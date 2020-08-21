@@ -120,7 +120,7 @@ class Strategy(object):
 
         self.strategies = {None: self._strategy_noop,
                            'simple': self._strategy_simple,
-                           'htex': self._strategy_htex}
+                           'htex_auto_scale': self._strategy_htex_auto_scale}
 
         self.strategize = self.strategies[self.config.strategy]
         self.logger_flag = False
@@ -277,13 +277,20 @@ class Strategy(object):
                 # logger.debug("Strategy: Case 3")
                 pass
 
-    def _strategy_htex(self, tasks, *args, kind=None, **kwargs):
-        """Peek at the DFK and the executors specified.
+    def _strategy_htex_auto_scale(self, tasks, *args, kind=None, **kwargs):
+        """ HTEX specific auto scaling strategy
 
-        We assume here that tasks are not held in a runnable
-        state, and that all tasks from an app would be sent to
-        a single specific executor, i.e tasks cannot be specified
-        to go to one of more executors.
+        This strategy works only for HTEX. This strategy will scale up by
+        requesting additional compute resources via the provider when the
+        workload requirements exceed the provisioned capacity. The scale out
+        behavior is exactly like the 'simple' strategy.
+
+        If there are idle blocks during execution, this strategy will terminate
+        those idle blocks specifically. When # of tasks >> # of blocks, HTEX places
+        tasks evenly across blocks, which makes it rather difficult to ensure that
+        some blocks will reach 0% utilization. Consequently, this strategy can be
+        expected to scale down effectively only when # of workers, or tasks executing
+        per block is close to 1.
 
         Args:
             - tasks (task_ids): Not used here.

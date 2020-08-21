@@ -30,7 +30,7 @@ local_config = Config(
         )
     ],
     max_idletime=1,
-    strategy='htex',
+    strategy='htex_auto_scale',
 )
 
 
