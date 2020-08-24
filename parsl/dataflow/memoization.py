@@ -1,7 +1,7 @@
 import hashlib
 from functools import singledispatch
 import logging
-from parsl.executors.serialize.serialize import serialize_object
+from parsl.serialize import serialize
 import types
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ def id_for_memo(obj, output_ref=False):
 @id_for_memo.register(types.FunctionType)
 @id_for_memo.register(type(None))
 def id_for_memo_serialize(obj, output_ref=False):
-    return serialize_object(obj)[0]
+    return serialize(obj)
 
 
 @id_for_memo.register(list)
@@ -59,7 +59,7 @@ def id_for_memo_list(denormalized_list, output_ref=False):
     for e in denormalized_list:
         normalized_list.append(id_for_memo(e, output_ref=output_ref))
 
-    return serialize_object(normalized_list)[0]
+    return serialize(normalized_list)
 
 
 @id_for_memo.register(dict)
@@ -78,7 +78,7 @@ def id_for_memo_dict(denormalized_dict, output_ref=False):
     for k in keys:
         normalized_list.append(id_for_memo(k))
         normalized_list.append(id_for_memo(denormalized_dict[k], output_ref=output_ref))
-    return serialize_object(normalized_list)[0]
+    return serialize(normalized_list)
 
 
 class Memoizer(object):
@@ -134,7 +134,6 @@ class Memoizer(object):
     def make_hash(self, task):
         """Create a hash of the task inputs.
 
-        This uses a serialization library borrowed from ipyparallel.
         If this fails here, then all ipp calls are also likely to fail due to failure
         at serialization.
 
@@ -167,7 +166,6 @@ class Memoizer(object):
             t = t + [id_for_memo(outputs, output_ref=True)]   # TODO: use append?
 
         t = t + [id_for_memo(filtered_kw)]
-
         t = t + [id_for_memo(task['func_name']),
                  id_for_memo(task['fn_hash']),
                  id_for_memo(task['args'])]

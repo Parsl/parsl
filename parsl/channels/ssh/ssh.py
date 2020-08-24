@@ -4,7 +4,7 @@ import os
 
 import paramiko
 from parsl.channels.base import Channel
-from parsl.channels.errors import BadHostKeyException, AuthException, SSHException, BadScriptPath, BadPermsScriptPath, FileCopyException, FileExists
+from parsl.channels.errors import BadHostKeyException, AuthException, SSHException, BadScriptPath, BadPermsScriptPath, FileCopyException
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,8 @@ class SSHChannel(Channel, RepresentationMixin):
 
     '''
 
-    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None, gssapi_auth=False, skip_auth=False, port=22, key_filename=None):
+    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None,
+                 gssapi_auth=False, skip_auth=False, port=22, key_filename=None, host_keys_filename=None):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -53,43 +54,60 @@ class SSHChannel(Channel, RepresentationMixin):
         self.skip_auth = skip_auth
         self.gssapi_auth = gssapi_auth
         self.key_filename = key_filename
+        self.host_keys_filename = host_keys_filename
 
         if self.skip_auth:
             self.ssh_client = NoAuthSSHClient()
         else:
             self.ssh_client = paramiko.SSHClient()
-        self.ssh_client.load_system_host_keys()
+        self.ssh_client.load_system_host_keys(filename=host_keys_filename)
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.sftp_client = None
 
         self.envs = {}
         if envs is not None:
             self.envs = envs
 
-        try:
-            self.ssh_client.connect(
-                hostname,
-                username=username,
-                password=password,
-                port=port,
-                allow_agent=True,
-                gss_auth=gssapi_auth,
-                gss_kex=gssapi_auth,
-                key_filename=key_filename
-            )
-            t = self.ssh_client.get_transport()
-            self.sftp_client = paramiko.SFTPClient.from_transport(t)
+    def _is_connected(self):
+        transport = self.ssh_client.get_transport() if self.ssh_client else None
+        return transport and transport.is_active()
 
-        except paramiko.BadHostKeyException as e:
-            raise BadHostKeyException(e, self.hostname)
+    def _connect(self):
+        if not self._is_connected():
+            logger.debug(f"connecting to {self.hostname}:{self.port}")
+            try:
+                self.ssh_client.connect(
+                    self.hostname,
+                    username=self.username,
+                    password=self.password,
+                    port=self.port,
+                    allow_agent=True,
+                    gss_auth=self.gssapi_auth,
+                    gss_kex=self.gssapi_auth,
+                    key_filename=self.key_filename
+                )
+                transport = self.ssh_client.get_transport()
+                self.sftp_client = paramiko.SFTPClient.from_transport(transport)
 
-        except paramiko.AuthenticationException as e:
-            raise AuthException(e, self.hostname)
+            except paramiko.BadHostKeyException as e:
+                raise BadHostKeyException(e, self.hostname)
 
-        except paramiko.SSHException as e:
-            raise SSHException(e, self.hostname)
+            except paramiko.AuthenticationException as e:
+                raise AuthException(e, self.hostname)
 
-        except Exception as e:
-            raise SSHException(e, self.hostname)
+            except paramiko.SSHException as e:
+                raise SSHException(e, self.hostname)
+
+            except Exception as e:
+                raise SSHException(e, self.hostname)
+
+    def _valid_sftp_client(self):
+        self._connect()
+        return self.sftp_client
+
+    def _valid_ssh_client(self):
+        self._connect()
+        return self.ssh_client
 
     def prepend_envs(self, cmd, env={}):
         env.update(self.envs)
@@ -119,7 +137,7 @@ class SSHChannel(Channel, RepresentationMixin):
         '''
 
         # Execute the command
-        stdin, stdout, stderr = self.ssh_client.exec_command(
+        stdin, stdout, stderr = self._valid_ssh_client().exec_command(
             self.prepend_envs(cmd, envs), bufsize=-1, timeout=walltime
         )
         # Block on exit status from the command
@@ -156,9 +174,9 @@ class SSHChannel(Channel, RepresentationMixin):
                 logger.exception("File push failed due to SFTP client failure")
                 raise FileCopyException(e, self.hostname)
         try:
-            self.sftp_client.put(local_source, remote_dest, confirm=True)
+            self._valid_sftp_client().put(local_source, remote_dest, confirm=True)
             # Set perm because some systems require the script to be executable
-            self.sftp_client.chmod(remote_dest, 0o777)
+            self._valid_sftp_client().chmod(remote_dest, 0o777)
         except Exception as e:
             logger.exception("File push from local source {} to remote destination {} failed".format(
                 local_source, remote_dest))
@@ -191,14 +209,8 @@ class SSHChannel(Channel, RepresentationMixin):
                 logger.exception("Failed to create local_dir: {0}".format(local_dir))
                 raise BadScriptPath(e, self.hostname)
 
-        # Easier to check this than to waste time trying to pull file and
-        # realize there's a problem.
-        if os.path.exists(local_dest):
-            logger.exception("Remote file copy will overwrite a local file:{0}".format(local_dest))
-            raise FileExists(None, self.hostname, filename=local_dest)
-
         try:
-            self.sftp_client.get(remote_source, local_dest)
+            self._valid_sftp_client().get(remote_source, local_dest)
         except Exception as e:
             logger.exception("File pull failed")
             raise FileCopyException(e, self.hostname)
@@ -206,7 +218,8 @@ class SSHChannel(Channel, RepresentationMixin):
         return local_dest
 
     def close(self):
-        return self.ssh_client.close()
+        if self._is_connected():
+            return self.ssh_client.close()
 
     def isdir(self, path):
         """Return true if the path refers to an existing directory.
@@ -218,7 +231,7 @@ class SSHChannel(Channel, RepresentationMixin):
         """
         result = True
         try:
-            self.sftp_client.lstat(path)
+            self._valid_sftp_client().lstat(path)
         except FileNotFoundError:
             result = False
 
@@ -242,7 +255,7 @@ class SSHChannel(Channel, RepresentationMixin):
             raise OSError('Target directory {} already exists'.format(path))
 
         self.execute_wait('mkdir -p {}'.format(path))
-        self.sftp_client.chmod(path, mode)
+        self._valid_sftp_client().chmod(path, mode)
 
     def abspath(self, path):
         """Return the absolute path on the remote side.
@@ -252,7 +265,7 @@ class SSHChannel(Channel, RepresentationMixin):
         path : str
             Path for which the absolute path will be returned.
         """
-        return self.sftp_client.normalize(path)
+        return self._valid_sftp_client().normalize(path)
 
     @property
     def script_dir(self):
