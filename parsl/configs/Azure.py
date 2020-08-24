@@ -26,7 +26,6 @@ config = Config(
     executors=[
         HighThroughputExecutor(
             label='azure_single_node',
-            address=address_by_query(),
             provider=AzureProvider(
                 vm_reference=vm_reference,
                 key_file='azure_key_file.json',

@@ -65,25 +65,19 @@
             "givenName": "Ben",
             "familyName": "Glick",
             "email": "glick@lclark.edu"
-        }
+        },
+        {
+            "@id":"https://orcid.org/0000-0001-5147-0051",
+            "@type": "Person",
+            "givenName": "Kelly L.",
+            "familyName": "Rowland",
+            "email": "kellyrowland@lbl.gov"
     ],
     "softwareRequirements": [
         {
             "@type": "SoftwareApplication",
             "identifier": "cmreshandler",
             "name": "CMRESHandler",
-            "provider": {
-                "@id": "https://pypi.org",
-                "@type": "Organization",
-                "name": "The Python Package Index",
-                "url": "https://pypi.org"
-            },
-            "runtimePlatform": "Python 3.6.4"
-        },
-        {
-            "@type": "SoftwareApplication",
-            "identifier": "ipyparallel",
-            "name": "ipyparallel",
             "provider": {
                 "@id": "https://pypi.org",
                 "@type": "Organization",

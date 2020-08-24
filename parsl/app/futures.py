@@ -1,6 +1,5 @@
 """This module implements DataFutures.
 """
-import os
 import logging
 from concurrent.futures import Future
 
@@ -126,34 +125,3 @@ class DataFuture(Future):
                 self.__class__.__name__,
                 id(self),
                 _STATE_TO_DESCRIPTION_MAP[self._state])
-
-
-def testing_nonfuture():
-    fpath = '~/shuffled.txt'
-    df = DataFuture(None, fpath)
-    print(df)
-    print("Result: ", df.filepath)
-    assert df.filepath == os.path.abspath(os.path.expanduser(fpath))
-
-
-if __name__ == "__main__":
-    # logging.basicConfig(filename='futures.testing.log',level=logging.DEBUG)
-    import sys
-    import random
-    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-    logger.debug("Begin Testing")
-
-    with open('shuffled.txt', 'w') as testfile:
-        nums = list(range(0, 10000))
-        random.shuffle(nums)
-        for item in nums:
-            testfile.write("{0}\n".format(item))
-
-    foo = Future()  # type: Future[str]
-    df = DataFuture(foo, './shuffled.txt')
-    dx = DataFuture(foo, '~/shuffled.txt')
-
-    print(foo.done())
-    print(df.done())
-
-    testing_nonfuture()

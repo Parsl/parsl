@@ -5,8 +5,12 @@ from statistics import mean, stdev
 
 import zmq
 from multiprocessing import Process, Manager
-from ipyparallel.serialize import pack_apply_message, unpack_apply_message
-from ipyparallel.serialize import deserialize_object
+
+from parsl.serialize import ParslSerializer
+parsl_serializer = ParslSerializer()
+pack_apply_message = parsl_serializer.pack_apply_message
+unpack_apply_message = parsl_serializer.unpack_apply_message
+deserialize_object = parsl_serializer.deserialize
 
 from constants import CLIENT_IP_FILE
 from parsl.addresses import address_by_interface
@@ -25,8 +29,7 @@ def simple_executor(f_all, args_all, kwargs_all, num_tasks):
         start_time = time.time()
         buf = pack_apply_message(f=next(f_all), args=next(args_all),
                                  kwargs=next(kwargs_all),
-                                 buffer_threshold=1024 * 1024,
-                                 item_threshold=1024)
+                                 buffer_threshold=1024 * 1024)
         serialization_times.append(time.time() - start_time)
 
         start_time = time.time()
@@ -78,8 +81,7 @@ def dealer_executor(f_all, args_all, kwargs_all, num_tasks, return_dict,
             start_time = time.time()
             buf = pack_apply_message(f=next(f_all), args=next(args_all),
                                      kwargs=next(kwargs_all),
-                                     buffer_threshold=1024 * 1024,
-                                     item_threshold=1024)
+                                     buffer_threshold=1024 * 1024)
             serialization_times.append(time.time() - start_time)
 
             logger.debug("Manager sending task {}".format(task_id))
