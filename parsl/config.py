@@ -32,8 +32,9 @@ class Config(RepresentationMixin):
     checkpoint_period : str, optional
         Time interval (in "HH:MM:SS") at which to checkpoint completed tasks. Only has an effect if
         `checkpoint_mode='periodic'`.
-    data_management_max_threads : int, optional
-        Maximum number of threads to allocate for the data manager to use for managing input and output transfers.
+    internal_tasks_max_threads : int, optional
+        Maximum number of threads to allocate for submit side internal tasks such as some data transfers
+        or @joinapps
         Default is 10.
     monitoring : MonitoringHub, optional
         The config to use for database monitoring. Default is None which does not log to a database.
@@ -67,7 +68,7 @@ class Config(RepresentationMixin):
                  checkpoint_files: Optional[List[str]] = None,
                  checkpoint_mode: Optional[str] = None,
                  checkpoint_period: Optional[str] = None,
-                 data_management_max_threads: int = 10,
+                 internal_tasks_max_threads: int = 10,
                  retries: int = 0,
                  run_dir: str = 'runinfo',
                  strategy: Optional[str] = 'simple',
@@ -93,7 +94,7 @@ class Config(RepresentationMixin):
         if checkpoint_mode == 'periodic' and checkpoint_period is None:
             checkpoint_period = "00:30:00"
         self.checkpoint_period = checkpoint_period
-        self.data_management_max_threads = data_management_max_threads
+        self.internal_tasks_max_threads = internal_tasks_max_threads
         self.retries = retries
         self.run_dir = run_dir
         self.strategy = strategy

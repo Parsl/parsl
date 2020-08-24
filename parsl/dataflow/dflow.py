@@ -170,8 +170,8 @@ class DataFlowKernel(object):
 
         self.executors = {}
         self.data_manager = DataManager(self)
-        data_manager_executor = ThreadPoolExecutor(max_threads=config.data_management_max_threads, label='_parsl_internal')
-        self.add_executors(config.executors + [data_manager_executor])
+        parsl_internal_executor = ThreadPoolExecutor(max_threads=config.internal_tasks_max_threads, label='_parsl_internal')
+        self.add_executors(config.executors + [parsl_internal_executor])
 
         if self.checkpoint_mode == "periodic":
             try:
