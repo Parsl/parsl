@@ -114,8 +114,10 @@ class PriorityQueueEntry:
         elif self.pri is not None and other.pri is None:
             return True
         else:  # self/other both not None
-            return self.pri.__gt__(other.pri)
-
+            c = self.pri.__gt__(other.pri)
+            if c == NotImplemented:
+              raise RuntimeError("priority values are not comparable: {} vs {}".format(self.pri, other.pri))
+            return c
 
 class Interchange(object):
     """ Interchange is a task orchestrator for distributed systems.
