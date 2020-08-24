@@ -1,6 +1,6 @@
 """Exceptions raised by Apps."""
 from functools import wraps
-from typing import List, Union, Any, TypeVar
+from typing import Callable, List, Union, Any, TypeVar
 from types import TracebackType
 
 import dill
@@ -131,10 +131,26 @@ class RemoteExceptionWrapper:
         reraise(t, v, tb)
 
 
-TF = TypeVar('TF')
+R = TypeVar('R')
+
+# There appears to be no solutio to typing this without a mypy plugin.
+# The reason is because wrap_error maps a Callable[[X...], R] to a Callable[[X...], Union[R, R2]].
+# However, there is no provision in Python typing for pattern matching all possible types of
+# callable arguments. This is because Callable[] is, in the infinite wisdom of the typing module,
+# only used for callbacks: "There is no syntax to indicate optional or keyword arguments; such
+# function types are rarely used as callback types.".
+# The alternative supported by the typing module, of saying Callable[..., R] ->
+#   Callable[..., Union[R, R2]] results in no pattern matching between the first and second
+# ellipsis.
+# Yet another bogus solution that was here previously would simply define wrap_error as
+#   wrap_error(T) -> T, where T was a custom TypeVar. This obviously missed the fact that
+# the returned function had its return signature modified.
+# Ultimately, the best choice appears to be Callable[..., R] -> Callable[..., Union[R, ?Exception]],
+#  since it results in the correct type specification for the return value(s) while treating the
+#  arguments as Any.
 
 
-def wrap_error(func: TF) -> Union[TF, RemoteExceptionWrapper]:
+def wrap_error(func: Callable[..., R]) -> Callable[..., Union[R, RemoteExceptionWrapper]]:
     @wraps(func)  # type: ignore
     def wrapper(*args: object, **kwargs: object) -> Any:
         import sys
