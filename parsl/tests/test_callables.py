@@ -46,3 +46,11 @@ def test_check_importlib_function():
     spec.loader.exec_module(module)
     some_aux_func = module.some_aux_func
     app(some_aux_func).result()
+
+
+def test_check_importlib_function_partial():
+    spec = importlib.util.spec_from_file_location('', "parsl/tests/callables_helper.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    some_aux_func = module.some_aux_func
+    app(partial(some_aux_func, 1)).result()
