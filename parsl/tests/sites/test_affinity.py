@@ -33,7 +33,7 @@ def get_worker_info():
     rank = int(os.environ['PARSL_WORKER_RANK'])
     aff = os.sched_getaffinity(0)
     sleep(1.0)
-    return rank,  aff
+    return rank, aff
 
 
 @pytest.mark.local
