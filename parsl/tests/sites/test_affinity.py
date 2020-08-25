@@ -38,7 +38,7 @@ def get_worker_info():
 
 @pytest.mark.local
 @pytest.mark.skipif('sched_getaffinity' not in dir(os), reason='System does not support sched_setaffinity')
-@pytest.mark.skipif(os.cpu_count() < 2, reason='Must have a more than one CPU')
+@pytest.mark.skipif(os.cpu_count() == 1, reason='Must have a more than one CPU')
 def test_htex():
     worker_info = [get_worker_info() for _ in range(4)]
     worker_affinity = dict([r.result() for r in worker_info])
