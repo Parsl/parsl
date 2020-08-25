@@ -509,7 +509,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
 
         # Determine this worker's cores
         if cpu_affinity == "block":
-            my_cores = avail_cores[cores_per_worker*worker_id:cores_per_worker*(worker_id + 1)]
+            my_cores = avail_cores[cores_per_worker * worker_id:cores_per_worker * (worker_id + 1)]
         elif cpu_affinity == "alternating":
             my_cores = avail_cores[worker_id::pool_size]
         else:
