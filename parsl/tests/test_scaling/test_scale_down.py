@@ -65,13 +65,13 @@ def test_scale_out():
     print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
     assert len(dfk.executors['htex_local'].connected_managers) == 5, "Expected 5 managers once tasks are running"
 
-    time.sleep(3)
+    time.sleep(1)
     print("running")
     print("Managers   : ", dfk.executors['htex_local'].connected_managers)
     print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
     assert len(dfk.executors['htex_local'].connected_managers) == 5, "Expected 5 managers 3 seconds after 2 tasks finished"
 
-    time.sleep(17)
+    time.sleep(21)
     print("Middle")
     print("Managers   : ", dfk.executors['htex_local'].connected_managers)
     print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
@@ -79,7 +79,7 @@ def test_scale_out():
 
     for i in range(2, 4):
         fus[i].result()
-    time.sleep(17)
+    time.sleep(21)
     print("Finalizing result")
     print("Managers   : ", dfk.executors['htex_local'].connected_managers)
     print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
@@ -89,7 +89,7 @@ def test_scale_out():
     print("Cleaning")
     print("Managers   : ", dfk.executors['htex_local'].connected_managers)
     print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
-    time.sleep(20)
+    time.sleep(21)
     assert len(dfk.executors['htex_local'].connected_managers) == 2, "Expected 2 managers when no tasks, lower bound by min_blocks"
 
 
