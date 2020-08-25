@@ -393,7 +393,8 @@ class Manager(object):
                                                              self.pending_task_queue,
                                                              self.pending_result_queue,
                                                              self.ready_worker_queue,
-                                                             self._tasks_in_progress
+                                                             self._tasks_in_progress,
+                                                             self.cpu_affinity
                                                          ), name="HTEX-Worker-{}".format(worker_id))
             p.start()
             self.procs[worker_id] = p
@@ -502,7 +503,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
     # If desired, set process affinity
     if cpu_affinity != "none":
         # Count the number of cores per worker
-        avail_cores = os.sched_getaffinity(0)  # Get the available processors
+        avail_cores = sorted(os.sched_getaffinity(0))  # Get the available processors
         cores_per_worker = len(avail_cores) // pool_size
         assert cores_per_worker > 0, "Affinity does not work if there are more workers than cores"
 
@@ -516,7 +517,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
 
         # Set the affinity for this worker
         os.sched_setaffinity(0, my_cores)
-        logger.info("Assigned worker to {}".format(my_cores))
+        logger.info("Set worker CPU affinity to {}".format(my_cores))
 
     while True:
         worker_queue.put(worker_id)
