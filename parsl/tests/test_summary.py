@@ -25,5 +25,5 @@ def test_summary(caplog):
     parsl.clear()
 
     assert "Summary of tasks in DFK:" in caplog.text
-    assert "Tasks in state States.done: 1" in caplog.text
+    assert "Tasks in state States.exec_done: 1" in caplog.text
     assert "Tasks in state States.failed: 1" in caplog.text

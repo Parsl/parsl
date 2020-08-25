@@ -1,7 +1,9 @@
 import parsl
 from parsl.app.app import python_app
-from parsl.tests.configs.local_threads import config
-from parsl.executors.errors import UnsupportedFeatureError
+# from parsl.tests.configs.local_threads import config
+from parsl.tests.configs.htex_local import config
+# from parsl.tests.configs.workqueue_ex import config
+from parsl.executors.errors import UnsupportedFeatureError, ExecutorError
 from parsl.executors import WorkQueueExecutor
 
 
@@ -11,19 +13,42 @@ def double(x, parsl_resource_specification={}):
 
 
 def test_resource(n=2):
-    spec = {'cores': 2, 'memory': '1GiB'}
+    executors = parsl.dfk().executors
+    executor = None
+    for label in executors:
+        if label != 'data_manager':
+            executor = executors[label]
+            break
+
+    # Specify incorrect number of resources
+    spec = {'cores': 2, 'memory': 1000}
     fut = double(n, parsl_resource_specification=spec)
     try:
         fut.result()
+    except UnsupportedFeatureError:
+        assert not isinstance(executor, WorkQueueExecutor)
     except Exception as e:
-        assert isinstance(e, UnsupportedFeatureError)
+        assert isinstance(e, ExecutorError)
+
+    # Specify resources with wrong types
+    # 'cpus' is incorrect, should be 'cores'
+    spec = {'cpus': 2, 'memory': 1000, 'disk': 1000}
+    fut = double(n, parsl_resource_specification=spec)
+    try:
+        fut.result()
+    except UnsupportedFeatureError:
+        assert not isinstance(executor, WorkQueueExecutor)
+    except Exception as e:
+        assert isinstance(e, ExecutorError)
+
+    # Correct specification, case insensitive
+    spec = {'COREs': 2, 'MEMory': 1000, 'Disk': 1000}
+    fut = double(n, parsl_resource_specification=spec)
+    try:
+        fut.result()
+    except UnsupportedFeatureError:
+        assert not isinstance(executor, WorkQueueExecutor)
     else:
-        executors = parsl.dfk().executors
-        executor = None
-        for label in executors:
-            if label != 'data_manager':
-                executor = executors[label]
-                break
         assert isinstance(executor, WorkQueueExecutor)
 
 
