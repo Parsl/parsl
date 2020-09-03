@@ -129,6 +129,13 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
     max_workers : int
         Caps the number of workers launched by the manager. Default: infinity
 
+    cpu_affinity: string
+        Whether or how each worker process sets thread affinity. Options are "none" to forgo
+        any CPU affinity configuration, "block" to assign adjacent cores to workers
+        (ex: assign 0-1 to worker 0, 2-3 to worker 1), and
+        "alternating" to assign cores to workers in round-robin
+        (ex: assign 0,2 to worker 0, 1,3 to worker 1).
+
     prefetch_capacity : int
         Number of tasks that could be prefetched over available worker capacity.
         When there are a few tasks (<100) or when tasks are long running, this option should
@@ -170,6 +177,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                  cores_per_worker: float = 1.0,
                  mem_per_worker: Optional[float] = None,
                  max_workers: Union[int, float] = float('inf'),
+                 cpu_affinity: str = 'none',
                  prefetch_capacity: int = 0,
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
@@ -225,6 +233,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         self.poll_period = poll_period
         self.run_dir = '.'
         self.worker_logdir_root = worker_logdir_root
+        self.cpu_affinity = cpu_affinity
 
         if not launch_cmd:
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
@@ -239,7 +248,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                "--block_id={{block_id}} "
                                "--hb_period={heartbeat_period} "
                                "{address_probe_timeout_string} "
-                               "--hb_threshold={heartbeat_threshold} ")
+                               "--hb_threshold={heartbeat_threshold} "
+                               "--cpu-affinity {cpu_affinity} ")
 
     def initialize_scaling(self):
         """ Compose the launch command and call the scale_out
@@ -270,7 +280,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
                                        poll_period=self.poll_period,
-                                       logdir=worker_logdir)
+                                       logdir=worker_logdir,
+                                       cpu_affinity=self.cpu_affinity)
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
 
@@ -592,7 +603,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                 "Attempts to provision nodes via provider has failed"))
         return internal_block
 
-    def scale_in(self, blocks=None, block_ids=[]):
+    def scale_in(self, blocks=None, block_ids=[], force=True, max_idletime=None):
         """Scale in the number of active blocks by specified amount.
 
         The scale in method here is very rude. It doesn't give the workers
@@ -605,24 +616,63 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         blocks : int
              Number of blocks to terminate and scale_in by
 
+        force : Bool
+             Used along with blocks to indicate whether blocks should be terminated by force.
+             When force = True, we will kill blocks regardless of the blocks being busy
+             When force = False, Only idle blocks will be terminated.
+             If the # of `idle_blocks` < `blocks`, the list of jobs marked for termination
+             will be in the range: 0 -`blocks`.
+
+        max_idletime: float
+             A time to indicate how long a block can be idle.
+             Used along with force = False to kill blocks that have been idle for that long.
+
         block_ids : list
              List of specific block ids to terminate. Optional
 
-        Raises:
-             NotImplementedError
+        Returns
+        -------
+        List of job_ids marked for termination
         """
 
         if block_ids:
             block_ids_to_kill = block_ids
         else:
-            block_ids_to_kill = list(self.blocks.keys())[:blocks]
+            managers = self.connected_managers
+            block_info = {}
+            for manager in managers:
+                if not manager['active']:
+                    continue
+                b_id = manager['block_id']
+                if b_id not in block_info:
+                    block_info[b_id] = [0, float('inf')]
+                block_info[b_id][0] += manager['tasks']
+                block_info[b_id][1] = min(block_info[b_id][1], manager['idle_duration'])
 
+            sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1][1], item[1][0]))
+            if force is True:
+                block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
+            else:
+                if not max_idletime:
+                    block_ids_to_kill = [x[0] for x in sorted_blocks if x[1][0] == 0][:blocks]
+                else:
+                    block_ids_to_kill = []
+                    for x in sorted_blocks:
+                        if x[1][1] > max_idletime and x[1][0] == 0:
+                            block_ids_to_kill.append(x[0])
+                            if len(block_ids_to_kill) == blocks:
+                                break
+                logger.debug("Selecting block ids to kill since they are idle : {}".format(
+                    block_ids_to_kill))
+
+        logger.debug("Current blocks : {}".format(self.blocks))
         # Hold the block
         for block_id in block_ids_to_kill:
             self._hold_block(block_id)
 
         # Now kill via provider
-        to_kill = [self.blocks.pop(bid) for bid in block_ids_to_kill]
+        # Potential issue with multiple threads trying to remove the same blocks
+        to_kill = [self.blocks.pop(bid) for bid in block_ids_to_kill if bid in self.blocks]
 
         r = self.provider.cancel(to_kill)
 
