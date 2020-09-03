@@ -2,7 +2,6 @@ from parsl.config import Config
 from parsl.providers import CobaltProvider
 from parsl.launchers import AprunLauncher
 from parsl.executors import HighThroughputExecutor
-from parsl.addresses import address_by_hostname
 
 from .user_opts import user_opts
 
@@ -13,7 +12,6 @@ def fresh_config():
             HighThroughputExecutor(
                 label='theta_local_htex_multinode',
                 max_workers=1,
-                address=address_by_hostname(),
                 provider=CobaltProvider(
                     queue=user_opts['theta']['queue'],
                     account=user_opts['theta']['account'],

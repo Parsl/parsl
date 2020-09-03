@@ -197,16 +197,28 @@ By default, Parsl only runs one app at a time on each worker node.
 However, it is possible to specify the requirements for a particular app,
 and Work Queue will automatically run as many parallel instances as possible on each node.
 Work Queue automatically detects the amount of cores, memory, and other resources available on each execution node.
-To activate this feature, add resource specifications to your apps:
+To activate this feature, add a resource specification to your apps. A resource specification is a dictionary with
+the following three (case-insensitive) keys: ``cores`` (an integer corresponding to the number of cores required by the task),
+``memory`` (an integer corresponding to the task's memory requirement in MB), and ``disk`` (an integer corresponding to
+the task's disk requirement in MB), passed to an app via the special keyword argument ``parsl_resource_specification``. The specification can be set for all app invocations via a default, for example:
 
    .. code-block:: python
 
       @python_app
-      def compute(x, parsl_resource_specification={'cores': 1, 'memory': '1GiB', 'disk': '1GiB'}):
+      def compute(x, parsl_resource_specification={'cores': 1, 'memory': 1000, 'disk': 1000}):
           return x*2
 
-This special keyword argument will inform Work Queue about the resources this app requires.
+
+or updated when the app is invocated:
+
+   .. code-block:: python
+
+      spec = {'cores': 1, 'memory': 500, 'disk': 500}
+      future = compute(x, parsl_resource_specification=spec)
+
+This ``parsl_resource_specification`` special keyword argument will inform Work Queue about the resources this app requires.
 When placing instances of ``compute(x)``, Work Queue will run as many parallel instances as possible based on each worker node's available resources.
+
 If an app's resource requirements are not known in advance,
 Work Queue has an auto-labeling feature that measures the actual resource usage of your apps and automatically chooses resource labels for you.
 With auto-labeling, it is not necessary to provide ``parsl_resource_specification``;
@@ -338,6 +350,19 @@ with the scheduler, and uses the `AprunLauncher` to launch workers.
 .. literalinclude:: ../../parsl/configs/bluewaters.py
 
 
+Bridges (PSC)
+-------------
+
+.. image:: https://insidehpc.com/wp-content/uploads/2016/08/Bridges_FB1b.jpg
+
+The following snippet shows an example configuration for executing on the Bridges supercomputer at the Pittsburgh Supercomputing Center.
+The configuration assumes the user is running on a login node and uses the `SlurmProvider` to interface
+with the scheduler, and uses the `SrunLauncher` to launch workers.
+
+.. literalinclude:: ../../parsl/configs/bridges.py
+
+
+
 CC-IN2P3
 --------
 
@@ -362,7 +387,7 @@ To utilize Work Queue with Parsl, please install the full CCTools software packa
 
    $ conda create -y --name <environment> python=<version> conda-pack
    $ conda activate <environment>
-   $ conda install -y -c conda-forge cctools parsl
+   $ conda install -y -c conda-forge ndcctools parsl
 
 This creates a Conda environment on your machine with all the necessary tools and setup needed to utilize Work Queue with the Parsl library.
 

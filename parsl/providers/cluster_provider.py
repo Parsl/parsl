@@ -63,7 +63,6 @@ class ClusterProvider(ExecutionProvider):
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
         self.parallelism = parallelism
-        self.provisioned_blocks = 0
         self.launcher = launcher
         self.walltime = walltime
         self.cmd_timeout = cmd_timeout

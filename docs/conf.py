@@ -40,9 +40,9 @@ extensions = [
     'sphinx.ext.napoleon'
 ]
 
-url = 'https://raw.githubusercontent.com/Parsl/parsl-tutorial/master/parsl-introduction.ipynb'
+url = 'https://raw.githubusercontent.com/Parsl/parsl-tutorial/master/1-parsl-introduction.ipynb'
 r = requests.get(url)
-with open(os.path.join(os.path.dirname(__file__), 'parsl-introduction.ipynb'), 'wb') as f:
+with open(os.path.join(os.path.dirname(__file__), '1-parsl-introduction.ipynb'), 'wb') as f:
     f.write(r.content)
 
 nbsphinx_execute = 'never'

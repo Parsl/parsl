@@ -1,10 +1,8 @@
 pyzmq>=17.1.2
 typeguard>=2.5
-ipyparallel
 globus-sdk
 dill
 tblib
-ipykernel
 requests
 paramiko
 psutil>=5.5.1
