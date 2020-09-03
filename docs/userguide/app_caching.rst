@@ -94,6 +94,4 @@ It is important to consider several important issues when using app caching:
 
 - Performance: If app caching is enabled, there may be some performance
   overhead especially if a large number of short duration tasks are launched rapidly.
-
-.. note::
-   The performance penalty has not yet been quantified.
+  This overhead has not been quantified.

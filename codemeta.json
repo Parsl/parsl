@@ -88,18 +88,6 @@
         },
         {
             "@type": "SoftwareApplication",
-            "identifier": "ipyparallel",
-            "name": "ipyparallel",
-            "provider": {
-                "@id": "https://pypi.org",
-                "@type": "Organization",
-                "name": "The Python Package Index",
-                "url": "https://pypi.org"
-            },
-            "runtimePlatform": "Python 3.6.4"
-        },
-        {
-            "@type": "SoftwareApplication",
             "identifier": "ipykernel",
             "name": "ipykernel",
             "provider": {

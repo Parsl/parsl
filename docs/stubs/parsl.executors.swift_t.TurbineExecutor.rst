@@ -14,6 +14,7 @@ parsl.executors.swift\_t.TurbineExecutor
    .. autosummary::
    
       ~TurbineExecutor.__init__
+      ~TurbineExecutor.handle_errors
       ~TurbineExecutor.scale_in
       ~TurbineExecutor.scale_out
       ~TurbineExecutor.set_bad_state_and_fail_all
@@ -32,6 +33,7 @@ parsl.executors.swift\_t.TurbineExecutor
    .. autosummary::
    
       ~TurbineExecutor.bad_state_is_set
+      ~TurbineExecutor.error_management_enabled
       ~TurbineExecutor.executor_exception
       ~TurbineExecutor.hub_address
       ~TurbineExecutor.hub_port

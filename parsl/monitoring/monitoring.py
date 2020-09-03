@@ -290,6 +290,7 @@ class MonitoringHub(RepresentationMixin):
 
     @staticmethod
     def monitor_wrapper(f,
+                        try_id,
                         task_id,
                         monitoring_hub_url,
                         run_id,
@@ -302,6 +303,7 @@ class MonitoringHub(RepresentationMixin):
             command_q = Queue(maxsize=10)
             p = Process(target=monitor,
                         args=(os.getpid(),
+                              try_id,
                               task_id,
                               monitoring_hub_url,
                               run_id,
@@ -466,6 +468,7 @@ def router_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs,
 
 
 def monitor(pid,
+            try_id,
             task_id,
             monitoring_hub_url,
             run_id,
@@ -509,6 +512,7 @@ def monitor(pid,
             d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
             d["run_id"] = run_id
             d["task_id"] = task_id
+            d["try_id"] = try_id
             d['resource_monitoring_interval'] = sleep_dur
             d['hostname'] = platform.node()
             d['first_msg'] = first_msg

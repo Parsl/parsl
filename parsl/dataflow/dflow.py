@@ -92,6 +92,7 @@ class DataFlowKernel(object):
         # Monitoring
         self.run_id = str(uuid4())
         self.tasks_completed_count = 0
+        self.tasks_memo_completed_count = 0
         self.tasks_failed_count = 0
         self.tasks_dep_fail_count = 0
 
@@ -190,16 +191,18 @@ class DataFlowKernel(object):
         """
         Create the dictionary that will be included in the log.
         """
-
         info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'hashsum', 'fail_count', 'status',
-                           'id', 'time_submitted', 'time_returned', 'executor']
+                           'id', 'time_invoked', 'try_time_launched', 'time_returned', 'try_time_returned', 'executor']
 
         task_log_info = {"task_" + k: task_record[k] for k in info_to_monitor}
         task_log_info['run_id'] = self.run_id
+        task_log_info['try_id'] = task_record['try_id']
         task_log_info['timestamp'] = datetime.datetime.now()
         task_log_info['task_status_name'] = task_record['status'].name
         task_log_info['tasks_failed_count'] = self.tasks_failed_count
         task_log_info['tasks_completed_count'] = self.tasks_completed_count
+        task_log_info['tasks_memo_completed_count'] = self.tasks_memo_completed_count
+        task_log_info['from_memo'] = task_record['from_memo']
         task_log_info['task_inputs'] = str(task_record['kwargs'].get('inputs', None))
         task_log_info['task_outputs'] = str(task_record['kwargs'].get('outputs', None))
         task_log_info['task_stdin'] = task_record['kwargs'].get('stdin', None)
@@ -261,6 +264,8 @@ class DataFlowKernel(object):
 
         task_record = self.tasks[task_id]
 
+        task_record['try_time_returned'] = datetime.datetime.now()
+
         if not future.done():
             raise ValueError("done callback called, despite future not reporting itself as done")
 
@@ -283,12 +288,23 @@ class DataFlowKernel(object):
                     task_record['app_fu'].set_exception(e)
 
             elif task_record['fail_count'] <= self._config.retries:
+
+                # record the final state for this try before we mutate for retries
+                task_record['status'] = States.fail_retryable
+                self._send_task_log_info(task_record)
+
+                task_record['try_id'] += 1
                 task_record['status'] = States.pending
+                task_record['try_time_launched'] = None
+                task_record['try_time_returned'] = None
+                task_record['fail_history'] = []
+
                 logger.info("Task {} marked for retry".format(task_id))
 
             else:
                 logger.exception("Task {} failed after {} retry attempts".format(task_id,
                                                                                  self._config.retries))
+                task_record['time_returned'] = datetime.datetime.now()
                 task_record['status'] = States.failed
                 self.tasks_failed_count += 1
                 task_record['time_returned'] = datetime.datetime.now()
@@ -296,11 +312,15 @@ class DataFlowKernel(object):
                     task_record['app_fu'].set_exception(e)
 
         else:
+            if task_record['from_memo']:
+                task_record['status'] = States.memo_done
+                self.tasks_memo_completed_count += 1
+                logger.info("Task {} completed by memoization".format(task_id))
+            else:
+                task_record['status'] = States.exec_done
+                self.tasks_completed_count += 1
+                logger.info("Task {} completed by execution".format(task_id))
 
-            task_record['status'] = States.done
-            self.tasks_completed_count += 1
-
-            logger.info("Task {} completed".format(task_id))
             task_record['time_returned'] = datetime.datetime.now()
 
             with task_record['app_fu']._update_lock:
@@ -311,6 +331,7 @@ class DataFlowKernel(object):
         if task_record['app_fu'].stderr is not None:
             logger.info("Standard error for task {} available at {}".format(task_id, task_record['app_fu'].stderr))
 
+        # record current state for this task after we're done: maybe a new try, or maybe the old try marked as failed
         self._send_task_log_info(task_record)
 
         # it might be that in the course of the update, we've gone back to being
@@ -455,13 +476,15 @@ class DataFlowKernel(object):
         Returns:
             Future that tracks the execution of the submitted executable
         """
-        self.tasks[task_id]['time_submitted'] = datetime.datetime.now()
+        self.tasks[task_id]['try_time_launched'] = datetime.datetime.now()
 
         memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
         if memo_fu:
             logger.info("Reusing cached result for task {}".format(task_id))
+            self.tasks[task_id]['from_memo'] = True
             return memo_fu
 
+        self.tasks[task_id]['from_memo'] = False
         executor_label = self.tasks[task_id]["executor"]
         try:
             executor = self.executors[executor_label]
@@ -471,7 +494,8 @@ class DataFlowKernel(object):
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
-            executable = self.monitoring.monitor_wrapper(executable, task_id,
+            try_id = self.tasks[task_id]['fail_count']
+            executable = self.monitoring.monitor_wrapper(executable, try_id, task_id,
                                                          self.monitoring.monitoring_hub_url,
                                                          self.run_id,
                                                          wrapper_logging_level,
@@ -720,11 +744,15 @@ class DataFlowKernel(object):
                     'exec_fu': None,
                     'fail_count': 0,
                     'fail_history': [],
+                    'from_memo': None,
                     'ignore_for_cache': ignore_for_cache,
                     'status': States.unsched,
+                    'try_id': 0,
                     'id': task_id,
-                    'time_submitted': None,
+                    'time_invoked': datetime.datetime.now(),
                     'time_returned': None,
+                    'try_time_launched': None,
+                    'try_time_returned': None,
                     'resource_specification': resource_specification}
 
         app_fu = AppFuture(task_def)
@@ -815,7 +843,8 @@ class DataFlowKernel(object):
         for tid in self.tasks:
             keytasks[self.tasks[tid]['status']] += 1
         # Fetch from counters since tasks get wiped
-        keytasks[States.done] = self.tasks_completed_count
+        keytasks[States.exec_done] = self.tasks_completed_count
+        keytasks[States.memo_done] = self.tasks_memo_completed_count
         keytasks[States.failed] = self.tasks_failed_count
         keytasks[States.dep_fail] = self.tasks_dep_fail_count
 

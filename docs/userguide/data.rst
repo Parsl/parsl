@@ -325,7 +325,7 @@ execute-side file system, because Globus file transfers happen
 between two Globus endpoints.
 
 Globus Configuration
-^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""
 
 In order to manage where files are staged, users must configure the default ``working_dir`` on a remote location. This information is specified in the :class:`~parsl.executors.base.ParslExecutor` via the ``working_dir`` parameter in the :class:`~parsl.config.Config` instance. For example:
 

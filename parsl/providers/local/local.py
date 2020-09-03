@@ -73,7 +73,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         '''
 
-        logger.debug("Checking status of: {0}".format(job_ids))
         for job_id in self.resources:
             # This job dict should really be a class on its own
             job_dict = self.resources[job_id]
@@ -207,7 +206,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         script_path = "{0}/{1}.sh".format(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
 
-        wrap_command = self.worker_init + '\n' + self.launcher(command, tasks_per_node, self.nodes_per_block)
+        wrap_command = self.worker_init + f'\nexport JOBNAME=${job_name}\n' + self.launcher(command, tasks_per_node, self.nodes_per_block)
 
         self._write_submit_script(wrap_command, script_path)
 

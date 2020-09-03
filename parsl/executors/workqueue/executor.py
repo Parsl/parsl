@@ -1,4 +1,4 @@
-"""WorkQueueExecutor utilizes the Work Queue distributed framework developed by the
+""" WorkQueueExecutor utilizes the Work Queue distributed framework developed by the
 Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant,
 high-throughput system for delegating Parsl tasks to thousands of remote machines
 """
@@ -19,8 +19,8 @@ import queue
 import inspect
 import shutil
 import itertools
-from ipyparallel.serialize import pack_apply_message
 
+from parsl.serialize import pack_apply_message
 import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
 
 
 # Support structure to communicate parsl tasks to the work queue submit thread.
-ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category env_pkg map_file function_file result_file input_files output_files')
+ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category cores memory disk env_pkg map_file function_file result_file input_files output_files')
 
 # Support structure to communicate final status of work queue tasks to parsl
 # result is only valid if result_received is True
@@ -169,6 +169,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         init_command: str
             Command line to run before executing a task in a worker.
             Default is ''.
+
+        worker_options: str
+            Extra options passed to work_queue_worker. Default is ''.
     """
 
     @typeguard.typechecked
@@ -191,6 +194,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  autolabel_window: int = 1,
                  autocategory: bool = False,
                  init_command: str = "",
+                 worker_options: str = "",
                  full_debug: bool = True):
         NoStatusHandlingExecutor.__init__(self)
         self._provider = provider
@@ -224,6 +228,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.autocategory = autocategory
         self.should_stop = multiprocessing.Value(c_bool, False)
         self.cached_envs = {}  # type: Dict[int, str]
+        self.worker_options = worker_options
 
         if not self.address:
             self.address = socket.gethostname()
@@ -316,6 +321,36 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         kwargs : dict
             Keyword arguments to the Parsl app
         """
+        cores = None
+        memory = None
+        disk = None
+        if resource_specification and isinstance(resource_specification, dict):
+            logger.debug("Got resource specification: {}".format(resource_specification))
+
+            acceptable_resource_types = ['cores', 'memory', 'disk']
+            keys = list(resource_specification.keys())
+            if len(keys) != 3:
+                logger.error("Task resource specification requires "
+                             "three resources to be specified simultaneously: cores, memory, and disk")
+                raise ExecutorError(self, "Task resource specification requires "
+                                          "three resources to be specified simultaneously: cores, memory, and disk, "
+                                          "and only takes these three resource types.")
+
+            if not all(k.lower() in acceptable_resource_types for k in keys):
+                logger.error("Task resource specification only accepts "
+                             "three types of resources: cores, memory, and disk")
+                raise ExecutorError(self, "Task resource specification requires "
+                                          "three resources to be specified simultaneously: cores, memory, and disk, "
+                                          "and only takes these three resource types.")
+
+            for k in keys:
+                if k.lower() == 'cores':
+                    cores = resource_specification[k]
+                elif k.lower() == 'memory':
+                    memory = resource_specification[k]
+                elif k.lower() == 'disk':
+                    disk = resource_specification[k]
+
         self.task_counter += 1
         task_id = self.task_counter
 
@@ -372,7 +407,17 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
         category = func.__qualname__ if self.autocategory else 'parsl-default'
-        self.task_queue.put_nowait(ParslTaskToWq(task_id, category, env_pkg, map_file, function_file, result_file, input_files, output_files))
+        self.task_queue.put_nowait(ParslTaskToWq(task_id,
+                                                 category,
+                                                 cores,
+                                                 memory,
+                                                 disk,
+                                                 env_pkg,
+                                                 map_file,
+                                                 function_file,
+                                                 result_file,
+                                                 input_files,
+                                                 output_files))
 
         return fu
 
@@ -380,6 +425,8 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         worker_command = 'work_queue_worker'
         if self.project_password_file:
             worker_command += ' --password {}'.format(self.project_password_file)
+        if self.worker_options:
+            worker_command += ' {}'.format(self.worker_options)
         if self.project_name:
             worker_command += ' -M {}'.format(self.project_name)
         else:
@@ -411,8 +458,8 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                              "kwargs": parsl_fn_kwargs}
         else:
             function_info = {"byte code": pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
-                                                             buffer_threshold=1024 * 1024,
-                                                             item_threshold=1024)}
+                                                             buffer_threshold=1024 * 1024)}
+
         with open(fn_path, "wb") as f_out:
             pickle.dump(function_info, f_out)
 
@@ -720,6 +767,13 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
             t.specify_category(task.category)
             if autolabel:
                 q.specify_category_mode(task.category, WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT)
+
+            if task.cores is not None:
+                t.specify_cores(task.cores)
+            if task.memory is not None:
+                t.specify_memory(task.memory)
+            if task.disk is not None:
+                t.specify_disk(task.disk)
 
             # Specify environment variables for the task
             if env is not None:
