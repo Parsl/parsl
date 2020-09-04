@@ -65,7 +65,7 @@ def stage_out_noop(app_fu, inputs=[], _parsl_staging_inhibit=True):
     import time
     import logging
     logger = logging.getLogger(__name__)
-    logger.warning("BENC stage_out_noop")
+    logger.info("stage_out_noop")
     time.sleep(1)
     return None
 
@@ -78,6 +78,6 @@ def stage_in_noop(parent_fut=None, outputs=[], _parsl_staging_inhibit=True):
     import time
     import logging
     logger = logging.getLogger(__name__)
-    logger.warning("BENC stage_in_noop")
+    logger.info("stage_in_noop")
     time.sleep(1)
     return None
