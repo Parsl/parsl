@@ -26,7 +26,7 @@ def touch(filename, inputs=[], outputs=[]):
 
 
 @python_app
-def test_in(file):
+def app_test_in(file):
     # does not need to do anything as this
     # is just for exercising staging
     pass
@@ -76,7 +76,7 @@ def test_regression_stage_in_does_not_stage_out():
     f.write("test")
     f.close()
 
-    test_in(File("test.3")).result()
+    app_test_in(File("test.3")).result()
 
     parsl.dfk().cleanup()
     parsl.clear()
