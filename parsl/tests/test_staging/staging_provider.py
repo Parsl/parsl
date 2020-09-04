@@ -43,7 +43,7 @@ class NoOpTestingFileStaging(Staging, RepresentationMixin):
         logger.info("Creating state-in app for file {}".format(file))
         if self.allow_stage_in:
             stage_in_app = make_stage_in_app(executor=executor, dfk=dm.dfk)
-            app_fut = stage_in_app(outputs=[file], staging_inhibit_output=True, parent_fut=parent_fut)
+            app_fut = stage_in_app(outputs=[file], _parsl_staging_inhibit=True, parent_fut=parent_fut)
             return app_fut._outputs[0]
         else:
             raise RuntimeError("NoOpTestingFileStaging provider configured to prohibit stage in")
@@ -52,7 +52,7 @@ class NoOpTestingFileStaging(Staging, RepresentationMixin):
         logger.info("Creating state-out app for file {}".format(file))
         if self.allow_stage_out:
             stage_out_app = make_stage_out_app(executor=executor, dfk=dm.dfk)
-            return stage_out_app(app_fu, inputs=[file])
+            return stage_out_app(app_fu, inputs=[file], _parsl_staging_inhibit=True)
         else:
             raise RuntimeError("NoOpTestingFileStaging provider configured to prohibit stage out")
 
@@ -61,7 +61,7 @@ def make_stage_out_app(executor, dfk):
     return python_app(executors=[executor], data_flow_kernel=dfk)(stage_out_noop)
 
 
-def stage_out_noop(app_fu, inputs=[]):
+def stage_out_noop(app_fu, inputs=[], _parsl_staging_inhibit=True):
     import time
     import logging
     logger = logging.getLogger(__name__)
@@ -74,7 +74,7 @@ def make_stage_in_app(executor, dfk):
     return python_app(executors=[executor], data_flow_kernel=dfk)(stage_in_noop)
 
 
-def stage_in_noop(parent_fut=None, outputs=[], staging_inhibit_output=True):
+def stage_in_noop(parent_fut=None, outputs=[], _parsl_staging_inhibit=True):
     import time
     import logging
     logger = logging.getLogger(__name__)
