@@ -271,9 +271,7 @@ class DataFlowKernel(object):
             raise ValueError("done callback called, despite future not reporting itself as done")
 
         try:
-            res = future.result()
-            if isinstance(res, RemoteExceptionWrapper):
-                res.reraise()
+            res = self._unwrap_remote_exception_wrapper(future)
 
         except Exception as e:
             logger.debug("Task {} try {} failed".format(task_id, task_record['try_id']))
@@ -326,27 +324,22 @@ class DataFlowKernel(object):
                 task_record['time_returned'] = datetime.datetime.now()
 
                 with task_record['app_fu']._update_lock:
-                    task_record['app_fu'].set_result(future.result())
-            else:  # is a join
-                # now what do we do?
-                # something like a retry, but with updated dependencies? (so States.joining is like States.pending?) waiting on future...
-                inner_future = future.result()
-                # the result of the executor future will be an AppFuture which
-                # will retry/be monitored/etc by parsl as normal as a
-                # separate task. then when that task completes, we want to use
-                # its result as the result for this future.
+                    task_record['app_fu'].set_result(res)
+            else:
+                # This is a join task, and the original task's function code has
+                # completed. That means that the future returned by that code
+                # will be available inside the executor future, so we can add
+                # that as a dependency for monitoring, and the completion
+                # listener.
 
+                inner_future = future.result()
                 task_record['status'] = States.joining
                 task_record['depends'].append(inner_future)
-                # not sure if this is the right way to represent this
-                # dependency, or to add it into depends? it's a different kind
-                # of dependency to a regular DAG dependency though...
-
                 inner_future.add_done_callback(partial(self.handle_join_update, task_id))
 
         self._log_std_streams(task_record)
 
-        # record current state for this task after we're done: maybe a new try, or maybe the old try marked as failed
+        # record current state for this task: maybe a new try, maybe the original try marked as failed, maybe the original try joining
         self._send_task_log_info(task_record)
 
         # it might be that in the course of the update, we've gone back to being
@@ -356,15 +349,18 @@ class DataFlowKernel(object):
 
     def handle_join_update(self, outer_task_id, inner_app_future):
         # Use the result of the inner_app_future as the final result of
-        # the outer app future. no retry handling.
-        # There is duplication with handle_exec_update and maybe they should be merged?
+        # the outer app future.
+
+        # There is no retry handling here: inner apps are responsible for
+        # their own retrying, and joining state is responsible for passing
+        # on whatever the result of that retrying was (if any).
+
+        # TODO: There is duplication with handle_exec_update and maybe they should be merged?
 
         task_record = self.tasks[outer_task_id]
 
         try:
-            res = inner_app_future.result()
-            if isinstance(res, RemoteExceptionWrapper):
-                res.reraise()
+            res = self._unwrap_remote_exception_wrapper(inner_app_future)
 
         except Exception as e:
             logger.debug("Task {} failed due to failure of inner join future".format(outer_task_id))
@@ -389,10 +385,7 @@ class DataFlowKernel(object):
             with task_record['app_fu']._update_lock:
                 task_record['app_fu'].set_result(res)
 
-        if task_record['app_fu'].stdout is not None:
-            logger.info("Standard output for task {} available at {}".format(outer_task_id, task_record['app_fu'].stdout))
-        if task_record['app_fu'].stderr is not None:
-            logger.info("Standard error for task {} available at {}".format(outer_task_id, task_record['app_fu'].stderr))
+        self._log_std_streams(task_record)
 
         self._send_task_log_info(task_record)
 
@@ -424,6 +417,13 @@ class DataFlowKernel(object):
         if self.checkpoint_mode is None:
             self.wipe_task(task_id)
         return
+
+    @staticmethod
+    def _unwrap_remote_exception_wrapper(future: Future) -> Any:
+        result = future.result()
+        if isinstance(result, RemoteExceptionWrapper):
+            result.reraise()
+        return result
 
     def wipe_task(self, task_id):
         """ Remove task with task_id from the internal tasks table
