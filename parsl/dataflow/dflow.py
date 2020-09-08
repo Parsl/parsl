@@ -28,7 +28,7 @@ from parsl.dataflow.flow_control import FlowControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
-from parsl.dataflow.states import FINAL_STATES, States
+from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.providers.provider_base import JobStatus, JobState
@@ -318,31 +318,23 @@ class DataFlowKernel(object):
                     task_record['app_fu'].set_exception(e)
 
         else:
-            if not task_record['join']:
-                if task_record['from_memo']:
-                    task_record['status'] = States.memo_done
-                    self.tasks_memo_completed_count += 1
-                    logger.info("Task {} completed by memoization".format(task_id))
-                else:
-                    task_record['status'] = States.exec_done
-                    self.tasks_completed_count += 1
-                    logger.info("Task {} completed by execution".format(task_id))
-
-                task_record['time_returned'] = datetime.datetime.now()
-
-                with task_record['app_fu']._update_lock:
-                    task_record['app_fu'].set_result(res)
+            if task_record['from_memo']:
+                self._complete_task(task_record, States.memo_done, res)
             else:
-                # This is a join task, and the original task's function code has
-                # completed. That means that the future returned by that code
-                # will be available inside the executor future, so we can add
-                # that as a dependency for monitoring, and the completion
-                # listener.
+                if not task_record['join']:
+                    self._complete_task(task_record, States.exec_done, res)
+                else:
+                    # This is a join task, and the original task's function code has
+                    # completed. That means that the future returned by that code
+                    # will be available inside the executor future, so we can add
+                    # that as a dependency for monitoring, and the completion
+                    # listener.
 
-                inner_future = future.result()
-                task_record['status'] = States.joining
-                task_record['depends'].append(inner_future)
-                inner_future.add_done_callback(partial(self.handle_join_update, task_id))
+                    inner_future = future.result()
+                    assert isinstance(inner_future, Future)
+                    task_record['status'] = States.joining
+                    task_record['depends'].append(inner_future)
+                    inner_future.add_done_callback(partial(self.handle_join_update, task_id))
 
         self._log_std_streams(task_record)
 
@@ -361,8 +353,6 @@ class DataFlowKernel(object):
         # There is no retry handling here: inner apps are responsible for
         # their own retrying, and joining state is responsible for passing
         # on whatever the result of that retrying was (if any).
-
-        # TODO: There is duplication with handle_exec_update and maybe they should be merged?
 
         task_record = self.tasks[outer_task_id]
 
@@ -383,14 +373,7 @@ class DataFlowKernel(object):
                 task_record['app_fu'].set_exception(e)
 
         else:
-            task_record['status'] = States.exec_done
-            self.tasks_completed_count += 1
-
-            logger.info("Task {} completed by execution join".format(outer_task_id))
-            task_record['time_returned'] = datetime.datetime.now()
-
-            with task_record['app_fu']._update_lock:
-                task_record['app_fu'].set_result(res)
+            self._complete_task(task_record, States.exec_done, res)
 
         self._log_std_streams(task_record)
 
@@ -424,6 +407,21 @@ class DataFlowKernel(object):
         if self.checkpoint_mode is None:
             self.wipe_task(task_id)
         return
+
+    def _complete_task(self, task_record, new_state, result):
+        """Set a task into a completed state
+        """
+        assert new_state in FINAL_STATES
+        assert new_state not in FINAL_FAILURE_STATES
+        old_state = task_record['status']
+        task_record['status'] = new_state
+        self.tasks_completed_count += 1  # TODO: need to update the correct counter based on new_state
+
+        logger.info("Task {} completed ({} -> {})".format(task_record['id'], old_state, new_state))
+        task_record['time_returned'] = datetime.datetime.now()
+
+        with task_record['app_fu']._update_lock:
+            task_record['app_fu'].set_result(result)
 
     @staticmethod
     def _unwrap_remote_exception_wrapper(future: Future) -> Any:
@@ -482,6 +480,7 @@ class DataFlowKernel(object):
                         try:
                             exec_fu = self.launch_task(
                                 task_id, task_record['func'], *new_args, **kwargs)
+                            assert isinstance(exec_fu, Future)
                         except Exception as e:
                             # task launched failed somehow. the execution might
                             # have been launched and an exception raised after
@@ -507,16 +506,16 @@ class DataFlowKernel(object):
                                                       task_id))
 
             if exec_fu:
-
+                assert isinstance(exec_fu, Future)
                 try:
                     exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
-                except Exception as e:
+                except Exception:
                     # this exception is ignored here because it is assumed that exception
                     # comes from directly executing handle_exec_update (because exec_fu is
                     # done already). If the callback executes later, then any exception
                     # coming out of the callback will be ignored and not propate anywhere,
                     # so this block attempts to keep the same behaviour here.
-                    logger.error("add_done_callback got an exception {} which will be ignored".format(e))
+                    logger.error("add_done_callback got an exception which will be ignored", exc_info=True)
 
                 task_record['exec_fu'] = exec_fu
 
@@ -547,6 +546,7 @@ class DataFlowKernel(object):
         if memo_fu:
             logger.info("Reusing cached result for task {}".format(task_id))
             self.tasks[task_id]['from_memo'] = True
+            assert isinstance(memo_fu, Future)
             return memo_fu
 
         self.tasks[task_id]['from_memo'] = False
