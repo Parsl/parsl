@@ -51,7 +51,7 @@ Data management
 
     parsl.app.futures.DataFuture
     parsl.data_provider.data_manager.DataManager
-    parsl.data_provider.data_manager.Staging
+    parsl.data_provider.staging.Staging
     parsl.data_provider.files.File
     parsl.data_provider.ftp.FTPSeparateTaskStaging
     parsl.data_provider.ftp.FTPInTaskStaging

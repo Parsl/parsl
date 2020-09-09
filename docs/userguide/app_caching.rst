@@ -1,7 +1,7 @@
 .. _label-appcaching:
 
 App caching
-----------
+-----------
 
 There are many situations in which a program may be re-executed
 over time. Often, large fragments of the program will not have changed 

@@ -32,7 +32,7 @@ Deprecated and Removed features
 New Functionality
 ^^^^^^^^^^^^^^^^^
 
-* `WorkQueueExecutor` introduced in `v0.9.0` is now in `Beta`. `WorkQueueExecutor` is designed as a drop-in replacement for `HighThroughputExecutor`. Here are some key features:
+* `WorkQueueExecutor` introduced in v0.9.0 is now in beta. `WorkQueueExecutor` is designed as a drop-in replacement for `HighThroughputExecutor`. Here are some key features:
   * Support for packaging the python environment and shipping it to the worker side. This mechanism addresses propagating python environments in  grid-like systems that lack shared-filesystems or cloud environments.
   * `WorkQueueExecutor` supports resource function tagging and resource specification
   * Support for resource specification kwarg `issue#1675 <https://github.com/Parsl/parsl/issues/1675>`_
@@ -49,8 +49,8 @@ New Functionality
     parsl.memoization.id_for_memo.
   * Add ability to label some arguments in an app invocation as not memoized using the ignore_for_cache app keyword (PR 1568)
 
-* Special keyword args: `inputs`, `outputs` that are used to specify files no longer support strings
-  and now require `File` objects. For example, the following snippet is no longer supported in `v1.0.0`:
+* Special keyword args: 'inputs', 'outputs' that are used to specify files no longer support strings
+  and now require `File` objects. For example, the following snippet is no longer supported in v1.0.0:
 
    .. code-block:: python
 
@@ -88,23 +88,23 @@ New Functionality
 
 * New launcher: `WrappedLauncher` for launching tasks inside containers.
 
-* `SSHChannel` now supports a `key_filename` kwarg `issue#1639 <https://github.com/Parsl/parsl/issues/1639>`_
+* `SSHChannel` now supports a ``key_filename`` kwarg `issue#1639 <https://github.com/Parsl/parsl/issues/1639>`_
 
 * Newly added Makefile wraps several frequent developer operations such as:
 
-  * Run the test-suite: `make test`
+  * Run the test-suite: ``make test``
 
-  * Install parsl: `make install`
+  * Install parsl: ``make install``
 
-  * Create a virtualenv: `make virtualenv`
+  * Create a virtualenv: ``make virtualenv``
 
-  * Tag release and push to release channels: `make deploy`
+  * Tag release and push to release channels: ``make deploy``
 
 * Several updates to the `HighThroughputExecutor`:
 
   * By default, the `HighThroughputExecutor` will now use heuristics to detect and try all addresses
     when the workers connect back to the parsl master. An address can be configured manually using the
-    `HighThroughputExecutor(address=<address_string>)` kwarg option.
+    ``HighThroughputExecutor(address=<address_string>)`` kwarg option.
 
   * Support for Mac OS. (`pull#1469 <https://github.com/Parsl/parsl/pull/1469>`_, `pull#1738 <https://github.com/Parsl/parsl/pull/1738>`_)
 
@@ -114,9 +114,9 @@ New Functionality
 
 * Support for garbage collection to limit memory consumption in long-lived scripts.
 
-* All cluster providers now use `max_blocks=1` by default `issue#1730 <https://github.com/Parsl/parsl/issues/1730>`_ to avoid over-provisioning.
+* All cluster providers now use ``max_blocks=1`` by default `issue#1730 <https://github.com/Parsl/parsl/issues/1730>`_ to avoid over-provisioning.
 
-* New `JobStatus` class for better monitoring of Jobs submitted to batch schedulers.
+* New ``JobStatus`` class for better monitoring of Jobs submitted to batch schedulers.
 
 Bug Fixes
 ^^^^^^^^^
@@ -156,7 +156,7 @@ Tom Glanzman @TomGlanzman, Levi Naden @LNaden, Logan Ward @WardLT, Matthew Welbo
 New Functionality
 ^^^^^^^^^^^^^^^^^
 
-* Parsl will no longer do automatic keyword substitution in `@bash_app` in favor of deferring to Python's `format method <https://docs.python.org/3.1/library/stdtypes.html#str.format>`_
+* Parsl will no longer do automatic keyword substitution in ``@bash_app`` in favor of deferring to Python's `format method <https://docs.python.org/3.1/library/stdtypes.html#str.format>`_
   and newer `f-strings <https://www.python.org/dev/peps/pep-0498/>`_. For example,
 
      .. code-block:: python
@@ -176,8 +176,8 @@ New Functionality
             return f'cat {inputs[0]} > {outputs[0]}' # <-- OR use f-strings introduced in Python3.6
 
 
-* `@python_app` now takes a `walltime` kwarg to limit the task execution time.
-* New file staging API `parsl.data_provider.staging` to support pluggable
+* ``@python_app`` now takes a ``walltime`` kwarg to limit the task execution time.
+* New file staging API `parsl.data_provider.staging.Staging` to support pluggable
   file staging methods. The methods implemented in 0.8.0 (HTTP(S), FTP and
   Globus) are still present, along with two new methods which perform HTTP(S)
   and FTP staging on worker nodes to support non-shared-filesystem executors

@@ -310,7 +310,7 @@ configuration follows.
 .. note::
    Load-balancing will not work properly with this approach. In future work, a dedicated provider
    that supports load-balancing will be implemented. You can follow progress on this work
-   `here <https://github.com/Parsl/parsl/issues/941>`_.
+   `in issue #941 <https://github.com/Parsl/parsl/issues/941>`_.
 
 
 Amazon Web Services
@@ -383,7 +383,7 @@ CCL (Notre Dame, with Work Queue)
 .. image:: http://ccl.cse.nd.edu/software/workqueue/WorkQueueLogoSmall.png
 
 To utilize Work Queue with Parsl, please install the full CCTools software package within an appropriate Anaconda or Miniconda environment
-(instructions for installing Miniconda can be found `here <https://docs.conda.io/projects/conda/en/latest/user-guide/install/>`_):
+(instructions for installing Miniconda can be found `in the Conda install guide <https://docs.conda.io/projects/conda/en/latest/user-guide/install/>`_):
 
 .. code-block:: bash
 
