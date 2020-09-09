@@ -20,8 +20,10 @@ except (ImportError, NameError, FileNotFoundError):
 
 class KubernetesProvider(ExecutionProvider, RepresentationMixin):
     """ Kubernetes execution provider
+
     Parameters
     ----------
+
     namespace : str
         Kubernetes namespace to create deployments.
     image : str
