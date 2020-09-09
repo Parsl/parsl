@@ -36,11 +36,16 @@ script:
     # run the make targets for the two supported targets.
     - make test
 
+    # documentation checks:
+
+    - cd docs
+    # check we can build the docs without warnings
+    - make SPHINXOPTS=-W html
+
     # check that documentation stubs are up to date, as they are compiled from
     # python code but stored in version control rather than generated as part
     # of doc build. prereqs for this will have been installed because of above
     # pip install .[all] step
-    - cd docs
     - rm -rfv stubs
     - sphinx-autogen reference.rst userguide/*rst devguide/*rst
     # this will both display any diffs in log output, and fail if there is any diff
@@ -71,9 +76,6 @@ script:
     # testing of what is installed
     - pip install .[all]
 
-    # check documentation builds without warning, turning warnings into CI failures
-    - pip install .[docs]
-    - make SPHINXOPTS=-W html
 
     # run simple worker test. this is unlikely to scale due to
     # a stdout/stderr buffering bug in present master.
