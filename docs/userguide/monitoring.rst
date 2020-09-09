@@ -53,8 +53,13 @@ configuration. Here the `MonitoringHub` is specified to use port
 Visualization
 -------------
 
-To view the web dashboard while or after a Parsl program has executed, you
-need to first run the ``parsl-visualize`` utility::
+To run the web dashboard utility ``parsl-visualize`` you first need to install
+its dependencies:
+
+   $ pip install parsl[monitoring]
+
+To view the web dashboard while or after a Parsl program has executed, run
+the ``parsl-visualize`` utility::
 
    $ parsl-visualize
 
