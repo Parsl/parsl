@@ -192,14 +192,14 @@ New Functionality
       from parsl.data_provider.data_manager import default_staging
       storage_access = default_staging + [GlobusStaging(...)]
 
-  `GlobusScheme` in 0.8.0 has been renamed GlobusStaging and moved to a new
+  ``GlobusScheme`` in 0.8.0 has been renamed `GlobusStaging` and moved to a new
   module, parsl.data_provider.globus
 
 * `WorkQueueExecutor`: a new executor that integrates functionality from `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ is now available.
 * New provider to support for Ad-Hoc clusters `parsl.providers.AdHocProvider`
 * New provider added to support LSF on Summit `parsl.providers.LSFProvider`
 * Support for CPU and Memory resource hints to providers `(github) <https://github.com/Parsl/parsl/issues/942>`_.
-* The `logging_level=logging.INFO` in `MonitoringHub` is replaced with `monitoring_debug=False`:
+* The ``logging_level=logging.INFO`` in `MonitoringHub` is replaced with ``monitoring_debug=False``:
 
    .. code-block:: python
 
@@ -223,9 +223,9 @@ New Functionality
 * Several test-suite improvements that have dramatically reduced test duration.
 * Several improvements to the Monitoring interface.
 * Configurable port on `parsl.channels.SSHChannel`.
-* `suppress_failure` now defaults to True.
-* `HighThroughputExecutor` is the recommended executor, and `IPyParallelExecutor` is deprecated.
-* `HighThroughputExecutor` will expose worker information via environment variables: `PARSL_WORKER_RANK` and `PARSL_WORKER_COUNT`
+* ``suppress_failure`` now defaults to True.
+* `HighThroughputExecutor` is the recommended executor, and ``IPyParallelExecutor`` is deprecated.
+* `HighThroughputExecutor` will expose worker information via environment variables: ``PARSL_WORKER_RANK`` and ``PARSL_WORKER_COUNT``
 
 Bug Fixes
 ^^^^^^^^^
@@ -236,7 +236,7 @@ Bug Fixes
 * Globus status processing failure `issue#1317 <https://github.com/Parsl/parsl/issues/1317>`_.
 * Sporadic globus staging error `issue#1170 <https://github.com/Parsl/parsl/issues/1170>`_.
 * RepresentationMixin breaks on classes with no default parameters `issue#1124 <https://github.com/Parsl/parsl/issues/1124>`_.
-* File `localpath` staging conflict `issue#1197 <https://github.com/Parsl/parsl/issues/1197>`_.
+* File ``localpath`` staging conflict `issue#1197 <https://github.com/Parsl/parsl/issues/1197>`_.
 * Fix IndexError when using CondorProvider with strategy enabled `issue#1298 <https://github.com/Parsl/parsl/issues/1298>`_.
 * Improper dependency error handling causes hang `issue#1285 <https://github.com/Parsl/parsl/issues/1285>`_.
 * Memoization/checkpointing fixes for bash apps `issue#1269 <https://github.com/Parsl/parsl/issues/1269>`_.
@@ -245,7 +245,7 @@ Bug Fixes
 * parsl + htex + slurm hangs if slurm command times out, without making further progress `issue#1241 <https://github.com/Parsl/parsl/issues/1241>`_.
 * Fix strategy overallocations `issue#704 <https://github.com/Parsl/parsl/issues/704>`_.
 * max_blocks not respected in SlurmProvider `issue#868 <https://github.com/Parsl/parsl/issues/868>`_.
-* globus staging does not work with a non-default `workdir` `issue#784 <https://github.com/Parsl/parsl/issues/784>`_.
+* globus staging does not work with a non-default ``workdir`` `issue#784 <https://github.com/Parsl/parsl/issues/784>`_.
 * Cumulative CPU time loses time when subprocesses end `issue#1108 <https://github.com/Parsl/parsl/issues/1108>`_.
 * Interchange KeyError due to too many heartbeat missed `issue#1128 <https://github.com/Parsl/parsl/issues/1128>`_.
 
@@ -268,8 +268,8 @@ New Functionality
 ^^^^^^^^^^^^^^^^^
 
 * Monitoring is now integrated into parsl as default functionality.
-* `parsl.AUTO_LOGNAME`: Support for a special `AUTO_LOGNAME` option to auto generate `stdout` and `stderr` file paths.
-* `parsl.Files` no longer behave as strings. This means that operations in apps that treated `parsl.Files` as strings
+* ``parsl.AUTO_LOGNAME``: Support for a special ``AUTO_LOGNAME`` option to auto generate ``stdout`` and ``stderr`` file paths.
+* `File` no longer behaves as a string. This means that operations in apps that treated a `File` as  a string
   will break. For example the following snippet will have to be updated:
 
   .. code-block:: python
@@ -296,7 +296,7 @@ Bug Fixes
 * Viz server explicit binding fix `issue#1023 <https://github.com/Parsl/parsl/issues/1023>`_
 * Fix sqlalchemy version warning `issue#997 <https://github.com/Parsl/parsl/issues/997>`_
 * All workflows are called typeguard `issue#973 <https://github.com/Parsl/parsl/issues/973>`_
-* Fix `ModuleNotFoundError: No module named 'monitoring` `issue#971 <https://github.com/Parsl/parsl/issues/971>`_
+* Fix ``ModuleNotFoundError: No module named 'monitoring'`` `issue#971 <https://github.com/Parsl/parsl/issues/971>`_
 * Fix sqlite3 integrity error `issue#920 <https://github.com/Parsl/parsl/issues/920>`_
 * HTEX interchange check python version mismatch to the micro level `issue#857 <https://github.com/Parsl/parsl/issues/857>`_
 * Clarify warning message when a manager goes missing `issue#698 <https://github.com/Parsl/parsl/issues/698>`_
@@ -311,7 +311,7 @@ Released on Mar 14th, 2019
 New Functionality
 ^^^^^^^^^^^^^^^^^
 
-* `Monitoring`: Support for reporting monitoring data to a local sqlite database is now available.
+* Monitoring: Support for reporting monitoring data to a local sqlite database is now available.
 * Parsl is switching to an opt-in model for anonymous usage tracking. Read more here: :ref:`label-usage-tracking`.
 * `bash_app` now supports specification of write modes for `stdout` and `stderr`.
 * Persistent volume support added to `Kubernetes` provider.
