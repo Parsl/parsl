@@ -313,8 +313,8 @@ New Functionality
 
 * Monitoring: Support for reporting monitoring data to a local sqlite database is now available.
 * Parsl is switching to an opt-in model for anonymous usage tracking. Read more here: :ref:`label-usage-tracking`.
-* `bash_app` now supports specification of write modes for `stdout` and `stderr`.
-* Persistent volume support added to `Kubernetes` provider.
+* `bash_app` now supports specification of write modes for ``stdout`` and ``stderr``.
+* Persistent volume support added to `KubernetesProvider`.
 * Scaling recommendations from study on Bluewaters is now available in the userguide.
 
 
@@ -329,8 +329,8 @@ New Functionality
 * `LowLatencyExecutor`: a new executor designed to address use-cases with tight latency requirements
   such as model serving (Machine Learning), function serving and interactive analyses is now available.
 * New options in `HighThroughputExecutor`:
-     * `suppress_failure`: Enable suppression of worker rejoin errors.
-     * `max_workers`: Limit workers spawned by manager
+     * ``suppress_failure``: Enable suppression of worker rejoin errors.
+     * ``max_workers``: Limit workers spawned by manager
 * Late binding of DFK, allows apps to pick DFK dynamically at call time. This functionality adds safety
   to cases where a new config is loaded and a new DFK is created.
 
@@ -358,8 +358,8 @@ New functionality
 ^^^^^^^^^^^^^^^^^
 
 
-* `HighThroughputExecutor`: a new executor intended to replace the `IPyParallelExecutor` is now available.
-  This new executor addresses several limitations of `IPyParallelExecutor` such as:
+* `HighThroughputExecutor`: a new executor intended to replace the ``IPyParallelExecutor`` is now available.
+  This new executor addresses several limitations of ``IPyParallelExecutor`` such as:
 
   * Scale beyond the ~300 worker limitation of IPP.
   * Multi-processing manager supports execution on all cores of a single node.
@@ -442,7 +442,7 @@ New functionality
   no longer a **provider** option. Instead, the notion of ``tasks_per_node`` is defined via executor specific options,
   for eg:
 
-    * `IPyParallelExecutor` provides ``workers_per_node``
+    * ``IPyParallelExecutor`` provides ``workers_per_node``
     * `HighThroughputExecutor` provides ``cores_per_worker`` to allow for worker launches to be determined based on
       the number of cores on the compute node.
     * `ExtremeScaleExecutor` uses ``ranks_per_node`` to specify the ranks to launch per node.
@@ -503,7 +503,7 @@ Bug fixes (highlights)
 * Inform user checkpointed results are being used `issue#494 <https://github.com/Parsl/parsl/issues/494>`_
 * Fix IPP + python 3.5 failure `issue#490 <https://github.com/Parsl/parsl/issues/490>`_
 * File creation fails if no executor has been loaded `issue#482 <https://github.com/Parsl/parsl/issues/482>`_
-* Make sure tasks in `dep_fail` state are retried `issue#473 <https://github.com/Parsl/parsl/issues/473>`_
+* Make sure tasks in ``dep_fail`` state are retried `issue#473 <https://github.com/Parsl/parsl/issues/473>`_
 * Hard requirement for CMRESHandler `issue#422 <https://github.com/Parsl/parsl/issues/422>`_
 * Log error Globus events to stderr `issue#436 <https://github.com/Parsl/parsl/issues/436>`_
 * Take 'slots' out of logging `issue#411 <https://github.com/Parsl/parsl/issues/411>`_
@@ -642,7 +642,7 @@ Bug Fixes
 
 * Usage tracking with certain missing network causes 20s startup delay. `issue#220 <https://github.com/Parsl/parsl/issues/220>`_
 
-* `task_exit` checkpointing repeatedly truncates checkpoint file during run bug `issue#230 <https://github.com/Parsl/parsl/issues/230>`_
+* ``task_exit`` checkpointing repeatedly truncates checkpoint file during run bug `issue#230 <https://github.com/Parsl/parsl/issues/230>`_
 
 * Checkpoints will not reload from a run that was Ctrl-C'ed `issue#232 <https://github.com/Parsl/parsl/issues/232>`_
 
@@ -650,7 +650,7 @@ Bug Fixes
 
 * Failures not to be checkpointed `issue#239 <https://github.com/Parsl/parsl/issues/239>`_
 
-* Naming inconsitencies with `maxThreads`, `max_threads`, `max_workers` are now resolved `issue#303 <https://github.com/Parsl/parsl/issues/303>`_
+* Naming inconsitencies with ``maxThreads``, ``max_threads``, ``max_workers`` are now resolved `issue#303 <https://github.com/Parsl/parsl/issues/303>`_
 
 * Fatal not a git repository alerts `issue#326 <https://github.com/Parsl/parsl/issues/326>`_
 
@@ -688,9 +688,9 @@ Bug Fixes
 
 * Race condition in task checkpointing `issue#234 <https://github.com/Parsl/parsl/issues/234>`_
 
-* `task_exit` checkpointing repeatedly truncates checkpoint file during run `issue#230 <https://github.com/Parsl/parsl/issues/230>`_
+* ``task_exit`` checkpointing repeatedly truncates checkpoint file during run `issue#230 <https://github.com/Parsl/parsl/issues/230>`_
 
-* Make `dfk.cleanup()` not cause kernel to restart with Jupyter on Mac `issue#212 <https://github.com/Parsl/parsl/issues/212>`_
+* Make ``dfk.cleanup()`` not cause kernel to restart with Jupyter on Mac `issue#212 <https://github.com/Parsl/parsl/issues/212>`_
 
 * Fix automatic IPP controller creation on OS X `issue#206 <https://github.com/Parsl/parsl/issues/206>`_
 
@@ -790,7 +790,7 @@ Bug Fixes
 ^^^^^^^^^
 * Passing Files over IPP broken `issue#200 <https://github.com/Parsl/parsl/issues/200>`_
 
-* Fix `DataFuture.__repr__` for default instantiation `issue#164 <https://github.com/Parsl/parsl/issues/164>`_
+* Fix ``DataFuture.__repr__`` for default instantiation `issue#164 <https://github.com/Parsl/parsl/issues/164>`_
 
 * Results added to appCache before retries exhausted `issue#130 <https://github.com/Parsl/parsl/issues/130>`_
 
@@ -842,7 +842,7 @@ New functionality
 ^^^^^^^^^^^^^^^^^
 
 * Elastic scaling in response to workflow pressure. `issue#46 <https://github.com/Parsl/parsl/issues/46>`_
-  Options `minBlocks`, `maxBlocks`, and `parallelism` now work and controls workflow execution.
+  Options ``minBlocks``, ``maxBlocks``, and ``parallelism`` now work and controls workflow execution.
 
   Documented in: :ref:`label-elasticity`
 
@@ -874,7 +874,7 @@ New functionality
 
    Documented in: :ref:`label-checkpointing`, :ref:`label-appcaching`
 
-* Parsl now creates a new directory under `./runinfo/` with an incrementing number per workflow
+* Parsl now creates a new directory under ``./runinfo/`` with an incrementing number per workflow
   invocation
 
 * Troubleshooting guide and more documentation
@@ -888,8 +888,8 @@ Bug Fixes
 * Missing documentation from libsubmit was added back
   `issue#41 <https://github.com/Parsl/parsl/issues/41>`_
 
-* Fixes for `script_dir` | `scriptDir` inconsistencies `issue#64 <https://github.com/Parsl/parsl/issues/64>`_
-    * We now use `scriptDir` exclusively.
+* Fixes for ``script_dir`` | ``scriptDir`` inconsistencies `issue#64 <https://github.com/Parsl/parsl/issues/64>`_
+    * We now use ``scriptDir`` exclusively.
 
 * Fix for caching not working on jupyter notebooks `issue#90 <https://github.com/Parsl/parsl/issues/90>`_
 
@@ -899,7 +899,7 @@ Bug Fixes
 
 * PEP8 conformance of code and tests with limited exclusions `issue#72 <https://github.com/Parsl/parsl/issues/72>`_
 
-* Doc bug in recommending `max_workers` instead of `maxThreads` `issue#73 <https://github.com/Parsl/parsl/issues/70>`_
+* Doc bug in recommending ``max_workers`` instead of ``maxThreads`` `issue#73 <https://github.com/Parsl/parsl/issues/70>`_
 
 
 
@@ -948,7 +948,7 @@ New functionality
 
 * Execution providers have been restructured to a separate repo: `libsubmit <https://github.com/Parsl/libsubmit>`_
 
-* Bash app styles have changes to return the commandline string rather than be assigned to the special keyword `cmd_line`.
+* Bash app styles have changes to return the commandline string rather than be assigned to the special keyword ``cmd_line``.
   Please refer to `RFC #37 <https://github.com/Parsl/parsl/issues/37>`_ for more details. This is a **non-backward** compatible change.
 
 * Output files from apps are now made available as an attribute of the AppFuture.
