@@ -39,6 +39,7 @@ script:
     # documentation checks:
 
     - cd docs
+    - sudo apt-get install -y pandoc
     # check we can build the docs without warnings
     - make SPHINXOPTS=-W html
 
