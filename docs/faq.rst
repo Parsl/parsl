@@ -154,8 +154,8 @@ style configuration was passed to Parsl v0.6.0+ and requires an upgrade to the c
    parsl.dataflow.error.ConfigurationError: Expected `Config` class, received dictionary. For help,
    see http://parsl.readthedocs.io/en/stable/stubs/parsl.config.Config.html
 
-For more information on how to update your configuration script, please refer to our configuration guide
-:ref:`here <configuration_section>`.
+For more information on how to update your configuration script, please refer to:
+:ref:`configuration-section`.
 
    
 Remote execution fails with SystemError(unknown opcode)
@@ -241,10 +241,10 @@ Parsl hangs
 
 There are a few common situations in which a Parsl script might hang:
 
-1. Circular Dependency in code
+1. Circular Dependency in code:
    If an `app` takes a list as an `input` argument and the future returned
    is added to that list, it creates a circular dependency that cannot be resolved.
-   This situation is described `here <https://github.com/Parsl/parsl/issues/59>`_ in more detail.
+   This situation is described in `issue 59 <https://github.com/Parsl/parsl/issues/59>`_ in more detail.
 
 2. Workers requested are unable to contact the Parsl client due to one or
    more issues listed below:
@@ -293,7 +293,7 @@ for a Jupyter notebook, or
 
     jupyter lab --no-browser --ip=`/sbin/ip route get 8.8.8.8 | awk '{print $NF;exit}'`
 
-for Jupyter lab (recommended). If that doesn't work, see instructions `here <https://techtalktone.wordpress.com/2017/03/28/running-jupyter-notebooks-on-a-remote-server-via-ssh/>`_.
+for Jupyter lab (recommended). If that doesn't work, see `these instructions <https://techtalktone.wordpress.com/2017/03/28/running-jupyter-notebooks-on-a-remote-server-via-ssh/>`_.
 
 How can I sync my conda environment and Jupyter environment?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -302,7 +302,7 @@ Run::
 
    conda install nb_conda
 
-Now all available conda environments (for example, one created by following the instructions `here <quickstart.rst#installation-using-conda>`_) will automatically be added to the list of kernels.
+Now all available conda environments (for example, one created by following the instructions `in the quickstart guide <quickstart.rst#installation-using-conda>`_) will automatically be added to the list of kernels.
 
 .. _label_serialization_error:
 
