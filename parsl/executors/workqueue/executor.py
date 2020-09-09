@@ -712,7 +712,7 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
     if wq_log_dir is not None:
         wq_master_log = os.path.join(wq_log_dir, "master_log")
         wq_trans_log = os.path.join(wq_log_dir, "transaction_log")
-        if full:
+        if full and autolabel:
             wq_resource_log = os.path.join(wq_log_dir, "resource_logs")
             q.enable_monitoring_full(dirname=wq_resource_log)
         q.specify_log(wq_master_log)
