@@ -101,7 +101,9 @@ Stepping through the following question should help formulate a suitable configu
 | Kubernetes cluster  | * `HighThroughputExecutor`    | `KubernetesProvider`   |
 +---------------------+-------------------------------+------------------------+
 
-.. [beta] WorkQueueExecutor is available in ``v1.0.0`` in beta status.
+.. _beta:
+
+WorkQueueExecutor is available in ``v1.0.0`` in beta status.
 
 
 2.  How many nodes will be used to execute the apps? What task durations are necessary to achieve good performance?
