@@ -57,7 +57,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         scaling where as many resources as possible are used; parallelism close to 0 represents
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
     worker_init : str
-        Command to be run first for the workers, such as `python start.py`.
+        Command to be run first for the workers, such as ``python start.py``.
     secret : str
         Docker secret to use to pull images
     pod_name : str

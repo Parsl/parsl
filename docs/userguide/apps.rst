@@ -27,8 +27,8 @@ As a Parsl Python app is executed asynchronously, and potentially remotely, the 
 cannot assume access to shared program state. For example, it must explicitly import any 
 required modules and cannot refer to variables used outside the function. 
 Thus while the following code fragment is valid Python, it is not valid Parsl, 
-as the `bad_double()` function requires the `random` module and refers to the external 
-variable `factor`.
+as the ``bad_double()`` function requires the `random` module and refers to the external 
+variable ``factor``.
 
 .. code-block:: python
 
@@ -57,13 +57,13 @@ The following alternative formulation is valid Parsl.
 
 Python apps may be passed any Python input argument, including primitive types, 
 files, and other complex types that can be serialized (e.g., numpy array,
-scikit-learn model). They may also be passed a Parsl `Future` (see :ref:`label-futures`) 
+scikit-learn model). They may also be passed a Parsl ``Future`` (see :ref:`label-futures`) 
 returned by another Parsl app.
 In this case, Parsl will establish a dependency between the two apps and will not 
 execute the dependent app until all dependent futures are resolved.
 Further detail is provided in :ref:`label-futures`.
 
-A Python app may also act upon files. In order to make Parsl aware of these files, they must be specified by using the ``inputs`` and/or ``outputs`` keyword arguments, as in following code snippet, which copies the contents of one file (`in.txt`) to another (`out.txt`).
+A Python app may also act upon files. In order to make Parsl aware of these files, they must be specified by using the ``inputs`` and/or ``outputs`` keyword arguments, as in following code snippet, which copies the contents of one file (``in.txt``) to another (``out.txt``).
 
 .. code-block:: python
 
@@ -117,8 +117,8 @@ It is defined by a ``@bash_app`` decorator and the Python code that forms the bo
 function must return a fragment of Bash shell code to be executed by Parsl.
 The Bash shell code executed by a Bash app can be arbitrarily long. 
 
-The following code snippet presents an example of a Bash app `echo_hello`,
-which returns the bash command `'echo "Hello World!"'` as a string. 
+The following code snippet presents an example of a Bash app ``echo_hello``,
+which returns the bash command ``'echo "Hello World!"'`` as a string. 
 This string will be executed by Parsl as a Bash command.
 
 .. code-block:: python
@@ -145,9 +145,9 @@ Special Keywords
 In addition to the ``inputs``, ``outputs``, and ``walltime`` keyword arguments
 described above, a Bash app can accept the following keywords:
 
-1. stdout: (string, tuple or `parsl.AUTO_LOGNAME`) The path to a file to which standard output should be redirected. If set to `parsl.AUTO_LOGNAME`, the log will be automatically named according to task id and saved under `task_logs` in the run directory. If set to a tuple `(filename, mode)`, standard output will be redirected to the named file, opened with the specified mode as used by the Python `open <https://docs.python.org/3/library/functions.html#open>`_ function.
-2. stderr: (string or `parsl.AUTO_LOGNAME`) Like stdout, but for the standard error stream.
-3. label: (string) If the app is invoked with `stdout=parsl.AUTO_LOGNAME` or `stderr=parsl.AUTO_LOGNAME`, this arugment will be appended to the log name.
+1. stdout: (string, tuple or ``parsl.AUTO_LOGNAME``) The path to a file to which standard output should be redirected. If set to ``parsl.AUTO_LOGNAME``, the log will be automatically named according to task id and saved under ``task_logs`` in the run directory. If set to a tuple ``(filename, mode)``, standard output will be redirected to the named file, opened with the specified mode as used by the Python `open <https://docs.python.org/3/library/functions.html#open>`_ function.
+2. stderr: (string or ``parsl.AUTO_LOGNAME``) Like stdout, but for the standard error stream.
+3. label: (string) If the app is invoked with ``stdout=parsl.AUTO_LOGNAME`` or ``stderr=parsl.AUTO_LOGNAME``, this arugment will be appended to the log name.
 
 A Bash app can construct the Bash command string to be executed from arguments passed
 to the decorated function.
@@ -169,13 +169,13 @@ Returns
 ^^^^^^^
 
 A Bash app, like a Python app, returns an AppFuture, which can be used to obtain
-task status, determine when the app has completed (e.g., via `future.result()` as in the preceding code fragment), and access exceptions.
+task status, determine when the app has completed (e.g., via ``future.result()`` as in the preceding code fragment), and access exceptions.
 As a Bash app can only return results via files specified via ``outputs``, ``stderr``, or ``stdout``; the value returned by the AppFuture has no meaning.
 
 If the Bash app exits with Unix exit code 0, then the AppFuture will complete. If the Bash app
 exits with any other code, Parsl will treat this as a failure, and the AppFuture will instead
 contain an `BashExitFailure` exception. The Unix exit code can be accessed through the
-`exitcode` attribute of that `BashExitFailure`.
+``exitcode`` attribute of that `BashExitFailure`.
 
 Limitations
 ^^^^^^^^^^^

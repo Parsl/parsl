@@ -132,7 +132,7 @@ WorkQueueExecutor is available in ``v1.0.0`` in beta status.
 .. [*] The maximum number of nodes tested for the `WorkQueueExecutor` is 10,000 GPU cores and
        20,000 CPU cores.
 
-.. warning:: `IPyParallelExecutor` is  deprecated as of Parsl v0.8.0. `HighThroughputExecutor`
+.. warning:: ``IPyParallelExecutor`` is  deprecated as of Parsl v0.8.0. `HighThroughputExecutor`
    is the recommended replacement.
 
 
@@ -335,7 +335,7 @@ ASPIRE 1 (NSCC)
 
 .. image:: https://www.nscc.sg/wp-content/uploads/2017/04/ASPIRE1Img.png
 
-The following snippet shows an example configuration for accessing NSCC's **ASPIRE 1** supercomputer. This example uses the `HighThroughputExecutor` executor and connects to ASPIRE1's PBSPro scheduler. It also shows how `scheduler_options` parameter could be used for scheduling array jobs in PBSPro.
+The following snippet shows an example configuration for accessing NSCC's **ASPIRE 1** supercomputer. This example uses the `HighThroughputExecutor` executor and connects to ASPIRE1's PBSPro scheduler. It also shows how ``scheduler_options`` parameter could be used for scheduling array jobs in PBSPro.
 
 .. literalinclude:: ../../parsl/configs/ASPIRE1.py
 
@@ -458,7 +458,7 @@ Kubernetes Clusters
 
 Kubernetes is an open-source system for container management, such as automating deployment and scaling of containers.
 The snippet below shows an example configuration for deploying pods as workers on a Kubernetes cluster.
-The KubernetesProvider exploits the Python Kubernetes API, which assumes that you have kube config in `~/.kube/config`.
+The KubernetesProvider exploits the Python Kubernetes API, which assumes that you have kube config in ``~/.kube/config``.
 
 .. literalinclude:: ../../parsl/configs/kubernetes.py
 
