@@ -588,6 +588,7 @@ New functionality
 * Implicit Data Staging `issue#281 <https://github.com/Parsl/parsl/issues/281>`_
 
   .. code-block:: python
+
     # create an remote Parsl file
     inp = File('ftp://www.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
 
@@ -702,7 +703,7 @@ Bug Fixes
 * Error for globus transfer failure `issue#162 <https://github.com/Parsl/parsl/issues/162>`_
 
 
-  Parsl 0.5.2
+Parsl 0.5.2
 -----------
 
 Released. June 21st, 2018.

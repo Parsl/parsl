@@ -11,8 +11,9 @@ Steps to release
    * `requirements.txt`
    * `parsl/docs/devguide/changelog.rst`
    * `parsl/README.rst`
-4. Commit and push the changes to github
-3. Run the `tag_and_release.sh` script. This script will verify that
+
+3. Commit and push the changes to github
+4. Run the `tag_and_release.sh` script. This script will verify that
    version number matches the version specified.
 
    .. code:: bash
