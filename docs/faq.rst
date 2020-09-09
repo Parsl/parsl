@@ -41,7 +41,7 @@ How can I make an App dependent on multiple inputs?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You can pass any number of futures in to a single App either as positional arguments
-or as a list of futures via the special keyword `inputs=[]`.
+or as a list of futures via the special keyword ``inputs=[]``.
 The App will wait for all inputs to be satisfied before execution.
 
 
@@ -242,7 +242,7 @@ Parsl hangs
 There are a few common situations in which a Parsl script might hang:
 
 1. Circular Dependency in code:
-   If an `app` takes a list as an `input` argument and the future returned
+   If an ``app`` takes a list as an ``input`` argument and the future returned
    is added to that list, it creates a circular dependency that cannot be resolved.
    This situation is described in `issue 59 <https://github.com/Parsl/parsl/issues/59>`_ in more detail.
 
@@ -309,7 +309,7 @@ Now all available conda environments (for example, one created by following the 
 Addressing SerializationError
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-As of `1.0.0` Parsl will raise a `SerializationError` when it encounters an object that Parsl cannot serialize.
+As of v1.0.0, Parsl will raise a `SerializationError` when it encounters an object that Parsl cannot serialize.
 This applies to objects passed as arguments to an app, as well as objects returned from the app.
 
 Parsl uses `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and pickle to serialize Python objects
@@ -317,7 +317,7 @@ to/from functions. Therefore, Python apps can only use input and output objects 
 cloudpickle or pickle. For example the following data types are known to have issues with serializability :
 
 * Closures
-* Objects of complex classes with no `__dict__` or `__getstate__` methods defined
+* Objects of complex classes with no ``__dict__`` or ``__getstate__`` methods defined
 * System objects such as file descriptors, sockets and locks (e.g threading.Lock)
 
 If Parsl raises a `SerializationError`, first identify what objects are problematic with a quick test:

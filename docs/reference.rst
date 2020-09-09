@@ -133,6 +133,7 @@ Exceptions
     parsl.executors.errors.ControllerError
     parsl.executors.errors.ExecutorError
     parsl.executors.errors.ScalingFailed
+    parsl.executors.errors.SerializationError
     parsl.executors.errors.InsufficientMPIRanks
     parsl.executors.errors.DeserializationError
     parsl.executors.errors.BadMessage
