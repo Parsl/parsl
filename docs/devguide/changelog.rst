@@ -63,7 +63,7 @@ New Functionality
 
    This is the new syntax:
 
-   .. code-block::
+   .. code-block:: python
 
       from parsl import File
 
