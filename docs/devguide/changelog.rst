@@ -771,7 +771,7 @@ New functionality
                  }],
             "globals": {"lazyErrors": True}        }
 
-   .. caution::
+  .. caution::
      This feature is available from Parsl ``v0.5.0`` in an ``experimental`` state.
 
 * Cleaner logging `issue#85 <https://github.com/Parsl/parsl/issues/85>`_

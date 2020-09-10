@@ -103,10 +103,10 @@ as shown below :
     )
 
 
-    .. note::
-       Another possibility that can cause workers not to connect back to Parsl is an incompatibility between
-       the system and the pre-compiled bindings used for pyzmq. As a last resort, you can try:
-       ``pip install --upgrade --no-binary pyzmq pyzmq``, which forces re-compilation.
+.. note::
+   Another possibility that can cause workers not to connect back to Parsl is an incompatibility between
+   the system and the pre-compiled bindings used for pyzmq. As a last resort, you can try:
+   ``pip install --upgrade --no-binary pyzmq pyzmq``, which forces re-compilation.
 
 For the `HighThroughputExecutor` as well as the `ExtremeScaleExecutor`, ``address`` is a keyword argument
 taken at initialization. Here is an example for the `HighThroughputExecutor`:
@@ -147,7 +147,7 @@ The switch to a class based configuration allowed for well-defined options for e
 configured as well as transparency on configuration defaults. The following traceback indicates that the old
 style configuration was passed to Parsl v0.6.0+ and requires an upgrade to the configuration.
 
-.. code-block:: python
+.. code-block::
 
    File "/home/yadu/src/parsl/parsl/dataflow/dflow.py", line 70, in __init__
        'Expected `Config` class, received dictionary. For help, '
