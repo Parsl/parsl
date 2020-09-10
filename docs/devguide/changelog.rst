@@ -74,8 +74,8 @@ New Functionality
       concat = cat(inputs=[File('hello-0.txt')],
                    outputs=[File('hello-1.txt')])
 
-    Since filenames are no longer passed to apps as strings, and the string filepath is required, it can
-    be accessed from the File object using the `filepath` attribute.
+   Since filenames are no longer passed to apps as strings, and the string filepath is required, it can
+   be accessed from the File object using the ``filepath`` attribute.
 
    .. code-block:: python
 
