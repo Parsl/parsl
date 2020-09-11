@@ -30,7 +30,7 @@ class FlowControl(object):
             callback()
 
     This logic ensures that the callbacks are activated with a maximum delay
-    of `interval` for systems with infrequent events as well as systems which would
+    of ``interval`` for systems with infrequent events as well as systems which would
     generate large bursts of events.
 
     Once a callback is triggered, the callback generally runs a strategy

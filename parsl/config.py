@@ -31,7 +31,7 @@ class Config(RepresentationMixin):
         `None`, checkpointing will be disabled. Default is None.
     checkpoint_period : str, optional
         Time interval (in "HH:MM:SS") at which to checkpoint completed tasks. Only has an effect if
-        `checkpoint_mode='periodic'`.
+        ``checkpoint_mode='periodic'``.
     internal_tasks_max_threads : int, optional
         Maximum number of threads to allocate for submit side internal tasks such as some data transfers
         or @joinapps
@@ -53,7 +53,7 @@ class Config(RepresentationMixin):
     initialize_logging : bool, optional
         Make DFK optionally not initialize any logging. Log messages
         will still be passed into the python logging system under the
-        `parsl` logger name, but the logging system will not by default
+        ``parsl`` logger name, but the logging system will not by default
         perform any further log system configuration. Most noticeably,
         it will not create a parsl.log logfile.  The use case for this
         is when parsl is used as a library in a bigger system which

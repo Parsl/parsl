@@ -132,6 +132,7 @@ class GnuParallelLauncher(Launcher):
     machine.
 
     This launcher makes the following assumptions:
+
     - GNU parallel is installed and can be located in $PATH
     - Paswordless SSH login is configured between the controller node and the
       target nodes.

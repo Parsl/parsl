@@ -85,8 +85,8 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
     machines for execution and retrieval.
 
 
-        Parameters
-        ----------
+    Parameters
+    ----------
 
         label: str
             A human readable label for the executor, unique

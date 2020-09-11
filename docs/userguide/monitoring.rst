@@ -8,7 +8,7 @@ programs, down to the individual apps that are executed on remote machines.
 
 The monitoring system records information to an SQLite database while a
 workflow runs. This information can then be visualised in a web dashboard
-using the `parsl-visualize` tool, or queried using SQL using regular
+using the ``parsl-visualize`` tool, or queried using SQL using regular
 SQLite tools.
 
 
