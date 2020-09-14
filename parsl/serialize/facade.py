@@ -37,7 +37,7 @@ class ParslSerializer(object):
     def _list_methods(self):
         return self.methods_for_code, self.methods_for_data
 
-    def pack_apply_message(self, func, args, kwargs, buffer_threshold=1e6):
+    def pack_apply_message(self, func, args, kwargs, buffer_threshold=128 * 1e6):
         """Serialize and pack function and parameters
 
         Parameters
@@ -53,7 +53,8 @@ class ParslSerializer(object):
             Dict containing named parameters
 
         buffer_threshold: Ignored
-            Limits buffer to specified size in bytes. Default is 1e6 bytes.
+            Limits buffer to specified size in bytes. Exceeding this limit would give you
+            a warning in the log. Default is 128MB.
         """
         b_func = self.serialize(func, buffer_threshold=buffer_threshold)
         b_args = self.serialize(args, buffer_threshold=buffer_threshold)
@@ -83,7 +84,6 @@ class ParslSerializer(object):
                     # We attempt a deserialization to make sure both work.
                     method.deserialize(serialized)
                 except Exception as e:
-                    logger.exception(f"Serialization method: {method} did not work")
                     last_exception = e
                     continue
                 else:
@@ -94,7 +94,6 @@ class ParslSerializer(object):
                 try:
                     serialized = method.serialize(obj)
                 except Exception as e:
-                    logger.exception(f"Serialization method {method} did not work")
                     last_exception = e
                     continue
                 else:
@@ -106,7 +105,7 @@ class ParslSerializer(object):
             raise last_exception
 
         if len(serialized) > buffer_threshold:
-            raise TypeError(f"Serialized object is too large and exceeds buffer threshold of {buffer_threshold} bytes")
+            logger.warning(f"Serialized object exceeds buffer threshold of {buffer_threshold} bytes, this could cause overflows")
         return serialized
 
     def deserialize(self, payload):

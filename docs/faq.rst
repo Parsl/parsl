@@ -41,7 +41,7 @@ How can I make an App dependent on multiple inputs?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You can pass any number of futures in to a single App either as positional arguments
-or as a list of futures via the special keyword `inputs=[]`.
+or as a list of futures via the special keyword ``inputs=[]``.
 The App will wait for all inputs to be satisfied before execution.
 
 
@@ -103,10 +103,10 @@ as shown below :
     )
 
 
-    .. note::
-       Another possibility that can cause workers not to connect back to Parsl is an incompatibility between
-       the system and the pre-compiled bindings used for pyzmq. As a last resort, you can try:
-       ``pip install --upgrade --no-binary pyzmq pyzmq``, which forces re-compilation.
+.. note::
+   Another possibility that can cause workers not to connect back to Parsl is an incompatibility between
+   the system and the pre-compiled bindings used for pyzmq. As a last resort, you can try:
+   ``pip install --upgrade --no-binary pyzmq pyzmq``, which forces re-compilation.
 
 For the `HighThroughputExecutor` as well as the `ExtremeScaleExecutor`, ``address`` is a keyword argument
 taken at initialization. Here is an example for the `HighThroughputExecutor`:
@@ -147,15 +147,15 @@ The switch to a class based configuration allowed for well-defined options for e
 configured as well as transparency on configuration defaults. The following traceback indicates that the old
 style configuration was passed to Parsl v0.6.0+ and requires an upgrade to the configuration.
 
-.. code-block:: python
+.. code-block::
 
    File "/home/yadu/src/parsl/parsl/dataflow/dflow.py", line 70, in __init__
        'Expected `Config` class, received dictionary. For help, '
    parsl.dataflow.error.ConfigurationError: Expected `Config` class, received dictionary. For help,
    see http://parsl.readthedocs.io/en/stable/stubs/parsl.config.Config.html
 
-For more information on how to update your configuration script, please refer to our configuration guide
-:ref:`here <configuration_section>`.
+For more information on how to update your configuration script, please refer to:
+:ref:`configuration-section`.
 
    
 Remote execution fails with SystemError(unknown opcode)
@@ -241,10 +241,10 @@ Parsl hangs
 
 There are a few common situations in which a Parsl script might hang:
 
-1. Circular Dependency in code
-   If an `app` takes a list as an `input` argument and the future returned
+1. Circular Dependency in code:
+   If an ``app`` takes a list as an ``input`` argument and the future returned
    is added to that list, it creates a circular dependency that cannot be resolved.
-   This situation is described `here <https://github.com/Parsl/parsl/issues/59>`_ in more detail.
+   This situation is described in `issue 59 <https://github.com/Parsl/parsl/issues/59>`_ in more detail.
 
 2. Workers requested are unable to contact the Parsl client due to one or
    more issues listed below:
@@ -293,7 +293,7 @@ for a Jupyter notebook, or
 
     jupyter lab --no-browser --ip=`/sbin/ip route get 8.8.8.8 | awk '{print $NF;exit}'`
 
-for Jupyter lab (recommended). If that doesn't work, see instructions `here <https://techtalktone.wordpress.com/2017/03/28/running-jupyter-notebooks-on-a-remote-server-via-ssh/>`_.
+for Jupyter lab (recommended). If that doesn't work, see `these instructions <https://techtalktone.wordpress.com/2017/03/28/running-jupyter-notebooks-on-a-remote-server-via-ssh/>`_.
 
 How can I sync my conda environment and Jupyter environment?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -302,14 +302,14 @@ Run::
 
    conda install nb_conda
 
-Now all available conda environments (for example, one created by following the instructions `here <quickstart.rst#installation-using-conda>`_) will automatically be added to the list of kernels.
+Now all available conda environments (for example, one created by following the instructions `in the quickstart guide <quickstart.rst#installation-using-conda>`_) will automatically be added to the list of kernels.
 
 .. _label_serialization_error:
 
 Addressing SerializationError
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-As of `1.0.0` Parsl will raise a `SerializationError` when it encounters an object that Parsl cannot serialize.
+As of v1.0.0, Parsl will raise a `SerializationError` when it encounters an object that Parsl cannot serialize.
 This applies to objects passed as arguments to an app, as well as objects returned from the app.
 
 Parsl uses `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and pickle to serialize Python objects
@@ -317,7 +317,7 @@ to/from functions. Therefore, Python apps can only use input and output objects 
 cloudpickle or pickle. For example the following data types are known to have issues with serializability :
 
 * Closures
-* Objects of complex classes with no `__dict__` or `__getstate__` methods defined
+* Objects of complex classes with no ``__dict__`` or ``__getstate__`` methods defined
 * System objects such as file descriptors, sockets and locks (e.g threading.Lock)
 
 If Parsl raises a `SerializationError`, first identify what objects are problematic with a quick test:

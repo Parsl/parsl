@@ -82,7 +82,7 @@ def python_app(function=None, data_flow_kernel=None, cache=False, executors='all
     ----------
     function : function
         Do not pass this keyword argument directly. This is needed in order to allow for omitted parenthesis,
-        for example, `@python_app` if using all defaults or `@python_app(walltime=120)`. If the
+        for example, ``@python_app`` if using all defaults or ``@python_app(walltime=120)``. If the
         decorator is used alone, function will be the actual function being decorated, whereas if it
         is called with arguments, function will be None. Default is None.
     data_flow_kernel : DataFlowKernel
@@ -115,7 +115,7 @@ def bash_app(function=None, data_flow_kernel=None, cache=False, executors='all',
     ----------
     function : function
         Do not pass this keyword argument directly. This is needed in order to allow for omitted parenthesis,
-        for example, `@bash_app` if using all defaults or `@bash_app(walltime=120)`. If the
+        for example, ``@bash_app`` if using all defaults or ``@bash_app(walltime=120)``. If the
         decorator is used alone, function will be the actual function being decorated, whereas if it
         is called with arguments, function will be None. Default is None.
     data_flow_kernel : DataFlowKernel

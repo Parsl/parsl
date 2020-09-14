@@ -64,7 +64,8 @@ class Manager(object):
                  block_id=None,
                  heartbeat_threshold=120,
                  heartbeat_period=30,
-                 poll_period=10):
+                 poll_period=10,
+                 cpu_affinity=False):
         """
         Parameters
         ----------
@@ -74,9 +75,6 @@ class Manager(object):
         address_probe_timeout : int
              Timeout in seconds for the address probe to detect viable addresses
              to the interchange. Default : 30s
-
-        worker_url : str
-             Worker url on which workers will attempt to connect back
 
         uid : str
              string unique identifier
@@ -116,6 +114,9 @@ class Manager(object):
 
         poll_period : int
              Timeout period used by the manager in milliseconds. Default: 10ms
+
+        cpu_affinity : str
+             Whether each worker should force its affinity to different CPUs
         """
 
         logger.info("Manager started")
@@ -186,6 +187,7 @@ class Manager(object):
         self.heartbeat_period = heartbeat_period
         self.heartbeat_threshold = heartbeat_threshold
         self.poll_period = poll_period
+        self.cpu_affinity = cpu_affinity
 
     def create_reg_message(self):
         """ Creates a registration message to identify the worker to the interchange
@@ -365,7 +367,8 @@ class Manager(object):
                                                                      self.pending_task_queue,
                                                                      self.pending_result_queue,
                                                                      self.ready_worker_queue,
-                                                                     self._tasks_in_progress
+                                                                     self._tasks_in_progress,
+                                                                     self.cpu_affinity
                                                                  ), name="HTEX-Worker-{}".format(worker_id))
                     self.procs[worker_id] = p
                     logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has been restarted".format(worker_id))
@@ -390,7 +393,8 @@ class Manager(object):
                                                              self.pending_task_queue,
                                                              self.pending_result_queue,
                                                              self.ready_worker_queue,
-                                                             self._tasks_in_progress
+                                                             self._tasks_in_progress,
+                                                             self.cpu_affinity
                                                          ), name="HTEX-Worker-{}".format(worker_id))
             p.start()
             self.procs[worker_id] = p
@@ -473,7 +477,7 @@ def execute_task(bufs):
         return user_ns.get(resultname)
 
 
-def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue, tasks_in_progress):
+def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue, tasks_in_progress, cpu_affinity):
     """
 
     Put request token into queue
@@ -495,6 +499,25 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
     logger.info('Worker {} started'.format(worker_id))
     if args.debug:
         logger.debug("Debug logging enabled")
+
+    # If desired, set process affinity
+    if cpu_affinity != "none":
+        # Count the number of cores per worker
+        avail_cores = sorted(os.sched_getaffinity(0))  # Get the available processors
+        cores_per_worker = len(avail_cores) // pool_size
+        assert cores_per_worker > 0, "Affinity does not work if there are more workers than cores"
+
+        # Determine this worker's cores
+        if cpu_affinity == "block":
+            my_cores = avail_cores[cores_per_worker * worker_id:cores_per_worker * (worker_id + 1)]
+        elif cpu_affinity == "alternating":
+            my_cores = avail_cores[worker_id::pool_size]
+        else:
+            raise ValueError("Affinity strategy {} is not supported".format(cpu_affinity))
+
+        # Set the affinity for this worker
+        os.sched_setaffinity(0, my_cores)
+        logger.info("Set worker CPU affinity to {}".format(my_cores))
 
     while True:
         worker_queue.put(worker_id)
@@ -592,6 +615,8 @@ if __name__ == "__main__":
                         help="Poll period used in milliseconds")
     parser.add_argument("-r", "--result_port", required=True,
                         help="REQUIRED: Result port for posting results to the interchange")
+    parser.add_argument("--cpu-affinity", type=str, choices=["none", "block", "alternating"],
+                        help="Whether/how workers should control CPU affinity.")
 
     args = parser.parse_args()
 
@@ -618,6 +643,7 @@ if __name__ == "__main__":
         logger.info("Prefetch capacity: {}".format(args.prefetch_capacity))
         logger.info("Heartbeat threshold: {}".format(args.hb_threshold))
         logger.info("Heartbeat period: {}".format(args.hb_period))
+        logger.info("CPU affinity: {}".format(args.cpu_affinity))
 
         manager = Manager(task_port=args.task_port,
                           result_port=args.result_port,
@@ -631,7 +657,8 @@ if __name__ == "__main__":
                           prefetch_capacity=int(args.prefetch_capacity),
                           heartbeat_threshold=int(args.hb_threshold),
                           heartbeat_period=int(args.hb_period),
-                          poll_period=int(args.poll))
+                          poll_period=int(args.poll),
+                          cpu_affinity=args.cpu_affinity)
         manager.start()
 
     except Exception as e:

@@ -5,14 +5,15 @@ Currently packaging is managed by @annawoodard and @yadudoc.
 
 Steps to release
 
-1. Update the version number in `parsl/parsl/version.py`
+1. Update the version number in ``parsl/parsl/version.py``
 2. Check the following files to confirm new release information
-   * `parsl/setup.py`
-   * `requirements.txt`
-   * `parsl/docs/devguide/changelog.rst`
-   * `parsl/README.rst`
-4. Commit and push the changes to github
-3. Run the `tag_and_release.sh` script. This script will verify that
+   * ``parsl/setup.py``
+   * ``requirements.txt``
+   * ``parsl/docs/devguide/changelog.rst``
+   * ``parsl/README.rst``
+
+3. Commit and push the changes to github
+4. Run the ``tag_and_release.sh`` script. This script will verify that
    version number matches the version specified.
 
    .. code:: bash
@@ -20,7 +21,7 @@ Steps to release
       ./tag_and_release.sh <VERSION_FOR_TAG>
 
 
-Here are the steps that is taken by the `tag_and_release.sh` script:
+Here are the steps that is taken by the ``tag_and_release.sh`` script:
 
 .. code:: bash
 
