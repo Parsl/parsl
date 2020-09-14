@@ -444,7 +444,7 @@ class DatabaseManager:
                                 logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
                             deferred_resource_messages[task_try_id] = msg
                     else:
-                        # Insert to resource table if not first message 
+                        # Insert to resource table if not first message
                         insert_resource_messages.append(msg)
 
                 if insert_resource_messages:
