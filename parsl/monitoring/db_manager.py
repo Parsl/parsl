@@ -433,7 +433,7 @@ class DatabaseManager:
                 for msg in resource_messages:
                     task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
                     if msg['first_msg']:
-
+                        # Update the running time to try table if first message
                         msg['task_status_name'] = States.running.name
                         msg['task_try_time_running'] = msg['timestamp']
 
@@ -444,6 +444,7 @@ class DatabaseManager:
                                 logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
                             deferred_resource_messages[task_try_id] = msg
                     else:
+                        # Insert to resource table if not first message 
                         insert_resource_messages.append(msg)
 
                 if insert_resource_messages:
