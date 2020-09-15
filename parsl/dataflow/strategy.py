@@ -184,7 +184,6 @@ class Strategy(object):
         KWargs:
             - kind (Not used)
         """
-
         for exec_status in status_list:
             executor = exec_status.executor
             label = executor.label
@@ -254,7 +253,7 @@ class Strategy(object):
                         logger.debug("Idle time has reached {}s for executor {}; removing resources".format(
                             self.max_idletime, label)
                         )
-                        executor.scale_in(active_blocks - min_blocks)
+                        exec_status.scale_in(active_blocks - min_blocks)
 
                     else:
                         pass
@@ -277,13 +276,13 @@ class Strategy(object):
                     excess_blocks = math.ceil(float(excess) / (tasks_per_node * nodes_per_block))
                     excess_blocks = min(excess_blocks, max_blocks - active_blocks)
                     logger.debug("Requesting {} more blocks".format(excess_blocks))
-                    executor.scale_out(excess_blocks)
+                    exec_status.scale_out(excess_blocks)
 
             elif active_slots == 0 and active_tasks > 0:
                 # Case 4
                 logger.debug("Requesting single slot")
                 if active_blocks < max_blocks:
-                    executor.scale_out(1)
+                    exec_status.scale_out(1)
 
             # Case 4
             # More slots than tasks
@@ -293,7 +292,7 @@ class Strategy(object):
                     logger.debug("More slots than tasks")
                     if isinstance(executor, HighThroughputExecutor):
                         if active_blocks > min_blocks:
-                            executor.scale_in(1, force=False, max_idletime=self.max_idletime)
+                            exec_status.scale_in(1, force=False, max_idletime=self.max_idletime)
 
                 elif strategy_type == 'simple':
                     # skip for simple strategy
