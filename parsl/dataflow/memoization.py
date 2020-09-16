@@ -62,6 +62,19 @@ def id_for_memo_list(denormalized_list, output_ref=False):
     return serialize(normalized_list)
 
 
+@id_for_memo.register(tuple)
+def id_for_memo_tuple(denormalized_tuple, output_ref=False):
+    if type(denormalized_tuple) != tuple:
+        raise ValueError("id_for_memo_list cannot work on subclasses of tuple")
+
+    normalized_list = []
+
+    for e in denormalized_tuple:
+        normalized_list.append(id_for_memo(e, output_ref=output_ref))
+
+    return serialize_object(normalized_list)[0]
+
+
 @id_for_memo.register(dict)
 def id_for_memo_dict(denormalized_dict, output_ref=False):
     """This normalises the keys and values of the supplied dictionary.
