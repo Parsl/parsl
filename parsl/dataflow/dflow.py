@@ -274,7 +274,7 @@ class DataFlowKernel(object):
                 res.reraise()
 
         except Exception as e:
-            logger.debug("Task {} failed".format(task_id))
+            logger.debug("Task {} try {} failed".format(task_id, task_record['try_id']))
             # We keep the history separately, since the future itself could be
             # tossed.
             task_record['fail_history'].append(str(e))
