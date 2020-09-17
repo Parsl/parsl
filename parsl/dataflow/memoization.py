@@ -65,7 +65,7 @@ def id_for_memo_list(denormalized_list, output_ref=False):
 @id_for_memo.register(tuple)
 def id_for_memo_tuple(denormalized_tuple, output_ref=False):
     if type(denormalized_tuple) != tuple:
-        raise ValueError("id_for_memo_list cannot work on subclasses of tuple")
+        raise ValueError("id_for_memo_tuple cannot work on subclasses of tuple")
 
     normalized_list = []
 
