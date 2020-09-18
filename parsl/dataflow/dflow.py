@@ -163,8 +163,8 @@ class DataFlowKernel(object):
 
         self.executors = {}
         self.data_manager = DataManager(self)
-        data_manager_executor = ThreadPoolExecutor(max_threads=config.data_management_max_threads, label='data_manager')
-        self.add_executors(config.executors + [data_manager_executor])
+        parsl_internal_executor = ThreadPoolExecutor(max_threads=config.internal_tasks_max_threads, label='_parsl_internal')
+        self.add_executors(config.executors + [parsl_internal_executor])
 
         if self.checkpoint_mode == "periodic":
             try:
@@ -374,7 +374,7 @@ class DataFlowKernel(object):
 
     @staticmethod
     def check_staging_inhibited(kwargs):
-        return kwargs.get('staging_inhibit_output', False)
+        return kwargs.get('_parsl_staging_inhibit', False)
 
     def launch_if_ready(self, task_id):
         """
@@ -521,8 +521,9 @@ class DataFlowKernel(object):
         """
 
         # Return if the task is a data management task, rather than doing
-        # data managament on it.
-        if executor == 'data_manager':
+        #  data management on it.
+        if self.check_staging_inhibited(kwargs):
+            logger.debug("Not performing input staging")
             return args, kwargs, func
 
         inputs = kwargs.get('inputs', [])
@@ -569,7 +570,7 @@ class DataFlowKernel(object):
                 if newfunc:
                     func = newfunc
             else:
-                logger.debug("Not performing staging for: {}".format(repr(f)))
+                logger.debug("Not performing output staging for: {}".format(repr(f)))
                 app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
         return func
 
@@ -706,7 +707,7 @@ class DataFlowKernel(object):
         task_id = self.task_count
         self.task_count += 1
         if isinstance(executors, str) and executors.lower() == 'all':
-            choices = list(e for e in self.executors if e != 'data_manager')
+            choices = list(e for e in self.executors if e != '_parsl_internal')
         elif isinstance(executors, list):
             choices = executors
         else:

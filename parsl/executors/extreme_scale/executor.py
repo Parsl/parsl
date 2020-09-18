@@ -36,7 +36,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
       4. ZeroMQ pipes that connect the ExtremeScaleExecutor, Interchange and the mpi_worker_pool
 
     Our design assumes that there is a single MPI application (mpi_worker_pool)
-    running over a `block` and that there might be several such instances.
+    running over a ``block`` and that there might be several such instances.
 
     Here is a diagram
 
@@ -61,7 +61,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
     ----------
 
     provider : :class:`~parsl.providers.provider_base.ExecutionProvider`
-       Provider to access computation resources. Can be any providers in `parsl.providers`:
+       Provider to access computation resources. Can be any providers in ``parsl.providers``:
         :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
         :class:`~parsl.providers.condor.condor.Condor`,
         :class:`~parsl.providers.googlecloud.googlecloud.GoogleCloud`,
@@ -82,7 +82,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
 
     address : string
         An address to connect to the main Parsl process which is reachable from the network in which
-        workers will be running. This can be either a hostname as returned by `hostname` or an
+        workers will be running. This can be either a hostname as returned by ``hostname`` or an
         IP address. Most login nodes on clusters have several network interfaces available, only
         some of which can be reached from the compute nodes.  Some trial and error might be
         necessary to identify what addresses are reachable from compute nodes.

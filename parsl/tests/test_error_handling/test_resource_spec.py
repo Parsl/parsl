@@ -16,7 +16,7 @@ def test_resource(n=2):
     executors = parsl.dfk().executors
     executor = None
     for label in executors:
-        if label != 'data_manager':
+        if label != '_parsl_internal':
             executor = executors[label]
             break
 
