@@ -407,6 +407,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
         category = func.__qualname__ if self.autocategory else 'parsl-default'
+        category = func.__name__ if self.autocategory else 'parsl-default'
         self.task_queue.put_nowait(ParslTaskToWq(task_id,
                                                  category,
                                                  cores,
