@@ -1,6 +1,6 @@
 Parsl - Parallel Scripting Library
 ==================================
-|licence| |build-status| |docs| |NSF-1550588| |NSF-1550476| |NSF-1550562|
+|licence| |build-status| |docs| |NSF-1550588| |NSF-1550476| |NSF-1550562| |NSF-1550528|
 
 Parsl is a parallel programming library for Python. Parsl augments Python with simple, scalable, and flexible constructs for encoding parallelism. Developers annotate Python functions to specify opportunities for concurrent execution. These annotated functions, called apps, may represent pure Python functions or calls to external applications, whether sequential, multicore (e.g., CPU, GPU, accelerator), or multi-node MPI. Parsl further allows these calls to these apps, called tasks, to be connected by shared input/output data (e.g., Python objects or files) via which Parsl can construct a dynamic dependency graph of tasks.
 
@@ -34,6 +34,9 @@ The latest Parsl version available on PyPi is v1.0.0.
    :alt: NSF award info
 .. |NSF-1550562| image:: https://img.shields.io/badge/NSF-1550562-blue.svg
    :target: https://nsf.gov/awardsearch/showAward?AWD_ID=1550562
+   :alt: NSF award info
+.. |NSF-1550528| image:: https://img.shields.io/badge/NSF-1550528-blue.svg
+   :target: https://nsf.gov/awardsearch/showAward?AWD_ID=1550528
    :alt: NSF award info
    
 QuickStart
