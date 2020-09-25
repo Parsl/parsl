@@ -32,6 +32,9 @@ The latest Parsl version available on PyPi is v1.0.0.
 .. |NSF-1550476| image:: https://img.shields.io/badge/NSF-1550476-blue.svg
    :target: https://nsf.gov/awardsearch/showAward?AWD_ID= 1550476
    :alt: NSF award info
+.. |NSF-1550528| image:: https://img.shields.io/badge/NSF-1550528-blue.svg
+   :target: https://nsf.gov/awardsearch/showAward?AWD_ID=1550528
+   :alt: NSF award info
    
 QuickStart
 ==========
