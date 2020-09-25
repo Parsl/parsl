@@ -89,15 +89,12 @@ class UDPRadio:
                                   socket.IPPROTO_UDP)  # UDP
         self.sock.settimeout(self.sock_timeout)
 
-    def send(self, message_type, task_id, message):
+    def send(self, message):
         """ Sends a message to the UDP receiver
 
         Parameter
         ---------
 
-        message_type: monitoring.MessageType (enum)
-        task_id: int
-            Task identifier of the task for which resource monitoring is being reported
         message: object
             Arbitrary pickle-able object that is to be sent
 
@@ -107,7 +104,6 @@ class UDPRadio:
         try:
             buffer = pickle.dumps((self.source_id,   # Identifier for manager
                                    int(time.time()),  # epoch timestamp
-                                   message_type,
                                    message))
         except Exception:
             logging.exception("Exception during pickling", exc_info=True)
@@ -273,7 +269,7 @@ class MonitoringHub(RepresentationMixin):
         while True:
             try:
                 exception_msgs.append(self.exception_q.get(block=False))
-                self.logger.info("Either Hub or DBM process got exception.")
+                self.logger.error("Either Hub or DBM process got exception.")
             except queue.Empty:
                 break
         if self._dfk_channel and self.monitoring_hub_active:
@@ -281,7 +277,7 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.close()
             if exception_msgs:
                 for exception_msg in exception_msgs:
-                    self.logger.info("{} process got exception {}. Terminating all monitoring processes.".format(exception_msg[0], exception_msg[1]))
+                    self.logger.error("{} process got exception {}. Terminating all monitoring processes.".format(exception_msg[0], exception_msg[1]))
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
             self.logger.info("Waiting for Hub to receive all messages and terminate")
@@ -294,6 +290,7 @@ class MonitoringHub(RepresentationMixin):
 
     @staticmethod
     def monitor_wrapper(f,
+                        try_id,
                         task_id,
                         monitoring_hub_url,
                         run_id,
@@ -306,6 +303,7 @@ class MonitoringHub(RepresentationMixin):
             command_q = Queue(maxsize=10)
             p = Process(target=monitor,
                         args=(os.getpid(),
+                              try_id,
                               task_id,
                               monitoring_hub_url,
                               run_id,
@@ -470,6 +468,7 @@ def router_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs,
 
 
 def monitor(pid,
+            try_id,
             task_id,
             monitoring_hub_url,
             run_id,
@@ -513,6 +512,7 @@ def monitor(pid,
             d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
             d["run_id"] = run_id
             d["task_id"] = task_id
+            d["try_id"] = try_id
             d['resource_monitoring_interval'] = sleep_dur
             d['hostname'] = platform.node()
             d['first_msg'] = first_msg
@@ -558,7 +558,7 @@ def monitor(pid,
             d['psutil_process_time_user'] += total_children_user_time
             d['psutil_process_time_system'] += total_children_system_time
             logging.debug("sending message")
-            radio.send(MessageType.TASK_INFO, task_id, d)
+            radio.send(d)
             first_msg = False
         except Exception:
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)

@@ -34,7 +34,7 @@ class AppFuture(Future):
     """An AppFuture wraps a sequence of Futures which may fail and be retried.
 
     The AppFuture will wait for the DFK to provide a result from an appropriate
-    parent future, through `parent_callback`. It will set its result to the
+    parent future, through ``parent_callback``. It will set its result to the
     result of that parent future, if that parent future completes without an
     exception. This result setting should cause .result(), .exception() and done
     callbacks to fire as expected.

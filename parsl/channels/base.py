@@ -3,7 +3,17 @@ from typing import Dict, Tuple, Union, List, Optional
 
 
 class Channel(metaclass=ABCMeta):
-    """ Define the interface to all channels. Channels are usually called via the execute_wait function.
+    """For certain resources such as campus clusters or supercomputers at
+    research laboratories, resource requirements may require authentication.
+    For instance some resources may allow access to their job schedulers from
+    only their login-nodes which require you to authenticate on through SSH,
+    GSI-SSH and sometimes even require two factor authentication. Channels are
+    simple abstractions that enable the ExecutionProvider component to talk to
+    the resource managers of compute facilities. The simplest Channel,
+    *LocalChannel*, simply executes commands locally on a shell, while the
+    *SshChannel* authenticates you to remote systems.
+
+    Channels are usually called via the execute_wait function.
     For channels that execute remotely, a push_file function allows you to copy over files.
 
     .. code:: python

@@ -1,6 +1,6 @@
 """Exceptions raised by Apps."""
 from functools import wraps
-from typing import List, Union, Callable, Any
+from typing import Callable, List, Union, Any, TypeVar
 from types import TracebackType
 
 import dill
@@ -9,7 +9,7 @@ from tblib import Traceback
 
 from six import reraise
 
-from parsl import File
+from parsl.data_provider.files import File
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class BashExitFailure(AppException):
     exitcode(int)
     """
 
-    def __init__(self, reason: str, exitcode: int):
+    def __init__(self, reason: str, exitcode: int) -> None:
         self.reason = reason
         self.exitcode = exitcode
 
@@ -65,7 +65,7 @@ class BashAppNoReturn(AppException):
     reason(string)
     """
 
-    def __init__(self, reason: str):
+    def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
 
@@ -78,7 +78,7 @@ class MissingOutputs(ParslError):
     outputs(List of strings/files..)
     """
 
-    def __init__(self, reason: str, outputs: List[Union[str, File]]):
+    def __init__(self, reason: str, outputs: List[Union[str, File]]) -> None:
         super().__init__(reason, outputs)
         self.reason = reason
         self.outputs = outputs
@@ -96,25 +96,20 @@ class BadStdStreamFile(ParslError):
        exception object
     """
 
-    # TODO: [typing] This exception is never constructed with the first argument as a list. There
-    # are two spots where this constructor is called from:
-    #   - parsl.utils.get_std_fname_mode: invoked as __init__(message, exception)
-    #   - parsl.app.bash.open_std_fd: invoked as __init__(filename, exception)
-    def __init__(self, outputs: List[Union[str, File]], exception: Exception):
-        super().__init__(outputs, exception)
-        self._outputs = outputs
+    def __init__(self, reason: str, exception: Exception) -> None:
+        super().__init__(reason, exception)
+        self._reason = reason
         self._exception = exception
 
     def __repr__(self) -> str:
-        return "FilePath: [{}] Exception: {}".format(self._outputs,
-                                                     self._exception)
+        return "Bad Stream File: {} Exception: {}".format(self._reason, self._exception)
 
     def __str__(self) -> str:
         return self.__repr__()
 
 
 class RemoteExceptionWrapper:
-    def __init__(self, e_type: type, e_value: Exception, traceback: TracebackType):
+    def __init__(self, e_type: type, e_value: Exception, traceback: TracebackType) -> None:
 
         self.e_type = dill.dumps(e_type)
         self.e_value = dill.dumps(e_value)
@@ -136,16 +131,32 @@ class RemoteExceptionWrapper:
         reraise(t, v, tb)
 
 
-# TODO: [typing] I don't think this is correct. We need to constrain the type of the
-# wrapper to that of the wrapped function, whereas this specification makes the wrapper
-# untyped. That said, I found no evidence on the InterTubes that this is possible.
-def wrap_error(func: Callable[..., Any]) -> Callable[..., Any]:
-    @wraps(func)
+R = TypeVar('R')
+
+# There appears to be no solutio to typing this without a mypy plugin.
+# The reason is because wrap_error maps a Callable[[X...], R] to a Callable[[X...], Union[R, R2]].
+# However, there is no provision in Python typing for pattern matching all possible types of
+# callable arguments. This is because Callable[] is, in the infinite wisdom of the typing module,
+# only used for callbacks: "There is no syntax to indicate optional or keyword arguments; such
+# function types are rarely used as callback types.".
+# The alternative supported by the typing module, of saying Callable[..., R] ->
+#   Callable[..., Union[R, R2]] results in no pattern matching between the first and second
+# ellipsis.
+# Yet another bogus solution that was here previously would simply define wrap_error as
+#   wrap_error(T) -> T, where T was a custom TypeVar. This obviously missed the fact that
+# the returned function had its return signature modified.
+# Ultimately, the best choice appears to be Callable[..., R] -> Callable[..., Union[R, ?Exception]],
+#  since it results in the correct type specification for the return value(s) while treating the
+#  arguments as Any.
+
+
+def wrap_error(func: Callable[..., R]) -> Callable[..., Union[R, RemoteExceptionWrapper]]:
+    @wraps(func)  # type: ignore
     def wrapper(*args: object, **kwargs: object) -> Any:
         import sys
         from parsl.app.errors import RemoteExceptionWrapper
         try:
-            return func(*args, **kwargs)
+            return func(*args, **kwargs)  # type: ignore
         except Exception:
             return RemoteExceptionWrapper(*sys.exc_info())
-    return wrapper
+    return wrapper  # type: ignore

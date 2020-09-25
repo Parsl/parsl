@@ -40,9 +40,9 @@ extensions = [
     'sphinx.ext.napoleon'
 ]
 
-url = 'https://raw.githubusercontent.com/Parsl/parsl-tutorial/master/parsl-introduction.ipynb'
+url = 'https://raw.githubusercontent.com/Parsl/parsl-tutorial/master/1-parsl-introduction.ipynb'
 r = requests.get(url)
-with open(os.path.join(os.path.dirname(__file__), 'parsl-introduction.ipynb'), 'wb') as f:
+with open(os.path.join(os.path.dirname(__file__), '1-parsl-introduction.ipynb'), 'wb') as f:
     f.write(r.content)
 
 nbsphinx_execute = 'never'
@@ -76,8 +76,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'Parsl'
-copyright = '2018, University of Chicago'
-author = 'The Parsl Project'
+copyright = '2018--2020, Parsl Project'
+author = 'Parsl Project'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -181,7 +181,7 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = []
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied

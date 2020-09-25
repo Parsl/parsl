@@ -108,6 +108,7 @@ def cat(inputs=[], outputs=[], stdout='cat.out', stderr='cat.err'):
     return 'cat {inputs[0]} > {outputs[0]}'.format(inputs=inputs, outputs=outputs)
 
 
+@pytest.mark.staging_required
 def test_5():
     """Testing behavior of outputs """
     # Call echo specifying the outputfile
