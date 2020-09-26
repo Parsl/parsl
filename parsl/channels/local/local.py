@@ -3,7 +3,7 @@ import logging
 import os
 import shutil
 import subprocess
-from typing import Dict, Optional, List, Union, Mapping, Tuple
+from typing import Dict, Optional, Tuple
 
 from parsl.channels.base import Channel
 from parsl.channels.errors import FileCopyException

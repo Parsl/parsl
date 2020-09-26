@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
-from typing import Dict, Tuple, Union, List, Optional
+from typing import Dict, Tuple, Optional
 
 
 class Channel(metaclass=ABCMeta):

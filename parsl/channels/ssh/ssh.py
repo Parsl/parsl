@@ -1,7 +1,7 @@
 import errno
 import logging
 import os
-from typing import Optional, Dict, Tuple, List, Union
+from typing import Optional, Dict, Tuple
 
 import paramiko
 from parsl.channels.base import Channel
@@ -9,6 +9,7 @@ from parsl.channels.errors import BadHostKeyException, AuthException, SSHExcepti
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
+
 
 class NoAuthSSHClient(paramiko.SSHClient):
     def _auth(self, username: str, *args: object) -> None:
