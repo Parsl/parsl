@@ -66,7 +66,7 @@ class SSHChannel(Channel, RepresentationMixin):
             self.ssh_client = paramiko.SSHClient()
         self.ssh_client.load_system_host_keys(filename=host_keys_filename)
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.sftp_client = None
+        self.sftp_client = None  # type: Optional[paramiko.SFTPClient]
 
         self.envs = {}
         if envs is not None:
