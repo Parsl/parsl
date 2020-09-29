@@ -433,8 +433,10 @@ class MonitoringRouter:
 
             try:
                 msg = self.ic_channel.recv_pyobj()
-                msg[1]['run_id'] = self.run_id
-                msg = (msg[0], msg[1])
+                msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
+                msg[2]['run_id'] = self.run_id
+                msg[2]['timestamp'] = msg[1]
+                msg = (msg[0], msg[2])
                 self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
                 node_msgs.put((msg, 0))
             except zmq.Again:
