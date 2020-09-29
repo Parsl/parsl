@@ -178,12 +178,15 @@ class Database:
         id = Column('id', Integer, nullable=False, primary_key=True, autoincrement=True)
         run_id = Column('run_id', Text, nullable=False)
         hostname = Column('hostname', Text, nullable=False)
+        uid = Column('uid', Text, nullable=False)
+        block_id = Column('block_id', Text, nullable=False)
         cpu_count = Column('cpu_count', Integer, nullable=False)
         total_memory = Column('total_memory', Integer, nullable=False)
         active = Column('active', Boolean, nullable=False)
         worker_count = Column('worker_count', Integer, nullable=False)
         python_v = Column('python_v', Text, nullable=False)
-        reg_time = Column('reg_time', DateTime, nullable=False)
+        timestamp = Column('timestamp', DateTime, nullable=False)
+        last_heartbeat = Column('last_heartbeat', DateTime, nullable=False)
 
     class Resource(Base):
         __tablename__ = RESOURCE
