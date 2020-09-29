@@ -3,6 +3,7 @@ import typeguard
 import logging
 import threading
 import queue
+import datetime
 import pickle
 from multiprocessing import Process, Queue
 from typing import Dict  # noqa F401 (used in type annotation)
@@ -196,6 +197,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         self.working_dir = working_dir
         self.managed = managed
         self.blocks = {}  # type: Dict[str, str]
+        self.block_mapping = {}  # type: Dict[str, str]
         self.cores_per_worker = cores_per_worker
         self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
@@ -223,6 +225,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             self.workers_per_node = 1  # our best guess-- we do not have any provider hints
 
         self._task_counter = 0
+        self.run_id = None  # set to the correct run_id in dfk
         self.hub_address = None  # set to the correct hub address in dfk
         self.hub_port = None  # set to the correct hub port in dfk
         self.worker_ports = worker_ports
@@ -573,6 +576,21 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
     def scaling_enabled(self):
         return self._scaling_enabled
 
+    def create_monitoring_info(self, status):
+        """ Create a msg for monitoring based on the poll status
+
+        """
+        msg = []
+        for job_id, s in status.items():
+            d = {}
+            d['run_id'] = self.run_id
+            d['job_id'] = job_id
+            d['block_id'] = self.block_mapping[job_id]
+            d['status'] = s.status_name
+            d['timestamp'] = datetime.datetime.now()
+            msg.append(d)
+        return msg
+
     def scale_out(self, blocks=1):
         """Scales out the number of blocks by "blocks"
 
@@ -585,7 +603,9 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         for i in range(blocks):
             external_block_id = str(len(self.blocks))
             try:
-                self.blocks[external_block_id] = self._launch_block(external_block_id)
+                internal_block_id = self._launch_block(external_block_id)
+                self.blocks[external_block_id] = internal_block_id
+                self.block_mapping[internal_block_id] = external_block_id
                 r.append(external_block_id)
             except Exception as ex:
                 self._fail_job_async(external_block_id,
@@ -673,6 +693,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         # Now kill via provider
         # Potential issue with multiple threads trying to remove the same blocks
         to_kill = [self.blocks.pop(bid) for bid in block_ids_to_kill if bid in self.blocks]
+        for bid in to_kill:
+            self.block_mapping.pop(bid)
 
         r = self.provider.cancel(to_kill)
 

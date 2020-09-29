@@ -883,6 +883,7 @@ class DataFlowKernel(object):
 
     def add_executors(self, executors):
         for executor in executors:
+            executor.run_id = self.run_id
             executor.run_dir = self.run_dir
             executor.hub_address = self.hub_address
             executor.hub_port = self.hub_interchange_port

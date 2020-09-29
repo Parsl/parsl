@@ -216,9 +216,10 @@ class MonitoringHub(RepresentationMixin):
         self.priority_msgs = Queue()
         self.resource_msgs = Queue()
         self.node_msgs = Queue()
+        self.block_msgs = Queue()
 
         self.router_proc = Process(target=router_starter,
-                                   args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
+                                   args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),
                                    kwargs={"hub_address": self.hub_address,
                                            "hub_port": self.hub_port,
                                            "hub_port_range": self.hub_port_range,
@@ -234,7 +235,7 @@ class MonitoringHub(RepresentationMixin):
         self.router_proc.start()
 
         self.dbm_proc = Process(target=dbm_starter,
-                                args=(self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs,),
+                                args=(self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs,),
                                 kwargs={"logdir": self.logdir,
                                         "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                         "db_url": self.logging_endpoint,
@@ -411,7 +412,7 @@ class MonitoringRouter:
                                                            min_port=hub_port_range[0],
                                                            max_port=hub_port_range[1])
 
-    def start(self, priority_msgs, node_msgs, resource_msgs):
+    def start(self, priority_msgs, node_msgs, block_msgs, resource_msgs):
 
         while True:
             try:
@@ -433,10 +434,16 @@ class MonitoringRouter:
 
             try:
                 msg = self.ic_channel.recv_pyobj()
-                msg[1]['run_id'] = self.run_id
-                msg = (msg[0], msg[1])
+                self.logger.debug("Got ZMQ Message from interchange before handling: {}".format(msg))
+                if msg[0].value == MessageType.NODE_INFO.value:
+                    msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
+                    msg[2]['run_id'] = self.run_id
+                    msg[2]['timestamp'] = msg[1]
+                    msg = (msg[0], msg[2])
+                    node_msgs.put((msg, 0))
+                elif msg[0].value == MessageType.BLOCK_INFO.value:
+                    block_msgs.put((msg, 0))
                 self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
-                node_msgs.put((msg, 0))
             except zmq.Again:
                 pass
 
@@ -454,12 +461,12 @@ class MonitoringRouter:
         self.logger.info("Monitoring router finished")
 
 
-def router_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
+def router_starter(comm_q, exception_q, priority_msgs, node_msgs, block_msgs, resource_msgs, *args, **kwargs):
     router = MonitoringRouter(*args, **kwargs)
     comm_q.put((router.hub_port, router.ic_port))
     router.logger.info("Starting MonitoringRouter in router_starter")
     try:
-        router.start(priority_msgs, node_msgs, resource_msgs)
+        router.start(priority_msgs, node_msgs, block_msgs, resource_msgs)
     except Exception as e:
         router.logger.exception("router.start exception")
         exception_q.put(('Hub', str(e)))

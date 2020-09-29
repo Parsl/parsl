@@ -37,7 +37,7 @@ TRY = 'try'              # Try table includes information about each attempt to 
 STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
-
+BLOCK = 'block'          # Block table include the status for block polling
 
 class Database:
 
@@ -188,6 +188,17 @@ class Database:
         timestamp = Column('timestamp', DateTime, nullable=False)
         last_heartbeat = Column('last_heartbeat', DateTime, nullable=False)
 
+    class Block(Base):
+        __tablename__ = BLOCK
+        run_id = Column('run_id', Text, nullable=False)
+        block_id = Column('block_id', Text, nullable=False)
+        job_id = Column('job_id', Text, nullable=False)
+        timestamp = Column('timestamp', DateTime, nullable=False)
+        status = Column("status", Text, nullable=False)
+        __table_args__ = (
+            PrimaryKeyConstraint('run_id', 'block_id', 'timestamp'),
+        )
+
     class Resource(Base):
         __tablename__ = RESOURCE
         try_id = Column('try_id', Integer, sa.ForeignKey(
@@ -252,9 +263,10 @@ class DatabaseManager:
 
         self.pending_priority_queue = queue.Queue()
         self.pending_node_queue = queue.Queue()
+        self.pending_block_queue = queue.Queue()
         self.pending_resource_queue = queue.Queue()
 
-    def start(self, priority_queue, node_queue, resource_queue) -> None:
+    def start(self, priority_queue, node_queue, block_queue, resource_queue) -> None:
 
         self._kill_event = threading.Event()
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
@@ -272,6 +284,14 @@ class DatabaseManager:
                                                         daemon=True,
                                                         )
         self._node_queue_pull_thread.start()
+
+        self._block_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
+                                                        args=(
+                                                            block_queue, 'block', self._kill_event,),
+                                                        name="Monitoring-migrate-block",
+                                                        daemon=True,
+                                                        )
+        self._block_queue_pull_thread.start()
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
@@ -304,16 +324,20 @@ class DatabaseManager:
 
         while (not self._kill_event.is_set() or
                self.pending_priority_queue.qsize() != 0 or self.pending_resource_queue.qsize() != 0 or
-               priority_queue.qsize() != 0 or resource_queue.qsize() != 0):
+               self.pending_node_queue.qsize() != 0 or self.pending_block_queue.qsize() != 0 or
+               priority_queue.qsize() != 0 or resource_queue.qsize() != 0 or
+               node_queue.qsize() != 0 or block_queue.qsize() != 0):
 
             """
             WORKFLOW_INFO and TASK_INFO messages (i.e. priority messages)
 
             """
-            logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}""".format(
+            logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}, {}, {}, {}, {}""".format(
                               self._kill_event.is_set(),
                               self.pending_priority_queue.qsize() != 0, self.pending_resource_queue.qsize() != 0,
-                              priority_queue.qsize() != 0, resource_queue.qsize() != 0))
+                              self.pending_node_queue.qsize() != 0, self.pending_block_queue.qsize() != 0,
+                              priority_queue.qsize() != 0, resource_queue.qsize() != 0,
+                              node_queue.qsize() != 0, block_queue.qsize() != 0))
 
             # This is the list of resource messages which can be reprocessed as if they
             # had just arrived because the corresponding first task message has been
@@ -421,6 +445,23 @@ class DatabaseManager:
                 self._insert(table=NODE, messages=node_info_messages)
 
             """
+            BLOCK_INFO messages
+
+            """
+            block_info_messages = self._get_messages_in_batch(self.pending_block_queue,
+                                                             interval=self.batching_interval,
+                                                             threshold=self.batching_threshold)
+            if block_info_messages:
+                logger.debug(
+                    "Got {} messages from block queue".format(len(block_info_messages)))
+                # BLOCK INFO MESSAGES are a nested list of dict---each dict refers to the info of a job/block
+                # E.g., [ [{'block_id': 1}], [{'block_id': 2}] ]
+                block_messages_to_insert = []
+                for block_msg in block_info_messages:
+                    block_messages_to_insert.extend(block_msg)
+                self._insert(table=BLOCK, messages=block_messages_to_insert)
+
+            """
             Resource info messages
 
             """
@@ -474,6 +515,8 @@ class DatabaseManager:
                     self.pending_resource_queue.put(x[-1])
                 elif queue_tag == 'node':
                     self.pending_node_queue.put(x[-1])
+                elif queue_tag == "block":
+                    self.pending_block_queue.put(x[-1])
 
     def _update(self, table, columns, messages):
         try:
@@ -542,7 +585,7 @@ class DatabaseManager:
         self._kill_event.set()
 
 
-def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
+def dbm_starter(exception_q, priority_msgs, node_msgs, block_msgs, resource_msgs, *args, **kwargs):
     """Start the database manager process
 
     The DFK should start this function. The args, kwargs match that of the monitoring config
@@ -551,7 +594,7 @@ def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **k
     try:
         dbm = DatabaseManager(*args, **kwargs)
         logger.info("Starting dbm in dbm starter")
-        dbm.start(priority_msgs, node_msgs, resource_msgs)
+        dbm.start(priority_msgs, node_msgs, block_msgs, resource_msgs)
     except KeyboardInterrupt:
         logger.exception("KeyboardInterrupt signal caught")
         dbm.close()
