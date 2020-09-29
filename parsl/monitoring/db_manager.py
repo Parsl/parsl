@@ -39,6 +39,7 @@ RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
 BLOCK = 'block'          # Block table include the status for block polling
 
+
 class Database:
 
     if not _sqlalchemy_enabled:
@@ -286,11 +287,11 @@ class DatabaseManager:
         self._node_queue_pull_thread.start()
 
         self._block_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
-                                                        args=(
-                                                            block_queue, 'block', self._kill_event,),
-                                                        name="Monitoring-migrate-block",
-                                                        daemon=True,
-                                                        )
+                                                         args=(
+                                                             block_queue, 'block', self._kill_event,),
+                                                         name="Monitoring-migrate-block",
+                                                         daemon=True,
+                                                         )
         self._block_queue_pull_thread.start()
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
@@ -449,8 +450,8 @@ class DatabaseManager:
 
             """
             block_info_messages = self._get_messages_in_batch(self.pending_block_queue,
-                                                             interval=self.batching_interval,
-                                                             threshold=self.batching_threshold)
+                                                              interval=self.batching_interval,
+                                                              threshold=self.batching_threshold)
             if block_info_messages:
                 logger.debug(
                     "Got {} messages from block queue".format(len(block_info_messages)))

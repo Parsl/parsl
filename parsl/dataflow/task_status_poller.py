@@ -26,16 +26,16 @@ class PollItem(ExecutorStatus):
 
         # Create a ZMQ channel to send poll status to monitoring
         if isinstance(self._executor, HighThroughputExecutor):
-           self.monitoring_enabled = False
-           hub_address = self._executor.hub_address
-           hub_port = self._executor.hub_port
-           if hub_address and hub_port:
-               context = zmq.Context()
-               self.hub_channel = context.socket(zmq.DEALER)
-               self.hub_channel.set_hwm(0)
-               self.hub_channel.connect("tcp://{}:{}".format(hub_address, hub_port))
-               self.monitoring_enabled = True
-               logger.info("Monitoring enabled on executor and connected to hub")
+            self.monitoring_enabled = False
+            hub_address = self._executor.hub_address
+            hub_port = self._executor.hub_port
+            if hub_address and hub_port:
+                context = zmq.Context()
+                self.hub_channel = context.socket(zmq.DEALER)
+                self.hub_channel.set_hwm(0)
+                self.hub_channel.connect("tcp://{}:{}".format(hub_address, hub_port))
+                self.monitoring_enabled = True
+                logger.info("Monitoring enabled on executor and connected to hub")
 
     def _should_poll(self, now: float):
         return now >= self._last_poll_time + self._interval
@@ -50,7 +50,7 @@ class PollItem(ExecutorStatus):
                 if self.monitoring_enabled:
                     msg = self._executor.create_monitoring_info(self._status)
                     logger.info("Sending message {} to hub from executor".format(msg))
-                    self.hub_channel.send_pyobj((MessageType.BLOCK_INFO, msg)) 
+                    self.hub_channel.send_pyobj((MessageType.BLOCK_INFO, msg))
 
     @property
     def status(self) -> Dict[object, JobStatus]:
