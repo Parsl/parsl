@@ -455,8 +455,8 @@ class DatabaseManager:
             if block_info_messages:
                 logger.debug(
                     "Got {} messages from block queue".format(len(block_info_messages)))
-                # BLOCK INFO MESSAGES are a nested list of dict---each dict refers to the info of a job/block
-                # E.g., [ [{'block_id': 1}], [{'block_id': 2}] ]
+                # block_info_messages is possibly a nested list of dict (at different polling times)
+                # Each dict refers to the info of a job/block at one polling time
                 block_messages_to_insert = []
                 for block_msg in block_info_messages:
                     block_messages_to_insert.extend(block_msg)
