@@ -329,19 +329,21 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
             acceptable_resource_types = ['cores', 'memory', 'disk']
             keys = list(resource_specification.keys())
-            if len(keys) != 3:
-                logger.error("Task resource specification requires "
-                             "three resources to be specified simultaneously: cores, memory, and disk")
-                raise ExecutorError(self, "Task resource specification requires "
-                                          "three resources to be specified simultaneously: cores, memory, and disk, "
-                                          "and only takes these three resource types.")
-
             if not all(k.lower() in acceptable_resource_types for k in keys):
                 logger.error("Task resource specification only accepts "
                              "three types of resources: cores, memory, and disk")
-                raise ExecutorError(self, "Task resource specification requires "
-                                          "three resources to be specified simultaneously: cores, memory, and disk, "
-                                          "and only takes these three resource types.")
+                raise ExecutorError(self, "Task resource specification only accepts "
+                                          "three types of resources: cores, memory, and disk")
+
+            if len(keys) != 3:
+                if not self.autolabel:
+                    logger.error("Rnning with `autolabel=False`. In this mode, "
+                                 "task resource specification requires "
+                                 "three resources to be specified simultaneously: cores, memory, and disk")
+                    raise ExecutorError(self, "Task resource specification requires "
+                                              "three resources to be specified simultaneously: cores, memory, and disk, "
+                                              "and only takes these three resource types, when running with `autolabel=False`. "
+                                              "Try setting autolabel=True if you are unsure of the resource usage")
 
             for k in keys:
                 if k.lower() == 'cores':
