@@ -267,7 +267,7 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.send_pyobj((mtype, message))
         except zmq.Again:
             self.logger.exception(
-                "[MONITORING] The monitoring message sent from DFK to Hub timeouts after {}ms".format(self.dfk_channel_timeout))
+                "The monitoring message sent from DFK to Hub timed-out after {}ms".format(self.dfk_channel_timeout))
 
     def close(self) -> None:
         if self.logger:
@@ -276,7 +276,7 @@ class MonitoringHub(RepresentationMixin):
         while True:
             try:
                 exception_msgs.append(self.exception_q.get(block=False))
-                self.logger.error("Either Hub or DBM process got exception.")
+                self.logger.error("There was a queued exception (Either Hub or DBM process got exception much earlier?)")
             except queue.Empty:
                 break
         if self._dfk_channel and self.monitoring_hub_active:
@@ -284,7 +284,8 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.close()
             if exception_msgs:
                 for exception_msg in exception_msgs:
-                    self.logger.error("{} process got exception {}. Terminating all monitoring processes.".format(exception_msg[0], exception_msg[1]))
+                    self.logger.error("{} process delivered an exception: {}. Terminating all monitoring processes immediately.".format(exception_msg[0],
+                                      exception_msg[1]))
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
             self.logger.info("Waiting for Hub to receive all messages and terminate")
@@ -429,48 +430,59 @@ class MonitoringRouter:
               priority_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
               node_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
               resource_msgs: "queue.Queue[Tuple[Dict[str, Any], str]]") -> None:
+        try:
+            while True:
+                self.logger.info("MONLOOP")
+                try:
+                    data, addr = self.sock.recvfrom(2048)
+                    msg = pickle.loads(data)
+                    resource_msgs.put((msg, addr))
+                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
+                except socket.timeout:
+                    pass
 
-        while True:
-            try:
-                data, addr = self.sock.recvfrom(2048)
-                msg = pickle.loads(data)
-                resource_msgs.put((msg, addr))
-                self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
-            except socket.timeout:
-                pass
+                try:
+                    msg = self.dfk_channel.recv_pyobj()
+                    self.logger.info("Got ZMQ Message from DFK: {}".format(msg))
+                    priority_msgs.put((msg, 0))
+                    if msg[0].value == MessageType.WORKFLOW_INFO.value and 'python_version' not in msg[1]:
+                        break
+                except zmq.Again:
+                    pass
+                except Exception:
+                    # This will catch malformed messages. What happens if the
+                    # dfk_channel is broken in such a way that it always raises
+                    # an exception? Looping on this would maybe be the wrong
+                    # thing to do.
+                    self.logger.exception("Failure processing a DFK ZMQ message")
 
-            try:
-                msg = self.dfk_channel.recv_pyobj()
-                self.logger.debug("Got ZMQ Message from DFK: {}".format(msg))
-                priority_msgs.put((msg, 0))
-                if msg[0].value == MessageType.WORKFLOW_INFO.value and 'python_version' not in msg[1]:
-                    break
-            except zmq.Again:
-                pass
+                try:
+                    msg = self.ic_channel.recv_pyobj()
+                    msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
+                    msg[2]['run_id'] = self.run_id
+                    msg[2]['timestamp'] = msg[1]
+                    msg = (msg[0], msg[2])
+                    self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
+                    node_msgs.put((msg, 0))
+                except zmq.Again:
+                    pass
 
-            try:
-                msg = self.ic_channel.recv_pyobj()
-                msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
-                msg[2]['run_id'] = self.run_id
-                msg[2]['timestamp'] = msg[1]
-                msg = (msg[0], msg[2])
-                self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
-                node_msgs.put((msg, 0))
-            except zmq.Again:
-                pass
+            self.logger.info("Monitoring router draining")
+            last_msg_received_time = time.time()
+            while time.time() - last_msg_received_time < self.atexit_timeout:
+                self.logger.info("Drain loop")
+                try:
+                    data, addr = self.sock.recvfrom(2048)
+                    msg = pickle.loads(data)
+                    resource_msgs.put((msg, addr))
+                    last_msg_received_time = time.time()
+                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
+                except socket.timeout:
+                    pass
 
-        last_msg_received_time = time.time()
-        while time.time() - last_msg_received_time < self.atexit_timeout:
-            try:
-                data, addr = self.sock.recvfrom(2048)
-                msg = pickle.loads(data)
-                resource_msgs.put((msg, addr))
-                last_msg_received_time = time.time()
-                self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
-            except socket.timeout:
-                pass
-
-        self.logger.info("Monitoring router finished")
+            self.logger.info("Monitoring router finishing normally")
+        finally:
+            self.logger.info("Monitoring router finished")
 
 
 def router_starter(comm_q: "queue.Queue[Tuple[int, int]]",
