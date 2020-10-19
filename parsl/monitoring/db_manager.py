@@ -63,7 +63,10 @@ class Database:
         self.eng = sa.create_engine(url)
         self.meta = self.Base.metadata
 
+        # TODO: I'm seeing database lock errors happening here with my db lock test.
+        # Is the right behaviour to retry a few times?
         self.meta.create_all(self.eng)
+
         self.meta.reflect(bind=self.eng)
 
         Session = sessionmaker(bind=self.eng)
@@ -538,7 +541,17 @@ class DatabaseManager:
 
     def _update(self, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
         try:
-            self.db.update(table=table, columns=columns, messages=messages)
+            done = False
+            while not done:
+                try:
+                    self.db.update(table=table, columns=columns, messages=messages)
+                    done = True
+                except sa.exc.OperationalError as e:
+                    # hoping that this is a database locked error during _update, not some other problem
+                    logger.warning("Got an sqlite3 operational error. Ignoring and retying on the assumption that it is recoverable: {}".format(e))
+                    self.db.rollback()
+                    time.sleep(1)  # hard coded 1s wait - this should be configurable or exponential backoff or something
+
         except KeyboardInterrupt:
             logger.exception("KeyboardInterrupt when trying to update Table {}".format(table))
             try:
@@ -555,7 +568,16 @@ class DatabaseManager:
 
     def _insert(self, table: str, messages: List[Dict[str, Any]]) -> None:
         try:
-            self.db.insert(table=table, messages=messages)
+            done = False
+            while not done:
+                try:
+                    self.db.insert(table=table, messages=messages)
+                    done = True
+                except sa.exc.OperationalError as e:
+                    # hoping that this is a database locked error during _update, not some other problem
+                    logger.warning("Got an sqlite3 operational error. Ignoring and retying on the assumption that it is recoverable: {}".format(e))
+                    self.db.rollback()
+                    time.sleep(1)  # hard coded 1s wait - this should be configurable or exponential backoff or something
         except KeyboardInterrupt:
             logger.exception("KeyboardInterrupt when trying to update Table {}".format(table))
             try:
