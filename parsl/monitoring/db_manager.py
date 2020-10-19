@@ -481,7 +481,17 @@ class DatabaseManager:
 
     def _update(self, table, columns, messages):
         try:
-            self.db.update(table=table, columns=columns, messages=messages)
+            done = False
+            while not done:
+                try:
+                    self.db.update(table=table, columns=columns, messages=messages)
+                    done = True
+                except sa.exc.OperationalError as e:
+                # hoping that this is a database locked error during _update, not some other problem
+                    logger.warning("Got an sqlite3 operational error. Ignoring and retying on the assumption that it is recoverable: {}".format(e))
+                    self.db.rollback()
+                    time.sleep(1) # hard coded 1s wait - this should be configurable or exponential backoff or something
+                     
         except KeyboardInterrupt:
             logger.exception("KeyboardInterrupt when trying to update Table {}".format(table))
             try:
@@ -498,7 +508,16 @@ class DatabaseManager:
 
     def _insert(self, table, messages):
         try:
-            self.db.insert(table=table, messages=messages)
+            done = False
+            while not done:
+                try:
+                    self.db.insert(table=table, messages=messages)
+                    done = True
+                except sa.exc.OperationalError as e:
+                # hoping that this is a database locked error during _update, not some other problem
+                    logger.warning("Got an sqlite3 operational error. Ignoring and retying on the assumption that it is recoverable: {}".format(e))
+                    self.db.rollback()
+                    time.sleep(1) # hard coded 1s wait - this should be configurable or exponential backoff or something
         except KeyboardInterrupt:
             logger.exception("KeyboardInterrupt when trying to update Table {}".format(table))
             try:
