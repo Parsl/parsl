@@ -531,7 +531,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         os.makedirs(pkg_dir, exist_ok=True)
         with tempfile.NamedTemporaryFile(suffix='.yaml') as spec:
             logger.info("Analyzing dependencies of %s", fn_name)
-            analyze_cmdline = [package_analyze_script, exec_parsl_function.__file__,'-', spec.name]
+            analyze_cmdline = [package_analyze_script, exec_parsl_function.__file__, '-', spec.name]
             for p in extra_pkgs:
                 analyze_cmdline += ["--extra-pkg", p]
             subprocess.run(analyze_cmdline, input=source_code, check=True)
