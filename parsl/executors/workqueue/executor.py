@@ -513,7 +513,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
     def _prepare_package(self, fn):
         fn_id = id(fn)
-        fn_name = fn.__qualname__
+        fn_name = fn.__name__
         if fn_id in self.cached_envs:
             logger.debug("Skipping analysis of %s, previously got %s", fn_name, self.cached_envs[fn_id])
             return self.cached_envs[fn_id]
