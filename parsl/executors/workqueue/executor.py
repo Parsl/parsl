@@ -522,7 +522,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         os.makedirs(pkg_dir, exist_ok=True)
         with tempfile.NamedTemporaryFile(suffix='.yaml') as spec:
             logger.info("Analyzing dependencies of %s", fn_name)
-            subprocess.run([package_analyze_script, '-', spec.name], input=source_code, check=True)
+            subprocess.run([package_analyze_script, exec_parsl_function.__file__,'-', spec.name], input=source_code, check=True)
             with open(spec.name, mode='rb') as f:
                 spec_hash = hashlib.sha256(f.read()).hexdigest()
                 logger.debug("Spec hash for %s is %s", fn_name, spec_hash)
