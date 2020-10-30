@@ -192,7 +192,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  pack: bool = False,
                  autolabel: bool = False,
                  autolabel_window: int = 1,
-                 autocategory: bool = False,
+                 autocategory: bool = True,
                  init_command: str = "",
                  worker_options: str = "",
                  full_debug: bool = True):
