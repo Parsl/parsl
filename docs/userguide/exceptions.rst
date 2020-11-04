@@ -93,7 +93,7 @@ case, task C fails and therefore tasks E and F that depend on results from
 C cannot be executed; however, Parsl will continue to execute tasks B and D
 as they are unaffected by task C's failure.
 
-.. code-block:: python
+.. code-block::
 
     Here's a workflow graph, where
          (X)  is runnable,

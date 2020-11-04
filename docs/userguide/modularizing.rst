@@ -1,4 +1,4 @@
-.. _codebases
+.. _codebases:
 
 Structuring Parsl programs
 --------------------------

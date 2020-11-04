@@ -37,9 +37,9 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
     One of 3 methods are required to authenticate: keyfile, profile or environment
     variables. If neither keyfile or profile are set, the following environment
-    variables must be set: `AWS_ACCESS_KEY_ID` (the access key for your AWS account),
-    `AWS_SECRET_ACCESS_KEY` (the secret key for your AWS account), and (optionaly) the
-    `AWS_SESSION_TOKEN` (the session key for your AWS account).
+    variables must be set: ``AWS_ACCESS_KEY_ID`` (the access key for your AWS account),
+    ``AWS_SECRET_ACCESS_KEY`` (the secret key for your AWS account), and (optionaly) the
+    ``AWS_SESSION_TOKEN`` (the session key for your AWS account).
 
     Parameters
     ----------
@@ -87,7 +87,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         :class:`~parsl.launchers.SrunLauncher`, or
         :class:`~parsl.launchers.AprunLauncher`
     linger : Bool
-        When set to True, the workers will not `halt`. The user is responsible for shutting
+        When set to True, the workers will not ``halt``. The user is responsible for shutting
         down the node.
     """
 

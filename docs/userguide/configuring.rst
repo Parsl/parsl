@@ -101,7 +101,9 @@ Stepping through the following question should help formulate a suitable configu
 | Kubernetes cluster  | * `HighThroughputExecutor`    | `KubernetesProvider`   |
 +---------------------+-------------------------------+------------------------+
 
-.. [beta] WorkQueueExecutor is available in ``v1.0.0`` in beta status.
+.. _beta:
+
+WorkQueueExecutor is available in ``v1.0.0`` in beta status.
 
 
 2.  How many nodes will be used to execute the apps? What task durations are necessary to achieve good performance?
@@ -130,7 +132,7 @@ Stepping through the following question should help formulate a suitable configu
 .. [*] The maximum number of nodes tested for the `WorkQueueExecutor` is 10,000 GPU cores and
        20,000 CPU cores.
 
-.. warning:: `IPyParallelExecutor` is  deprecated as of Parsl v0.8.0. `HighThroughputExecutor`
+.. warning:: ``IPyParallelExecutor`` is  deprecated as of Parsl v0.8.0. `HighThroughputExecutor`
    is the recommended replacement.
 
 
@@ -197,16 +199,28 @@ By default, Parsl only runs one app at a time on each worker node.
 However, it is possible to specify the requirements for a particular app,
 and Work Queue will automatically run as many parallel instances as possible on each node.
 Work Queue automatically detects the amount of cores, memory, and other resources available on each execution node.
-To activate this feature, add resource specifications to your apps:
+To activate this feature, add a resource specification to your apps. A resource specification is a dictionary with
+the following three (case-insensitive) keys: ``cores`` (an integer corresponding to the number of cores required by the task),
+``memory`` (an integer corresponding to the task's memory requirement in MB), and ``disk`` (an integer corresponding to
+the task's disk requirement in MB), passed to an app via the special keyword argument ``parsl_resource_specification``. The specification can be set for all app invocations via a default, for example:
 
    .. code-block:: python
 
       @python_app
-      def compute(x, parsl_resource_specification={'cores': 1, 'memory': '1GiB', 'disk': '1GiB'}):
+      def compute(x, parsl_resource_specification={'cores': 1, 'memory': 1000, 'disk': 1000}):
           return x*2
 
-This special keyword argument will inform Work Queue about the resources this app requires.
+
+or updated when the app is invocated:
+
+   .. code-block:: python
+
+      spec = {'cores': 1, 'memory': 500, 'disk': 500}
+      future = compute(x, parsl_resource_specification=spec)
+
+This ``parsl_resource_specification`` special keyword argument will inform Work Queue about the resources this app requires.
 When placing instances of ``compute(x)``, Work Queue will run as many parallel instances as possible based on each worker node's available resources.
+
 If an app's resource requirements are not known in advance,
 Work Queue has an auto-labeling feature that measures the actual resource usage of your apps and automatically chooses resource labels for you.
 With auto-labeling, it is not necessary to provide ``parsl_resource_specification``;
@@ -296,7 +310,7 @@ configuration follows.
 .. note::
    Load-balancing will not work properly with this approach. In future work, a dedicated provider
    that supports load-balancing will be implemented. You can follow progress on this work
-   `here <https://github.com/Parsl/parsl/issues/941>`_.
+   `in issue #941 <https://github.com/Parsl/parsl/issues/941>`_.
 
 
 Amazon Web Services
@@ -321,7 +335,7 @@ ASPIRE 1 (NSCC)
 
 .. image:: https://www.nscc.sg/wp-content/uploads/2017/04/ASPIRE1Img.png
 
-The following snippet shows an example configuration for accessing NSCC's **ASPIRE 1** supercomputer. This example uses the `HighThroughputExecutor` executor and connects to ASPIRE1's PBSPro scheduler. It also shows how `scheduler_options` parameter could be used for scheduling array jobs in PBSPro.
+The following snippet shows an example configuration for accessing NSCC's **ASPIRE 1** supercomputer. This example uses the `HighThroughputExecutor` executor and connects to ASPIRE1's PBSPro scheduler. It also shows how ``scheduler_options`` parameter could be used for scheduling array jobs in PBSPro.
 
 .. literalinclude:: ../../parsl/configs/ASPIRE1.py
 
@@ -336,6 +350,19 @@ The configuration assumes the user is running on a login node and uses the `Torq
 with the scheduler, and uses the `AprunLauncher` to launch workers.
 
 .. literalinclude:: ../../parsl/configs/bluewaters.py
+
+
+Bridges (PSC)
+-------------
+
+.. image:: https://insidehpc.com/wp-content/uploads/2016/08/Bridges_FB1b.jpg
+
+The following snippet shows an example configuration for executing on the Bridges supercomputer at the Pittsburgh Supercomputing Center.
+The configuration assumes the user is running on a login node and uses the `SlurmProvider` to interface
+with the scheduler, and uses the `SrunLauncher` to launch workers.
+
+.. literalinclude:: ../../parsl/configs/bridges.py
+
 
 
 CC-IN2P3
@@ -356,13 +383,13 @@ CCL (Notre Dame, with Work Queue)
 .. image:: http://ccl.cse.nd.edu/software/workqueue/WorkQueueLogoSmall.png
 
 To utilize Work Queue with Parsl, please install the full CCTools software package within an appropriate Anaconda or Miniconda environment
-(instructions for installing Miniconda can be found `here <https://docs.conda.io/projects/conda/en/latest/user-guide/install/>`_):
+(instructions for installing Miniconda can be found `in the Conda install guide <https://docs.conda.io/projects/conda/en/latest/user-guide/install/>`_):
 
 .. code-block:: bash
 
    $ conda create -y --name <environment> python=<version> conda-pack
    $ conda activate <environment>
-   $ conda install -y -c conda-forge cctools parsl
+   $ conda install -y -c conda-forge ndcctools parsl
 
 This creates a Conda environment on your machine with all the necessary tools and setup needed to utilize Work Queue with the Parsl library.
 
@@ -431,7 +458,7 @@ Kubernetes Clusters
 
 Kubernetes is an open-source system for container management, such as automating deployment and scaling of containers.
 The snippet below shows an example configuration for deploying pods as workers on a Kubernetes cluster.
-The KubernetesProvider exploits the Python Kubernetes API, which assumes that you have kube config in `~/.kube/config`.
+The KubernetesProvider exploits the Python Kubernetes API, which assumes that you have kube config in ``~/.kube/config``.
 
 .. literalinclude:: ../../parsl/configs/kubernetes.py
 

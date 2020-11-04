@@ -19,11 +19,23 @@ def format_time(value):
         return str(datetime.timedelta(seconds=round(value)))
     elif isinstance(value, datetime.datetime):
         return value.replace(microsecond=0)
+    elif isinstance(value, datetime.timedelta):
+        rounded_timedelta = datetime.timedelta(days=value.days, seconds=value.seconds)
+        return rounded_timedelta
     else:
         return "Incorrect time format found (neither float nor datetime.datetime object)"
 
 
+def format_duration(value):
+    (start, end) = value
+    if start and end:
+        return format_time(end - start)
+    else:
+        return "-"
+
+
 app.jinja_env.filters['timeformat'] = format_time
+app.jinja_env.filters['durationformat'] = format_duration
 
 
 @app.route('/')
@@ -45,17 +57,21 @@ def workflow(workflow_id):
 
     df_status = pd.read_sql_query(
         "SELECT run_id, task_id, task_status_name, timestamp FROM status WHERE run_id='%s'" % workflow_id, db.engine)
-    df_task = pd.read_sql_query("""SELECT task_id, task_func_name, task_time_submitted,
-                                task_time_returned, task_time_running from task
+    df_task = pd.read_sql_query("""SELECT task_id, task_func_name,
+                                task_time_returned from task
                                 WHERE run_id='%s'"""
                                 % (workflow_id), db.engine)
+    df_task_tries = pd.read_sql_query("""SELECT task.task_id, task_func_name,
+                                      task_try_time_running, task_try_time_returned from task, try
+                                      WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'"""
+                                      % (workflow_id, workflow_id), db.engine)
     task_summary = db.engine.execute(
         "SELECT task_func_name, count(*) as 'frequency' from task WHERE run_id='%s' group by task_func_name;" % workflow_id)
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
                            task_gantt=task_gantt_plot(df_task, df_status, time_completed=workflow_details.time_completed),
-                           task_per_app=task_per_app_plot(df_task, df_status))
+                           task_per_app=task_per_app_plot(df_task_tries, df_status))
 
 
 @app.route('/workflow/<workflow_id>/app/<app_name>')
@@ -117,10 +133,17 @@ def task(workflow_id, task_id):
 @app.route('/workflow/<workflow_id>/dag_<path:path>')
 def workflow_dag_details(workflow_id, path='group_by_apps'):
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
-    df_tasks = pd.read_sql_query("""SELECT task_id, task_func_name, task_depends,
-                                 task_time_submitted, task_time_returned, task_time_running
-                                 FROM task WHERE run_id='%s' """
-                                 % (workflow_id), db.engine)
+    query = """SELECT task.task_id, task.task_func_name, task.task_depends, status.task_status_name
+               FROM task LEFT JOIN status
+               ON task.task_id = status.task_id
+               AND task.run_id = status.run_id
+               AND status.timestamp = (SELECT MAX(status.timestamp)
+                                       FROM status
+                                       WHERE status.task_id = task.task_id and status.run_id = task.run_id
+                                      )
+               WHERE task.run_id='%s'""" % (workflow_id)
+
+    df_tasks = pd.read_sql_query(query, db.engine)
 
     group_by_apps = (path == "group_by_apps")
     return render_template('dag.html',
@@ -143,6 +166,10 @@ def workflow_resources(workflow_id):
 
     df_task = pd.read_sql_query(
         "SELECT * FROM task WHERE run_id='%s'" % (workflow_id), db.engine)
+    df_task_tries = pd.read_sql_query("""SELECT task.task_id, task_func_name,
+                                      task_try_time_launched, task_try_time_running, task_try_time_returned from task, try
+                                      WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'"""
+                                      % (workflow_id, workflow_id), db.engine)
     df_node = pd.read_sql_query(
         "SELECT * FROM node WHERE run_id='%s'" % (workflow_id), db.engine)
 
@@ -157,5 +184,5 @@ def workflow_resources(workflow_id):
                                df_resources, df_task, type='psutil_process_memory_resident', label='Memory Distribution', option='max'),
                            cpu_efficiency=resource_efficiency(df_resources, df_node, label='CPU'),
                            memory_efficiency=resource_efficiency(df_resources, df_node, label='mem'),
-                           worker_efficiency=worker_efficiency(df_task, df_node),
+                           worker_efficiency=worker_efficiency(df_task_tries, df_node),
                            )
