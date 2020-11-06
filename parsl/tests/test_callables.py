@@ -4,6 +4,7 @@
 # executors.
 
 import importlib
+import pathlib
 import parsl
 
 from functools import partial
@@ -41,7 +42,8 @@ def test_check_import_module_function_partial():
 
 
 def test_check_importlib_function():
-    spec = importlib.util.spec_from_file_location("dynamically_loaded_module", "parsl/tests/callables_helper.py")
+    helper_path = pathlib.Path(__file__).parent / "callables_helper.py"
+    spec = importlib.util.spec_from_file_location("dynamically_loaded_module", helper_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     some_aux_func = module.some_aux_func
@@ -49,7 +51,8 @@ def test_check_importlib_function():
 
 
 def test_check_importlib_function_partial():
-    spec = importlib.util.spec_from_file_location("dynamically_loaded_module", "parsl/tests/callables_helper.py")
+    helper_path = pathlib.Path(__file__).parent / "callables_helper.py"
+    spec = importlib.util.spec_from_file_location("dynamically_loaded_module", helper_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     some_aux_func = module.some_aux_func
