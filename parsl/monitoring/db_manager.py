@@ -431,11 +431,12 @@ class DatabaseManager:
             if resource_messages:
                 logger.debug(
                     "Got {} messages from resource queue, {} reprocessable".format(len(resource_messages), len(reprocessable_first_resource_messages)))
-                self._insert(table=RESOURCE, messages=resource_messages)
+
+                insert_resource_messages = []
                 for msg in resource_messages:
                     task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
                     if msg['first_msg']:
-
+                        # Update the running time to try table if first message
                         msg['task_status_name'] = States.running.name
                         msg['task_try_time_running'] = msg['timestamp']
 
@@ -445,6 +446,12 @@ class DatabaseManager:
                             if task_try_id in deferred_resource_messages:
                                 logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
                             deferred_resource_messages[task_try_id] = msg
+                    else:
+                        # Insert to resource table if not first message
+                        insert_resource_messages.append(msg)
+
+                if insert_resource_messages:
+                    self._insert(table=RESOURCE, messages=insert_resource_messages)
 
             if reprocessable_first_resource_messages:
                 self._insert(table=STATUS, messages=reprocessable_first_resource_messages)
