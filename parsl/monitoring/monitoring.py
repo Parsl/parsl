@@ -492,6 +492,7 @@ def monitor(pid,
 
     if first_message:
         msg = {'run_id': run_id,
+               'try_id': try_id,
                'task_id': task_id,
                'hostname': platform.node(),
                'first_msg': first_message,
