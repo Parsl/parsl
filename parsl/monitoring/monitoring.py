@@ -302,6 +302,7 @@ class MonitoringHub(RepresentationMixin):
         def wrapped(*args, **kwargs):
             # Send first message to monitoring router
             monitor(os.getpid(),
+                    try_id,
                     task_id,
                     monitoring_hub_url,
                     run_id,
