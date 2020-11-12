@@ -60,6 +60,10 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor):
             If True and the invocation fails, keep the function directory.
             This is automatically True if keep_task_dir is True.
 
+        wrapper_path: str
+            Path of the Parsl function execution wrapper (exec_parsl_function.py).
+            By default this is left at 'exec_parsl_function.py'.
+
     """
 
     @typeguard.typechecked
@@ -70,7 +74,8 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor):
                  source: Optional[bool] = False,
                  keep_task_dir: Optional[bool] = False,
                  keep_failed_task_dir: Optional[bool] = True,
-                 managed: Optional[bool] = True):
+                 managed: Optional[bool] = True,
+                 wrapper_path: Optional[str] = 'exec_parsl_function.py'):
         NoStatusHandlingExecutor.__init__(self)
 
         self.unit_manager = unit_manager
@@ -80,6 +85,7 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor):
         self.keep_task_dir = keep_task_dir
         self.keep_failed_task_dir = keep_failed_task_dir
         self.managed = managed
+        self.wrapper_path = wrapper_path
 
         self.task_counter = -1
         self.tasks_lock = threading.Lock()
@@ -161,7 +167,7 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor):
             # when we receive notifications about the unit state
             cud.name = str(task_id)
             # must be installed remotely
-            cud.executable = 'exec_parsl_function.py'
+            cud.executable = self.wrapper_path
 
             function_file = task_dir / '.function'
             result_file = task_dir / '.result'
