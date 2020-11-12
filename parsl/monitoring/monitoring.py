@@ -71,6 +71,74 @@ class MonitoringRadio(metaclass=ABCMeta):
         pass
 
 
+class HTEXRadio(MonitoringRadio):
+
+    def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
+        """
+        Parameters
+        ----------
+
+        monitoring_url : str
+            URL of the form <scheme>://<IP>:<PORT>
+        source_id : str
+            String identifier of the source
+        timeout : int
+            timeout, default=10s
+        """
+        self.source_id = source_id
+        logger.info("htex-based monitoring channel initialising")
+
+    def send(self, message: object) -> None:
+        """ Sends a message to the UDP receiver
+
+        Parameter
+        ---------
+
+        message: object
+            Arbitrary pickle-able object that is to be sent
+
+        Returns:
+            None
+        """
+
+        import parsl.executors.high_throughput.monitoring_info
+
+        # TODO: this message needs to look like the other messages that the interchange will send...
+        #            hub_channel.send_pyobj((MessageType.NODE_INFO,
+        #                            datetime.datetime.now(),
+        #                            self._ready_manager_queue[manager]))
+
+        # not serialising here because it looks like python objects can go through mp queues without explicit pickling?
+        try:
+            buffer = (MessageType.RESOURCE_INFO, (self.source_id,   # Identifier for manager
+                      int(time.time()),  # epoch timestamp
+                      message))
+        except Exception:
+            logging.exception("Exception during pickling", exc_info=True)
+            return
+
+        result_queue = parsl.executors.high_throughput.monitoring_info.result_queue
+
+        # this message needs to go in the result queue tagged so that it is treated
+        # i) as a monitoring message by the interchange, and then further more treated
+        # as a RESOURCE_INFO message when received by monitoring (rather than a NODE_INFO
+        # which is the implicit default for messages from the interchange)
+
+        # for the interchange, the outer wrapper, this needs to be a dict:
+
+        interchange_msg = {
+            'type': 'monitoring',
+            'payload': buffer
+        }
+
+        if result_queue:
+            result_queue.put(pickle.dumps(interchange_msg))
+        else:
+            logger.error("result_queue is uninitialized - cannot put monitoring message")
+
+        return
+
+
 class UDPRadio(MonitoringRadio):
 
     def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
@@ -507,7 +575,7 @@ class MonitoringRouter:
                         node_msg = ((msg[0], msg[2]), 0)
                         node_msgs.put(node_msg)
                     elif msg[0] == MessageType.RESOURCE_INFO:
-                        resource_msgs.put(cast(Any, msg))
+                        resource_msgs.put(cast(Any, (msg, 0)))
                     elif msg[0] == MessageType.BLOCK_INFO:
                         block_msgs.put(cast(Any, (msg, 0)))
                     else:
@@ -588,6 +656,9 @@ def send_first_message(try_id: int,
     if radio_mode == "udp":
         radio = UDPRadio(monitoring_hub_url,
                          source_id=task_id)
+    elif radio_mode == "htex":
+        radio = HTEXRadio(monitoring_hub_url,
+                          source_id=task_id)
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
@@ -630,6 +701,9 @@ def monitor(pid: int,
     if radio_mode == "udp":
         radio = UDPRadio(monitoring_hub_url,
                          source_id=task_id)
+    elif radio_mode == "htex":
+        radio = HTEXRadio(monitoring_hub_url,
+                          source_id=task_id)
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
