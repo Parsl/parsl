@@ -13,6 +13,7 @@ from pathlib import Path
 
 from radical.pilot import UnitManager, ComputeUnitDescription, states, TRANSFER, CREATE_PARENTS
 
+from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.files import File
 from parsl.serialize import pack_apply_message
 from parsl.executors.status_handling import NoStatusHandlingExecutor
@@ -203,7 +204,11 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor):
                 fu.set_exception(Exception(obj.stderr + '\n' + obj.stdout))
             else:
                 try:
-                    fu.set_result(self._read_result(task_dir))
+                    result = self._read_result(task_dir)
+                    if isinstance(result, RemoteExceptionWrapper):
+                        result.reraise()
+                    else:
+                        fu.set_result(result)
                 except Exception as ex:
                     fu.set_exception(Exception('Failed to read results file: %s' % ex))
         if state == states.CANCELED:
