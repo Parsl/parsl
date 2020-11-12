@@ -492,7 +492,9 @@ class DatabaseManager:
                     else:
                         logger.warning("dropping message with unknown format: {}".format(x))
                 elif queue_tag == 'resource':
-                    assert x[0] == MessageType.RESOURCE_INFO, "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue"
+                    assert isinstance(x, tuple), "_migrate_logs_to_internal was expecting a tuple, got {}".format(x)
+                    assert x[0] == MessageType.RESOURCE_INFO, \
+                        "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue, got tag {}, message {}".format(x[0], x)
                     self._dispatch_to_internal(x)
                     # body = x[1]
                     # assert len(body) == 3

@@ -13,6 +13,9 @@ from parsl.utils import RepresentationMixin
 
 from parsl.process_loggers import wrap_with_logs
 
+# this is needed for htex hack to get at htex result queue
+import parsl.executors.high_throughput.monitoring_info
+
 from parsl.monitoring.message_type import MessageType
 from typing import Any, Callable, Dict, List, Optional, cast
 
@@ -63,7 +66,79 @@ def start_file_logger(filename: str, name: str = 'monitoring', level: int = logg
     return logger
 
 
+# hack away at this:
+# OldUDPRadio is the original UDP radio code, which should be preserved
+# The new UDPRadio class should be called something like HTEXRadio
+# and there should be some way of switching between them, probably configured
+# by the user? eg specify a classname as a string? but all these parameters
+# might need to be a bit different too
+
 class UDPRadio:
+
+    def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
+        """
+        Parameters
+        ----------
+
+        monitoring_url : str
+            URL of the form <scheme>://<IP>:<PORT>
+        source_id : str
+            String identifier of the source
+        timeout : int
+            timeout, default=10s
+        """
+        self.source_id = source_id
+        logger.info("htex-based monitoring channel initialising")
+
+    def send(self, message: object) -> None:
+        """ Sends a message to the UDP receiver
+
+        Parameter
+        ---------
+
+        message: object
+            Arbitrary pickle-able object that is to be sent
+
+        Returns:
+            None
+        """
+        # TODO: this message needs to look like the other messages that the interchange will send...
+        #            hub_channel.send_pyobj((MessageType.NODE_INFO,
+        #                            datetime.datetime.now(),
+        #                            self._ready_manager_queue[manager]))
+
+        # not serialising here because it looks like python objects can go through mp queues without explicit pickling?
+        try:
+            buffer = (MessageType.RESOURCE_INFO, (self.source_id,   # Identifier for manager
+                      int(time.time()),  # epoch timestamp
+                      message))
+        except Exception:
+            logging.exception("Exception during pickling", exc_info=True)
+            return
+
+        result_queue = parsl.executors.high_throughput.monitoring_info.result_queue
+
+        # this message needs to go in the result queue tagged so that it is treated
+        # i) as a monitoring message by the interchange, and then further more treated
+        # as a RESOURCE_INFO message when received by monitoring (rather than a NODE_INFO
+        # which is the implicit default for messages from the interchange)
+
+        # for the interchange, the outer wrapper, this needs to be a dict:
+
+        interchange_msg = {
+            'type': 'monitoring',
+            'payload': buffer
+        }
+
+        if result_queue:
+            result_queue.put(pickle.dumps(interchange_msg))
+        else:
+            logger.error("result_queue is uninitialized - cannot put monitoring message")
+
+        return
+
+
+class OldUDPRadio:
 
     def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
         """
@@ -472,7 +547,7 @@ class MonitoringRouter:
                         # too much which queue this goes to now... could be node_msgs
                         # just as well, I think.
                         # and if the above message rewriting was got rid of, this block might not need to switch on message tag at all.
-                        resource_msgs.put(cast(Any, msg))
+                        resource_msgs.put(cast(Any, (msg, 0)))
                     else:
                         logger.error("Discarding message with unknown tag {}".format(msg[0]))
                 except zmq.Again:

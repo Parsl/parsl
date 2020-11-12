@@ -361,6 +361,7 @@ class Interchange(object):
                 logger.debug("[COMMAND] is alive")
                 continue
 
+    @wrap_with_logs
     def start(self, poll_period=None):
         """ Start the interchange
 
@@ -448,7 +449,7 @@ class Interchange(object):
                                                 "py.v={} parsl.v={}".format(msg['python_v'].rsplit(".", 1)[0],
                                                                             msg['parsl_v'])
                             )
-                            result_package = {'task_id': -1, 'exception': serialize_object(e)}
+                            result_package = {'type': 'result', 'task_id': -1, 'exception': serialize_object(e)}
                             pkl_package = pickle.dumps(result_package)
                             self.results_outgoing.send(pkl_package)
                             logger.warning("[MAIN] Sent failure reports, unregistering manager")
@@ -515,11 +516,31 @@ class Interchange(object):
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
                 logger.debug("[MAIN] entering results_incoming section")
-                manager, *b_messages = self.results_incoming.recv_multipart()
+                manager, *all_messages = self.results_incoming.recv_multipart()
                 if manager not in self._ready_manager_queue:
                     logger.warning("[MAIN] Received a result from a un-registered manager: {}".format(manager))
                 else:
-                    logger.debug("[MAIN] Got {} result items in batch".format(len(b_messages)))
+                    logger.debug("[MAIN] Got {} result items in batch".format(len(all_messages)))
+
+                    b_messages = []
+
+                    # this block needs to split messages into 'result' messages, and process as previously;
+                    # monitoring messages, which should be sent to monitoring via whatever is used?
+                    # and others, which should generate a non-fatal error log
+
+                    # TODO: rework to avoid depickling twice... because that's quite expensive I expect
+
+                    for message in all_messages:
+                        r = pickle.loads(message)
+                        if r['type'] == 'result':
+                            # process this for task ID and forward to executor
+                            b_messages.append(message)
+                        # TODO: case here for monitoring messages
+                        if r['type'] == 'monitoring':
+                            hub_channel.send_pyobj(r['payload'])
+                        else:
+                            logger.error("Interchange discarding result_queue message of unknown type: {}".format(r['type']))
+
                     for b_message in b_messages:
                         r = pickle.loads(b_message)
                         try:
@@ -531,7 +552,9 @@ class Interchange(object):
                                 manager,
                                 self._ready_manager_queue[manager]['tasks']))
 
-                    self.results_outgoing.send_multipart(b_messages)
+                    if b_messages:
+                        self.results_outgoing.send_multipart(b_messages)
+
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
                     if len(self._ready_manager_queue[manager]['tasks']) == 0:
                         self._ready_manager_queue[manager]['idle_since'] = time.time()
@@ -550,7 +573,7 @@ class Interchange(object):
                     try:
                         raise ManagerLost(manager, self._ready_manager_queue[manager]['hostname'])
                     except Exception:
-                        result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
+                        result_package = {'type': 'result', 'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
                         pkl_package = pickle.dumps(result_package)
                         self.results_outgoing.send(pkl_package)
                         logger.warning("[MAIN] Sent failure reports, unregistering manager")
