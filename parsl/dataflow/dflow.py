@@ -504,7 +504,8 @@ class DataFlowKernel(object):
                                                          self.monitoring.monitoring_hub_url,
                                                          self.run_id,
                                                          wrapper_logging_level,
-                                                         self.monitoring.resource_monitoring_interval)
+                                                         self.monitoring.resource_monitoring_interval,
+                                                         executor.radio_mode)
 
         with self.submitter_lock:
             exec_fu = executor.submit(executable, self.tasks[task_id]['resource_specification'], *args, **kwargs)

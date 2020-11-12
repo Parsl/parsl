@@ -357,7 +357,7 @@ class Manager(object):
                             raise WorkerLost(worker_id, platform.node())
                         except Exception:
                             logger.info("[WORKER_WATCHDOG_THREAD] Putting exception for task {} in the pending result queue".format(task['task_id']))
-                            result_package = {'task_id': task['task_id'], 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
+                            result_package = {'type': 'result', 'task_id': task['task_id'], 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
                             pkl_package = pickle.dumps(result_package)
                             self.pending_result_queue.put(pkl_package)
                     except KeyError:
@@ -498,6 +498,10 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
     os.environ['PARSL_WORKER_COUNT'] = str(pool_size)
     os.environ['PARSL_WORKER_POOL_ID'] = str(pool_id)
 
+    # share the result queue with monitoring code so it too can send results down that channel
+    import parsl.executors.high_throughput.monitoring_info as mi
+    mi.result_queue = result_queue
+
     # Sync worker with master
     logger.info('Worker {} started'.format(worker_id))
     if args.debug:
@@ -542,9 +546,9 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
             serialized_result = serialize(result, buffer_threshold=1e6)
         except Exception as e:
             logger.info('Caught an exception: {}'.format(e))
-            result_package = {'task_id': tid, 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
+            result_package = {'type': 'result', 'task_id': tid, 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
         else:
-            result_package = {'task_id': tid, 'result': serialized_result}
+            result_package = {'type': 'result', 'task_id': tid, 'result': serialized_result}
             # logger.debug("Result: {}".format(result))
 
         logger.info("Completed task {}".format(tid))
@@ -552,7 +556,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
             pkl_package = pickle.dumps(result_package)
         except Exception:
             logger.exception("Caught exception while trying to pickle the result package")
-            pkl_package = pickle.dumps({'task_id': tid,
+            pkl_package = pickle.dumps({'type': 'result', 'task_id': tid,
                                         'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))
             })
 

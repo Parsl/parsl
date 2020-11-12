@@ -255,6 +255,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                "--hb_threshold={heartbeat_threshold} "
                                "--cpu-affinity {cpu_affinity} ")
 
+    radio_mode = "htex"
+
     def initialize_scaling(self):
         """ Compose the launch command and call the scale_out
 
@@ -383,44 +385,51 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                     for serialized_msg in msgs:
                         try:
                             msg = pickle.loads(serialized_msg)
-                            tid = msg['task_id']
                         except pickle.UnpicklingError:
                             raise BadMessage("Message received could not be unpickled")
 
-                        except Exception:
-                            raise BadMessage("Message received does not contain 'task_id' field")
+                        # at this point, dispatch on message type
 
-                        if tid == -1 and 'exception' in msg:
-                            logger.warning("Executor shutting down due to exception from interchange")
-                            exception = deserialize(msg['exception'])
-                            self.set_bad_state_and_fail_all(exception)
-                            break
-
-                        task_fut = self.tasks.pop(tid)
-
-                        if 'result' in msg:
-                            result = deserialize(msg['result'])
-                            task_fut.set_result(result)
-
-                        elif 'exception' in msg:
+                        if msg['type'] == 'result':
                             try:
-                                s = deserialize(msg['exception'])
-                                # s should be a RemoteExceptionWrapper... so we can reraise it
-                                if isinstance(s, RemoteExceptionWrapper):
-                                    try:
-                                        s.reraise()
-                                    except Exception as e:
-                                        task_fut.set_exception(e)
-                                elif isinstance(s, Exception):
-                                    task_fut.set_exception(s)
-                                else:
-                                    raise ValueError("Unknown exception-like type received: {}".format(type(s)))
-                            except Exception as e:
-                                # TODO could be a proper wrapped exception?
-                                task_fut.set_exception(
-                                    DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
+                                tid = msg['task_id']
+                            except Exception:
+                                raise BadMessage("Message received does not contain 'task_id' field")
+
+                            if tid == -1 and 'exception' in msg:
+                                logger.warning("Executor shutting down due to exception from interchange")
+                                exception = deserialize(msg['exception'])
+                                self.set_bad_state_and_fail_all(exception)
+                                break
+
+                            task_fut = self.tasks.pop(tid)
+
+                            if 'result' in msg:
+                                result = deserialize(msg['result'])
+                                task_fut.set_result(result)
+
+                            elif 'exception' in msg:
+                                try:
+                                    s = deserialize(msg['exception'])
+                                    # s should be a RemoteExceptionWrapper... so we can reraise it
+                                    if isinstance(s, RemoteExceptionWrapper):
+                                        try:
+                                            s.reraise()
+                                        except Exception as e:
+                                            task_fut.set_exception(e)
+                                    elif isinstance(s, Exception):
+                                        task_fut.set_exception(s)
+                                    else:
+                                        raise ValueError("Unknown exception-like type received: {}".format(type(s)))
+                                except Exception as e:
+                                    # TODO could be a proper wrapped exception?
+                                    task_fut.set_exception(
+                                        DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
+                            else:
+                                raise BadMessage("Message received is neither result or exception")
                         else:
-                            raise BadMessage("Message received is neither result or exception")
+                            # the 'monitoring' message type should not reach this if statement. It should be handled in the interchange.
+                            raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
             if not self.is_alive:
                 break
