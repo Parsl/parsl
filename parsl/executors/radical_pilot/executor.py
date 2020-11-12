@@ -155,6 +155,11 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor):
         self._add_input(cud, File(str(function_file)))
         self._add_output(cud, File(str(result_file)))
 
+    def _add_resource_spec(self, cud: ComputeUnitDescription, kwargs: Dict[str, object]):
+        if 'parsl_resource_specification' in kwargs:
+            cud.update(kwargs['parsl_resource_specification'])
+            del kwargs['parsl_resource_specification']
+
     def submit(self, func, resource_specification, *args, **kwargs):
         """
         """
@@ -174,6 +179,7 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor):
             result_file = task_dir / '.result'
 
             self._add_staging(cud, args, kwargs, function_file, result_file)
+            self._add_resource_spec(cud, kwargs)
 
             # Create a Future object and have it be mapped from the task ID in the tasks dictionary
             fu = Future()
