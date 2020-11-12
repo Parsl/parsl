@@ -53,8 +53,8 @@ def remap_files(fn_args, fn_kwargs):
     for k, v in fn_kwargs.items():
         if k in ['stdout', 'stderr']:
             v = File(v)
-            fn_kwargs[k] = v
             _remap_file(v)
+            fn_kwargs[k] = (v.url, 'a+')
         else:
             _remap_file(v)
 
