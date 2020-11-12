@@ -404,10 +404,10 @@ def worker(comm, rank):
         try:
             result = execute_task(req['buffer'])
         except Exception as e:
-            result_package = {'task_id': tid, 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
+            result_package = {'type': 'result', 'task_id': tid, 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
             logger.debug("No result due to exception: {} with result package {}".format(e, result_package))
         else:
-            result_package = {'task_id': tid, 'result': serialize(result)}
+            result_package = {'type': 'result', 'task_id': tid, 'result': serialize(result)}
             logger.debug("Result: {}".format(result))
 
         pkl_package = pickle.dumps(result_package)
