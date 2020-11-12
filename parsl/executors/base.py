@@ -20,6 +20,18 @@ class ParslExecutor(metaclass=ABCMeta):
        label: str - a human readable label for the executor, unique
               with respect to other executors.
 
+    Per-executor monitoring behaviour can be influenced by exposing:
+
+       radio_mode: str - a string describing how monitoring code wrapping individual
+              tasks should send data back to the submit side. This field is messy
+              and should be made more general, but for prototyping for LSST, this
+              is OK. The principal requirement is that HTEX tasks can be told to
+              use the htex channel, and thread executor tasks can use the UDP
+              channel. Further less urgent requirements: other remote executors
+              such as workqueue need a more reliable channel than UDP - because
+              the motivation for this work is that htex + udp isn't providing
+              reliable monitoring.
+
     An executor may optionally expose:
 
        storage_access: List[parsl.data_provider.staging.Staging] - a list of staging
@@ -36,6 +48,8 @@ class ParslExecutor(metaclass=ABCMeta):
     """
 
     label: str
+
+    radio_mode: str = "udp"
 
     @abstractmethod
     def start(self) -> Optional[List[str]]:

@@ -576,6 +576,7 @@ class DataFlowKernel(object):
                                                          self.run_id,
                                                          wrapper_logging_level,
                                                          self.monitoring.resource_monitoring_interval,
+                                                         executor.radio_mode,
                                                          executor.monitor_resources())
 
         with self.submitter_lock:
