@@ -174,6 +174,8 @@ class Database:
 
         task_fail_history = Column('task_fail_history', Text, nullable=True)
 
+        task_joins = Column('task_joins', Text, nullable=True)
+
         __table_args__ = (
             PrimaryKeyConstraint('try_id', 'task_id', 'run_id'),
         )
@@ -422,8 +424,7 @@ class DatabaseManager:
                                               'task_time_returned',
                                               'run_id', 'task_id',
                                               'task_fail_count',
-                                              'task_hashsum',
-                                              'depends'],
+                                              'task_hashsum'],
                                      messages=task_info_update_messages)
                     logger.debug("Inserting {} task_info_all_messages into status table".format(len(task_info_all_messages)))
 
@@ -441,7 +442,8 @@ class DatabaseManager:
                                      columns=['run_id', 'task_id', 'try_id',
                                               'task_fail_history',
                                               'task_try_time_launched',
-                                              'task_try_time_returned'],
+                                              'task_try_time_returned',
+                                              'task_joins'],
                                      messages=try_update_messages)
 
                 """
