@@ -226,6 +226,12 @@ class DataFlowKernel(object):
         if task_record['depends'] is not None:
             task_log_info['task_depends'] = ",".join([str(t.tid) for t in task_record['depends']
                                                       if isinstance(t, AppFuture) or isinstance(t, DataFuture)])
+
+        j = task_record['joins']
+        if isinstance(j, AppFuture) or isinstance(j, DataFuture):
+            task_log_info['task_joins'] = j.tid
+        else:
+            task_log_info['task_joins'] = None
         return task_log_info
 
     def _count_deps(self, depends):
@@ -326,7 +332,7 @@ class DataFlowKernel(object):
                     inner_future = future.result()
                     assert isinstance(inner_future, Future)
                     task_record['status'] = States.joining
-                    task_record['depends'].append(inner_future)
+                    task_record['joins'] = inner_future
                     inner_future.add_done_callback(partial(self.handle_join_update, task_id))
 
         self._log_std_streams(task_record)
@@ -808,6 +814,7 @@ class DataFlowKernel(object):
                     'from_memo': None,
                     'ignore_for_cache': ignore_for_cache,
                     'join': join,
+                    'joins': None,
                     'status': States.unsched,
                     'try_id': 0,
                     'id': task_id,

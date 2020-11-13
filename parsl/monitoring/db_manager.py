@@ -130,6 +130,7 @@ class Database:
         task_id = Column('task_id', Integer, nullable=False)
         run_id = Column('run_id', Text, nullable=False)
         task_depends = Column('task_depends', Text, nullable=True)
+        task_joins = Column('task_joins', Text, nullable=True)
         task_func_name = Column('task_func_name', Text, nullable=False)
         task_memoize = Column('task_memoize', Text, nullable=False)
         task_hashsum = Column('task_hashsum', Text, nullable=True)
@@ -395,7 +396,7 @@ class DatabaseManager:
                                               'run_id', 'task_id',
                                               'task_fail_count',
                                               'task_hashsum',
-                                              'depends'],
+                                              'task_joins'],
                                      messages=task_info_update_messages)
                     logger.debug("Inserting {} task_info_all_messages into status table".format(len(task_info_all_messages)))
 
