@@ -325,10 +325,7 @@ class DataFlowKernel(object):
             with task_record['app_fu']._update_lock:
                 task_record['app_fu'].set_result(future.result())
 
-        if task_record['app_fu'].stdout is not None:
-            logger.info("Standard output for task {} available at {}".format(task_id, task_record['app_fu'].stdout))
-        if task_record['app_fu'].stderr is not None:
-            logger.info("Standard error for task {} available at {}".format(task_id, task_record['app_fu'].stderr))
+        self._log_std_streams(task_record)
 
         # record current state for this task after we're done: maybe a new try, or maybe the old try marked as failed
         self._send_task_log_info(task_record)
@@ -1140,6 +1137,13 @@ class DataFlowKernel(object):
             raise BadCheckpoint("checkpointDirs expects a list of checkpoints")
 
         return self._load_checkpoints(checkpointDirs)
+
+    @staticmethod
+    def _log_std_streams(task_record):
+        if task_record['app_fu'].stdout is not None:
+            logger.info("Standard output for task {} available at {}".format(task_record['id'], task_record['app_fu'].stdout))
+        if task_record['app_fu'].stderr is not None:
+            logger.info("Standard error for task {} available at {}".format(task_record['id'], task_record['app_fu'].stderr))
 
 
 class DataFlowKernelLoader(object):
