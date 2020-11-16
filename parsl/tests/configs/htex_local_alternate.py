@@ -15,6 +15,9 @@ will cause substantially different behaviour on whatever
 those timing parameters control.
 """
 
+# imports for monitoring:
+from parsl.monitoring import MonitoringHub
+
 import os
 
 from parsl.providers import LocalProvider
@@ -33,10 +36,6 @@ working_dir = os.getcwd() + "/" + "test_htex_alternate"
 
 
 def fresh_config():
-    # imports for monitoring, which will only work if monitoring
-    # dependencies are installed, so cannot happen at module level.
-
-    from parsl.monitoring import MonitoringHub
     return Config(
         executors=[
             HighThroughputExecutor(
