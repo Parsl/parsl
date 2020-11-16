@@ -6,8 +6,6 @@ import pytest
 
 logger = logging.getLogger(__name__)
 
-from parsl.tests.configs.htex_local_alternate import fresh_config
-
 
 @parsl.python_app
 def this_app():
@@ -21,6 +19,7 @@ def test_row_counts():
     # would otherwise fail to import and break even a basic test
     # run.
     import sqlalchemy
+    from parsl.tests.configs.htex_local_alternate import fresh_config
 
     if os.path.exists("monitoring.db"):
         logger.info("Monitoring database already exists - deleting")
