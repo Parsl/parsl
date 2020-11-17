@@ -301,16 +301,14 @@ class MonitoringHub(RepresentationMixin):
         """
         def wrapped(*args, **kwargs):
             # Send first message to monitoring router
-            try:
-                monitor(os.getpid(),
-                        task_id,
-                        monitoring_hub_url,
-                        run_id,
-                        logging_level,
-                        sleep_dur,
-                        first_message=True)
-            except Exception:
-                pass
+            monitor(os.getpid(),
+                    try_id,
+                    task_id,
+                    monitoring_hub_url,
+                    run_id,
+                    logging_level,
+                    sleep_dur,
+                    first_message=True)
 
             # create the monitor process and start
             p = Process(target=monitor,
@@ -496,6 +494,7 @@ def monitor(pid,
 
     if first_message:
         msg = {'run_id': run_id,
+               'try_id': try_id,
                'task_id': task_id,
                'hostname': platform.node(),
                'first_msg': first_message,
