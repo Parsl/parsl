@@ -49,4 +49,3 @@ parsl.executors.HighThroughputExecutor
       ~HighThroughputExecutor.status_polling_interval
       ~HighThroughputExecutor.tasks
    
-   
