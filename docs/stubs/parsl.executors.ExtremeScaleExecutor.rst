@@ -14,6 +14,7 @@ parsl.executors.ExtremeScaleExecutor
    .. autosummary::
    
       ~ExtremeScaleExecutor.__init__
+      ~ExtremeScaleExecutor.create_monitoring_info
       ~ExtremeScaleExecutor.handle_errors
       ~ExtremeScaleExecutor.hold_worker
       ~ExtremeScaleExecutor.initialize_scaling
