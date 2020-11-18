@@ -5,7 +5,7 @@ import os
 import time
 import datetime
 
-from typing import Any, Dict, Set
+from typing import Any, Dict, Set, List
 
 from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
