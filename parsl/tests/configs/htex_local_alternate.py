@@ -34,33 +34,38 @@ from parsl.data_provider.file_noop import NoOpFileStaging
 
 working_dir = os.getcwd() + "/" + "test_htex_alternate"
 
-config = Config(
-    executors=[
-        HighThroughputExecutor(
-            label="htex_Local",
-            working_dir=working_dir,
-            storage_access=[FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging()],
-            worker_debug=True,
-            cores_per_worker=1,
-            heartbeat_period=2,
-            heartbeat_threshold=5,
-            poll_period=100,
-            provider=LocalProvider(
-                channel=LocalChannel(),
-                init_blocks=0,
-                min_blocks=0,
-                max_blocks=5,
-                launcher=SingleNodeLauncher(),
-            ),
+
+def fresh_config():
+    return Config(
+        executors=[
+            HighThroughputExecutor(
+                label="htex_Local",
+                working_dir=working_dir,
+                storage_access=[FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging()],
+                worker_debug=True,
+                cores_per_worker=1,
+                heartbeat_period=2,
+                heartbeat_threshold=5,
+                poll_period=100,
+                provider=LocalProvider(
+                    channel=LocalChannel(),
+                    init_blocks=0,
+                    min_blocks=0,
+                    max_blocks=5,
+                    launcher=SingleNodeLauncher(),
+                ),
+            )
+        ],
+        strategy='simple',
+        app_cache=True, checkpoint_mode='task_exit',
+        retries=2,
+        monitoring=MonitoringHub(
+                        hub_address="localhost",
+                        hub_port=55055,
+                        monitoring_debug=False,
+                        resource_monitoring_interval=1,
         )
-    ],
-    strategy='simple',
-    app_cache=True, checkpoint_mode='task_exit',
-    retries=2,
-    monitoring=MonitoringHub(
-                    hub_address="localhost",
-                    hub_port=55055,
-                    monitoring_debug=False,
-                    resource_monitoring_interval=1,
     )
-)
+
+
+config = fresh_config()
