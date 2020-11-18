@@ -49,4 +49,3 @@ parsl.executors.ExtremeScaleExecutor
       ~ExtremeScaleExecutor.status_polling_interval
       ~ExtremeScaleExecutor.tasks
    
-   
