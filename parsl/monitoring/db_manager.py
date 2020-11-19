@@ -5,7 +5,7 @@ import os
 import time
 import datetime
 
-from typing import Any, Dict, Set
+from typing import Any, Dict, List, Set
 
 from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
@@ -248,9 +248,9 @@ class DatabaseManager:
         self.batching_interval = batching_interval
         self.batching_threshold = batching_threshold
 
-        self.pending_priority_queue = queue.Queue()
-        self.pending_node_queue = queue.Queue()
-        self.pending_resource_queue = queue.Queue()
+        self.pending_priority_queue = queue.Queue()  # type: queue.Queue[Any]
+        self.pending_node_queue = queue.Queue()  # type: queue.Queue[Any]
+        self.pending_resource_queue = queue.Queue()  # type: queue.Queue[Any]
 
     def start(self, priority_queue, node_queue, resource_queue) -> None:
 
@@ -509,7 +509,7 @@ class DatabaseManager:
                 logger.exception("Rollback failed")
 
     def _get_messages_in_batch(self, msg_queue):
-        messages = []
+        messages = []  # type: List[Any]
         start = time.time()
         while True:
             if time.time() - start >= self.batching_interval or len(messages) >= self.batching_threshold:
