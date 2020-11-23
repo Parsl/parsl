@@ -8,7 +8,7 @@ coverage==4.5.4
 mock>=1.0.0
 nbsphinx
 sphinx_rtd_theme
-mypy==0.761
+mypy==0.790
 sqlalchemy-stubs
 Sphinx==2.2.0
 twine
