@@ -210,7 +210,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         We do not want to create a new VPC and new identical security groups, so we save
         information about them in a file between runs.
         """
-        fh = open('awsproviderstate.json', 'w')
+        fh = open(self.state_file, 'w')
         state = {}
         state['vpcID'] = self.vpc_id
         state['sgID'] = self.sg_id
