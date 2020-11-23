@@ -5,7 +5,7 @@ import os
 import time
 import datetime
 
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar
 
 from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
@@ -14,9 +14,11 @@ from parsl.monitoring.message_type import MessageType
 
 logger = logging.getLogger("database_manager")
 
+X = TypeVar('X')
+
 try:
     import sqlalchemy as sa
-    from sqlalchemy import Column, Text, Float, Boolean, Integer, DateTime, PrimaryKeyConstraint
+    from sqlalchemy import Column, Text, Float, Boolean, Integer, DateTime, PrimaryKeyConstraint, Table
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.ext.declarative import declarative_base
 except ImportError:
@@ -53,7 +55,7 @@ class Database:
     Base = declarative_base()
 
     def __init__(self,
-                 url='sqlite:///monitoring.db',
+                 url: str = 'sqlite:///monitoring.db',
                  ):
 
         self.eng = sa.create_engine(url)
@@ -65,25 +67,25 @@ class Database:
         Session = sessionmaker(bind=self.eng)
         self.session = Session()
 
-    def update(self, table=None, columns=None, messages=None):
-        table = self.meta.tables[table]
-        mappings = self._generate_mappings(table, columns=columns,
+    def update(self, *, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
+        table_obj = self.meta.tables[table]
+        mappings = self._generate_mappings(table_obj, columns=columns,
                                            messages=messages)
-        mapper = get_mapper(table)
+        mapper = get_mapper(table_obj)
         self.session.bulk_update_mappings(mapper, mappings)
         self.session.commit()
 
-    def insert(self, table=None, messages=None):
-        table = self.meta.tables[table]
-        mappings = self._generate_mappings(table, messages=messages)
-        mapper = get_mapper(table)
+    def insert(self, *, table: str, messages: List[Dict[str, Any]]) -> None:
+        table_obj = self.meta.tables[table]
+        mappings = self._generate_mappings(table_obj, messages=messages)
+        mapper = get_mapper(table_obj)
         self.session.bulk_insert_mappings(mapper, mappings)
         self.session.commit()
 
-    def rollback(self):
+    def rollback(self) -> None:
         self.session.rollback()
 
-    def _generate_mappings(self, table, columns=None, messages=[]):
+    def _generate_mappings(self, table: Table, columns: Optional[List[str]] = None, messages: List[Dict[str, Any]] = []) -> List[Dict[str, Any]]:
         mappings = []
         for msg in messages:
             m = {}
@@ -226,15 +228,15 @@ class Database:
 
 class DatabaseManager:
     def __init__(self,
-                 db_url='sqlite:///monitoring.db',
-                 logdir='.',
-                 logging_level=logging.INFO,
-                 batching_interval=1,
-                 batching_threshold=99999,
+                 db_url: str = 'sqlite:///monitoring.db',
+                 logdir: str = '.',
+                 logging_level: int = logging.INFO,
+                 batching_interval: float = 1,
+                 batching_threshold: float = 99999,
                  ):
 
         self.workflow_end = False
-        self.workflow_start_message = None
+        self.workflow_start_message = None  # type: Optional[Dict[str, Any]]
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
@@ -248,11 +250,14 @@ class DatabaseManager:
         self.batching_interval = batching_interval
         self.batching_threshold = batching_threshold
 
-        self.pending_priority_queue = queue.Queue()  # type: queue.Queue[Any]
-        self.pending_node_queue = queue.Queue()  # type: queue.Queue[Any]
-        self.pending_resource_queue = queue.Queue()  # type: queue.Queue[Any]
+        self.pending_priority_queue = queue.Queue()  # type: queue.Queue[Tuple[MessageType, Dict[str, Any]]]
+        self.pending_node_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
+        self.pending_resource_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
 
-    def start(self, priority_queue, node_queue, resource_queue) -> None:
+    def start(self,
+              priority_queue: "queue.Queue[Tuple[MessageType, Dict[str, Any]]]",
+              node_queue: "queue.Queue[Dict[str, Any]]",
+              resource_queue: "queue.Queue[Dict[str, Any]]") -> None:
 
         self._kill_event = threading.Event()
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
@@ -453,7 +458,7 @@ class DatabaseManager:
                                       'hostname'],
                              messages=reprocessable_first_resource_messages)
 
-    def _migrate_logs_to_internal(self, logs_queue, queue_tag, kill_event):
+    def _migrate_logs_to_internal(self, logs_queue: queue.Queue, queue_tag: str, kill_event: threading.Event) -> None:
         logger.info("Starting processing for queue {}".format(queue_tag))
 
         while not kill_event.is_set() or logs_queue.qsize() != 0:
@@ -474,7 +479,7 @@ class DatabaseManager:
                 elif queue_tag == 'node':
                     self.pending_node_queue.put(x[-1])
 
-    def _update(self, table, columns, messages):
+    def _update(self, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
         try:
             self.db.update(table=table, columns=columns, messages=messages)
         except KeyboardInterrupt:
@@ -491,7 +496,7 @@ class DatabaseManager:
             except Exception:
                 logger.exception("Rollback failed")
 
-    def _insert(self, table, messages):
+    def _insert(self, table: str, messages: List[Dict[str, Any]]) -> None:
         try:
             self.db.insert(table=table, messages=messages)
         except KeyboardInterrupt:
@@ -508,8 +513,8 @@ class DatabaseManager:
             except Exception:
                 logger.exception("Rollback failed")
 
-    def _get_messages_in_batch(self, msg_queue):
-        messages = []  # type: List[Any]
+    def _get_messages_in_batch(self, msg_queue: "queue.Queue[X]") -> List[X]:
+        messages = []  # type: List[X]
         start = time.time()
         while True:
             if time.time() - start >= self.batching_interval or len(messages) >= self.batching_threshold:
@@ -524,7 +529,7 @@ class DatabaseManager:
                 messages.append(x)
         return messages
 
-    def close(self):
+    def close(self) -> None:
         logger.info("Database Manager cleanup initiated.")
         if not self.workflow_end and self.workflow_start_message:
             logger.info("Logging workflow end info to database due to abnormal exit")
@@ -536,19 +541,27 @@ class DatabaseManager:
                          columns=['run_id', 'time_completed',
                                   'workflow_duration'],
                          messages=[self.workflow_start_message])
-        self.batching_interval, self.batching_threshold = float(
-            'inf'), float('inf')
+        self.batching_interval = float('inf')
+        self.batching_threshold = float('inf')
         self._kill_event.set()
 
 
-def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
+def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
+                priority_msgs: "queue.Queue[Tuple[MessageType, Dict[str, Any]]]",
+                node_msgs: "queue.Queue[Dict[str, Any]]",
+                resource_msgs: "queue.Queue[Dict[str, Any]]",
+                db_url: str,
+                logdir: str,
+                logging_level: int) -> None:
     """Start the database manager process
 
     The DFK should start this function. The args, kwargs match that of the monitoring config
 
     """
     try:
-        dbm = DatabaseManager(*args, **kwargs)
+        dbm = DatabaseManager(db_url=db_url,
+                              logdir=logdir,
+                              logging_level=logging_level)
         logger.info("Starting dbm in dbm starter")
         dbm.start(priority_msgs, node_msgs, resource_msgs)
     except KeyboardInterrupt:
