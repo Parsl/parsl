@@ -387,7 +387,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                             self.set_bad_state_and_fail_all(exception)
                             break
 
-                        task_fut = self.tasks[tid]
+                        task_fut = self.tasks.pop(tid)
 
                         if 'result' in msg:
                             result = deserialize(msg['result'])
