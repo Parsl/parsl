@@ -129,7 +129,7 @@ class Interchange(object):
 
         worker_port_range : tuple(int, int)
              The interchange picks ports at random from the range which will be used by workers.
-             This is overridden when the worker_ports option is set. Defauls: (54000, 55000)
+             This is overridden when the worker_ports option is set. Default: (54000, 55000)
 
         hub_address : str
              The ip address at which the interchange can send info about managers to when monitoring is enabled.
