@@ -54,8 +54,6 @@ class Database:
 
     def __init__(self,
                  url='sqlite:///monitoring.db',
-                 username=None,
-                 password=None,
                  ):
 
         self.eng = sa.create_engine(url)
