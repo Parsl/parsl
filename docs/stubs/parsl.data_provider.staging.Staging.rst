@@ -1,7 +1,7 @@
-parsl.data\_provider.data\_manager.Staging
-==========================================
+parsl.data\_provider.staging.Staging
+====================================
 
-.. currentmodule:: parsl.data_provider.data_manager
+.. currentmodule:: parsl.data_provider.staging
 
 .. autoclass:: Staging
 

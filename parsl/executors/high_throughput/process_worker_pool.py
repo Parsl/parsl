@@ -197,6 +197,7 @@ class Manager(object):
                                              sys.version_info.minor,
                                              sys.version_info.micro),
                'worker_count': self.worker_count,
+               'uid': self.uid,
                'block_id': self.block_id,
                'prefetch_capacity': self.prefetch_capacity,
                'max_capacity': self.worker_count + self.prefetch_capacity,

@@ -28,7 +28,7 @@ class HTTPSeparateTaskStaging(Staging, RepresentationMixin):
             file.local_path = file.filename
 
         stage_in_app = _http_stage_in_app(dm, executor=executor)
-        app_fut = stage_in_app(working_dir, outputs=[file], staging_inhibit_output=True, parent_fut=parent_fut)
+        app_fut = stage_in_app(working_dir, outputs=[file], _parsl_staging_inhibit=True, parent_fut=parent_fut)
         return app_fut._outputs[0]
 
 
@@ -73,7 +73,7 @@ def in_task_transfer_wrapper(func, file, working_dir):
     return wrapper
 
 
-def _http_stage_in(working_dir, parent_fut=None, outputs=[], staging_inhibit_output=True):
+def _http_stage_in(working_dir, parent_fut=None, outputs=[], _parsl_staging_inhibit=True):
     file = outputs[0]
     if working_dir:
         os.makedirs(working_dir, exist_ok=True)

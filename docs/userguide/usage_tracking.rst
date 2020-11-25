@@ -21,7 +21,7 @@ it is important that we provide aggregate usage data about such things as the fo
 * Parsl exit codes
 
 By participating in this project, you help justify continuing support for the software on which you rely.
-The data sent is as generic as possible and is anonymized (see :ref:`What is sent? <_what-is-sent>` below).
+The data sent is as generic as possible and is anonymized (see :ref:`What is sent? <what-is-sent>` below).
 
 Opt-In
 ------

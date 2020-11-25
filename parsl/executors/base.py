@@ -25,7 +25,7 @@ class ParslExecutor(metaclass=ABCMeta):
        storage_access: List[parsl.data_provider.staging.Staging] - a list of staging
               providers that will be used for file staging. In the absence of this
               attribute, or if this attribute is `None`, then a default value of
-              `parsl.data_provider.staging.default_staging` will be used by the
+              ``parsl.data_provider.staging.default_staging`` will be used by the
               staging code.
 
               Typechecker note: Ideally storage_access would be declared on executor
