@@ -54,8 +54,6 @@ class Database:
 
     def __init__(self,
                  url='sqlite:///monitoring.db',
-                 username=None,
-                 password=None,
                  ):
 
         self.eng = sa.create_engine(url)
@@ -178,12 +176,15 @@ class Database:
         id = Column('id', Integer, nullable=False, primary_key=True, autoincrement=True)
         run_id = Column('run_id', Text, nullable=False)
         hostname = Column('hostname', Text, nullable=False)
+        uid = Column('uid', Text, nullable=False)
+        block_id = Column('block_id', Text, nullable=False)
         cpu_count = Column('cpu_count', Integer, nullable=False)
         total_memory = Column('total_memory', Integer, nullable=False)
         active = Column('active', Boolean, nullable=False)
         worker_count = Column('worker_count', Integer, nullable=False)
         python_v = Column('python_v', Text, nullable=False)
-        reg_time = Column('reg_time', DateTime, nullable=False)
+        timestamp = Column('timestamp', DateTime, nullable=False)
+        last_heartbeat = Column('last_heartbeat', DateTime, nullable=False)
 
     class Resource(Base):
         __tablename__ = RESOURCE
@@ -428,11 +429,12 @@ class DatabaseManager:
             if resource_messages:
                 logger.debug(
                     "Got {} messages from resource queue, {} reprocessable".format(len(resource_messages), len(reprocessable_first_resource_messages)))
-                self._insert(table=RESOURCE, messages=resource_messages)
+
+                insert_resource_messages = []
                 for msg in resource_messages:
                     task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
                     if msg['first_msg']:
-
+                        # Update the running time to try table if first message
                         msg['task_status_name'] = States.running.name
                         msg['task_try_time_running'] = msg['timestamp']
 
@@ -442,6 +444,12 @@ class DatabaseManager:
                             if task_try_id in deferred_resource_messages:
                                 logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
                             deferred_resource_messages[task_try_id] = msg
+                    else:
+                        # Insert to resource table if not first message
+                        insert_resource_messages.append(msg)
+
+                if insert_resource_messages:
+                    self._insert(table=RESOURCE, messages=insert_resource_messages)
 
             if reprocessable_first_resource_messages:
                 self._insert(table=STATUS, messages=reprocessable_first_resource_messages)

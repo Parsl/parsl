@@ -66,6 +66,8 @@ class CommandClient(object):
                     self.context.destroy()
                     self.context = zmq.Context()
                     self.create_socket_and_bind()
+                else:
+                    break
 
         if reply == '__PARSL_ZMQ_PIPES_MAGIC__':
             logger.error("Command channel run retries exhausted. Unable to run command")

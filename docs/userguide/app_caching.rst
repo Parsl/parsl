@@ -1,7 +1,7 @@
 .. _label-appcaching:
 
 App caching
-----------
+-----------
 
 There are many situations in which a program may be re-executed
 over time. Often, large fragments of the program will not have changed 
@@ -58,7 +58,7 @@ Attempting to cache apps invoked with other, non-hashable, data types will
 lead to an exception at invocation.
 
 Mechanisms to hash new types can be registered by a program by using the
-`parsl.dataflow.memoization.id_for_memo` single dispatch function.
+``parsl.dataflow.memoization.id_for_memo`` single dispatch function.
 
 
 Ignoring arguments

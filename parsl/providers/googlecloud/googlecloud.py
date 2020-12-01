@@ -59,20 +59,6 @@ class GoogleCloudProvider():
         scaling where as many resources as possible are used; parallelism close to 0 represents
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
 
-    .. code:: python
-
-                                +------------------
-                                |
-          script_string ------->|  submit
-               id      <--------|---+
-                                |
-          [ ids ]       ------->|  status
-          [statuses]   <--------|----+
-                                |
-          [ ids ]       ------->|  cancel
-          [cancel]     <--------|----+
-                                |
-                                +-------------------
      """
 
     def __init__(self,
