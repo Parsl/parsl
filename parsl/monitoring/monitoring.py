@@ -392,22 +392,18 @@ class MonitoringRouter:
         self.loop_freq = 10.0  # milliseconds
 
         # Initialize the UDP socket
-        try:
-            self.sock = socket.socket(socket.AF_INET,
-                                      socket.SOCK_DGRAM,
-                                      socket.IPPROTO_UDP)
+        self.sock = socket.socket(socket.AF_INET,
+                                  socket.SOCK_DGRAM,
+                                  socket.IPPROTO_UDP)
 
-            # We are trying to bind to all interfaces with 0.0.0.0
-            if not self.hub_port:
-                self.sock.bind(('0.0.0.0', 0))
-                self.hub_port = self.sock.getsockname()[1]
-            else:
-                self.sock.bind(('0.0.0.0', self.hub_port))
-            self.sock.settimeout(self.loop_freq / 1000)
-            self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.hub_port))
-        except OSError:
-            self.logger.critical("The port is already in use")
-            self.hub_port = -1
+        # We are trying to bind to all interfaces with 0.0.0.0
+        if not self.hub_port:
+            self.sock.bind(('0.0.0.0', 0))
+            self.hub_port = self.sock.getsockname()[1]
+        else:
+            self.sock.bind(('0.0.0.0', self.hub_port))
+        self.sock.settimeout(self.loop_freq / 1000)
+        self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.hub_port))
 
         self._context = zmq.Context()
         self.dfk_channel = self._context.socket(zmq.DEALER)
