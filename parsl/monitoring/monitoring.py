@@ -11,6 +11,8 @@ import queue
 from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 
+from parsl.process_loggers import wrap_with_logs
+
 from parsl.monitoring.message_type import MessageType
 from typing import Any, Callable, Dict, List, Optional, Union
 
@@ -480,6 +482,7 @@ class MonitoringRouter:
         self.logger.info("Monitoring router finished")
 
 
+@wrap_with_logs
 def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    exception_q: "queue.Queue[Tuple[str, str]]",
                    priority_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
@@ -523,6 +526,7 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
     router.logger.info("End of router_starter")
 
 
+@wrap_with_logs
 def send_first_message(try_id: int,
                        task_id: int,
                        monitoring_hub_url: str,
@@ -543,6 +547,7 @@ def send_first_message(try_id: int,
     return
 
 
+@wrap_with_logs
 def monitor(pid: int,
             try_id: int,
             task_id: int,
