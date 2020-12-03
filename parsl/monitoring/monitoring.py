@@ -12,13 +12,16 @@ from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 
 from parsl.monitoring.message_type import MessageType
+from typing import Any, Dict, Optional
+
+_db_manager_excepts: Optional[Exception]
 
 from typing import Optional, Tuple
 
 try:
     from parsl.monitoring.db_manager import dbm_starter
 except Exception as e:
-    _db_manager_excepts = e  # type: Optional[Exception]
+    _db_manager_excepts = e
 else:
     _db_manager_excepts = None
 
@@ -166,8 +169,14 @@ class MonitoringHub(RepresentationMixin):
         resource_monitoring_interval : float
              The time interval, in seconds, at which the monitoring records the resource usage of each task. Default: 30 seconds
         """
-        self.logger = None
-        self._dfk_channel = None
+
+        self.logger = logger
+
+        # Any is used to disable typechecking on uses of _dfk_channel,
+        # because it is used in the code as if it points to a channel, but
+        # the static type is that it can also be None. The code relies on
+        # .start() being called and initialising this to a real channel.
+        self._dfk_channel = None  # type: Any
 
         if _db_manager_excepts:
             raise(_db_manager_excepts)
@@ -197,7 +206,6 @@ class MonitoringHub(RepresentationMixin):
         os.makedirs(self.logdir, exist_ok=True)
 
         # Initialize the ZMQ pipe to the Parsl Client
-        self.logger = logger
         self.logger.info("Monitoring Hub initialized")
 
         self.logger.debug("Initializing ZMQ Pipes to client")
@@ -211,11 +219,11 @@ class MonitoringHub(RepresentationMixin):
                                                               min_port=self.client_port_range[0],
                                                               max_port=self.client_port_range[1])
 
-        comm_q = Queue(maxsize=10)
-        self.exception_q = Queue(maxsize=10)
-        self.priority_msgs = Queue()
-        self.resource_msgs = Queue()
-        self.node_msgs = Queue()
+        comm_q = Queue(maxsize=10)  # type: Queue[Tuple[int, int]]
+        self.exception_q = Queue(maxsize=10)  # type: Queue[Tuple[str, str]]
+        self.priority_msgs = Queue()  # type: Queue[Tuple[Any, int]]
+        self.resource_msgs = Queue()  # type: Queue[Tuple[Any, Any]]
+        self.node_msgs = Queue()  # type: Queue[Tuple[Any, int]]
 
         self.router_proc = Process(target=router_starter,
                                    args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
@@ -520,8 +528,8 @@ def monitor(pid,
     pm = psutil.Process(pid)
     pm.cpu_percent()
 
-    children_user_time = {}
-    children_system_time = {}
+    children_user_time = {}  # type: Dict[int, float]
+    children_system_time = {}  # type: Dict[int, float]
     total_children_user_time = 0.0
     total_children_system_time = 0.0
     while True:
@@ -582,5 +590,3 @@ def monitor(pid,
 
         logging.debug("sleeping")
         time.sleep(sleep_dur)
-
-    logger.info("Monitor exiting")
