@@ -17,6 +17,8 @@ import json
 import psutil
 import multiprocessing
 
+from parsl.process_loggers import wrap_with_logs
+
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
@@ -214,6 +216,7 @@ class Manager(object):
         r = self.task_incoming.send(heartbeat)
         logger.debug("Return from heartbeat: {}".format(r))
 
+    @wrap_with_logs
     def pull_tasks(self, kill_event):
         """ Pull tasks from the incoming tasks 0mq pipe onto the internal
         pending task queue
@@ -294,6 +297,7 @@ class Manager(object):
                     logger.critical("[TASK_PULL_THREAD] Exiting")
                     break
 
+    @wrap_with_logs
     def push_results(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
 
@@ -330,6 +334,7 @@ class Manager(object):
 
         logger.critical("[RESULT_PUSH_THREAD] Exiting")
 
+    @wrap_with_logs
     def worker_watchdog(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
 
@@ -474,6 +479,7 @@ def execute_task(bufs):
         return user_ns.get(resultname)
 
 
+@wrap_with_logs
 def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue, tasks_in_progress, cpu_affinity):
     """
 

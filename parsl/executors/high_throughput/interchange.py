@@ -19,7 +19,7 @@ serialize_object = ParslSerializer().serialize
 
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.monitoring.message_type import MessageType
-
+from parsl.process_loggers import wrap_with_logs
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
@@ -255,6 +255,7 @@ class Interchange(object):
 
         return tasks
 
+    @wrap_with_logs
     def migrate_tasks_to_internal(self, kill_event):
         """Pull tasks from the incoming tasks 0mq pipe onto the internal
         pending task queue
@@ -292,6 +293,7 @@ class Interchange(object):
                                          datetime.datetime.now(),
                                          self._ready_manager_queue[manager]))
 
+    @wrap_with_logs
     def _command_server(self, kill_event):
         """ Command server to run async command to the interchange
         """
@@ -599,6 +601,7 @@ def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_
     logger.addHandler(handler)
 
 
+@wrap_with_logs
 def starter(comm_q, *args, **kwargs):
     """Start the interchange process
 

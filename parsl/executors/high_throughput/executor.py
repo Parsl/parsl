@@ -23,6 +23,7 @@ from parsl.executors.status_handling import StatusHandlingExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.data_provider.staging import Staging
 from parsl.addresses import get_all_addresses
+from parsl.process_loggers import wrap_with_logs
 
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
@@ -312,6 +313,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         self.initialize_scaling()
 
+    @wrap_with_logs
     def _queue_management_worker(self):
         """Listen to the queue for task status messages and handle them.
 
