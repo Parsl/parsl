@@ -357,11 +357,11 @@ class MonitoringRouter:
              The specific port at which workers will be able to reach the Hub via UDP. Default: None
         hub_port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
-             This is overridden when the hub_port option is set. Defauls: (55050, 56000)
+             This is overridden when the hub_port option is set. Default: (55050, 56000)
         client_address : str
              The ip address at which the dfk will be able to reach Hub. Default: "127.0.0.1"
         client_port : tuple(int, int)
-             The port at which the dfk will be able to reach Hub. Defauls: None
+             The port at which the dfk will be able to reach Hub. Default: None
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         logging_level : int
@@ -439,8 +439,10 @@ class MonitoringRouter:
 
             try:
                 msg = self.ic_channel.recv_pyobj()
-                msg[1]['run_id'] = self.run_id
-                msg = (msg[0], msg[1])
+                msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
+                msg[2]['run_id'] = self.run_id
+                msg[2]['timestamp'] = msg[1]
+                msg = (msg[0], msg[2])
                 self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
                 node_msgs.put((msg, 0))
             except zmq.Again:
