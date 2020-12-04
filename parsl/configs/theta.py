@@ -2,7 +2,6 @@ from parsl.config import Config
 from parsl.providers import CobaltProvider
 from parsl.launchers import AprunLauncher
 from parsl.executors import HighThroughputExecutor
-from parsl.addresses import address_by_hostname
 
 
 config = Config(
@@ -10,7 +9,6 @@ config = Config(
         HighThroughputExecutor(
             label='theta_local_htex_multinode',
             max_workers=4,
-            address=address_by_hostname(),
             provider=CobaltProvider(
                 queue='YOUR_QUEUE',
                 account='YOUR_ACCOUNT',

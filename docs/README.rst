@@ -19,14 +19,14 @@ upon git commits.
 Local builds
 ------------
 
-To build the documentation locally, use
-::
+To build the documentation locally, use::
+
     $ make html
 
 Regenerate module stubs
 --------------------------
 
-If necessary, docstring stubs can be regenerated using
-::
+If necessary, docstring stubs can be regenerated using::
+
     $ sphinx-autogen reference.rst
 

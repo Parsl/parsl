@@ -5,7 +5,7 @@ import os
 import time
 import datetime
 
-from typing import Any, Dict, Set
+from typing import Any, Dict, List, Set
 
 from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
@@ -33,6 +33,7 @@ else:
 
 WORKFLOW = 'workflow'    # Workflow table includes workflow metadata
 TASK = 'task'            # Task table includes task metadata
+TRY = 'try'              # Try table includes information about each attempt to run a task
 STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
@@ -53,8 +54,6 @@ class Database:
 
     def __init__(self,
                  url='sqlite:///monitoring.db',
-                 username=None,
-                 password=None,
                  ):
 
         self.eng = sa.create_engine(url)
@@ -108,7 +107,6 @@ class Database:
         tasks_failed_count = Column(Integer, nullable=False)
         tasks_completed_count = Column(Integer, nullable=False)
 
-    # TODO: expand to full set of info
     class Status(Base):
         __tablename__ = STATUS
         task_id = Column(Integer, sa.ForeignKey(
@@ -116,7 +114,7 @@ class Database:
         task_status_name = Column(Text, nullable=False)
         timestamp = Column(DateTime, nullable=False)
         run_id = Column(Text, sa.ForeignKey('workflow.run_id'), nullable=False)
-        hostname = Column('hostname', Text, nullable=True)
+        try_id = Column('try_id', Integer, nullable=False)
         __table_args__ = (
             PrimaryKeyConstraint('task_id', 'run_id',
                                  'task_status_name', 'timestamp'),
@@ -126,16 +124,8 @@ class Database:
         __tablename__ = TASK
         task_id = Column('task_id', Integer, nullable=False)
         run_id = Column('run_id', Text, nullable=False)
-        hostname = Column('hostname', Text, nullable=True)
         task_depends = Column('task_depends', Text, nullable=True)
-        task_executor = Column('task_executor', Text, nullable=False)
         task_func_name = Column('task_func_name', Text, nullable=False)
-        task_time_submitted = Column(
-            'task_time_submitted', DateTime, nullable=True)
-        task_time_running = Column(
-            'task_time_running', DateTime, nullable=True)
-        task_time_returned = Column(
-            'task_time_returned', DateTime, nullable=True)
         task_memoize = Column('task_memoize', Text, nullable=False)
         task_hashsum = Column('task_hashsum', Text, nullable=True)
         task_inputs = Column('task_inputs', Text, nullable=True)
@@ -143,10 +133,42 @@ class Database:
         task_stdin = Column('task_stdin', Text, nullable=True)
         task_stdout = Column('task_stdout', Text, nullable=True)
         task_stderr = Column('task_stderr', Text, nullable=True)
+
+        task_time_invoked = Column(
+            'task_time_invoked', DateTime, nullable=True)
+
+        task_time_returned = Column(
+            'task_time_returned', DateTime, nullable=True)
+
         task_fail_count = Column('task_fail_count', Integer, nullable=False)
-        task_fail_history = Column('task_fail_history', Text, nullable=True)
+
         __table_args__ = (
             PrimaryKeyConstraint('task_id', 'run_id'),
+        )
+
+    class Try(Base):
+        __tablename__ = TRY
+        try_id = Column('try_id', Integer, nullable=False)
+        task_id = Column('task_id', Integer, nullable=False)
+        run_id = Column('run_id', Text, nullable=False)
+
+        hostname = Column('hostname', Text, nullable=True)
+
+        task_executor = Column('task_executor', Text, nullable=False)
+
+        task_try_time_launched = Column(
+            'task_try_time_launched', DateTime, nullable=True)
+
+        task_try_time_running = Column(
+            'task_try_time_running', DateTime, nullable=True)
+
+        task_try_time_returned = Column(
+            'task_try_time_returned', DateTime, nullable=True)
+
+        task_fail_history = Column('task_fail_history', Text, nullable=True)
+
+        __table_args__ = (
+            PrimaryKeyConstraint('try_id', 'task_id', 'run_id'),
         )
 
     class Node(Base):
@@ -154,20 +176,25 @@ class Database:
         id = Column('id', Integer, nullable=False, primary_key=True, autoincrement=True)
         run_id = Column('run_id', Text, nullable=False)
         hostname = Column('hostname', Text, nullable=False)
+        uid = Column('uid', Text, nullable=False)
+        block_id = Column('block_id', Text, nullable=False)
         cpu_count = Column('cpu_count', Integer, nullable=False)
         total_memory = Column('total_memory', Integer, nullable=False)
         active = Column('active', Boolean, nullable=False)
         worker_count = Column('worker_count', Integer, nullable=False)
         python_v = Column('python_v', Text, nullable=False)
-        reg_time = Column('reg_time', DateTime, nullable=False)
+        timestamp = Column('timestamp', DateTime, nullable=False)
+        last_heartbeat = Column('last_heartbeat', DateTime, nullable=False)
 
     class Resource(Base):
         __tablename__ = RESOURCE
+        try_id = Column('try_id', Integer, sa.ForeignKey(
+            'try.try_id'), nullable=False)
         task_id = Column('task_id', Integer, sa.ForeignKey(
             'task.task_id'), nullable=False)
-        timestamp = Column('timestamp', DateTime, nullable=False)
         run_id = Column('run_id', Text, sa.ForeignKey(
             'workflow.run_id'), nullable=False)
+        timestamp = Column('timestamp', DateTime, nullable=False)
         resource_monitoring_interval = Column(
             'resource_monitoring_interval', Float, nullable=True)
         psutil_process_pid = Column(
@@ -193,7 +220,7 @@ class Database:
         psutil_process_status = Column(
             'psutil_process_status', Text, nullable=True)
         __table_args__ = (
-            PrimaryKeyConstraint('task_id', 'run_id', 'timestamp'),
+            PrimaryKeyConstraint('try_id', 'task_id', 'run_id', 'timestamp'),
         )
 
 
@@ -221,9 +248,9 @@ class DatabaseManager:
         self.batching_interval = batching_interval
         self.batching_threshold = batching_threshold
 
-        self.pending_priority_queue = queue.Queue()
-        self.pending_node_queue = queue.Queue()
-        self.pending_resource_queue = queue.Queue()
+        self.pending_priority_queue = queue.Queue()  # type: queue.Queue[Any]
+        self.pending_node_queue = queue.Queue()  # type: queue.Queue[Any]
+        self.pending_resource_queue = queue.Queue()  # type: queue.Queue[Any]
 
     def start(self, priority_queue, node_queue, resource_queue) -> None:
 
@@ -262,6 +289,11 @@ class DatabaseManager:
         """
         inserted_tasks = set()  # type: Set[object]
 
+        """
+        like inserted_tasks but for task,try tuples
+        """
+        inserted_tries = set()  # type: Set[Any]
+
         # for any task ID, we can defer exactly one message, which is the
         # assumed-to-be-unique first message (with first message flag set).
         # The code prior to this patch will discard previous message in
@@ -287,13 +319,12 @@ class DatabaseManager:
             reprocessable_first_resource_messages = []
 
             # Get a batch of priority messages
-            priority_messages = self._get_messages_in_batch(self.pending_priority_queue,
-                                                            interval=self.batching_interval,
-                                                            threshold=self.batching_threshold)
+            priority_messages = self._get_messages_in_batch(self.pending_priority_queue)
             if priority_messages:
                 logger.debug(
                     "Got {} messages from priority queue".format(len(priority_messages)))
                 task_info_update_messages, task_info_insert_messages, task_info_all_messages = [], [], []
+                try_update_messages, try_insert_messages, try_all_messages = [], [], []
                 for msg_type, msg in priority_messages:
                     if msg_type.value == MessageType.WORKFLOW_INFO.value:
                         if "python_version" in msg:   # workflow start message
@@ -310,7 +341,8 @@ class DatabaseManager:
                                          messages=[msg])
                             self.workflow_end = True
 
-                    else:                             # TASK_INFO message
+                    elif msg_type.value == MessageType.TASK_INFO.value:
+                        task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
                         task_info_all_messages.append(msg)
                         if msg['task_id'] in inserted_tasks:
                             task_info_update_messages.append(msg)
@@ -318,39 +350,65 @@ class DatabaseManager:
                             inserted_tasks.add(msg['task_id'])
                             task_info_insert_messages.append(msg)
 
-                            # check if there is an left_message for this task
-                            if msg['task_id'] in deferred_resource_messages:
-                                reprocessable_first_resource_messages.append(
-                                    deferred_resource_messages.pop(msg['task_id']))
+                        try_all_messages.append(msg)
+                        if task_try_id in inserted_tries:
+                            try_update_messages.append(msg)
+                        else:
+                            inserted_tries.add(task_try_id)
+                            try_insert_messages.append(msg)
 
-                logger.debug(
-                    "Updating and inserting TASK_INFO to all tables")
+                            # check if there is a left_message for this task
+                            if task_try_id in deferred_resource_messages:
+                                reprocessable_first_resource_messages.append(
+                                    deferred_resource_messages.pop(task_try_id))
+                    else:
+                        raise RuntimeError("Unexpected message type {} received on priority queue".format(msg_type))
+
+                logger.debug("Updating and inserting TASK_INFO to all tables")
+                logger.debug("Updating {} TASK_INFO into workflow table".format(len(task_info_update_messages)))
+                self._update(table=WORKFLOW,
+                             columns=['run_id', 'tasks_failed_count',
+                                      'tasks_completed_count'],
+                             messages=task_info_all_messages)
 
                 if task_info_insert_messages:
                     self._insert(table=TASK, messages=task_info_insert_messages)
                     logger.debug(
                         "There are {} inserted task records".format(len(inserted_tasks)))
+
                 if task_info_update_messages:
-                    self._update(table=WORKFLOW,
-                                 columns=['run_id', 'tasks_failed_count',
-                                          'tasks_completed_count'],
-                                 messages=task_info_update_messages)
+                    logger.debug("Updating {} TASK_INFO into task table".format(len(task_info_update_messages)))
                     self._update(table=TASK,
-                                 columns=['task_time_submitted',
+                                 columns=['task_time_invoked',
                                           'task_time_returned',
                                           'run_id', 'task_id',
                                           'task_fail_count',
-                                          'task_fail_history'],
+                                          'task_hashsum'],
                                  messages=task_info_update_messages)
+                logger.debug("Inserting {} task_info_all_messages into status table".format(len(task_info_all_messages)))
+
                 self._insert(table=STATUS, messages=task_info_all_messages)
+
+                if try_insert_messages:
+                    logger.debug("Inserting {} TASK_INFO to try table".format(len(try_insert_messages)))
+                    self._insert(table=TRY, messages=try_insert_messages)
+                    logger.debug(
+                        "There are {} inserted task records".format(len(inserted_tasks)))
+
+                if try_update_messages:
+                    logger.debug("Updating {} TASK_INFO into try table".format(len(try_update_messages)))
+                    self._update(table=TRY,
+                                 columns=['run_id', 'task_id', 'try_id',
+                                          'task_fail_history',
+                                          'task_try_time_launched',
+                                          'task_try_time_returned'],
+                                 messages=try_update_messages)
 
             """
             NODE_INFO messages
 
             """
-            node_info_messages = self._get_messages_in_batch(self.pending_node_queue,
-                                                             interval=self.batching_interval,
-                                                             threshold=self.batching_threshold)
+            node_info_messages = self._get_messages_in_batch(self.pending_node_queue)
             if node_info_messages:
                 logger.debug(
                     "Got {} messages from node queue".format(len(node_info_messages)))
@@ -360,32 +418,38 @@ class DatabaseManager:
             Resource info messages
 
             """
-            resource_messages = self._get_messages_in_batch(self.pending_resource_queue,
-                                                            interval=self.batching_interval,
-                                                            threshold=self.batching_threshold)
+            resource_messages = self._get_messages_in_batch(self.pending_resource_queue)
 
             if resource_messages:
                 logger.debug(
                     "Got {} messages from resource queue, {} reprocessable".format(len(resource_messages), len(reprocessable_first_resource_messages)))
-                self._insert(table=RESOURCE, messages=resource_messages)
+
+                insert_resource_messages = []
                 for msg in resource_messages:
+                    task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
                     if msg['first_msg']:
-
+                        # Update the running time to try table if first message
                         msg['task_status_name'] = States.running.name
-                        msg['task_time_running'] = msg['timestamp']
+                        msg['task_try_time_running'] = msg['timestamp']
 
-                        if msg['task_id'] in inserted_tasks:
+                        if task_try_id in inserted_tries:  # TODO: needs to become task_id and try_id, and check against inserted_tries
                             reprocessable_first_resource_messages.append(msg)
                         else:
-                            if msg['task_id'] in deferred_resource_messages:
+                            if task_try_id in deferred_resource_messages:
                                 logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
-                            deferred_resource_messages[msg['task_id']] = msg
+                            deferred_resource_messages[task_try_id] = msg
+                    else:
+                        # Insert to resource table if not first message
+                        insert_resource_messages.append(msg)
+
+                if insert_resource_messages:
+                    self._insert(table=RESOURCE, messages=insert_resource_messages)
 
             if reprocessable_first_resource_messages:
                 self._insert(table=STATUS, messages=reprocessable_first_resource_messages)
-                self._update(table=TASK,
-                             columns=['task_time_running',
-                                      'run_id', 'task_id',
+                self._update(table=TRY,
+                             columns=['task_try_time_running',
+                                      'run_id', 'task_id', 'try_id',
                                       'hostname'],
                              messages=reprocessable_first_resource_messages)
 
@@ -444,11 +508,11 @@ class DatabaseManager:
             except Exception:
                 logger.exception("Rollback failed")
 
-    def _get_messages_in_batch(self, msg_queue, interval=1, threshold=99999):
-        messages = []
+    def _get_messages_in_batch(self, msg_queue):
+        messages = []  # type: List[Any]
         start = time.time()
         while True:
-            if time.time() - start >= interval or len(messages) >= threshold:
+            if time.time() - start >= self.batching_interval or len(messages) >= self.batching_threshold:
                 break
             try:
                 x = msg_queue.get(timeout=0.1)

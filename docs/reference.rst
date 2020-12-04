@@ -51,7 +51,7 @@ Data management
 
     parsl.app.futures.DataFuture
     parsl.data_provider.data_manager.DataManager
-    parsl.data_provider.data_manager.Staging
+    parsl.data_provider.staging.Staging
     parsl.data_provider.files.File
     parsl.data_provider.ftp.FTPSeparateTaskStaging
     parsl.data_provider.ftp.FTPInTaskStaging
@@ -73,6 +73,7 @@ Executors
     parsl.executors.HighThroughputExecutor
     parsl.executors.WorkQueueExecutor
     parsl.executors.ExtremeScaleExecutor
+    parsl.executors.LowLatencyExecutor
     parsl.executors.swift_t.TurbineExecutor
 
 Launchers
@@ -134,6 +135,7 @@ Exceptions
     parsl.executors.errors.ControllerError
     parsl.executors.errors.ExecutorError
     parsl.executors.errors.ScalingFailed
+    parsl.executors.errors.SerializationError
     parsl.executors.errors.InsufficientMPIRanks
     parsl.executors.errors.DeserializationError
     parsl.executors.errors.BadMessage
