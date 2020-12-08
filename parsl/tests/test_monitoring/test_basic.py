@@ -53,4 +53,11 @@ def test_row_counts():
         (c, ) = result.first()
         assert c == 1
 
+        result = connection.execute("SELECT COUNT(*) FROM status, try "
+                                    "WHERE status.task_id = try.task_id "
+                                    "AND status.task_status_name='exec_done' "
+                                    "AND task_try_time_running is NULL")
+        (c, ) = result.first()
+        assert c == 0
+
     logger.info("all done")
