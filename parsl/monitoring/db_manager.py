@@ -539,21 +539,37 @@ class DatabaseManager:
                     assert len(x) == 2
                     assert x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO], \
                         "_migrate_logs_to_internal can only migrate WORKFLOW_,TASK_INFO message from priority queue, got x[0] == {}".format(x[0])
-                    self.pending_priority_queue.put(cast(Any, x))
+                    self._dispatch_to_internal(x)
                 elif queue_tag == 'resource':
                     assert x[0] == MessageType.RESOURCE_INFO, "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue"
-                    body = x[1]
-                    assert len(body) == 3
-                    self.pending_resource_queue.put(body[-1])
+                    self._dispatch_to_internal(x)
                 elif queue_tag == 'node':
                     assert len(x) == 2, "expected message tuple to have exactly two elements"
                     assert x[0] == MessageType.NODE_INFO, "_migrate_logs_to_internal can only migrate NODE_INFO messages from node queue"
 
-                    self.pending_node_queue.put(x[-1])
+                    self._dispatch_to_internal(x)
                 elif queue_tag == "block":
-                    self.pending_block_queue.put(x[-1])
+                    self._dispatch_to_internal(x)
                 else:
-                    raise RuntimeError(f"queue_tag {queue_tag} is unknown")
+                    logger.error(f"Discarding because unknown queue tag '{queue_tag}', message: {x}")
+
+    def _dispatch_to_internal(self, x: Tuple) -> None:
+        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO]:
+            self.pending_priority_queue.put(cast(Any, x))
+        elif x[0] == MessageType.RESOURCE_INFO:
+            body = x[1]
+            assert len(body) == 3
+            self.pending_resource_queue.put(body[-1])
+        elif x[0] == MessageType.NODE_INFO:
+            assert len(x) == 2, "expected NODE_INFO tuple to have exactly two elements"
+
+            logger.info("Will put {} to pending node queue".format(x[1]))
+            self.pending_node_queue.put(x[1])
+        elif x[0] == MessageType.BLOCK_INFO:
+            logger.info("Will put {} to pending block queue".format(x[1]))
+            self.pending_block_queue.put(x[-1])
+        else:
+            logger.error("Discarding message of unknown type {}".format(x[0]))
 
     def _update(self, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
         try:
