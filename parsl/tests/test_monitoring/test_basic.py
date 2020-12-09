@@ -53,6 +53,10 @@ def test_row_counts():
         (c, ) = result.first()
         assert c == 1
 
+        result = connection.execute("SELECT COUNT(*) FROM node")
+        (c, ) = result.first()
+        assert c >= 1
+
         result = connection.execute("SELECT COUNT(*) FROM status, try "
                                     "WHERE status.task_id = try.task_id "
                                     "AND status.task_status_name='exec_done' "
