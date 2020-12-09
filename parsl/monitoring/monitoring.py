@@ -222,9 +222,9 @@ class MonitoringHub(RepresentationMixin):
         comm_q = Queue(maxsize=10)  # type: Queue[Union[Tuple[int, int], str]]
         self.exception_q = Queue(maxsize=10)  # type: Queue[Tuple[str, str]]
         self.priority_msgs = Queue()  # type: Queue[Tuple[Any, int]]
-        self.resource_msgs = Queue()  # type: Queue[Tuple[Any, Any]]
-        self.node_msgs = Queue()  # type: Queue[Tuple[Any, int]]
-        self.block_msgs = Queue()  # type: Queue[Tuple[Any, Any]]
+        self.resource_msgs = Queue()  # type: Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]
+        self.node_msgs = Queue()  # type: Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]
+        self.block_msgs = Queue()  # type:  Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]
 
         self.router_proc = Process(target=router_starter,
                                    args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),
@@ -429,17 +429,17 @@ class MonitoringRouter:
 
     def start(self,
               priority_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
-              node_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
-              block_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
-              resource_msgs: "queue.Queue[Tuple[Dict[str, Any], str]]") -> None:
+              node_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
+              block_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
+              resource_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]") -> None:
         try:
             while True:
                 self.logger.info("MONLOOP")
                 try:
                     data, addr = self.sock.recvfrom(2048)
                     msg = pickle.loads(data)
-                    resource_msgs.put((msg, addr))
-                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
+                    self.logger.info("Got UDP Message from {}: {}".format(addr, msg))
+                    resource_msgs.put(((MessageType.RESOURCE_INFO, msg), addr))
                 except socket.timeout:
                     pass
 
@@ -463,17 +463,26 @@ class MonitoringRouter:
 
                 try:
                     msg = self.ic_channel.recv_pyobj()
-                    self.logger.debug("Got ZMQ Message from interchange before handling: {}".format(msg))
+                    self.logger.info("Got ZMQ Message from interchange: {}".format(msg))
+
+                    assert msg[0] == MessageType.NODE_INFO \
+                        or msg[0] == MessageType.BLOCK_INFO, \
+                        "IC Channel expects only NODE_INFO or BLOCK_INFO and cannot dispatch other message types"
+
+                    # TODO: there's a style difference between comparing NODE_INFO and NODE_INFO.value - should be OK to compare just NODE_INFO?
                     if msg[0].value == MessageType.NODE_INFO.value:
                         msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
                         msg[2]['run_id'] = self.run_id
+                        # TODO: why isn't this included in the original message in the right place? does some intermediate place add it in?
                         msg[2]['timestamp'] = msg[1]
-                        msg = (msg[0], msg[2])
-                        node_msgs.put((msg, 0))
+
+                        # ((tag, dict), addr)
+                        node_msg = ((msg[0], msg[2]), 0)
+                        self.logger.info("Sending reformatted message to node_msgs: {}".format(node_msg))
+                        node_msgs.put(node_msg)
                     elif msg[0].value == MessageType.BLOCK_INFO.value:
                         block_msgs.put((msg, 0))
                     # TODO: else we're discarding a message here without noting that it is being discarded
-                    self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
                 except zmq.Again:
                     pass
 
@@ -483,10 +492,10 @@ class MonitoringRouter:
                 self.logger.info("Drain loop")
                 try:
                     data, addr = self.sock.recvfrom(2048)
+                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
                     msg = pickle.loads(data)
                     resource_msgs.put((msg, addr))
                     last_msg_received_time = time.time()
-                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
                 except socket.timeout:
                     pass
 
@@ -499,9 +508,9 @@ class MonitoringRouter:
 def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    exception_q: "queue.Queue[Tuple[str, str]]",
                    priority_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
-                   node_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
-                   block_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
-                   resource_msgs: "queue.Queue[Tuple[Dict[str, Any], str]]",
+                   node_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
+                   block_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
+                   resource_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], str]]",
 
                    hub_address: str,
                    hub_port: Optional[int],
