@@ -14,7 +14,7 @@ from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
 
 from parsl.monitoring.message_type import MessageType
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import cast, Any, Callable, Dict, List, Optional, Union
 
 _db_manager_excepts: Optional[Exception]
 
@@ -447,8 +447,11 @@ class MonitoringRouter:
                     msg = self.dfk_channel.recv_pyobj()
                     self.logger.info("Got ZMQ Message from DFK: {}".format(msg))
                     if msg[0].value == MessageType.BLOCK_INFO.value:
+                        self.logger.info("Putting that ZMQ message to block_msgs")
                         block_msgs.put((msg, 0))
+                        self.logger.info("Put that ZMQ message to block_msgs")
                     else:
+                        self.logger.info("Putting that ZMQ message to priority_msgs by default")
                         priority_msgs.put((msg, 0))
                     if msg[0].value == MessageType.WORKFLOW_INFO.value and 'python_version' not in msg[1]:
                         break
@@ -464,13 +467,12 @@ class MonitoringRouter:
                 try:
                     msg = self.ic_channel.recv_pyobj()
                     self.logger.info("Got ZMQ Message from interchange: {}".format(msg))
+                    assert isinstance(msg, tuple), "IC Channel expects only tuples, got {}".format(msg)
+                    assert len(msg) >= 1, "IC Channel expects tuples of length at least 1, got {}".format(msg)
+                    if msg[0] == MessageType.NODE_INFO:
+                        self.logger.info("message is NODE_INFO")
+                        assert len(msg) >= 1, "IC Channel expects NODE_INFO tuples of length at least 3, got {}".format(msg)
 
-                    assert msg[0] == MessageType.NODE_INFO \
-                        or msg[0] == MessageType.BLOCK_INFO, \
-                        "IC Channel expects only NODE_INFO or BLOCK_INFO and cannot dispatch other message types"
-
-                    # TODO: there's a style difference between comparing NODE_INFO and NODE_INFO.value - should be OK to compare just NODE_INFO?
-                    if msg[0].value == MessageType.NODE_INFO.value:
                         msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
                         msg[2]['run_id'] = self.run_id
                         # TODO: why isn't this included in the original message in the right place? does some intermediate place add it in?
@@ -480,9 +482,23 @@ class MonitoringRouter:
                         node_msg = ((msg[0], msg[2]), 0)
                         self.logger.info("Sending reformatted message to node_msgs: {}".format(node_msg))
                         node_msgs.put(node_msg)
-                    elif msg[0].value == MessageType.BLOCK_INFO.value:
-                        block_msgs.put((msg, 0))
-                    # TODO: else we're discarding a message here without noting that it is being discarded
+                    elif msg[0] == MessageType.RESOURCE_INFO:
+                        # with more uniform handling of messaging, it doesn't matter
+                        # too much which queue this goes to now... could be node_msgs
+                        # just as well, I think.
+                        # and if the above message rewriting was got rid of, this block might not need to switch on message tag at all.
+                        self.logger.info("Handling as RESOURCE_INFO")
+                        resource_msgs.put(cast(Any, msg))
+                    elif msg[0] == MessageType.BLOCK_INFO:
+                        self.logger.info("Putting message to block_msgs: {}".format((msg, 0)))
+                        # block_msgs.put((msg, 0))
+                        block_msgs.put(cast(Any, (msg, 0)))
+                        # TODO this cast is suspicious and is to make mypy
+                        # trivially pass rather than me paying attention to
+                        # the message structure. so if something breaks in
+                        # this patch, it could well be here.
+                    else:
+                        logger.error("Discarding message with unknown tag {}".format(msg[0]))
                 except zmq.Again:
                     pass
 
