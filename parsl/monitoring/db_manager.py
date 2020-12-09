@@ -5,7 +5,7 @@ import os
 import time
 import datetime
 
-from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar
+from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
 
 from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
@@ -527,17 +527,33 @@ class DatabaseManager:
             except queue.Empty:
                 continue
             else:
-                if queue_tag == 'priority':
+                if queue_tag == 'priority' and x == 'STOP':
                     if x == 'STOP':
                         self.close()
+                elif queue_tag == 'priority':  # implicitly not 'STOP'
+                    if isinstance(x, tuple):
+                        assert x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO], \
+                            "_migrate_logs_to_internal can only migrate WORKFLOW_,TASK_INFO message from priority queue, got x[0] == {}".format(x[0])
+                        assert len(x) == 2
+                        self.pending_priority_queue.put(cast(Any, x))
                     else:
-                        self.pending_priority_queue.put(x)
+                        logger.warning("dropping message with unknown format: {}".format(x))
                 elif queue_tag == 'resource':
+                    assert len(x) == 3
                     self.pending_resource_queue.put(x[-1])
                 elif queue_tag == 'node':
-                    self.pending_node_queue.put(x[-1])
+                    logger.info("Received these two from node queue")
+                    logger.info("x = {}".format(x))
+                    logger.info("addr = {}".format(addr))
+
+                    assert x[0] == MessageType.NODE_INFO, "_migrate_logs_to_internal can only migrate NODE_INFO messages from node queue"
+                    assert len(x) == 2, "expected message tuple to have exactly two elements"
+
+                    logger.info("Will put {} to pending node queue".format(x[1]))
+                    self.pending_node_queue.put(x[1])
                 elif queue_tag == "block":
                     self.pending_block_queue.put(x[-1])
+                # TODO: else condition here raise an exception.
 
     def _update(self, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
         try:
