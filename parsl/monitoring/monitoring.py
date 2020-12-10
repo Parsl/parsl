@@ -13,8 +13,11 @@ from parsl.utils import RepresentationMixin
 
 from parsl.process_loggers import wrap_with_logs
 
+# this is needed for htex hack to get at htex result queue
+import parsl.executors.high_throughput.monitoring_info
+
 from parsl.monitoring.message_type import MessageType
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, cast
 
 _db_manager_excepts: Optional[Exception]
 
@@ -63,7 +66,79 @@ def start_file_logger(filename: str, name: str = 'monitoring', level: int = logg
     return logger
 
 
+# hack away at this:
+# OldUDPRadio is the original UDP radio code, which should be preserved
+# The new UDPRadio class should be called something like HTEXRadio
+# and there should be some way of switching between them, probably configured
+# by the user? eg specify a classname as a string? but all these parameters
+# might need to be a bit different too
+
 class UDPRadio:
+
+    def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
+        """
+        Parameters
+        ----------
+
+        monitoring_url : str
+            URL of the form <scheme>://<IP>:<PORT>
+        source_id : str
+            String identifier of the source
+        timeout : int
+            timeout, default=10s
+        """
+        self.source_id = source_id
+        logger.info("htex-based monitoring channel initialising")
+
+    def send(self, message: object) -> None:
+        """ Sends a message to the UDP receiver
+
+        Parameter
+        ---------
+
+        message: object
+            Arbitrary pickle-able object that is to be sent
+
+        Returns:
+            None
+        """
+        # TODO: this message needs to look like the other messages that the interchange will send...
+        #            hub_channel.send_pyobj((MessageType.NODE_INFO,
+        #                            datetime.datetime.now(),
+        #                            self._ready_manager_queue[manager]))
+
+        # not serialising here because it looks like python objects can go through mp queues without explicit pickling?
+        try:
+            buffer = (MessageType.RESOURCE_INFO, (self.source_id,   # Identifier for manager
+                      int(time.time()),  # epoch timestamp
+                      message))
+        except Exception:
+            logging.exception("Exception during pickling", exc_info=True)
+            return
+
+        result_queue = parsl.executors.high_throughput.monitoring_info.result_queue
+
+        # this message needs to go in the result queue tagged so that it is treated
+        # i) as a monitoring message by the interchange, and then further more treated
+        # as a RESOURCE_INFO message when received by monitoring (rather than a NODE_INFO
+        # which is the implicit default for messages from the interchange)
+
+        # for the interchange, the outer wrapper, this needs to be a dict:
+
+        interchange_msg = {
+            'type': 'monitoring',
+            'payload': buffer
+        }
+
+        if result_queue:
+            result_queue.put(pickle.dumps(interchange_msg))
+        else:
+            logger.error("result_queue is uninitialized - cannot put monitoring message")
+
+        return
+
+
+class OldUDPRadio:
 
     def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
         """
@@ -222,8 +297,8 @@ class MonitoringHub(RepresentationMixin):
         comm_q = Queue(maxsize=10)  # type: Queue[Tuple[int, int]]
         self.exception_q = Queue(maxsize=10)  # type: Queue[Tuple[str, str]]
         self.priority_msgs = Queue()  # type: Queue[Tuple[Any, int]]
-        self.resource_msgs = Queue()  # type: Queue[Tuple[Any, Any]]
-        self.node_msgs = Queue()  # type: Queue[Tuple[Any, int]]
+        self.resource_msgs = Queue()  # type: Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]
+        self.node_msgs = Queue()  # type: Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]
 
         self.router_proc = Process(target=router_starter,
                                    args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
@@ -314,14 +389,10 @@ class MonitoringHub(RepresentationMixin):
         def wrapped(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
             logger.debug("wrapped: 1. start of wrapped")
             # Send first message to monitoring router
-            monitor(os.getpid(),
-                    try_id,
-                    task_id,
-                    monitoring_hub_url,
-                    run_id,
-                    logging_level,
-                    sleep_dur,
-                    first_message=True)
+            send_first_message(try_id,
+                               task_id,
+                               monitoring_hub_url,
+                               run_id)
             logger.debug("wrapped: 2. sent first message")
 
             # create the monitor process and start
@@ -405,23 +476,19 @@ class MonitoringRouter:
         self.loop_freq = 10.0  # milliseconds
 
         # Initialize the UDP socket
-        try:
-            self.sock = socket.socket(socket.AF_INET,
-                                      socket.SOCK_DGRAM,
-                                      socket.IPPROTO_UDP)
+        self.sock = socket.socket(socket.AF_INET,
+                                  socket.SOCK_DGRAM,
+                                  socket.IPPROTO_UDP)
 
-            # We are trying to bind to all interfaces with 0.0.0.0
-            if not hub_port:
-                self.sock.bind(('0.0.0.0', 0))
-                self.hub_port = self.sock.getsockname()[1]
-            else:
-                self.hub_port = hub_port
-                self.sock.bind(('0.0.0.0', self.hub_port))
-            self.sock.settimeout(self.loop_freq / 1000)
-            self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.hub_port))
-        except OSError:
-            self.logger.critical("The port is already in use")
-            self.hub_port = -1
+        # We are trying to bind to all interfaces with 0.0.0.0
+        if not hub_port:
+            self.sock.bind(('0.0.0.0', 0))
+            self.hub_port = self.sock.getsockname()[1]
+        else:
+            self.hub_port = hub_port
+            self.sock.bind(('0.0.0.0', self.hub_port))
+        self.sock.settimeout(self.loop_freq / 1000)
+        self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.hub_port))
 
         self._context = zmq.Context()
         self.dfk_channel = self._context.socket(zmq.DEALER)
@@ -441,16 +508,16 @@ class MonitoringRouter:
 
     def start(self,
               priority_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
-              node_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
-              resource_msgs: "queue.Queue[Tuple[Dict[str, Any], str]]") -> None:
+              node_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
+              resource_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]") -> None:
         try:
             while True:
                 self.logger.info("MONLOOP")
                 try:
                     data, addr = self.sock.recvfrom(2048)
                     msg = pickle.loads(data)
-                    resource_msgs.put((msg, addr))
-                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
+                    self.logger.info("Got UDP Message from {}: {}".format(addr, msg))
+                    resource_msgs.put(((MessageType.RESOURCE_INFO, msg), addr))
                 except socket.timeout:
                     pass
 
@@ -471,12 +538,29 @@ class MonitoringRouter:
 
                 try:
                     msg = self.ic_channel.recv_pyobj()
-                    msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
-                    msg[2]['run_id'] = self.run_id
-                    msg[2]['timestamp'] = msg[1]
-                    msg = (msg[0], msg[2])
-                    self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
-                    node_msgs.put((msg, 0))
+                    self.logger.info("Got ZMQ Message from interchange: {}".format(msg))
+                    assert isinstance(msg, tuple), "IC Channel expects only tuples, got {}".format(msg)
+                    assert len(msg) >= 1, "IC Channel expects tuples of length at least 1, got {}".format(msg)
+                    if msg[0] == MessageType.NODE_INFO:
+                        assert len(msg) >= 1, "IC Channel expects NODE_INFO tuples of length at least 3, got {}".format(msg)
+
+                        msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
+                        msg[2]['run_id'] = self.run_id
+                        # TODO: why isn't this included in the original message in the right place? does some intermediate place add it in?
+                        msg[2]['timestamp'] = msg[1]
+
+                        # ((tag, dict), addr)
+                        node_msg = ((msg[0], msg[2]), 0)
+                        self.logger.info("Sending reformatted message to node_msgs: {}".format(node_msg))
+                        node_msgs.put(node_msg)
+                    elif msg[0] == MessageType.RESOURCE_INFO:
+                        # with more uniform handling of messaging, it doesn't matter
+                        # too much which queue this goes to now... could be node_msgs
+                        # just as well, I think.
+                        # and if the above message rewriting was got rid of, this block might not need to switch on message tag at all.
+                        resource_msgs.put(cast(Any, (msg, 0)))
+                    else:
+                        logger.error("Discarding message with unknown tag {}".format(msg[0]))
                 except zmq.Again:
                     pass
 
@@ -486,10 +570,10 @@ class MonitoringRouter:
                 self.logger.info("Drain loop")
                 try:
                     data, addr = self.sock.recvfrom(2048)
+                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
                     msg = pickle.loads(data)
                     resource_msgs.put((msg, addr))
                     last_msg_received_time = time.time()
-                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
                 except socket.timeout:
                     pass
 
@@ -502,8 +586,8 @@ class MonitoringRouter:
 def router_starter(comm_q: "queue.Queue[Tuple[int, int]]",
                    exception_q: "queue.Queue[Tuple[str, str]]",
                    priority_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
-                   node_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
-                   resource_msgs: "queue.Queue[Tuple[Dict[str, Any], str]]",
+                   node_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
+                   resource_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], str]]",
 
                    hub_address: str,
                    hub_port: Optional[int],
@@ -537,40 +621,48 @@ def router_starter(comm_q: "queue.Queue[Tuple[int, int]]",
 
 
 @wrap_with_logs
+def send_first_message(try_id: int,
+                       task_id: int,
+                       monitoring_hub_url: str,
+                       run_id: str) -> None:
+    import platform
+
+    radio = UDPRadio(monitoring_hub_url,
+                     source_id=task_id)
+
+    msg = {'run_id': run_id,
+           'try_id': try_id,
+           'task_id': task_id,
+           'hostname': platform.node(),
+           'first_msg': True,
+           'timestamp': datetime.datetime.now()
+    }
+    radio.send(msg)
+    return
+
+
+@wrap_with_logs
 def monitor(pid: int,
             try_id: int,
             task_id: int,
             monitoring_hub_url: str,
             run_id: str,
             logging_level: int = logging.INFO,
-            sleep_dur: int = 10,
-            first_message: bool = False) -> None:
+            sleep_dur: int = 10) -> None:
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
     """
+    import logging
     import platform
+    import psutil
     import time
 
     radio = UDPRadio(monitoring_hub_url,
                      source_id=task_id)
 
-    if first_message:
-        msg = {'run_id': run_id,
-               'try_id': try_id,
-               'task_id': task_id,
-               'hostname': platform.node(),
-               'first_msg': first_message,
-               'timestamp': datetime.datetime.now()
-        }
-        radio.send(msg)
-        return
-
-    import psutil
-    import logging
-
     format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
     logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
-        logbase="/tmp", task_id=task_id, pid=pid), level=logging_level, format=format_string)
+        logbase="/tmp", task_id=task_id, pid=pid), level=logging.DEBUG, format=format_string)
 
     logging.debug("start of monitor")
 
@@ -595,7 +687,7 @@ def monitor(pid: int,
             d["try_id"] = try_id
             d['resource_monitoring_interval'] = sleep_dur
             d['hostname'] = platform.node()
-            d['first_msg'] = first_message
+            d['first_msg'] = False
             d['timestamp'] = datetime.datetime.now()
 
             logging.debug("getting children")

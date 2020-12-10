@@ -220,14 +220,6 @@ class Interchange(object):
         self.hub_address = hub_address
         self.hub_port = hub_port
 
-        self.monitoring_enabled = False
-        if hub_address and hub_port:
-            self.hub_channel = self.context.socket(zmq.DEALER)
-            self.hub_channel.set_hwm(0)
-            self.hub_channel.connect("tcp://{}:{}".format(hub_address, hub_port))
-            self.monitoring_enabled = True
-            logger.info("Monitoring enabled and connected to hub")
-
         self.pending_task_queue = queue.PriorityQueue(maxsize=10 ** 6)
 
         self.worker_ports = worker_ports
@@ -326,12 +318,23 @@ class Interchange(object):
                 task_counter += 1
                 logger.debug("[TASK_PULL_THREAD] Fetched task:{}".format(task_counter))
 
-    def _send_monitoring_info(self, manager):
-        if self.monitoring_enabled:
+    def _create_monitoring_channel(self):
+        if self.hub_address and self.hub_port:
+            logger.info("Connecting to monitoring")
+            hub_channel = self.context.socket(zmq.DEALER)
+            hub_channel.set_hwm(0)
+            hub_channel.connect("tcp://{}:{}".format(self.hub_address, self.hub_port))
+            logger.info("Monitoring enabled and connected to hub")
+            return hub_channel
+        else:
+            return None
+
+    def _send_monitoring_info(self, hub_channel, manager):
+        if hub_channel:
             logger.info("Sending message {} to hub".format(self._ready_manager_queue[manager]))
-            self.hub_channel.send_pyobj((MessageType.NODE_INFO,
-                                         datetime.datetime.now(),
-                                         self._ready_manager_queue[manager]))
+            hub_channel.send_pyobj((MessageType.NODE_INFO,
+                                    datetime.datetime.now(),
+                                    self._ready_manager_queue[manager]))
 
     @wrap_with_logs
     def _command_server(self, kill_event):
@@ -340,13 +343,7 @@ class Interchange(object):
         logger.debug("[COMMAND] Command Server Starting")
 
         # Need to create a new ZMQ socket for command server thread
-        monitoring_enabled = False
-        if self.hub_address and self.hub_port:
-            hub_channel = self.context.socket(zmq.DEALER)
-            hub_channel.set_hwm(0)
-            hub_channel.connect("tcp://{}:{}".format(self.hub_address, self.hub_port))
-            monitoring_enabled = True
-            logger.info("[COMMAND] Monitoring enabled and connected to hub")
+        hub_channel = self._create_monitoring_channel()
 
         while not kill_event.is_set():
             try:
@@ -385,11 +382,7 @@ class Interchange(object):
                     if manager in self._ready_manager_queue:
                         self._ready_manager_queue[manager]['active'] = False
                         reply = True
-                        if monitoring_enabled:
-                            logger.info("[COMMAND] Sending message {} to hub".format(self._ready_manager_queue[manager]))
-                            hub_channel.send_pyobj((MessageType.NODE_INFO,
-                                                    datetime.datetime.now(),
-                                                    self._ready_manager_queue[manager]))
+                        self._send_monitoring_info(hub_channel, manager)
                     else:
                         reply = False
 
@@ -408,6 +401,7 @@ class Interchange(object):
                 logger.debug("[COMMAND] is alive")
                 continue
 
+    @wrap_with_logs
     def start(self):
         """ Start the interchange
 
@@ -417,6 +411,8 @@ class Interchange(object):
         TODO: Move task receiving to a thread
         """
         logger.info("Incoming ports bound")
+
+        hub_channel = self._create_monitoring_channel()
 
         # poll period is never specified as a start() parameter, so removing the defaulting here as noise.
         # poll_period = self.poll_period
@@ -494,7 +490,7 @@ class Interchange(object):
                         logger.info("[MAIN] Adding manager: {} to ready queue".format(manager))
                         self._ready_manager_queue[manager].update(msg)
                         logger.info("[MAIN] Registration info for manager {}: {}".format(manager, msg))
-                        self._send_monitoring_info(manager)
+                        self._send_monitoring_info(hub_channel, manager)
 
                         if (msg['python_v'].rsplit(".", 1)[0] != self.current_platform['python_v'].rsplit(".", 1)[0] or
                             msg['parsl_v'] != self.current_platform['parsl_v']):
@@ -506,7 +502,7 @@ class Interchange(object):
                                                 "py.v={} parsl.v={}".format(msg['python_v'].rsplit(".", 1)[0],
                                                                             msg['parsl_v'])
                             )
-                            result_package = {'task_id': -1, 'exception': serialize_object(e)}
+                            result_package = {'type': 'result', 'task_id': -1, 'exception': serialize_object(e)}
                             pkl_package = pickle.dumps(result_package)
                             self.results_outgoing.send(pkl_package)
                             logger.warning("[MAIN] Sent failure reports, unregistering manager")
@@ -578,11 +574,31 @@ class Interchange(object):
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
                 logger.debug("[MAIN] entering results_incoming section")
-                manager, *b_messages = self.results_incoming.recv_multipart()
+                manager, *all_messages = self.results_incoming.recv_multipart()
                 if manager not in self._ready_manager_queue:
                     logger.warning("[MAIN] Received a result from a un-registered manager: {}".format(manager))
                 else:
-                    logger.debug("[MAIN] Got {} result items in batch".format(len(b_messages)))
+                    logger.debug("[MAIN] Got {} result items in batch".format(len(all_messages)))
+
+                    b_messages = []
+
+                    # this block needs to split messages into 'result' messages, and process as previously;
+                    # monitoring messages, which should be sent to monitoring via whatever is used?
+                    # and others, which should generate a non-fatal error log
+
+                    # TODO: rework to avoid depickling twice... because that's quite expensive I expect
+
+                    for message in all_messages:
+                        r = pickle.loads(message)
+                        if r['type'] == 'result':
+                            # process this for task ID and forward to executor
+                            b_messages.append(message)
+                        # TODO: case here for monitoring messages
+                        if r['type'] == 'monitoring':
+                            hub_channel.send_pyobj(r['payload'])
+                        else:
+                            logger.error("Interchange discarding result_queue message of unknown type: {}".format(r['type']))
+
                     for b_message in b_messages:
                         r = pickle.loads(b_message)
                         try:
@@ -594,7 +610,9 @@ class Interchange(object):
                                 manager,
                                 self._ready_manager_queue[manager]['tasks']))
 
-                    self.results_outgoing.send_multipart(b_messages)
+                    if b_messages:
+                        self.results_outgoing.send_multipart(b_messages)
+
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
                     if len(self._ready_manager_queue[manager]['tasks']) == 0:
                         self._ready_manager_queue[manager]['idle_since'] = time.time()
@@ -613,7 +631,7 @@ class Interchange(object):
                     try:
                         raise ManagerLost(manager, self._ready_manager_queue[manager]['hostname'])
                     except Exception:
-                        result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
+                        result_package = {'type': 'result', 'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
                         pkl_package = pickle.dumps(result_package)
                         self.results_outgoing.send(pkl_package)
                         logger.warning("[MAIN] Sent failure reports, unregistering manager")
