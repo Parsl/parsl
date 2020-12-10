@@ -2,12 +2,19 @@ import logging
 import os
 import parsl
 import pytest
+import time
 
 logger = logging.getLogger(__name__)
 
 
 @parsl.python_app
 def this_app():
+    # this delay needs to be several times the resource monitoring
+    # period configured in the test configuration, so that some
+    # messages are actually sent - there is no guarantee that any
+    # (non-first) resource message will be sent at all for a short app.
+    time.sleep(3)
+
     return 5
 
 
@@ -69,6 +76,10 @@ def test_row_counts():
         result = connection.execute("SELECT COUNT(*) FROM block")
         (c, ) = result.first()
         assert c >= 2
+
+        result = connection.execute("SELECT COUNT(*) FROM resource")
+        (c, ) = result.first()
+        assert c >= 1
 
     logger.info("all done")
 
