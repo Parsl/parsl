@@ -713,7 +713,7 @@ class DataFlowKernel(object):
         else:
             raise ValueError("Task {} supplied invalid type for executors: {}".format(task_id, type(executors)))
         executor = random.choice(choices)
-        logger.info("Task {} will be sent to executor {}".format(task_id, executor))
+        logger.debug("Task {} will be sent to executor {}".format(task_id, executor))
 
         # The below uses func.__name__ before it has been wrapped by any staging code.
 
