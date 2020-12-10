@@ -7,7 +7,6 @@ import pytest
 logger = logging.getLogger(__name__)
 
 
-
 @parsl.python_app(cache=True)
 def this_app(x):
     return x + 1
