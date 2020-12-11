@@ -439,7 +439,7 @@ class DataFlowKernel(object):
     def wipe_task(self, task_id):
         """ Remove task with task_id from the internal tasks table
         """
-        del self.tasks[task_id]
+        # del self.tasks[task_id]
 
     @staticmethod
     def check_staging_inhibited(kwargs):
