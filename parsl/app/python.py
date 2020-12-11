@@ -76,6 +76,6 @@ class PythonApp(AppBase):
                              fn_hash=self.func_hash,
                              cache=self.cache,
                              ignore_for_cache=self.ignore_for_cache,
-                             app_kwargs=kwargs)
+                             app_kwargs=invocation_kwargs)
 
         return app_fut

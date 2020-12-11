@@ -149,6 +149,13 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             require a common environment or shared FS on execution nodes.
             Implies source=True.
 
+        extra_pkgs: list
+            List of extra pip/conda package names to include when packing
+            the environment. This may be useful if the app executes other
+            (possibly non-Python) programs provided via pip or conda.
+            Scanning the app source for imports would not detect these
+            dependencies, so they need to be manually specified.
+
         autolabel: bool
             Use the Resource Monitor to automatically determine resource
             labels based on observed task behavior.
@@ -190,9 +197,10 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  use_cache: bool = False,
                  source: bool = False,
                  pack: bool = False,
+                 extra_pkgs: Optional[List[str]] = None,
                  autolabel: bool = False,
                  autolabel_window: int = 1,
-                 autocategory: bool = False,
+                 autocategory: bool = True,
                  init_command: str = "",
                  worker_options: str = "",
                  full_debug: bool = True):
@@ -223,6 +231,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.full = full_debug
         self.source = True if pack else source
         self.pack = pack
+        self.extra_pkgs = extra_pkgs or []
         self.autolabel = autolabel
         self.autolabel_window = autolabel_window
         self.autocategory = autocategory
@@ -396,7 +405,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self._serialize_function(function_file, func, args, kwargs)
 
         if self.pack:
-            env_pkg = self._prepare_package(func)
+            env_pkg = self._prepare_package(func, self.extra_pkgs)
         else:
             env_pkg = None
 
@@ -408,7 +417,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
-        category = func.__qualname__ if self.autocategory else 'parsl-default'
+        category = func.__name__ if self.autocategory else 'parsl-default'
         self.task_queue.put_nowait(ParslTaskToWq(task_id,
                                                  category,
                                                  cores,
@@ -513,9 +522,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         to_stage = not os.path.isabs(fname)
         return ParslFileToWq(fname, stage=to_stage, cache=False)
 
-    def _prepare_package(self, fn):
+    def _prepare_package(self, fn, extra_pkgs):
         fn_id = id(fn)
-        fn_name = fn.__qualname__
+        fn_name = fn.__name__
         if fn_id in self.cached_envs:
             logger.debug("Skipping analysis of %s, previously got %s", fn_name, self.cached_envs[fn_id])
             return self.cached_envs[fn_id]
@@ -524,7 +533,10 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         os.makedirs(pkg_dir, exist_ok=True)
         with tempfile.NamedTemporaryFile(suffix='.yaml') as spec:
             logger.info("Analyzing dependencies of %s", fn_name)
-            subprocess.run([package_analyze_script, '-', spec.name], input=source_code, check=True)
+            analyze_cmdline = [package_analyze_script, exec_parsl_function.__file__, '-', spec.name]
+            for p in extra_pkgs:
+                analyze_cmdline += ["--extra-pkg", p]
+            subprocess.run(analyze_cmdline, input=source_code, check=True)
             with open(spec.name, mode='rb') as f:
                 spec_hash = hashlib.sha256(f.read()).hexdigest()
                 logger.debug("Spec hash for %s is %s", fn_name, spec_hash)

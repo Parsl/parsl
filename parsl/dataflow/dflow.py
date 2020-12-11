@@ -274,7 +274,7 @@ class DataFlowKernel(object):
                 res.reraise()
 
         except Exception as e:
-            logger.debug("Task {} failed".format(task_id))
+            logger.debug("Task {} try {} failed".format(task_id, task_record['try_id']))
             # We keep the history separately, since the future itself could be
             # tossed.
             task_record['fail_history'].append(str(e))
@@ -325,10 +325,7 @@ class DataFlowKernel(object):
             with task_record['app_fu']._update_lock:
                 task_record['app_fu'].set_result(future.result())
 
-        if task_record['app_fu'].stdout is not None:
-            logger.info("Standard output for task {} available at {}".format(task_id, task_record['app_fu'].stdout))
-        if task_record['app_fu'].stderr is not None:
-            logger.info("Standard error for task {} available at {}".format(task_id, task_record['app_fu'].stderr))
+        self._log_std_streams(task_record)
 
         # record current state for this task after we're done: maybe a new try, or maybe the old try marked as failed
         self._send_task_log_info(task_record)
@@ -507,6 +504,9 @@ class DataFlowKernel(object):
         self._send_task_log_info(self.tasks[task_id])
 
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
+
+        self._log_std_streams(self.tasks[task_id])
+
         return exec_fu
 
     def _add_input_deps(self, executor, args, kwargs, func):
@@ -713,6 +713,7 @@ class DataFlowKernel(object):
         else:
             raise ValueError("Task {} supplied invalid type for executors: {}".format(task_id, type(executors)))
         executor = random.choice(choices)
+        logger.debug("Task {} will be sent to executor {}".format(task_id, executor))
 
         # The below uses func.__name__ before it has been wrapped by any staging code.
 
@@ -1137,6 +1138,13 @@ class DataFlowKernel(object):
             raise BadCheckpoint("checkpointDirs expects a list of checkpoints")
 
         return self._load_checkpoints(checkpointDirs)
+
+    @staticmethod
+    def _log_std_streams(task_record):
+        if task_record['app_fu'].stdout is not None:
+            logger.info("Standard output for task {} available at {}".format(task_record['id'], task_record['app_fu'].stdout))
+        if task_record['app_fu'].stderr is not None:
+            logger.info("Standard error for task {} available at {}".format(task_record['id'], task_record['app_fu'].stderr))
 
 
 class DataFlowKernelLoader(object):
