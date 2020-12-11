@@ -327,30 +327,30 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         if resource_specification and isinstance(resource_specification, dict):
             logger.debug("Got resource specification: {}".format(resource_specification))
 
-            acceptable_resource_types = ['cores', 'memory', 'disk']
-            keys = list(resource_specification.keys())
-            if not all(k.lower() in acceptable_resource_types for k in keys):
-                logger.error("Task resource specification only accepts "
-                             "three types of resources: cores, memory, and disk")
-                raise ExecutorError(self, "Task resource specification only accepts "
-                                          "three types of resources: cores, memory, and disk")
+            acceptable_resource_types = set(['cores', 'memory', 'disk'])
+            keys = set(resource_specification.keys())
+            if self.autolabel:
+                if not keys.issubset(acceptable_resource_types):
+                    logger.error("Task resource specification only accepts "
+                                 "three types of resources: cores, memory, and disk")
+                    raise ExecutorError(self, "Task resource specification only accepts "
+                                              "three types of resources: cores, memory, and disk")
 
-            if len(keys) != 3:
-                if not self.autolabel:
-                    logger.error("Rnning with `autolabel=False`. In this mode, "
-                                 "task resource specification requires "
-                                 "three resources to be specified simultaneously: cores, memory, and disk")
-                    raise ExecutorError(self, "Task resource specification requires "
-                                              "three resources to be specified simultaneously: cores, memory, and disk, "
-                                              "and only takes these three resource types, when running with `autolabel=False`. "
-                                              "Try setting autolabel=True if you are unsure of the resource usage")
+            elif keys != acceptable_resource_types:
+                logger.error("Running with `autolabel=False`. In this mode, "
+                             "task resource specification requires "
+                             "three resources to be specified simultaneously: cores, memory, and disk")
+                raise ExecutorError(self, "Task resource specification requires "
+                                          "three resources to be specified simultaneously: cores, memory, and disk, "
+                                          "and only takes these three resource types, when running with `autolabel=False`. "
+                                          "Try setting autolabel=True if you are unsure of the resource usage")
 
             for k in keys:
-                if k.lower() == 'cores':
+                if k == 'cores':
                     cores = resource_specification[k]
-                elif k.lower() == 'memory':
+                elif k == 'memory':
                     memory = resource_specification[k]
-                elif k.lower() == 'disk':
+                elif k == 'disk':
                     disk = resource_specification[k]
 
         self.task_counter += 1
