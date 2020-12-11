@@ -71,22 +71,6 @@ test_matrix = {
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
 
 
-# @pytest.mark.whitelist(whitelist, reason='broken in IPP')
-@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
-def test_bash_formatting():
-
-    f = bad_format()
-    try:
-        f.result()
-    except Exception as e:
-        print("Caught exception", e)
-        assert isinstance(
-            e, parsl.app.errors.AppBadFormatting), "Expected AppBadFormatting got : {0}".format(e)
-    return True
-
-
-# @pytest.mark.whitelist(whitelist, reason='broken in IPP')
-@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_div_0(test_fn=div_0):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
@@ -187,8 +171,6 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
     args = parser.parse_args()
-
-    print(test_bash_formatting())
 
     exit(0)
 
