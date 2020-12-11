@@ -3,6 +3,8 @@ import os
 import pytest
 import shutil
 import time
+import random
+import re
 
 import parsl
 from parsl import File
@@ -21,7 +23,7 @@ def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
 
 
 @bash_app
-def foo(x, y, z=10, stdout=None):
+def foo(x, y, z=10, stdout=None, label=None):
     return """echo {0} {1} {z}
     """.format(x, y, z=z)
 
@@ -31,23 +33,20 @@ def test_command_format_1():
     """Testing command format for BashApps
     """
 
-    stdout = os.path.abspath('std.out')
+    outdir = os.path.abspath('outputs')
+    stdout = os.path.join(outdir, 'foo-std.out')
     if os.path.exists(stdout):
         os.remove(stdout)
 
-    app_fu = foo(1, 4, stdout=stdout)
-    print("App_fu : ", app_fu)
+    foo_future = foo(1, 4, stdout=stdout)
+    print("[test_command_format_1] foo_future: ", foo_future)
     contents = None
 
-    assert app_fu.result() == 0, "BashApp exited with an error code : {0}".format(
-        app_fu.result())
+    assert foo_future.result() == 0, "BashApp exited with an error code : {0}".format(
+        foo_future.result())
 
     with open(stdout, 'r') as stdout_f:
         contents = stdout_f.read()
-        print("Contents : ", contents)
-
-    if os.path.exists('stdout_file'):
-        os.remove(stdout)
 
     assert contents == '1 4 10\n', 'Output does not match expected string "1 4 10", Got: "{0}"'.format(
         contents)
@@ -55,10 +54,37 @@ def test_command_format_1():
 
 
 @pytest.mark.issue363
+def test_auto_log_filename_format():
+    """Testing auto log filename format for BashApps
+    """
+    app_label = "label_test_auto_log_filename_format"
+    rand_int = random.randint(1000, 1000000000)
+
+    foo_future = foo(1, rand_int, stdout=parsl.AUTO_LOGNAME, label=app_label)
+    print("[test_auto_log_filename_format] foo_future: ", foo_future)
+    contents = None
+
+    assert foo_future.result() == 0, "BashApp exited with an error code : {0}".format(
+        foo_future.result())
+
+    log_fpath = foo_future.stdout
+    log_pattern = fr".*/task_\d+_foo_{app_label}"
+    assert re.match(log_pattern, log_fpath), 'Output file "{0}" does not match pattern "{1}"'.format(
+        log_fpath, log_pattern)
+    assert os.path.exists(log_fpath), 'Output file does not exist "{0}"'.format(log_fpath)
+    with open(log_fpath, 'r') as stdout_f:
+        contents = stdout_f.read()
+
+    assert contents == '1 {0} 10\n'.format(rand_int), \
+        'Output does not match expected string "1 {0} 10", Got: "{1}"'.format(rand_int, contents)
+    return True
+
+
+@pytest.mark.issue363
 def test_parallel_for(n=3):
     """Testing a simple parallel for loop
     """
-    outdir = os.path.abspath('outputs')
+    outdir = os.path.join(os.path.abspath('outputs'), 'test_parallel')
     if not os.path.exists(outdir):
         os.makedirs(outdir)
     else:
@@ -105,4 +131,5 @@ if __name__ == '__main__':
 
     x = test_parallel_for(int(args.count))
     y = test_command_format_1()
+    z = test_auto_log_filename_format()
     # raise_error(0)

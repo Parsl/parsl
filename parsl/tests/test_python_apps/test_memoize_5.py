@@ -9,22 +9,25 @@ def test_python_memoization(n=2):
     """Testing python memoization when func bodies differ
     This is the canonical use case.
     """
-    @python_app
-    def random_uuid(x, cache=True):
+    @python_app(cache=True)
+    def random_uuid(x):
         import uuid
         return str(uuid.uuid4())
 
     x = random_uuid(0)
+    x.result()  # allow x to complete to allow completion-time memoization to happen
+    z = random_uuid(0)
+    assert x.result() == z.result(), "Memoized results were not used"
     print(x.result())
 
-    @python_app
-    def random_uuid(x, cache=True):
+    @python_app(cache=True)
+    def random_uuid(x):
         import uuid
         print("hi")
         return str(uuid.uuid4())
 
     y = random_uuid(0)
-    assert x.result() != y.result(), "Memoized results were not used"
+    assert x.result() != y.result(), "Memoized results were incorrectly used"
 
 
 if __name__ == '__main__':

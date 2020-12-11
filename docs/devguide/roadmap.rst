@@ -44,8 +44,7 @@ Data management
 * **Support for systems without a shared file system (point-to-point staging). (Partial support in v0.9.0)**
 * Support for data caching at multiple levels and across sites.
 
-.. todo::
-   Add diagram for staging
+TODO: Add diagram for staging
 
 
 Execution core and parallelism (DFK)

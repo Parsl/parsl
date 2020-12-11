@@ -63,7 +63,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
         :class:`~parsl.launchers.SrunLauncher`, or
         :class:`~parsl.launchers.AprunLauncher`
-     move_files : Optional[Bool]: should files be moved? by default, Parsl will try to move files.
+    move_files : Optional[Bool]: should files be moved? by default, Parsl will try to move files.
     """
 
     def __init__(self,

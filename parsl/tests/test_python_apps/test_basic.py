@@ -1,4 +1,3 @@
-import os
 import time
 
 import pytest
@@ -69,21 +68,6 @@ def test_parallel_for(n=2):
     print("Duration : {0}s".format(time.time() - start))
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return d
-
-
-@pytest.mark.skip('broken')
-def test_stdout():
-    """This one does not work as we don't catch stdout and stderr for python apps.
-    """
-    string = "Hello World!"
-    fu = echo(10, string, stdout='std.out')
-    fu.result()
-
-    assert os.path.exists('std.out'), "STDOUT was not captured to 'std.out'"
-
-    with open('std.out', 'r') as f:
-        assert f.read() == string, "String did not match output file"
-    print("[TEST STATUS] test_stdout [SUCCESS]")
 
 
 def test_custom_exception():

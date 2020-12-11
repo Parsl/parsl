@@ -14,8 +14,8 @@ class Staging:
 
     For each file to be staged in, the data manager will present the file
     to each configured Staging provider in turn: first, it will ask if the
-    provider can stage this file by calling `can_stage_in`, and if so, it
-    will call both `stage_in` and `replace_task` to give the provider the
+    provider can stage this file by calling ``can_stage_in``, and if so, it
+    will call both ``stage_in`` and ``replace_task`` to give the provider the
     opportunity to perform staging.
 
     For each file to be staged out, the data manager will follow the same
@@ -24,9 +24,9 @@ class Staging:
     The default implementation of this class rejects all files, and
     performs no staging actions.
 
-    To implement a concrete provider, one or both of the `can_stage_*`
+    To implement a concrete provider, one or both of the ``can_stage_*``
     methods should be overridden to match the appropriate files, and then
-    the corresponding `stage_*` and/or `replace_task*` methods should be
+    the corresponding ``stage_*`` and/or ``replace_task*`` methods should be
     implemented.
     """
 
