@@ -9,7 +9,6 @@ env:
     - HYDRA_LAUNCHER=fork
     - OMPI_MCA_rmaps_base_oversubscribe=yes
     - MPI=mpich
-    - CCTOOLS_VERSION=7.0.11
 
 before_install:
     - sudo apt-get update -q
