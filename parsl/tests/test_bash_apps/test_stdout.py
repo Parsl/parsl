@@ -10,7 +10,7 @@ from parsl.tests.configs.local_threads import config
 
 
 @bash_app
-def echo_to_streams(msg):
+def echo_to_streams(msg, stderr='std.err', stdout='std.out'):
     return 'echo "{0}"; echo "{0}" >&2'.format(msg)
 
 

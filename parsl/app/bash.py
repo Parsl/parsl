@@ -48,7 +48,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
     # Try to run the func to compose the commandline
     try:
         # Execute the func to get the commandline
-        executable = func(*args, **app_kwargs)
+        executable = func(*args, **kwargs)
 
     except AttributeError as e:
         if executable is not None:

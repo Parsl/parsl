@@ -625,7 +625,7 @@ class Interchange(object):
                 logger.warning("[MAIN] Too many heartbeats missed for manager {}".format(manager))
                 if self._ready_manager_queue[manager]['active']:
                     self._ready_manager_queue[manager]['active'] = False
-                    self._send_monitoring_info(manager)
+                    self._send_monitoring_info(hub_channel, manager)
 
                 for tid in self._ready_manager_queue[manager]['tasks']:
                     try:
