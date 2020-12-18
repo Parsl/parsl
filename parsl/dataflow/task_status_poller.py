@@ -18,24 +18,24 @@ logger = logging.getLogger(__name__)
 
 
 class PollItem(ExecutorStatus):
-    def __init__(self, executor: ParslExecutor):
+    def __init__(self, executor: ParslExecutor, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
         self._executor = executor
+        self._dfk = dfk
         self._interval = executor.status_polling_interval
         self._last_poll_time = 0.0
         self._status = {}  # type: Dict[object, JobStatus]
 
         # Create a ZMQ channel to send poll status to monitoring
-        if isinstance(self._executor, HighThroughputExecutor):
-            self.monitoring_enabled = False
-            hub_address = self._executor.hub_address
-            hub_port = self._executor.hub_port
-            if hub_address and hub_port:
-                context = zmq.Context()
-                self.hub_channel = context.socket(zmq.DEALER)
-                self.hub_channel.set_hwm(0)
-                self.hub_channel.connect("tcp://{}:{}".format(hub_address, hub_port))
-                self.monitoring_enabled = True
-                logger.info("Monitoring enabled on executor and connected to hub")
+        self.monitoring_enabled = False
+        if self._dfk.monitoring is not None:
+            self.monitoring_enabled = True
+            hub_address = self._dfk.hub_address
+            hub_port = self._dfk.hub_interchange_port
+            context = zmq.Context()
+            self.hub_channel = context.socket(zmq.DEALER)
+            self.hub_channel.set_hwm(0)
+            self.hub_channel.connect("tcp://{}:{}".format(hub_address, hub_port))
+            logger.info("Monitoring enabled on executor and connected to hub")
 
     def _should_poll(self, now: float):
         return now >= self._last_poll_time + self._interval
@@ -46,11 +46,10 @@ class PollItem(ExecutorStatus):
             self._last_poll_time = now
 
             # Send monitoring info for HTEX when monitoring enabled
-            if isinstance(self._executor, HighThroughputExecutor):
-                if self.monitoring_enabled:
-                    msg = self._executor.create_monitoring_info(self._status)
-                    logger.info("Sending message {} to hub from executor".format(msg))
-                    self.hub_channel.send_pyobj((MessageType.BLOCK_INFO, msg))
+            if self.monitoring_enabled:
+                msg = self._executor.create_monitoring_info(self._status)
+                logger.info("Sending message {} to hub from executor".format(msg))
+                self.hub_channel.send_pyobj((MessageType.BLOCK_INFO, msg))
 
     @property
     def status(self) -> Dict[object, JobStatus]:
@@ -81,6 +80,7 @@ class PollItem(ExecutorStatus):
 class TaskStatusPoller(object):
     def __init__(self, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
         self._poll_items = []  # type: List[PollItem]
+        self.dfk = dfk
         self._strategy = Strategy(dfk)
         self._error_handler = JobErrorHandler()
 
@@ -98,5 +98,5 @@ class TaskStatusPoller(object):
         for executor in executors:
             if executor.status_polling_interval > 0:
                 logger.debug("Adding executor {}".format(executor.label))
-                self._poll_items.append(PollItem(executor))
+                self._poll_items.append(PollItem(executor, self.dfk))
         self._strategy.add_executors(executors)
