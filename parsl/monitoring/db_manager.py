@@ -443,9 +443,7 @@ class DatabaseManager:
             BLOCK_INFO messages
 
             """
-            block_info_messages = self._get_messages_in_batch(self.pending_block_queue,
-                                                              interval=self.batching_interval,
-                                                              threshold=self.batching_threshold)
+            block_info_messages = self._get_messages_in_batch(self.pending_block_queue)
             if block_info_messages:
                 logger.debug(
                     "Got {} messages from block queue".format(len(block_info_messages)))
