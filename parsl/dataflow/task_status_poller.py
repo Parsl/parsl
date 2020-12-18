@@ -9,7 +9,6 @@ from parsl.dataflow.executor_status import ExecutorStatus
 from parsl.dataflow.job_error_handler import JobErrorHandler
 from parsl.dataflow.strategy import Strategy
 from parsl.executors.base import ParslExecutor
-from parsl.executors import HighThroughputExecutor
 from parsl.monitoring.message_type import MessageType
 
 from parsl.providers.provider_base import JobStatus, JobState
