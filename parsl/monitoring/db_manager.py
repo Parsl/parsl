@@ -5,7 +5,7 @@ import os
 import time
 import datetime
 
-from typing import Any, Dict, Set, List
+from typing import Any, Dict, List, Set
 
 from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
@@ -55,8 +55,6 @@ class Database:
 
     def __init__(self,
                  url='sqlite:///monitoring.db',
-                 username=None,
-                 password=None,
                  ):
 
         self.eng = sa.create_engine(url)
@@ -262,10 +260,10 @@ class DatabaseManager:
         self.batching_interval = batching_interval
         self.batching_threshold = batching_threshold
 
-        self.pending_priority_queue = queue.Queue()
-        self.pending_node_queue = queue.Queue()
-        self.pending_block_queue = queue.Queue()
-        self.pending_resource_queue = queue.Queue()
+        self.pending_priority_queue = queue.Queue()  # type: queue.Queue[Any]
+        self.pending_node_queue = queue.Queue()  # type: queue.Queue[Any]
+        self.pending_block_queue = queue.Queue()  # type: queue.Queue[Any]
+        self.pending_resource_queue = queue.Queue()  # type: queue.Queue[Any]
 
     def start(self, priority_queue, node_queue, block_queue, resource_queue) -> None:
 
@@ -346,9 +344,7 @@ class DatabaseManager:
             reprocessable_first_resource_messages = []
 
             # Get a batch of priority messages
-            priority_messages = self._get_messages_in_batch(self.pending_priority_queue,
-                                                            interval=self.batching_interval,
-                                                            threshold=self.batching_threshold)
+            priority_messages = self._get_messages_in_batch(self.pending_priority_queue)
             if priority_messages:
                 logger.debug(
                     "Got {} messages from priority queue".format(len(priority_messages)))
@@ -437,9 +433,7 @@ class DatabaseManager:
             NODE_INFO messages
 
             """
-            node_info_messages = self._get_messages_in_batch(self.pending_node_queue,
-                                                             interval=self.batching_interval,
-                                                             threshold=self.batching_threshold)
+            node_info_messages = self._get_messages_in_batch(self.pending_node_queue)
             if node_info_messages:
                 logger.debug(
                     "Got {} messages from node queue".format(len(node_info_messages)))
@@ -466,9 +460,7 @@ class DatabaseManager:
             Resource info messages
 
             """
-            resource_messages = self._get_messages_in_batch(self.pending_resource_queue,
-                                                            interval=self.batching_interval,
-                                                            threshold=self.batching_threshold)
+            resource_messages = self._get_messages_in_batch(self.pending_resource_queue)
 
             if resource_messages:
                 logger.debug(
@@ -560,11 +552,11 @@ class DatabaseManager:
             except Exception:
                 logger.exception("Rollback failed")
 
-    def _get_messages_in_batch(self, msg_queue, interval=1, threshold=99999):
-        messages = []
+    def _get_messages_in_batch(self, msg_queue):
+        messages = []  # type: List[Any]
         start = time.time()
         while True:
-            if time.time() - start >= interval or len(messages) >= threshold:
+            if time.time() - start >= self.batching_interval or len(messages) >= self.batching_threshold:
                 break
             try:
                 x = msg_queue.get(timeout=0.1)
