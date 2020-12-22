@@ -227,9 +227,6 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         blocks : int
              # of blocks to scale out. Default=1
-
-        Raises:
-             NotImplementedError
         """
         r = []
         for i in range(blocks):
@@ -255,9 +252,6 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
         The scale in method here is very rude. It doesn't give the workers
         the opportunity to finish current tasks or cleanup. This is tracked
         in issue #530
-
-        Raises:
-             NotImplementedError
         """
         to_kill = self.blocks[:blocks]
         if self.provider:
@@ -276,9 +270,6 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
             - hub (Bool): Whether the hub should be shutdown, Default:True,
             - targets (list of ints| 'all'): List of block id's to kill, Default:'all'
             - block (Bool): To block for confirmations or not
-
-        Raises:
-             NotImplementedError
         """
 
         logger.warning("Attempting LowLatencyExecutor shutdown")
