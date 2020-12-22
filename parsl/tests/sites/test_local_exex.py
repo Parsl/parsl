@@ -34,6 +34,7 @@ def bash_app(stdout=None, stderr=None):
 
 
 @pytest.mark.local
+@pytest.mark.skip("BENC/LSST - don't test exex")
 def test_python(N=2):
     """Testing basic python functionality."""
 
@@ -53,6 +54,7 @@ def test_python(N=2):
 
 
 @pytest.mark.local
+@pytest.mark.skip("BENC/LSST - don't test exex")
 def test_bash():
     """Testing basic bash functionality."""
 
