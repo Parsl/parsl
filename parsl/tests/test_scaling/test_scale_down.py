@@ -1,3 +1,4 @@
+import logging
 import parsl
 import pytest
 import time
@@ -10,6 +11,8 @@ from parsl.launchers import SingleNodeLauncher
 
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
+
+logger = logging.getLogger(__name__)
 
 local_config = Config(
     executors=[
@@ -46,51 +49,44 @@ def sleeper(t):
 @pytest.mark.skip('fails 50% of time in CI - see issue #1885')
 @pytest.mark.local
 def test_scale_out():
+    logger.info("Starting DFK")
     dfk = parsl.dfk()
 
     # Since we have init_blocks = 0, at this point we should have 0 managers
-    print("Executor : ", dfk.executors['htex_local'])
-    print("Before")
-    print("Managers   : ", dfk.executors['htex_local'].connected_managers)
-    print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
+    logger.info(f"Executor: {dfk.executors['htex_local']}")
+    logger.info(f"Managers: {dfk.executors['htex_local'].connected_managers}")
+    logger.info(f"Outstanding: {dfk.executors['htex_local'].outstanding}")
     assert len(dfk.executors['htex_local'].connected_managers) == 0, "Expected 0 managers at start"
 
     fus = [sleeper(i) for i in [3, 3, 25, 25, 50]]
 
+    logger.info("All apps invoked. Waiting for first two to finish.")
+
     for i in range(2):
         fus[i].result()
 
-    # At this point, since we have 1 task already processed we should have atleast 1 manager
-    print("Between")
-    print("Managers   : ", dfk.executors['htex_local'].connected_managers)
-    print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
-    assert len(dfk.executors['htex_local'].connected_managers) == 5, "Expected 5 managers once tasks are running"
+    # At this point, since we have 1 task already processed we should have at least 1 manager
+    logger.info(f"Managers: {dfk.executors['htex_local'].connected_managers}")
+    logger.info(f"Outstanding: {dfk.executors['htex_local'].outstanding}")
+    assert len(dfk.executors['htex_local'].connected_managers) >= 1, "Expected at least one manager once tasks are running"
 
+    logger.info("Sleeping 1s, assuming that this will be fast enough for full scale up")
     time.sleep(1)
-    print("running")
-    print("Managers   : ", dfk.executors['htex_local'].connected_managers)
-    print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
-    assert len(dfk.executors['htex_local'].connected_managers) == 5, "Expected 5 managers 3 seconds after 2 tasks finished"
 
-    time.sleep(21)
-    print("Middle")
-    print("Managers   : ", dfk.executors['htex_local'].connected_managers)
-    print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
-    assert len(dfk.executors['htex_local'].connected_managers) == 3, "Expected 3 managers before cleaning up"
+    logger.info(f"Managers: {dfk.executors['htex_local'].connected_managers}")
+    logger.info(f"Outstanding: {dfk.executors['htex_local'].outstanding}")
+    assert len(dfk.executors['htex_local'].connected_managers) == 5, "Expected 5 managers 1 second after 2 tasks finished"
 
-    for i in range(2, 4):
-        fus[i].result()
-    time.sleep(21)
-    print("Finalizing result")
-    print("Managers   : ", dfk.executors['htex_local'].connected_managers)
-    print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
-    assert len(dfk.executors['htex_local'].connected_managers) == 2, "Expected 2 managers before finishing, lower bound by min_blocks"
-
+    logger.info("Waiting for all apps to complete")
     [x.result() for x in fus]
-    print("Cleaning")
-    print("Managers   : ", dfk.executors['htex_local'].connected_managers)
-    print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
-    time.sleep(21)
+    logger.info("All apps completed")
+
+    logger.info(f"Managers: {dfk.executors['htex_local'].connected_managers}")
+    logger.info(f"Outstanding: {dfk.executors['htex_local'].outstanding}")
+
+    # By this time, scale-down of some executors should have happened,
+    # because the durations of the last two sleeper() invocations are
+    # very long.
     assert len(dfk.executors['htex_local'].connected_managers) == 2, "Expected 2 managers when no tasks, lower bound by min_blocks"
 
 
