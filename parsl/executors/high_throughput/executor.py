@@ -589,7 +589,9 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         for id, s in status.items():
             d = {}
             d['run_id'] = self.run_id
-            if block_id_type != 'external':
+            d['status'] = s.status_name
+            d['timestamp'] = datetime.datetime.now()
+            if block_id_type == 'internal':
                 d['job_id'] = id
                 if id in self.block_mapping:
                     d['block_id'] = self.block_mapping[id]
@@ -598,8 +600,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             elif block_id_type == 'external':
                 d['job_id'] = self.blocks[id]
                 d['block_id'] = id
-            d['status'] = s.status_name
-            d['timestamp'] = datetime.datetime.now()
+            else:
+                raise RuntimeError("Unknown block id type")
             msg.append(d)
         return msg
 
