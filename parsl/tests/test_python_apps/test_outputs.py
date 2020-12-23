@@ -2,9 +2,9 @@ import argparse
 import os
 import shutil
 
-import pytest
+from concurrent.futures import wait
 
-from parsl.app.app import python_app
+from parsl import File, python_app
 from parsl.tests.configs.local_threads import config
 
 
@@ -21,8 +21,6 @@ def double(x, outputs=[]):
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
 
 
-# @pytest.mark.whitelist(whitelist, reason='broken in IPP')
-@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_launch_apps(n=2, outdir='outputs'):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
@@ -31,17 +29,17 @@ def test_launch_apps(n=2, outdir='outputs'):
         os.makedirs(outdir)
     print('outdir is ', outdir)
 
-    all_futs = {}
+    all_futs = []
     for i in range(n):
-        fus = double(i, outputs=['{0}/{1}.txt'.format(outdir, i)])
-        print(fus.outputs)
-        all_futs[fus] = fus
+        fus = double(i, outputs=[File('{0}/{1}.txt'.format(outdir, i))])
+        all_futs.append(fus)
+
+    wait(all_futs)
 
     stdout_file_count = len(
         [item for item in os.listdir(outdir) if item.endswith('.txt')])
     assert stdout_file_count == n, "Only {}/{} files in '{}' ".format(
             len(os.listdir('outputs/')), n, os.listdir(outdir))
-    print("[TEST STATUS] test_parallel_for [SUCCESS]")
 
 
 if __name__ == '__main__':
