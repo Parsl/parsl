@@ -8,8 +8,6 @@ logger = logging.getLogger(__name__)
 
 @parsl.python_app
 def this_app():
-    import time
-    time.sleep(7)
     return 5
 
 
@@ -63,7 +61,7 @@ def test_row_counts():
         # local provider has a status_polling_interval of 5s
         result = connection.execute("SELECT COUNT(*) FROM block")
         (c, ) = result.first()
-        assert c == 1
+        assert c >= 2
 
     logger.info("all done")
 
