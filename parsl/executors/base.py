@@ -46,7 +46,7 @@ class ParslExecutor(metaclass=ABCMeta):
         self.label = ""  # type: str
 
     @abstractmethod
-    def start(self) -> Optional[List]:
+    def start(self) -> Optional[List[str]]:
         """Start the executor.
 
         Any spin-up operations (for example: starting thread pools) should be performed here.
