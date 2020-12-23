@@ -14,6 +14,7 @@ parsl.executors.ThreadPoolExecutor
    .. autosummary::
    
       ~ThreadPoolExecutor.__init__
+      ~ThreadPoolExecutor.create_monitoring_info
       ~ThreadPoolExecutor.handle_errors
       ~ThreadPoolExecutor.scale_in
       ~ThreadPoolExecutor.scale_out
