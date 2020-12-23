@@ -34,7 +34,7 @@ class PollItem(ExecutorStatus):
             self.hub_channel = context.socket(zmq.DEALER)
             self.hub_channel.set_hwm(0)
             self.hub_channel.connect("tcp://{}:{}".format(hub_address, hub_port))
-            logger.info("Monitoring enabled on executor and connected to hub")
+            logger.info("Monitoring enabled on task status poller")
 
     def _should_poll(self, now: float):
         return now >= self._last_poll_time + self._interval
@@ -43,12 +43,15 @@ class PollItem(ExecutorStatus):
         if self._should_poll(now):
             self._status = self._executor.status()
             self._last_poll_time = now
+            self.send_monitoring_info(self._status, block_id_type='internal')
 
-            # Send monitoring info for HTEX when monitoring enabled
-            if self.monitoring_enabled:
-                msg = self._executor.create_monitoring_info(self._status)
-                logger.info("Sending message {} to hub from executor".format(msg))
-                self.hub_channel.send_pyobj((MessageType.BLOCK_INFO, msg))
+    def send_monitoring_info(self, status=None, block_id_type='external'):
+        # Send monitoring info for HTEX when monitoring enabled
+        if self.monitoring_enabled:
+            msg = self._executor.create_monitoring_info(status,
+                                                        block_id_type=block_id_type)
+            logger.debug("Sending message {} to hub from task status poller".format(msg))
+            self.hub_channel.send_pyobj((MessageType.BLOCK_INFO, msg))
 
     @property
     def status(self) -> Dict[object, JobStatus]:
@@ -61,15 +64,21 @@ class PollItem(ExecutorStatus):
     def scale_in(self, n):
         ids = self._executor.scale_in(n)
         if ids is not None:
+            new_status = {}
             for id in ids:
+                new_status[id] = JobStatus(JobState.CANCELLED)
                 del self._status[id]
+            self.send_monitoring_info(new_status)
         return ids
 
     def scale_out(self, n):
         ids = self._executor.scale_out(n)
         if ids is not None:
+            new_status = {}
             for id in ids:
-                self._status[id] = JobStatus(JobState.PENDING)
+                new_status[id] = JobStatus(JobState.PENDING)
+            self.send_monitoring_info(new_status)
+            self._status.update(new_status)
         return ids
 
     def __repr__(self):

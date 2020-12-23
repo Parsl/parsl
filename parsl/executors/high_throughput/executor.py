@@ -198,6 +198,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         self.managed = managed
         self.blocks = {}  # type: Dict[str, str]
         self.block_mapping = {}  # type: Dict[str, str]
+        self.removed_block_mapping = {}  # type: Dict[str, str]
         self.cores_per_worker = cores_per_worker
         self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
@@ -576,16 +577,23 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def create_monitoring_info(self, status):
+    def create_monitoring_info(self, status, block_id_type='external'):
         """ Create a msg for monitoring based on the poll status
 
         """
         msg = []
-        for job_id, s in status.items():
+        for id, s in status.items():
             d = {}
             d['run_id'] = self.run_id
-            d['job_id'] = job_id
-            d['block_id'] = self.block_mapping[job_id]
+            if block_id_type != 'external':
+                d['job_id'] = id
+                if id in self.block_mapping:
+                    d['block_id'] = self.block_mapping[id]
+                else:
+                    d['block_id'] = self.removed_block_mapping.pop(id)
+            elif block_id_type == 'external':
+                d['job_id'] = self.blocks[id]
+                d['block_id'] = id
             d['status'] = s.status_name
             d['timestamp'] = datetime.datetime.now()
             msg.append(d)
@@ -694,7 +702,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         # Potential issue with multiple threads trying to remove the same blocks
         to_kill = [self.blocks.pop(bid) for bid in block_ids_to_kill if bid in self.blocks]
         for bid in to_kill:
-            self.block_mapping.pop(bid)
+            self.removed_block_mapping[bid] = self.block_mapping.pop(bid)
 
         r = self.provider.cancel(to_kill)
 
