@@ -291,13 +291,16 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         self._scaling_enabled = True
         logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
+
         # TODO: why is this a provider property?
+        jids = []
         if hasattr(self.provider, 'init_blocks'):
             try:
-                self.scale_out(blocks=self.provider.init_blocks)
+                jids = self.scale_out(blocks=self.provider.init_blocks)
             except Exception as e:
                 logger.error("Scaling out failed: {}".format(e))
                 raise e
+        return jids
 
     def start(self):
         """Create the Interchange process and connect to it.
@@ -314,7 +317,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
-        self.initialize_scaling()
+        jids = self.initialize_scaling()
+        return jids
 
     def _queue_management_worker(self):
         """Listen to the queue for task status messages and handle them.

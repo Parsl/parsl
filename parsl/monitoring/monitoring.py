@@ -440,7 +440,10 @@ class MonitoringRouter:
             try:
                 msg = self.dfk_channel.recv_pyobj()
                 self.logger.debug("Got ZMQ Message from DFK: {}".format(msg))
-                priority_msgs.put((msg, 0))
+                if msg[0].value == MessageType.BLOCK_INFO.value:
+                    block_msgs.put((msg, 0))
+                else:
+                    priority_msgs.put((msg, 0))
                 if msg[0].value == MessageType.WORKFLOW_INFO.value and 'python_version' not in msg[1]:
                     break
             except zmq.Again:
