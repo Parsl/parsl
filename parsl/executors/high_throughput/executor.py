@@ -591,6 +591,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             d['run_id'] = self.run_id
             d['status'] = s.status_name
             d['timestamp'] = datetime.datetime.now()
+            d['executor_label'] = self.label
             if block_id_type == 'internal':
                 d['job_id'] = id
                 if id in self.block_mapping:

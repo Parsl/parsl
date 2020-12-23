@@ -190,12 +190,13 @@ class Database:
     class Block(Base):
         __tablename__ = BLOCK
         run_id = Column('run_id', Text, nullable=False)
+        executor_label = Column('executor_label', Text, nullable=False)
         block_id = Column('block_id', Text, nullable=False)
         job_id = Column('job_id', Text, nullable=False)
         timestamp = Column('timestamp', DateTime, nullable=False)
         status = Column("status", Text, nullable=False)
         __table_args__ = (
-            PrimaryKeyConstraint('run_id', 'block_id', 'timestamp'),
+            PrimaryKeyConstraint('run_id', 'block_id', 'executor_label', 'timestamp'),
         )
 
     class Resource(Base):
