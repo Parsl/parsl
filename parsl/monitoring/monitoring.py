@@ -12,13 +12,16 @@ from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 
 from parsl.monitoring.message_type import MessageType
+from typing import Any, Dict, Optional
+
+_db_manager_excepts: Optional[Exception]
 
 from typing import Optional, Tuple
 
 try:
     from parsl.monitoring.db_manager import dbm_starter
 except Exception as e:
-    _db_manager_excepts = e  # type: Optional[Exception]
+    _db_manager_excepts = e
 else:
     _db_manager_excepts = None
 
@@ -89,16 +92,12 @@ class UDPRadio:
                                   socket.IPPROTO_UDP)  # UDP
         self.sock.settimeout(self.sock_timeout)
 
-    def send(self, message_type, task_id, message):
+    def send(self, message):
         """ Sends a message to the UDP receiver
 
         Parameter
         ---------
 
-        message_type: monitoring.MessageType (enum)
-            In this case message type is RESOURCE_INFO most often
-        task_id: int
-            Task identifier of the task for which resource monitoring is being reported
         message: object
             Arbitrary pickle-able object that is to be sent
 
@@ -108,7 +107,6 @@ class UDPRadio:
         try:
             buffer = pickle.dumps((self.source_id,   # Identifier for manager
                                    int(time.time()),  # epoch timestamp
-                                   message_type,
                                    message))
         except Exception:
             logging.exception("Exception during pickling", exc_info=True)
@@ -171,8 +169,14 @@ class MonitoringHub(RepresentationMixin):
         resource_monitoring_interval : float
              The time interval, in seconds, at which the monitoring records the resource usage of each task. Default: 30 seconds
         """
-        self.logger = None
-        self._dfk_channel = None
+
+        self.logger = logger
+
+        # Any is used to disable typechecking on uses of _dfk_channel,
+        # because it is used in the code as if it points to a channel, but
+        # the static type is that it can also be None. The code relies on
+        # .start() being called and initialising this to a real channel.
+        self._dfk_channel = None  # type: Any
 
         if _db_manager_excepts:
             raise(_db_manager_excepts)
@@ -202,7 +206,6 @@ class MonitoringHub(RepresentationMixin):
         os.makedirs(self.logdir, exist_ok=True)
 
         # Initialize the ZMQ pipe to the Parsl Client
-        self.logger = logger
         self.logger.info("Monitoring Hub initialized")
 
         self.logger.debug("Initializing ZMQ Pipes to client")
@@ -216,27 +219,27 @@ class MonitoringHub(RepresentationMixin):
                                                               min_port=self.client_port_range[0],
                                                               max_port=self.client_port_range[1])
 
-        comm_q = Queue(maxsize=10)
-        self.exception_q = Queue(maxsize=10)
-        self.priority_msgs = Queue()
-        self.resource_msgs = Queue()
-        self.node_msgs = Queue()
+        comm_q = Queue(maxsize=10)  # type: Queue[Tuple[int, int]]
+        self.exception_q = Queue(maxsize=10)  # type: Queue[Tuple[str, str]]
+        self.priority_msgs = Queue()  # type: Queue[Tuple[Any, int]]
+        self.resource_msgs = Queue()  # type: Queue[Tuple[Any, Any]]
+        self.node_msgs = Queue()  # type: Queue[Tuple[Any, int]]
 
-        self.queue_proc = Process(target=hub_starter,
-                                  args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
-                                  kwargs={"hub_address": self.hub_address,
-                                          "hub_port": self.hub_port,
-                                          "hub_port_range": self.hub_port_range,
-                                          "client_address": self.client_address,
-                                          "client_port": self.dfk_port,
-                                          "logdir": self.logdir,
-                                          "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                          "run_id": run_id
-                                  },
-                                  name="Monitoring-Queue-Process",
-                                  daemon=True,
+        self.router_proc = Process(target=router_starter,
+                                   args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs),
+                                   kwargs={"hub_address": self.hub_address,
+                                           "hub_port": self.hub_port,
+                                           "hub_port_range": self.hub_port_range,
+                                           "client_address": self.client_address,
+                                           "client_port": self.dfk_port,
+                                           "logdir": self.logdir,
+                                           "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                           "run_id": run_id
+                                   },
+                                   name="Monitoring-Router-Process",
+                                   daemon=True,
         )
-        self.queue_proc.start()
+        self.router_proc.start()
 
         self.dbm_proc = Process(target=dbm_starter,
                                 args=(self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs,),
@@ -248,7 +251,7 @@ class MonitoringHub(RepresentationMixin):
                                 daemon=True,
         )
         self.dbm_proc.start()
-        self.logger.info("Started the Hub process {} and DBM process {}".format(self.queue_proc.pid, self.dbm_proc.pid))
+        self.logger.info("Started the Hub process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
         try:
             udp_dish_port, ic_port = comm_q.get(block=True, timeout=120)
@@ -274,7 +277,7 @@ class MonitoringHub(RepresentationMixin):
         while True:
             try:
                 exception_msgs.append(self.exception_q.get(block=False))
-                self.logger.info("Either Hub or DBM process got exception.")
+                self.logger.error("Either Hub or DBM process got exception.")
             except queue.Empty:
                 break
         if self._dfk_channel and self.monitoring_hub_active:
@@ -282,11 +285,11 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.close()
             if exception_msgs:
                 for exception_msg in exception_msgs:
-                    self.logger.info("{} process got exception {}. Terminating all monitoring processes.".format(exception_msg[0], exception_msg[1]))
-                self.queue_proc.terminate()
+                    self.logger.error("{} process got exception {}. Terminating all monitoring processes.".format(exception_msg[0], exception_msg[1]))
+                self.router_proc.terminate()
                 self.dbm_proc.terminate()
             self.logger.info("Waiting for Hub to receive all messages and terminate")
-            self.queue_proc.join()
+            self.router_proc.join()
             self.logger.debug("Finished waiting for Hub termination")
             if len(exception_msgs) == 0:
                 self.priority_msgs.put(("STOP", 0))
@@ -295,6 +298,7 @@ class MonitoringHub(RepresentationMixin):
 
     @staticmethod
     def monitor_wrapper(f,
+                        try_id,
                         task_id,
                         monitoring_hub_url,
                         run_id,
@@ -304,23 +308,30 @@ class MonitoringHub(RepresentationMixin):
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
         def wrapped(*args, **kwargs):
-            command_q = Queue(maxsize=10)
+            # Send first message to monitoring router
+            monitor(os.getpid(),
+                    try_id,
+                    task_id,
+                    monitoring_hub_url,
+                    run_id,
+                    logging_level,
+                    sleep_dur,
+                    first_message=True)
+
+            # create the monitor process and start
             p = Process(target=monitor,
                         args=(os.getpid(),
+                              try_id,
                               task_id,
                               monitoring_hub_url,
                               run_id,
-                              command_q,
                               logging_level,
                               sleep_dur),
                         name="Monitor-Wrapper-{}".format(task_id))
             p.start()
+
             try:
-                try:
-                    return f(*args, **kwargs)
-                finally:
-                    command_q.put("Finished")
-                    p.join()
+                return f(*args, **kwargs)
             finally:
                 # There's a chance of zombification if the workers are killed by some signals
                 p.terminate()
@@ -328,7 +339,7 @@ class MonitoringHub(RepresentationMixin):
         return wrapped
 
 
-class Hub:
+class MonitoringRouter:
 
     def __init__(self,
                  hub_address,
@@ -354,11 +365,11 @@ class Hub:
              The specific port at which workers will be able to reach the Hub via UDP. Default: None
         hub_port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
-             This is overridden when the hub_port option is set. Defauls: (55050, 56000)
+             This is overridden when the hub_port option is set. Default: (55050, 56000)
         client_address : str
              The ip address at which the dfk will be able to reach Hub. Default: "127.0.0.1"
         client_port : tuple(int, int)
-             The port at which the dfk will be able to reach Hub. Defauls: None
+             The port at which the dfk will be able to reach Hub. Default: None
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         logging_level : int
@@ -368,10 +379,10 @@ class Hub:
 
         """
         os.makedirs(logdir, exist_ok=True)
-        self.logger = start_file_logger("{}/hub.log".format(logdir),
-                                        name="hub",
+        self.logger = start_file_logger("{}/monitoring_router.log".format(logdir),
+                                        name="monitoring_router",
                                         level=logging_level)
-        self.logger.debug("Hub starting")
+        self.logger.debug("Monitoring router starting")
 
         self.hub_port = hub_port
         self.hub_address = hub_address
@@ -436,8 +447,10 @@ class Hub:
 
             try:
                 msg = self.ic_channel.recv_pyobj()
-                msg[1]['run_id'] = self.run_id
-                msg = (msg[0], msg[1])
+                msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
+                msg[2]['run_id'] = self.run_id
+                msg[2]['timestamp'] = msg[1]
+                msg = (msg[0], msg[2])
                 self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
                 node_msgs.put((msg, 0))
             except zmq.Again:
@@ -454,46 +467,58 @@ class Hub:
             except socket.timeout:
                 pass
 
-        self.logger.info("Hub finished")
+        self.logger.info("Monitoring router finished")
 
 
-def hub_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
-    hub = Hub(*args, **kwargs)
-    comm_q.put((hub.hub_port, hub.ic_port))
-    hub.logger.info("Starting Hub in Hub starter")
+def router_starter(comm_q, exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
+    router = MonitoringRouter(*args, **kwargs)
+    comm_q.put((router.hub_port, router.ic_port))
+    router.logger.info("Starting MonitoringRouter in router_starter")
     try:
-        hub.start(priority_msgs, node_msgs, resource_msgs)
+        router.start(priority_msgs, node_msgs, resource_msgs)
     except Exception as e:
-        hub.logger.exception("hub.start exception")
+        router.logger.exception("router.start exception")
         exception_q.put(('Hub', str(e)))
 
-    hub.logger.info("End of hub starter")
+    router.logger.info("End of router_starter")
 
 
 def monitor(pid,
+            try_id,
             task_id,
             monitoring_hub_url,
             run_id,
-            command_q,
             logging_level=logging.INFO,
-            sleep_dur=10):
+            sleep_dur=10,
+            first_message=False):
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
     """
-    import psutil
     import platform
-
-    import logging
     import time
-    import queue
+
+    radio = UDPRadio(monitoring_hub_url,
+                     source_id=task_id)
+
+    if first_message:
+        msg = {'run_id': run_id,
+               'try_id': try_id,
+               'task_id': task_id,
+               'hostname': platform.node(),
+               'first_msg': first_message,
+               'timestamp': datetime.datetime.now()
+        }
+        radio.send(msg)
+        return
+
+    import psutil
+    import logging
 
     format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
     logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
         logbase="/tmp", task_id=task_id, pid=pid), level=logging_level, format=format_string)
-    logging.debug("start of monitor")
 
-    radio = UDPRadio(monitoring_hub_url,
-                     source_id=task_id)
+    logging.debug("start of monitor")
 
     # these values are simple to log. Other information is available in special formats such as memory below.
     simple = ["cpu_num", 'cpu_percent', 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']
@@ -503,9 +528,8 @@ def monitor(pid,
     pm = psutil.Process(pid)
     pm.cpu_percent()
 
-    first_msg = True
-    children_user_time = {}
-    children_system_time = {}
+    children_user_time = {}  # type: Dict[int, float]
+    children_system_time = {}  # type: Dict[int, float]
     total_children_user_time = 0.0
     total_children_system_time = 0.0
     while True:
@@ -514,9 +538,10 @@ def monitor(pid,
             d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
             d["run_id"] = run_id
             d["task_id"] = task_id
+            d["try_id"] = try_id
             d['resource_monitoring_interval'] = sleep_dur
             d['hostname'] = platform.node()
-            d['first_msg'] = first_msg
+            d['first_msg'] = first_message
             d['timestamp'] = datetime.datetime.now()
 
             logging.debug("getting children")
@@ -559,18 +584,9 @@ def monitor(pid,
             d['psutil_process_time_user'] += total_children_user_time
             d['psutil_process_time_system'] += total_children_system_time
             logging.debug("sending message")
-            radio.send(MessageType.TASK_INFO, task_id, d)
-            first_msg = False
+            radio.send(d)
         except Exception:
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
-
-        try:
-            msg = command_q.get(block=False)
-            if msg == "Finished":
-                logging.info("Received task finished message. Ending the monitoring loop now.")
-                break
-        except queue.Empty:
-            logging.debug("Have not received any message.")
 
         logging.debug("sleeping")
         time.sleep(sleep_dur)

@@ -15,15 +15,19 @@ AUTO_LOGNAME
 
 """
 import logging
+import os
+import platform
 
 from parsl.version import VERSION
 from parsl.app.app import bash_app, python_app
+from parsl.config import Config
 from parsl.executors import ThreadPoolExecutor
-from parsl.executors import IPyParallelExecutor
 from parsl.executors import HighThroughputExecutor
 from parsl.executors import ExtremeScaleExecutor
+from parsl.executors import WorkQueueExecutor
 from parsl.log_utils import set_stream_logger
 from parsl.log_utils import set_file_logger
+from parsl.monitoring import MonitoringHub
 
 from parsl.data_provider.files import File
 
@@ -41,6 +45,7 @@ __all__ = [
     'python_app',
 
     # core
+    'Config',
     'DataFlowKernel',
     'File',
 
@@ -53,7 +58,10 @@ __all__ = [
     'ThreadPoolExecutor',
     'HighThroughputExecutor',
     'ExtremeScaleExecutor',
-    'IPyParallelExecutor',
+    'WorkQueueExecutor',
+
+    # monitoring
+    'MonitoringHub',
 ]
 
 clear = DataFlowKernelLoader.clear
@@ -70,3 +78,6 @@ class NullHandler(logging.Handler):
 
 
 logging.getLogger('parsl').addHandler(NullHandler())
+
+if platform.system() == 'Darwin':
+    os.environ['OBJC_DISABLE_INITIALIZE_FORK_SAFETY'] = 'YES'

@@ -7,12 +7,10 @@ import threading
 import queue
 from multiprocessing import Process, Queue
 
-from ipyparallel.serialize import pack_apply_message  # ,unpack_apply_message
-from ipyparallel.serialize import deserialize_object  # ,serialize_object
-
+from parsl.serialize import pack_apply_message, deserialize
 from parsl.executors.low_latency import zmq_pipes
 from parsl.executors.low_latency import interchange
-from parsl.executors.errors import ScalingFailed, DeserializationError, BadMessage
+from parsl.executors.errors import ScalingFailed, DeserializationError, BadMessage, UnsupportedFeatureError
 from parsl.executors.status_handling import StatusHandlingExecutor
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
@@ -158,7 +156,7 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         while not self.bad_state_is_set:
             task_id, buf = self.incoming_q.get()  # TODO: why does this hang?
-            msg = deserialize_object(buf)[0]
+            msg = deserialize(buf)[0]
             # TODO: handle exceptions
             task_fut = self.tasks[task_id]
             logger.debug("Got response for task id {}".format(task_id))
@@ -172,7 +170,7 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
             elif 'exception' in msg:
                 logger.warning("Task: {} has returned with an exception")
                 try:
-                    s, _ = deserialize_object(msg['exception'])
+                    s = deserialize(msg['exception'])
                     exception = ValueError("Remote exception description: {}".format(s))
                     task_fut.set_exception(exception)
                 except Exception as e:
@@ -189,8 +187,14 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         logger.info("[MTHREAD] queue management worker finished")
 
-    def submit(self, func, *args, **kwargs):
+    def submit(self, func, resource_specification, *args, **kwargs):
         """ TODO: docstring """
+        if resource_specification:
+            logger.error("Ignoring the resource specification. "
+                         "Parsl resource specification is not supported in LowLatency Executor. "
+                         "Please check WorkQueueExecutor if resource specification is needed.")
+            raise UnsupportedFeatureError('resource specification', 'LowLatency Executor', 'WorkQueue Executor')
+
         if self.bad_state_is_set:
             raise self.executor_exception
 
@@ -203,8 +207,7 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
         self.tasks[task_id] = Future()
 
         fn_buf = pack_apply_message(func, args, kwargs,
-                                    buffer_threshold=1024 * 1024,
-                                    item_threshold=1024)
+                                    buffer_threshold=1024 * 1024)
 
         # Post task to the the outgoing queue
         self.outgoing_q.put(task_id, fn_buf)
@@ -231,13 +234,16 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
         r = []
         for i in range(blocks):
             if self.provider:
-                block = self.provider.submit(
-                    self.launch_cmd, self.workers_per_node)
-                logger.debug("Launched block {}:{}".format(i, block))
-                if not block:
-                    raise(ScalingFailed(self.provider.label,
-                                        "Attempts to provision nodes via provider has failed"))
-                self.blocks.extend([block])
+                try:
+                    block = self.provider.submit(
+                        self.launch_cmd, self.workers_per_node)
+                    logger.debug("Launched block {}:{}".format(i, block))
+                    # TODO: use exceptions for this
+                    if not block:
+                        self._fail_job_async(None, "Failed to launch block")
+                    self.blocks.extend([block])
+                except Exception as ex:
+                    self._fail_job_async(None, "Failed to launch block: {}".format(ex))
             else:
                 logger.error("No execution provider available")
                 r = None

@@ -1,6 +1,5 @@
 import os
 import pytest
-
 import parsl
 from parsl.app.app import bash_app
 from parsl.data_provider.files import File
@@ -39,6 +38,7 @@ def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     """.format(i=inputs[0], o=outputs[0])
 
 
+@pytest.mark.staging_required
 def test_regression_200():
     """Regression test for #200. Pickleablility of Files"""
 
@@ -59,6 +59,7 @@ def test_regression_200():
         assert "Hello World" in data, "Missed data"
 
 
+@pytest.mark.staging_required
 def test_increment(depth=5):
     """Test simple pipeline A->B...->N
     """

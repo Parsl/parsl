@@ -1,3 +1,4 @@
+import os
 from abc import ABCMeta, abstractmethod, abstractproperty
 from enum import Enum
 from typing import Any, List, Optional
@@ -25,10 +26,15 @@ class JobState(bytes, Enum):
 
 class JobStatus(object):
     """Encapsulates a job state together with other details, presently a (error) message"""
+    SUMMARY_TRUNCATION_THRESHOLD = 2048
 
-    def __init__(self, state: JobState, message: str = None):
+    def __init__(self, state: JobState, message: str = None, exit_code: Optional[int] = None,
+                 stdout_path: str = None, stderr_path: str = None):
         self.state = state
         self.message = message
+        self.exit_code = exit_code
+        self.stdout_path = stdout_path
+        self.stderr_path = stderr_path
 
     @property
     def terminal(self):
@@ -40,9 +46,63 @@ class JobStatus(object):
         else:
             return "{}".format(self.state)
 
+    @property
+    def stdout(self):
+        return self._read_file(self.stdout_path)
+
+    @property
+    def stderr(self):
+        return self._read_file(self.stderr_path)
+
+    def _read_file(self, path):
+        try:
+            with open(path, 'r') as f:
+                return f.read()
+        except Exception:
+            return None
+
+    @property
+    def stdout_summary(self):
+        return self._read_summary(self.stdout_path)
+
+    @property
+    def stderr_summary(self):
+        return self._read_summary(self.stderr_path)
+
+    def _read_summary(self, path):
+        if not path:
+            # can happen for synthetic job failures
+            return None
+        try:
+            with open(path, 'r') as f:
+                f.seek(0, os.SEEK_END)
+                size = f.tell()
+                f.seek(0, os.SEEK_SET)
+                if size > JobStatus.SUMMARY_TRUNCATION_THRESHOLD:
+                    head = f.read(JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2)
+                    f.seek(size - JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2, os.SEEK_SET)
+                    tail = f.read(JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2)
+                    return head + '\n...\n' + tail
+                else:
+                    f.seek(0, os.SEEK_SET)
+                    return f.read()
+        except FileNotFoundError:
+            # When output is redirected to a file, but the process does not produce any output
+            # bytes, no file is actually created. This handles that case.
+            return None
+
 
 class ExecutionProvider(metaclass=ABCMeta):
-    """ Define the strict interface for all Execution Providers
+    """Execution providers are responsible for managing execution resources
+    that have a Local Resource Manager (LRM). For instance, campus clusters
+    and supercomputers generally have LRMs (schedulers) such as Slurm,
+    Torque/PBS, Condor and Cobalt. Clouds, on the other hand, have API
+    interfaces that allow much more fine-grained composition of an execution
+    environment. An execution provider abstracts these types of resources and
+    provides a single uniform interface to them.
+
+    The providers abstract away the interfaces provided by various systems to
+    request, monitor, and cancel compute resources.
 
     .. code:: python
 

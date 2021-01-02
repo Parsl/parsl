@@ -1,13 +1,15 @@
 language: python
 python:
-  - "3.9-dev"
+  - "3.6"
+  - "3.7"
+  - "3.8"
+  - "3.9"
 
 env:
   global:
     - HYDRA_LAUNCHER=fork
     - OMPI_MCA_rmaps_base_oversubscribe=yes
     - MPI=mpich
-    - CCTOOLS_VERSION=7.0.11
 
 before_install:
     - sudo apt-get update -q
@@ -28,37 +30,50 @@ os:
 
 # command to run tests
 script:
-    - make flake8
-    - make lint
-
-    # This uses all of the configurations and tests as the base from which to
-    # run mypy checks - these are likely to capture most of the code used in
-    # parsl
-    - make mypy
-
       # do this before any testing, but not in-between tests
     - make clean_coverage
 
     # run the make targets for the two supported targets.
     - make test
 
+    # documentation checks:
+
+    - pip install .[docs]
+    - sudo apt-get install -y pandoc
+    - cd docs
+
+    # check we can build the docs without warnings
+    - make SPHINXOPTS=-W html
+
     # check that documentation stubs are up to date, as they are compiled from
     # python code but stored in version control rather than generated as part
-    # of doc build. prereqs for this will have been installed because of above
-    # pip install .[all] step
-    - cd docs
+    # of doc build.
     - rm -rfv stubs
     - sphinx-autogen reference.rst userguide/*rst devguide/*rst
     # this will both display any diffs in log output, and fail if there is any diff
     - git diff --exit-code
+
     - cd ..
 
     # assert that none of the runs in this test have put an ERROR message into a
-    # database manager log file or monitoring hub log file. It would be better if
+    # database manager log file or monitoring router log file. It would be better if
     # the tests themselves failed immediately when there was a monitoring error, but
     # in the absence of that, this is a dirty way to check.
     - bash -c '! grep ERROR runinfo*/*/database_manager.log'
-    - bash -c '! grep ERROR runinfo*/*/hub.log'
+    - bash -c '! grep ERROR runinfo*/*/monitoring_router.log'
+
+    # Check that parsl-visualize does not give errors.
+    # 'monitoring.db' needs to exist and have some interesting content in it
+    # which at time of writing comes from the htex_local_alternative test
+    # run.
+    - sudo apt-get install -y graphviz
+    - pip install .[monitoring]
+    - parsl-visualize &
+    # now wait for this to become responsive to connections
+    - wget http://127.0.0.1:8080/ --retry-connrefused --tries 30 --waitretry=1
+    # wget will return a failure code if any of the requested URLs don't return an HTTP 200 result
+    - wget http://127.0.0.1:8080/ --recursive --no-verbose --page-requisites --level=inf -e robots=off
+    - killall --wait parsl-visualize
 
     # check that 'all' install target works, even though we aren't doing any further
     # testing of what is installed

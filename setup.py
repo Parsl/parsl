@@ -22,7 +22,7 @@ extras_require = {
     'kubernetes' : ['kubernetes'],
     'oauth_ssh' : ['oauth-ssh>=0.9'],
     'extreme_scale' : ['mpi4py'],
-    'docs' : ['nbsphinx', 'sphinx_rtd_theme'],
+    'docs' : ['nbsphinx', 'sphinx_rtd_theme', 'ipython'],
     'google_cloud' : ['google-auth', 'google-api-python-client'],
     'gssapi' : ['python-gssapi'],
     'azure' : ['azure<=4', 'msrestazure'],
@@ -42,11 +42,12 @@ setup(
     download_url='https://github.com/Parsl/parsl/archive/{}.tar.gz'.format(VERSION),
     include_package_data=True,
     packages=find_packages(),
+    python_requires=">=3.6.0",
     install_requires=install_requires,
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
                'parsl/executors/extreme_scale/mpi_worker_pool.py',
                'parsl/executors/low_latency/lowlatency_worker.py',
-               'parsl/executors/workqueue/workqueue_worker.py',
+               'parsl/executors/workqueue/exec_parsl_function.py',
     ],
 
     extras_require=extras_require,
@@ -58,8 +59,9 @@ setup(
         # Licence, must match with licence above
         'License :: OSI Approved :: Apache Software License',
         # Python versions supported
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
     keywords=['Workflows', 'Scientific computing'],
     entry_points={'console_scripts':
