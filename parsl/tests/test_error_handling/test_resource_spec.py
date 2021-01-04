@@ -16,7 +16,7 @@ def test_resource(n=2):
     executors = parsl.dfk().executors
     executor = None
     for label in executors:
-        if label != 'data_manager':
+        if label != '_parsl_internal':
             executor = executors[label]
             break
 
@@ -40,16 +40,6 @@ def test_resource(n=2):
         assert not isinstance(executor, WorkQueueExecutor)
     except Exception as e:
         assert isinstance(e, ExecutorError)
-
-    # Correct specification, case insensitive
-    spec = {'COREs': 2, 'MEMory': 1000, 'Disk': 1000}
-    fut = double(n, parsl_resource_specification=spec)
-    try:
-        fut.result()
-    except UnsupportedFeatureError:
-        assert not isinstance(executor, WorkQueueExecutor)
-    else:
-        assert isinstance(executor, WorkQueueExecutor)
 
 
 if __name__ == '__main__':

@@ -91,7 +91,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
     address : string
         An address to connect to the main Parsl process which is reachable from the network in which
-        workers will be running. This can be either a hostname as returned by `hostname` or an
+        workers will be running. This can be either a hostname as returned by ``hostname`` or an
         IP address. Most login nodes on clusters have several network interfaces available, only
         some of which can be reached from the compute nodes.
         By default, the executor will attempt to enumerate and connect through all possible addresses.
@@ -387,7 +387,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                             self.set_bad_state_and_fail_all(exception)
                             break
 
-                        task_fut = self.tasks[tid]
+                        task_fut = self.tasks.pop(tid)
 
                         if 'result' in msg:
                             result = deserialize(msg['result'])

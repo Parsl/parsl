@@ -5,7 +5,7 @@ import os
 import time
 import datetime
 
-from typing import Any, Dict, Set
+from typing import Any, Dict, List, Set
 
 from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
@@ -54,8 +54,6 @@ class Database:
 
     def __init__(self,
                  url='sqlite:///monitoring.db',
-                 username=None,
-                 password=None,
                  ):
 
         self.eng = sa.create_engine(url)
@@ -178,12 +176,15 @@ class Database:
         id = Column('id', Integer, nullable=False, primary_key=True, autoincrement=True)
         run_id = Column('run_id', Text, nullable=False)
         hostname = Column('hostname', Text, nullable=False)
+        uid = Column('uid', Text, nullable=False)
+        block_id = Column('block_id', Text, nullable=False)
         cpu_count = Column('cpu_count', Integer, nullable=False)
         total_memory = Column('total_memory', Integer, nullable=False)
         active = Column('active', Boolean, nullable=False)
         worker_count = Column('worker_count', Integer, nullable=False)
         python_v = Column('python_v', Text, nullable=False)
-        reg_time = Column('reg_time', DateTime, nullable=False)
+        timestamp = Column('timestamp', DateTime, nullable=False)
+        last_heartbeat = Column('last_heartbeat', DateTime, nullable=False)
 
     class Resource(Base):
         __tablename__ = RESOURCE
@@ -247,9 +248,9 @@ class DatabaseManager:
         self.batching_interval = batching_interval
         self.batching_threshold = batching_threshold
 
-        self.pending_priority_queue = queue.Queue()
-        self.pending_node_queue = queue.Queue()
-        self.pending_resource_queue = queue.Queue()
+        self.pending_priority_queue = queue.Queue()  # type: queue.Queue[Any]
+        self.pending_node_queue = queue.Queue()  # type: queue.Queue[Any]
+        self.pending_resource_queue = queue.Queue()  # type: queue.Queue[Any]
 
     def start(self, priority_queue, node_queue, resource_queue) -> None:
 
@@ -318,9 +319,7 @@ class DatabaseManager:
             reprocessable_first_resource_messages = []
 
             # Get a batch of priority messages
-            priority_messages = self._get_messages_in_batch(self.pending_priority_queue,
-                                                            interval=self.batching_interval,
-                                                            threshold=self.batching_threshold)
+            priority_messages = self._get_messages_in_batch(self.pending_priority_queue)
             if priority_messages:
                 logger.debug(
                     "Got {} messages from priority queue".format(len(priority_messages)))
@@ -409,9 +408,7 @@ class DatabaseManager:
             NODE_INFO messages
 
             """
-            node_info_messages = self._get_messages_in_batch(self.pending_node_queue,
-                                                             interval=self.batching_interval,
-                                                             threshold=self.batching_threshold)
+            node_info_messages = self._get_messages_in_batch(self.pending_node_queue)
             if node_info_messages:
                 logger.debug(
                     "Got {} messages from node queue".format(len(node_info_messages)))
@@ -421,18 +418,17 @@ class DatabaseManager:
             Resource info messages
 
             """
-            resource_messages = self._get_messages_in_batch(self.pending_resource_queue,
-                                                            interval=self.batching_interval,
-                                                            threshold=self.batching_threshold)
+            resource_messages = self._get_messages_in_batch(self.pending_resource_queue)
 
             if resource_messages:
                 logger.debug(
                     "Got {} messages from resource queue, {} reprocessable".format(len(resource_messages), len(reprocessable_first_resource_messages)))
-                self._insert(table=RESOURCE, messages=resource_messages)
+
+                insert_resource_messages = []
                 for msg in resource_messages:
                     task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
                     if msg['first_msg']:
-
+                        # Update the running time to try table if first message
                         msg['task_status_name'] = States.running.name
                         msg['task_try_time_running'] = msg['timestamp']
 
@@ -442,6 +438,12 @@ class DatabaseManager:
                             if task_try_id in deferred_resource_messages:
                                 logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
                             deferred_resource_messages[task_try_id] = msg
+                    else:
+                        # Insert to resource table if not first message
+                        insert_resource_messages.append(msg)
+
+                if insert_resource_messages:
+                    self._insert(table=RESOURCE, messages=insert_resource_messages)
 
             if reprocessable_first_resource_messages:
                 self._insert(table=STATUS, messages=reprocessable_first_resource_messages)
@@ -506,11 +508,11 @@ class DatabaseManager:
             except Exception:
                 logger.exception("Rollback failed")
 
-    def _get_messages_in_batch(self, msg_queue, interval=1, threshold=99999):
-        messages = []
+    def _get_messages_in_batch(self, msg_queue):
+        messages = []  # type: List[Any]
         start = time.time()
         while True:
-            if time.time() - start >= interval or len(messages) >= threshold:
+            if time.time() - start >= self.batching_interval or len(messages) >= self.batching_threshold:
                 break
             try:
                 x = msg_queue.get(timeout=0.1)

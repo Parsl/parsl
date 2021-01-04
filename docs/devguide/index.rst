@@ -9,3 +9,4 @@ Developer documentation
    design
    roadmap
    packaging
+   ../README
