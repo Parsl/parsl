@@ -41,7 +41,6 @@ parsl.providers.AWSProvider
    .. autosummary::
    
       ~AWSProvider.cores_per_node
-      ~AWSProvider.current_capacity
       ~AWSProvider.label
       ~AWSProvider.mem_per_node
       ~AWSProvider.status_polling_interval
