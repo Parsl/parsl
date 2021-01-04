@@ -13,12 +13,17 @@ config = Config(
                 max_blocks=4,
                 # This scheduler option string ensures that the compute nodes provisioned
                 # will have modules
-                scheduler_options='Requirements = OSGVO_OS_STRING == "RHEL 6" && Arch == "X86_64" &&  HAS_MODULES == True',
+                scheduler_options="""
+                +ProjectName = "MyProject"
+                Requirements = HAS_MODULES=?=TRUE
+                """,
                 # Command to be run before starting a worker, such as:
                 # 'module load Anaconda; source activate parsl_env'.
-                worker_init='',
+                worker_init='unset HOME; unset PYTHONPATH; module load python/3.7.0; python3 -m venv parsl_env; source parsl_env/bin/activate; python3 -m pip install parsl',
                 walltime="00:20:00",
             ),
+            worker_logdir_root='$OSG_WN_TMP',
+            worker_ports=(31000,31001)
         )
     ]
 )

@@ -482,10 +482,8 @@ Open Science Grid
 .. image:: https://www.renci.org/wp-content/uploads/2008/10/osg_logo.png
 
 The Open Science Grid (OSG) is a national, distributed computing Grid spanning over 100 individual sites to provide tens of thousands of CPU cores.
-The snippet below shows an example configuration for executing remotely on OSG.
+The snippet below shows an example configuration for executing remotely on OSG. You will need to have a valid project name on the OSG.
 The configuration uses the `CondorProvider` to interface with the scheduler.
-
-.. note:: This config was last tested with 0.8.0
 
 .. literalinclude:: ../../parsl/configs/osg.py
 
