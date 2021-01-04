@@ -2,14 +2,12 @@ from parsl.config import Config
 from parsl.launchers import SrunLauncher
 from parsl.providers import SlurmProvider
 from parsl.executors import HighThroughputExecutor
-from parsl.addresses import address_by_query
 
 
 config = Config(
     executors=[
         HighThroughputExecutor(
             label='Comet_HTEX_multinode',
-            address=address_by_query(),
             worker_logdir_root='YOUR_LOGDIR_ON_COMET',
             max_workers=2,
             provider=SlurmProvider(

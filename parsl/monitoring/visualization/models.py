@@ -17,7 +17,6 @@ class Workflow(db.Model):
     workflow_version = db.Column(db.Text, nullable=True)
     time_began = db.Column(db.DateTime, nullable=False)  # Why not date?
     time_completed = db.Column(db.DateTime)
-    workflow_duration = db.Column(db.Float)
     host = db.Column(db.Text, nullable=False)
     user = db.Column(db.Text, nullable=False)
     rundir = db.Column(db.Text, nullable=False)
@@ -57,13 +56,8 @@ class Task(db.Model):
     __tablename__ = TASK
     task_id = db.Column('task_id', db.Integer, nullable=False)
     run_id = db.Column('run_id', db.Text, nullable=False)
-    task_executor = db.Column('task_executor', db.Text, nullable=False)
     task_func_name = db.Column('task_func_name', db.Text, nullable=False)
     task_depends = db.Column('task_depends', db.Text, nullable=True)
-    task_time_submitted = db.Column(
-        'task_time_submitted', db.DateTime, nullable=False)
-    task_time_running = db.Column(
-        'task_time_running', db.DateTime, nullable=True)
     task_time_returned = db.Column(
         'task_time_returned', db.DateTime, nullable=True)
     task_memoize = db.Column('task_memoize', db.Text, nullable=False)

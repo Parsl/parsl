@@ -63,7 +63,6 @@ class ClusterProvider(ExecutionProvider):
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
         self.parallelism = parallelism
-        self.provisioned_blocks = 0
         self.launcher = launcher
         self.walltime = walltime
         self.cmd_timeout = cmd_timeout
@@ -143,14 +142,6 @@ class ClusterProvider(ExecutionProvider):
         if job_ids:
             self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
-
-    @property
-    def current_capacity(self):
-        """ Returns the currently provisioned blocks.
-        This may need to return more information in the futures :
-        { minsize, maxsize, current_requested }
-        """
-        return self.provisioned_blocks
 
     @property
     def label(self):

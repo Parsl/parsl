@@ -1,5 +1,6 @@
 ''' Exceptions raise by Apps.
 '''
+from typing import Optional
 
 
 class ChannelError(Exception):
@@ -7,10 +8,15 @@ class ChannelError(Exception):
 
     Only to be invoked when only a more specific error is not available.
     """
-    def __repr__(self):
-        return "Hostname: {0}, Reason: {1}".format(self.hostname, self.reason)
+    def __init__(self, reason: str, e: Exception, hostname: str) -> None:
+        self.reason = reason
+        self.e = e
+        self.hostname = hostname
 
-    def __str__(self):
+    def __repr__(self) -> str:
+        return "Hostname:{0}, Reason:{1}".format(self.hostname, self.reason)
+
+    def __str__(self) -> str:
         return self.__repr__()
 
 
@@ -24,11 +30,9 @@ class BadHostKeyException(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e, hostname):
-        super().__init__()
-        self.reason = "SSH channel could not be created since server's host keys could not be verified"
-        self.hostname = hostname
-        self.e = e
+    def __init__(self, e: Exception, hostname: str) -> None:
+        super().__init__("SSH channel could not be created since server's host keys could not be "
+                         "verified", e, hostname)
 
 
 class BadScriptPath(ChannelError):
@@ -40,11 +44,8 @@ class BadScriptPath(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e, hostname):
-        super().__init__()
-        self.reason = "Inaccessible remote script dir. Specify script_dir"
-        self.hostname = hostname
-        self.e = e
+    def __init__(self, e: Exception, hostname: str) -> None:
+        super().__init__("Inaccessible remote script dir. Specify script_dir", e, hostname)
 
 
 class BadPermsScriptPath(ChannelError):
@@ -56,11 +57,8 @@ class BadPermsScriptPath(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e, hostname):
-        super().__init__()
-        self.reason = "User does not have permissions to access the script_dir"
-        self.hostname = hostname
-        self.e = e
+    def __init__(self, e: Exception, hostname: str) -> None:
+        super().__init__("User does not have permissions to access the script_dir", e, hostname)
 
 
 class FileExists(ChannelError):
@@ -73,11 +71,9 @@ class FileExists(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e, hostname, filename=None):
-        super().__init__()
-        self.reason = "File name collision in channel transport phase:" + filename
-        self.hostname = hostname
-        self.e = e
+    def __init__(self, e: Exception, hostname: str, filename: Optional[str] = None) -> None:
+        super().__init__("File name collision in channel transport phase: {}".format(filename),
+                         e, hostname)
 
 
 class AuthException(ChannelError):
@@ -89,11 +85,8 @@ class AuthException(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e, hostname):
-        super().__init__()
-        self.reason = "Authentication to remote server failed"
-        self.hostname = hostname
-        self.e = e
+    def __init__(self, e: Exception, hostname: str) -> None:
+        super().__init__("Authentication to remote server failed", e, hostname)
 
 
 class SSHException(ChannelError):
@@ -105,11 +98,8 @@ class SSHException(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e, hostname):
-        super().__init__()
-        self.reason = "Error connecting or establishing an SSH session"
-        self.hostname = hostname
-        self.e = e
+    def __init__(self, e: Exception, hostname: str) -> None:
+        super().__init__("Error connecting or establishing an SSH session", e, hostname)
 
 
 class FileCopyException(ChannelError):
@@ -121,8 +111,5 @@ class FileCopyException(ChannelError):
     hostname (string)
     '''
 
-    def __init__(self, e, hostname):
-        super().__init__()
-        self.reason = "File copy failed due to {0}".format(e)
-        self.hostname = hostname
-        self.e = e
+    def __init__(self, e: Exception, hostname: str) -> None:
+        super().__init__("File copy failed due to {0}".format(e), e, hostname)

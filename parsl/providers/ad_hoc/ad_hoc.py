@@ -111,7 +111,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
             channel_counts = {channel: 0 for channel in self.channels}
             for job_id in self.resources:
                 channel = self.resources[job_id]['channel']
-                if self.resources[job_id]['status'] == JobStatus(JobState.RUNNING):
+                if self.resources[job_id]['status'].state == JobState.RUNNING:
                     channel_counts[channel] = channel_counts.get(channel, 0) + 1
                 else:
                     channel_counts[channel] = channel_counts.get(channel, 0)

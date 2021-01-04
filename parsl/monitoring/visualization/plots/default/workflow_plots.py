@@ -5,35 +5,62 @@ import plotly.graph_objs as go
 import plotly.figure_factory as ff
 from plotly.offline import plot
 import networkx as nx
-import datetime
 
 from parsl.monitoring.visualization.utils import timestamp_to_int, num_to_timestamp, DB_DATE_FORMAT
 
 
-def task_gantt_plot(df_task, time_completed=None):
+def task_gantt_plot(df_task, df_status, time_completed=None):
 
-    df_task = df_task.sort_values(by=['task_time_submitted'], ascending=False)
+    # if the workflow is not recorded as completed, then assume
+    # that tasks should continue in their last state until now,
+    # rather than the workflow end time.
+    if not time_completed:
+        time_completed = df_status['timestamp'].max()
+
+    df_task = df_task.sort_values(by=['task_id'], ascending=False)
 
     parsl_tasks = []
     for i, task in df_task.iterrows():
-        time_running, time_returned = task['task_time_running'], task['task_time_returned']
-        if task['task_time_returned'] is None:
-            time_returned = datetime.datetime.now()
-            if time_completed is not None:
-                time_returned = time_completed
-        if task['task_time_submitted'] is not None:
-            time_submitted = task['task_time_submitted']
-        else:
-            time_submitted = time_returned
-        if task['task_time_running'] is None:
-            time_running = time_submitted
+        task_id = task['task_id']
+
         description = "Task ID: {}, app: {}".format(task['task_id'], task['task_func_name'])
-        dic1 = dict(Task=description, Start=time_submitted,
-                    Finish=time_running, Resource="Pending")
-        dic2 = dict(Task=description, Start=time_running,
-                    Finish=time_returned, Resource="Running")
-        parsl_tasks.extend([dic1, dic2])
-    colors = {'Pending': 'rgb(168, 168, 168)', 'Running': 'rgb(0, 0, 255)'}
+
+        statuses = df_status.loc[df_status['task_id'] == task_id].sort_values(by=['timestamp'])
+
+        last_status = None
+        for j, status in statuses.iterrows():
+            if last_status is not None:
+                last_status_bar = {'Task': description,
+                                   'Start': last_status['timestamp'],
+                                   'Finish': status['timestamp'],
+                                   'Resource': last_status['task_status_name']
+                                  }
+                parsl_tasks.extend([last_status_bar])
+            last_status = status
+
+        # TODO: factor with above?
+        if last_status is not None:
+            last_status_bar = {'Task': description,
+                               'Start': last_status['timestamp'],
+                               'Finish': time_completed,
+                               'Resource': last_status['task_status_name']
+                              }
+            parsl_tasks.extend([last_status_bar])
+
+    # colours must assign a colour value for every state name defined
+    # in parsl/dataflow/states.py
+
+    colors = {'unsched': 'rgb(240, 240, 240)',
+              'pending': 'rgb(168, 168, 168)',
+              'launched': 'rgb(100, 255, 255)',
+              'running': 'rgb(0, 0, 255)',
+              'dep_fail': 'rgb(255, 128, 255)',
+              'failed': 'rgb(200, 0, 0)',
+              'exec_done': 'rgb(0, 200, 0)',
+              'memo_done': 'rgb(64, 200, 64)',
+              'fail_retryable': 'rgb(200, 128,128)'
+             }
+
     fig = ff.create_gantt(parsl_tasks,
                           title="",
                           colors=colors,
@@ -51,7 +78,7 @@ def task_per_app_plot(task, status):
 
     try:
         task['epoch_time_running'] = (pd.to_datetime(
-            task['task_time_running']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+            task['task_try_time_running']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         task['epoch_time_returned'] = (pd.to_datetime(
             task['task_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         start = int(task['epoch_time_running'].min())
@@ -178,7 +205,16 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
         groups_list = {app: (i, None) for i, app in enumerate(
             df_tasks['task_func_name'].unique())}
     else:
-        groups_list = {'Pending': (0, 'gray'), "Running": (1, 'blue'), 'Completed': (2, 'green'), 'Unknown': (3, 'red')}
+        groups_list = {"unsched": (0, 'rgb(240, 240, 240)'),
+                       "pending": (1, 'rgb(168, 168, 168)'),
+                       "launched": (2, 'rgb(100, 255, 255)'),
+                       "running": (3, 'rgb(0, 0, 255)'),
+                       "dep_fail": (4, 'rgb(255, 128, 255)'),
+                       "failed": (5, 'rgb(200, 0, 0)'),
+                       "exec_done": (6, 'rgb(0, 200, 0)'),
+                       "memo_done": (7, 'rgb(64, 200, 64)'),
+                       "fail_retryable": (8, 'rgb(200, 128,128)')
+                      }
 
     node_traces = [...] * len(groups_list)
 
@@ -208,14 +244,7 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
         if group_by_apps:
             name = dic['task_func_name'][node]
         else:
-            if dic['task_time_returned'][node] is not None:
-                name = 'Completed'
-            elif dic['task_time_running'][node] is not None:
-                name = "Running"
-            elif dic['task_time_submitted'][node] is not None:
-                name = "Pending"
-            else:
-                name = "Unknown"
+            name = dic['task_status_name'][node]
         index, _ = groups_list[name]
         node_traces[index]['x'] += tuple([x])
         node_traces[index]['y'] += tuple([y])

@@ -29,8 +29,8 @@ Synchronization provides a way of blocking execution of one activity
 
 Parsl supports concurrency and synchronization as follows. 
 Whenever a Parsl program calls a Parsl app (a function annotated with a Parsl
-app decorator, see :ref:`label-apps`),
-Parsl will create a new `task` and immediately return a 
+app decorator, see :ref:`apps`),
+Parsl will create a new ``task`` and immediately return a 
 `future <https://en.wikipedia.org/wiki/Futures_and_promises>`_ in lieu of that function's result(s). 
 The program will then continue immediately to the next statement in the program.
 At some point, for example when the task's dependencies are met and there
@@ -58,7 +58,7 @@ They provide three key capabilities:
 1. An AppFuture's ``result()`` function can be used to wait for an app to complete, and then access any result(s).
 This function is blocking: it returns only when the app completes or fails. 
 The following code fragment implements an example similar to the ``expensive_function()`` example above.
-Here, the `sleep_double` app simply doubles the input value. The program invokes
+Here, the ``sleep_double`` app simply doubles the input value. The program invokes
 the ``sleep_double`` app twice, and returns futures in place of results. The example
 shows how the future's ``result()`` function can be used to wait for the results from the 
 two ``sleep_double`` app invocations to be computed.

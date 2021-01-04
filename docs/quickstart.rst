@@ -91,7 +91,7 @@ There are several options for following the tutorial:
 
 1. Use `Binder <https://mybinder.org/v2/gh/Parsl/parsl-tutorial/master>`_  to follow the tutorial online without installing or writing any code locally. 
 2. Clone the `Parsl tutorial repository <https://github.com/Parsl/parsl-tutorial>`_ using a local Parsl installation.
-3. Read through the online `tutorial documentation <parsl-introduction>`_.
+3. Read through the online `tutorial documentation <1-parsl-introduction.html>`_.
 
 
 Usage Tracking

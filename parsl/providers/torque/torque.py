@@ -97,7 +97,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         self.queue = queue
         self.scheduler_options = scheduler_options
         self.worker_init = worker_init
-        self.provisioned_blocks = 0
         self.template_string = template_string
 
         # Dictionary that keeps track of jobs, keyed on job_id
@@ -162,10 +161,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
              - job_id: (string) Identifier for the job
 
         '''
-
-        if self.provisioned_blocks >= self.max_blocks:
-            logger.warning("[%s] at capacity, cannot add more blocks now", self.label)
-            return None
 
         # Set job name
         job_name = "parsl.{0}.{1}".format(job_name, time.time())
