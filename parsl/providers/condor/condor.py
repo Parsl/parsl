@@ -305,10 +305,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         return rets
 
-    @property
-    def current_capacity(self):
-        return self
-
     def _add_resource(self, job_id):
         for jid in job_id:
             self.resources[jid] = {'status': JobStatus(JobState.PENDING), 'size': 1}

@@ -28,7 +28,6 @@ parsl.providers.LSFProvider
    .. autosummary::
    
       ~LSFProvider.cores_per_node
-      ~LSFProvider.current_capacity
       ~LSFProvider.label
       ~LSFProvider.mem_per_node
       ~LSFProvider.status_polling_interval
