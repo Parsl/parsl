@@ -41,16 +41,6 @@ def test_resource(n=2):
     except Exception as e:
         assert isinstance(e, ExecutorError)
 
-    # Correct specification, case insensitive
-    spec = {'COREs': 2, 'MEMory': 1000, 'Disk': 1000}
-    fut = double(n, parsl_resource_specification=spec)
-    try:
-        fut.result()
-    except UnsupportedFeatureError:
-        assert not isinstance(executor, WorkQueueExecutor)
-    else:
-        assert isinstance(executor, WorkQueueExecutor)
-
 
 if __name__ == '__main__':
     local_config = config
