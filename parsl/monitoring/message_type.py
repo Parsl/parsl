@@ -11,3 +11,6 @@ class MessageType(Enum):
 
     # Reports of the resource capacity for each node
     NODE_INFO = 3
+
+    # Reports of the block info
+    BLOCK_INFO = 4
