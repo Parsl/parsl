@@ -19,9 +19,8 @@ class Config(RepresentationMixin):
     Parameters
     ----------
     executors : list of ParslExecutor, optional
-        List of executor instances to use. Possible executors include :class:`~parsl.executors.threads.ThreadPoolExecutor`,
-        or :class:`~parsl.executors.swift_t.TurbineExecutor`. Default
-        is [:class:`~parsl.executors.threads.ThreadPoolExecutor()`].
+        List of `ParslExecutor` instances to use for executing tasks.
+        Default is [:class:`~parsl.executors.threads.ThreadPoolExecutor()`].
     app_cache : bool, optional
         Enable app caching. Default is True.
     checkpoint_files : list of str, optional
