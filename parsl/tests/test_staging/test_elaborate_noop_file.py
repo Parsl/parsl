@@ -46,10 +46,13 @@ def test_regression_stage_out_does_not_stage_in():
 
     parsl.load(no_stageout_config)
 
-    # test with no staging
-    touch("test.1", outputs=[File("test.1")]).result()
+    # Test that the helper app runs with no staging
+    touch("test.1", outputs=[]).result()
 
-    # test with stage-out
+    # Test with stage-out, checking that provider stage in is never
+    # invoked. If stage-in is invoked, the the NoOpTestingFileStaging
+    # provider will raise an exception, which should propagate to
+    # .result() here.
     touch("test.2", outputs=[File("test.2")]).result()
 
     parsl.dfk().cleanup()
@@ -70,12 +73,13 @@ def test_regression_stage_in_does_not_stage_out():
 
     parsl.load(no_stageout_config)
 
-    # TODO create a file not using a task
-
     f = open("test.3", "a")
     f.write("test")
     f.close()
 
+    # Test that stage in does not invoke stage out. If stage out is
+    # attempted, then the NoOpTestingFileStaging provider will raise
+    # an exception which should propagate here.
     app_test_in(File("test.3")).result()
 
     parsl.dfk().cleanup()
