@@ -328,7 +328,7 @@ If Parsl raises a `SerializationError`, first identify what objects are problema
    # If non-serializable you will get a TypeError
    pickle.dumps(YOUR_DATA_OBJECT)
 
-If the data object simply is complex, Please refer `here <https://docs.python.org/3/library/pickle.html#handling-stateful-objects>`_ for more details,
+If the data object simply is complex, please refer `here <https://docs.python.org/3/library/pickle.html#handling-stateful-objects>`_ for more details
 on adding custom mechanisms for supporting serialization.
 
 
