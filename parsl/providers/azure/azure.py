@@ -358,11 +358,6 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
     def label(self):
         return self._label
 
-    @property
-    def current_capacity(self):
-        """Returns the current blocksize."""
-        return len(self.instances)
-
     def create_nic(self, network_client):
         """Create (or update, if it exists already) a Network Interface for a VM.
 

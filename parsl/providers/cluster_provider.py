@@ -144,13 +144,5 @@ class ClusterProvider(ExecutionProvider):
         return [self.resources[jid]['status'] for jid in job_ids]
 
     @property
-    def current_capacity(self):
-        """ Returns the currently provisioned blocks.
-        This may need to return more information in the futures :
-        { minsize, maxsize, current_requested }
-        """
-        return self.provisioned_blocks
-
-    @property
     def label(self):
         return self._label
