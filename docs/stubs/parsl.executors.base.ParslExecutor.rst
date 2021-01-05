@@ -14,6 +14,7 @@ parsl.executors.base.ParslExecutor
    .. autosummary::
    
       ~ParslExecutor.__init__
+      ~ParslExecutor.create_monitoring_info
       ~ParslExecutor.handle_errors
       ~ParslExecutor.scale_in
       ~ParslExecutor.scale_out
