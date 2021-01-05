@@ -77,7 +77,7 @@ class PollItem(ExecutorStatus):
             new_status = {}
             for id in ids:
                 new_status[id] = JobStatus(JobState.PENDING)
-            self.send_monitoring_info(new_status)
+            self.send_monitoring_info(new_status, block_id_type='external')
             self._status.update(new_status)
         return ids
 
