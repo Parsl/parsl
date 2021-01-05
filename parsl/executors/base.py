@@ -46,7 +46,7 @@ class ParslExecutor(metaclass=ABCMeta):
         self.label = ""  # type: str
 
     @abstractmethod
-    def start(self) -> None:
+    def start(self) -> Optional[List[str]]:
         """Start the executor.
 
         Any spin-up operations (for example: starting thread pools) should be performed here.
@@ -99,6 +99,14 @@ class ParslExecutor(metaclass=ABCMeta):
 
         The callers of ParslExecutors need to differentiate between Executors
         and Executors wrapped in a resource provider
+        """
+        pass
+
+    @abstractmethod
+    def create_monitoring_info(self, status: Dict[object, JobStatus]) -> List[object]:
+        """Create a monitoring message for each block based on the poll status.
+
+        :return: a list of dictionaries mapping to the info of each block
         """
         pass
 

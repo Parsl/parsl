@@ -31,6 +31,7 @@ from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import FINAL_STATES, States
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
+from parsl.providers.provider_base import JobStatus, JobState
 from parsl.utils import get_version, get_std_fname_mode
 
 from parsl.monitoring.message_type import MessageType
@@ -885,6 +886,7 @@ class DataFlowKernel(object):
 
     def add_executors(self, executors):
         for executor in executors:
+            executor.run_id = self.run_id
             executor.run_dir = self.run_dir
             executor.hub_address = self.hub_address
             executor.hub_port = self.hub_interchange_port
@@ -901,7 +903,14 @@ class DataFlowKernel(object):
                         self._create_remote_dirs_over_channel(executor.provider, executor.provider.channel)
 
             self.executors[executor.label] = executor
-            executor.start()
+            jids = executor.start()
+            if self.monitoring and jids:
+                new_status = {}
+                for jid in jids:
+                    new_status[jid] = JobStatus(JobState.PENDING)
+                msg = executor.create_monitoring_info(new_status)
+                logger.debug("Sending monitoring message {} to hub from DFK".format(msg))
+                self.monitoring.send(MessageType.BLOCK_INFO, msg)
         self.flowcontrol.add_executors(executors)
 
     def atexit_cleanup(self):
@@ -971,7 +980,14 @@ class DataFlowKernel(object):
             if executor.managed and not executor.bad_state_is_set:
                 if executor.scaling_enabled:
                     job_ids = executor.provider.resources.keys()
-                    executor.scale_in(len(job_ids))
+                    jids = executor.scale_in(len(job_ids))
+                    if self.monitoring and jids:
+                        new_status = {}
+                        for jid in jids:
+                            new_status[jid] = JobStatus(JobState.CANCELLED)
+                        msg = executor.create_monitoring_info(new_status, block_id_type='internal')
+                        logger.debug("Sending message {} to hub from DFK".format(msg))
+                        self.monitoring.send(MessageType.BLOCK_INFO, msg)
                 executor.shutdown()
 
         self.time_completed = datetime.datetime.now()
