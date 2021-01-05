@@ -46,7 +46,7 @@ class NoOpTestingFileStaging(Staging, RepresentationMixin):
             app_fut = stage_in_app(outputs=[file], _parsl_staging_inhibit=True, parent_fut=parent_fut)
             return app_fut._outputs[0]
         else:
-            raise RuntimeError("NoOpTestingFileStaging provider configured to prohibit stage in")
+            raise NoOpError("NoOpTestingFileStaging provider configured to prohibit stage in")
 
     def stage_out(self, dm, executor, file, app_fu):
         logger.info("Creating state-out app for file {}".format(file))
@@ -54,7 +54,7 @@ class NoOpTestingFileStaging(Staging, RepresentationMixin):
             stage_out_app = make_stage_out_app(executor=executor, dfk=dm.dfk)
             return stage_out_app(app_fu, inputs=[file], _parsl_staging_inhibit=True)
         else:
-            raise RuntimeError("NoOpTestingFileStaging provider configured to prohibit stage out")
+            raise NoOpError("NoOpTestingFileStaging provider configured to prohibit stage out")
 
 
 def make_stage_out_app(executor, dfk):
@@ -81,3 +81,9 @@ def stage_in_noop(parent_fut=None, outputs=[], _parsl_staging_inhibit=True):
     logger.info("stage_in_noop")
     time.sleep(1)
     return None
+
+
+class NoOpError(RuntimeError):
+    """This should behave the same as a RuntimeError, but is a subclass so
+    that it can be checked for specifically in test cases."""
+    pass

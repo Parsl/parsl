@@ -14,7 +14,7 @@ from parsl import bash_app, python_app
 from parsl.config import Config
 from parsl.data_provider.files import File
 from parsl.executors.threads import ThreadPoolExecutor
-from parsl.tests.test_staging.staging_provider import NoOpTestingFileStaging
+from parsl.tests.test_staging.staging_provider import NoOpTestingFileStaging, NoOpError
 from parsl.tests.utils import get_rundir
 
 logger = logging.getLogger(__name__)
@@ -55,6 +55,10 @@ def test_regression_stage_out_does_not_stage_in():
     # .result() here.
     touch("test.2", outputs=[File("test.2")]).result()
 
+    # Test that stage-in exceptions propagate out to user code.
+    with pytest.raises(NoOpError):
+        touch("test.3", inputs=[File("test.3")]).result()
+
     parsl.dfk().cleanup()
     parsl.clear()
 
@@ -73,14 +77,18 @@ def test_regression_stage_in_does_not_stage_out():
 
     parsl.load(no_stageout_config)
 
-    f = open("test.3", "a")
+    f = open("test.4", "a")
     f.write("test")
     f.close()
 
     # Test that stage in does not invoke stage out. If stage out is
     # attempted, then the NoOpTestingFileStaging provider will raise
     # an exception which should propagate here.
-    app_test_in(File("test.3")).result()
+    app_test_in(File("test.4")).result()
+
+    # Test that stage out exceptions propagate to user code.
+    with pytest.raises(NoOpError):
+        touch("test.5", outputs=[File("test.5")]).result()
 
     parsl.dfk().cleanup()
     parsl.clear()
