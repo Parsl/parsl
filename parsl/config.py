@@ -19,15 +19,15 @@ class Config(RepresentationMixin):
     Parameters
     ----------
     executors : list of ParslExecutor, optional
-        List of executor instances to use. Possible executors include :class:`~parsl.executors.threads.ThreadPoolExecutor`,
-        or :class:`~parsl.executors.swift_t.TurbineExecutor`. Default
-        is [:class:`~parsl.executors.threads.ThreadPoolExecutor()`].
+        List of `ParslExecutor` instances to use for executing tasks.
+        Default is [:class:`~parsl.executors.threads.ThreadPoolExecutor()`].
     app_cache : bool, optional
         Enable app caching. Default is True.
     checkpoint_files : list of str, optional
-        List of paths to checkpoint files. Default is None.
+        List of paths to checkpoint files. See :func:`parsl.utils.get_all_checkpoints` and
+        :func:`parsl.utils.get_last_checkpoint` for helpers. Default is None.
     checkpoint_mode : str, optional
-        Checkpoint mode to use, can be 'dfk_exit', 'task_exit', or 'periodic'. If set to
+        Checkpoint mode to use, can be ``'dfk_exit'``, ``'task_exit'``, or ``'periodic'``. If set to
         `None`, checkpointing will be disabled. Default is None.
     checkpoint_period : str, optional
         Time interval (in "HH:MM:SS") at which to checkpoint completed tasks. Only has an effect if
