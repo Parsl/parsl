@@ -608,9 +608,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
     def scale_out(self, blocks=1):
         """Scales out the number of blocks by "blocks"
-
-        Raises:
-             NotImplementedError
         """
         if not self.provider:
             raise (ScalingFailed("No execution provider available"))
@@ -727,9 +724,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             - hub (Bool): Whether the hub should be shutdown, Default: True,
             - targets (list of ints| 'all'): List of block id's to kill, Default: 'all'
             - block (Bool): To block for confirmations or not
-
-        Raises:
-             NotImplementedError
         """
 
         logger.info("Attempting HighThroughputExecutor shutdown")
