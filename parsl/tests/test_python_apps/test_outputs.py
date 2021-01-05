@@ -1,5 +1,6 @@
 import argparse
 import os
+import pytest
 import shutil
 
 from concurrent.futures import wait
@@ -21,6 +22,7 @@ def double(x, outputs=[]):
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
 
 
+@pytest.mark.issue363
 def test_launch_apps(n=2, outdir='outputs'):
     if not os.path.exists(outdir):
         os.makedirs(outdir)
