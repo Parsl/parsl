@@ -356,7 +356,7 @@ class DatabaseManager:
                         else:
                             inserted_tries.add(task_try_id)
                             try_insert_messages.append(msg)
-                            
+
                             # check if there is a left_message for this task
                             if task_try_id in deferred_resource_messages:
                                 reprocessable_first_resource_messages.append(
