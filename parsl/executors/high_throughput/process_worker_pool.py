@@ -5,7 +5,6 @@ import logging
 import os
 import sys
 import platform
-# import random
 import threading
 import pickle
 import time
@@ -28,9 +27,6 @@ else:
     from multiprocessing import Queue as mpQueue
 
 from parsl.serialize import unpack_apply_message, serialize
-
-RESULT_TAG = 10
-TASK_REQUEST_TAG = 11
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 
@@ -427,10 +423,10 @@ class Manager(object):
         self._worker_watchdog_thread.join()
         for proc_id in self.procs:
             self.procs[proc_id].terminate()
-            logger.critical("Terminating worker {}:{}".format(self.procs[proc_id],
-                                                              self.procs[proc_id].is_alive()))
+            logger.critical("Terminating worker {}: is_alive()={}".format(self.procs[proc_id],
+                                                                          self.procs[proc_id].is_alive()))
             self.procs[proc_id].join()
-            logger.debug("Worker:{} joined successfully".format(self.procs[proc_id]))
+            logger.debug("Worker {} joined successfully".format(self.procs[proc_id]))
 
         self.task_incoming.close()
         self.result_outgoing.close()
@@ -662,10 +658,9 @@ if __name__ == "__main__":
                           cpu_affinity=args.cpu_affinity)
         manager.start()
 
-    except Exception as e:
-        logger.critical("process_worker_pool exiting from an exception")
-        logger.exception("Caught error: {}".format(e))
+    except Exception:
+        logger.critical("Process worker pool exiting with an exception", exc_info=True)
         raise
     else:
-        logger.info("process_worker_pool exiting")
-        print("PROCESS_WORKER_POOL exiting")
+        logger.info("Process worker pool exiting normally")
+        print("Process worker pool exiting normally")
