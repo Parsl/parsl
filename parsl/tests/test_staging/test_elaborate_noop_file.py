@@ -15,7 +15,6 @@ from parsl.config import Config
 from parsl.data_provider.files import File
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.tests.test_staging.staging_provider import NoOpTestingFileStaging, NoOpError
-from parsl.tests.utils import get_rundir
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +39,7 @@ def test_regression_stage_out_does_not_stage_in():
                 label='local_threads',
                 storage_access=[NoOpTestingFileStaging(allow_stage_in=False)]
             )
-        ],
-        run_dir=get_rundir()
+        ]
     )
 
     parsl.load(no_stageout_config)
@@ -72,7 +70,6 @@ def test_regression_stage_in_does_not_stage_out():
                 storage_access=[NoOpTestingFileStaging(allow_stage_out=False)]
             )
         ],
-        run_dir=get_rundir()
     )
 
     parsl.load(no_stageout_config)
