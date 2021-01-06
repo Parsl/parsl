@@ -40,6 +40,7 @@ def fresh_config():
         executors=[
             HighThroughputExecutor(
                 label="htex_Local",
+                address="localhost",
                 working_dir=working_dir,
                 storage_access=[FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging()],
                 worker_debug=True,
