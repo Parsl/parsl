@@ -47,7 +47,6 @@ def sleep(sleep_dur=0.1):
 
 
 @pytest.mark.local
-@pytest.mark.skip('passes even without retries enabled')
 def test_fail_nowait(numtasks=10):
     """Test retries on tasks with no dependencies.
     """
@@ -66,7 +65,6 @@ def test_fail_nowait(numtasks=10):
 
 
 @pytest.mark.local
-@pytest.mark.skip('passes even without retries enabled')
 def test_fail_delayed(numtasks=10):
     """Test retries on tasks with dependencies.
 

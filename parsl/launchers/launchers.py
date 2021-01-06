@@ -40,7 +40,7 @@ class WrappedLauncher(Launcher):
     """Wraps the command by prepending commands before a user's command
 
     As an example, the wrapped launcher can be used to launch a command
-    inside a docker contain by prepending the proper docker invocation"""
+    inside a docker container by prepending the proper docker invocation"""
 
     def __init__(self, prepend: str, debug: bool = True):
         """
