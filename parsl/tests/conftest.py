@@ -13,7 +13,6 @@ import _pytest.runner as runner
 
 import parsl
 from parsl.dataflow.dflow import DataFlowKernelLoader
-from parsl.tests.utils import get_rundir
 
 logger = logging.getLogger('parsl')
 
@@ -108,7 +107,6 @@ def load_dfk_session(request, pytestconfig):
         spec = importlib.util.spec_from_file_location('', config)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        module.config.run_dir = get_rundir()  # Give unique rundir; needed running with -n=X where X > 1.
 
         if DataFlowKernelLoader._dfk is not None:
             raise ValueError("DFK didn't start as None - there was a DFK from somewhere already")
