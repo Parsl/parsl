@@ -117,6 +117,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                  walltime="01:00:00",
                  linger=False,
 
+                 upload_parsl=False,
                  ssh_username='ubuntu',
                  ssh_key_filename=None,
 
@@ -149,6 +150,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.resources = {}
         self.state_file = state_file if state_file is not None else 'awsproviderstate.json'
 
+        self.upload_parsl = upload_parsl
         self.ssh_username = ssh_username
         self.ssh_key_filename = ssh_key_filename
 
@@ -624,11 +626,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             logger.error("Failed to submit request to EC2")
             return None
 
-        try:
-            self.upload_local_parsl(instance)
-        except Exception as ex:
-            print(ex)
-
         logger.debug("Started instance_id: {0}".format(instance.instance_id))
 
         state = translate_table.get(instance.state['Name'], JobState.PENDING)
@@ -638,6 +635,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             "instance": instance,
             "status": JobStatus(state)
         }
+
+        self.upload_local_parsl(instance)
 
         return instance.instance_id
 
