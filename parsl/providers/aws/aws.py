@@ -3,6 +3,10 @@ import logging
 import os
 import time
 from string import Template
+from pathlib import Path
+
+from paramiko import SSHClient, AutoAddPolicy
+from scp import SCPClient
 
 from parsl.dataflow.error import ConfigurationError
 from parsl.providers.aws.template import template_string
@@ -112,6 +116,10 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                  state_file=None,
                  walltime="01:00:00",
                  linger=False,
+
+                 ssh_username='ubuntu',
+                 ssh_key_filename=None,
+
                  launcher=SingleNodeLauncher()):
         if not _boto_enabled:
             raise OptionalModuleMissing(['boto3'], "AWS Provider requires the boto3 module.")
@@ -140,6 +148,9 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.linger = linger
         self.resources = {}
         self.state_file = state_file if state_file is not None else 'awsproviderstate.json'
+
+        self.ssh_username = ssh_username
+        self.ssh_key_filename = ssh_key_filename
 
         env_specified = os.getenv("AWS_ACCESS_KEY_ID") is not None and os.getenv("AWS_SECRET_ACCESS_KEY") is not None
         if profile is None and key_file is None and not env_specified:
@@ -564,6 +575,25 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         return all_states
 
+    def upload_local_parsl(self, instance):
+        parsl_root_path = str((Path(__file__).parent / '../..').resolve())
+        print(parsl_root_path)
+
+        instance.wait_until_running()
+        instance.reload()
+        public_ip = instance.public_ip_address
+        print(public_ip)
+
+        time.sleep(15)
+
+        ssh = SSHClient()
+        ssh.set_missing_host_key_policy(AutoAddPolicy())
+        # ssh.load_system_host_keys()
+        ssh.connect(public_ip, username="ubuntu", key_filename="/home/kir/.ssh/key2.pem")
+        scp = SCPClient(ssh.get_transport())
+        scp.put(parsl_root_path, recursive=True, remote_path='/tmp')
+        scp.close()
+
     def submit(self, command='sleep 1', tasks_per_node=1, job_name="parsl.aws"):
         """Submit the command onto a freshly instantiated AWS EC2 instance.
 
@@ -593,6 +623,11 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         if not instance:
             logger.error("Failed to submit request to EC2")
             return None
+
+        try:
+            self.upload_local_parsl(instance)
+        except Exception as ex:
+            print(ex)
 
         logger.debug("Started instance_id: {0}".format(instance.instance_id))
 
