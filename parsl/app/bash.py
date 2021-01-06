@@ -41,6 +41,9 @@ def remote_side_bash_executor(func, *args, **kwargs):
         # Execute the func to get the commandline
         executable = func(*args, **kwargs)
 
+        if not isinstance(executable, str):
+            raise ValueError(f"Expected a str for bash_app commandline, got {type(executable)}")
+
     except AttributeError as e:
         if executable is not None:
             raise pe.AppBadFormatting("App formatting failed for app '{}' with AttributeError: {}".format(func_name, e))
