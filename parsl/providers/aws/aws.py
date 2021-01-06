@@ -118,7 +118,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                  linger=False,
 
                  upload_parsl=False,
-                 ssh_username='ubuntu',
+                 ssh_username=None,
                  ssh_key_filename=None,
 
                  launcher=SingleNodeLauncher()):
@@ -461,6 +461,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         command = Template(template_string).substitute(jobname=job_name,
                                                        user_script=command,
                                                        linger=str(self.linger).lower(),
+                                                       upload_parsl=str(self.upload_parsl).lower(),
                                                        worker_init=self.worker_init)
         instance_type = self.instance_type
         subnet = self.sn_ids[0]
@@ -579,21 +580,41 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
     def upload_local_parsl(self, instance):
         parsl_root_path = str((Path(__file__).parent / '../..').resolve())
-        print(parsl_root_path)
+
+        logger.debug("Waiting for EC2 instance to be in running state")
 
         instance.wait_until_running()
         instance.reload()
         public_ip = instance.public_ip_address
-        print(public_ip)
 
+        logger.debug("EC2 instance in running state, waiting for instance to be SSH-capable")
+
+        # need to wait a bit after instance is running for SSH to work
         time.sleep(15)
+
+        logger.debug("Local Parsl path: {0}".format(parsl_root_path))
+        logger.debug("Uploading local Parsl via SCP to host: {0}".format(public_ip))
 
         ssh = SSHClient()
         ssh.set_missing_host_key_policy(AutoAddPolicy())
         # ssh.load_system_host_keys()
-        ssh.connect(public_ip, username="ubuntu", key_filename="/home/kir/.ssh/key2.pem")
+        ssh_connect_args = {'hostname': public_ip}
+        if self.ssh_username is not None:
+            ssh_connect_args['username'] = self.ssh_username
+        if self.ssh_key_filename is not None:
+            ssh_connect_args['key_filename'] = self.ssh_key_filename
+
+        ssh.connect(**ssh_connect_args)
         scp = SCPClient(ssh.get_transport())
         scp.put(parsl_root_path, recursive=True, remote_path='/tmp')
+
+        logger.debug("Parsl upload complete")
+
+        upload_complete_path = (Path(__file__).parent / 'parsl_upload_complete.txt').resolve()
+        logger.debug("Uploading complete indicator: {0}".format(upload_complete_path))
+        
+        scp.put(upload_complete_path, remote_path='/tmp')
+
         scp.close()
 
     def submit(self, command='sleep 1', tasks_per_node=1, job_name="parsl.aws"):
@@ -636,7 +657,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             "status": JobStatus(state)
         }
 
-        self.upload_local_parsl(instance)
+        if (self.upload_parsl):
+            self.upload_local_parsl(instance)
 
         return instance.instance_id
 
