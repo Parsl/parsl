@@ -119,7 +119,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                  linger=False,
 
                  upload_parsl=False,
-                 upload_parsl_path=None,
                  ssh_username=None,
                  ssh_key_filename=None,
 
@@ -153,7 +152,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.state_file = state_file if state_file is not None else 'awsproviderstate.json'
 
         self.upload_parsl = upload_parsl
-        self.upload_parsl_path = upload_parsl_path
         self.ssh_username = ssh_username
         self.ssh_key_filename = ssh_key_filename
 
@@ -161,9 +159,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         if profile is None and key_file is None and not env_specified:
             raise ConfigurationError("Must specify either profile', 'key_file', or "
                                      "'AWS_ACCESS_KEY_ID' and 'AWS_SECRET_ACCESS_KEY' environment variables.")
-
-        if upload_parsl and upload_parsl_path is None:
-            raise ConfigurationError("Must specify 'upload_parsl_path' if 'upload_parsl' is enabled")
 
         try:
             self.initialize_boto_client()
