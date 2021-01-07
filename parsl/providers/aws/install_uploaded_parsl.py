@@ -1,9 +1,9 @@
 import parsl
-from pathlib import Path
+from shutil import rmtree
+from distutils.dir_util import copy_tree
 
-# print((Path(__file__).parent / 'parsl_upload_complete.txt').resolve())
+uploaded_parsl_path = '/tmp/parsl'
+pip_parsl_path = parsl.__path__[0]
 
-print(parsl.__path__)
-
-with open((Path(__file__).parent / 'example.txt').resolve(), 'w+') as f:
-    f.write('This is a test\n')
+rmtree(pip_parsl_path)
+copy_tree(uploaded_parsl_path, pip_parsl_path)

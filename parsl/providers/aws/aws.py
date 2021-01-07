@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import time
+import io
 from string import Template
 from pathlib import Path
 
@@ -118,6 +119,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                  linger=False,
 
                  upload_parsl=False,
+                 upload_parsl_path=None,
                  ssh_username=None,
                  ssh_key_filename=None,
 
@@ -151,6 +153,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.state_file = state_file if state_file is not None else 'awsproviderstate.json'
 
         self.upload_parsl = upload_parsl
+        self.upload_parsl_path = upload_parsl_path
         self.ssh_username = ssh_username
         self.ssh_key_filename = ssh_key_filename
 
@@ -158,6 +161,9 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         if profile is None and key_file is None and not env_specified:
             raise ConfigurationError("Must specify either profile', 'key_file', or "
                                      "'AWS_ACCESS_KEY_ID' and 'AWS_SECRET_ACCESS_KEY' environment variables.")
+
+        if upload_parsl and upload_parsl_path is None:
+            raise ConfigurationError("Must specify 'upload_parsl_path' if 'upload_parsl' is enabled")
 
         try:
             self.initialize_boto_client()
@@ -610,12 +616,13 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         logger.debug("Parsl upload complete")
 
-        upload_complete_path = (Path(__file__).parent / 'parsl_upload_complete.txt').resolve()
-        logger.debug("Uploading complete indicator: {0}".format(upload_complete_path))
+        fl = io.BytesIO()
+        logger.debug("Uploading complete indicator")
         
-        scp.put(upload_complete_path, remote_path='/tmp')
-
+        scp.putfo(fl, '/tmp/parsl_upload_complete.txt')
         scp.close()
+
+        logger.debug("Complete indicator uploaded")
 
     def submit(self, command='sleep 1', tasks_per_node=1, job_name="parsl.aws"):
         """Submit the command onto a freshly instantiated AWS EC2 instance.
