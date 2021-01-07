@@ -580,7 +580,13 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         return all_states
 
     def upload_local_parsl(self, instance):
-        parsl_root_path = str((Path(__file__).parent / '../..').resolve())
+        parsl_root = Path(__file__).parent / '../..'
+        parsl_pip_dist = parsl_root / '../parsl-1.0.0.dist-info'
+
+        parsl_root_path = str(parsl_root.resolve())
+        parsl_pip_dist_path = str(parsl_pip_dist.resolve())
+        logger.debug("Local Parsl path: {0}".format(parsl_root_path))
+        logger.debug("Local Parsl dist-info path: {0}".format(parsl_pip_dist_path))
 
         logger.debug("Waiting for EC2 instance to be in running state")
 
@@ -593,7 +599,6 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         # need to wait a bit after instance is running for SSH to work
         time.sleep(15)
 
-        logger.debug("Local Parsl path: {0}".format(parsl_root_path))
         logger.debug("Uploading local Parsl via SCP to host: {0}".format(public_ip))
 
         ssh = SSHClient()
@@ -608,13 +613,14 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         ssh.connect(**ssh_connect_args)
         scp = SCPClient(ssh.get_transport())
         scp.put(parsl_root_path, recursive=True, remote_path='/tmp')
+        scp.put(parsl_pip_dist_path, recursive=True, remote_path='/tmp')
 
         logger.debug("Parsl upload complete")
 
         fl = io.BytesIO()
         logger.debug("Uploading complete indicator")
         
-        scp.putfo(fl, '/tmp/parsl_upload_complete.txt')
+        scp.putfo(fl, '/tmp/parsl_upload_complete')
         scp.close()
 
         logger.debug("Complete indicator uploaded")

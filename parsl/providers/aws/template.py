@@ -8,7 +8,7 @@ pip3 install numpy scipy parsl
 if $upload_parsl
 then
     # Wait until the Parsl SCP upload is complete
-    while ! (test -f "/tmp/parsl_upload_complete.txt"); do
+    while ! (test -f "/tmp/parsl_upload_complete"); do
         sleep 5
     done
     python3 /tmp/parsl/providers/aws/install_uploaded_parsl.py
