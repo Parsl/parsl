@@ -1,4 +1,3 @@
-
 import logging
 import os
 import parsl
@@ -53,4 +52,26 @@ def test_row_counts():
         (c, ) = result.first()
         assert c == 1
 
+        result = connection.execute("SELECT COUNT(*) FROM status, try "
+                                    "WHERE status.task_id = try.task_id "
+                                    "AND status.task_status_name='exec_done' "
+                                    "AND task_try_time_running is NULL")
+        (c, ) = result.first()
+        assert c == 0
+
+        # Two entries: one showing manager active, one inactive
+        result = connection.execute("SELECT COUNT(*) FROM node")
+        (c, ) = result.first()
+        assert c == 2
+
+        # There should be one block polling status
+        # local provider has a status_polling_interval of 5s
+        result = connection.execute("SELECT COUNT(*) FROM block")
+        (c, ) = result.first()
+        assert c >= 2
+
     logger.info("all done")
+
+
+if __name__ == "__main__":
+    test_row_counts()

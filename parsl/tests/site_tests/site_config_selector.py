@@ -73,6 +73,3 @@ def fresh_config():
         # We should skip this.
 
     return config
-
-
-config = fresh_config()
