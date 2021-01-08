@@ -4,6 +4,7 @@ import os
 import pathlib
 import pickle
 import random
+import time
 import typeguard
 import inspect
 import threading
@@ -27,9 +28,10 @@ from parsl.dataflow.flow_control import FlowControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
-from parsl.dataflow.states import States
+from parsl.dataflow.states import FINAL_STATES, States
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
+from parsl.providers.provider_base import JobStatus, JobState
 from parsl.utils import get_version, get_std_fname_mode
 
 from parsl.monitoring.message_type import MessageType
@@ -256,7 +258,7 @@ class DataFlowKernel(object):
         structure.
 
         Args:
-             task_id (string) : Task id which is a uuid string
+             task_id (string) : Task id
              future (Future) : The future object corresponding to the task which
              makes this callback
         """
@@ -367,7 +369,8 @@ class DataFlowKernel(object):
     def wipe_task(self, task_id):
         """ Remove task with task_id from the internal tasks table
         """
-        del self.tasks[task_id]
+        if self.config.garbage_collect:
+            del self.tasks[task_id]
 
     @staticmethod
     def check_staging_inhibited(kwargs):
@@ -463,7 +466,7 @@ class DataFlowKernel(object):
         targeted at those specific executors.
 
         Args:
-            task_id (uuid string) : A uuid string that uniquely identifies the task
+            task_id (string) : A string that uniquely identifies the task
             executable (callable) : A callable object
             args (list of positional args)
             kwargs (arbitrary keyword arguments)
@@ -613,7 +616,7 @@ class DataFlowKernel(object):
         it, and will (most likely) result in a type error.
 
         Args:
-             task_id (uuid str) : Task id
+             task_id (str) : Task id
              func (Function) : App function
              args (List) : Positional args to app function
              kwargs (Dict) : Kwargs to app function
@@ -884,6 +887,7 @@ class DataFlowKernel(object):
 
     def add_executors(self, executors):
         for executor in executors:
+            executor.run_id = self.run_id
             executor.run_dir = self.run_dir
             executor.hub_address = self.hub_address
             executor.hub_port = self.hub_interchange_port
@@ -900,7 +904,14 @@ class DataFlowKernel(object):
                         self._create_remote_dirs_over_channel(executor.provider, executor.provider.channel)
 
             self.executors[executor.label] = executor
-            executor.start()
+            jids = executor.start()
+            if self.monitoring and jids:
+                new_status = {}
+                for jid in jids:
+                    new_status[jid] = JobStatus(JobState.PENDING)
+                msg = executor.create_monitoring_info(new_status)
+                logger.debug("Sending monitoring message {} to hub from DFK".format(msg))
+                self.monitoring.send(MessageType.BLOCK_INFO, msg)
         self.flowcontrol.add_executors(executors)
 
     def atexit_cleanup(self):
@@ -920,10 +931,14 @@ class DataFlowKernel(object):
             if task_id not in self.tasks:
                 logger.debug("Task {} no longer in task list".format(task_id))
             else:
-                fut = self.tasks[task_id]['app_fu']
+                task_record = self.tasks[task_id]  # still a race condition with the above self.tasks if-statement
+                fut = task_record['app_fu']
                 if not fut.done():
-                    logger.debug("Waiting for task {} to complete".format(task_id))
                     fut.exception()
+                # now app future is done, poll until DFK state is final: a DFK state being final and the app future being done do not imply each other.
+                while task_record['status'] not in FINAL_STATES:
+                    time.sleep(0.1)
+
         logger.info("All remaining tasks completed")
 
     def cleanup(self):
@@ -966,7 +981,14 @@ class DataFlowKernel(object):
             if executor.managed and not executor.bad_state_is_set:
                 if executor.scaling_enabled:
                     job_ids = executor.provider.resources.keys()
-                    executor.scale_in(len(job_ids))
+                    jids = executor.scale_in(len(job_ids))
+                    if self.monitoring and jids:
+                        new_status = {}
+                        for jid in jids:
+                            new_status[jid] = JobStatus(JobState.CANCELLED)
+                        msg = executor.create_monitoring_info(new_status, block_id_type='internal')
+                        logger.debug("Sending message {} to hub from DFK".format(msg))
+                        self.monitoring.send(MessageType.BLOCK_INFO, msg)
                 executor.shutdown()
 
         self.time_completed = datetime.datetime.now()

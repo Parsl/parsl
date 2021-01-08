@@ -14,6 +14,7 @@ parsl.executors.WorkQueueExecutor
    .. autosummary::
    
       ~WorkQueueExecutor.__init__
+      ~WorkQueueExecutor.create_monitoring_info
       ~WorkQueueExecutor.handle_errors
       ~WorkQueueExecutor.initialize_scaling
       ~WorkQueueExecutor.run_dir
