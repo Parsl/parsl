@@ -363,6 +363,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         ----------
         vpc : VPC instance
             VPC in which to set up security group.
+        name : str
+            Name tag for the newly created security group.
         """
 
         tag_spec = self.create_name_tag_spec('security-group', name)
@@ -709,9 +711,30 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         os.remove(self.config['state_file_path'])
 
     def generate_aws_id(self):
+        """Generate a new ID for AWS resources.
+
+        Returns
+        -------
+        str
+            An ID of the form 'parsl.aws.123456.789' for giving resources unique identifiers.
+        """
         return "parsl.aws.{0}".format(time.time())
 
     def create_name_tag_spec(self, resource_type, name):
+        """Create a new tag specification for a resource name.
+
+        Parameters
+        ----------
+        resource_type : str
+            The AWS resource type
+        name : str
+            The name to assign to the resource
+
+        Returns
+        -------
+        record
+            A TagSpecifications record to be passed into the creation of a new AWS resource.
+        """
         return [{"ResourceType": resource_type, "Tags": [{'Key': 'Name', 'Value': name}]}]
 
     @property
