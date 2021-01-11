@@ -3,7 +3,6 @@ import logging
 import os
 import parsl
 import pytest
-import sqlalchemy
 import time
 
 logger = logging.getLogger(__name__)
@@ -18,6 +17,7 @@ def this_app():
 
 @pytest.mark.local
 def test_row_counts():
+    import sqlalchemy
     if os.path.exists("monitoring.db"):
         logger.info("Monitoring database already exists - deleting")
         os.remove("monitoring.db")
