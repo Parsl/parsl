@@ -69,8 +69,9 @@ def test_scale_out():
     logger.info(f"Outstanding: {dfk.executors['htex_local'].outstanding}")
     assert len(dfk.executors['htex_local'].connected_managers) >= 1, "Expected at least one manager once tasks are running"
 
-    logger.info("Sleeping 1s, assuming that this will be fast enough for full scale up")
-    time.sleep(1)
+    # 1s delay here doesn't seem to be long enough for all of the managers to be started and connected in CI.
+    logger.info("Sleeping 2s, assuming that this will be fast enough for full scale up")
+    time.sleep(2)
 
     logger.info(f"Managers: {dfk.executors['htex_local'].connected_managers}")
     logger.info(f"Outstanding: {dfk.executors['htex_local'].outstanding}")
