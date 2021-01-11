@@ -35,18 +35,13 @@ def get_version() -> str:
 
 @typeguard.typechecked
 def get_all_checkpoints(rundir: str = "runinfo") -> List[str]:
-    """Finds the checkpoints from all last runs.
-
-    Note that checkpoints are incremental, and this helper will not find
-    previous checkpoints from earlier than the most recent run. It probably
-    should be made to do so.
+    """Finds the checkpoints from all runs in the rundir.
 
     Kwargs:
        - rundir(str) : Path to the runinfo directory
 
     Returns:
-       - a list suitable for the checkpointFiles parameter of the DataFlowKernel
-         constructor
+       - a list suitable for the checkpoint_files parameter of `Config`
 
     """
 
@@ -72,15 +67,15 @@ def get_last_checkpoint(rundir: str = "runinfo") -> List[str]:
     """Finds the checkpoint from the last run, if one exists.
 
     Note that checkpoints are incremental, and this helper will not find
-    previous checkpoints from earlier than the most recent run. It probably
-    should be made to do so.
+    previous checkpoints from earlier than the most recent run. If you
+    want that behaviour, see `get_all_checkpoints`.
 
     Kwargs:
        - rundir(str) : Path to the runinfo directory
 
     Returns:
-     - a list suitable for the checkpointFiles parameter of the DataFlowKernel
-       constructor, with 0 or 1 elements
+     - a list suitable for the checkpoint_files parameter of `Config`,
+       with 0 or 1 elements
 
     """
     if not os.path.isdir(rundir):

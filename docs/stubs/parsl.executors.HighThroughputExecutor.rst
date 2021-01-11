@@ -14,6 +14,7 @@ parsl.executors.HighThroughputExecutor
    .. autosummary::
    
       ~HighThroughputExecutor.__init__
+      ~HighThroughputExecutor.create_monitoring_info
       ~HighThroughputExecutor.handle_errors
       ~HighThroughputExecutor.hold_worker
       ~HighThroughputExecutor.initialize_scaling

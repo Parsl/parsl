@@ -7,21 +7,22 @@ from typing import Any, List, Optional
 class JobState(bytes, Enum):
     """Defines a set of states that a job can be in"""
 
-    def __new__(cls, value, terminal):
+    def __new__(cls, value, terminal, status_name):
         # noinspection PyArgumentList
         obj = bytes.__new__(cls, [value])
         obj._value_ = value
         obj.terminal = terminal
+        obj.status_name = status_name
         return obj
 
-    UNKNOWN = (0, False)
-    PENDING = (1, False)
-    RUNNING = (2, False)
-    CANCELLED = (3, True)
-    COMPLETED = (4, True)
-    FAILED = (5, True)
-    TIMEOUT = (6, True)
-    HELD = (7, False)
+    UNKNOWN = (0, False, "UNKNOWN")
+    PENDING = (1, False, "PENDING")
+    RUNNING = (2, False, "RUNNING")
+    CANCELLED = (3, True, "CANCELLED")
+    COMPLETED = (4, True, "COMPLETED")
+    FAILED = (5, True, "FAILED")
+    TIMEOUT = (6, True, "TIMEOUT")
+    HELD = (7, False, "HELD")
 
 
 class JobStatus(object):
@@ -39,6 +40,10 @@ class JobStatus(object):
     @property
     def terminal(self):
         return self.state.terminal
+
+    @property
+    def status_name(self):
+        return self.state.status_name
 
     def __repr__(self):
         if self.message is not None:
