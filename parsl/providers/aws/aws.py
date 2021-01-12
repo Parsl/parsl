@@ -450,9 +450,50 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                                                        linger=str(self.linger).lower(),
                                                        worker_init=self.worker_init)
         instance_type = self.instance_type
-        subnet = self.sn_ids[0]
         ami_id = self.image_id
         total_instances = len(self.instances)
+
+        # not all availability zones support all instance types,
+        # so we need to check which subnets can actually be used given the
+        # user-provided instance type
+
+        # this finds the availability zones in a region that support
+        # the user-provided instance type
+        az_offerings = self.client.describe_instance_type_offerings(
+            LocationType='availability-zone',
+            Filters=[
+                {
+                    'Name': 'instance-type',
+                    'Values': [
+                        instance_type,
+                    ]
+                },
+            ],
+        )
+
+        allowed_azs = []
+        for az in az_offerings['InstanceTypeOfferings']:
+            allowed_azs.append(az['Location'])
+
+        # this is used to retrieve the availability zone of each subnet
+        subnets = self.client.describe_subnets(
+            SubnetIds=list(self.sn_ids),
+        )
+
+        subnet = None
+        for sn in subnets['Subnets']:
+            sn_id = sn['SubnetId']
+            az = sn['AvailabilityZone']
+            # a subnet has been found with an availability zone
+            # that is supported for the instance type, so we should use
+            # this subnet
+            if az in allowed_azs:
+                subnet = sn_id
+                break
+
+        if subnet is None:
+            logger.error("No subnet in region {0} supports instance type {1}".format(self.region, instance_type))
+            return [None]
 
         if float(self.spot_max_bid) > 0:
             spot_options = {
