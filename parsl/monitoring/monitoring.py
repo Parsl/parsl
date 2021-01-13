@@ -255,10 +255,16 @@ class MonitoringHub(RepresentationMixin):
         self.logger.info("Started the Hub process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
         try:
-            udp_dish_port, ic_port = comm_q.get(block=True, timeout=120)
+            comm_q_result = comm_q.get(block=True, timeout=120)
         except queue.Empty:
             self.logger.error("Hub has not completed initialization in 120s. Aborting")
             raise Exception("Hub failed to start")
+
+        if isinstance(comm_q_result, str):
+            self.logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
+            raise RuntimeError("MonitoringRouter failed to start: {comm_q_result}")
+
+        udp_dish_port, ic_port = comm_q_result
 
         self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_dish_port)
         return ic_port
@@ -393,22 +399,18 @@ class MonitoringRouter:
         self.loop_freq = 10.0  # milliseconds
 
         # Initialize the UDP socket
-        try:
-            self.sock = socket.socket(socket.AF_INET,
-                                      socket.SOCK_DGRAM,
-                                      socket.IPPROTO_UDP)
+        self.sock = socket.socket(socket.AF_INET,
+                                  socket.SOCK_DGRAM,
+                                  socket.IPPROTO_UDP)
 
-            # We are trying to bind to all interfaces with 0.0.0.0
-            if not self.hub_port:
-                self.sock.bind(('0.0.0.0', 0))
-                self.hub_port = self.sock.getsockname()[1]
-            else:
-                self.sock.bind(('0.0.0.0', self.hub_port))
-            self.sock.settimeout(self.loop_freq / 1000)
-            self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.hub_port))
-        except OSError:
-            self.logger.critical("The port is already in use")
-            self.hub_port = -1
+        # We are trying to bind to all interfaces with 0.0.0.0
+        if not self.hub_port:
+            self.sock.bind(('0.0.0.0', 0))
+            self.hub_port = self.sock.getsockname()[1]
+        else:
+            self.sock.bind(('0.0.0.0', self.hub_port))
+        self.sock.settimeout(self.loop_freq / 1000)
+        self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.hub_port))
 
         self._context = zmq.Context()
         self.dfk_channel = self._context.socket(zmq.DEALER)
@@ -479,8 +481,14 @@ class MonitoringRouter:
 
 
 def router_starter(comm_q, exception_q, priority_msgs, node_msgs, block_msgs, resource_msgs, *args, **kwargs):
-    router = MonitoringRouter(*args, **kwargs)
-    comm_q.put((router.hub_port, router.ic_port))
+
+    try:
+        router = MonitoringRouter(*args, **kwargs)
+    except Exception as e:
+        logger.error("MonitoringRouter construction failed.", exc_info=True)
+        comm_q.put(f"Monitoring router construction failed: {e}")
+    else:
+        comm_q.put((router.hub_port, router.ic_port))
     router.logger.info("Starting MonitoringRouter in router_starter")
     try:
         router.start(priority_msgs, node_msgs, block_msgs, resource_msgs)
