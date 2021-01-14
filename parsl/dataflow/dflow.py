@@ -915,7 +915,7 @@ class DataFlowKernel(object):
                 new_status = {}
                 for jid in jids:
                     new_status[jid] = JobStatus(JobState.PENDING)
-                msg = executor.create_monitoring_info(new_status)
+                msg = executor.create_monitoring_info(new_status, block_id_type='external')
                 logger.debug("Sending monitoring message {} to hub from DFK".format(msg))
                 self.monitoring.send(MessageType.BLOCK_INFO, msg)
         self.flowcontrol.add_executors(executors)
