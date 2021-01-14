@@ -130,14 +130,11 @@ class Strategy(object):
         for executor in executors:
             self.executors[executor.label] = {'idle_since': None, 'config': executor.label}
 
-    def _strategy_noop(self, status: List[ExecutorStatus], tasks, *args, kind=None, **kwargs):
+    def _strategy_noop(self, status: List[ExecutorStatus], tasks):
         """Do nothing.
 
         Args:
             - tasks (task_ids): Not used here.
-
-        KWargs:
-            - kind (Not used)
         """
 
     def unset_logging(self):
@@ -154,13 +151,13 @@ class Strategy(object):
 
         self.logger_flag = True
 
-    def _strategy_simple(self, status_list, tasks, *args, kind=None, **kwargs):
-        self._general_strategy(status_list, tasks, *args, strategy_type='simple', kind=None, **kwargs)
+    def _strategy_simple(self, status_list, tasks):
+        self._general_strategy(status_list, tasks, strategy_type='simple')
 
-    def _strategy_htex_auto_scale(self, status_list, tasks, *args, kind=None, **kwargs):
-        self._general_strategy(status_list, tasks, *args, strategy_type='htex', kind=None, **kwargs)
+    def _strategy_htex_auto_scale(self, status_list, tasks):
+        self._general_strategy(status_list, tasks, strategy_type='htex')
 
-    def _general_strategy(self, status_list, tasks, *args, strategy_type='simple', kind=None, **kwargs):
+    def _general_strategy(self, status_list, tasks, *, strategy_type):
 
         """ HTEX specific auto scaling strategy
 
@@ -178,9 +175,6 @@ class Strategy(object):
 
         Args:
             - tasks (task_ids): Not used here.
-
-        KWargs:
-            - kind (Not used)
         """
         for exec_status in status_list:
             executor = exec_status.executor
