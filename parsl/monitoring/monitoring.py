@@ -309,7 +309,7 @@ class MonitoringHub(RepresentationMixin):
                         monitoring_hub_url: str,
                         run_id: str,
                         logging_level: int,
-                        sleep_dur: int) -> Callable:
+                        sleep_dur: float) -> Callable:
         """ Internal
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
@@ -533,7 +533,7 @@ def monitor(pid: int,
             monitoring_hub_url: str,
             run_id: str,
             logging_level: int = logging.INFO,
-            sleep_dur: int = 10,
+            sleep_dur: float = 10,
             first_message: bool = False) -> None:
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
