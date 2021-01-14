@@ -13,6 +13,7 @@ import requests
 import socket
 import fcntl
 import struct
+import typeguard
 import psutil
 
 from typing import Set, List, Callable
@@ -33,6 +34,7 @@ def address_by_route() -> str:
     return addr
 
 
+@typeguard.typechecked
 def address_by_query(timeout: float = 30) -> str:
     """Finds an address for the local host by querying ipify. This may
        return an unusable value when the host is behind NAT, or when the
@@ -66,6 +68,7 @@ def address_by_hostname() -> str:
     return addr
 
 
+@typeguard.typechecked
 def address_by_interface(ifname: str) -> str:
     """Returns the IP address of the given interface name, e.g. 'eth0'
 
