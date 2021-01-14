@@ -88,8 +88,3 @@ class File(object):
             return self.path
         else:
             raise ValueError("No local_path set for {}".format(repr(self)))
-
-
-if __name__ == '__main__':
-
-    x = File('./files.py')

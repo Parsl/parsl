@@ -16,8 +16,10 @@ parsl.providers.AWSProvider
       ~AWSProvider.__init__
       ~AWSProvider.cancel
       ~AWSProvider.config_route_table
+      ~AWSProvider.create_name_tag_spec
       ~AWSProvider.create_session
       ~AWSProvider.create_vpc
+      ~AWSProvider.generate_aws_id
       ~AWSProvider.get_instance_state
       ~AWSProvider.goodbye
       ~AWSProvider.initialize_boto_client
