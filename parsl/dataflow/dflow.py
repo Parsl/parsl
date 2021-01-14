@@ -32,7 +32,7 @@ from parsl.dataflow.states import FINAL_STATES, States
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.providers.provider_base import JobStatus, JobState
-from parsl.utils import get_version, get_std_fname_mode
+from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints
 
 from parsl.monitoring.message_type import MessageType
 
@@ -152,7 +152,13 @@ class DataFlowKernel(object):
             self.monitoring.send(MessageType.WORKFLOW_INFO,
                                  workflow_info)
 
-        checkpoints = self.load_checkpoints(config.checkpoint_files)
+        if config.checkpoint_files is not None:
+            checkpoints = self.load_checkpoints(config.checkpoint_files)
+        elif config.checkpoint_files is None and config.checkpoint_mode is not None:
+            checkpoints = self.load_checkpoints(get_all_checkpoints(self.run_dir))
+        else:
+            checkpoints = {}
+
         self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint=checkpoints)
         self.checkpointed_tasks = 0
         self._checkpoint_timer = None
@@ -909,7 +915,7 @@ class DataFlowKernel(object):
                 new_status = {}
                 for jid in jids:
                     new_status[jid] = JobStatus(JobState.PENDING)
-                msg = executor.create_monitoring_info(new_status)
+                msg = executor.create_monitoring_info(new_status, block_id_type='external')
                 logger.debug("Sending monitoring message {} to hub from DFK".format(msg))
                 self.monitoring.send(MessageType.BLOCK_INFO, msg)
         self.flowcontrol.add_executors(executors)
