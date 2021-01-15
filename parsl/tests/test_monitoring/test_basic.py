@@ -1,14 +1,20 @@
-
 import logging
 import os
 import parsl
 import pytest
+import time
 
 logger = logging.getLogger(__name__)
 
 
 @parsl.python_app
 def this_app():
+    # this delay needs to be several times the resource monitoring
+    # period configured in the test configuration, so that some
+    # messages are actually sent - there is no guarantee that any
+    # (non-first) resource message will be sent at all for a short app.
+    time.sleep(3)
+
     return 5
 
 
@@ -53,4 +59,30 @@ def test_row_counts():
         (c, ) = result.first()
         assert c == 1
 
+        result = connection.execute("SELECT COUNT(*) FROM status, try "
+                                    "WHERE status.task_id = try.task_id "
+                                    "AND status.task_status_name='exec_done' "
+                                    "AND task_try_time_running is NULL")
+        (c, ) = result.first()
+        assert c == 0
+
+        # Two entries: one showing manager active, one inactive
+        result = connection.execute("SELECT COUNT(*) FROM node")
+        (c, ) = result.first()
+        assert c == 2
+
+        # There should be one block polling status
+        # local provider has a status_polling_interval of 5s
+        result = connection.execute("SELECT COUNT(*) FROM block")
+        (c, ) = result.first()
+        assert c >= 2
+
+        result = connection.execute("SELECT COUNT(*) FROM resource")
+        (c, ) = result.first()
+        assert c >= 1
+
     logger.info("all done")
+
+
+if __name__ == "__main__":
+    test_row_counts()
