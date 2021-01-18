@@ -563,7 +563,7 @@ def monitor(pid: int,
 
     format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
     logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
-        logbase="/tmp", task_id=task_id, pid=pid), level=logging.DEBUG, format=format_string)
+        logbase="/tmp", task_id=task_id, pid=pid), level=logging_level, format=format_string)
 
     logging.debug("start of monitor")
 
