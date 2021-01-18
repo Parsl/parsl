@@ -15,7 +15,6 @@ parsl.dataflow.strategy.Strategy
    
       ~Strategy.__init__
       ~Strategy.add_executors
-      ~Strategy.unset_logging
    
    
 
