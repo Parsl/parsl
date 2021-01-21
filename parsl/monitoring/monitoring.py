@@ -15,8 +15,12 @@ from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
 
+from parsl.serialize import deserialize
+
 from parsl.monitoring.message_type import MessageType
 from typing import cast, Any, Callable, Dict, List, Optional, Union
+
+from parsl.serialize import serialize
 
 _db_manager_excepts: Optional[Exception]
 
@@ -69,6 +73,62 @@ class MonitoringRadio(metaclass=ABCMeta):
     @abstractmethod
     def send(self, message: object) -> None:
         pass
+
+
+class FilesystemRadio(MonitoringRadio):
+    """A MonitoringRadio that sends messages over a shared filesystem.
+
+    The messsage directory structure is based on maildir,
+    https://en.wikipedia.org/wiki/Maildir
+
+    The writer creates a message in tmp/ and then when it is fully
+    written, moves it atomically into new/
+
+    The reader ignores tmp/ and only reads and deletes messages from
+    new/
+
+    This avoids a race condition of reading partially written messages.
+
+    This radio is likely to give higher shared filesystem load compared to
+    the UDPRadio, but should be much more reliable.
+    """
+
+    def __init__(self, *, monitoring_url: str, source_id: int, timeout: int = 10, run_dir: str):
+        logger.info("filesystem based monitoring channel initializing")
+        self.source_id = source_id
+        self.id_counter = 0
+        self.radio_uid = f"host-{socket.gethostname()}-pid-{os.getpid()}-radio-{id(self)}"
+        self.base_path = f"{run_dir}/monitor-fs-radio/"
+        self.tmp_path = f"{self.base_path}/tmp"
+        self.new_path = f"{self.base_path}/new"
+
+        os.makedirs(self.tmp_path, exist_ok=True)
+        os.makedirs(self.new_path, exist_ok=True)
+
+    def send(self, message: object) -> None:
+        logger.info("Sending a monitoring message via filesystem")
+
+        # this should be randomised by things like worker ID, process ID, whatever
+        # because there will in general be many FilesystemRadio objects sharing the
+        # same space (even from the same process). id(self) used here will
+        # disambiguate in one process at one instant, but not between
+        # other things: eg different hosts, different processes, same process different non-overlapping instantiations
+        unique_id = f"msg-{self.radio_uid}-{self.id_counter}"
+
+        self.id_counter = self.id_counter + 1
+
+        tmp_filename = f"{self.tmp_path}/{unique_id}"
+        new_filename = f"{self.new_path}/{unique_id}"
+        buffer = ((MessageType.RESOURCE_INFO, (self.source_id,   # Identifier for manager
+                   int(time.time()),  # epoch timestamp
+                   message)), "NA")
+
+        # this will write the message out then atomically
+        # move it into new/, so that a partially written
+        # file will never be observed in new/
+        with open(tmp_filename, "wb") as f:
+            f.write(serialize(buffer))
+        os.rename(tmp_filename, new_filename)
 
 
 class HTEXRadio(MonitoringRadio):
@@ -147,7 +207,6 @@ class UDPRadio(MonitoringRadio):
         timeout : int
             timeout, default=10s
         """
-
         self.monitoring_url = monitoring_url
         self.sock_timeout = timeout
         self.source_id = source_id
@@ -333,6 +392,14 @@ class MonitoringHub(RepresentationMixin):
         self.dbm_proc.start()
         self.logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
+        self.filesystem_proc = Process(target=filesystem_receiver,
+                                       args=(self.logdir, self.resource_msgs, run_dir),
+                                       name="Monitoring-Filesystem-Process",
+                                       daemon=True
+        )
+        self.filesystem_proc.start()
+        self.logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
+
         try:
             comm_q_result = comm_q.get(block=True, timeout=120)
         except queue.Empty:
@@ -376,6 +443,7 @@ class MonitoringHub(RepresentationMixin):
                                       exception_msg[1]))
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
+                self.filesystem_proc.terminate()
             self.logger.info("Waiting for router to terminate")
             self.router_proc.join()
             self.logger.debug("Finished waiting for router termination")
@@ -383,6 +451,12 @@ class MonitoringHub(RepresentationMixin):
                 self.priority_msgs.put(("STOP", 0))
             self.dbm_proc.join()
             self.logger.debug("Finished waiting for DBM termination")
+
+            # should this be message based? it probably doesn't need to be if
+            # we believe we've received all messages
+            self.logger.info("Terminating filesystem radio receiver process")
+            self.filesystem_proc.terminate()
+            self.filesystem_proc.join()
 
     @staticmethod
     def monitor_wrapper(f: Any,
@@ -438,6 +512,40 @@ class MonitoringHub(RepresentationMixin):
                     p.terminate()
                     p.join()
         return wrapped
+
+
+@wrap_with_logs
+def filesystem_receiver(logdir: str, q: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]", run_dir: str) -> None:
+    logger = start_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
+                               name="monitoring_filesystem_radio",
+                               level=logging.DEBUG)
+    logger.info("Starting filesystem radio receiver")
+    base_path = f"{run_dir}/monitor-fs-radio/"
+    tmp_dir = f"{base_path}/tmp/"
+    new_dir = f"{base_path}/new/"
+    logger.debug(f"Creating new and tmp paths under {base_path}")
+
+    os.makedirs(tmp_dir, exist_ok=True)
+    os.makedirs(new_dir, exist_ok=True)
+
+    while True:  # this loop will end on process termination
+        logger.info("Start filesystem radio receiver loop")
+
+        # iterate over files in new_dir
+        for filename in os.listdir(new_dir):
+            try:
+                logger.info(f"Processing filesystem radio file {filename}")
+                full_path_filename = f"{new_dir}/{filename}"
+                with open(full_path_filename, "rb") as f:
+                    message = deserialize(f.read())
+                logger.info(f"Message received is: {message}")
+                assert(isinstance(message, tuple))
+                q.put(cast(Any, message))  # the type of message is complicated to assert, so cast to Any
+                os.remove(full_path_filename)
+            except Exception:
+                logger.exception(f"Exception processing {filename} - probably will be retried next iteration")
+
+        time.sleep(1)  # whats a good time for this poll?
 
 
 class MonitoringRouter:
@@ -655,6 +763,9 @@ def send_first_message(try_id: int,
     elif radio_mode == "htex":
         radio = HTEXRadio(monitoring_hub_url,
                           source_id=task_id)
+    elif radio_mode == "filesystem":
+        radio = FilesystemRadio(monitoring_url=monitoring_hub_url,
+                                source_id=task_id, run_dir=run_dir)
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
@@ -700,6 +811,9 @@ def monitor(pid: int,
     elif radio_mode == "htex":
         radio = HTEXRadio(monitoring_hub_url,
                           source_id=task_id)
+    elif radio_mode == "filesystem":
+        radio = FilesystemRadio(monitoring_url=monitoring_hub_url,
+                                source_id=task_id, run_dir=run_dir)
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
