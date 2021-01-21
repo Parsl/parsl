@@ -63,7 +63,7 @@ def fresh_config():
         monitoring=MonitoringHub(
                         hub_address="localhost",
                         hub_port=55055,
-                        monitoring_debug=False,
+                        monitoring_debug=True,
                         resource_monitoring_interval=1,
         )
     )

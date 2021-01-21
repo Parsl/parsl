@@ -13,11 +13,15 @@ from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
 
+from parsl.serialize import deserialize
+
 # this is needed for htex hack to get at htex result queue
 import parsl.executors.high_throughput.monitoring_info
 
 from parsl.monitoring.message_type import MessageType
 from typing import cast, Any, Callable, Dict, List, Optional, Union
+
+from parsl.serialize import serialize
 
 _db_manager_excepts: Optional[Exception]
 
@@ -70,6 +74,42 @@ class MonitoringRadio(metaclass=ABCMeta):
     @abstractmethod
     def send(self, message: object) -> None:
         pass
+
+
+class FilesystemRadio(MonitoringRadio):
+    def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
+        logger.info("filesystem based monitoring channel initializing")
+        self.source_id = source_id
+        self.id_counter = 0
+
+    def send(self, message: object) -> None:
+        logger.info("Sending a monitoring message via filesystem")
+
+        tmp_path = "/home/benc/tmp/parsl-radio/tmp"
+        new_path = "/home/benc/tmp/parsl-radio/new"
+
+        # this should be randomised by things like worker ID, process ID, whatever
+        # because there will in general be many FilesystemRadio objects sharing the
+        # same space (even from the same process). id(self) used here will
+        # disambiguate in one process at one instant, but not between
+        # other things: eg different hosts, different processes, same process different non-overlapping instantiations
+        unique_id = f"msg-{id(self)}-{self.id_counter}"
+
+        self.id_counter = self.id_counter + 1
+
+        # TODO: use path operators not string interpolation
+        tmp_filename = f"{tmp_path}/{unique_id}"
+        new_filename = f"{new_path}/{unique_id}"
+        buffer = ((MessageType.RESOURCE_INFO, (self.source_id,   # Identifier for manager
+                   int(time.time()),  # epoch timestamp
+                   message)), "NA")
+
+        # this will write the message out then atomically
+        # move it into new/, so that a partially written
+        # file will never be observed in new/
+        with open(tmp_filename, "wb") as f:
+            f.write(serialize(buffer))
+        os.rename(tmp_filename, new_filename)
 
 
 class HTEXRadio(MonitoringRadio):
@@ -151,7 +191,6 @@ class UDPRadio(MonitoringRadio):
         timeout : int
             timeout, default=10s
         """
-
         self.monitoring_url = monitoring_url
         self.sock_timeout = timeout
         self.source_id = source_id
@@ -328,6 +367,14 @@ class MonitoringHub(RepresentationMixin):
         self.dbm_proc.start()
         self.logger.info("Started the Hub process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
+        self.filesystem_proc = Process(target=filesystem_receiver,
+                                       args=(self.logdir, self.resource_msgs),
+                                       name="Monitoring-Filesystem-Process",
+                                       daemon=True
+        )
+        self.filesystem_proc.start()
+        self.logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
+
         try:
             comm_q_result = comm_q.get(block=True, timeout=120)
         except queue.Empty:
@@ -371,6 +418,7 @@ class MonitoringHub(RepresentationMixin):
                                       exception_msg[1]))
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
+                self.filesystem_proc.terminate()
             self.logger.info("Waiting for Hub to receive all messages and terminate")
             self.router_proc.join()
             self.logger.debug("Finished waiting for Hub termination")
@@ -378,6 +426,12 @@ class MonitoringHub(RepresentationMixin):
                 self.priority_msgs.put(("STOP", 0))
             self.dbm_proc.join()
             self.logger.debug("Finished waiting for DBM termination")
+
+            # should this be message based? it probably doesn't need to be if
+            # we believe we've received all messages
+            self.logger.info("Terminating filesystem radio receiver process")
+            self.filesystem_proc.terminate()
+            self.filesystem_proc.join()
 
     @staticmethod
     def monitor_wrapper(f: Any,
@@ -425,6 +479,34 @@ class MonitoringHub(RepresentationMixin):
                     p.terminate()
                     p.join()
         return wrapped
+
+
+# this needs proper typing, but I was having some problems with typeguard...
+@wrap_with_logs
+def filesystem_receiver(logdir: str, q: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]") -> None:
+    new_dir = "/home/benc/tmp/parsl-radio/new"
+    logger = start_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
+                               name="monitoring_filesystem_radio",
+                               level=logging.DEBUG)
+    logger.info("Starting filesystem radio receiver")
+    while True:  # needs an exit condition, that also copes with late messages
+        # like the UDP radio receiver.
+        logger.info("Start filesystem radio receiver loop")
+
+        # iterate over files in new_dir
+        for filename in os.listdir(new_dir):
+            logger.info(f"Processing filesystem radio file {filename}")
+            full_path_filename = f"{new_dir}/{filename}"
+            with open(full_path_filename, "rb") as f:
+                message = deserialize(f.read())
+            logger.info(f"Message received is: {message}")
+            assert(isinstance(message, tuple))
+            q.put(cast(Any, message))  # TODO: sort this typing/cast out
+            # should this addr field at the end be removed? does it ever
+            # get used in monitoring?
+            os.remove(full_path_filename)
+
+        time.sleep(1)  # whats a good time for this poll?
 
 
 class MonitoringRouter:
@@ -656,6 +738,9 @@ def send_first_message(try_id: int,
     elif radio_mode == "htex":
         radio = HTEXRadio(monitoring_hub_url,
                           source_id=task_id)
+    elif radio_mode == "filesystem":
+        radio = FilesystemRadio(monitoring_hub_url,
+                                source_id=task_id)
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
@@ -694,6 +779,9 @@ def monitor(pid: int,
     elif radio_mode == "htex":
         radio = HTEXRadio(monitoring_hub_url,
                           source_id=task_id)
+    elif radio_mode == "filesystem":
+        radio = FilesystemRadio(monitoring_hub_url,
+                                source_id=task_id)
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
