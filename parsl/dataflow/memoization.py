@@ -1,5 +1,5 @@
 import hashlib
-from functools import singledispatch
+from functools import lru_cache, singledispatch
 from inspect import getsource
 import logging
 from parsl.serialize import serialize
@@ -94,7 +94,10 @@ def id_for_memo_dict(denormalized_dict, output_ref=False):
     return serialize(normalized_list)
 
 
+# the LRU cache decorator must be applied closer to the id_for_memo_function call
+# that the .register() call, so that the cache-decorated version is registered.
 @id_for_memo.register(types.FunctionType)
+@lru_cache()
 def id_for_memo_function(function, output_ref=False):
     """This produces function hash material using the source definition of the
        function.
