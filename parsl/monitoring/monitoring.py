@@ -433,6 +433,7 @@ class MonitoringRouter:
               resource_msgs: "queue.Queue[Tuple[Dict[str, Any], str]]") -> None:
         try:
             while True:
+                self.logger.info("MONLOOP")
                 try:
                     data, addr = self.sock.recvfrom(2048)
                     msg = pickle.loads(data)
