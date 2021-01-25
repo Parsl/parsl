@@ -1,4 +1,3 @@
-
 import logging
 import os
 import parsl
@@ -7,7 +6,6 @@ import socket
 import time
 
 logger = logging.getLogger(__name__)
-
 
 
 @parsl.python_app
