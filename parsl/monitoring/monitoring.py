@@ -221,7 +221,7 @@ class MonitoringHub(RepresentationMixin):
         comm_q = Queue(maxsize=10)  # type: Queue[Union[Tuple[int, int], str]]
         self.exception_q = Queue(maxsize=10)  # type: Queue[Tuple[str, str]]
         self.priority_msgs = Queue()  # type: Queue[Tuple[Any, int]]
-        self.resource_msgs = Queue()  # type: Queue[Tuple[Dict[str, Any], Any]]
+        self.resource_msgs = Queue()  # type: Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]
         self.node_msgs = Queue()  # type: Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]
         self.block_msgs = Queue()  # type:  Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]
 
@@ -436,14 +436,14 @@ class MonitoringRouter:
               priority_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
               node_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
               block_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
-              resource_msgs: "queue.Queue[Tuple[Dict[str, Any], Any]]") -> None:
+              resource_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]") -> None:
         try:
             while True:
                 try:
                     data, addr = self.sock.recvfrom(2048)
                     msg = pickle.loads(data)
                     self.logger.info("Got UDP Message from {}: {}".format(addr, msg))
-                    resource_msgs.put((msg, addr))
+                    resource_msgs.put(((MessageType.RESOURCE_INFO, msg), addr))
                 except socket.timeout:
                     pass
 
@@ -511,7 +511,7 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    priority_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
                    node_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
                    block_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
-                   resource_msgs: "queue.Queue[Tuple[Dict[str, Any], str]]",
+                   resource_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], str]]",
 
                    hub_address: str,
                    hub_port: Optional[int],

@@ -539,8 +539,10 @@ class DatabaseManager:
                     else:
                         logger.warning("dropping message with unknown format: {}".format(x))
                 elif queue_tag == 'resource':
-                    assert len(x) == 3
-                    self.pending_resource_queue.put(x[-1])
+                    assert x[0] == MessageType.RESOURCE_INFO, "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue"
+                    body = x[1]
+                    assert len(body) == 3
+                    self.pending_resource_queue.put(body[-1])
                 elif queue_tag == 'node':
                     logger.info("Received these two from node queue")
                     logger.info("x = {}".format(x))
