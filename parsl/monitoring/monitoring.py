@@ -443,7 +443,7 @@ class MonitoringRouter:
 
                 try:
                     msg = self.dfk_channel.recv_pyobj()
-                    self.logger.info("Got ZMQ Message from DFK: {}".format(msg))
+                    self.logger.debug("Got ZMQ Message from DFK: {}".format(msg))
                     if msg[0].value == MessageType.BLOCK_INFO.value:
                         block_msgs.put((msg, 0))
                     else:
