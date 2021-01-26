@@ -451,6 +451,21 @@ class DatabaseManager:
                     self._insert(table=NODE, messages=node_info_messages)
 
                 """
+                BLOCK_INFO messages
+
+                """
+                block_info_messages = self._get_messages_in_batch(self.pending_block_queue)
+                if block_info_messages:
+                    logger.debug(
+                        "Got {} messages from block queue".format(len(block_info_messages)))
+                    # block_info_messages is possibly a nested list of dict (at different polling times)
+                    # Each dict refers to the info of a job/block at one polling time
+                    block_messages_to_insert = []  # type: List[Any]
+                    for block_msg in block_info_messages:
+                        block_messages_to_insert.extend(block_msg)
+                    self._insert(table=BLOCK, messages=block_messages_to_insert)
+
+                """
                 Resource info messages
 
                 """
@@ -480,21 +495,6 @@ class DatabaseManager:
 
                     if insert_resource_messages:
                         self._insert(table=RESOURCE, messages=insert_resource_messages)
-
-                """
-                BLOCK_INFO messages
-
-                """
-                block_info_messages = self._get_messages_in_batch(self.pending_block_queue)
-                if block_info_messages:
-                    logger.debug(
-                        "Got {} messages from block queue".format(len(block_info_messages)))
-                    # block_info_messages is possibly a nested list of dict (at different polling times)
-                    # Each dict refers to the info of a job/block at one polling time
-                    block_messages_to_insert = []  # type: List[Any]
-                    for block_msg in block_info_messages:
-                        block_messages_to_insert.extend(block_msg)
-                    self._insert(table=BLOCK, messages=block_messages_to_insert)
 
                 if reprocessable_first_resource_messages:
                     self._insert(table=STATUS, messages=reprocessable_first_resource_messages)
