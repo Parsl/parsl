@@ -10,6 +10,7 @@ import zmq
 import queue
 from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
+from parsl.process_loggers import wrap_with_logs
 
 from parsl.monitoring.message_type import MessageType
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -315,14 +316,10 @@ class MonitoringHub(RepresentationMixin):
         """
         def wrapped(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
             # Send first message to monitoring router
-            monitor(os.getpid(),
-                    try_id,
-                    task_id,
-                    monitoring_hub_url,
-                    run_id,
-                    logging_level,
-                    sleep_dur,
-                    first_message=True)
+            send_first_message(try_id,
+                               task_id,
+                               monitoring_hub_url,
+                               run_id)
 
             # create the monitor process and start
             p = Process(target=monitor,
@@ -484,6 +481,7 @@ class MonitoringRouter:
         self.logger.info("Monitoring router finished")
 
 
+@wrap_with_logs
 def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    exception_q: "queue.Queue[Tuple[str, str]]",
                    priority_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
@@ -527,36 +525,45 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
     router.logger.info("End of router_starter")
 
 
+@wrap_with_logs
+def send_first_message(try_id: int,
+                       task_id: int,
+                       monitoring_hub_url: str,
+                       run_id: str) -> None:
+    import platform
+
+    radio = UDPRadio(monitoring_hub_url,
+                     source_id=task_id)
+
+    msg = {'run_id': run_id,
+           'try_id': try_id,
+           'task_id': task_id,
+           'hostname': platform.node(),
+           'first_msg': True,
+           'timestamp': datetime.datetime.now()
+    }
+    radio.send(msg)
+    return
+
+
+@wrap_with_logs
 def monitor(pid: int,
             try_id: int,
             task_id: int,
             monitoring_hub_url: str,
             run_id: str,
             logging_level: int = logging.INFO,
-            sleep_dur: float = 10,
-            first_message: bool = False) -> None:
+            sleep_dur: float = 10) -> None:
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
     """
+    import logging
     import platform
+    import psutil
     import time
 
     radio = UDPRadio(monitoring_hub_url,
                      source_id=task_id)
-
-    if first_message:
-        msg = {'run_id': run_id,
-               'try_id': try_id,
-               'task_id': task_id,
-               'hostname': platform.node(),
-               'first_msg': first_message,
-               'timestamp': datetime.datetime.now()
-        }
-        radio.send(msg)
-        return
-
-    import psutil
-    import logging
 
     format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
     logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
@@ -585,7 +592,7 @@ def monitor(pid: int,
             d["try_id"] = try_id
             d['resource_monitoring_interval'] = sleep_dur
             d['hostname'] = platform.node()
-            d['first_msg'] = first_message
+            d['first_msg'] = False
             d['timestamp'] = datetime.datetime.now()
 
             logging.debug("getting children")
