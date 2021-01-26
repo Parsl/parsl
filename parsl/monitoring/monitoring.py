@@ -461,7 +461,7 @@ class MonitoringRouter:
 
                 try:
                     msg = self.ic_channel.recv_pyobj()
-                    self.logger.debug("Got ZMQ Message from interchange before handling: {}".format(msg))
+                    self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
                     if msg[0].value == MessageType.NODE_INFO.value:
                         msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
                         msg[2]['run_id'] = self.run_id
@@ -470,8 +470,8 @@ class MonitoringRouter:
                         node_msgs.put((msg, 0))
                     elif msg[0].value == MessageType.BLOCK_INFO.value:
                         block_msgs.put((msg, 0))
-                    # TODO: else we're discarding a message here without noting that it is being discarded
-                    self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
+                    else:
+                        self.logger.error(f"Discarding message from interchange with unknown type {msg[0].value}")
                 except zmq.Again:
                     pass
 
