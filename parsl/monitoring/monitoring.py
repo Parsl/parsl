@@ -457,7 +457,7 @@ class MonitoringRouter:
                     # dfk_channel is broken in such a way that it always raises
                     # an exception? Looping on this would maybe be the wrong
                     # thing to do.
-                    self.logger.exception("Failure processing a DFK ZMQ message")
+                    self.logger.warning("Failure processing a DFK ZMQ message", exc_info=True)
 
                 try:
                     msg = self.ic_channel.recv_pyobj()
