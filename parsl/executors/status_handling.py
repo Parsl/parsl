@@ -3,7 +3,7 @@ import threading
 from itertools import compress
 from abc import abstractmethod
 from concurrent.futures import Future
-from typing import List, Any, Dict
+from typing import List, Any, Dict, Tuple
 
 import parsl  # noqa F401
 from parsl.executors.base import ParslExecutor
@@ -22,22 +22,22 @@ class StatusHandlingExecutor(ParslExecutor):
         self._simulated_status = {}
         self._executor_bad_state = threading.Event()
         self._executor_exception = None
-        self._generated_job_id_counter = 1
+        self._generated_block_id_counter = 1
         self._tasks = {}  # type: Dict[object, Future]
 
-    def _make_status_dict(self, job_ids: List[Any], status_list: List[JobStatus]) -> Dict[Any, JobStatus]:
-        """Given a list of job ids and a list of corresponding status strings,
+    def _make_status_dict(self, block_ids: List[Any], status_list: List[JobStatus]) -> Dict[Any, JobStatus]:
+        """Given a list of block ids and a list of corresponding status strings,
         returns a dictionary mapping each job id to the corresponding status
 
         :param job_ids: the list of job ids
         :param status_list: the list of job status strings
         :return: the resulting dictionary
         """
-        if len(job_ids) != len(status_list):
-            raise IndexError("job id list and status string list differ in size")
+        if len(block_ids) != len(status_list):
+            raise IndexError("block id list and status string list differ in size")
         d = {}
-        for i in range(len(job_ids)):
-            d[job_ids[i]] = status_list[i]
+        for i in range(len(block_ids)):
+            d[block_ids[i]] = status_list[i]
 
         return d
 
@@ -52,25 +52,25 @@ class StatusHandlingExecutor(ParslExecutor):
             return self._provider.status_polling_interval
 
     @abstractmethod
-    def _get_job_ids(self) -> List[object]:
+    def _get_block_and_job_ids(self) -> Tuple[List[object], List[object]]:
         raise NotImplementedError("Classes inheriting from StatusHandlingExecutor must implement "
-                                  "_get_job_ids()")
+                                  "_get_block_and_job_ids()")
 
-    def _fail_job_async(self, job_id: Any, message: str):
+    def _fail_job_async(self, block_id: Any, message: str):
         """Marks a job that has failed to start but would not otherwise be included in status()
         as failed and report it in status()
         """
-        if job_id is None:
-            job_id = "failed-block-{}".format(self._generated_job_id_counter)
-            self._generated_job_id_counter += 1
-        self._simulated_status[job_id] = JobStatus(JobState.FAILED, message)
+        if block_id is None:
+            block_id = "failed-block-{}".format(self._generated_block_id_counter)
+            self._generated_block_id_counter += 1
+        self._simulated_status[block_id] = JobStatus(JobState.FAILED, message)
 
     def status(self) -> Dict[object, JobStatus]:
         """Return status of all blocks."""
 
         if self._provider:
-            job_ids = list(self._get_job_ids())
-            status = self._make_status_dict(job_ids, self._provider.status(job_ids))
+            block_ids, job_ids = self._get_block_and_job_ids()
+            status = self._make_status_dict(block_ids, self._provider.status(job_ids))
         else:
             status = {}
         status.update(self._simulated_status)

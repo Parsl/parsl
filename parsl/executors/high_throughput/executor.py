@@ -712,8 +712,15 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         return self._filter_scale_in_ids(to_kill, r)
 
-    def _get_job_ids(self) -> List[object]:
-        return list(self.blocks.values())
+    def _get_block_and_job_ids(self) -> Tuple[List[object], List[object]]:
+        # Not using self.blocks.keys() and self.blocks.values()
+        # The dictionary may be changed during invoking this function
+        # As scale_in and scale_out are invoked in multiple threads
+        block_ids = list(self.blocks.keys())
+        job_ids = []
+        for bid in block_ids:
+            job_ids.append(self.blocks[bid])
+        return block_ids, job_ids
 
     def shutdown(self, hub=True, targets='all', block=False):
         """Shutdown the executor, including all workers and controllers.

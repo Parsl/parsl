@@ -43,7 +43,7 @@ class PollItem(ExecutorStatus):
         if self._should_poll(now):
             self._status = self._executor.status()
             self._last_poll_time = now
-            self.send_monitoring_info(self._status, block_id_type='internal')
+            self.send_monitoring_info(self._status, block_id_type='external')
 
     def send_monitoring_info(self, status=None, block_id_type='external'):
         # Send monitoring info for HTEX when monitoring enabled
