@@ -613,27 +613,27 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             raise (ScalingFailed("No execution provider available"))
         r = []
         for i in range(blocks):
-            external_block_id = str(len(self.blocks))
+            block_id = str(len(self.blocks))
             try:
-                internal_block_id = self._launch_block(external_block_id)
-                self.blocks[external_block_id] = internal_block_id
-                self.block_mapping[internal_block_id] = external_block_id
-                r.append(external_block_id)
+                job_id = self._launch_block(block_id)
+                self.blocks[block_id] = job_id
+                self.block_mapping[job_id] = block_id
+                r.append(block_id)
             except Exception as ex:
-                self._fail_job_async(external_block_id,
-                                     "Failed to start block {}: {}".format(external_block_id, ex))
+                self._fail_job_async(block_id,
+                                     "Failed to start block {}: {}".format(block_id, ex))
         return r
 
-    def _launch_block(self, external_block_id: str) -> Any:
+    def _launch_block(self, block_id: str) -> Any:
         if self.launch_cmd is None:
             raise ScalingFailed(self.provider.label, "No launch command")
-        launch_cmd = self.launch_cmd.format(block_id=external_block_id)
-        internal_block = self.provider.submit(launch_cmd, 1)
-        logger.debug("Launched block {}->{}".format(external_block_id, internal_block))
-        if not internal_block:
+        launch_cmd = self.launch_cmd.format(block_id=block_id)
+        job_id = self.provider.submit(launch_cmd, 1)
+        logger.debug("Launched block {}->{}".format(block_id, job_id))
+        if not job_id:
             raise(ScalingFailed(self.provider.label,
                                 "Attempts to provision nodes via provider has failed"))
-        return internal_block
+        return job_id
 
     def scale_in(self, blocks=None, block_ids=[], force=True, max_idletime=None):
         """Scale in the number of active blocks by specified amount.
