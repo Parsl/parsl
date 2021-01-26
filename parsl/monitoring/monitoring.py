@@ -479,7 +479,6 @@ class MonitoringRouter:
             self.logger.info("Monitoring router draining")
             last_msg_received_time = time.time()
             while time.time() - last_msg_received_time < self.atexit_timeout:
-                self.logger.info("Drain loop")
                 try:
                     data, addr = self.sock.recvfrom(2048)
                     msg = pickle.loads(data)
