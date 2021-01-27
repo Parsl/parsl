@@ -52,7 +52,7 @@ class StatusHandlingExecutor(ParslExecutor):
             return self._provider.status_polling_interval
 
     @abstractmethod
-    def _get_block_and_job_ids(self) -> Tuple[List[object], List[object]]:
+    def _get_block_and_job_ids(self) -> Tuple[List[str], List[str]]:
         raise NotImplementedError("Classes inheriting from StatusHandlingExecutor must implement "
                                   "_get_block_and_job_ids()")
 
