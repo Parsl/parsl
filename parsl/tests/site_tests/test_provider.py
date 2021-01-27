@@ -56,7 +56,7 @@ def test_provider():
     assert status[0].terminal is True, "Terminal state"
     logger.info("Job in terminal state")
 
-    current_jobs = executor._get_job_ids()
+    _, current_jobs = executor._get_block_and_job_ids()
     assert len(current_jobs) == 0, "Expected current_jobs == 0"
     parsl.clear()
     del dfk
