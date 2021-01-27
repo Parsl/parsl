@@ -36,7 +36,7 @@ def test_provider():
     provider = dfk.executors[name].provider
 
     # At this point we should have 1 job
-    current_jobs = executor._get_job_ids()
+    _, current_jobs = executor._get_block_and_job_ids()
     assert len(current_jobs) == 1, "Expected 1 job at init, got {}".format(len(current_jobs))
 
     logger.info("Getting provider status (1)")
