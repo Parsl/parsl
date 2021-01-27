@@ -101,6 +101,16 @@ class ParslExecutor(metaclass=ABCMeta):
         """
         return []
 
+    def monitor_resources(self) -> bool:
+        """Should resource monitoring happen for tasks on running on this executor?
+
+        Parsl resource monitoring conflicts with execution styles which use threads, and
+        can deadlock while running.
+
+        This function allows resource monitoring to be disabled per executor implementation.
+        """
+        return True
+
     @abstractmethod
     def status(self) -> Dict[object, JobStatus]:
         """Return the status of all jobs/blocks currently known to this executor.

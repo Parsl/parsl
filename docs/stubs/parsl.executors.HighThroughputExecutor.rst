@@ -18,6 +18,7 @@ parsl.executors.HighThroughputExecutor
       ~HighThroughputExecutor.handle_errors
       ~HighThroughputExecutor.hold_worker
       ~HighThroughputExecutor.initialize_scaling
+      ~HighThroughputExecutor.monitor_resources
       ~HighThroughputExecutor.scale_in
       ~HighThroughputExecutor.scale_out
       ~HighThroughputExecutor.set_bad_state_and_fail_all

@@ -17,6 +17,7 @@ parsl.executors.WorkQueueExecutor
       ~WorkQueueExecutor.create_monitoring_info
       ~WorkQueueExecutor.handle_errors
       ~WorkQueueExecutor.initialize_scaling
+      ~WorkQueueExecutor.monitor_resources
       ~WorkQueueExecutor.run_dir
       ~WorkQueueExecutor.scale_in
       ~WorkQueueExecutor.scale_out
