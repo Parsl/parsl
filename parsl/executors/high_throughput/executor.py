@@ -597,9 +597,9 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                 d['job_id'] = id
                 d['block_id'] = self.block_mapping[id]
             elif block_id_type == 'external':
-                # In some case a block fails to launch due to provider error
-                # Then this block won't appear in self.blocks
-                # But it would reported in status
+                # In some case, a block fails to launch due to provider error
+                # then this block won't appear in self.blocks
+                # nut this block would be reported in status
                 d['job_id'] = self.blocks.get(id, None)
                 d['block_id'] = id
             else:
