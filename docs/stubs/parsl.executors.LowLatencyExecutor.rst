@@ -16,6 +16,7 @@ parsl.executors.LowLatencyExecutor
       ~LowLatencyExecutor.__init__
       ~LowLatencyExecutor.create_monitoring_info
       ~LowLatencyExecutor.handle_errors
+      ~LowLatencyExecutor.monitor_resources
       ~LowLatencyExecutor.scale_in
       ~LowLatencyExecutor.scale_out
       ~LowLatencyExecutor.set_bad_state_and_fail_all
