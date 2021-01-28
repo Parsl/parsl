@@ -5,18 +5,21 @@ import os
 import time
 import datetime
 
-from typing import Any, Dict, Set
+from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar
 
 from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
 from parsl.providers.error import OptionalModuleMissing
 from parsl.monitoring.message_type import MessageType
+from parsl.process_loggers import wrap_with_logs
 
 logger = logging.getLogger("database_manager")
 
+X = TypeVar('X')
+
 try:
     import sqlalchemy as sa
-    from sqlalchemy import Column, Text, Float, Boolean, Integer, DateTime, PrimaryKeyConstraint
+    from sqlalchemy import Column, Text, Float, Boolean, Integer, DateTime, PrimaryKeyConstraint, Table
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.ext.declarative import declarative_base
 except ImportError:
@@ -37,6 +40,7 @@ TRY = 'try'              # Try table includes information about each attempt to 
 STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
+BLOCK = 'block'          # Block table include the status for block polling
 
 
 class Database:
@@ -53,9 +57,7 @@ class Database:
     Base = declarative_base()
 
     def __init__(self,
-                 url='sqlite:///monitoring.db',
-                 username=None,
-                 password=None,
+                 url: str = 'sqlite:///monitoring.db',
                  ):
 
         self.eng = sa.create_engine(url)
@@ -67,25 +69,25 @@ class Database:
         Session = sessionmaker(bind=self.eng)
         self.session = Session()
 
-    def update(self, table=None, columns=None, messages=None):
-        table = self.meta.tables[table]
-        mappings = self._generate_mappings(table, columns=columns,
+    def update(self, *, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
+        table_obj = self.meta.tables[table]
+        mappings = self._generate_mappings(table_obj, columns=columns,
                                            messages=messages)
-        mapper = get_mapper(table)
+        mapper = get_mapper(table_obj)
         self.session.bulk_update_mappings(mapper, mappings)
         self.session.commit()
 
-    def insert(self, table=None, messages=None):
-        table = self.meta.tables[table]
-        mappings = self._generate_mappings(table, messages=messages)
-        mapper = get_mapper(table)
+    def insert(self, *, table: str, messages: List[Dict[str, Any]]) -> None:
+        table_obj = self.meta.tables[table]
+        mappings = self._generate_mappings(table_obj, messages=messages)
+        mapper = get_mapper(table_obj)
         self.session.bulk_insert_mappings(mapper, mappings)
         self.session.commit()
 
-    def rollback(self):
+    def rollback(self) -> None:
         self.session.rollback()
 
-    def _generate_mappings(self, table, columns=None, messages=[]):
+    def _generate_mappings(self, table: Table, columns: Optional[List[str]] = None, messages: List[Dict[str, Any]] = []) -> List[Dict[str, Any]]:
         mappings = []
         for msg in messages:
             m = {}
@@ -178,12 +180,27 @@ class Database:
         id = Column('id', Integer, nullable=False, primary_key=True, autoincrement=True)
         run_id = Column('run_id', Text, nullable=False)
         hostname = Column('hostname', Text, nullable=False)
+        uid = Column('uid', Text, nullable=False)
+        block_id = Column('block_id', Text, nullable=False)
         cpu_count = Column('cpu_count', Integer, nullable=False)
         total_memory = Column('total_memory', Integer, nullable=False)
         active = Column('active', Boolean, nullable=False)
         worker_count = Column('worker_count', Integer, nullable=False)
         python_v = Column('python_v', Text, nullable=False)
-        reg_time = Column('reg_time', DateTime, nullable=False)
+        timestamp = Column('timestamp', DateTime, nullable=False)
+        last_heartbeat = Column('last_heartbeat', DateTime, nullable=False)
+
+    class Block(Base):
+        __tablename__ = BLOCK
+        run_id = Column('run_id', Text, nullable=False)
+        executor_label = Column('executor_label', Text, nullable=False)
+        block_id = Column('block_id', Text, nullable=False)
+        job_id = Column('job_id', Text, nullable=False)
+        timestamp = Column('timestamp', DateTime, nullable=False)
+        status = Column("status", Text, nullable=False)
+        __table_args__ = (
+            PrimaryKeyConstraint('run_id', 'block_id', 'executor_label', 'timestamp'),
+        )
 
     class Resource(Base):
         __tablename__ = RESOURCE
@@ -225,15 +242,15 @@ class Database:
 
 class DatabaseManager:
     def __init__(self,
-                 db_url='sqlite:///monitoring.db',
-                 logdir='.',
-                 logging_level=logging.INFO,
-                 batching_interval=1,
-                 batching_threshold=99999,
+                 db_url: str = 'sqlite:///monitoring.db',
+                 logdir: str = '.',
+                 logging_level: int = logging.INFO,
+                 batching_interval: float = 1,
+                 batching_threshold: float = 99999,
                  ):
 
         self.workflow_end = False
-        self.workflow_start_message = None
+        self.workflow_start_message = None  # type: Optional[Dict[str, Any]]
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
@@ -247,11 +264,16 @@ class DatabaseManager:
         self.batching_interval = batching_interval
         self.batching_threshold = batching_threshold
 
-        self.pending_priority_queue = queue.Queue()
-        self.pending_node_queue = queue.Queue()
-        self.pending_resource_queue = queue.Queue()
+        self.pending_priority_queue = queue.Queue()  # type: queue.Queue[Tuple[MessageType, Dict[str, Any]]]
+        self.pending_node_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
+        self.pending_block_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
+        self.pending_resource_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
 
-    def start(self, priority_queue, node_queue, resource_queue) -> None:
+    def start(self,
+              priority_queue: "queue.Queue[Tuple[MessageType, Dict[str, Any]]]",
+              node_queue: "queue.Queue[Dict[str, Any]]",
+              block_queue: "queue.Queue[Dict[str, Any]]",
+              resource_queue: "queue.Queue[Dict[str, Any]]") -> None:
 
         self._kill_event = threading.Event()
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
@@ -269,6 +291,14 @@ class DatabaseManager:
                                                         daemon=True,
                                                         )
         self._node_queue_pull_thread.start()
+
+        self._block_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
+                                                         args=(
+                                                             block_queue, 'block', self._kill_event,),
+                                                         name="Monitoring-migrate-block",
+                                                         daemon=True,
+                                                         )
+        self._block_queue_pull_thread.start()
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
@@ -301,16 +331,20 @@ class DatabaseManager:
 
         while (not self._kill_event.is_set() or
                self.pending_priority_queue.qsize() != 0 or self.pending_resource_queue.qsize() != 0 or
-               priority_queue.qsize() != 0 or resource_queue.qsize() != 0):
+               self.pending_node_queue.qsize() != 0 or self.pending_block_queue.qsize() != 0 or
+               priority_queue.qsize() != 0 or resource_queue.qsize() != 0 or
+               node_queue.qsize() != 0 or block_queue.qsize() != 0):
 
             """
             WORKFLOW_INFO and TASK_INFO messages (i.e. priority messages)
 
             """
-            logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}""".format(
+            logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}, {}, {}, {}, {}""".format(
                               self._kill_event.is_set(),
                               self.pending_priority_queue.qsize() != 0, self.pending_resource_queue.qsize() != 0,
-                              priority_queue.qsize() != 0, resource_queue.qsize() != 0))
+                              self.pending_node_queue.qsize() != 0, self.pending_block_queue.qsize() != 0,
+                              priority_queue.qsize() != 0, resource_queue.qsize() != 0,
+                              node_queue.qsize() != 0, block_queue.qsize() != 0))
 
             # This is the list of resource messages which can be reprocessed as if they
             # had just arrived because the corresponding first task message has been
@@ -318,9 +352,7 @@ class DatabaseManager:
             reprocessable_first_resource_messages = []
 
             # Get a batch of priority messages
-            priority_messages = self._get_messages_in_batch(self.pending_priority_queue,
-                                                            interval=self.batching_interval,
-                                                            threshold=self.batching_threshold)
+            priority_messages = self._get_messages_in_batch(self.pending_priority_queue)
             if priority_messages:
                 logger.debug(
                     "Got {} messages from priority queue".format(len(priority_messages)))
@@ -409,30 +441,42 @@ class DatabaseManager:
             NODE_INFO messages
 
             """
-            node_info_messages = self._get_messages_in_batch(self.pending_node_queue,
-                                                             interval=self.batching_interval,
-                                                             threshold=self.batching_threshold)
+            node_info_messages = self._get_messages_in_batch(self.pending_node_queue)
             if node_info_messages:
                 logger.debug(
                     "Got {} messages from node queue".format(len(node_info_messages)))
                 self._insert(table=NODE, messages=node_info_messages)
 
             """
+            BLOCK_INFO messages
+
+            """
+            block_info_messages = self._get_messages_in_batch(self.pending_block_queue)
+            if block_info_messages:
+                logger.debug(
+                    "Got {} messages from block queue".format(len(block_info_messages)))
+                # block_info_messages is possibly a nested list of dict (at different polling times)
+                # Each dict refers to the info of a job/block at one polling time
+                block_messages_to_insert = []  # type: List[Any]
+                for block_msg in block_info_messages:
+                    block_messages_to_insert.extend(block_msg)
+                self._insert(table=BLOCK, messages=block_messages_to_insert)
+
+            """
             Resource info messages
 
             """
-            resource_messages = self._get_messages_in_batch(self.pending_resource_queue,
-                                                            interval=self.batching_interval,
-                                                            threshold=self.batching_threshold)
+            resource_messages = self._get_messages_in_batch(self.pending_resource_queue)
 
             if resource_messages:
                 logger.debug(
                     "Got {} messages from resource queue, {} reprocessable".format(len(resource_messages), len(reprocessable_first_resource_messages)))
-                self._insert(table=RESOURCE, messages=resource_messages)
+
+                insert_resource_messages = []
                 for msg in resource_messages:
                     task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
                     if msg['first_msg']:
-
+                        # Update the running time to try table if first message
                         msg['task_status_name'] = States.running.name
                         msg['task_try_time_running'] = msg['timestamp']
 
@@ -442,6 +486,12 @@ class DatabaseManager:
                             if task_try_id in deferred_resource_messages:
                                 logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
                             deferred_resource_messages[task_try_id] = msg
+                    else:
+                        # Insert to resource table if not first message
+                        insert_resource_messages.append(msg)
+
+                if insert_resource_messages:
+                    self._insert(table=RESOURCE, messages=insert_resource_messages)
 
             if reprocessable_first_resource_messages:
                 self._insert(table=STATUS, messages=reprocessable_first_resource_messages)
@@ -451,7 +501,8 @@ class DatabaseManager:
                                       'hostname'],
                              messages=reprocessable_first_resource_messages)
 
-    def _migrate_logs_to_internal(self, logs_queue, queue_tag, kill_event):
+    @wrap_with_logs(target="database_manager")
+    def _migrate_logs_to_internal(self, logs_queue: queue.Queue, queue_tag: str, kill_event: threading.Event) -> None:
         logger.info("Starting processing for queue {}".format(queue_tag))
 
         while not kill_event.is_set() or logs_queue.qsize() != 0:
@@ -471,8 +522,10 @@ class DatabaseManager:
                     self.pending_resource_queue.put(x[-1])
                 elif queue_tag == 'node':
                     self.pending_node_queue.put(x[-1])
+                elif queue_tag == "block":
+                    self.pending_block_queue.put(x[-1])
 
-    def _update(self, table, columns, messages):
+    def _update(self, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
         try:
             self.db.update(table=table, columns=columns, messages=messages)
         except KeyboardInterrupt:
@@ -489,7 +542,7 @@ class DatabaseManager:
             except Exception:
                 logger.exception("Rollback failed")
 
-    def _insert(self, table, messages):
+    def _insert(self, table: str, messages: List[Dict[str, Any]]) -> None:
         try:
             self.db.insert(table=table, messages=messages)
         except KeyboardInterrupt:
@@ -506,11 +559,11 @@ class DatabaseManager:
             except Exception:
                 logger.exception("Rollback failed")
 
-    def _get_messages_in_batch(self, msg_queue, interval=1, threshold=99999):
-        messages = []
+    def _get_messages_in_batch(self, msg_queue: "queue.Queue[X]") -> List[X]:
+        messages = []  # type: List[X]
         start = time.time()
         while True:
-            if time.time() - start >= interval or len(messages) >= threshold:
+            if time.time() - start >= self.batching_interval or len(messages) >= self.batching_threshold:
                 break
             try:
                 x = msg_queue.get(timeout=0.1)
@@ -522,7 +575,7 @@ class DatabaseManager:
                 messages.append(x)
         return messages
 
-    def close(self):
+    def close(self) -> None:
         logger.info("Database Manager cleanup initiated.")
         if not self.workflow_end and self.workflow_start_message:
             logger.info("Logging workflow end info to database due to abnormal exit")
@@ -534,21 +587,31 @@ class DatabaseManager:
                          columns=['run_id', 'time_completed',
                                   'workflow_duration'],
                          messages=[self.workflow_start_message])
-        self.batching_interval, self.batching_threshold = float(
-            'inf'), float('inf')
+        self.batching_interval = float('inf')
+        self.batching_threshold = float('inf')
         self._kill_event.set()
 
 
-def dbm_starter(exception_q, priority_msgs, node_msgs, resource_msgs, *args, **kwargs):
+@wrap_with_logs(target="database_manager")
+def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
+                priority_msgs: "queue.Queue[Tuple[MessageType, Dict[str, Any]]]",
+                node_msgs: "queue.Queue[Dict[str, Any]]",
+                block_msgs: "queue.Queue[Dict[str, Any]]",
+                resource_msgs: "queue.Queue[Dict[str, Any]]",
+                db_url: str,
+                logdir: str,
+                logging_level: int) -> None:
     """Start the database manager process
 
     The DFK should start this function. The args, kwargs match that of the monitoring config
 
     """
     try:
-        dbm = DatabaseManager(*args, **kwargs)
+        dbm = DatabaseManager(db_url=db_url,
+                              logdir=logdir,
+                              logging_level=logging_level)
         logger.info("Starting dbm in dbm starter")
-        dbm.start(priority_msgs, node_msgs, resource_msgs)
+        dbm.start(priority_msgs, node_msgs, block_msgs, resource_msgs)
     except KeyboardInterrupt:
         logger.exception("KeyboardInterrupt signal caught")
         dbm.close()

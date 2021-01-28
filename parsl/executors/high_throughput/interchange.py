@@ -19,6 +19,7 @@ serialize_object = ParslSerializer().serialize
 
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.monitoring.message_type import MessageType
+from parsl.process_loggers import wrap_with_logs
 
 
 HEARTBEAT_CODE = (2 ** 32) - 1
@@ -102,10 +103,10 @@ class Interchange(object):
     def __init__(self,
                  client_address="127.0.0.1",
                  interchange_address="127.0.0.1",
-                 hub_address=None,
                  client_ports=(50055, 50056, 50057),
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
+                 hub_address=None,
                  hub_port=None,
                  heartbeat_threshold=60,
                  logdir=".",
@@ -121,10 +122,6 @@ class Interchange(object):
         interchange_address : str
              The ip address at which the workers will be able to reach the Interchange. Default: "127.0.0.1"
 
-        hub_address : str
-             The ip address at which the interchange can send info about managers to when monitoring is enabled.
-             This is passed via dfk and executor automatically. Default: None (meaning monitoring disabled)
-
         client_ports : triple(int, int, int)
              The ports at which the client can be reached
 
@@ -133,7 +130,11 @@ class Interchange(object):
 
         worker_port_range : tuple(int, int)
              The interchange picks ports at random from the range which will be used by workers.
-             This is overridden when the worker_ports option is set. Defauls: (54000, 55000)
+             This is overridden when the worker_ports option is set. Default: (54000, 55000)
+
+        hub_address : str
+             The ip address at which the interchange can send info about managers to when monitoring is enabled.
+             This is passed via dfk and executor automatically. Default: None (meaning monitoring disabled)
 
         hub_port : str
              The port at which the interchange can send info about managers to when monitoring is enabled.
@@ -178,13 +179,8 @@ class Interchange(object):
         self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
         logger.info("Connected to client")
 
-        self.monitoring_enabled = False
-        if hub_address and hub_port:
-            self.hub_channel = self.context.socket(zmq.DEALER)
-            self.hub_channel.set_hwm(0)
-            self.hub_channel.connect("tcp://{}:{}".format(hub_address, hub_port))
-            self.monitoring_enabled = True
-            logger.info("Monitoring enabled and connected to hub")
+        self.hub_address = hub_address
+        self.hub_port = hub_port
 
         self.pending_task_queue = queue.Queue(maxsize=10 ** 6)
 
@@ -252,6 +248,7 @@ class Interchange(object):
 
         return tasks
 
+    @wrap_with_logs(target="interchange")
     def migrate_tasks_to_internal(self, kill_event):
         """Pull tasks from the incoming tasks 0mq pipe onto the internal
         pending task queue
@@ -282,10 +279,33 @@ class Interchange(object):
                 task_counter += 1
                 logger.debug("[TASK_PULL_THREAD] Fetched task:{}".format(task_counter))
 
+    def _create_monitoring_channel(self):
+        if self.hub_address and self.hub_port:
+            logger.info("Connecting to monitoring")
+            hub_channel = self.context.socket(zmq.DEALER)
+            hub_channel.set_hwm(0)
+            hub_channel.connect("tcp://{}:{}".format(self.hub_address, self.hub_port))
+            logger.info("Monitoring enabled and connected to hub")
+            return hub_channel
+        else:
+            return None
+
+    def _send_monitoring_info(self, hub_channel, manager):
+        if hub_channel:
+            logger.info("Sending message {} to hub".format(self._ready_manager_queue[manager]))
+            hub_channel.send_pyobj((MessageType.NODE_INFO,
+                                    datetime.datetime.now(),
+                                    self._ready_manager_queue[manager]))
+
+    @wrap_with_logs(target="interchange")
     def _command_server(self, kill_event):
         """ Command server to run async command to the interchange
         """
         logger.debug("[COMMAND] Command Server Starting")
+
+        # Need to create a new ZMQ socket for command server thread
+        hub_channel = self._create_monitoring_channel()
+
         while not kill_event.is_set():
             try:
                 command_req = self.command_channel.recv_pyobj()
@@ -323,6 +343,7 @@ class Interchange(object):
                     if manager in self._ready_manager_queue:
                         self._ready_manager_queue[manager]['active'] = False
                         reply = True
+                        self._send_monitoring_info(hub_channel, manager)
                     else:
                         reply = False
 
@@ -350,6 +371,8 @@ class Interchange(object):
         TODO: Move task receiving to a thread
         """
         logger.info("Incoming ports bound")
+
+        hub_channel = self._create_monitoring_channel()
 
         if poll_period is None:
             poll_period = self.poll_period
@@ -401,7 +424,7 @@ class Interchange(object):
                         logger.debug("[MAIN] Message :\n{}\n".format(message[0]))
                     else:
                         # We set up an entry only if registration works correctly
-                        self._ready_manager_queue[manager] = {'last': time.time(),
+                        self._ready_manager_queue[manager] = {'last_heartbeat': time.time(),
                                                               'idle_since': time.time(),
                                                               'free_capacity': 0,
                                                               'block_id': None,
@@ -414,9 +437,7 @@ class Interchange(object):
                         logger.info("[MAIN] Adding manager: {} to ready queue".format(manager))
                         self._ready_manager_queue[manager].update(msg)
                         logger.info("[MAIN] Registration info for manager {}: {}".format(manager, msg))
-                        if self.monitoring_enabled:
-                            logger.info("Sending message {} to hub".format(self._ready_manager_queue[manager]))
-                            self.hub_channel.send_pyobj((MessageType.NODE_INFO, self._ready_manager_queue[manager]))
+                        self._send_monitoring_info(hub_channel, manager)
 
                         if (msg['python_v'].rsplit(".", 1)[0] != self.current_platform['python_v'].rsplit(".", 1)[0] or
                             msg['parsl_v'] != self.current_platform['parsl_v']):
@@ -443,7 +464,7 @@ class Interchange(object):
 
                 else:
                     tasks_requested = int.from_bytes(message[1], "little")
-                    self._ready_manager_queue[manager]['last'] = time.time()
+                    self._ready_manager_queue[manager]['last_heartbeat'] = time.time()
                     if tasks_requested == HEARTBEAT_CODE:
                         logger.debug("[MAIN] Manager {} sent heartbeat".format(manager))
                         self.task_outgoing.send_multipart([manager, b'', PKL_HEARTBEAT_CODE])
@@ -518,10 +539,13 @@ class Interchange(object):
                 logger.debug("[MAIN] leaving results_incoming section")
 
             bad_managers = [manager for manager in self._ready_manager_queue if
-                            time.time() - self._ready_manager_queue[manager]['last'] > self.heartbeat_threshold]
+                            time.time() - self._ready_manager_queue[manager]['last_heartbeat'] > self.heartbeat_threshold]
             for manager in bad_managers:
-                logger.debug("[MAIN] Last: {} Current: {}".format(self._ready_manager_queue[manager]['last'], time.time()))
+                logger.debug("[MAIN] Last: {} Current: {}".format(self._ready_manager_queue[manager]['last_heartbeat'], time.time()))
                 logger.warning("[MAIN] Too many heartbeats missed for manager {}".format(manager))
+                if self._ready_manager_queue[manager]['active']:
+                    self._ready_manager_queue[manager]['active'] = False
+                    self._send_monitoring_info(hub_channel, manager)
 
                 for tid in self._ready_manager_queue[manager]['tasks']:
                     try:
@@ -573,6 +597,7 @@ def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_
     logger.addHandler(handler)
 
 
+@wrap_with_logs(target="interchange")
 def starter(comm_q, *args, **kwargs):
     """Start the interchange process
 

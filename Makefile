@@ -8,7 +8,7 @@ MPICH=mpich
 OPENMPI=openmpi
 EXECUTORS_PATH := $(shell ls -d parsl/executors/*/ | tr '\n' ':')
 export PATH := $(EXECUTORS_PATH):$(WORKQUEUE_INSTALL)/bin/:$(PATH)
-export CCTOOLS_VERSION=7.0.11
+export CCTOOLS_VERSION=7.1.11
 export HYDRA_LAUNCHER=fork
 export OMPI_MCA_rmaps_base_oversubscribe=yes
 MPI=$(MPICH)
@@ -24,9 +24,9 @@ virtualenv: ## create an activate a virtual env
 	echo "Run 'source $(VENV)/bin/activate' to activate the virtual environment"
 
 
-$(DEPS): test-requirements.txt
+$(DEPS): test-requirements.txt requirements.txt
 	pip3 install --upgrade pip
-	pip3 install -r test-requirements.txt
+	pip3 install -r test-requirements.txt -r requirements.txt
 	touch $(DEPS)
 
 .PHONY: deps
@@ -49,7 +49,8 @@ mypy: ## run mypy checks
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/configs/
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/test*/
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/sites/
-	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/app/ parsl/channels/ parsl/dataflow/ parsl/data_provider/ parsl/launchers parsl/providers/
+        # only the top level of monitoring is checked here because the visualization code does not type check
+	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/app/ parsl/channels/ parsl/dataflow/ parsl/data_provider/ parsl/launchers parsl/providers/ parsl/monitoring/*py
 
 .PHONY: local_thread_test
 local_thread_test: ## run all tests with local_thread config

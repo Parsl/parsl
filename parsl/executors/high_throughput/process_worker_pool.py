@@ -5,7 +5,6 @@ import logging
 import os
 import sys
 import platform
-# import random
 import threading
 import pickle
 import time
@@ -18,6 +17,8 @@ import json
 import psutil
 import multiprocessing
 
+from parsl.process_loggers import wrap_with_logs
+
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
@@ -28,9 +29,6 @@ else:
     from multiprocessing import Queue as mpQueue
 
 from parsl.serialize import unpack_apply_message, serialize
-
-RESULT_TAG = 10
-TASK_REQUEST_TAG = 11
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 
@@ -197,6 +195,7 @@ class Manager(object):
                                              sys.version_info.minor,
                                              sys.version_info.micro),
                'worker_count': self.worker_count,
+               'uid': self.uid,
                'block_id': self.block_id,
                'prefetch_capacity': self.prefetch_capacity,
                'max_capacity': self.worker_count + self.prefetch_capacity,
@@ -217,6 +216,7 @@ class Manager(object):
         r = self.task_incoming.send(heartbeat)
         logger.debug("Return from heartbeat: {}".format(r))
 
+    @wrap_with_logs
     def pull_tasks(self, kill_event):
         """ Pull tasks from the incoming tasks 0mq pipe onto the internal
         pending task queue
@@ -297,6 +297,7 @@ class Manager(object):
                     logger.critical("[TASK_PULL_THREAD] Exiting")
                     break
 
+    @wrap_with_logs
     def push_results(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
 
@@ -333,6 +334,7 @@ class Manager(object):
 
         logger.critical("[RESULT_PUSH_THREAD] Exiting")
 
+    @wrap_with_logs
     def worker_watchdog(self, kill_event):
         """ Listens on the pending_result_queue and sends out results via 0mq
 
@@ -426,10 +428,10 @@ class Manager(object):
         self._worker_watchdog_thread.join()
         for proc_id in self.procs:
             self.procs[proc_id].terminate()
-            logger.critical("Terminating worker {}:{}".format(self.procs[proc_id],
-                                                              self.procs[proc_id].is_alive()))
+            logger.critical("Terminating worker {}: is_alive()={}".format(self.procs[proc_id],
+                                                                          self.procs[proc_id].is_alive()))
             self.procs[proc_id].join()
-            logger.debug("Worker:{} joined successfully".format(self.procs[proc_id]))
+            logger.debug("Worker {} joined successfully".format(self.procs[proc_id]))
 
         self.task_incoming.close()
         self.result_outgoing.close()
@@ -477,6 +479,7 @@ def execute_task(bufs):
         return user_ns.get(resultname)
 
 
+@wrap_with_logs(target="worker_log")
 def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue, tasks_in_progress, cpu_affinity):
     """
 
@@ -661,10 +664,9 @@ if __name__ == "__main__":
                           cpu_affinity=args.cpu_affinity)
         manager.start()
 
-    except Exception as e:
-        logger.critical("process_worker_pool exiting from an exception")
-        logger.exception("Caught error: {}".format(e))
+    except Exception:
+        logger.critical("Process worker pool exiting with an exception", exc_info=True)
         raise
     else:
-        logger.info("process_worker_pool exiting")
-        print("PROCESS_WORKER_POOL exiting")
+        logger.info("Process worker pool exiting normally")
+        print("Process worker pool exiting normally")

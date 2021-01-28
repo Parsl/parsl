@@ -276,10 +276,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         return rets
 
     @property
-    def current_capacity(self):
-        return len(self.resources)
-
-    @property
     def label(self):
         return self._label
 
