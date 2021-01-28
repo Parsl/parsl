@@ -195,7 +195,7 @@ class Database:
         run_id = Column('run_id', Text, nullable=False)
         executor_label = Column('executor_label', Text, nullable=False)
         block_id = Column('block_id', Text, nullable=False)
-        job_id = Column('job_id', Text, nullable=False)
+        job_id = Column('job_id', Text, nullable=True)
         timestamp = Column('timestamp', DateTime, nullable=False)
         status = Column("status", Text, nullable=False)
         __table_args__ = (

@@ -199,7 +199,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         self.managed = managed
         self.blocks = {}  # type: Dict[str, str]
         self.block_mapping = {}  # type: Dict[str, str]
-        self.removed_block_mapping = {}  # type: Dict[str, str]
         self.cores_per_worker = cores_per_worker
         self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
@@ -596,12 +595,12 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             d['executor_label'] = self.label
             if block_id_type == 'internal':
                 d['job_id'] = id
-                if id in self.block_mapping:
-                    d['block_id'] = self.block_mapping[id]
-                else:
-                    d['block_id'] = self.removed_block_mapping.pop(id)
+                d['block_id'] = self.block_mapping[id]
             elif block_id_type == 'external':
-                d['job_id'] = self.blocks[id]
+                # In some case a block fails to launch due to provider error
+                # Then this block won't appear in self.blocks
+                # But it would reported in status
+                d['job_id'] = self.blocks.get(id, None)
                 d['block_id'] = id
             else:
                 raise RuntimeError("Unknown block id type")
@@ -622,6 +621,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                 self.block_mapping[job_id] = block_id
                 r.append(block_id)
             except Exception as ex:
+                logger.exception("Failed to start block {}: {}".format(block_id, ex))
                 self._fail_job_async(block_id,
                                      "Failed to start block {}: {}".format(block_id, ex))
         return r
@@ -707,8 +707,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         # Now kill via provider
         # Potential issue with multiple threads trying to remove the same blocks
         to_kill = [self.blocks.pop(bid) for bid in block_ids_to_kill if bid in self.blocks]
-        for bid in to_kill:
-            self.removed_block_mapping[bid] = self.block_mapping.pop(bid)
 
         r = self.provider.cancel(to_kill)
 
