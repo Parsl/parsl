@@ -1,15 +1,15 @@
 Join Apps
 =========
 
-Join apps allow a workflow to asynchronously launch other apps and incorporate
-them into the task graph. They can be specified using the `join_app` decorator.
+Join apps allows an app to define a sub-workflow: the app can launch other apps
+and incorporate them into the main task graph. They can be specified using the
+`join_app` decorator.
+
+Motivation
+----------
 
 Although apps can be launched from within a `python_app` in any `ThreadPoolExecutor`,
-the ``Future`` objects for those launched apps cannot easily be used outside of the
-launching `python_app`.
-
-Motivating example
-------------------
+the ``Future`` objects from those launched apps cannot easily be used.
 
 Here is a motivating example that shows ways in which launching apps from inside a
 `python_app` is insufficient.
@@ -149,7 +149,6 @@ concurrently.
 
 Anything that blocks the execution thread on future completion (for example, ``.result()``
 or ``.as_completed()``) is the enemy.
-
 
 `join_app` syntax
 ------------------
