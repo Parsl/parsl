@@ -219,6 +219,7 @@ completes when all of those futures complete, without any further processing. Th
 barrier future, depending on an arbitrary list of other futures.
 
 This allows more naunced dependencies to be expressed that can help with:
+
 * increased concurrency - helping with strong scaling
 * more focused error propagation - allowing more of an ultimately failing workflow to complete
 * more useful monitoring information
