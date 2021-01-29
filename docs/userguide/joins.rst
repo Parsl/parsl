@@ -40,7 +40,7 @@ is positive and type_two if the input is negative.
   # process(-3).result() = 6
 
 The join app ``process`` looks very much like a normal Python function
-which launches apps would. When invoked with literal numbers as above,
+that launches apps. When invoked with literal numbers as above,
 it would behave as if the `join_app` decorator wasn't there: the literal
 number is inspected and a choice is made about which app to invoke;
 then the ``Future`` that is returned from ``process`` completes when
@@ -257,4 +257,3 @@ Terminology
 -----------
 
 The term "join" comes from use of monads in functional programming, especially Haskell.
-
