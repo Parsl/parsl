@@ -1,3 +1,5 @@
+.. _label-joinapp:
+
 Join Apps
 =========
 
@@ -96,7 +98,7 @@ by pre_process has completed.
 
 * Why can't process be a @python_app?
 
-A python app, if run in a ThreadPoolExecutor, can launch more parsl apps;
+A python app, if run in a `ThreadPoolExecutor`, can launch more parsl apps;
 so a python app implementation of process() would be able to inspect x and
 launch ``option_{one, two}``.
 
@@ -169,9 +171,9 @@ sets up 1000 parametrised iterations:
     f_inner = f_outer.result()  # Future[int]
     result = post_process(f_inner)
 
-Now that for loop can only iterate after pre_processing is done for each
-iteration - it is unnecessarily serialised so that pre_processing cannot run
-in parallel.
+The ``for`` loop can only iterate after pre_processing is done for each
+iteration - it is unnecessarily serialised by the ``.result()`` call, 
+so that pre_processing cannot run in parallel.
 
 So, the rule about not calling ``.result()`` applies in the main workflow thread
 too.

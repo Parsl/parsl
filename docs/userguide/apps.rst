@@ -13,6 +13,9 @@ and the ``@join_app`` decorator for a **Join app**.
 Python apps encapsulate pure Python code, while Bash apps wrap calls to external applications and scripts,
 and Join apps allow composition of other apps to form sub-workflows.
 
+Python and Bash apps are documented below. Join apps are documented in a later
+section (see :ref:`label-joinapp`)
+
 Python Apps
 -----------
 
