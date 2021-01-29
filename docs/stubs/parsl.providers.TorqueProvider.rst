@@ -28,7 +28,6 @@ parsl.providers.TorqueProvider
    .. autosummary::
    
       ~TorqueProvider.cores_per_node
-      ~TorqueProvider.current_capacity
       ~TorqueProvider.label
       ~TorqueProvider.mem_per_node
       ~TorqueProvider.status_polling_interval

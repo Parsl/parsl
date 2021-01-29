@@ -4,6 +4,7 @@ import os
 import pathlib
 import pickle
 import random
+import time
 import typeguard
 import inspect
 import threading
@@ -27,10 +28,11 @@ from parsl.dataflow.flow_control import FlowControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
-from parsl.dataflow.states import States
+from parsl.dataflow.states import FINAL_STATES, States
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
-from parsl.utils import get_version, get_std_fname_mode
+from parsl.providers.provider_base import JobStatus, JobState
+from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints
 
 from parsl.monitoring.message_type import MessageType
 
@@ -150,7 +152,13 @@ class DataFlowKernel(object):
             self.monitoring.send(MessageType.WORKFLOW_INFO,
                                  workflow_info)
 
-        checkpoints = self.load_checkpoints(config.checkpoint_files)
+        if config.checkpoint_files is not None:
+            checkpoints = self.load_checkpoints(config.checkpoint_files)
+        elif config.checkpoint_files is None and config.checkpoint_mode is not None:
+            checkpoints = self.load_checkpoints(get_all_checkpoints(self.run_dir))
+        else:
+            checkpoints = {}
+
         self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint=checkpoints)
         self.checkpointed_tasks = 0
         self._checkpoint_timer = None
@@ -190,7 +198,7 @@ class DataFlowKernel(object):
         """
         Create the dictionary that will be included in the log.
         """
-        info_to_monitor = ['func_name', 'fn_hash', 'memoize', 'hashsum', 'fail_count', 'status',
+        info_to_monitor = ['func_name', 'memoize', 'hashsum', 'fail_count', 'status',
                            'id', 'time_invoked', 'try_time_launched', 'time_returned', 'try_time_returned', 'executor']
 
         task_log_info = {"task_" + k: task_record[k] for k in info_to_monitor}
@@ -256,7 +264,7 @@ class DataFlowKernel(object):
         structure.
 
         Args:
-             task_id (string) : Task id which is a uuid string
+             task_id (string) : Task id
              future (Future) : The future object corresponding to the task which
              makes this callback
         """
@@ -367,7 +375,8 @@ class DataFlowKernel(object):
     def wipe_task(self, task_id):
         """ Remove task with task_id from the internal tasks table
         """
-        del self.tasks[task_id]
+        if self.config.garbage_collect:
+            del self.tasks[task_id]
 
     @staticmethod
     def check_staging_inhibited(kwargs):
@@ -463,7 +472,7 @@ class DataFlowKernel(object):
         targeted at those specific executors.
 
         Args:
-            task_id (uuid string) : A uuid string that uniquely identifies the task
+            task_id (string) : A string that uniquely identifies the task
             executable (callable) : A callable object
             args (list of positional args)
             kwargs (arbitrary keyword arguments)
@@ -495,7 +504,8 @@ class DataFlowKernel(object):
                                                          self.monitoring.monitoring_hub_url,
                                                          self.run_id,
                                                          wrapper_logging_level,
-                                                         self.monitoring.resource_monitoring_interval)
+                                                         self.monitoring.resource_monitoring_interval,
+                                                         executor.monitor_resources())
 
         with self.submitter_lock:
             exec_fu = executor.submit(executable, self.tasks[task_id]['resource_specification'], *args, **kwargs)
@@ -613,7 +623,7 @@ class DataFlowKernel(object):
         it, and will (most likely) result in a type error.
 
         Args:
-             task_id (uuid str) : Task id
+             task_id (str) : Task id
              func (Function) : App function
              args (List) : Positional args to app function
              kwargs (Dict) : Kwargs to app function
@@ -672,7 +682,7 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, app_args, executors='all', fn_hash=None, cache=False, ignore_for_cache=None, app_kwargs={}):
+    def submit(self, func, app_args, executors='all', cache=False, ignore_for_cache=None, app_kwargs={}):
         """Add task to the dataflow system.
 
         If the app task has the executors attributes not set (default=='all')
@@ -687,8 +697,6 @@ class DataFlowKernel(object):
             - app_args : Args to the function
             - executors (list or string) : List of executors this call could go to.
                     Default='all'
-            - fn_hash (Str) : Hash of the function and inputs
-                    Default=None
             - cache (Bool) : To enable memoization or not
             - ignore_for_cache (list) : List of kwargs to be ignored for memoization/checkpointing
             - app_kwargs (dict) : Rest of the kwargs to the fn passed as dict.
@@ -713,6 +721,7 @@ class DataFlowKernel(object):
         else:
             raise ValueError("Task {} supplied invalid type for executors: {}".format(task_id, type(executors)))
         executor = random.choice(choices)
+        logger.debug("Task {} will be sent to executor {}".format(task_id, executor))
 
         # The below uses func.__name__ before it has been wrapped by any staging code.
 
@@ -738,7 +747,6 @@ class DataFlowKernel(object):
         task_def = {'depends': None,
                     'executor': executor,
                     'func_name': func.__name__,
-                    'fn_hash': fn_hash,
                     'memoize': cache,
                     'hashsum': None,
                     'exec_fu': None,
@@ -883,6 +891,7 @@ class DataFlowKernel(object):
 
     def add_executors(self, executors):
         for executor in executors:
+            executor.run_id = self.run_id
             executor.run_dir = self.run_dir
             executor.hub_address = self.hub_address
             executor.hub_port = self.hub_interchange_port
@@ -899,7 +908,14 @@ class DataFlowKernel(object):
                         self._create_remote_dirs_over_channel(executor.provider, executor.provider.channel)
 
             self.executors[executor.label] = executor
-            executor.start()
+            jids = executor.start()
+            if self.monitoring and jids:
+                new_status = {}
+                for jid in jids:
+                    new_status[jid] = JobStatus(JobState.PENDING)
+                msg = executor.create_monitoring_info(new_status, block_id_type='external')
+                logger.debug("Sending monitoring message {} to hub from DFK".format(msg))
+                self.monitoring.send(MessageType.BLOCK_INFO, msg)
         self.flowcontrol.add_executors(executors)
 
     def atexit_cleanup(self):
@@ -919,10 +935,14 @@ class DataFlowKernel(object):
             if task_id not in self.tasks:
                 logger.debug("Task {} no longer in task list".format(task_id))
             else:
-                fut = self.tasks[task_id]['app_fu']
+                task_record = self.tasks[task_id]  # still a race condition with the above self.tasks if-statement
+                fut = task_record['app_fu']
                 if not fut.done():
-                    logger.debug("Waiting for task {} to complete".format(task_id))
                     fut.exception()
+                # now app future is done, poll until DFK state is final: a DFK state being final and the app future being done do not imply each other.
+                while task_record['status'] not in FINAL_STATES:
+                    time.sleep(0.1)
+
         logger.info("All remaining tasks completed")
 
     def cleanup(self):
@@ -965,7 +985,14 @@ class DataFlowKernel(object):
             if executor.managed and not executor.bad_state_is_set:
                 if executor.scaling_enabled:
                     job_ids = executor.provider.resources.keys()
-                    executor.scale_in(len(job_ids))
+                    jids = executor.scale_in(len(job_ids))
+                    if self.monitoring and jids:
+                        new_status = {}
+                        for jid in jids:
+                            new_status[jid] = JobStatus(JobState.CANCELLED)
+                        msg = executor.create_monitoring_info(new_status, block_id_type='internal')
+                        logger.debug("Sending message {} to hub from DFK".format(msg))
+                        self.monitoring.send(MessageType.BLOCK_INFO, msg)
                 executor.shutdown()
 
         self.time_completed = datetime.datetime.now()

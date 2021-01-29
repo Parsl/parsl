@@ -161,11 +161,6 @@ class GoogleCloudProvider():
                 statuses.append(False)
         return statuses
 
-    @property
-    def current_capacity(self):
-        """Returns the number of currently provisioned blocks."""
-        return self.provisioned_blocks
-
     def bye(self):
         self.cancel([i for i in list(self.resources)])
 

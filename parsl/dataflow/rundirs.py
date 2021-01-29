@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def make_rundir(path):
+def make_rundir(path: str) -> str:
     """When a path has not been specified, make the run directory.
 
     Creates a rundir with the following hierarchy:
@@ -17,7 +17,6 @@ def make_rundir(path):
 
     Kwargs:
         - path (str): String path to a specific run dir
-               Default : None.
     """
     try:
         if not os.path.exists(path):

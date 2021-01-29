@@ -43,6 +43,7 @@ def sleeper(t):
     return random.randint(0, 10000)
 
 
+@pytest.mark.skip('fails 50% of time in CI - see issue #1885')
 @pytest.mark.local
 def test_scale_out():
     dfk = parsl.dfk()

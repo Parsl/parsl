@@ -35,18 +35,10 @@ class ParslExecutor(metaclass=ABCMeta):
               @typeguard the constructor, you'll have to use List[Any] here.
     """
 
-    # This __init__ method exists to provide a python 3.5 compatible type declaration
-    # for the `label` attribute. If/when python 3.5 is deprecated (see parsl issue #1553)
-    # this could be replaced with a python 3.6 style attribute type declaration.
-    #   label: str
-    # and __init__ removed.
+    label: str
 
     @abstractmethod
-    def __init__(self) -> None:
-        self.label = ""  # type: str
-
-    @abstractmethod
-    def start(self) -> None:
+    def start(self) -> Optional[List[str]]:
         """Start the executor.
 
         Any spin-up operations (for example: starting thread pools) should be performed here.
@@ -101,6 +93,23 @@ class ParslExecutor(metaclass=ABCMeta):
         and Executors wrapped in a resource provider
         """
         pass
+
+    def create_monitoring_info(self, status: Dict[object, JobStatus], block_id_type: str) -> List[object]:
+        """Create a monitoring message for each block based on the poll status.
+
+        :return: a list of dictionaries mapping to the info of each block
+        """
+        return []
+
+    def monitor_resources(self) -> bool:
+        """Should resource monitoring happen for tasks on running on this executor?
+
+        Parsl resource monitoring conflicts with execution styles which use threads, and
+        can deadlock while running.
+
+        This function allows resource monitoring to be disabled per executor implementation.
+        """
+        return True
 
     @abstractmethod
     def status(self) -> Dict[object, JobStatus]:

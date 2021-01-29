@@ -28,6 +28,8 @@ Configuration
     parsl.addresses.address_by_interface
     parsl.addresses.address_by_query
     parsl.addresses.address_by_route
+    parsl.utils.get_all_checkpoints
+    parsl.utils.get_last_checkpoint
 
 Channels
 ========

@@ -319,8 +319,7 @@ Amazon Web Services
 .. image:: ./aws_image.png
 
 .. note::
-   Please note that **boto3** library must be installed to use AWS with Parsl.
-   This can be installed via ``python3 -m pip install parsl[aws]``
+   To use AWS with Parsl, install Parsl with AWS dependencies via ``python3 -m pip install parsl[aws]``
 
 Amazon Web Services is a commercial cloud service which allows users to rent a range of computers and other computing services.
 The following snippet shows how Parsl can be configured to provision nodes from the Elastic Compute Cloud (EC2) service.
@@ -482,10 +481,8 @@ Open Science Grid
 .. image:: https://www.renci.org/wp-content/uploads/2008/10/osg_logo.png
 
 The Open Science Grid (OSG) is a national, distributed computing Grid spanning over 100 individual sites to provide tens of thousands of CPU cores.
-The snippet below shows an example configuration for executing remotely on OSG.
+The snippet below shows an example configuration for executing remotely on OSG. You will need to have a valid project name on the OSG.
 The configuration uses the `CondorProvider` to interface with the scheduler.
-
-.. note:: This config was last tested with 0.8.0
 
 .. literalinclude:: ../../parsl/configs/osg.py
 

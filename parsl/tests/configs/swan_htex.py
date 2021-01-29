@@ -12,7 +12,6 @@ from parsl.launchers import AprunLauncher
 from parsl.providers import TorqueProvider
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
-from parsl.tests.utils import get_rundir
 
 # If you are a developer running tests, make sure to update parsl/tests/configs/user_opts.py
 # If you are a user copying-and-pasting this as an example, make sure to either
@@ -39,6 +38,5 @@ config = Config(
                 worker_init=user_opts['swan']['worker_init'],
             ),
         )
-    ],
-    run_dir=get_rundir()
+    ]
 )

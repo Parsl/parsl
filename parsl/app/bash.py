@@ -12,25 +12,9 @@ def remote_side_bash_executor(func, *args, **kwargs):
     command-line to run, and then run that command-line using bash.
     """
     import os
-    import time
     import subprocess
-    import logging
     import parsl.app.errors as pe
-    from parsl import set_file_logger
     from parsl.utils import get_std_fname_mode
-
-    logbase = "/tmp"
-    format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-
-    # make this name unique per invocation so that each invocation can
-    # log to its own file. It would be better to include the task_id here
-    # but that is awkward to wire through at the moment as apps do not
-    # have access to that execution context.
-    t = time.time()
-
-    logname = __name__ + "." + str(t)
-    logger = logging.getLogger(logname)
-    set_file_logger(filename='{0}/bashexec.{1}.log'.format(logbase, t), name=logname, level=logging.DEBUG, format_string=format_string)
 
     func_name = func.__name__
 
@@ -41,6 +25,9 @@ def remote_side_bash_executor(func, *args, **kwargs):
         # Execute the func to get the commandline
         executable = func(*args, **kwargs)
 
+        if not isinstance(executable, str):
+            raise ValueError(f"Expected a str for bash_app commandline, got {type(executable)}")
+
     except AttributeError as e:
         if executable is not None:
             raise pe.AppBadFormatting("App formatting failed for app '{}' with AttributeError: {}".format(func_name, e))
@@ -50,10 +37,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
     except IndexError as e:
         raise pe.AppBadFormatting("App formatting failed for app '{}' with IndexError: {}".format(func_name, e))
     except Exception as e:
-        logger.error("Caught exception during formatting of app '{}': {}".format(func_name, e))
         raise e
-
-    logger.debug("Executable: %s", executable)
 
     # Updating stdout, stderr if values passed at call time.
 
@@ -157,7 +141,6 @@ class BashApp(AppBase):
         app_fut = dfk.submit(self.wrapped_remote_function,
                              app_args=args,
                              executors=self.executors,
-                             fn_hash=self.func_hash,
                              cache=self.cache,
                              ignore_for_cache=self.ignore_for_cache,
                              app_kwargs=invocation_kwargs)
