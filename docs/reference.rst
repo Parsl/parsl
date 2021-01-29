@@ -10,6 +10,7 @@ Core
 
     parsl.app.app.python_app
     parsl.app.app.bash_app
+    parsl.app.app.join_app
     parsl.dataflow.futures.AppFuture
     parsl.dataflow.dflow.DataFlowKernelLoader
     parsl.monitoring.MonitoringHub

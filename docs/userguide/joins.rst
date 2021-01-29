@@ -2,17 +2,17 @@ Join Apps
 =========
 
 Join apps allow a workflow to asynchronously launch other apps and incorporate
-them into the task graph. They can be specified using the `@join_app` decorator.
+them into the task graph. They can be specified using the `join_app` decorator.
 
-Although apps can be launched from within a `@python_app` in any `ThreadPoolExecutor`,
-the `Future` objects for those launched apps cannot easily be used outside of the
-launching `@python_app`.
+Although apps can be launched from within a `python_app` in any `ThreadPoolExecutor`,
+the ``Future`` objects for those launched apps cannot easily be used outside of the
+launching `python_app`.
 
 Motivating example
 ------------------
 
 Here is a motivating example that shows ways in which launching apps from inside a
-`@python_app` is insufficient.
+`python_app` is insufficient.
 
 Consider a workflow where there are "sensors" which must be processed and assembled
 into "patches", and then all patches assembled into a "mosaic".
@@ -23,11 +23,14 @@ of time and is expensive to compute.
 There are many patches that must all be processed in this way.
 
 For each patch:
+
 1. Generate list of sensors for this patch, in a single parsl app.
 2. Process sensors for this patch - one parsl app per sensor
 3. When all sensors are processed, assemble all the processed data into a patch.
 4. When assembly is complete, do some post processing on the patch
+
 Once all patches are done:
+
 5. Make mosaic of all patches
 
 Here are some implementation attempts and the weaknesses I see in them.
@@ -52,8 +55,8 @@ Weaknesses
 """"""""""
 
 *  Only one patch is processed at a time. The outer for loop blocks on task completion repeatedly
-before all of the apps are submitted, forcing unnecessarily serialised execution ordering: each
-loop will block waiting for generate_sensor_list_app to complete.
+   before all of the apps are submitted, forcing unnecessarily serialised execution ordering: each
+   loop will block waiting for generate_sensor_list_app to complete.
 
 Attempt 2 - a `python_app` per iteration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -97,10 +100,10 @@ worker available for every patch to be processed simultanously, that will for th
 idle waiting for final results. If there are fewer workers, then patch processing will be
 serialised due to lack of workers, although to a lesser extent than in attempt 1.
 
-But worse, if any of the launched apps also used the `local-thread-pool` executor, then
+But worse, if any of the launched apps also used the same `ThreadPoolExecutor`, then
 the workflow can deadlock:
 launched process_patch apps will be waiting for other apps to complete, but those apps cannot start
-because process_patch apps are occupying all of the `local-thread-pool` workers.
+because process_patch apps are occupying all of the `ThreadPoolExecutor` workers.
 
 This leads to a principle: apps should not block on other apps; instead any blocking of execution
 should happen inside parsl's dependency mechanism.
@@ -144,11 +147,11 @@ inside another for loop that loops over multiple datasets: the function would bl
 for sensor list generation, rather than processing each dataset's sensor list generations
 concurrently.
 
-Anything that blocks the execution thread on future completion (for example, `.result()`
-or `.as_completed()`) is the enemy.
+Anything that blocks the execution thread on future completion (for example, ``.result()``
+or ``.as_completed()``) is the enemy.
 
 
-`@join_app` syntax
+`join_app` syntax
 ------------------
 
 This is an attempt to move some of the cases where blocking and ad-hoc task scheduling happens in
@@ -179,12 +182,12 @@ in the user workflow should block waiting for app completion.
   def combine(*args):
     pass # do nothing, but only after all args are complete
 
-A join_app looks quite like a python app, but should return a future, rather than a value.
+A `join_app` looks quite like a python app, but should return a future, rather than a value.
 After the python code has run, the app invocation will not complete until that future has
-completed, and the return value of the `@join_app` will be the return value (or exception)
+completed, and the return value of the `join_app` will be the return value (or exception)
 from the returned future.
 
-This example uses a helper app called `combine` which, given a list of input futures,
+This example uses a helper app called ``combine`` which, given a list of input futures,
 completes when all of those futures complete, without any further processing. This constructs a
 barrier future, depending on an arbitrary list of other futures.
 
@@ -196,5 +199,5 @@ This allows more naunced dependencies to be expressed that can help with:
 Terminology
 -----------
 
-The term `join` comes from use of monads in functional programming, especially Haskell.
+The term "join" comes from use of monads in functional programming, especially Haskell.
 

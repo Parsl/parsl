@@ -21,6 +21,7 @@ parsl.dataflow.dflow.DataFlowKernel
       ~DataFlowKernel.cleanup
       ~DataFlowKernel.handle_app_update
       ~DataFlowKernel.handle_exec_update
+      ~DataFlowKernel.handle_join_update
       ~DataFlowKernel.launch_if_ready
       ~DataFlowKernel.launch_task
       ~DataFlowKernel.load_checkpoints
