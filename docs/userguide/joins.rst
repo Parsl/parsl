@@ -93,7 +93,7 @@ Once all patches are done:
 
 5. Make mosaic of all patches
 
-Here are some implementation attempts and the weaknesses I see in them.
+Here are some possible implementations and their weaknesses.
 
 Attempt 1 - a simple for loop
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
