@@ -5,6 +5,37 @@ Join apps allows an app to define a sub-workflow: the app can launch other apps
 and incorporate them into the main task graph. They can be specified using the
 `join_app` decorator.
 
+Usage
+-----
+
+A `join_app` looks quite like a python app, but should return a ``Future``,
+rather than a value. After the python code has run, the app invocation will not
+complete until that future has completed, and the return value of the `join_app`
+will be the return value (or exception) from the returned future.
+
+In the following example, two python apps are composed together inside a single
+app, ``do_parts``. When ``do_parts`` is invoked, it will return a ``Future``
+which will complete after both part_a and part_b have completed.
+
+.. code-block:: python
+
+  @python_app
+  def part_a():
+    # do some stuff
+    return 3
+
+  @python_app
+  def part_b(x):
+    # do some more stuff
+    return x+1
+
+  @join_app
+  def do_parts():
+    """Combine the two parts together"""
+    return part_b(part_a())
+
+  # do_parts().result() == 4
+
 Motivation
 ----------
 
@@ -181,10 +212,7 @@ in the user workflow should block waiting for app completion.
   def combine(*args):
     pass # do nothing, but only after all args are complete
 
-A `join_app` looks quite like a python app, but should return a future, rather than a value.
-After the python code has run, the app invocation will not complete until that future has
-completed, and the return value of the `join_app` will be the return value (or exception)
-from the returned future.
+
 
 This example uses a helper app called ``combine`` which, given a list of input futures,
 completes when all of those futures complete, without any further processing. This constructs a
