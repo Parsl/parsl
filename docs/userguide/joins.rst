@@ -13,28 +13,57 @@ rather than a value. After the python code has run, the app invocation will not
 complete until that future has completed, and the return value of the `join_app`
 will be the return value (or exception) from the returned future.
 
-In the following example, two python apps are composed together inside a single
-app, ``do_parts``. When ``do_parts`` is invoked, it will return a ``Future``
-which will complete after both part_a and part_b have completed.
+In the following example, a sub-workflow called ``process`` is defined. This
+workflow decides which app to run on its argument, type_one if the input
+is positive and type_two if the input is negative.
 
 .. code-block:: python
 
   @python_app
-  def part_a():
+  def type_one(x):
     # do some stuff
-    return 3
+    return x*2
 
   @python_app
-  def part_b(x):
+  def type_two(x):
     # do some more stuff
-    return x+1
+    return (-x) * 2
 
   @join_app
-  def do_parts():
-    """Combine the two parts together"""
-    return part_b(part_a())
+  def process(x):
+    if x > 0:
+      return type_one(x)
+    else:
+      return type_two(x)
 
-  # do_parts().result() == 4
+  # process(10).result() == 20
+  # process(-3).result() = 6
+
+The join app ``process`` looks very much like a normal Python function
+which launches apps would. When invoked with literal numbers as above,
+it would behave as if the `join_app` decorator wasn't there: the literal
+number is inspected and a choice is made about which app to invoke;
+then the ``Future`` that is returned from ``process`` completes when
+processing is finished.
+
+The difference comes when the input ``x`` is to come from the output of
+an earlier app invocation:
+
+.. code-block:: python
+
+  @python_app
+  def later():
+    time.sleep(120)
+    return 10
+
+  # process(later()) = 20
+
+If ``process`` was a regular Python function, it would be able to inspect
+the result of ``later`` - that result wouldn't exist for another 120 seconds.
+
+A join app would defer its execution until ``later`` was complete, just like
+any other Parsl app that is passed a ``Future``.
+
 
 Motivation
 ----------
