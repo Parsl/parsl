@@ -41,7 +41,7 @@ is positive and type_two if the input is negative.
 
 The join app ``process`` looks very much like a normal Python function
 that launches apps. When invoked with literal numbers as above,
-it would behave as if the `join_app` decorator wasn't there: the literal
+it behaves as if the `join_app` decorator wasn't there: the literal
 number is inspected and a choice is made about which app to invoke;
 then the ``Future`` that is returned from ``process`` completes when
 processing is finished.
