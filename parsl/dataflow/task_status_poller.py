@@ -54,7 +54,7 @@ class PollItem(ExecutorStatus):
             self.hub_channel.send_pyobj((MessageType.BLOCK_INFO, msg))
 
     @property
-    def status(self) -> Dict[object, JobStatus]:
+    def status(self) -> Dict[str, JobStatus]:
         return self._status
 
     @property

@@ -65,7 +65,7 @@ class StatusHandlingExecutor(ParslExecutor):
             self._generated_block_id_counter += 1
         self._simulated_status[block_id] = JobStatus(JobState.FAILED, message)
 
-    def status(self) -> Dict[object, JobStatus]:
+    def status(self) -> Dict[str, JobStatus]:
         """Return status of all blocks."""
 
         if self._provider:
@@ -100,7 +100,7 @@ class StatusHandlingExecutor(ParslExecutor):
         return True
 
     def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
-                      status: Dict[Any, JobStatus]) -> bool:
+                      status: Dict[str, JobStatus]) -> bool:
         init_blocks = 3
         if hasattr(self.provider, 'init_blocks'):
             init_blocks = self.provider.init_blocks  # type: ignore
@@ -153,7 +153,7 @@ class NoStatusHandlingExecutor(ParslExecutor):
         return {}
 
     def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
-                      status: Dict[Any, JobStatus]) -> bool:
+                      status: Dict[str, JobStatus]) -> bool:
         return False
 
     @property
