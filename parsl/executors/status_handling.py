@@ -27,7 +27,7 @@ class StatusHandlingExecutor(ParslExecutor):
 
     def _make_status_dict(self, block_ids: List[str], status_list: List[JobStatus]) -> Dict[str, JobStatus]:
         """Given a list of block ids and a list of corresponding status strings,
-        returns a dictionary mapping each job id to the corresponding status
+        returns a dictionary mapping each block id to the corresponding status
 
         :param block_ids: the list of block ids
         :param status_list: the list of job status strings
