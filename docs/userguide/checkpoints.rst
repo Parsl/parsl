@@ -53,9 +53,10 @@ Parsl determines app equivalence by storing the a hash
 of the app function. Thus, any changes to the app code (e.g., 
 its signature, its body, or even the docstring within the body)
 will invalidate cached values. 
-Further, Parsl does not traverse imported modules, and thus
-changes to modules used by an app will not invalidate cached
-values.
+
+However, Parsl does not traverse the call graph of the app function,
+so changes to functions called by an app will not invalidate
+cached values.
 
 
 Invocation equivalence 
