@@ -18,6 +18,7 @@ parsl.executors.ExtremeScaleExecutor
       ~ExtremeScaleExecutor.handle_errors
       ~ExtremeScaleExecutor.hold_worker
       ~ExtremeScaleExecutor.initialize_scaling
+      ~ExtremeScaleExecutor.monitor_resources
       ~ExtremeScaleExecutor.scale_in
       ~ExtremeScaleExecutor.scale_out
       ~ExtremeScaleExecutor.set_bad_state_and_fail_all
