@@ -10,7 +10,6 @@ User guide
    data
    execution
    exceptions
-   app_caching
    checkpoints
    configuring
    monitoring
