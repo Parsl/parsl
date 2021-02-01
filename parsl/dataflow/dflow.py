@@ -420,7 +420,13 @@ class DataFlowKernel(object):
         assert new_state not in FINAL_FAILURE_STATES
         old_state = task_record['status']
         task_record['status'] = new_state
-        self.tasks_completed_count += 1  # TODO: need to update the correct counter based on new_state
+
+        if new_state == States.exec_done:
+            self.tasks_completed_count += 1
+        elif new_state == States.memo_done:
+            self.tasks_memo_completed_count += 1
+        else:
+            raise RuntimeError(f"Cannot update task counters with unknown final state {new_state}")
 
         logger.info("Task {} completed ({} -> {})".format(task_record['id'], old_state, new_state))
         task_record['time_returned'] = datetime.datetime.now()
