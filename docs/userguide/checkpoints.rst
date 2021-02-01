@@ -1,4 +1,4 @@
-.. _label-memos
+.. _label-memos:
 
 Memoization and checkpointing
 -----------------------------
