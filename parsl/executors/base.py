@@ -112,10 +112,10 @@ class ParslExecutor(metaclass=ABCMeta):
         return True
 
     @abstractmethod
-    def status(self) -> Dict[object, JobStatus]:
+    def status(self) -> Dict[str, JobStatus]:
         """Return the status of all jobs/blocks currently known to this executor.
 
-        :return: a dictionary mapping job ids to status strings
+        :return: a dictionary mapping block ids (in string) to job status
         """
         pass
 

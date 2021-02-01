@@ -22,7 +22,7 @@ class PollItem(ExecutorStatus):
         self._dfk = dfk
         self._interval = executor.status_polling_interval
         self._last_poll_time = 0.0
-        self._status = {}  # type: Dict[object, JobStatus]
+        self._status = {}  # type: Dict[str, JobStatus]
 
         # Create a ZMQ channel to send poll status to monitoring
         self.monitoring_enabled = False
@@ -55,6 +55,10 @@ class PollItem(ExecutorStatus):
 
     @property
     def status(self) -> Dict[str, JobStatus]:
+        """Return the status of all jobs/blocks of the executor of this poller.
+
+        :return: a dictionary mapping block ids (in string) to job status
+        """
         return self._status
 
     @property
