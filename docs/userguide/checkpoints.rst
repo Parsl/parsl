@@ -55,7 +55,7 @@ its signature, its body, or even the docstring within the body)
 will invalidate cached values. 
 
 However, Parsl does not traverse the call graph of the app function,
-so changes to functions called by an app will not invalidate
+so changes inside functions called by an app will not invalidate
 cached values.
 
 
