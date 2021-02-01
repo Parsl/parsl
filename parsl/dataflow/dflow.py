@@ -331,9 +331,9 @@ class DataFlowKernel(object):
                 else:
                     # This is a join task, and the original task's function code has
                     # completed. That means that the future returned by that code
-                    # will be available inside the executor future, so we can add
-                    # that as a dependency for monitoring, and the completion
-                    # listener.
+                    # will be available inside the executor future, so we can now
+                    # record the inner app ID in monitoring, and add a completion
+                    # listener to that inner future.
 
                     inner_future = future.result()
                     assert isinstance(inner_future, Future)
