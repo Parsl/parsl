@@ -428,7 +428,7 @@ class DataFlowKernel(object):
         else:
             raise RuntimeError(f"Cannot update task counters with unknown final state {new_state}")
 
-        logger.info("Task {} completed ({} -> {})".format(task_record['id'], old_state, new_state))
+        logger.info(f"Task {task_record['id']} completed ({old_state.name} -> {new_state.name})")
         task_record['time_returned'] = datetime.datetime.now()
 
         with task_record['app_fu']._update_lock:
