@@ -275,7 +275,7 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.send_pyobj((mtype, message))
         except zmq.Again:
             self.logger.exception(
-                "[MONITORING] The monitoring message sent from DFK to Hub timeouts after {}ms".format(self.dfk_channel_timeout))
+                "The monitoring message sent from DFK to Hub timed-out after {}ms".format(self.dfk_channel_timeout))
 
     def close(self) -> None:
         if self.logger:
@@ -284,7 +284,7 @@ class MonitoringHub(RepresentationMixin):
         while True:
             try:
                 exception_msgs.append(self.exception_q.get(block=False))
-                self.logger.error("Either Hub or DBM process got exception.")
+                self.logger.error("There was a queued exception (Either Hub or DBM process got exception much earlier?)")
             except queue.Empty:
                 break
         if self._dfk_channel and self.monitoring_hub_active:
@@ -292,7 +292,8 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.close()
             if exception_msgs:
                 for exception_msg in exception_msgs:
-                    self.logger.error("{} process got exception {}. Terminating all monitoring processes.".format(exception_msg[0], exception_msg[1]))
+                    self.logger.error("{} process delivered an exception: {}. Terminating all monitoring processes immediately.".format(exception_msg[0],
+                                      exception_msg[1]))
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
             self.logger.info("Waiting for Hub to receive all messages and terminate")
@@ -310,7 +311,8 @@ class MonitoringHub(RepresentationMixin):
                         monitoring_hub_url: str,
                         run_id: str,
                         logging_level: int,
-                        sleep_dur: float) -> Callable:
+                        sleep_dur: float,
+                        monitor_resources: bool) -> Callable:
         """ Internal
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
@@ -321,24 +323,29 @@ class MonitoringHub(RepresentationMixin):
                                monitoring_hub_url,
                                run_id)
 
-            # create the monitor process and start
-            p = Process(target=monitor,
-                        args=(os.getpid(),
-                              try_id,
-                              task_id,
-                              monitoring_hub_url,
-                              run_id,
-                              logging_level,
-                              sleep_dur),
-                        name="Monitor-Wrapper-{}".format(task_id))
-            p.start()
+            if monitor_resources:
+                # create the monitor process and start
+                p: Optional[Process]
+                p = Process(target=monitor,
+                            args=(os.getpid(),
+                                  try_id,
+                                  task_id,
+                                  monitoring_hub_url,
+                                  run_id,
+                                  logging_level,
+                                  sleep_dur),
+                            name="Monitor-Wrapper-{}".format(task_id))
+                p.start()
+            else:
+                p = None
 
             try:
                 return f(*args, **kwargs)
             finally:
                 # There's a chance of zombification if the workers are killed by some signals
-                p.terminate()
-                p.join()
+                if p:
+                    p.terminate()
+                    p.join()
         return wrapped
 
 
@@ -430,55 +437,65 @@ class MonitoringRouter:
               node_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
               block_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
               resource_msgs: "queue.Queue[Tuple[Dict[str, Any], str]]") -> None:
+        try:
+            while True:
+                try:
+                    data, addr = self.sock.recvfrom(2048)
+                    msg = pickle.loads(data)
+                    resource_msgs.put((msg, addr))
+                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
+                except socket.timeout:
+                    pass
 
-        while True:
-            try:
-                data, addr = self.sock.recvfrom(2048)
-                msg = pickle.loads(data)
-                resource_msgs.put((msg, addr))
-                self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
-            except socket.timeout:
-                pass
+                try:
+                    msg = self.dfk_channel.recv_pyobj()
+                    self.logger.debug("Got ZMQ Message from DFK: {}".format(msg))
+                    if msg[0].value == MessageType.BLOCK_INFO.value:
+                        block_msgs.put((msg, 0))
+                    else:
+                        priority_msgs.put((msg, 0))
+                    if msg[0].value == MessageType.WORKFLOW_INFO.value and 'python_version' not in msg[1]:
+                        break
+                except zmq.Again:
+                    pass
+                except Exception:
+                    # This will catch malformed messages. What happens if the
+                    # dfk_channel is broken in such a way that it always raises
+                    # an exception? Looping on this would maybe be the wrong
+                    # thing to do.
+                    self.logger.warning("Failure processing a DFK ZMQ message", exc_info=True)
 
-            try:
-                msg = self.dfk_channel.recv_pyobj()
-                self.logger.debug("Got ZMQ Message from DFK: {}".format(msg))
-                if msg[0].value == MessageType.BLOCK_INFO.value:
-                    block_msgs.put((msg, 0))
-                else:
-                    priority_msgs.put((msg, 0))
-                if msg[0].value == MessageType.WORKFLOW_INFO.value and 'python_version' not in msg[1]:
-                    break
-            except zmq.Again:
-                pass
+                try:
+                    msg = self.ic_channel.recv_pyobj()
+                    self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
+                    if msg[0].value == MessageType.NODE_INFO.value:
+                        msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
+                        msg[2]['run_id'] = self.run_id
+                        msg[2]['timestamp'] = msg[1]
+                        msg = (msg[0], msg[2])
+                        node_msgs.put((msg, 0))
+                    elif msg[0].value == MessageType.BLOCK_INFO.value:
+                        block_msgs.put((msg, 0))
+                    else:
+                        self.logger.error(f"Discarding message from interchange with unknown type {msg[0].value}")
+                except zmq.Again:
+                    pass
 
-            try:
-                msg = self.ic_channel.recv_pyobj()
-                self.logger.debug("Got ZMQ Message from interchange before handling: {}".format(msg))
-                if msg[0].value == MessageType.NODE_INFO.value:
-                    msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
-                    msg[2]['run_id'] = self.run_id
-                    msg[2]['timestamp'] = msg[1]
-                    msg = (msg[0], msg[2])
-                    node_msgs.put((msg, 0))
-                elif msg[0].value == MessageType.BLOCK_INFO.value:
-                    block_msgs.put((msg, 0))
-                self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
-            except zmq.Again:
-                pass
+            self.logger.info("Monitoring router draining")
+            last_msg_received_time = time.time()
+            while time.time() - last_msg_received_time < self.atexit_timeout:
+                try:
+                    data, addr = self.sock.recvfrom(2048)
+                    msg = pickle.loads(data)
+                    resource_msgs.put((msg, addr))
+                    last_msg_received_time = time.time()
+                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
+                except socket.timeout:
+                    pass
 
-        last_msg_received_time = time.time()
-        while time.time() - last_msg_received_time < self.atexit_timeout:
-            try:
-                data, addr = self.sock.recvfrom(2048)
-                msg = pickle.loads(data)
-                resource_msgs.put((msg, addr))
-                last_msg_received_time = time.time()
-                self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
-            except socket.timeout:
-                pass
-
-        self.logger.info("Monitoring router finished")
+            self.logger.info("Monitoring router finishing normally")
+        finally:
+            self.logger.info("Monitoring router finished")
 
 
 @wrap_with_logs

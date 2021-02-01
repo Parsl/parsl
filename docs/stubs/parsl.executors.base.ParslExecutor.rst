@@ -16,6 +16,7 @@ parsl.executors.base.ParslExecutor
       ~ParslExecutor.__init__
       ~ParslExecutor.create_monitoring_info
       ~ParslExecutor.handle_errors
+      ~ParslExecutor.monitor_resources
       ~ParslExecutor.scale_in
       ~ParslExecutor.scale_out
       ~ParslExecutor.set_bad_state_and_fail_all
