@@ -712,12 +712,12 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         return self._filter_scale_in_ids(to_kill, r)
 
-    def _get_block_and_job_ids(self) -> Tuple[List[str], List[str]]:
+    def _get_block_and_job_ids(self) -> Tuple[List[str], List[Any]]:
         # Not using self.blocks.keys() and self.blocks.values()
         # The dictionary may be changed during invoking this function
         # As scale_in and scale_out are invoked in multiple threads
         block_ids = list(self.blocks.keys())
-        job_ids = []  # types: List[str]
+        job_ids = []  # types: List[Any]
         for bid in block_ids:
             job_ids.append(self.blocks[bid])
         return block_ids, job_ids
