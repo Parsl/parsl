@@ -82,8 +82,9 @@ def python_app(function=None, data_flow_kernel=None, cache=False, executors='all
     cache : bool
         Enable caching of the app call. Default is False.
     join : bool
-        Perform a monadic join, where the python app returns a Future (rather than a regular value),
-        and the corresponding AppFuture completes what that inner future completes.
+        If True, this app will be a join app: the decorated python code must return a Future
+        (rather than a regular value), and and the corresponding AppFuture will complete when
+        that inner future completes.
     """
     from parsl.app.python import PythonApp
 
