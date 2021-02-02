@@ -908,12 +908,12 @@ class DataFlowKernel(object):
                         self._create_remote_dirs_over_channel(executor.provider, executor.provider.channel)
 
             self.executors[executor.label] = executor
-            jids = executor.start()
-            if self.monitoring and jids:
+            block_ids = executor.start()
+            if self.monitoring and block_ids:
                 new_status = {}
-                for jid in jids:
-                    new_status[jid] = JobStatus(JobState.PENDING)
-                msg = executor.create_monitoring_info(new_status, block_id_type='external')
+                for bid in block_ids:
+                    new_status[bid] = JobStatus(JobState.PENDING)
+                msg = executor.create_monitoring_info(new_status, block_id_type='block')
                 logger.debug("Sending monitoring message {} to hub from DFK".format(msg))
                 self.monitoring.send(MessageType.BLOCK_INFO, msg)
         self.flowcontrol.add_executors(executors)
@@ -990,7 +990,7 @@ class DataFlowKernel(object):
                         new_status = {}
                         for jid in jids:
                             new_status[jid] = JobStatus(JobState.CANCELLED)
-                        msg = executor.create_monitoring_info(new_status, block_id_type='internal')
+                        msg = executor.create_monitoring_info(new_status, block_id_type='job')
                         logger.debug("Sending message {} to hub from DFK".format(msg))
                         self.monitoring.send(MessageType.BLOCK_INFO, msg)
                 executor.shutdown()

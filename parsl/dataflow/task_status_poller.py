@@ -43,9 +43,9 @@ class PollItem(ExecutorStatus):
         if self._should_poll(now):
             self._status = self._executor.status()
             self._last_poll_time = now
-            self.send_monitoring_info(self._status, block_id_type='external')
+            self.send_monitoring_info(self._status, block_id_type='block')
 
-    def send_monitoring_info(self, status=None, block_id_type='external'):
+    def send_monitoring_info(self, status=None, block_id_type='block'):
         # Send monitoring info for HTEX when monitoring enabled
         if self.monitoring_enabled:
             msg = self._executor.create_monitoring_info(status,
@@ -67,26 +67,26 @@ class PollItem(ExecutorStatus):
 
     def scale_in(self, n, force=True, max_idletime=None):
         if force and not max_idletime:
-            ids = self._executor.scale_in(n)
+            job_ids = self._executor.scale_in(n)
         else:
-            ids = self._executor.scale_in(n, force=force, max_idletime=max_idletime)
-        if ids is not None:
+            job_ids = self._executor.scale_in(n, force=force, max_idletime=max_idletime)
+        if job_ids is not None:
             new_status = {}
-            for id in ids:
-                new_status[id] = JobStatus(JobState.CANCELLED)
-                del self._status[id]
-            self.send_monitoring_info(new_status, block_id_type='internal')
-        return ids
+            for jid in job_ids:
+                new_status[jid] = JobStatus(JobState.CANCELLED)
+                del self._status[jid]
+            self.send_monitoring_info(new_status, block_id_type='job')
+        return job_ids
 
     def scale_out(self, n):
-        ids = self._executor.scale_out(n)
-        if ids is not None:
+        block_ids = self._executor.scale_out(n)
+        if block_ids is not None:
             new_status = {}
-            for id in ids:
-                new_status[id] = JobStatus(JobState.PENDING)
-            self.send_monitoring_info(new_status, block_id_type='external')
+            for block_id in block_ids:
+                new_status[block_id] = JobStatus(JobState.PENDING)
+            self.send_monitoring_info(new_status, block_id_type='block')
             self._status.update(new_status)
-        return ids
+        return block_ids
 
     def __repr__(self):
         return self._status.__repr__()

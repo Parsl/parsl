@@ -294,14 +294,14 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
 
         # TODO: why is this a provider property?
-        jids = []
+        block_ids = []
         if hasattr(self.provider, 'init_blocks'):
             try:
-                jids = self.scale_out(blocks=self.provider.init_blocks)
+                block_ids = self.scale_out(blocks=self.provider.init_blocks)
             except Exception as e:
                 logger.error("Scaling out failed: {}".format(e))
                 raise e
-        return jids
+        return block_ids
 
     def start(self):
         """Create the Interchange process and connect to it.
@@ -318,8 +318,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
-        jids = self.initialize_scaling()
-        return jids
+        block_ids = self.initialize_scaling()
+        return block_ids
 
     @wrap_with_logs
     def _queue_management_worker(self):
@@ -583,7 +583,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def create_monitoring_info(self, status, block_id_type='external'):
+    def create_monitoring_info(self, status, block_id_type='block'):
         """ Create a msg for monitoring based on the poll status
 
         """
@@ -594,13 +594,13 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             d['status'] = s.status_name
             d['timestamp'] = datetime.datetime.now()
             d['executor_label'] = self.label
-            if block_id_type == 'internal':
+            if block_id_type == 'job':
                 d['job_id'] = id
                 if id in self.block_mapping:
                     d['block_id'] = self.block_mapping[id]
                 else:
                     d['block_id'] = self.removed_block_mapping.pop(id)
-            elif block_id_type == 'external':
+            elif block_id_type == 'block':
                 d['job_id'] = self.blocks[id]
                 d['block_id'] = id
             else:
@@ -613,18 +613,18 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         """
         if not self.provider:
             raise (ScalingFailed("No execution provider available"))
-        r = []
+        block_ids = []
         for i in range(blocks):
             block_id = str(len(self.blocks))
             try:
                 job_id = self._launch_block(block_id)
                 self.blocks[block_id] = job_id
                 self.block_mapping[job_id] = block_id
-                r.append(block_id)
+                block_ids.append(block_id)
             except Exception as ex:
                 self._fail_job_async(block_id,
                                      "Failed to start block {}: {}".format(block_id, ex))
-        return r
+        return block_ids
 
     def _launch_block(self, block_id: str) -> Any:
         if self.launch_cmd is None:
