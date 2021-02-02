@@ -707,8 +707,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         # Now kill via provider
         # Potential issue with multiple threads trying to remove the same blocks
         to_kill = [self.blocks.pop(bid) for bid in block_ids_to_kill if bid in self.blocks]
-        for bid in to_kill:
-            self.removed_block_mapping[bid] = self.block_mapping.pop(bid)
+        for jid in to_kill:
+            self.removed_block_mapping[jid] = self.block_mapping.pop(jid)
 
         r = self.provider.cancel(to_kill)
 
