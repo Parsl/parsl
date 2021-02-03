@@ -45,19 +45,22 @@ def test_provider():
     assert status[0].state == JobState.RUNNING, "Expected job to be in state RUNNING"
 
     # Scale down to 0
-    scale_in_status = executor.scale_in(blocks=1)
+    scale_in_blocks = executor.scale_in(blocks=1)
     logger.info("Now sleeping 60 seconds")
     time.sleep(60)
     logger.info("Sleep finished")
     logger.info("Getting provider status (2)")
-    status = provider.status(scale_in_status)
-    logger.info("Got provider status")
+    status = executor.status()
+    logger.info("Got executor status")
     logger.info("Block status: {}".format(status))
-    assert status[0].terminal is True, "Terminal state"
+    assert status[scale_in_blocks[0]].terminal is True, "Terminal state"
     logger.info("Job in terminal state")
 
     _, current_jobs = executor._get_block_and_job_ids()
-    assert len(current_jobs) == 0, "Expected current_jobs == 0"
+    # PR 1952 stoped removing scale_in blocks from self.blocks
+    # A new PR will handle removing blocks from self.block
+    # this includes failed/completed/canceled blocks
+    assert len(current_jobs) == 1, "Expected current_jobs == 1"
     parsl.clear()
     del dfk
     logger.info("Ended test_provider")
