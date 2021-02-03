@@ -52,7 +52,7 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def scale_out(self, blocks: int) -> List[object]:
+    def scale_out(self, blocks: int) -> List[str]:
         """Scale out method.
 
         We should have the scale out method simply take resource object
@@ -64,7 +64,7 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def scale_in(self, blocks: int) -> List[object]:
+    def scale_in(self, blocks: int) -> List[str]:
         """Scale in method.
 
         Cause the executor to reduce the number of blocks by count.
@@ -94,7 +94,7 @@ class ParslExecutor(metaclass=ABCMeta):
         """
         pass
 
-    def create_monitoring_info(self, status: Dict[object, JobStatus]) -> List[object]:
+    def create_monitoring_info(self, status: Dict[str, JobStatus]) -> List[object]:
         """Create a monitoring message for each block based on the poll status.
 
         :return: a list of dictionaries mapping to the info of each block
@@ -161,7 +161,7 @@ class ParslExecutor(metaclass=ABCMeta):
 
     @abstractmethod
     def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
-                      status: Dict[Any, JobStatus]) -> bool:
+                      status: Dict[str, JobStatus]) -> bool:
         """This method is called by the error management infrastructure after a status poll. The
         executor implementing this method is then responsible for detecting abnormal conditions
         based on the status of submitted jobs. If the executor does not implement any special
