@@ -708,7 +708,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         return block_ids_killed
 
     def _get_block_and_job_ids(self) -> Tuple[List[str], List[Any]]:
-        # Not using self.blocks.keys() and self.blocks.values()
+        # Not using self.blocks.keys() and self.blocks.values() simultaneously
         # The dictionary may be changed during invoking this function
         # As scale_in and scale_out are invoked in multiple threads
         block_ids = list(self.blocks.keys())
