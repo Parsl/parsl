@@ -43,13 +43,12 @@ class PollItem(ExecutorStatus):
         if self._should_poll(now):
             self._status = self._executor.status()
             self._last_poll_time = now
-            self.send_monitoring_info(self._status, block_id_type='block')
+            self.send_monitoring_info(self._status)
 
-    def send_monitoring_info(self, status=None, block_id_type='block'):
+    def send_monitoring_info(self, status=None):
         # Send monitoring info for HTEX when monitoring enabled
         if self.monitoring_enabled:
-            msg = self._executor.create_monitoring_info(status,
-                                                        block_id_type=block_id_type)
+            msg = self._executor.create_monitoring_info(status)
             logger.debug("Sending message {} to hub from task status poller".format(msg))
             self.hub_channel.send_pyobj((MessageType.BLOCK_INFO, msg))
 
@@ -75,7 +74,7 @@ class PollItem(ExecutorStatus):
             for block_id in block_ids:
                 new_status[block_id] = JobStatus(JobState.CANCELLED)
                 del self._status[block_id]
-            self.send_monitoring_info(new_status, block_id_type='block')
+            self.send_monitoring_info(new_status)
         return block_ids
 
     def scale_out(self, n):
@@ -84,7 +83,7 @@ class PollItem(ExecutorStatus):
             new_status = {}
             for block_id in block_ids:
                 new_status[block_id] = JobStatus(JobState.PENDING)
-            self.send_monitoring_info(new_status, block_id_type='block')
+            self.send_monitoring_info(new_status)
             self._status.update(new_status)
         return block_ids
 

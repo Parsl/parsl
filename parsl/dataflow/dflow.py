@@ -913,7 +913,7 @@ class DataFlowKernel(object):
                 new_status = {}
                 for bid in block_ids:
                     new_status[bid] = JobStatus(JobState.PENDING)
-                msg = executor.create_monitoring_info(new_status, block_id_type='block')
+                msg = executor.create_monitoring_info(new_status)
                 logger.debug("Sending monitoring message {} to hub from DFK".format(msg))
                 self.monitoring.send(MessageType.BLOCK_INFO, msg)
         self.flowcontrol.add_executors(executors)
@@ -990,7 +990,7 @@ class DataFlowKernel(object):
                         new_status = {}
                         for bid in block_ids:
                             new_status[bid] = JobStatus(JobState.CANCELLED)
-                        msg = executor.create_monitoring_info(new_status, block_id_type='block')
+                        msg = executor.create_monitoring_info(new_status)
                         logger.debug("Sending message {} to hub from DFK".format(msg))
                         self.monitoring.send(MessageType.BLOCK_INFO, msg)
                 executor.shutdown()

@@ -582,28 +582,19 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
     def scaling_enabled(self):
         return self._scaling_enabled
 
-    def create_monitoring_info(self, status, block_id_type='block'):
+    def create_monitoring_info(self, status):
         """ Create a msg for monitoring based on the poll status
 
         """
         msg = []
-        for id, s in status.items():
+        for bid, s in status.items():
             d = {}
             d['run_id'] = self.run_id
             d['status'] = s.status_name
             d['timestamp'] = datetime.datetime.now()
             d['executor_label'] = self.label
-            if block_id_type == 'job':
-                d['job_id'] = id
-                if id in self.block_mapping:
-                    d['block_id'] = self.block_mapping[id]
-                else:
-                    d['block_id'] = self.removed_block_mapping.pop(id)
-            elif block_id_type == 'block':
-                d['job_id'] = self.blocks[id]
-                d['block_id'] = id
-            else:
-                raise RuntimeError("Unknown block id type")
+            d['job_id'] = self.blocks.get(bid, None)
+            d['block_id'] = bid
             msg.append(d)
         return msg
 
