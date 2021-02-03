@@ -199,7 +199,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         self.managed = managed
         self.blocks = {}  # type: Dict[str, str]
         self.block_mapping = {}  # type: Dict[str, str]
-        self.removed_block_mapping = {}  # type: Dict[str, str]
         self.cores_per_worker = cores_per_worker
         self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
@@ -706,13 +705,16 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         # Now kill via provider
         # Potential issue with multiple threads trying to remove the same blocks
-        to_kill = [self.blocks.pop(bid) for bid in block_ids_to_kill if bid in self.blocks]
-        for jid in to_kill:
-            self.removed_block_mapping[jid] = self.block_mapping.pop(jid)
+        to_kill = [self.blocks[bid] for bid in block_ids_to_kill if bid in self.blocks]
 
         r = self.provider.cancel(to_kill)
+        job_ids = self._filter_scale_in_ids(to_kill, r)
 
-        return self._filter_scale_in_ids(to_kill, r)
+        # to_kill block_ids are fetched from self.blocks
+        # If a block_id is in self.block, it must exist in self.block_mapping
+        block_ids_killed = [self.block_mapping[jid] for jid in job_ids]
+
+        return block_ids_killed
 
     def _get_block_and_job_ids(self) -> Tuple[List[str], List[Any]]:
         # Not using self.blocks.keys() and self.blocks.values()

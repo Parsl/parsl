@@ -67,16 +67,16 @@ class PollItem(ExecutorStatus):
 
     def scale_in(self, n, force=True, max_idletime=None):
         if force and not max_idletime:
-            job_ids = self._executor.scale_in(n)
+            block_ids = self._executor.scale_in(n)
         else:
-            job_ids = self._executor.scale_in(n, force=force, max_idletime=max_idletime)
-        if job_ids is not None:
+            block_ids = self._executor.scale_in(n, force=force, max_idletime=max_idletime)
+        if block_ids is not None:
             new_status = {}
-            for jid in job_ids:
-                new_status[jid] = JobStatus(JobState.CANCELLED)
-                del self._status[jid]
-            self.send_monitoring_info(new_status, block_id_type='job')
-        return job_ids
+            for block_id in block_ids:
+                new_status[block_id] = JobStatus(JobState.CANCELLED)
+                del self._status[block_id]
+            self.send_monitoring_info(new_status, block_id_type='block')
+        return block_ids
 
     def scale_out(self, n):
         block_ids = self._executor.scale_out(n)

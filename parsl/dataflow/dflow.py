@@ -985,12 +985,12 @@ class DataFlowKernel(object):
             if executor.managed and not executor.bad_state_is_set:
                 if executor.scaling_enabled:
                     job_ids = executor.provider.resources.keys()
-                    jids = executor.scale_in(len(job_ids))
-                    if self.monitoring and jids:
+                    block_ids = executor.scale_in(len(job_ids))
+                    if self.monitoring and block_ids:
                         new_status = {}
-                        for jid in jids:
-                            new_status[jid] = JobStatus(JobState.CANCELLED)
-                        msg = executor.create_monitoring_info(new_status, block_id_type='job')
+                        for bid in block_ids:
+                            new_status[bid] = JobStatus(JobState.CANCELLED)
+                        msg = executor.create_monitoring_info(new_status, block_id_type='block')
                         logger.debug("Sending message {} to hub from DFK".format(msg))
                         self.monitoring.send(MessageType.BLOCK_INFO, msg)
                 executor.shutdown()
