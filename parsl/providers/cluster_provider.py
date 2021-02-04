@@ -14,18 +14,18 @@ class ClusterProvider(ExecutionProvider):
 
     Parameters
     ----------
-    label : str
+      label : str
         Label for this provider.
-    channel : Channel
+      channel : Channel
         Channel for accessing this provider. Possible channels include
         :class:`~parsl.channels.LocalChannel` (the default),
         :class:`~parsl.channels.SSHChannel`, or
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
-    walltime : str
+      walltime : str
         Walltime requested per block in HH:MM:SS.
-    launcher : str
+      launcher : str
         FIXME
-    cmd_timeout : int
+      cmd_timeout : int
         Timeout for commands made to the scheduler in seconds
 
     .. code:: python
