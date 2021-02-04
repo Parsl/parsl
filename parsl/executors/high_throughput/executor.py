@@ -612,7 +612,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         """Scales out the number of blocks by "blocks"
         """
         if not self.provider:
-            raise (ScalingFailed("No execution provider available"))
+            raise (ScalingFailed(None, "No execution provider available"))
         r = []
         for i in range(blocks):
             external_block_id = str(len(self.blocks))
