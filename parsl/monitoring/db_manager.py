@@ -171,6 +171,8 @@ class Database:
 
         task_fail_history = Column('task_fail_history', Text, nullable=True)
 
+        task_joins = Column('task_joins', Text, nullable=True)
+
         __table_args__ = (
             PrimaryKeyConstraint('try_id', 'task_id', 'run_id'),
         )
@@ -195,7 +197,7 @@ class Database:
         run_id = Column('run_id', Text, nullable=False)
         executor_label = Column('executor_label', Text, nullable=False)
         block_id = Column('block_id', Text, nullable=False)
-        job_id = Column('job_id', Text, nullable=False)
+        job_id = Column('job_id', Text, nullable=True)
         timestamp = Column('timestamp', DateTime, nullable=False)
         status = Column("status", Text, nullable=False)
         __table_args__ = (
@@ -437,7 +439,8 @@ class DatabaseManager:
                                      columns=['run_id', 'task_id', 'try_id',
                                               'task_fail_history',
                                               'task_try_time_launched',
-                                              'task_try_time_returned'],
+                                              'task_try_time_returned',
+                                              'task_joins'],
                                      messages=try_update_messages)
 
                 """
