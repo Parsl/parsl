@@ -171,6 +171,8 @@ class Database:
 
         task_fail_history = Column('task_fail_history', Text, nullable=True)
 
+        task_joins = Column('task_joins', Text, nullable=True)
+
         __table_args__ = (
             PrimaryKeyConstraint('try_id', 'task_id', 'run_id'),
         )
@@ -437,7 +439,8 @@ class DatabaseManager:
                                      columns=['run_id', 'task_id', 'try_id',
                                               'task_fail_history',
                                               'task_try_time_launched',
-                                              'task_try_time_returned'],
+                                              'task_try_time_returned',
+                                              'task_joins'],
                                      messages=try_update_messages)
 
                 """
