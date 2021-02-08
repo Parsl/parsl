@@ -12,5 +12,5 @@ class ExecutorStatus(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def status(self) -> Dict[object, "parsl.providers.provider_base.JobStatus"]:
+    def status(self) -> Dict[str, "parsl.providers.provider_base.JobStatus"]:
         pass

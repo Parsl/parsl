@@ -10,11 +10,11 @@ User guide
    data
    execution
    exceptions
-   app_caching
    checkpoints
    configuring
    monitoring
    workflow
    modularizing
+   joins
    performance
    usage_tracking

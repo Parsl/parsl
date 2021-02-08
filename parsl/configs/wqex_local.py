@@ -4,11 +4,10 @@ from parsl.executors import WorkQueueExecutor
 config = Config(
     executors=[
         WorkQueueExecutor(
-            label="wqex_local",
-            port=50055,
-            project_name="WorkQueue Example",
-            shared_fs=True,
-            see_worker_output=True
+            label="parsl_wq_example",
+            port=9123,
+            project_name="parsl_wq_example",
+            shared_fs=False
         )
     ]
 )

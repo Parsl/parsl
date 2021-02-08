@@ -10,6 +10,7 @@ Core
 
     parsl.app.app.python_app
     parsl.app.app.bash_app
+    parsl.app.app.join_app
     parsl.dataflow.futures.AppFuture
     parsl.dataflow.dflow.DataFlowKernelLoader
     parsl.monitoring.MonitoringHub
@@ -115,6 +116,9 @@ Providers
     parsl.providers.TorqueProvider
     parsl.providers.KubernetesProvider
     parsl.providers.PBSProProvider
+    parsl.providers.provider_base.ExecutionProvider
+    parsl.providers.cluster_provider.ClusterProvider
+
 
 Exceptions
 ==========
