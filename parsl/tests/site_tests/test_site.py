@@ -28,8 +28,8 @@ def test_platform(n=2, sleep_dur=10):
     name = list(dfk.executors.keys())[0]
     print("Trying to get executor : ", name)
 
-    x = platform(sleep=0)
-    print(x.result())
+    x = [platform(sleep=1) for i in range(2)]
+    print([i.result() for i in x])
 
     print("Executor : ", dfk.executors[name])
     print("Connected   : ", dfk.executors[name].connected_workers)
