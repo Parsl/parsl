@@ -16,20 +16,6 @@ class ExecutorError(ParslError):
         return "Executor {0} failed due to: {1}".format(self.executor, self.reason)
 
 
-class InsufficientMPIRanks(ExecutorError):
-    ''' Error raised when attempting to launch a MPI worker pool with less than 2 ranks
-    '''
-
-    def __init__(self, tasks_per_node=None, nodes_per_block=None):
-        self.tasks_per_node = tasks_per_node
-        self.nodes_per_block = nodes_per_block
-
-    def __repr__(self):
-        return "MPIExecutor requires at least 2 ranks launched. \
-Ranks launched = tasks_per_node={} X nodes_per_block={}".format(self.tasks_per_node,
-                                                                self.nodes_per_block)
-
-
 class UnsupportedFeatureError(ExecutorError):
     """Error raised when attemping to use unsupported feature in an Executor"""
 
@@ -51,19 +37,6 @@ class ScalingFailed(ExecutorError):
     def __init__(self, executor, reason):
         self.executor = executor
         self.reason = reason
-
-
-class ControllerError(ExecutorError):
-    """Error raise by IPP controller."""
-
-    def __init__(self, reason):
-        self.reason = reason
-
-    def __repr__(self):
-        return "Controller init failed:Reason:{0}".format(self.reason)
-
-    def __str__(self):
-        return self.__repr__()
 
 
 class DeserializationError(ExecutorError):
