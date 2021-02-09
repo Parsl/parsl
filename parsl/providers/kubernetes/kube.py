@@ -17,6 +17,14 @@ try:
 except (ImportError, NameError, FileNotFoundError):
     _kubernetes_enabled = False
 
+translate_table = {
+    'Running': JobState.RUNNING,
+    'Pending': JobState.PENDING,
+    'Succeeded': JobState.COMPLETED,
+    'Failed': JobState.FAILED,
+    'Unknown': JobState.UNKNOWN,
+}
+
 
 class KubernetesProvider(ExecutionProvider, RepresentationMixin):
     """ Kubernetes execution provider
@@ -167,9 +175,9 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         Raises:
              - ExecutionProviderExceptions or its subclasses
         """
-        self._status()
-        # This is a hack
-        return [JobStatus(JobState.RUNNING) for jid in job_ids]
+        if job_ids:
+            self._status()
+        return [self.resources[jid]['status'] for jid in job_ids]
 
     def cancel(self, job_ids):
         """ Cancels the jobs specified by a list of job ids
@@ -184,7 +192,6 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
             self._delete_pod(job)
 
             self.resources[job]['status'] = JobStatus(JobState.CANCELLED)
-            del self.resources[job]
         rets = [True for i in job_ids]
 
         return rets
@@ -197,10 +204,25 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
               [status...] : Status list of all jobs
         """
 
-        jobs_ids = list(self.resources.keys())
-        # TODO: fix this
-        return jobs_ids
-        # do something to get the deployment's status
+        job_ids = list(self.resources.keys())
+        to_poll_job_ids = [jid for jid in job_ids if not self.resources[jid]['status'].terminal]
+        logger.debug("Polling Kubernetes pod status: {}".format(to_poll_job_ids))
+        for jid in to_poll_job_ids:
+            phase = None
+            try:
+                pod_status = self.kube_client.read_namespaced_pod_status(name=jid, namespace=self.namespace)
+            except Exception:
+                logger.exception("Failed to poll pod {} status, most likely because pod was terminated".format(jid))
+                if self.resources[jid]['status'] is JobStatus(JobState.RUNNING):
+                    phase = 'Unknown'
+            else:
+                phase = pod_status.status.phase
+            if phase:
+                status = translate_table.get(phase, JobState.UNKNOWN)
+                logger.debug("Updating pod {} with status {} to parsl status {}".format(jid,
+                                                                                        phase,
+                                                                                        status))
+                self.resources[jid]['status'] = JobStatus(status)
 
     def _create_pod(self,
                     image,

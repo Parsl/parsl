@@ -1,4 +1,4 @@
-from typing import List, Any, Dict
+from typing import List, Dict
 
 from parsl.dataflow.task_status_poller import ExecutorStatus
 from parsl.executors.base import ParslExecutor
@@ -20,12 +20,12 @@ class JobErrorHandler(object):
         if not custom_handling:
             self.simple_error_handler(es.executor, es.status, 3)
 
-    def simple_error_handler(self, executor: ParslExecutor, status: Dict[Any, JobStatus], threshold: int):
+    def simple_error_handler(self, executor: ParslExecutor, status: Dict[str, JobStatus], threshold: int):
         (total_jobs, failed_jobs) = self.count_jobs(status)
         if total_jobs >= threshold and failed_jobs == total_jobs:
             executor.set_bad_state_and_fail_all(self.get_error(status))
 
-    def count_jobs(self, status: Dict[Any, JobStatus]):
+    def count_jobs(self, status: Dict[str, JobStatus]):
         total = 0
         failed = 0
         for js in status.values():
@@ -34,7 +34,7 @@ class JobErrorHandler(object):
                 failed += 1
         return total, failed
 
-    def get_error(self, status: Dict[Any, JobStatus]) -> Exception:
+    def get_error(self, status: Dict[str, JobStatus]) -> Exception:
         """Concatenate all errors."""
         err = ""
         count = 1

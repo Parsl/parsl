@@ -49,7 +49,8 @@ mypy: ## run mypy checks
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/configs/
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/test*/
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/sites/
-	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/app/ parsl/channels/ parsl/dataflow/ parsl/data_provider/ parsl/launchers parsl/providers/
+        # only the top level of monitoring is checked here because the visualization code does not type check
+	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/app/ parsl/channels/ parsl/dataflow/ parsl/data_provider/ parsl/launchers parsl/providers/ parsl/monitoring/*py
 
 .PHONY: local_thread_test
 local_thread_test: ## run all tests with local_thread config

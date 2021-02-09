@@ -52,19 +52,19 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def scale_out(self, blocks: int) -> List[object]:
+    def scale_out(self, blocks: int) -> List[str]:
         """Scale out method.
 
         We should have the scale out method simply take resource object
         which will have the scaling methods, scale_out itself should be a coroutine, since
         scaling tasks can be slow.
 
-        :return: A list of job ids corresponding to the blocks that were added.
+        :return: A list of block ids corresponding to the blocks that were added.
         """
         pass
 
     @abstractmethod
-    def scale_in(self, blocks: int) -> List[object]:
+    def scale_in(self, blocks: int) -> List[str]:
         """Scale in method.
 
         Cause the executor to reduce the number of blocks by count.
@@ -73,7 +73,7 @@ class ParslExecutor(metaclass=ABCMeta):
         which will have the scaling methods, scale_in itself should be a coroutine, since
         scaling tasks can be slow.
 
-        :return: A list of job ids corresponding to the blocks that were removed.
+        :return: A list of block ids corresponding to the blocks that were removed.
         """
         pass
 
@@ -94,19 +94,28 @@ class ParslExecutor(metaclass=ABCMeta):
         """
         pass
 
-    @abstractmethod
-    def create_monitoring_info(self, status: Dict[object, JobStatus]) -> List[object]:
+    def create_monitoring_info(self, status: Dict[str, JobStatus]) -> List[object]:
         """Create a monitoring message for each block based on the poll status.
 
         :return: a list of dictionaries mapping to the info of each block
         """
-        pass
+        return []
+
+    def monitor_resources(self) -> bool:
+        """Should resource monitoring happen for tasks on running on this executor?
+
+        Parsl resource monitoring conflicts with execution styles which use threads, and
+        can deadlock while running.
+
+        This function allows resource monitoring to be disabled per executor implementation.
+        """
+        return True
 
     @abstractmethod
-    def status(self) -> Dict[object, JobStatus]:
+    def status(self) -> Dict[str, JobStatus]:
         """Return the status of all jobs/blocks currently known to this executor.
 
-        :return: a dictionary mapping job ids to status strings
+        :return: a dictionary mapping block ids (in string) to job status
         """
         pass
 
@@ -152,7 +161,7 @@ class ParslExecutor(metaclass=ABCMeta):
 
     @abstractmethod
     def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
-                      status: Dict[Any, JobStatus]) -> bool:
+                      status: Dict[str, JobStatus]) -> bool:
         """This method is called by the error management infrastructure after a status poll. The
         executor implementing this method is then responsible for detecting abnormal conditions
         based on the status of submitted jobs. If the executor does not implement any special

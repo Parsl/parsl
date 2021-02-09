@@ -16,6 +16,7 @@ parsl.executors.swift\_t.TurbineExecutor
       ~TurbineExecutor.__init__
       ~TurbineExecutor.create_monitoring_info
       ~TurbineExecutor.handle_errors
+      ~TurbineExecutor.monitor_resources
       ~TurbineExecutor.scale_in
       ~TurbineExecutor.scale_out
       ~TurbineExecutor.set_bad_state_and_fail_all

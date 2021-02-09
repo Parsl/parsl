@@ -1,32 +1,7 @@
 .. _label-data:
 
-Communication and data
+Passing Python objects
 ======================
-
-Communication between the Parsl program and Parsl tasks is crucial
-for accomplishing necessary work. Parsl supports two modes of communication: 
-by standard Python parameters and by files.
-
-Parsl abstracts not only concurrent execution but also the location in which
-an app executes. That is, it makes it possible for a Parsl app to execute anywhere, that is 
-a Parsl app will behave in the same way whether it is run locally or dispatched to a remote 
-computer. 
-Achieving location independence requires data location abstraction, so that a Parsl app receives the same input arguments, and can access files, in the same manner regardless of its execution location.
-To this end, Parsl:
-
-* Orchestrates the movement of Python parameters or files passed as input arguments to an app, to whichever location is selected for that app's execution;
-
-* Orchestrates the return value of any Python object or exception returned by a Parsl app; 
-
-* Serializes and deserializes Python data types, objects, and exceptions;
-
-* Implements a flexible file abstraction that can be used to reference files irrespective of their locations. At present this model supports local files as well as files accessible on the submit-side file system or via FTP, HTTP, HTTPS, and `Globus <https://globus.org>`_;
-
-* Translates file paths to location-specific paths relative to the location in which the app executes.
-
-
-Communicating via Python
-------------------------
 
 Parsl apps can communicate via standard Python function parameter passing 
 and return statements. The following example shows how a Python string
@@ -35,31 +10,33 @@ can be passed to, and returned from, a Parsl app.
 .. code-block:: python
 
     @python_app
-    def communicate(name):
+    def example(name):
         return 'hello {0}'.format(name)
-				
-    r = communicate('bob')
+	
+    r = example('bob')
     print(r.result())
 
 Parsl uses the cloudpickle and pickle libraries to serialize Python objects 
-into a sequence of bytes that can be passed over a network to/from apps. 
-Thus, Parsl is able to support communication via standard Python data types 
-(e.g., booleans, integers, tuples, lists, and dictionaries). However, not
+into a sequence of bytes that can be passed over a network from the submitting
+machine to executing workers.
+
+Thus, Parsl apps can receive and return standard Python data types 
+such as booleans, integers, tuples, lists, and dictionaries. However, not
 all objects can be serialized with these methods (e.g., closures, generators, 
-and system objects). 
+and system objects), and so those objects cannot be used with all executors.
 
 Parsl will raise a `SerializationError` if it encounters an object that it cannot 
 serialize. This applies to objects passed as arguments to an app, as well as objects 
 returned from an app. See :ref:`label_serialization_error`.
 
 
-Communicating via Files
------------------------
+Staging data files
+==================
 
-Parsl apps can communicate via files. A file may be passed as an input
+Parsl apps can take and return data files. A file may be passed as an input
 argument to an app, or returned from an app after execution. Parsl 
 provides support to automatically transfer (stage) files between 
-the main Parsl program, worker nodes, or external data storage systems. 
+the main Parsl program, worker nodes, and external data storage systems. 
 
 Input files can be passed as regular arguments, or a list of them may be
 specified in the special ``inputs`` keyword argument to an app invocation.
@@ -67,8 +44,11 @@ specified in the special ``inputs`` keyword argument to an app invocation.
 Inside an app, the ``filepath`` attribute of a `File` can be read to determine
 where on the execution-side file system the input file has been placed.
 
-Output file objects must also be passed in at app invocation, through the
-outputs parameter. Inside an app, the ``filepath`` attribute of an output
+Output `File` objects must also be passed in at app invocation, through the
+outputs parameter. In this case, the `File` object specifies where Parsl
+should place output after execution.
+
+Inside an app, the ``filepath`` attribute of an output
 `File` provides the path at which the corresponding output file should be
 placed so that Parsl can find it after execution.
 

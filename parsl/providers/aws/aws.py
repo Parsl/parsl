@@ -286,11 +286,16 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         Security groups are configured in function security_group.
         """
 
+        vpc_name = self.generate_aws_id()
+
         try:
+            tag_spec = self.create_name_tag_spec('vpc', vpc_name)
+
             # We use a large VPC so that the cluster can get large
             vpc = self.ec2.create_vpc(
                 CidrBlock='10.0.0.0/16',
                 AmazonProvidedIpv6CidrBlock=False,
+                TagSpecifications=tag_spec,
             )
         except Exception as e:
             # This failure will cause a full abort
@@ -313,10 +318,14 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         # go through AZs and set up a subnet per
         for num, zone in enumerate(availability_zones['AvailabilityZones']):
             if zone['State'] == "available":
+                zone_name = zone['ZoneName']
+                tag_spec = self.create_name_tag_spec('subnet', '{0}.{1}'.format(vpc_name, zone_name))
 
                 # Create a large subnet (4000 max nodes)
                 subnet = vpc.create_subnet(
-                    CidrBlock='10.0.{}.0/20'.format(16 * num), AvailabilityZone=zone['ZoneName']
+                    CidrBlock='10.0.{}.0/20'.format(16 * num),
+                    AvailabilityZone=zone_name,
+                    TagSpecifications=tag_spec,
                 )
 
                 # Make subnet accessible
@@ -329,11 +338,19 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             else:
                 logger.info("{} unavailable".format(zone['ZoneName']))
         # Security groups
-        self.security_group(vpc)
+        security_group_iterator = vpc.security_groups.all()
+        for security_group in security_group_iterator:
+            # this can only be the default security group for this VPC,
+            # since no other security groups have been created yet
+            security_group.create_tags(
+                Tags=[{'Key': 'Name', 'Value': '{0}.default'.format(vpc_name)}],
+            )
+
+        self.security_group(vpc, vpc_name)
         self.vpc_id = vpc.id
         return vpc
 
-    def security_group(self, vpc):
+    def security_group(self, vpc, name):
         """Create and configure a new security group.
 
         Allows all ICMP in, all TCP and UDP in within VPC.
@@ -346,10 +363,16 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         ----------
         vpc : VPC instance
             VPC in which to set up security group.
+        name : str
+            Name tag for the newly created security group.
         """
 
+        tag_spec = self.create_name_tag_spec('security-group', name)
+
         sg = vpc.create_security_group(
-            GroupName="private-subnet", Description="security group for remote executors"
+            GroupName="private-subnet",
+            Description="security group for remote executors",
+            TagSpecifications=tag_spec,
         )
 
         ip_ranges = [{'CidrIp': '10.0.0.0/16'}]
@@ -450,9 +473,50 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                                                        linger=str(self.linger).lower(),
                                                        worker_init=self.worker_init)
         instance_type = self.instance_type
-        subnet = self.sn_ids[0]
         ami_id = self.image_id
         total_instances = len(self.instances)
+
+        # not all availability zones support all instance types,
+        # so we need to check which subnets can actually be used given the
+        # user-provided instance type
+
+        # this finds the availability zones in a region that support
+        # the user-provided instance type
+        az_offerings = self.client.describe_instance_type_offerings(
+            LocationType='availability-zone',
+            Filters=[
+                {
+                    'Name': 'instance-type',
+                    'Values': [
+                        instance_type,
+                    ]
+                },
+            ],
+        )
+
+        allowed_azs = []
+        for az in az_offerings['InstanceTypeOfferings']:
+            allowed_azs.append(az['Location'])
+
+        # this is used to retrieve the availability zone of each subnet
+        subnets = self.client.describe_subnets(
+            SubnetIds=list(self.sn_ids),
+        )
+
+        subnet = None
+        for sn in subnets['Subnets']:
+            sn_id = sn['SubnetId']
+            az = sn['AvailabilityZone']
+            # a subnet has been found with an availability zone
+            # that is supported for the instance type, so we should use
+            # this subnet
+            if az in allowed_azs:
+                subnet = sn_id
+                break
+
+        if subnet is None:
+            logger.error("No subnet in region {0} supports instance type {1}".format(self.region, instance_type))
+            return [None]
 
         if float(self.spot_max_bid) > 0:
             spot_options = {
@@ -470,7 +534,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             logger.warning("Exceeded instance limit ({}). Cannot continue\n".format(self.max_nodes))
             return [None]
         try:
-            tag_spec = [{"ResourceType": "instance", "Tags": [{'Key': 'Name', 'Value': job_name}]}]
+            tag_spec = self.create_name_tag_spec('instance', job_name)
 
             instance = self.ec2.create_instances(
                 MinCount=1,
@@ -484,7 +548,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                 InstanceMarketOptions=spot_options,
                 InstanceInitiatedShutdownBehavior='terminate',
                 IamInstanceProfile={'Arn': self.iam_instance_profile_arn},
-                UserData=command
+                UserData=command,
             )
         except ClientError as e:
             print(e)
@@ -584,7 +648,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             If at capacity, None will be returned. Otherwise, the job identifier will be returned.
         """
 
-        job_name = "parsl.aws.{0}".format(time.time())
+        job_name = self.generate_aws_id()
         wrapped_cmd = self.launcher(command,
                                     tasks_per_node,
                                     self.nodes_per_block)
@@ -686,6 +750,33 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             raise e
         self.show_summary()
         os.remove(self.config['state_file_path'])
+
+    def generate_aws_id(self):
+        """Generate a new ID for AWS resources.
+
+        Returns
+        -------
+        str
+            An ID of the form 'parsl.aws.123456.789' for giving resources unique identifiers.
+        """
+        return "parsl.aws.{0}".format(time.time())
+
+    def create_name_tag_spec(self, resource_type, name):
+        """Create a new tag specification for a resource name.
+
+        Parameters
+        ----------
+        resource_type : str
+            The AWS resource type
+        name : str
+            The name to assign to the resource
+
+        Returns
+        -------
+        record
+            A TagSpecifications record to be passed into the creation of a new AWS resource.
+        """
+        return [{"ResourceType": resource_type, "Tags": [{'Key': 'Name', 'Value': name}]}]
 
     @property
     def label(self):

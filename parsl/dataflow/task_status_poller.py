@@ -22,7 +22,7 @@ class PollItem(ExecutorStatus):
         self._dfk = dfk
         self._interval = executor.status_polling_interval
         self._last_poll_time = 0.0
-        self._status = {}  # type: Dict[object, JobStatus]
+        self._status = {}  # type: Dict[str, JobStatus]
 
         # Create a ZMQ channel to send poll status to monitoring
         self.monitoring_enabled = False
@@ -43,18 +43,21 @@ class PollItem(ExecutorStatus):
         if self._should_poll(now):
             self._status = self._executor.status()
             self._last_poll_time = now
-            self.send_monitoring_info(self._status, block_id_type='internal')
+            self.send_monitoring_info(self._status)
 
-    def send_monitoring_info(self, status=None, block_id_type='external'):
+    def send_monitoring_info(self, status=None):
         # Send monitoring info for HTEX when monitoring enabled
         if self.monitoring_enabled:
-            msg = self._executor.create_monitoring_info(status,
-                                                        block_id_type=block_id_type)
+            msg = self._executor.create_monitoring_info(status)
             logger.debug("Sending message {} to hub from task status poller".format(msg))
             self.hub_channel.send_pyobj((MessageType.BLOCK_INFO, msg))
 
     @property
-    def status(self) -> Dict[object, JobStatus]:
+    def status(self) -> Dict[str, JobStatus]:
+        """Return the status of all jobs/blocks of the executor of this poller.
+
+        :return: a dictionary mapping block ids (in string) to job status
+        """
         return self._status
 
     @property
@@ -63,26 +66,26 @@ class PollItem(ExecutorStatus):
 
     def scale_in(self, n, force=True, max_idletime=None):
         if force and not max_idletime:
-            ids = self._executor.scale_in(n)
+            block_ids = self._executor.scale_in(n)
         else:
-            ids = self._executor.scale_in(n, force=force, max_idletime=max_idletime)
-        if ids is not None:
+            block_ids = self._executor.scale_in(n, force=force, max_idletime=max_idletime)
+        if block_ids is not None:
             new_status = {}
-            for id in ids:
-                new_status[id] = JobStatus(JobState.CANCELLED)
-                del self._status[id]
-            self.send_monitoring_info(new_status, block_id_type='internal')
-        return ids
+            for block_id in block_ids:
+                new_status[block_id] = JobStatus(JobState.CANCELLED)
+                del self._status[block_id]
+            self.send_monitoring_info(new_status)
+        return block_ids
 
     def scale_out(self, n):
-        ids = self._executor.scale_out(n)
-        if ids is not None:
+        block_ids = self._executor.scale_out(n)
+        if block_ids is not None:
             new_status = {}
-            for id in ids:
-                new_status[id] = JobStatus(JobState.PENDING)
+            for block_id in block_ids:
+                new_status[block_id] = JobStatus(JobState.PENDING)
             self.send_monitoring_info(new_status)
             self._status.update(new_status)
-        return ids
+        return block_ids
 
     def __repr__(self):
         return self._status.__repr__()

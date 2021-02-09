@@ -7,8 +7,14 @@ An **app** is a Parsl construct for representing a fragment of Python code
 or external Bash shell code that can be asynchronously executed.
 
 A Parsl app is defined by annotating a Python function with a decorator: 
-the ``@python_app`` decorator for a **Python app**, and the ``@bash_app`` decorator for a **Bash app**. 
-Python apps encapsulate pure Python code, while Bash apps wrap calls to external applications and scripts.
+the ``@python_app`` decorator for a **Python app**, the ``@bash_app`` decorator for a **Bash app**,
+and the ``@join_app`` decorator for a **Join app**.
+
+Python apps encapsulate pure Python code, while Bash apps wrap calls to external applications and scripts,
+and Join apps allow composition of other apps to form sub-workflows.
+
+Python and Bash apps are documented below. Join apps are documented in a later
+section (see :ref:`label-joinapp`)
 
 Python Apps
 -----------

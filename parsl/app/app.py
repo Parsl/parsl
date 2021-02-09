@@ -4,8 +4,6 @@ The App class encapsulates a generic leaf task that can be executed asynchronous
 """
 import logging
 from abc import ABCMeta, abstractmethod
-from inspect import getsource
-from hashlib import md5
 from inspect import signature
 
 logger = logging.getLogger(__name__)
@@ -47,17 +45,6 @@ class AppBase(metaclass=ABCMeta):
             logger.error("App {} specifies invalid executor option, expects string or list".format(
                 func.__name__))
 
-        if cache is True:
-            try:
-                self.fn_source = getsource(func)
-            except OSError:
-                logger.warning("Unable to get source code for app caching. Recommend creating module")
-                self.fn_source = func.__name__
-
-            self.func_hash = md5(self.fn_source.encode('utf-8')).hexdigest()
-        else:
-            self.func_hash = func.__name__
-
         params = signature(func).parameters
 
         self.kwargs = {}
@@ -77,7 +64,7 @@ class AppBase(metaclass=ABCMeta):
         pass
 
 
-def python_app(function=None, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None):
+def python_app(function=None, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None, join=False):
     """Decorator function for making python apps.
 
     Parameters
@@ -94,6 +81,10 @@ def python_app(function=None, data_flow_kernel=None, cache=False, executors='all
         Labels of the executors that this app can execute over. Default is 'all'.
     cache : bool
         Enable caching of the app call. Default is False.
+    join : bool
+        If True, this app will be a join app: the decorated python code must return a Future
+        (rather than a regular value), and and the corresponding AppFuture will complete when
+        that inner future completes.
     """
     from parsl.app.python import PythonApp
 
@@ -103,11 +94,21 @@ def python_app(function=None, data_flow_kernel=None, cache=False, executors='all
                              data_flow_kernel=data_flow_kernel,
                              cache=cache,
                              executors=executors,
-                             ignore_for_cache=ignore_for_cache)
+                             ignore_for_cache=ignore_for_cache,
+                             join=join)
         return wrapper(func)
     if function is not None:
         return decorator(function)
     return decorator
+
+
+def join_app(function=None, data_flow_kernel=None, cache=False, ignore_for_cache=None):
+    return python_app(function=function,
+                      data_flow_kernel=data_flow_kernel,
+                      cache=cache,
+                      ignore_for_cache=ignore_for_cache,
+                      join=True,
+                      executors=["_parsl_internal"])
 
 
 def bash_app(function=None, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None):
