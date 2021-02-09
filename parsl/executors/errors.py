@@ -1,6 +1,8 @@
 """Exceptions raise by Executors."""
 from parsl.app.errors import ParslError
 
+from typing import Optional
+
 
 class ExecutorError(ParslError):
     """Base class for all exceptions.
@@ -34,7 +36,7 @@ Please checkout {} for this feature".format(self.feature,
 class ScalingFailed(ExecutorError):
     """Scaling failed due to error in Execution provider."""
 
-    def __init__(self, executor, reason):
+    def __init__(self, executor: Optional[str], reason: str):
         self.executor = executor
         self.reason = reason
 
