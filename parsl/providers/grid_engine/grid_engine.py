@@ -150,7 +150,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
             cmd = "qsub -q {0} -terse {1}".format(self.queue, channel_script_path)
         else:
             cmd = "qsub -terse {0}".format(channel_script_path)
-        retcode, stdout, stderr = self.execute_wait(cmd, 10)
+        retcode, stdout, stderr = self.execute_wait(cmd)
 
         if retcode == 0:
             for line in stdout.split('\n'):
@@ -214,7 +214,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
 
         job_id_list = ' '.join(job_ids)
         cmd = "qdel {}".format(job_id_list)
-        retcode, stdout, stderr = self.execute_wait(cmd, 3)
+        retcode, stdout, stderr = self.execute_wait(cmd)
 
         rets = None
         if retcode == 0:
