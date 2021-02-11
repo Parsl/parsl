@@ -72,7 +72,8 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                  walltime="00:10:00",
                  scheduler_options='',
                  worker_init='',
-                 launcher=SingleNodeLauncher()):
+                 launcher=SingleNodeLauncher(),
+                 queue=None):
         label = 'grid_engine'
         super().__init__(label,
                          channel,
@@ -141,7 +142,10 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         self._write_submit_script(template_string, script_path, job_name, job_config)
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
-        cmd = "qsub -terse {0}".format(channel_script_path)
+        if self.queue is not None:
+            cmd = "qsub -q {0} -terse {1}".format(self.queue, channel_script_path)
+        else:
+            cmd = "qsub -terse {0}".format(channel_script_path)
         retcode, stdout, stderr = self.execute_wait(cmd, 10)
 
         if retcode == 0:
