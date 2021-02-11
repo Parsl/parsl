@@ -289,7 +289,7 @@ class DataFlowKernel(object):
             logger.debug("Task {} try {} failed".format(task_id, task_record['try_id']))
             # We keep the history separately, since the future itself could be
             # tossed.
-            task_record['fail_history'].append(str(e))
+            task_record['fail_history'].append(repr(e))
             task_record['fail_count'] += 1
 
             if task_record['status'] == States.dep_fail:
@@ -368,7 +368,7 @@ class DataFlowKernel(object):
             logger.debug("Task {} failed due to failure of inner join future".format(outer_task_id))
             # We keep the history separately, since the future itself could be
             # tossed.
-            task_record['fail_history'].append(str(e))
+            task_record['fail_history'].append(repr(e))
             task_record['fail_count'] += 1
 
             task_record['status'] = States.failed
