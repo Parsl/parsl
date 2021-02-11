@@ -60,6 +60,8 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
+    cmd_timeout : int
+        Timeout for commands made to the scheduler in seconds
     """
 
     def __init__(self,
@@ -73,6 +75,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                  scheduler_options='',
                  worker_init='',
                  launcher=SingleNodeLauncher(),
+                 cmd_timeout: int = 10,
                  queue=None):
         label = 'grid_engine'
         super().__init__(label,
@@ -83,7 +86,8 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                          max_blocks,
                          parallelism,
                          walltime,
-                         launcher)
+                         launcher,
+                         cmd_timeout=cmd_timeout)
         self.scheduler_options = scheduler_options
         self.worker_init = worker_init
 
