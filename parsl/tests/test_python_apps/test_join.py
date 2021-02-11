@@ -40,17 +40,6 @@ def outer_make_a_dag(n):
     return combine(*futs)
 
 
-@python_app
-def gen_random():
-    import random
-    return random.randrange(10)
-
-
-@python_app
-def count(el):
-    return len(el)
-
-
 def test_result_flow():
     f = outer_app()
     res = f.result()
