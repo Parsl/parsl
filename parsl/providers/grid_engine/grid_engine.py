@@ -75,7 +75,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                  scheduler_options='',
                  worker_init='',
                  launcher=SingleNodeLauncher(),
-                 cmd_timeout: int = 10,
+                 cmd_timeout: int = 60,
                  queue=None):
         label = 'grid_engine'
         super().__init__(label,
