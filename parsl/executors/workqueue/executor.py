@@ -24,10 +24,10 @@ from parsl.serialize import pack_apply_message
 import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
+from parsl.errors import OptionalModuleMissing
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
-from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.errors import ScalingFailed
 from parsl.executors.workqueue import exec_parsl_function
 

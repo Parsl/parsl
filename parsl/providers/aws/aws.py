@@ -7,7 +7,7 @@ from string import Template
 from parsl.dataflow.error import ConfigurationError
 from parsl.providers.aws.template import template_string
 from parsl.providers.provider_base import ExecutionProvider, JobState, JobStatus
-from parsl.providers.error import OptionalModuleMissing
+from parsl.errors import OptionalModuleMissing
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
 
