@@ -113,4 +113,6 @@ class TaskStatusPoller(object):
             if executor.status_polling_interval > 0:
                 logger.debug("Adding executor {}".format(executor.label))
                 self._poll_items.append(PollItem(executor, self.dfk))
+            else:
+                logger.debug("Executor {} has no poll time, so will not poll".format(executor.label))
         self._strategy.add_executors(executors)
