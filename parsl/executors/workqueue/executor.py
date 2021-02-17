@@ -181,6 +181,8 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             Extra options passed to work_queue_worker. Default is ''.
     """
 
+    radio_mode = "filesystem"
+
     @typeguard.typechecked
     def __init__(self,
                  label: str = "WorkQueueExecutor",
