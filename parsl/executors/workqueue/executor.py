@@ -196,6 +196,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             'work_queue_worker'.
     """
 
+    radio_mode = "filesystem"
+
     @typeguard.typechecked
     def __init__(self,
                  label: str = "WorkQueueExecutor",
