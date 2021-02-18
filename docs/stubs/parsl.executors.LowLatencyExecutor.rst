@@ -38,6 +38,7 @@ parsl.executors.LowLatencyExecutor
       ~LowLatencyExecutor.executor_exception
       ~LowLatencyExecutor.hub_address
       ~LowLatencyExecutor.hub_port
+      ~LowLatencyExecutor.outstanding
       ~LowLatencyExecutor.provider
       ~LowLatencyExecutor.run_dir
       ~LowLatencyExecutor.scaling_enabled
