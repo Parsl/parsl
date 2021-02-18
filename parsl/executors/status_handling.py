@@ -1,7 +1,7 @@
 import logging
 import threading
 from itertools import compress
-from abc import abstractmethod
+from abc import abstractmethod, abstractproperty
 from concurrent.futures import Future
 from typing import List, Any, Dict, Tuple
 
@@ -64,6 +64,13 @@ class StatusHandlingExecutor(ParslExecutor):
             block_id = "failed-block-{}".format(self._generated_block_id_counter)
             self._generated_block_id_counter += 1
         self._simulated_status[block_id] = JobStatus(JobState.FAILED, message)
+
+    @abstractproperty
+    def outstanding(self) -> int:
+        """This should return the number of tasks that the executor has been given to run (waiting to run, and running now)"""
+
+        raise NotImplementedError("Classes inheriting from StatusHandlingExecutor must implement "
+                                  "outstanding()")
 
     def status(self) -> Dict[str, JobStatus]:
         """Return status of all blocks."""
