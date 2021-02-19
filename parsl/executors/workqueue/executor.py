@@ -337,16 +337,17 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         if resource_specification and isinstance(resource_specification, dict):
             logger.debug("Got resource specification: {}".format(resource_specification))
 
+            required_resource_types = set(['cores', 'memory', 'disk'])
             acceptable_resource_types = set(['cores', 'memory', 'disk', 'gpus'])
             keys = set(resource_specification.keys())
-            if self.autolabel:
-                if not keys.issubset(acceptable_resource_types):
-                    message = "Task resource specification only accepts these types of resources: {}".format(
-                            ', '.join(acceptable_resource_types))
-                    logger.error(message)
-                    raise ExecutorError(self, message)
 
-            elif keys != acceptable_resource_types:
+            if not keys.issubset(acceptable_resource_types):
+                message = "Task resource specification only accepts these types of resources: {}".format(
+                        ', '.join(acceptable_resource_types))
+                logger.error(message)
+                raise ExecutorError(self, message)
+
+            if not self.autolabel and not keys.issuperset(required_resource_types):
                 logger.error("Running with `autolabel=False`. In this mode, "
                              "task resource specification requires "
                              "three resources to be specified simultaneously: cores, memory, and disk")
