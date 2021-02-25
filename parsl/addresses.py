@@ -7,7 +7,6 @@ so some experimentation will probably be needed to choose the correct one.
 """
 
 import logging
-import os
 import platform
 import requests
 import socket
