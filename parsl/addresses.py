@@ -36,7 +36,6 @@ def address_by_route() -> str:
     s.connect(("8.8.8.8", 80))
     addr = s.getsockname()[0]
     s.close()
-        
     logger.debug("Address found: {}".format(addr))
     return addr
 
