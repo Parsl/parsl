@@ -73,10 +73,10 @@ workqueue_ex_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex conf
 	PYTHONPATH=.:/tmp/cctools/lib/python3.5/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --cov=parsl --cov-append --cov-report= --random-order
 
 .PHONY: config_local_test
-config_local_test: ## run all tests with workqueue_ex config
+config_local_test:
 	echo "$(MPI)"
 	parsl/executors/extreme_scale/install-mpi.sh $(MPI)
-	pip3 install ".[extreme_scale]"
+	pip3 install ".[extreme_scale,monitoring]"
 	PYTHONPATH=. pytest parsl/tests/ -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= --random-order --random-order-bucket=module --random-order-seed=435554
 
 .PHONY: site_test
