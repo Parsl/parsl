@@ -2,7 +2,10 @@ from parsl.app.app import join_app, python_app
 
 
 @python_app
-def sum(*args):
+def add(*args):
+    """Add all of the arguments together. If no arguments, then
+    zero is returned (the neutral element of +)
+    """
     accumulator = 0
     for v in args:
         accumulator += v
@@ -12,11 +15,11 @@ def sum(*args):
 @join_app
 def fibonacci(n):
     if n == 0:
-        return sum()
+        return add()
     elif n == 1:
-        return sum(1)
+        return add(1)
     else:
-        return sum(fibonacci(n - 1), fibonacci(n - 2))
+        return add(fibonacci(n - 1), fibonacci(n - 2))
 
 
 def test_fibonacci():

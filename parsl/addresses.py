@@ -7,7 +7,6 @@ so some experimentation will probably be needed to choose the correct one.
 """
 
 import logging
-import os
 import platform
 import requests
 import socket
@@ -29,7 +28,13 @@ def address_by_route() -> str:
        not reachable from workers.
     """
     logger.debug("Finding address by querying local routing table")
-    addr = os.popen("/sbin/ip route get 8.8.8.8 | awk '{print $NF;exit}'").read().strip()
+
+    # original author unknown
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    addr = s.getsockname()[0]
+    s.close()
     logger.debug("Address found: {}".format(addr))
     return addr
 

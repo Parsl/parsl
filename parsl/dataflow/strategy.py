@@ -155,11 +155,7 @@ class Strategy(object):
         self._general_strategy(status_list, tasks, strategy_type='simple')
 
     def _strategy_htex_auto_scale(self, status_list, tasks):
-        self._general_strategy(status_list, tasks, strategy_type='htex')
-
-    def _general_strategy(self, status_list, tasks, *, strategy_type):
-
-        """ HTEX specific auto scaling strategy
+        """HTEX specific auto scaling strategy
 
         This strategy works only for HTEX. This strategy will scale up by
         requesting additional compute resources via the provider when the
@@ -176,6 +172,9 @@ class Strategy(object):
         Args:
             - tasks (task_ids): Not used here.
         """
+        self._general_strategy(status_list, tasks, strategy_type='htex')
+
+    def _general_strategy(self, status_list, tasks, *, strategy_type):
         for exec_status in status_list:
             executor = exec_status.executor
             label = executor.label

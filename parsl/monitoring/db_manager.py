@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar
 
 from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
-from parsl.providers.error import OptionalModuleMissing
+from parsl.errors import OptionalModuleMissing
 from parsl.monitoring.message_type import MessageType
 from parsl.process_loggers import wrap_with_logs
 
@@ -364,7 +364,7 @@ class DatabaseManager:
                     task_info_update_messages, task_info_insert_messages, task_info_all_messages = [], [], []
                     try_update_messages, try_insert_messages, try_all_messages = [], [], []
                     for msg_type, msg in priority_messages:
-                        if msg_type.value == MessageType.WORKFLOW_INFO.value:
+                        if msg_type == MessageType.WORKFLOW_INFO:
                             if "python_version" in msg:   # workflow start message
                                 logger.debug(
                                     "Inserting workflow start info to WORKFLOW table")
@@ -379,7 +379,7 @@ class DatabaseManager:
                                              messages=[msg])
                                 self.workflow_end = True
 
-                        elif msg_type.value == MessageType.TASK_INFO.value:
+                        elif msg_type == MessageType.TASK_INFO:
                             task_try_id = str(msg['task_id']) + "." + str(msg['try_id'])
                             task_info_all_messages.append(msg)
                             if msg['task_id'] in inserted_tasks:
