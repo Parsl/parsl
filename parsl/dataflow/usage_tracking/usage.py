@@ -178,7 +178,7 @@ class UsageTracker (object):
 
         site_count = len([x for x in self.dfk.config.executors if x.managed])
 
-        app_fails = self.dfk.tasks_failed_count + self.tasks_dep_fail_count
+        app_fails = self.dfk.tasks_failed_count + self.dfk.tasks_dep_fail_count
 
         message = {'uuid': self.uuid,
                    'end': time.time(),
