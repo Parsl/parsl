@@ -19,6 +19,14 @@ config = Config(
 parsl.load(config)
 
 
+def callback(future,**kwargs):
+
+    if not future.cancelled():
+        print('Callback result: ', future.result())
+    else:
+        print('Future was cancelled!')
+
+
 @balsam_app(executors=["BalsamExecutor"])
 def hello(inputs=[]):
     return "echo Hello"
@@ -27,15 +35,6 @@ def hello(inputs=[]):
 @balsam_app(executors=["BalsamExecutor"])
 def world(inputs=[]):
     return "echo {} World".format(inputs[0])
-
-
-def callback(future,**kwargs):
-
-    if not future.cancelled():
-        print('Callback result: ', future.result())
-    else:
-        print('Future was cancelled!')
-
 
 SITE_ID = 1
 CLASS_PATH = 'parslapprunner.ParslAppRunner'
