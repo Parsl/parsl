@@ -10,6 +10,8 @@ import inspect
 import threading
 import sys
 import datetime
+import asyncio
+
 from getpass import getuser
 from typing import Any, Dict, List, Optional, Sequence
 from uuid import uuid4
@@ -37,6 +39,14 @@ from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints
 from parsl.monitoring.message_type import MessageType
 
 logger = logging.getLogger(__name__)
+
+
+def assert_is_future(future):
+    try:
+        assert isinstance(future, Future)
+    except:
+        import asyncio
+        assert isinstance(future, asyncio.Future)
 
 
 class DataFlowKernel(object):
@@ -336,7 +346,8 @@ class DataFlowKernel(object):
                     # listener to that inner future.
 
                     inner_future = future.result()
-                    assert isinstance(inner_future, Future)
+                    assert_is_future(inner_future)
+                    #assert isinstance(inner_future, Future)
                     task_record['status'] = States.joining
                     task_record['joins'] = inner_future
                     inner_future.add_done_callback(partial(self.handle_join_update, task_id))
@@ -491,7 +502,7 @@ class DataFlowKernel(object):
                         try:
                             exec_fu = self.launch_task(
                                 task_id, task_record['func'], *new_args, **kwargs)
-                            assert isinstance(exec_fu, Future)
+                            assert_is_future(exec_fu)
                         except Exception as e:
                             # task launched failed somehow. the execution might
                             # have been launched and an exception raised after
@@ -516,10 +527,18 @@ class DataFlowKernel(object):
                 exec_fu.set_exception(DependencyError(exceptions,
                                                       task_id))
 
+            async def async_result(future):
+                future.result()
+
             if exec_fu:
-                assert isinstance(exec_fu, Future)
+                assert_is_future(exec_fu)
                 try:
                     exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
+
+                    if isinstance(exec_fu, asyncio.Future):
+                        event_loop = asyncio.get_event_loop()
+                        event_loop.run_until_complete(async_result(exec_fu))
+
                 except Exception:
                     # this exception is ignored here because it is assumed that exception
                     # comes from directly executing handle_exec_update (because exec_fu is
@@ -557,7 +576,7 @@ class DataFlowKernel(object):
         if memo_fu:
             logger.info("Reusing cached result for task {}".format(task_id))
             self.tasks[task_id]['from_memo'] = True
-            assert isinstance(memo_fu, Future)
+            assert_is_future(memo_fu)
             return memo_fu
 
         self.tasks[task_id]['from_memo'] = False
