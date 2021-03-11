@@ -32,7 +32,7 @@ class BalsamUnsupportedFeatureException(Exception):
     pass
 
 
-class BalsamFuture:
+class BalsamFuture(Future):
     """
 
     """
@@ -41,11 +41,31 @@ class BalsamFuture:
     _future: Future = None
 
     def __init__(self, job, future):
+        super(BalsamFuture, self).__init__()
         self._job = job
         self._future = future
 
     def submit(self):
         pass
+
+    def result(self):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.get_result())
+        return self._future.result()
+
+    def __repr__(self):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.get_result())
+        return self._future.result()
+
+    def cancel(self, msg: Optional[str] = ...) -> bool:
+        self._future.cancel(msg)
+
+    def done(self) -> bool:
+        return self._future.done()
+
+    def cancelled(self) -> bool:
+        return self._future.cancelled()
 
     async def get_result(self):
         """
@@ -205,7 +225,8 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             logger.debug("Making workdir for job: {}".format(workdir))
             os.makedirs(_workdir, exist_ok=True)
             logger.debug("Running loop.run_until_complete: ", job)
-            loop.run_until_complete(balsam_future.get_result())
+
+            #loop.run_until_complete(balsam_future.get_result())
 
         if thread:
             logger.debug("Starting job thread: ", job)
