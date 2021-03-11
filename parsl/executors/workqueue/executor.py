@@ -25,14 +25,14 @@ import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
 from parsl.errors import OptionalModuleMissing
-from parsl.executors.status_handling import NoStatusHandlingExecutor
+from parsl.executors.block_based import BlockProviderExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
 from parsl.executors.errors import ScalingFailed
 from parsl.executors.workqueue import exec_parsl_function
 
 import typeguard
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Union
 from parsl.data_provider.staging import Staging
 
 from .errors import WorkQueueTaskFailure
@@ -74,7 +74,7 @@ WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason st
 ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name stage cache')
 
 
-class WorkQueueExecutor(NoStatusHandlingExecutor):
+class WorkQueueExecutor(BlockProviderExecutor):
     """Executor to use Work Queue batch system
 
     The WorkQueueExecutor system utilizes the Work Queue framework to
@@ -211,8 +211,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  worker_options: str = "",
                  full_debug: bool = True,
                  worker_executable: str = 'work_queue_worker'):
-        NoStatusHandlingExecutor.__init__(self)
-        self._provider = provider
+        BlockProviderExecutor.__init__(self, provider)
         self._scaling_enabled = True
 
         if not _work_queue_enabled:
@@ -262,6 +261,11 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.launch_cmd = ("{package_prefix}python3 exec_parsl_function.py {mapping} {function} {result}")
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
+
+    def _get_launch_command(self, block_id):
+        # this executor uses different terminology for worker/launch
+        # commands than in htex
+        return self.worker_command
 
     def start(self):
         """Create submit process and collector thread to create, send, and
@@ -577,6 +581,8 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.worker_command = self._construct_worker_command()
         self._patch_providers()
 
+        # TODO: this init_blocks handling should be factored with the
+        # corresponding htex handling and put into the BlockProviderExecutor
         if hasattr(self.provider, 'init_blocks'):
             try:
                 self.scale_out(blocks=self.provider.init_blocks)
@@ -584,7 +590,18 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                 logger.debug("Scaling out failed: {}".format(e))
                 raise e
 
-    def scale_out(self, blocks=1):
+    @property
+    def outstanding(self) -> int:
+        """TODO: this is very inefficient and probably should be replaced with
+        counters, but this one is minimally invasive to the rest of the code."""
+        outstanding = 0
+        for fut in self.tasks.values():
+            if not fut.done():
+                outstanding += 1
+        logger.debug(f"Counted {outstanding} outstanding tasks")
+        return outstanding
+
+    def xxxold_scale_out(self, blocks=1):
         """Scale out method.
 
         We should have the scale out method simply take resource object
@@ -602,6 +619,10 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                     self.blocks[external_block] = internal_block
         else:
             logger.error("No execution provider available to scale")
+
+    @property
+    def workers_per_node(self) -> Union[int, float]:
+        return 1
 
     def scale_in(self, count):
         """Scale in method. Not implemented.
