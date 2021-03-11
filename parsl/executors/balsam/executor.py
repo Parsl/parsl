@@ -226,7 +226,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             os.makedirs(_workdir, exist_ok=True)
             logger.debug("Running loop.run_until_complete: ", job)
 
-            #loop.run_until_complete(balsam_future.get_result())
+            loop.run_until_complete(balsam_future.get_result())
 
         if thread:
             logger.debug("Starting job thread: ", job)
