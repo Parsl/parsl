@@ -517,6 +517,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
     os.environ['PARSL_WORKER_RANK'] = str(worker_id)
     os.environ['PARSL_WORKER_COUNT'] = str(pool_size)
     os.environ['PARSL_WORKER_POOL_ID'] = str(pool_id)
+    os.environ['PARSL_WORKER_BLOCK_ID'] = str(args.block_id)
 
     # share the result queue with monitoring code so it too can send results down that channel
     import parsl.executors.high_throughput.monitoring_info as mi

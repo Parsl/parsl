@@ -159,6 +159,7 @@ class Database:
         task_id = Column('task_id', Integer, nullable=False)
         run_id = Column('run_id', Text, nullable=False)
 
+        block_id = Column('block_id', Text, nullable=True)
         hostname = Column('hostname', Text, nullable=True)
 
         task_executor = Column('task_executor', Text, nullable=False)
@@ -507,7 +508,7 @@ class DatabaseManager:
                     self._update(table=TRY,
                                  columns=['task_try_time_running',
                                           'run_id', 'task_id', 'try_id',
-                                          'hostname'],
+                                          'block_id', 'hostname'],
                                  messages=reprocessable_first_resource_messages)
             except Exception:
                 logger.exception("Exception in db loop: this might have been a malformed message, or some other error. monitoring data may have been lost")
