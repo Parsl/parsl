@@ -548,6 +548,7 @@ def send_first_message(try_id: int,
                        monitoring_hub_url: str,
                        run_id: str) -> None:
     import platform
+    import os
 
     radio = UDPRadio(monitoring_hub_url,
                      source_id=task_id)
@@ -556,6 +557,7 @@ def send_first_message(try_id: int,
            'try_id': try_id,
            'task_id': task_id,
            'hostname': platform.node(),
+           'block_id': os.environ.get('PARSL_WORKER_BLOCK_ID'),
            'first_msg': True,
            'timestamp': datetime.datetime.now()
     }
