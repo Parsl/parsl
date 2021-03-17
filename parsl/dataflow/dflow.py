@@ -657,6 +657,7 @@ class DataFlowKernel(object):
         try:
             executor = self.executors[executor_label]
         except Exception:
+            # TODO: this exception should maybe list self.executors.keys() rather than the entire config?
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
             raise ValueError("Task {} requested invalid executor {}".format(task_id, executor_label))
 
