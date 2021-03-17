@@ -78,12 +78,12 @@ class MonitoringRadio(metaclass=ABCMeta):
 
 
 class FilesystemRadio(MonitoringRadio):
-    def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
+    def __init__(self, *, monitoring_hub_url: str, source_id: int, timeout: int = 10, run_dir: str):
         logger.info("filesystem based monitoring channel initializing")
         self.source_id = source_id
         self.id_counter = 0
         self.radio_uid = f"host-{socket.gethostname()}-pid-{os.getpid()}-radio-{id(self)}"
-        self.base_path = "/global/u1/b/bxc/tmp-parsl-radio/"
+        self.base_path = f"{run_dir}/monitor-fs-radio/"
 
     def send(self, message: object) -> None:
         logger.info("Sending a monitoring message via filesystem")
@@ -314,7 +314,7 @@ class MonitoringHub(RepresentationMixin):
         self.resource_monitoring_enabled = resource_monitoring_enabled
         self.resource_monitoring_interval = resource_monitoring_interval
 
-    def start(self, run_id: str) -> int:
+    def start(self, run_id: str, run_dir: str) -> int:
 
         if self.logdir is None:
             self.logdir = "."
@@ -371,10 +371,9 @@ class MonitoringHub(RepresentationMixin):
         self.logger.info("Started the Hub process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
         self.filesystem_proc = Process(target=filesystem_receiver,
-                                       args=(self.logdir, self.resource_msgs),
+                                       args=(self.logdir, self.resource_msgs, run_dir),
                                        name="Monitoring-Filesystem-Process",
-                                       daemon=True
-        )
+                                       daemon=True)
         self.filesystem_proc.start()
         self.logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
 
@@ -447,7 +446,8 @@ class MonitoringHub(RepresentationMixin):
                         logging_level: int,
                         sleep_dur: float,
                         radio_mode: str,
-                        monitor_resources: bool) -> Callable:
+                        monitor_resources: bool,
+                        run_dir: str) -> Callable:
         """ Internal
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
@@ -458,7 +458,8 @@ class MonitoringHub(RepresentationMixin):
                                task_id,
                                monitoring_hub_url,
                                run_id,
-                               radio_mode)
+                               radio_mode,
+                               run_dir)
             logger.debug("wrapped: 2. sent first message")
 
             p: Optional[Process]
@@ -472,7 +473,7 @@ class MonitoringHub(RepresentationMixin):
                                        run_id,
                                        radio_mode,
                                        logging_level,
-                                       sleep_dur),
+                                       sleep_dur, run_dir),
                                  name="Monitor-Wrapper-{}".format(task_id))
                 logger.debug("wrapped: 3. created monitor process, pid {}".format(pp.pid))
                 pp.start()
@@ -497,7 +498,7 @@ class MonitoringHub(RepresentationMixin):
                                   task_id,
                                   monitoring_hub_url,
                                   run_id,
-                                  radio_mode)
+                                  radio_mode, run_dir)
                 logger.debug("wrapped: 10.1 sent last message")
                 # There's a chance of zombification if the workers are killed by some signals
                 if p:
@@ -510,12 +511,22 @@ class MonitoringHub(RepresentationMixin):
 
 # this needs proper typing, but I was having some problems with typeguard...
 @wrap_with_logs
-def filesystem_receiver(logdir: str, q: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]", base_path: str = "./") -> None:
-    new_dir = f"{base_path}/new"
+def filesystem_receiver(logdir: str, q: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]", run_dir: str) -> None:
     logger = start_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
                                name="monitoring_filesystem_radio",
                                level=logging.DEBUG)
     logger.info("Starting filesystem radio receiver")
+    # TODO: these paths should be created by path tools, not f-strings
+    # likewise the other places where tmp_dir, new_dir are created on
+    # the sending side.
+    base_path = f"{run_dir}/monitor-fs-radio/"
+    tmp_dir = f"{base_path}/tmp/"
+    new_dir = f"{base_path}/new/"
+    logger.debug("Creating new and tmp paths")
+
+    os.makedirs(tmp_dir)
+    os.makedirs(new_dir)
+
     while True:  # needs an exit condition, that also copes with late messages
         # like the UDP radio receiver.
         logger.info("Start filesystem radio receiver loop")
@@ -758,7 +769,7 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
 def send_first_message(try_id: int,
                        task_id: int,
                        monitoring_hub_url: str,
-                       run_id: str, radio_mode: str) -> None:
+                       run_id: str, radio_mode: str, run_dir: str) -> None:
     import platform
     import os
 
@@ -770,8 +781,8 @@ def send_first_message(try_id: int,
         radio = HTEXRadio(monitoring_hub_url,
                           source_id=task_id)
     elif radio_mode == "filesystem":
-        radio = FilesystemRadio(monitoring_hub_url,
-                                source_id=task_id)
+        radio = FilesystemRadio(monitoring_hub_url=monitoring_hub_url,
+                                source_id=task_id, run_dir=run_dir)
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
@@ -793,7 +804,7 @@ def send_first_message(try_id: int,
 def send_last_message(try_id: int,
                       task_id: int,
                       monitoring_hub_url: str,
-                      run_id: str, radio_mode: str) -> None:
+                      run_id: str, radio_mode: str, run_dir: str) -> None:
     import platform
     import os
 
@@ -805,8 +816,8 @@ def send_last_message(try_id: int,
         radio = HTEXRadio(monitoring_hub_url,
                           source_id=task_id)
     elif radio_mode == "filesystem":
-        radio = FilesystemRadio(monitoring_hub_url,
-                                source_id=task_id)
+        radio = FilesystemRadio(monitoring_hub_url=monitoring_hub_url,
+                                source_id=task_id, run_dir=run_dir)
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
@@ -831,7 +842,7 @@ def monitor(pid: int,
             run_id: str,
             radio_mode: str,
             logging_level: int = logging.INFO,
-            sleep_dur: float = 10) -> None:
+            sleep_dur: float = 10, run_dir: str = "./") -> None:
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
     """
@@ -848,8 +859,8 @@ def monitor(pid: int,
         radio = HTEXRadio(monitoring_hub_url,
                           source_id=task_id)
     elif radio_mode == "filesystem":
-        radio = FilesystemRadio(monitoring_hub_url,
-                                source_id=task_id)
+        radio = FilesystemRadio(monitoring_hub_url=monitoring_hub_url,
+                                source_id=task_id, run_dir=run_dir)
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
