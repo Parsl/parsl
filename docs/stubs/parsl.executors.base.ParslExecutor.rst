@@ -38,6 +38,7 @@ parsl.executors.base.ParslExecutor
       ~ParslExecutor.executor_exception
       ~ParslExecutor.hub_address
       ~ParslExecutor.hub_port
+      ~ParslExecutor.radio_mode
       ~ParslExecutor.run_dir
       ~ParslExecutor.scaling_enabled
       ~ParslExecutor.status_polling_interval

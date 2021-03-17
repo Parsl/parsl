@@ -26,7 +26,6 @@ parsl.executors.ExtremeScaleExecutor
       ~ExtremeScaleExecutor.start
       ~ExtremeScaleExecutor.status
       ~ExtremeScaleExecutor.submit
-      ~ExtremeScaleExecutor.weakref_cb
    
    
 
@@ -45,9 +44,11 @@ parsl.executors.ExtremeScaleExecutor
       ~ExtremeScaleExecutor.hub_port
       ~ExtremeScaleExecutor.outstanding
       ~ExtremeScaleExecutor.provider
+      ~ExtremeScaleExecutor.radio_mode
       ~ExtremeScaleExecutor.run_dir
       ~ExtremeScaleExecutor.scaling_enabled
       ~ExtremeScaleExecutor.status_polling_interval
       ~ExtremeScaleExecutor.tasks
+      ~ExtremeScaleExecutor.workers_per_node
    
    

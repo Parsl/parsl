@@ -26,7 +26,6 @@ parsl.executors.HighThroughputExecutor
       ~HighThroughputExecutor.start
       ~HighThroughputExecutor.status
       ~HighThroughputExecutor.submit
-      ~HighThroughputExecutor.weakref_cb
    
    
 
@@ -45,9 +44,11 @@ parsl.executors.HighThroughputExecutor
       ~HighThroughputExecutor.hub_port
       ~HighThroughputExecutor.outstanding
       ~HighThroughputExecutor.provider
+      ~HighThroughputExecutor.radio_mode
       ~HighThroughputExecutor.run_dir
       ~HighThroughputExecutor.scaling_enabled
       ~HighThroughputExecutor.status_polling_interval
       ~HighThroughputExecutor.tasks
+      ~HighThroughputExecutor.workers_per_node
    
    

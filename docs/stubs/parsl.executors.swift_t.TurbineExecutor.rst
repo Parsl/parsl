@@ -40,6 +40,7 @@ parsl.executors.swift\_t.TurbineExecutor
       ~TurbineExecutor.hub_address
       ~TurbineExecutor.hub_port
       ~TurbineExecutor.provider
+      ~TurbineExecutor.radio_mode
       ~TurbineExecutor.run_dir
       ~TurbineExecutor.scaling_enabled
       ~TurbineExecutor.status_polling_interval

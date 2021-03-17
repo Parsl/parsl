@@ -27,6 +27,7 @@ parsl.executors.WorkQueueExecutor
       ~WorkQueueExecutor.start
       ~WorkQueueExecutor.status
       ~WorkQueueExecutor.submit
+      ~WorkQueueExecutor.xxxold_scale_out
    
    
 
@@ -41,8 +42,11 @@ parsl.executors.WorkQueueExecutor
       ~WorkQueueExecutor.executor_exception
       ~WorkQueueExecutor.hub_address
       ~WorkQueueExecutor.hub_port
+      ~WorkQueueExecutor.outstanding
       ~WorkQueueExecutor.provider
+      ~WorkQueueExecutor.radio_mode
       ~WorkQueueExecutor.status_polling_interval
       ~WorkQueueExecutor.tasks
+      ~WorkQueueExecutor.workers_per_node
    
    
