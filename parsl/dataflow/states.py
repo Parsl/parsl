@@ -19,6 +19,12 @@ class States(IntEnum):
     memo_done = 9
     joining = 10
 
+    # like States.running, this state is also not observed by the DFK,
+    # but instead only by monitoring. This state does not record
+    # anything about task success or failure, merely that the wrapper
+    # ran long enough to record it as finished.
+    running_ended = 11
+
 
 # states from which we will never move to another state
 FINAL_STATES = [States.exec_done, States.memo_done, States.failed, States.dep_fail]

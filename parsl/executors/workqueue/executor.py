@@ -25,14 +25,14 @@ import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
 from parsl.errors import OptionalModuleMissing
-from parsl.executors.status_handling import StatusHandlingExecutor
+from parsl.executors.block_based import BlockProviderExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
 from parsl.executors.errors import ScalingFailed
 from parsl.executors.workqueue import exec_parsl_function
 
 import typeguard
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Union
 from parsl.data_provider.staging import Staging
 
 from .errors import WorkQueueTaskFailure
@@ -74,7 +74,7 @@ WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason st
 ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name stage cache')
 
 
-class WorkQueueExecutor(StatusHandlingExecutor):
+class WorkQueueExecutor(BlockProviderExecutor):
     """Executor to use Work Queue batch system
 
     The WorkQueueExecutor system utilizes the Work Queue framework to
@@ -206,13 +206,9 @@ class WorkQueueExecutor(StatusHandlingExecutor):
                  init_command: str = "",
                  worker_options: str = "",
                  full_debug: bool = True):
+        BlockProviderExecutor.__init__(self, provider)
 
-        # BENC: if this was factored into something mixin-like, what would
-        # this call look like? Does super.init() get called in general here
-        # at all? Maybe this can't fit into that mixin style of inheritance?
-        StatusHandlingExecutor.__init__(self, provider)
-
-        self._provider = provider
+        # ? should this be true even when not using a provider?
         self._scaling_enabled = True
 
         if not _work_queue_enabled:
@@ -262,62 +258,10 @@ class WorkQueueExecutor(StatusHandlingExecutor):
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
-    # BENC: copied from htex / driven by whats missing when the scaling strategy
-    # code tries to do anything. Maybe these make sense to factor out into the
-    # status handling executor.
-
-    def _get_block_and_job_ids(self) -> Tuple[List[str], List[Any]]:
-        # Not using self.blocks.keys() and self.blocks.values() simultaneously
-        # The dictionary may be changed during invoking this function
-        # As scale_in and scale_out are invoked in multiple threads
-        block_ids = list(self.blocks.keys())
-        job_ids = []  # types: List[Any]
-        for bid in block_ids:
-            job_ids.append(self.blocks[bid])
-        return block_ids, job_ids
-
-    # the scaling code wants this... but there is nothing requiring it to exist.
-    @property
-    def outstanding(self):
-
-        # this is going to cost scale linearly with the total number of tasks
-        # run in a run which is bad, but for now it isn't invasive into other
-        # bits of workqueue/executor.py - probably what should happen is that
-        # the relevant entry be removed from self.tasks, and then the number
-        # of tasks in self.tasks is the answer to this question.
-
-        count = 0
-        for key in self.tasks:
-            task = self.tasks[key]
-            if not task.done():
-                count += 1
-
-        logger.debug(f"BENC: outstanding: len(self.tasks) = {len(self.tasks)}, count = {count}")
-        return count
-
-    @property
-    def workers_per_node(self) -> int:
-        """BENC:
-        The use of the term 'worker' is a bit fragile here:
-
-        the terminology used in other parts of parsl has:
-         one worker = the ability to run one task at any instance in time
-        but work_queue_worker can run many tasks at once from what wq calls a worker.
-
-        In that sense, one wq worker == one parsl process_worker_pool.
-
-        The parsl scaling code interprets this field as meaning how many tasks are
-        expected to be able to be run simultanously on a node.
-
-        One of the goals of using WQ with parsl is that this can be dynamic, so there
-        isn't one sensible value here. However, for LSST DRP, I don't want any
-        subtleties of scaling here: I want parsl to maintain one large block of
-        eg 1000 nodes in the queue at once, until all the work is done
-
-        """
-        return 1
-
-    # END BENC copies from htex to make the scaling API happy.
+    def _get_launch_command(self, block_id):
+        # this executor uses different terminology for worker/launch
+        # commands than in htex
+        return self.worker_command
 
     def start(self):
         """Create submit process and collector thread to create, send, and
@@ -633,6 +577,8 @@ class WorkQueueExecutor(StatusHandlingExecutor):
         self.worker_command = self._construct_worker_command()
         self._patch_providers()
 
+        # TODO: this init_blocks handling should be factored with the
+        # corresponding htex handling and put into the BlockProviderExecutor
         if hasattr(self.provider, 'init_blocks'):
             try:
                 self.scale_out(blocks=self.provider.init_blocks)
@@ -640,7 +586,18 @@ class WorkQueueExecutor(StatusHandlingExecutor):
                 logger.debug("Scaling out failed: {}".format(e))
                 raise e
 
-    def scale_out(self, blocks=1):
+    @property
+    def outstanding(self) -> int:
+        """TODO: this is very inefficient and probably should be replaced with
+        counters, but this one is minimally invasive to the rest of the code."""
+        outstanding = 0
+        for fut in self.tasks.values():
+            if not fut.done():
+                outstanding += 1
+        logger.debug(f"Counted {outstanding} outstanding tasks")
+        return outstanding
+
+    def xxxold_scale_out(self, blocks=1):
         """Scale out method.
 
         We should have the scale out method simply take resource object
@@ -658,6 +615,10 @@ class WorkQueueExecutor(StatusHandlingExecutor):
                     self.blocks[external_block] = internal_block
         else:
             logger.error("No execution provider available to scale")
+
+    @property
+    def workers_per_node(self) -> Union[int, float]:
+        return 1
 
     def scale_in(self, count):
         """Scale in method. Not implemented.

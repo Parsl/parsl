@@ -106,7 +106,7 @@ class DataFlowKernel(object):
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
             self.hub_address = self.monitoring.hub_address
-            self.hub_interchange_port = self.monitoring.start(self.run_id)
+            self.hub_interchange_port = self.monitoring.start(self.run_id, self.run_dir)
 
         self.time_began = datetime.datetime.now()
         self.time_completed = None
@@ -284,7 +284,7 @@ class DataFlowKernel(object):
         task_record['try_time_returned'] = datetime.datetime.now()
 
         if not future.done():
-            raise ValueError("done callback called, despite future not reporting itself as done")
+            raise RuntimeError("done callback called, despite future not reporting itself as done")
 
         try:
             res = self._unwrap_remote_exception_wrapper(future)
@@ -571,6 +571,7 @@ class DataFlowKernel(object):
         try:
             executor = self.executors[executor_label]
         except Exception:
+            # TODO: this exception should maybe list self.executors.keys() rather than the entire config?
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
             raise ValueError("Task {} requested invalid executor {}".format(task_id, executor_label))
 
@@ -583,9 +584,11 @@ class DataFlowKernel(object):
                                                          wrapper_logging_level,
                                                          self.monitoring.resource_monitoring_interval,
                                                          executor.radio_mode,
-                                                         executor.monitor_resources())
+                                                         executor.monitor_resources(),
+                                                         self.run_dir)
 
         with self.submitter_lock:
+            # TODO: that resource_specification parameter might be more obvious as a kwarg?
             exec_fu = executor.submit(executable, self.tasks[task_id]['resource_specification'], *args, **kwargs)
         self.tasks[task_id]['status'] = States.launched
 
@@ -788,7 +791,7 @@ class DataFlowKernel(object):
             ignore_for_cache = []
 
         if self.cleanup_called:
-            raise ValueError("Cannot submit to a DFK that has been cleaned up")
+            raise RuntimeError("Cannot submit to a DFK that has been cleaned up")
 
         task_id = self.task_count
         self.task_count += 1

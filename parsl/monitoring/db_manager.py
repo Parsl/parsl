@@ -496,6 +496,20 @@ class DatabaseManager:
                                 if task_try_id in deferred_resource_messages:
                                     logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
                                 deferred_resource_messages[task_try_id] = msg
+                        elif msg['last_msg']:
+                            # TODO: i haven't thought about htis logic, but
+                            # first_msg, last_msg doesn't make much sense as a flag
+                            # any more - should be a separate message type for
+                            #   i) run/end run messages, ii) resource messages
+                            # Update the running time to try table if first message
+                            msg['task_status_name'] = States.running_ended.name
+                            msg['task_try_time_running'] = msg['timestamp']
+                            # making some assumptions that the primary key has
+                            # been added to inserted_tries already... but maybe
+                            # that assumption is made for insert_resource_messages
+                            # messages too?
+                            reprocessable_first_resource_messages.append(msg)
+
                         else:
                             # Insert to resource table if not first message
                             insert_resource_messages.append(msg)
