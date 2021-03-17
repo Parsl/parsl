@@ -82,19 +82,21 @@ class FilesystemRadio(MonitoringRadio):
         logger.info("filesystem based monitoring channel initializing")
         self.source_id = source_id
         self.id_counter = 0
+        self.radio_uid = f"host-{socket.gethostname()}-pid-{os.getpid()}-radio-{id(self)}"
+        self.base_path = "/global/u1/b/bxc/tmp-parsl-radio/"
 
     def send(self, message: object) -> None:
         logger.info("Sending a monitoring message via filesystem")
 
-        tmp_path = "/home/benc/tmp/parsl-radio/tmp"
-        new_path = "/home/benc/tmp/parsl-radio/new"
+        tmp_path = f"{self.base_path}/tmp"
+        new_path = f"{self.base_path}/new"
 
         # this should be randomised by things like worker ID, process ID, whatever
         # because there will in general be many FilesystemRadio objects sharing the
         # same space (even from the same process). id(self) used here will
         # disambiguate in one process at one instant, but not between
         # other things: eg different hosts, different processes, same process different non-overlapping instantiations
-        unique_id = f"msg-{id(self)}-{self.id_counter}"
+        unique_id = f"msg-{self.radio_uid}-{self.id_counter}"
 
         self.id_counter = self.id_counter + 1
 
@@ -490,6 +492,13 @@ class MonitoringHub(RepresentationMixin):
                 return r
             finally:
                 logger.debug("wrapped: 10 in 2nd finally")
+                logger.debug("wrapped: 10.1 sending last message")
+                send_last_message(try_id,
+                                  task_id,
+                                  monitoring_hub_url,
+                                  run_id,
+                                  radio_mode)
+                logger.debug("wrapped: 10.1 sent last message")
                 # There's a chance of zombification if the workers are killed by some signals
                 if p:
                     p.terminate()
@@ -501,8 +510,8 @@ class MonitoringHub(RepresentationMixin):
 
 # this needs proper typing, but I was having some problems with typeguard...
 @wrap_with_logs
-def filesystem_receiver(logdir: str, q: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]") -> None:
-    new_dir = "/home/benc/tmp/parsl-radio/new"
+def filesystem_receiver(logdir: str, q: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]", base_path: str = "./") -> None:
+    new_dir = f"{base_path}/new"
     logger = start_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
                                name="monitoring_filesystem_radio",
                                level=logging.DEBUG)
@@ -513,16 +522,19 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[Tuple[Tuple[MessageType, Di
 
         # iterate over files in new_dir
         for filename in os.listdir(new_dir):
-            logger.info(f"Processing filesystem radio file {filename}")
-            full_path_filename = f"{new_dir}/{filename}"
-            with open(full_path_filename, "rb") as f:
-                message = deserialize(f.read())
-            logger.info(f"Message received is: {message}")
-            assert(isinstance(message, tuple))
-            q.put(cast(Any, message))  # TODO: sort this typing/cast out
-            # should this addr field at the end be removed? does it ever
-            # get used in monitoring?
-            os.remove(full_path_filename)
+            try:
+                logger.info(f"Processing filesystem radio file {filename}")
+                full_path_filename = f"{new_dir}/{filename}"
+                with open(full_path_filename, "rb") as f:
+                    message = deserialize(f.read())
+                logger.info(f"Message received is: {message}")
+                assert(isinstance(message, tuple))
+                q.put(cast(Any, message))  # TODO: sort this typing/cast out
+                # should this addr field at the end be removed? does it ever
+                # get used in monitoring?
+                os.remove(full_path_filename)
+            except Exception:
+                logger.exception(f"Exception processing {filename} - probably will be retried next iteration")
 
         time.sleep(1)  # whats a good time for this poll?
 
@@ -769,6 +781,42 @@ def send_first_message(try_id: int,
            'hostname': platform.node(),
            'block_id': os.environ.get('PARSL_WORKER_BLOCK_ID'),
            'first_msg': True,
+           'last_msg': False,
+           'timestamp': datetime.datetime.now()
+    }
+    radio.send(msg)
+    return
+
+
+# TODO: factor with send_first_message
+@wrap_with_logs
+def send_last_message(try_id: int,
+                      task_id: int,
+                      monitoring_hub_url: str,
+                      run_id: str, radio_mode: str) -> None:
+    import platform
+    import os
+
+    radio: MonitoringRadio
+    if radio_mode == "udp":
+        radio = UDPRadio(monitoring_hub_url,
+                         source_id=task_id)
+    elif radio_mode == "htex":
+        radio = HTEXRadio(monitoring_hub_url,
+                          source_id=task_id)
+    elif radio_mode == "filesystem":
+        radio = FilesystemRadio(monitoring_hub_url,
+                                source_id=task_id)
+    else:
+        raise RuntimeError(f"Unknown radio mode: {radio_mode}")
+
+    msg = {'run_id': run_id,
+           'try_id': try_id,
+           'task_id': task_id,
+           'hostname': platform.node(),
+           'block_id': os.environ.get('PARSL_WORKER_BLOCK_ID'),
+           'first_msg': False,
+           'last_msg': True,
            'timestamp': datetime.datetime.now()
     }
     radio.send(msg)
@@ -833,6 +881,7 @@ def monitor(pid: int,
             d['resource_monitoring_interval'] = sleep_dur
             d['hostname'] = platform.node()
             d['first_msg'] = False
+            d['last_msg'] = False
             d['timestamp'] = datetime.datetime.now()
 
             logging.debug("getting children")

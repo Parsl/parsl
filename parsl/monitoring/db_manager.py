@@ -363,6 +363,13 @@ class DatabaseManager:
                 # processed (corresponding by task id)
                 reprocessable_first_resource_messages = []
 
+                # end-of-task-run status messages - handled in similar way as
+                # for last resource messages to try to have symmetry... this
+                # needs a type annotation though reprocessable_first_resource_messages
+                # doesn't... not sure why. Too lazy right now to figure out what,
+                # if any, more specific type than Any the messages have.
+                reprocessable_last_resource_messages: List[Any] = []
+
                 # Get a batch of priority messages
                 priority_messages = self._get_messages_in_batch(self.pending_priority_queue)
                 if priority_messages:
@@ -484,7 +491,11 @@ class DatabaseManager:
 
                 if resource_messages:
                     logger.debug(
-                        "Got {} messages from resource queue, {} reprocessable".format(len(resource_messages), len(reprocessable_first_resource_messages)))
+                        "Got {} messages from resource queue, "
+                        "{} reprocessable as first messages, "
+                        "{} reprocessable as last messages".format(len(resource_messages),
+                                                                   len(reprocessable_first_resource_messages),
+                                                                   len(reprocessable_last_resource_messages)))
 
                     insert_resource_messages = []
                     for msg in resource_messages:
@@ -500,8 +511,21 @@ class DatabaseManager:
                                 if task_try_id in deferred_resource_messages:
                                     logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
                                 deferred_resource_messages[task_try_id] = msg
+                        elif msg['last_msg']:
+                            # TODO: i haven't thought about htis logic, but
+                            # first_msg, last_msg doesn't make much sense as a flag
+                            # any more - should be a separate message type for
+                            #   i) run/end run messages, ii) resource messages
+                            # Update the running time to try table if first message
+                            msg['task_status_name'] = States.running_ended.name
+                            # making some assumptions that the primary key has
+                            # been added to inserted_tries already... but maybe
+                            # that assumption is made for insert_resource_messages
+                            # messages too?
+                            reprocessable_last_resource_messages.append(msg)
+
                         else:
-                            # Insert to resource table if not first message
+                            # Insert to resource table if not first/last (start/stop) message message
                             insert_resource_messages.append(msg)
 
                     if insert_resource_messages:
@@ -514,6 +538,9 @@ class DatabaseManager:
                                           'run_id', 'task_id', 'try_id',
                                           'block_id', 'hostname'],
                                  messages=reprocessable_first_resource_messages)
+
+                if reprocessable_last_resource_messages:
+                    self._insert(table=STATUS, messages=reprocessable_last_resource_messages)
             except Exception:
                 logger.exception("Exception in db loop: this might have been a malformed message, or some other error. monitoring data may have been lost")
                 exception_happened = True
