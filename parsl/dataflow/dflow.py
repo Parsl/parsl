@@ -673,6 +673,7 @@ class DataFlowKernel(object):
                                                          self.run_dir)
 
         with self.submitter_lock:
+            # TODO: that resource_specification parameter might be more obvious as a kwarg?
             exec_fu = executor.submit(executable, task_record['resource_specification'], *args, **kwargs)
         task_record['status'] = States.launched
 
