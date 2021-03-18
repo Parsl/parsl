@@ -146,8 +146,8 @@ def bash_app(function=None, data_flow_kernel=None, cache=False, executors='all',
     return decorator
 
 
-def balsam_app(function=None, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None):
-    """Decorator function for making bash apps.
+def balsam_app(function=None, data_flow_kernel=None, cache=False, walltime=60, executors='BalsamExecutor', ignore_for_cache=None):
+    """Decorator function for making balsam apps.
 
     Parameters
     ----------
@@ -173,6 +173,7 @@ def balsam_app(function=None, data_flow_kernel=None, cache=False, executors='all
             return BalsamApp(f,
                            data_flow_kernel=data_flow_kernel,
                            cache=cache,
+                           walltime=walltime,
                            executors=executors,
                            ignore_for_cache=ignore_for_cache)
         return wrapper(func)

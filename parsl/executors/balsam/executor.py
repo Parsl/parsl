@@ -83,7 +83,7 @@ class BalsamFuture(Future):
                 self._future.cancel()
                 return
 
-            await asyncio.sleep(2)
+            yield asyncio.sleep(2)
 
         if not self._future.cancelled():
             print("Result is available: ",self._job.data)

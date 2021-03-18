@@ -543,9 +543,10 @@ class DataFlowKernel(object):
                     # so this block attempts to keep the same behaviour here.
                     logger.error("add_done_callback got an exception which will be ignored", exc_info=True)
 
-                if isinstance(exec_fu, asyncio.Future):
-                    event_loop = asyncio.get_event_loop()
-                    event_loop.run_until_complete(async_result(exec_fu))
+                #if isinstance(exec_fu, asyncio.Future):
+                #    event_loop = asyncio.get_event_loop()
+                #    event_loop.run_until_complete(async_result(exec_fu))
+
                 task_record['exec_fu'] = exec_fu
 
     def launch_task(self, task_id, executable, *args, **kwargs):
