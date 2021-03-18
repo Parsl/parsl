@@ -5,6 +5,8 @@ from parsl.app.app import bash_app, python_app
 from parsl.tests.configs.local_threads import config
 from parsl.data_provider.files import File
 
+import pytest
+
 # parsl.set_stream_logger()
 
 
@@ -26,7 +28,7 @@ def total(inputs=[]):
             total += int(line)
     return total
 
-
+@pytest.mark.staging_required
 def test_parallel_dataflow():
     """Test parallel dataflow from docs on Composing workflows
     """
