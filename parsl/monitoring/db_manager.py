@@ -30,7 +30,8 @@ else:
 try:
     from sqlalchemy_utils import get_mapper
 except ImportError as e:
-    _sqlalchemy_utils_enabled = e
+    _sqlalchemy_utils_enabled = False
+    _sqlalchemy_utils_reason = e
 else:
     _sqlalchemy_utils_enabled = True
 
@@ -49,10 +50,10 @@ class Database:
         raise OptionalModuleMissing(['sqlalchemy'],
                                     ("Default database logging requires the sqlalchemy library."
                                      " Enable monitoring support with: pip install parsl[monitoring]"))
-    if _sqlalchemy_utils_enabled != True:
+    if not _sqlalchemy_utils_enabled:
         raise OptionalModuleMissing(['sqlalchemy_utils'],
                                     ("Default database logging requires the sqlalchemy_utils library."
-                                     " Enable monitoring support with: pip install parsl[monitoring]"), bt=_sqlalchemy_utils_enabled)
+                                     " Enable monitoring support with: pip install parsl[monitoring]"), bt=_sqlalchemy_utils_reason)
 
     Base = declarative_base()
 
