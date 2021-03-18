@@ -48,26 +48,8 @@ class BalsamFuture(Future):
     def submit(self):
         pass
 
-    def result(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.get_result())
-        return self._future.result()
-
-    def __repr__(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.get_result())
-        return self._future.result()
-
-    def cancel(self, msg: Optional[str] = ...) -> bool:
-        self._future.cancel(msg)
-
-    def done(self) -> bool:
-        return self._future.done()
-
-    def cancelled(self) -> bool:
-        return self._future.cancelled()
-
-    async def get_result(self):
+    @asyncio.coroutine
+    def get_result(self):
         """
         Poll Balsam2 API about this Job as long is job is either not finished,
         or gets cancelled by calling future.cancel() on the future object
@@ -80,17 +62,17 @@ class BalsamFuture(Future):
 
             if self._timeout <= 0:
                 print("Cancelling job due to timeout reached.")
-                self._future.cancel()
+                self.cancel()
                 return
 
-            yield asyncio.sleep(2)
+            yield time.sleep(2)
 
-        if not self._future.cancelled():
+        if not self.cancelled():
             print("Result is available: ",self._job.data)
-            self._future.set_result(self._job.data["result"])
-            self._future.done()
+            self.set_result(self._job.data["result"])
+            self.done()
 
-        if self._future.cancelled():
+        if self.cancelled():
             logger.info("Job future was cancelled")
 
 
@@ -124,6 +106,8 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.mode = mode
         self.tags = tags
         self.siteid = siteid
+        self.timeout = 30
+        self.sleep = 1
 
     def _get_block_and_job_ids(self) -> Tuple[List[str], List[Any]]:
         pass
@@ -152,6 +136,26 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         )
         batchjob.save()
 
+    @asyncio.coroutine
+    def poll_balsam_result(self, future):
+        while self.job.state != "JOB_FINISHED":
+
+            print("Checking result for {} in balsam...".format(self.appname))
+            self.job.refresh_from_db()
+
+            if self.timeout <= 0:
+                print("Cancelling job due to timeout reached.")
+                future.cancel()
+                return
+
+            print("Sleeping {} seconds...timeout in {} seconds.".format(self.sleep, self.timeout))
+            yield time.sleep(self.sleep)
+
+        if not self.future.cancelled():
+            print("Result is available {}: ".format(self.appname), self.job.data)
+            future.set_result(self.job.data["result"])
+            future.done()
+
     def submit(self, func: Callable, resource_specification: Dict[str, Any], *args: Any, **kwargs: Any) -> Future:
         """Submit
         submit(func,None, site_id, class_path, {})
@@ -169,7 +173,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         workdir = kwargs['workdir'] if 'workdir' in kwargs else 'site'+site_id+os.path.sep+"/"+appname
 
-        thread = kwargs['thread'] if 'thread' in kwargs else False
+        thread = kwargs['thread'] if 'thread' in kwargs else True
         callback = kwargs['callback'] if 'callback' in kwargs else None
         inputs = kwargs['inputs'] if 'inputs' in kwargs else []
         script = kwargs['script'] if 'script' in kwargs else 'bash'
@@ -212,6 +216,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         # Create a new Future object.
         future = loop.create_future()
+        #self.task = loop.create_task(self.poll_balsam_result(future))
 
         if callback:
             future.add_done_callback(callback)
@@ -225,8 +230,9 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             logger.debug("Making workdir for job: {}".format(workdir))
             os.makedirs(_workdir, exist_ok=True)
             logger.debug("Running loop.run_until_complete: ", job)
-
+            #self.task = loop.create_task(balsam_future.get_result())
             loop.run_until_complete(balsam_future.get_result())
+            print("Running...")
 
         if thread:
             logger.debug("Starting job thread: ", job)
@@ -235,7 +241,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         else:
             run()
 
-        return future
+        return balsam_future
 
     def scale_out(self, blocks: int) -> List[str]:
         """Scale out method.
