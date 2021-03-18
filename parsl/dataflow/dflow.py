@@ -527,8 +527,16 @@ class DataFlowKernel(object):
                 exec_fu.set_exception(DependencyError(exceptions,
                                                       task_id))
 
-            async def async_result(future):
-                future.result()
+            '''
+            @asyncio.coroutine
+            def async_result(future):
+                import time
+
+                if future.done():
+                    future.result()
+                else:
+                    yield
+            '''
 
             if exec_fu:
                 assert_is_future(exec_fu)
@@ -545,7 +553,8 @@ class DataFlowKernel(object):
 
                 #if isinstance(exec_fu, asyncio.Future):
                 #    event_loop = asyncio.get_event_loop()
-                #    event_loop.run_until_complete(async_result(exec_fu))
+                #    event_loop.create_task(async_result(exec_fu))
+
 
                 task_record['exec_fu'] = exec_fu
 
