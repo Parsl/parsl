@@ -24,10 +24,10 @@ from parsl.serialize import pack_apply_message
 import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
+from parsl.errors import OptionalModuleMissing
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
-from parsl.providers.error import OptionalModuleMissing
 from parsl.executors.errors import ScalingFailed
 from parsl.executors.workqueue import exec_parsl_function
 
@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
 
 
 # Support structure to communicate parsl tasks to the work queue submit thread.
-ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category cores memory disk env_pkg map_file function_file result_file input_files output_files')
+ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category cores memory disk gpus env_pkg map_file function_file result_file input_files output_files')
 
 # Support structure to communicate final status of work queue tasks to parsl
 # result is only valid if result_received is True
@@ -333,25 +333,26 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         cores = None
         memory = None
         disk = None
+        gpus = None
         if resource_specification and isinstance(resource_specification, dict):
             logger.debug("Got resource specification: {}".format(resource_specification))
 
-            acceptable_resource_types = set(['cores', 'memory', 'disk'])
+            required_resource_types = set(['cores', 'memory', 'disk'])
+            acceptable_resource_types = set(['cores', 'memory', 'disk', 'gpus'])
             keys = set(resource_specification.keys())
-            if self.autolabel:
-                if not keys.issubset(acceptable_resource_types):
-                    logger.error("Task resource specification only accepts "
-                                 "three types of resources: cores, memory, and disk")
-                    raise ExecutorError(self, "Task resource specification only accepts "
-                                              "three types of resources: cores, memory, and disk")
 
-            elif keys != acceptable_resource_types:
+            if not keys.issubset(acceptable_resource_types):
+                message = "Task resource specification only accepts these types of resources: {}".format(
+                        ', '.join(acceptable_resource_types))
+                logger.error(message)
+                raise ExecutorError(self, message)
+
+            if not self.autolabel and not keys.issuperset(required_resource_types):
                 logger.error("Running with `autolabel=False`. In this mode, "
                              "task resource specification requires "
                              "three resources to be specified simultaneously: cores, memory, and disk")
                 raise ExecutorError(self, "Task resource specification requires "
-                                          "three resources to be specified simultaneously: cores, memory, and disk, "
-                                          "and only takes these three resource types, when running with `autolabel=False`. "
+                                          "three resources to be specified simultaneously: cores, memory, and disk. "
                                           "Try setting autolabel=True if you are unsure of the resource usage")
 
             for k in keys:
@@ -361,6 +362,8 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                     memory = resource_specification[k]
                 elif k == 'disk':
                     disk = resource_specification[k]
+                elif k == 'gpus':
+                    gpus = resource_specification[k]
 
         self.task_counter += 1
         task_id = self.task_counter
@@ -423,6 +426,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                                  cores,
                                                  memory,
                                                  disk,
+                                                 gpus,
                                                  env_pkg,
                                                  map_file,
                                                  function_file,
@@ -788,6 +792,8 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                 t.specify_memory(task.memory)
             if task.disk is not None:
                 t.specify_disk(task.disk)
+            if task.gpus is not None:
+                t.specify_gpus(task.gpus)
 
             # Specify environment variables for the task
             if env is not None:

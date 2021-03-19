@@ -450,11 +450,11 @@ class MonitoringRouter:
                 try:
                     msg = self.dfk_channel.recv_pyobj()
                     self.logger.debug("Got ZMQ Message from DFK: {}".format(msg))
-                    if msg[0].value == MessageType.BLOCK_INFO.value:
+                    if msg[0] == MessageType.BLOCK_INFO:
                         block_msgs.put((msg, 0))
                     else:
                         priority_msgs.put((msg, 0))
-                    if msg[0].value == MessageType.WORKFLOW_INFO.value and 'python_version' not in msg[1]:
+                    if msg[0] == MessageType.WORKFLOW_INFO and 'python_version' not in msg[1]:
                         break
                 except zmq.Again:
                     pass
@@ -468,13 +468,13 @@ class MonitoringRouter:
                 try:
                     msg = self.ic_channel.recv_pyobj()
                     self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
-                    if msg[0].value == MessageType.NODE_INFO.value:
+                    if msg[0] == MessageType.NODE_INFO:
                         msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
                         msg[2]['run_id'] = self.run_id
                         msg[2]['timestamp'] = msg[1]
                         msg = (msg[0], msg[2])
                         node_msgs.put((msg, 0))
-                    elif msg[0].value == MessageType.BLOCK_INFO.value:
+                    elif msg[0] == MessageType.BLOCK_INFO:
                         block_msgs.put((msg, 0))
                     else:
                         self.logger.error(f"Discarding message from interchange with unknown type {msg[0].value}")
@@ -487,9 +487,9 @@ class MonitoringRouter:
                 try:
                     data, addr = self.sock.recvfrom(2048)
                     msg = pickle.loads(data)
+                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
                     resource_msgs.put((msg, addr))
                     last_msg_received_time = time.time()
-                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
                 except socket.timeout:
                     pass
 
@@ -548,6 +548,7 @@ def send_first_message(try_id: int,
                        monitoring_hub_url: str,
                        run_id: str) -> None:
     import platform
+    import os
 
     radio = UDPRadio(monitoring_hub_url,
                      source_id=task_id)
@@ -556,6 +557,7 @@ def send_first_message(try_id: int,
            'try_id': try_id,
            'task_id': task_id,
            'hostname': platform.node(),
+           'block_id': os.environ.get('PARSL_WORKER_BLOCK_ID'),
            'first_msg': True,
            'timestamp': datetime.datetime.now()
     }

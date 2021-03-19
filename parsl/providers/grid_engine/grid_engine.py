@@ -60,6 +60,8 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
     launcher : Launcher
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
+    cmd_timeout : int
+        Timeout for commands made to the scheduler in seconds
     """
 
     def __init__(self,
@@ -72,7 +74,9 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                  walltime="00:10:00",
                  scheduler_options='',
                  worker_init='',
-                 launcher=SingleNodeLauncher()):
+                 launcher=SingleNodeLauncher(),
+                 cmd_timeout: int = 60,
+                 queue=None):
         label = 'grid_engine'
         super().__init__(label,
                          channel,
@@ -82,7 +86,8 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                          max_blocks,
                          parallelism,
                          walltime,
-                         launcher)
+                         launcher,
+                         cmd_timeout=cmd_timeout)
         self.scheduler_options = scheduler_options
         self.worker_init = worker_init
 
@@ -141,8 +146,11 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         self._write_submit_script(template_string, script_path, job_name, job_config)
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
-        cmd = "qsub -terse {0}".format(channel_script_path)
-        retcode, stdout, stderr = self.execute_wait(cmd, 10)
+        if self.queue is not None:
+            cmd = "qsub -q {0} -terse {1}".format(self.queue, channel_script_path)
+        else:
+            cmd = "qsub -terse {0}".format(channel_script_path)
+        retcode, stdout, stderr = self.execute_wait(cmd)
 
         if retcode == 0:
             for line in stdout.split('\n'):
@@ -206,7 +214,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
 
         job_id_list = ' '.join(job_ids)
         cmd = "qdel {}".format(job_id_list)
-        retcode, stdout, stderr = self.execute_wait(cmd, 3)
+        retcode, stdout, stderr = self.execute_wait(cmd)
 
         rets = None
         if retcode == 0:
