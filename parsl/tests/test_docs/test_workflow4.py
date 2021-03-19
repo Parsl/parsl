@@ -28,6 +28,7 @@ def total(inputs=[]):
             total += int(line)
     return total
 
+
 @pytest.mark.staging_required
 def test_parallel_dataflow():
     """Test parallel dataflow from docs on Composing workflows
