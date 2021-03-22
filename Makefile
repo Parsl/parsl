@@ -63,7 +63,7 @@ htex_local_test: ## run all tests with htex_local config
 .PHONY: htex_local_alternate_test
 htex_local_alternate_test: ## run all tests with htex_local config
 	pip3 install ".[monitoring]"
-	PYTHONPATH=.  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --cov=parsl --cov-append --cov-report= --random-order
+	PYTHONPATH=.  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --cov=parsl --cov-append --cov-report= --random-order --random-order-bucket=module --random-order-seed=629459
 
 $(WORKQUEUE_INSTALL):
 	parsl/executors/workqueue/install-workqueue.sh
