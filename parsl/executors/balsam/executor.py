@@ -2,24 +2,30 @@
 """
 
 import logging
-from abc import ABC
-from asyncio import Future
 from typing import Optional, List, Callable, Dict, Any, Tuple, Union
 from balsam.api import Job, App, BatchJob, Site, site_config
+from multiprocessing import Condition
 
-import threading
+from concurrent.futures import Future
 import time
 import typeguard
 
+from concurrent.futures import ThreadPoolExecutor
 from parsl.executors.errors import UnsupportedFeatureError
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.utils import RepresentationMixin
-import asyncio
+import os
 
 logger = logging.getLogger(__name__)
+os.makedirs('logs', exist_ok=True)
+fileh = logging.FileHandler(os.getcwd() + os.path.sep + 'logs' + os.path.sep + 'executor.log', 'a')
+logger.addHandler(fileh)
+logging.basicConfig(level=logging.INFO)
 
 SITE_ID: int = 0
 CLASS_PATH: int = 1
+lock = Condition()
+result_lock = Condition()
 
 
 class BalsamFutureException(Exception):
@@ -27,7 +33,7 @@ class BalsamFutureException(Exception):
     pass
 
 
-class BalsamUnsupportedFeatureException(Exception):
+class BalsamUnsupportedFeatureException(UnsupportedFeatureError):
     """"""
     pass
 
@@ -37,43 +43,50 @@ class BalsamFuture(Future):
 
     """
     _job: Job = None
-    _timeout: int = 20
-    _future: Future = None
+    _timeout: int = 60
+    _appname: str = None
+    _sleep: int = 2
 
-    def __init__(self, job, future):
+    def __init__(self, job, appname, sleep=2, timeout=60):
         super(BalsamFuture, self).__init__()
         self._job = job
-        self._future = future
+        self._appname = appname
+        self._sleep = sleep
+        self._timeout = timeout
 
     def submit(self):
         pass
 
-    @asyncio.coroutine
-    def get_result(self):
+    def poll_result(self):
         """
         Poll Balsam2 API about this Job as long is job is either not finished,
         or gets cancelled by calling future.cancel() on the future object
         """
         while self._job.state != "JOB_FINISHED":
-            self._timeout -= 1
+            result_lock.acquire()
+            try:
+                self._timeout -= 1
 
-            print("Checking result in balsam...")
-            self._job.refresh_from_db()
+                print("Checking result in balsam {} {}...{}".format(str(id(self)), id(self._job), self._appname))
+                self._job.refresh_from_db()
 
-            if self._timeout <= 0:
-                print("Cancelling job due to timeout reached.")
-                self.cancel()
-                return
+                if self._timeout <= 0:
+                    print("Cancelling job due to timeout reached.")
+                    self.cancel()
+                    return
+            finally:
+                result_lock.release()
 
-            yield time.sleep(2)
+            time.sleep(self._sleep)
 
         if not self.cancelled():
-            print("Result is available: ",self._job.data)
+            print("Result is available[{}]: {} {}".format(self._appname, id(self._job), self._job.data))
             self.set_result(self._job.data["result"])
+            print("Set result on: {} {} ".format(id(self._job), id(self)))
             self.done()
 
         if self.cancelled():
-            logger.info("Job future was cancelled")
+            print("Job future was cancelled")
 
 
 class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
@@ -81,6 +94,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
     """
     managed = False
+    maxworkers = 3
 
     @typeguard.typechecked
     def __init__(self,
@@ -90,16 +104,18 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  walltime: int = 30,
                  queue: str = 'local',
                  mode: str = 'mpi',
-                 project: str = 'MyProject',
+                 maxworkers: int = 3,
+                 project: str = 'local',
                  siteid: int = -1,
                  tags: Dict[str, str] = {}
                  ):
-        logger.debug("Initializing HighThroughputExecutor")
+        print("Initializing BalsamExecutor")
 
         NoStatusHandlingExecutor.__init__(self)
         self.label = label
         self.workdir = workdir
         self.numnodes = numnodes
+        self.maxworkers = maxworkers
         self.walltime = walltime
         self.queue = queue
         self.project = project
@@ -108,6 +124,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.siteid = siteid
         self.timeout = 30
         self.sleep = 1
+        self.threadpool = None
 
     def _get_block_and_job_ids(self) -> Tuple[List[str], List[Any]]:
         pass
@@ -121,10 +138,8 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         Any spin-up operations (for example: starting thread pools) should be performed here.
         """
-        import os
         from balsam.api import BatchJob
 
-        os.makedirs(self.workdir+os.path.sep+'executor'+os.path.sep+'logs', exist_ok=True)
         batchjob = BatchJob(
             num_nodes=self.numnodes,
             wall_time_min=self.walltime,
@@ -135,113 +150,80 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             filter_tags=self.tags
         )
         batchjob.save()
-
-    @asyncio.coroutine
-    def poll_balsam_result(self, future):
-        while self.job.state != "JOB_FINISHED":
-
-            print("Checking result for {} in balsam...".format(self.appname))
-            self.job.refresh_from_db()
-
-            if self.timeout <= 0:
-                print("Cancelling job due to timeout reached.")
-                future.cancel()
-                return
-
-            print("Sleeping {} seconds...timeout in {} seconds.".format(self.sleep, self.timeout))
-            yield time.sleep(self.sleep)
-
-        if not self.future.cancelled():
-            print("Result is available {}: ".format(self.appname), self.job.data)
-            future.set_result(self.job.data["result"])
-            future.done()
+        self.threadpool = ThreadPoolExecutor(max_workers=self.maxworkers)
 
     def submit(self, func: Callable, resource_specification: Dict[str, Any], *args: Any, **kwargs: Any) -> Future:
         """Submit
         submit(func,None, site_id, class_path, {})
         """
-        import os
-        import inspect
-        site_id = args[SITE_ID]
-        class_path = args[CLASS_PATH]
-
-        appname = kwargs['appname']
-        sitedir = kwargs['sitedir']
-        appdir = sitedir + os.path.sep + "apps"
-        #appdeffile = appdir + os.path.sep + appname + ".py"
-        #parslrunner = appdir + os.path.sep + "parslapprunner.py"
-
-        workdir = kwargs['workdir'] if 'workdir' in kwargs else 'site'+site_id+os.path.sep+"/"+appname
-
-        thread = kwargs['thread'] if 'thread' in kwargs else True
-        callback = kwargs['callback'] if 'callback' in kwargs else None
-        inputs = kwargs['inputs'] if 'inputs' in kwargs else []
-        script = kwargs['script'] if 'script' in kwargs else 'bash'
-
-        node_packing_count = kwargs['node_packing_count'] if 'node_packing_count' in kwargs else 1
-        parameters = kwargs['params'] if 'params' in kwargs else {}
-        parameters['name'] = appname
-
-        if resource_specification:
-            logger.error("Ignoring the resource specification. ")
-            raise BalsamUnsupportedFeatureException()
-
-        if script == 'bash':
-            shell_command = func(inputs=inputs)
-
-        elif script == 'python':
-            # Inject function into appdef
-            lines = inspect.getsource(func)
-            shell_command = "python << HEREDOC\n{}\nHEREDOC".format(lines)
-        else:
-            # Found unknown script type
-            raise
-
-        # Use lines to inject into parslapprunner with shell_command as python -c
         try:
-            app = App.objects.create(site_id=site_id, class_path=class_path)
-        except:
-            app = App.objects.get(site_id=site_id, class_path=class_path)
-
-        app.save()
-        job = Job(
-            workdir,
-            app.id,
-            parameters={},
-            node_packing_count=node_packing_count,
-        )
-        job.parameters["command"] = shell_command
-        job.save()
-        loop = asyncio.get_event_loop()
-
-        # Create a new Future object.
-        future = loop.create_future()
-        #self.task = loop.create_task(self.poll_balsam_result(future))
-
-        if callback:
-            future.add_done_callback(callback)
-
-        balsam_future = BalsamFuture(job, future)
-
-        def run():
             import os
+            import inspect
+            site_id = args[SITE_ID]
+            class_path = args[CLASS_PATH]
 
-            _workdir = self.workdir+os.path.sep+job.workdir.name
-            logger.debug("Making workdir for job: {}".format(workdir))
+            appname = kwargs['appname']
+
+            workdir = kwargs['workdir'] if 'workdir' in kwargs else 'site' + site_id + os.path.sep + "/" + appname
+
+            print(os.getcwd(), workdir + os.path.sep + 'executor' + os.path.sep + 'logs')
+
+            print("Log file is " + workdir + os.path.sep + 'executor' + os.path.sep +
+                  'logs' + os.path.sep + 'executor.log')
+
+            callback = kwargs['callback'] if 'callback' in kwargs else None
+            inputs = kwargs['inputs'] if 'inputs' in kwargs else []
+            script = kwargs['script'] if 'script' in kwargs else 'bash'
+            sleep = kwargs['sleep'] if 'sleep' in kwargs else 2
+            timeout = kwargs['timeout'] if 'timeout' in kwargs else 60
+
+            node_packing_count = kwargs['node_packing_count'] if 'node_packing_count' in kwargs else 1
+            parameters = kwargs['params'] if 'params' in kwargs else {}
+            parameters['name'] = appname
+
+            if resource_specification:
+                logger.error("Ignoring the resource specification. ")
+                raise BalsamUnsupportedFeatureException()
+
+            if script == 'bash':
+                shell_command = func(inputs=inputs)
+            elif script == 'python':
+                lines = inspect.getsource(func)
+                shell_command = "python << HEREDOC\n{}\nHEREDOC".format(lines)
+            else:
+                raise BalsamUnsupportedFeatureException()
+
+            # Use lines to inject into parslapprunner with shell_command as python -c
+            try:
+                app = App.objects.create(site_id=site_id, class_path=class_path)
+            except:
+                app = App.objects.get(site_id=site_id, class_path=class_path)
+
+            app.save()
+            job = Job(
+                workdir,
+                app.id,
+                parameters={},
+                node_packing_count=node_packing_count,
+            )
+            job.parameters["command"] = shell_command
+            job.save()
+
+            balsam_future = BalsamFuture(job, appname, sleep=sleep, timeout=timeout)
+
+            if callback:
+                balsam_future.add_done_callback(callback)
+
+            _workdir = workdir + os.path.sep + job.workdir.name
+            print("Making workdir for job: {}".format(workdir))
             os.makedirs(_workdir, exist_ok=True)
-            logger.debug("Running loop.run_until_complete: ", job)
-            #self.task = loop.create_task(balsam_future.get_result())
-            loop.run_until_complete(balsam_future.get_result())
-            print("Running...")
 
-        if thread:
-            logger.debug("Starting job thread: ", job)
-            thread = threading.Thread(target=run, args=())
-            thread.start()
-        else:
-            run()
+            print("Starting job thread: ", job)
+            self.threadpool.submit(balsam_future.poll_result)
 
-        return balsam_future
+            return balsam_future
+        finally:
+            pass
 
     def scale_out(self, blocks: int) -> List[str]:
         """Scale out method.
@@ -283,8 +265,8 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
     @property
     def executor_exception(self):
-        return True
+        return False
 
     @property
     def error_management_enabled(self):
-        return True
+        return False
