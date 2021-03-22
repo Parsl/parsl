@@ -20,3 +20,5 @@ def fresh_config():
                                            resource_monitoring_interval=1,
                                           )
                  )
+
+config = fresh_config()
