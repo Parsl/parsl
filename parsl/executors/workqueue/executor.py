@@ -262,7 +262,7 @@ class WorkQueueExecutor(BlockProviderExecutor):
     def _get_launch_command(self, block_id):
         # this executor uses different terminology for worker/launch
         # commands than in htex
-        return self.worker_command
+        return f"PARSL_WORKER_BLOCK_ID={block_id} {self.worker_command}"
 
     def start(self):
         """Create submit process and collector thread to create, send, and
