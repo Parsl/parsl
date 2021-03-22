@@ -9,6 +9,7 @@ import logging
 from concurrent.futures import Future
 from ctypes import c_bool
 
+import datetime
 import tempfile
 import hashlib
 import subprocess
@@ -739,6 +740,26 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.collector_thread.join()
 
         logger.debug("Work Queue shutdown completed")
+
+    # TODO: factor this with htex - perhaps it should exist only in the
+    # block provider, and there should be no implementation of this at
+    # all in the base executor class (because this is only block
+    # relevant)
+    def create_monitoring_info(self, status):
+        """ Create a msg for monitoring based on the poll status
+
+        """
+        msg = []
+        for bid, s in status.items():
+            d = {}
+            d['run_id'] = self.run_id
+            d['status'] = s.status_name
+            d['timestamp'] = datetime.datetime.now()
+            d['executor_label'] = self.label
+            d['job_id'] = self.blocks.get(bid, None)
+            d['block_id'] = bid
+            msg.append(d)
+        return msg
 
     @wrap_with_logs
     def _collect_work_queue_results(self):
