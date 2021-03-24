@@ -503,7 +503,6 @@ class DatabaseManager:
                             #   i) run/end run messages, ii) resource messages
                             # Update the running time to try table if first message
                             msg['task_status_name'] = States.running_ended.name
-                            msg['task_try_time_running'] = msg['timestamp']
                             # making some assumptions that the primary key has
                             # been added to inserted_tries already... but maybe
                             # that assumption is made for insert_resource_messages
