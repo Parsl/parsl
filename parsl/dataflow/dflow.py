@@ -433,7 +433,7 @@ class DataFlowKernel(object):
         self.memoizer.update_memo(task_record, future)
 
         if self.checkpoint_mode == 'task_exit':
-            self.checkpoint(tasks=[task_id])
+            self.checkpoint(tasks=[task_record])
 
         # If checkpointing is turned on, wiping app_fu is left to the checkpointing code
         # else we wipe it here.
@@ -1116,7 +1116,7 @@ class DataFlowKernel(object):
         checkpointed is checkpointed to a file.
 
         Kwargs:
-            - tasks (List of task ids) : List of task ids to checkpoint. Default=None
+            - tasks (List of task records) : List of task ids to checkpoint. Default=None
                                          if set to None, we iterate over all tasks held by the DFK.
 
         .. note::
@@ -1132,7 +1132,7 @@ class DataFlowKernel(object):
             if tasks:
                 checkpoint_queue = tasks
             else:
-                checkpoint_queue = list(self.tasks.keys())
+                checkpoint_queue = list(self.tasks.values())
 
             checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
             checkpoint_dfk = checkpoint_dir + '/dfk.pkl'
@@ -1150,11 +1150,8 @@ class DataFlowKernel(object):
             count = 0
 
             with open(checkpoint_tasks, 'ab') as f:
-                for task_id in checkpoint_queue:
-                    if task_id not in self.tasks:
-                        continue
-
-                    task_record = self.tasks[task_id]
+                for task_record in checkpoint_queue:
+                    task_id = task_record['id']
 
                     if task_record['app_fu'] is None:
                         continue
