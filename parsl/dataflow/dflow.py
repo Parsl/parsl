@@ -262,7 +262,7 @@ class DataFlowKernel(object):
         """
         return self._config
 
-    def handle_exec_update(self, task_id, future):
+    def handle_exec_update(self, task_record, future):
         """This function is called only as a callback from an execution
         attempt reaching a final state (either successfully or failing).
 
@@ -270,12 +270,12 @@ class DataFlowKernel(object):
         structure.
 
         Args:
-             task_id (string) : Task id
+             task_record (dict) : Task record
              future (Future) : The future object corresponding to the task which
              makes this callback
         """
 
-        task_record = self.tasks[task_id]
+        task_id = task_record['id']
 
         task_record['try_time_returned'] = datetime.datetime.now()
 
@@ -519,7 +519,7 @@ class DataFlowKernel(object):
             if exec_fu:
                 assert isinstance(exec_fu, Future)
                 try:
-                    exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
+                    exec_fu.add_done_callback(partial(self.handle_exec_update, task_record))
                 except Exception:
                     # this exception is ignored here because it is assumed that exception
                     # comes from directly executing handle_exec_update (because exec_fu is
