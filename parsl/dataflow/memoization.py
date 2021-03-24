@@ -206,7 +206,7 @@ class Memoizer(object):
         hashedsum = hashlib.md5(x).hexdigest()
         return hashedsum
 
-    def check_memo(self, task_id, task):
+    def check_memo(self, task):
         """Create a hash of the task and its inputs and check the lookup table for this hash.
 
         If present, the results are returned. The result is a tuple indicating whether a memo
@@ -221,6 +221,9 @@ class Memoizer(object):
 
         This call will also set task['hashsum'] to the unique hashsum for the func+inputs.
         """
+
+        task_id = task['id']
+
         if not self.memoize or not task['memoize']:
             task['hashsum'] = None
             logger.debug("Task {} will not be memoized".format(task_id))
@@ -254,11 +257,10 @@ class Memoizer(object):
         """
         return self.memo_lookup_table[hashsum]
 
-    def update_memo(self, task_id, task, r):
+    def update_memo(self, task, r):
         """Updates the memoization lookup table with the result from a task.
 
         Args:
-             - task_id (int): Integer task id
              - task (dict) : A task dict from dfk.tasks
              - r (Result future): Result future
 
@@ -267,6 +269,9 @@ class Memoizer(object):
         """
         # TODO: could use typeguard
         assert isinstance(r, Future)
+
+        task_id = task['id']
+
         if not self.memoize or not task['memoize'] or 'hashsum' not in task:
             return
 
