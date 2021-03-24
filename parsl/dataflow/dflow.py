@@ -490,7 +490,7 @@ class DataFlowKernel(object):
                     if task_record['status'] == States.pending:
                         try:
                             exec_fu = self.launch_task(
-                                task_id, task_record['func'], *new_args, **kwargs)
+                                task_record, task_record['func'], *new_args, **kwargs)
                             assert isinstance(exec_fu, Future)
                         except Exception as e:
                             # task launched failed somehow. the execution might
@@ -530,7 +530,7 @@ class DataFlowKernel(object):
 
                 task_record['exec_fu'] = exec_fu
 
-    def launch_task(self, task_id, executable, *args, **kwargs):
+    def launch_task(self, task_record, executable, *args, **kwargs):
         """Handle the actual submission of the task to the executor layer.
 
         If the app task has the executors attributes not set (default=='all')
@@ -542,7 +542,7 @@ class DataFlowKernel(object):
         targeted at those specific executors.
 
         Args:
-            task_id (string) : A string that uniquely identifies the task
+            task_record : The task record
             executable (callable) : A callable object
             args (list of positional args)
             kwargs (arbitrary keyword arguments)
@@ -551,17 +551,18 @@ class DataFlowKernel(object):
         Returns:
             Future that tracks the execution of the submitted executable
         """
-        self.tasks[task_id]['try_time_launched'] = datetime.datetime.now()
+        task_id = task_record['id']
+        task_record['try_time_launched'] = datetime.datetime.now()
 
-        memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
+        memo_fu = self.memoizer.check_memo(task_id, task_record)
         if memo_fu:
             logger.info("Reusing cached result for task {}".format(task_id))
-            self.tasks[task_id]['from_memo'] = True
+            task_record['from_memo'] = True
             assert isinstance(memo_fu, Future)
             return memo_fu
 
-        self.tasks[task_id]['from_memo'] = False
-        executor_label = self.tasks[task_id]["executor"]
+        task_record['from_memo'] = False
+        executor_label = task_record["executor"]
         try:
             executor = self.executors[executor_label]
         except Exception:
@@ -570,7 +571,7 @@ class DataFlowKernel(object):
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
-            try_id = self.tasks[task_id]['fail_count']
+            try_id = task_record['fail_count']
             executable = self.monitoring.monitor_wrapper(executable, try_id, task_id,
                                                          self.monitoring.monitoring_hub_url,
                                                          self.run_id,
@@ -579,14 +580,14 @@ class DataFlowKernel(object):
                                                          executor.monitor_resources())
 
         with self.submitter_lock:
-            exec_fu = executor.submit(executable, self.tasks[task_id]['resource_specification'], *args, **kwargs)
-        self.tasks[task_id]['status'] = States.launched
+            exec_fu = executor.submit(executable, task_record['resource_specification'], *args, **kwargs)
+        task_record['status'] = States.launched
 
-        self._send_task_log_info(self.tasks[task_id])
+        self._send_task_log_info(task_record)
 
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
 
-        self._log_std_streams(self.tasks[task_id])
+        self._log_std_streams(task_record)
 
         return exec_fu
 
