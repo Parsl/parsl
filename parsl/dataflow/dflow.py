@@ -339,7 +339,7 @@ class DataFlowKernel(object):
                     assert isinstance(inner_future, Future)
                     task_record['status'] = States.joining
                     task_record['joins'] = inner_future
-                    inner_future.add_done_callback(partial(self.handle_join_update, task_id))
+                    inner_future.add_done_callback(partial(self.handle_join_update, task_record))
 
         self._log_std_streams(task_record)
 
@@ -351,7 +351,7 @@ class DataFlowKernel(object):
         if task_record['status'] == States.pending:
             self.launch_if_ready(task_id)
 
-    def handle_join_update(self, outer_task_id, inner_app_future):
+    def handle_join_update(self, task_record, inner_app_future):
         # Use the result of the inner_app_future as the final result of
         # the outer app future.
 
@@ -359,7 +359,7 @@ class DataFlowKernel(object):
         # their own retrying, and joining state is responsible for passing
         # on whatever the result of that retrying was (if any).
 
-        task_record = self.tasks[outer_task_id]
+        outer_task_id = task_record['id']
 
         try:
             res = self._unwrap_remote_exception_wrapper(inner_app_future)
