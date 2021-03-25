@@ -360,6 +360,13 @@ class DatabaseManager:
                 # processed (corresponding by task id)
                 reprocessable_first_resource_messages = []
 
+                # end-of-task-run status messages - handled in similar way as
+                # for last resource messages to try to have symmetry... this
+                # needs a type annotation though reprocessable_first_resource_messages
+                # doesn't... not sure why. Too lazy right now to figure out what,
+                # if any, more specific type than Any the messages have.
+                reprocessable_last_resource_messages: List[Any] = []
+
                 # Get a batch of priority messages
                 priority_messages = self._get_messages_in_batch(self.pending_priority_queue)
                 if priority_messages:
@@ -480,7 +487,11 @@ class DatabaseManager:
 
                 if resource_messages:
                     logger.debug(
-                        "Got {} messages from resource queue, {} reprocessable".format(len(resource_messages), len(reprocessable_first_resource_messages)))
+                        "Got {} messages from resource queue, "
+                        "{} reprocessable as first messages, "
+                        "{} reprocessable as last messages".format(len(resource_messages),
+                                                                   len(reprocessable_first_resource_messages),
+                                                                   len(reprocessable_last_resource_messages)))
 
                     insert_resource_messages = []
                     for msg in resource_messages:
@@ -507,10 +518,10 @@ class DatabaseManager:
                             # been added to inserted_tries already... but maybe
                             # that assumption is made for insert_resource_messages
                             # messages too?
-                            reprocessable_first_resource_messages.append(msg)
+                            reprocessable_last_resource_messages.append(msg)
 
                         else:
-                            # Insert to resource table if not first message
+                            # Insert to resource table if not first/last (start/stop) message message
                             insert_resource_messages.append(msg)
 
                     if insert_resource_messages:
@@ -523,6 +534,9 @@ class DatabaseManager:
                                           'run_id', 'task_id', 'try_id',
                                           'block_id', 'hostname'],
                                  messages=reprocessable_first_resource_messages)
+
+                if reprocessable_last_resource_messages:
+                    self._insert(table=STATUS, messages=reprocessable_last_resource_messages)
             except Exception:
                 logger.exception("Exception in db loop: this might have been a malformed message, or some other error. monitoring data may have been lost")
                 exception_happened = True
