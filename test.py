@@ -1,7 +1,5 @@
 import parsl
-import logging
-import sys
-from parsl.app.app import balsam_app
+from parsl.app.app import bash_app, python_app
 from parsl.config import Config
 from parsl.executors.balsam.executor import BalsamExecutor
 
@@ -27,22 +25,22 @@ def callback(future,**kwargs):
         print('Future was cancelled!')
 
 
-@balsam_app(executors=["BalsamExecutor"])
+@bash_app(executors=["BalsamExecutor"])
 def greetings(inputs=[]):
     return "echo Greetings"
 
 
-@balsam_app(executors=["BalsamExecutor"])
+@python_app(executors=["BalsamExecutor"])
 def hello(inputs=[]):
     return "Hello"
 
 
-@balsam_app(executors=["BalsamExecutor"])
+@bash_app(executors=["BalsamExecutor"])
 def combine(inputs=[]):
     return "echo {} {}".format(inputs[0], inputs[1])
 
 
-@balsam_app(executors=["BalsamExecutor"])
+@bash_app(executors=["BalsamExecutor"])
 def world(inputs=[]):
     return "echo {} {} World!".format(inputs[0], inputs[1])
 
@@ -50,10 +48,17 @@ def world(inputs=[]):
 SITE_ID = 1
 CLASS_PATH = 'parslapprunner.ParslAppRunner'
 
-hello = hello(SITE_ID, CLASS_PATH, numnodes=1, sitedir="git/site1", script='python', workdir='parsl/hello', appname='hello', callback=callback)
-combine = combine(SITE_ID, CLASS_PATH, numnodes=1, sitedir="git/site1", script='bash', workdir='parsl/combine', appname='combine', callback=callback, inputs=[hello.result(), "There!"])
-greetings = greetings(SITE_ID, CLASS_PATH, numnodes=1, sitedir="git/site1", script='bash', workdir='parsl/greetings', appname='greetings', callback=callback)
+settings = {
+    'sitedir': 'git/site1',
+    'callback': callback,
+    'siteid': SITE_ID,
+    'numnodes': 1,
+    'classpath': CLASS_PATH
+}
+hello = hello(**settings, workdir='parsl/hello', appname='hello')
+combine = combine(**settings, workdir='parsl/combine', appname='combine', inputs=[hello, "There!"])
+greetings = greetings(**settings, workdir='parsl/greetings', appname='greetings')
 
-world = world(SITE_ID, CLASS_PATH, numnodes=1, sitedir="git/site1", script='bash', workdir='parsl/world', appname='world', callback=callback, inputs=[combine.result(), greetings.result()])
+world = world(**settings, workdir='parsl/world', appname='world', inputs=[combine, greetings])
 
 print(world.result())
