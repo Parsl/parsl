@@ -125,6 +125,8 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.timeout = 30
         self.sleep = 1
         self.threadpool = None
+        self.batchjob = None
+        self.balsam_future = None
 
     def _get_block_and_job_ids(self) -> Tuple[List[str], List[Any]]:
         pass
@@ -140,7 +142,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         """
         from balsam.api import BatchJob
 
-        batchjob = BatchJob(
+        self.batchjob = BatchJob(
             num_nodes=self.numnodes,
             wall_time_min=self.walltime,
             job_mode=self.mode,
@@ -149,7 +151,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             project=self.project,
             filter_tags=self.tags
         )
-        batchjob.save()
+        self.batchjob.save()
         self.threadpool = ThreadPoolExecutor(max_workers=self.maxworkers)
 
     def submit(self, func: Callable, resource_specification: Dict[str, Any], *args: Any, **kwargs: Any) -> Future:
@@ -159,10 +161,9 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         try:
             import os
             import inspect
-            site_id = args[SITE_ID]
-            class_path = args[CLASS_PATH]
 
             appname = kwargs['appname']
+            site_id = kwargs['siteid']
 
             workdir = kwargs['workdir'] if 'workdir' in kwargs else 'site' + site_id + os.path.sep + "/" + appname
 
@@ -171,6 +172,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             print("Log file is " + workdir + os.path.sep + 'executor' + os.path.sep +
                   'logs' + os.path.sep + 'executor.log')
 
+            class_path = kwargs['classpath']
             callback = kwargs['callback'] if 'callback' in kwargs else None
             inputs = kwargs['inputs'] if 'inputs' in kwargs else []
             script = kwargs['script'] if 'script' in kwargs else 'bash'
@@ -188,8 +190,18 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             if script == 'bash':
                 shell_command = func(inputs=inputs)
             elif script == 'python':
+                import codecs
+                import re
+                import pickle
+
                 lines = inspect.getsource(func)
-                shell_command = "python << HEREDOC\n{}\nHEREDOC".format(lines)
+                pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
+                pargs = re.sub(r'\n', "", pargs).strip()
+                shell_command = "python << HEREDOC\n\nimport pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\nHEREDOC".format(
+                    site_id, class_path, lines, pargs, appname)
+
+                shell_command = re.sub(r'@(.|\s)*def', 'def', shell_command)
+                print(shell_command)
             else:
                 raise BalsamUnsupportedFeatureException()
 
@@ -209,19 +221,19 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             job.parameters["command"] = shell_command
             job.save()
 
-            balsam_future = BalsamFuture(job, appname, sleep=sleep, timeout=timeout)
+            self.balsam_future = BalsamFuture(job, appname, sleep=sleep, timeout=timeout)
 
             if callback:
-                balsam_future.add_done_callback(callback)
+                self.balsam_future.add_done_callback(callback)
 
             _workdir = workdir + os.path.sep + job.workdir.name
             print("Making workdir for job: {}".format(workdir))
             os.makedirs(_workdir, exist_ok=True)
 
             print("Starting job thread: ", job)
-            self.threadpool.submit(balsam_future.poll_result)
+            self.threadpool.submit(self.balsam_future.poll_result)
 
-            return balsam_future
+            return self.balsam_future
         finally:
             pass
 
@@ -256,8 +268,9 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         This includes all attached resources such as workers and controllers.
         """
-        # Shutdown site
-        pass
+        self.balsam_future.cancel()
+        self.batchjob.state = "pending_deletion"
+        self.batchjob.save()
 
     @property
     def bad_state_is_set(self):
