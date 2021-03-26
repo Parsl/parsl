@@ -44,6 +44,7 @@ class PythonApp(AppBase):
             ignore_for_cache=ignore_for_cache
         )
         self.join = join
+        self.kwargs['script'] = 'python'
 
     def __call__(self, *args, **kwargs):
         """This is where the call to a python app is handled.

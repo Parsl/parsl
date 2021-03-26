@@ -187,25 +187,26 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 logger.error("Ignoring the resource specification. ")
                 raise BalsamUnsupportedFeatureException()
 
+            import codecs
+            import re
+            import pickle
+
+            # Write python app.py to workdir location
             if script == 'bash':
                 shell_command = func(inputs=inputs)
             elif script == 'python':
-                import codecs
-                import re
-                import pickle
-
                 lines = inspect.getsource(func)
                 pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
                 pargs = re.sub(r'\n', "", pargs).strip()
                 shell_command = "python << HEREDOC\n\nimport pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\nHEREDOC".format(
                     site_id, class_path, lines, pargs, appname)
+                source = "import pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\n".format(
+                    site_id, class_path, lines, pargs, appname)
+                #shell_command = re.sub(r'@(.|\s)*def', 'def', shell_command)
+                shell_command = 'python app.py'
+                source = re.sub(r'@(.|\s)*def', 'def', source)
 
-                shell_command = re.sub(r'@(.|\s)*def', 'def', shell_command)
-                print(shell_command)
-            else:
-                raise BalsamUnsupportedFeatureException()
 
-            # Use lines to inject into parslapprunner with shell_command as python -c
             try:
                 app = App.objects.create(site_id=site_id, class_path=class_path)
             except:
@@ -220,6 +221,11 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             )
             job.parameters["command"] = shell_command
             job.save()
+            print(site_config.data_path)
+
+            if script == 'python':
+                with open(job.resolve_workdir(site_config.data_path).joinpath("app.py"), "w") as appsource:
+                    appsource.write(source)
 
             self.balsam_future = BalsamFuture(job, appname, sleep=sleep, timeout=timeout)
 

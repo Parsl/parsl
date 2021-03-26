@@ -1,5 +1,5 @@
 import parsl
-from parsl.app.app import bash_app, python_app
+from parsl.app.app import balsam_app
 from parsl.config import Config
 from parsl.executors.balsam.executor import BalsamExecutor
 
@@ -25,22 +25,22 @@ def callback(future,**kwargs):
         print('Future was cancelled!')
 
 
-@bash_app(executors=["BalsamExecutor"])
+@balsam_app(executors=["BalsamExecutor"])
 def greetings(inputs=[]):
     return "echo Greetings"
 
 
-@python_app(executors=["BalsamExecutor"])
+@balsam_app(executors=["BalsamExecutor"])
 def hello(inputs=[]):
     return "Hello"
 
 
-@bash_app(executors=["BalsamExecutor"])
+@balsam_app(executors=["BalsamExecutor"])
 def combine(inputs=[]):
     return "echo {} {}".format(inputs[0], inputs[1])
 
 
-@bash_app(executors=["BalsamExecutor"])
+@balsam_app(executors=["BalsamExecutor"])
 def world(inputs=[]):
     return "echo {} {} World!".format(inputs[0], inputs[1])
 
@@ -55,10 +55,10 @@ settings = {
     'numnodes': 1,
     'classpath': CLASS_PATH
 }
-hello = hello(**settings, workdir='parsl/hello', appname='hello')
-combine = combine(**settings, workdir='parsl/combine', appname='combine', inputs=[hello, "There!"])
-greetings = greetings(**settings, workdir='parsl/greetings', appname='greetings')
+hello = hello(**settings, script='python', workdir='parsl/hello', appname='hello')
+combine = combine(**settings, script='bash', workdir='parsl/combine', appname='combine', inputs=[hello, "There!"])
+greetings = greetings(**settings, script='bash', timeout=60, workdir='parsl/greetings', appname='greetings')
 
-world = world(**settings, workdir='parsl/world', appname='world', inputs=[combine, greetings])
+world = world(**settings, script='bash', workdir='parsl/world', appname='world', inputs=[combine, greetings])
 
 print(world.result())
