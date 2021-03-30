@@ -68,5 +68,6 @@ setup(
       [
        'parsl-globus-auth=parsl.data_provider.globus:cli_run',
        'parsl-visualize=parsl.monitoring.visualization.app:cli_run',
+       'parsl-config-probe=parsl.probe.probe:cli_run',
       ]}
 )
