@@ -29,12 +29,16 @@ result_lock = Condition()
 
 
 class BalsamFutureException(Exception):
-    """"""
+    """
+
+    """
     pass
 
 
 class BalsamUnsupportedFeatureException(UnsupportedFeatureError):
-    """"""
+    """
+
+    """
     pass
 
 
@@ -73,6 +77,8 @@ class BalsamFuture(Future):
                 if self._timeout <= 0:
                     print("Cancelling job due to timeout reached.")
                     self.cancel()
+                    self._job.state = "JOB_FINISHED"
+                    self._job.save()
                     return
             finally:
                 result_lock.release()
@@ -99,7 +105,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     @typeguard.typechecked
     def __init__(self,
                  label: str = 'BalsamExecutor',
-                 workdir: str = 'balsam',
+                 workdir: str = 'parsl',
                  numnodes: int = 1,
                  walltime: int = 30,
                  queue: str = 'local',
@@ -107,6 +113,10 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  maxworkers: int = 3,
                  project: str = 'local',
                  siteid: int = -1,
+                 sleep: int = 1,
+                 sitedir: str = None,
+                 timeout: int = 60,
+                 classpath: str = 'parslapprunner.ParslAppRunner',
                  tags: Dict[str, str] = {}
                  ):
         print("Initializing BalsamExecutor")
@@ -122,11 +132,14 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.mode = mode
         self.tags = tags
         self.siteid = siteid
-        self.timeout = 30
-        self.sleep = 1
+        self.timeout = timeout
+        self.sitedir = sitedir
+        self.sleep = sleep
+        self.classpath = classpath
         self.threadpool = None
         self.batchjob = None
         self.balsam_future = None
+        self.workdir = workdir
 
     def _get_block_and_job_ids(self) -> Tuple[List[str], List[Any]]:
         pass
@@ -140,18 +153,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         Any spin-up operations (for example: starting thread pools) should be performed here.
         """
-        from balsam.api import BatchJob
-
-        self.batchjob = BatchJob(
-            num_nodes=self.numnodes,
-            wall_time_min=self.walltime,
-            job_mode=self.mode,
-            queue=self.queue,
-            site_id=self.siteid,
-            project=self.project,
-            filter_tags=self.tags
-        )
-        self.batchjob.save()
         self.threadpool = ThreadPoolExecutor(max_workers=self.maxworkers)
 
     def submit(self, func: Callable, resource_specification: Dict[str, Any], *args: Any, **kwargs: Any) -> Future:
@@ -160,24 +161,30 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         """
         try:
             import os
+            import sys
             import inspect
+            import codecs
+            import re
+            import pickle
 
-            appname = kwargs['appname']
-            site_id = kwargs['siteid']
+            appname = func.__name__
+            site_id = kwargs['siteid'] if 'siteid' in kwargs else self.siteid
 
-            workdir = kwargs['workdir'] if 'workdir' in kwargs else 'site' + site_id + os.path.sep + "/" + appname
+            workdir = kwargs['workdir'] if 'workdir' in kwargs else "parsl" + os.path.sep + appname
 
             print(os.getcwd(), workdir + os.path.sep + 'executor' + os.path.sep + 'logs')
 
             print("Log file is " + workdir + os.path.sep + 'executor' + os.path.sep +
                   'logs' + os.path.sep + 'executor.log')
 
-            class_path = kwargs['classpath']
+            class_path = kwargs['classpath'] if 'classpath' in kwargs else self.classpath
             callback = kwargs['callback'] if 'callback' in kwargs else None
             inputs = kwargs['inputs'] if 'inputs' in kwargs else []
             script = kwargs['script'] if 'script' in kwargs else 'bash'
-            sleep = kwargs['sleep'] if 'sleep' in kwargs else 2
-            timeout = kwargs['timeout'] if 'timeout' in kwargs else 60
+            sleep = kwargs['sleep'] if 'sleep' in kwargs else self.sleep
+            numnodes = kwargs['numnodes'] if 'numnodes' in kwargs else self.numnodes
+            walltime = kwargs['walltime'] if 'walltime' in kwargs else self.walltime
+            timeout = kwargs['timeout'] if 'timeout' in kwargs else self.timeout
 
             node_packing_count = kwargs['node_packing_count'] if 'node_packing_count' in kwargs else 1
             parameters = kwargs['params'] if 'params' in kwargs else {}
@@ -187,54 +194,48 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 logger.error("Ignoring the resource specification. ")
                 raise BalsamUnsupportedFeatureException()
 
-            import codecs
-            import re
-            import pickle
+            lines = inspect.getsource(func)
 
-            # Write python app.py to workdir location
-            if script == 'bash':
-                shell_command = func(inputs=inputs)
-            elif script == 'python':
-                lines = inspect.getsource(func)
-                pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
-                pargs = re.sub(r'\n', "", pargs).strip()
-                shell_command = "python << HEREDOC\n\nimport pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\nHEREDOC".format(
-                    site_id, class_path, lines, pargs, appname)
-                source = "import pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\n".format(
-                    site_id, class_path, lines, pargs, appname)
-                #shell_command = re.sub(r'@(.|\s)*def', 'def', shell_command)
-                shell_command = 'python app.py'
-                source = re.sub(r'@(.|\s)*def', 'def', source)
+            pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
+            pargs = re.sub(r'\n', "", pargs).strip()
+            shell_command = "python << HEREDOC\n\nimport pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\nHEREDOC".format(
+                site_id, class_path, lines, pargs, appname)
+            source = "import pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\n".format(
+                site_id, class_path, lines, pargs, appname)
 
+            print(sys.executable)
+            shell_command = sys.executable+' app.py'
+            source = re.sub(r'@(.|\s)*def', 'def', source)
 
             try:
-                app = App.objects.create(site_id=site_id, class_path=class_path)
-            except:
                 app = App.objects.get(site_id=site_id, class_path=class_path)
+            except Exception as ex:
+                # Create App if it doesn't exist
+                app = App.objects.create(site_id=site_id, class_path=class_path)
+                app.save()
 
-            app.save()
+            print("Making workdir for job: {}".format(workdir))
+            os.makedirs(workdir, exist_ok=True)
+
             job = Job(
                 workdir,
                 app.id,
+                wall_time_min=walltime,
+                num_nodes=numnodes,
                 parameters={},
                 node_packing_count=node_packing_count,
             )
             job.parameters["command"] = shell_command
             job.save()
-            print(site_config.data_path)
 
-            if script == 'python':
-                with open(job.resolve_workdir(site_config.data_path).joinpath("app.py"), "w") as appsource:
-                    appsource.write(source)
+            # Write function source to app.py in job workdir for balsam to pick up
+            with open(job.resolve_workdir(site_config.data_path).joinpath("app.py"), "w") as appsource:
+                appsource.write(source)
 
             self.balsam_future = BalsamFuture(job, appname, sleep=sleep, timeout=timeout)
 
             if callback:
                 self.balsam_future.add_done_callback(callback)
-
-            _workdir = workdir + os.path.sep + job.workdir.name
-            print("Making workdir for job: {}".format(workdir))
-            os.makedirs(_workdir, exist_ok=True)
 
             print("Starting job thread: ", job)
             self.threadpool.submit(self.balsam_future.poll_result)
@@ -275,8 +276,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         This includes all attached resources such as workers and controllers.
         """
         self.balsam_future.cancel()
-        self.batchjob.state = "pending_deletion"
-        self.batchjob.save()
 
     @property
     def bad_state_is_set(self):
