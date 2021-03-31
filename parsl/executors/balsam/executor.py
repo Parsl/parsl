@@ -115,6 +115,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  siteid: int = -1,
                  sleep: int = 1,
                  sitedir: str = None,
+                 node_packing_count: int = 1,
                  timeout: int = 60,
                  classpath: str = 'parslapprunner.ParslAppRunner',
                  tags: Dict[str, str] = {}
@@ -136,6 +137,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.sitedir = sitedir
         self.sleep = sleep
         self.classpath = classpath
+        self.node_packing_count = node_packing_count
         self.threadpool = None
         self.batchjob = None
         self.balsam_future = None
@@ -186,7 +188,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             walltime = kwargs['walltime'] if 'walltime' in kwargs else self.walltime
             timeout = kwargs['timeout'] if 'timeout' in kwargs else self.timeout
 
-            node_packing_count = kwargs['node_packing_count'] if 'node_packing_count' in kwargs else 1
+            node_packing_count = kwargs['node_packing_count'] if 'node_packing_count' in kwargs else self.node_packing_count
             parameters = kwargs['params'] if 'params' in kwargs else {}
             parameters['name'] = appname
 
@@ -205,7 +207,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
             print(sys.executable)
             shell_command = sys.executable+' app.py'
-            source = re.sub(r'@(.|\s)*def', 'def', source)
+            #source = re.sub(r'@(.|\s)*def', 'def', source)
 
             try:
                 app = App.objects.get(site_id=site_id, class_path=class_path)
