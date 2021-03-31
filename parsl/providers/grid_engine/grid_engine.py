@@ -8,6 +8,7 @@ from parsl.providers.grid_engine.template import template_string
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.provider_base import JobState, JobStatus
 from parsl.utils import RepresentationMixin
+from parsl.providers.error import SubmitException
 
 logger = logging.getLogger(__name__)
 
@@ -160,8 +161,11 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                 self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
                 return job_id
         else:
-            print("[WARNING!!] Submission of command to scale_out failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
+            raise SubmitException(job_name,
+                                  f'Submission of command to scale_out failed at {self.__class__} with retcode: {retcode}',
+                                  stdout=stdout.strip(),
+                                  stderr=stderr.strip())
 
     def _status(self):
         ''' Get the status of a list of jobs identified by the job identifiers

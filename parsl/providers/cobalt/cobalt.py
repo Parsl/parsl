@@ -2,13 +2,13 @@ import logging
 import os
 import time
 
-from parsl.providers.error import ScaleOutFailed
 from parsl.channels import LocalChannel
 from parsl.launchers import AprunLauncher
 from parsl.providers.cobalt.template import template_string
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.provider_base import JobState, JobStatus
 from parsl.utils import RepresentationMixin, wtime_to_minutes
+from parsl.providers.error import SubmitException
 
 logger = logging.getLogger(__name__)
 
@@ -196,7 +196,10 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
             self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
             logger.error("Submission of command to scale_out failed: {0}".format(stderr))
-            raise (ScaleOutFailed(self.__class__, "Request to submit job to local scheduler failed"))
+            raise SubmitException(job_name,
+                                  f'Submission of command to scale_out failed at {self.__class__} with retcode: {retcode}',
+                                  stdout=stdout.strip(),
+                                  stderr=stderr.strip())
 
         logger.debug("Returning job id : {0}".format(job_id))
         return job_id

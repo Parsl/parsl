@@ -8,6 +8,7 @@ from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.lsf.template import template_string
 from parsl.providers.provider_base import JobState, JobStatus
 from parsl.utils import RepresentationMixin, wtime_to_minutes
+from parsl.providers.error import SubmitException
 
 logger = logging.getLogger(__name__)
 
@@ -188,8 +189,11 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
                     job_id = line.split()[1].strip('<>')
                     self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
-            logger.warning("Submission of command to scale_out failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
+            raise SubmitException(job_name,
+                                  f'Submission of command to scale_out failed at {self.__class__} with retcode: {retcode}',
+                                  stdout=stdout.strip(),
+                                  stderr=stderr.strip())
         return job_id
 
     def cancel(self, job_ids):

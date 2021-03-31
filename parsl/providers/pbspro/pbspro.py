@@ -7,6 +7,7 @@ from parsl.launchers import SingleNodeLauncher
 from parsl.providers.pbspro.template import template_string
 from parsl.providers import TorqueProvider
 from parsl.providers.provider_base import JobState, JobStatus
+from parsl.providers.error import SubmitException
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +154,10 @@ class PBSProProvider(TorqueProvider):
             if (stdout is not None) and (stderr is not None):
                 message += "\nstderr:{}\nstdout{}".format(stderr.strip(), stdout.strip())
             logger.error(message)
+            raise SubmitException(job_name,
+                                  f'Submission of command to scale_out failed at {self.__class__} with retcode: {retcode}',
+                                  stdout=stdout.strip(),
+                                  stderr=stderr.strip())
 
         return job_id
 

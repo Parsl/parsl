@@ -110,12 +110,16 @@ class GoogleCloudProvider():
         Raises:
              - ExecutionProviderException or its subclasses
         '''
-        wrapped_cmd = self.launcher(command,
-                                    tasks_per_node,
-                                    1)
+        try:
+            wrapped_cmd = self.launcher(command,
+                                        tasks_per_node,
+                                        1)
 
-        instance, name = self.create_instance(command=wrapped_cmd)
-        self.resources[name] = {"job_id": name, "status": JobStatus(translate_table[instance['status']])}
+            instance, name = self.create_instance(command=wrapped_cmd)
+            self.resources[name] = {"job_id": name, "status": JobStatus(translate_table[instance['status']])}
+        except Exception:
+            logger.error(f'{job_name}\'s submission of command failed at {self.__class__}')
+            raise
         return name
 
     def status(self, job_ids):

@@ -7,6 +7,7 @@ from parsl.launchers import SimpleLauncher
 from parsl.providers.provider_base import ExecutionProvider, JobStatus, JobState
 from parsl.providers.error import ScriptPathError
 from parsl.utils import RepresentationMixin
+from parsl.providers.error import SubmitException
 
 logger = logging.getLogger(__name__)
 
@@ -176,6 +177,12 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         # Bash would return until the streams are closed. So we redirect to a outs file
         final_cmd = 'bash {0} > {0}.out 2>&1 & \n echo "PID:$!" '.format(script_path)
         retcode, stdout, stderr = channel.execute_wait(final_cmd, self.cmd_timeout)
+        if retcode != 0:
+            raise SubmitException(job_name,
+                                  f'Submission of command to scale_out failed at {self.__class__} with retcode: {retcode}',
+                                  stdout=stdout.strip(),
+                                  stderr=stderr.strip())
+
         for line in stdout.split('\n'):
             if line.startswith("PID:"):
                 remote_pid = line.split("PID:")[1].strip()

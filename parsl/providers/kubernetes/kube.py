@@ -156,13 +156,16 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                                                worker_init=self.worker_init)
 
         logger.debug("Pod name :{}".format(pod_name))
-        self._create_pod(image=self.image,
-                         pod_name=pod_name,
-                         job_name=job_name,
-                         cmd_string=formatted_cmd,
-                         volumes=self.persistent_volumes)
-        self.resources[pod_name] = {'status': JobStatus(JobState.RUNNING)}
-
+        try:
+            self._create_pod(image=self.image,
+                             pod_name=pod_name,
+                             job_name=job_name,
+                             cmd_string=formatted_cmd,
+                             volumes=self.persistent_volumes)
+            self.resources[pod_name] = {'status': JobStatus(JobState.RUNNING)}
+        except Exception:
+            logger.error(f'{job_name}\'s submission of command failed at {self.__class__}')
+            raise
         return pod_name
 
     def status(self, job_ids):

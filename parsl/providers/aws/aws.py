@@ -648,11 +648,15 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             If at capacity, None will be returned. Otherwise, the job identifier will be returned.
         """
 
-        job_name = self.generate_aws_id()
-        wrapped_cmd = self.launcher(command,
-                                    tasks_per_node,
-                                    self.nodes_per_block)
-        [instance, *rest] = self.spin_up_instance(command=wrapped_cmd, job_name=job_name)
+        try:
+            job_name = self.generate_aws_id()
+            wrapped_cmd = self.launcher(command,
+                                        tasks_per_node,
+                                        self.nodes_per_block)
+            [instance, *rest] = self.spin_up_instance(command=wrapped_cmd, job_name=job_name)
+        except Exception:
+            logger.error(f'{job_name}\'s submission of command failed at {self.__class__}')
+            raise
 
         if not instance:
             logger.error("Failed to submit request to EC2")
