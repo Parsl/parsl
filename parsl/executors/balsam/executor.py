@@ -28,6 +28,13 @@ lock = Condition()
 result_lock = Condition()
 
 
+class BalsamJobFailureException(Exception):
+    """
+
+    """
+    pass
+
+
 class BalsamFutureException(Exception):
     """
 
@@ -67,17 +74,21 @@ class BalsamFuture(Future):
         or gets cancelled by calling future.cancel() on the future object
         """
         while self._job.state != "JOB_FINISHED":
+            if self._job.state == 'FAILED':
+                self.cancel()
+                raise BalsamJobFailureException()
+            
             result_lock.acquire()
             try:
                 self._timeout -= 1
 
-                print("Checking result in balsam {} {}...{}".format(str(id(self)), id(self._job), self._appname))
+                logger.debug("Checking result in balsam {} {}...{}".format(str(id(self)), id(self._job), self._appname))
                 self._job.refresh_from_db()
 
                 if self._timeout <= 0:
-                    print("Cancelling job due to timeout reached.")
+                    logger.debug("Cancelling job due to timeout reached.")
                     self.cancel()
-                    self._job.state = "JOB_FINISHED"
+                    self._job.state = "FAILED"
                     self._job.save()
                     return
             finally:
@@ -86,13 +97,13 @@ class BalsamFuture(Future):
             time.sleep(self._sleep)
 
         if not self.cancelled():
-            print("Result is available[{}]: {} {}".format(self._appname, id(self._job), self._job.data))
+            logger.debug("Result is available[{}]: {} {}".format(self._appname, id(self._job), self._job.data))
             self.set_result(self._job.data["result"])
-            print("Set result on: {} {} ".format(id(self._job), id(self)))
+            logger.debug("Set result on: {} {} ".format(id(self._job), id(self)))
             self.done()
 
         if self.cancelled():
-            print("Job future was cancelled")
+            logger.debug("Job future was cancelled[{}]: {} {} ".format(self._appname, id(self._job), self._job.data))
 
 
 class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
@@ -120,7 +131,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  classpath: str = 'parslapprunner.ParslAppRunner',
                  tags: Dict[str, str] = {}
                  ):
-        print("Initializing BalsamExecutor")
+        logger.debug("Initializing BalsamExecutor")
 
         NoStatusHandlingExecutor.__init__(self)
         self.label = label
@@ -174,9 +185,9 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
             workdir = kwargs['workdir'] if 'workdir' in kwargs else "parsl" + os.path.sep + appname
 
-            print(os.getcwd(), workdir + os.path.sep + 'executor' + os.path.sep + 'logs')
+            logger.debug(os.getcwd(), workdir + os.path.sep + 'executor' + os.path.sep + 'logs')
 
-            print("Log file is " + workdir + os.path.sep + 'executor' + os.path.sep +
+            logger.debug("Log file is " + workdir + os.path.sep + 'executor' + os.path.sep +
                   'logs' + os.path.sep + 'executor.log')
 
             class_path = kwargs['classpath'] if 'classpath' in kwargs else self.classpath
@@ -203,14 +214,14 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
                 pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
                 pargs = re.sub(r'\n', "", pargs).strip()
-                shell_command = "python << HEREDOC\n\nimport pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\nHEREDOC".format(
+                shell_command = "python << HEREDOC\n\nimport pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nlogger.debug(result)\nHEREDOC".format(
                     site_id, class_path, lines, pargs, appname)
-                source = "import pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\n".format(
+                source = "import pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nlogger.debug(result)\n".format(
                     site_id, class_path, lines, pargs, appname)
 
-                print(sys.executable)
-                shell_command = sys.executable+' app.py'
-                source = re.sub(r'@(.|\s)*def', 'def', source)
+                logger.debug(sys.executable)
+                shell_command = sys.executable + ' app.py'
+                source = source.replace('@python_app','#@python_app')
 
             try:
                 app = App.objects.get(site_id=site_id, class_path=class_path)
@@ -219,7 +230,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 app = App.objects.create(site_id=site_id, class_path=class_path)
                 app.save()
 
-            print("Making workdir for job: {}".format(workdir))
+            logger.debug("Making workdir for job: {}".format(workdir))
             os.makedirs(workdir, exist_ok=True)
 
             job = Job(
@@ -243,7 +254,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             if callback:
                 self.balsam_future.add_done_callback(callback)
 
-            print("Starting job thread: ", job)
+            logger.debug("Starting job thread: ", job)
             self.threadpool.submit(self.balsam_future.poll_result)
 
             return self.balsam_future
