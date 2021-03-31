@@ -11,6 +11,7 @@ config = Config(
             maxworkers=3,
             numnodes=1,
             timeout=60,
+            node_packing_count=8,
             sitedir='git/site1',
             project='local'
         )
@@ -48,7 +49,7 @@ def world(inputs=[]):
     return "echo {} {} World!".format(inputs[0], inputs[1])
 
 
-hello = hello(callback=callback, numnodes=2)
+hello = hello(callback=callback)
 combine = combine(callback=callback, inputs=[hello, "There!"])
 greetings = greetings(callback=callback, timeout=60)
 
