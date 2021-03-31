@@ -182,7 +182,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             class_path = kwargs['classpath'] if 'classpath' in kwargs else self.classpath
             callback = kwargs['callback'] if 'callback' in kwargs else None
             inputs = kwargs['inputs'] if 'inputs' in kwargs else []
-            script = kwargs['script'] if 'script' in kwargs else 'bash'
+            script = kwargs['script'] if 'script' in kwargs else None
             sleep = kwargs['sleep'] if 'sleep' in kwargs else self.sleep
             numnodes = kwargs['numnodes'] if 'numnodes' in kwargs else self.numnodes
             walltime = kwargs['walltime'] if 'walltime' in kwargs else self.walltime
@@ -196,18 +196,21 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 logger.error("Ignoring the resource specification. ")
                 raise BalsamUnsupportedFeatureException()
 
-            lines = inspect.getsource(func)
+            if script == 'bash':
+                shell_command = func(inputs=inputs)
+            else:
+                lines = inspect.getsource(func)
 
-            pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
-            pargs = re.sub(r'\n', "", pargs).strip()
-            shell_command = "python << HEREDOC\n\nimport pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\nHEREDOC".format(
-                site_id, class_path, lines, pargs, appname)
-            source = "import pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\n".format(
-                site_id, class_path, lines, pargs, appname)
+                pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
+                pargs = re.sub(r'\n', "", pargs).strip()
+                shell_command = "python << HEREDOC\n\nimport pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\nHEREDOC".format(
+                    site_id, class_path, lines, pargs, appname)
+                source = "import pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\n".format(
+                    site_id, class_path, lines, pargs, appname)
 
-            print(sys.executable)
-            shell_command = sys.executable+' app.py'
-            #source = re.sub(r'@(.|\s)*def', 'def', source)
+                print(sys.executable)
+                shell_command = sys.executable+' app.py'
+                source = re.sub(r'@(.|\s)*def', 'def', source)
 
             try:
                 app = App.objects.get(site_id=site_id, class_path=class_path)
@@ -231,8 +234,9 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             job.save()
 
             # Write function source to app.py in job workdir for balsam to pick up
-            with open(job.resolve_workdir(site_config.data_path).joinpath("app.py"), "w") as appsource:
-                appsource.write(source)
+            if script != 'bash':
+                with open(job.resolve_workdir(site_config.data_path).joinpath("app.py"), "w") as appsource:
+                    appsource.write(source)
 
             self.balsam_future = BalsamFuture(job, appname, sleep=sleep, timeout=timeout)
 
