@@ -1,5 +1,5 @@
 import parsl
-from parsl.app.app import python_app
+from parsl.app.app import python_app, bash_app
 from parsl.config import Config
 from parsl.executors.balsam.executor import BalsamExecutor
 
@@ -39,12 +39,12 @@ def hello(inputs=[]):
     return "Hello"
 
 
-@python_app(executors=["BalsamExecutor"])
+@bash_app(executors=["BalsamExecutor"])
 def combine(inputs=[]):
     return "echo {} {}".format(inputs[0], inputs[1])
 
 
-@python_app(executors=["BalsamExecutor"])
+@bash_app(executors=["BalsamExecutor"])
 def world(inputs=[]):
     return "echo {} {} World!".format(inputs[0], inputs[1])
 
