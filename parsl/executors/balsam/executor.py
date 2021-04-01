@@ -97,8 +97,18 @@ class BalsamFuture(Future):
             time.sleep(self._sleep)
 
         if not self.cancelled():
+            import pickle
+
             logger.debug("Result is available[{}]: {} {}".format(self._appname, id(self._job), self._job.data))
-            self.set_result(self._job.data["result"])
+
+            if self._job.data['type'] == 'python':
+                metadata = self._job.data
+                with open(metadata['file'], 'rb') as input:
+                    result = pickle.load(input)
+
+                    self.set_result(result)
+            elif self._job.data['type'] == 'bash':
+                self.set_result(self._job.data['result'])
             logger.debug("Set result on: {} {} ".format(id(self._job), id(self)))
             self.done()
 
@@ -216,8 +226,25 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 pargs = re.sub(r'\n', "", pargs).strip()
                 shell_command = "python << HEREDOC\n\nimport pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\nHEREDOC".format(
                     site_id, class_path, lines, pargs, appname)
-                source = "import pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\n".format(
-                    site_id, class_path, lines, pargs, appname)
+                source = "import pickle\n" \
+                         "import os\n" \
+                         "import json\n" \
+                         "import codecs\n" \
+                         "SITE_ID={}\n" \
+                         "CLASS_PATH='{}'\n" \
+                         "{}\n" \
+                         "pargs = '{}'\n" \
+                         "args = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\n" \
+                         "result = {}(inputs=[*args])\n" \
+                         "with open('output.pickle','ab') as output:\n" \
+                         "    pickle.dump(result, output)\n".format(
+                            site_id,
+                            class_path,
+                            lines,
+                            pargs,
+                            appname) + \
+                         "metadata = {\"type\":\"python\",\"file\":os.path.abspath('output.pickle')}\n" \
+                         "print(json.dumps(metadata))\n"
 
                 logger.debug(sys.executable)
                 shell_command = sys.executable + ' app.py'
