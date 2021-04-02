@@ -2,6 +2,31 @@ Changelog
 =========
 
 
+Parsl 1.1.0
+-----------
+
+Released on April 15th, 2021
+
+Parsl v1.1.0 includes 59 closed issues and 243 pull requests with contributions (code, tests, reviews and reports) from:
+
+Akila Ravihansa Perera @ravihansa3000, Anna Woodard @annawoodard, @bakerjl, Ben Clifford @benclifford,
+Daniel S. Katz @danielskatz, Douglas Thain @dthain, @gerrick, @JG-Quarknet, Joseph Moon @jmoon1506,
+Kelly L. Rowland @kellyrowland, Lars Bilke @bilke, Logan Ward @WardLT, Kirill Nagaitsev @Loonride,
+Marcus Schwarting @meschw04, Matt Baughman @mattebaughman, Mihael Hategan @hategan, @radiantone,
+Rohan Kumar @rohankumar42, Sohit Miglani @sohitmiglani, Tim Shaffer @trshaffer,
+Tyler J. Skluzacek @tskluzac, Yadu Nand Babuji @yadudoc, and Zhuozhao Li @ZhuozhaoLi
+
+Deprecated and Removed features
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+New Functionality
+^^^^^^^^^^^^^^^^^
+
+* `join_app` @Ben to update
+
+
+
 Parsl 1.0.0
 -----------
 
