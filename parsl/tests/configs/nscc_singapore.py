@@ -4,6 +4,8 @@ from parsl.launchers import MpiRunLauncher
 from parsl.addresses import address_by_interface
 from parsl.config import Config
 
+from .user_opts import user_opts
+
 
 def fresh_config():
     return Config(
@@ -20,10 +22,10 @@ def fresh_config():
                     # string to prepend to #PBS blocks in the submit
                     # script to the scheduler
                     # E.g., project name
-                    scheduler_options='',
+                    scheduler_options=user_opts['nscc']['scheduler_options'],
                     # Command to be run before starting a worker, such as:
                     # 'module load Anaconda; source activate parsl_env'.
-                    worker_init='module load openmpi/intel/1.10.2',
+                    worker_init=user_opts['nscc']['worker_init'],
                     nodes_per_block=2,
                     min_blocks=1,
                     max_blocks=1,
