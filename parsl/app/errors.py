@@ -133,7 +133,7 @@ class RemoteExceptionWrapper:
 
 R = TypeVar('R')
 
-# There appears to be no solutio to typing this without a mypy plugin.
+# There appears to be no solution to typing this without a mypy plugin.
 # The reason is because wrap_error maps a Callable[[X...], R] to a Callable[[X...], Union[R, R2]].
 # However, there is no provision in Python typing for pattern matching all possible types of
 # callable arguments. This is because Callable[] is, in the infinite wisdom of the typing module,
