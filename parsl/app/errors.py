@@ -2,12 +2,8 @@
 from functools import wraps
 from typing import Callable, List, Union, Any, TypeVar
 from types import TracebackType
-
-import dill
 import logging
 from tblib import Traceback
-
-from six import reraise
 
 from parsl.data_provider.files import File
 
@@ -111,24 +107,31 @@ class BadStdStreamFile(ParslError):
 class RemoteExceptionWrapper:
     def __init__(self, e_type: type, e_value: Exception, traceback: TracebackType) -> None:
 
-        self.e_type = dill.dumps(e_type)
-        self.e_value = dill.dumps(e_value)
+        self.e_type = e_type
+        self.e_value = e_value
         self.e_traceback = Traceback(traceback)
+
+        # self.e_type = dill.dumps(e_type)
+        # self.e_value = dill.dumps(e_value)
+        # self.e_traceback = Traceback(traceback)
 
     def reraise(self) -> None:
 
-        t = dill.loads(self.e_type)
+        # t = dill.loads(self.e_type)
 
         # the type is logged here before deserialising v and tb
         # because occasionally there are problems deserialising the
         # value (see #785, #548) and the fix is related to the
         # specific exception type.
-        logger.debug("Reraising exception of type {}".format(t))
+        logger.debug("Reraising exception of type {}".format(self.e_type))
 
-        v = dill.loads(self.e_value)
-        tb = self.e_traceback.as_traceback()
+        # v = dill.loads(self.e_value)
+        # tb = self.e_traceback.as_traceback()
 
-        reraise(t, v, tb)
+        raise self.e_value.with_traceback(self.e_traceback.as_traceback())
+
+        # reraise(self.e_type, self.e_value, self.e_traceback)
+        # reraise(t, v, tb)
 
 
 R = TypeVar('R')
