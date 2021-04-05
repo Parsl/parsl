@@ -101,14 +101,17 @@ class BalsamFuture(Future):
 
             logger.debug("Result is available[{}]: {} {}".format(self._appname, id(self._job), self._job.data))
 
-            if self._job.data['type'] == 'python':
-                metadata = self._job.data
+            metadata = self._job.data
+            logger.debug(metadata)
+            if metadata['type'] == 'python':
                 with open(metadata['file'], 'rb') as input:
                     result = pickle.load(input)
-
+                    logger.debug("OUTPUT.PICKLE is "+str(result))
                     self.set_result(result)
-            elif self._job.data['type'] == 'bash':
+            else:
+                logger.debug("BASH RESULT is " + self._job.data['result'])
                 self.set_result(self._job.data['result'])
+
             logger.debug("Set result on: {} {} ".format(id(self._job), id(self)))
             self.done()
 
@@ -195,7 +198,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
             workdir = kwargs['workdir'] if 'workdir' in kwargs else "parsl" + os.path.sep + appname
 
-            logger.debug(os.getcwd(), workdir + os.path.sep + 'executor' + os.path.sep + 'logs')
+            #logger.debug(os.getcwd(), workdir + os.path.sep + 'executor' + os.path.sep + 'logs')
 
             logger.debug("Log file is " + workdir + os.path.sep + 'executor' + os.path.sep +
                   'logs' + os.path.sep + 'executor.log')
@@ -220,12 +223,15 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             if script == 'bash':
                 shell_command = func(inputs=inputs)
             else:
+                import json
+
                 lines = inspect.getsource(func)
 
+                logger.debug("{} Inputs: {}".format(appname,json.dumps(inputs)))
                 pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
                 pargs = re.sub(r'\n', "", pargs).strip()
-                shell_command = "python << HEREDOC\n\nimport pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\nHEREDOC".format(
-                    site_id, class_path, lines, pargs, appname)
+                #shell_command = "python << HEREDOC\n\nimport pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\nHEREDOC".format(
+                #    site_id, class_path, lines, pargs, appname)
                 source = "import pickle\n" \
                          "import os\n" \
                          "import json\n" \
@@ -235,6 +241,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "{}\n" \
                          "pargs = '{}'\n" \
                          "args = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\n" \
+                         "print(args)\n" \
                          "result = {}(inputs=[*args])\n" \
                          "with open('output.pickle','ab') as output:\n" \
                          "    pickle.dump(result, output)\n".format(
@@ -244,7 +251,9 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                             pargs,
                             appname) + \
                          "metadata = {\"type\":\"python\",\"file\":os.path.abspath('output.pickle')}\n" \
-                         "print(json.dumps(metadata))\n"
+                         "with open('job.metadata','w') as job:\n" \
+                         "    job.write(json.dumps(metadata))\n" \
+                         "print(result)\n"
 
                 logger.debug(sys.executable)
                 shell_command = sys.executable + ' app.py'
@@ -271,6 +280,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             job.parameters["command"] = shell_command
             job.save()
 
+            os.makedirs(job.resolve_workdir(site_config.data_path), exist_ok=True)
             # Write function source to app.py in job workdir for balsam to pick up
             if script != 'bash':
                 with open(job.resolve_workdir(site_config.data_path).joinpath("app.py"), "w") as appsource:
@@ -281,7 +291,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             if callback:
                 self.balsam_future.add_done_callback(callback)
 
-            logger.debug("Starting job thread: ", job)
+            #logger.debug("Starting job thread: ", job)
             self.threadpool.submit(self.balsam_future.poll_result)
 
             return self.balsam_future
