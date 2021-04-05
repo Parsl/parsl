@@ -21,14 +21,19 @@ class ParslAppRunner(ApplicationDefinition):
         workdir = self.job.resolve_workdir(site_config.data_path)
         print('WORKDIR: ', workdir)
         stdout = workdir.joinpath("job.out").read_text().strip()
-        print('STDOUT: ', stdout)
+        metadata = workdir.joinpath("job.metadata").read_text().strip()
+        print('STDOUT2: ', stdout)
 
+        print("METADATA: ", metadata)
         try:
-            metadata = json.loads(stdout)
-            print("METADATA: ", metadata)
+            # Read from special metadata file instead of job.out
+
+            metadata = json.loads(metadata)
             self.job.data = metadata
         except:
-            self.job.data = {'result': stdout, 'type':'bash'}
+            import traceback
+            print(traceback.format_exc())
+            self.job.data = {'result': stdout, 'type': 'bash'}
 
         self.job.state = "POSTPROCESSED"
 
