@@ -29,20 +29,20 @@ rm -r parent
 
 verify_provider = '''
 (
-if [ -d ~/parsl_tmp ]; then
-    rm -rf ~/parsl_tmp
+if [ ! -d ~/parsl_tmp ]; then
+    mkdir ~/parsl_tmp
+    echo "HOSTNAME=$HOSTNAME"                                                 > ~/parsl_tmp/env.txt
+    echo "WHICHPYTHON=$(which python)"                                       >> ~/parsl_tmp/env.txt
+    echo -n "PYTHON_VERSION="                                                >> ~/parsl_tmp/env.txt
+    python --version                                                         >> ~/parsl_tmp/env.txt
+    echo "PARSL_VERSION="`python -c 'import parsl;print(parsl.__version__)'` >> ~/parsl_tmp/env.txt
+    echo "PARSL_PATH="`python -c 'import parsl;print(parsl.__path__[0])'`    >> ~/parsl_tmp/env.txt
+    echo "ZMQ_VERSION="`python -c 'import zmq;print(zmq.zmq_version())'`     >> ~/parsl_tmp/env.txt
+    echo "PYZMQ_VERSION="`python -c 'import zmq;print(zmq.pyzmq_version())'` >> ~/parsl_tmp/env.txt
+    echo "PROC_WORKER_POOL="`which process_worker_pool.py`                   >> ~/parsl_tmp/env.txt
+else
+    exit 0
 fi
-
-mkdir ~/parsl_tmp
-echo "HOSTNAME=$HOSTNAME"                                                 > ~/parsl_tmp/env.txt
-echo "WHICHPYTHON=$(which python)"                                       >> ~/parsl_tmp/env.txt
-echo -n "PYTHON_VERSION="
-python --version                                                         >> ~/parsl_tmp/env.txt
-echo "PARSL_VERSION="`python -c 'import parsl;print(parsl.__version__)'` >> ~/parsl_tmp/env.txt
-echo "PARSL_PATH="`python -c 'import parsl;print(parsl.__path__[0])'`    >> ~/parsl_tmp/env.txt
-echo "ZMQ_VERSION="`python -c 'import zmq;print(zmq.zmq_version())'`     >> ~/parsl_tmp/env.txt
-echo "PYZMQ_VERSION="`python -c 'import zmq;print(zmq.pyzmq_version())'` >> ~/parsl_tmp/env.txt
-echo "PROC_WORKER_POOL="`which process_worker_pool.py`                   >> ~/parsl_tmp/env.txt
 )
 '''
 
@@ -64,7 +64,7 @@ class ConfigTester():
             shutil.rmtree('~/parsl_tmp')
 
     def check_channel(self):
-        logger.debug('\nBegin checking the channel(s) in the config')
+        logger.debug('Begin checking the channel(s) in the config')
         executors = self.config.executors
         logger.debug(f'There are {len(executors)} executors in the config')
 
@@ -112,7 +112,7 @@ class ConfigTester():
                     raise
 
     def check_provider(self, disable_launcher):
-        logger.debug('\nBegin checking the provider(s) in the config')
+        logger.debug('Begin checking the provider(s) in the config')
         executors = self.config.executors
         logger.debug(f'There are {len(executors)} executors in the config')
 
@@ -138,12 +138,12 @@ class ConfigTester():
                     raise Exception('The provider ({wo} launcher) did not return with terminal status'.format(wo='without' if disable_launcher else 'with'))
 
                 keyval_file = provider.channel.pull_file(os.path.expanduser('~/parsl_tmp/env.txt'), os.getcwd())
-                keyval_dict = {line.split("=")[0]: line.split("=")[1] for line in open(keyval_file)}
+                keyval_dict = {line.split("=")[0]: line.split("=")[1].strip() for line in open(keyval_file)}
                 process_wp = subprocess.run(['which', 'process_worker_pool.py'], stdout=subprocess.PIPE)
 
                 local_keyval = {'HOSTNAME': socket.gethostname(),
                                 'WHICHPYTHON': sys.executable,
-                                'PYTHON_VERSION': platform.python_version(),
+                                'PYTHON_VERSION': 'Python ' + platform.python_version(),
                                 'PARSL_VERSION': parsl.__version__,
                                 'PARSL_PATH': parsl.__path__[0],
                                 'ZMQ_VERSION': zmq.zmq_version(),
@@ -156,7 +156,7 @@ class ConfigTester():
                             raise Exception(f'Unexpected {key}={value}')
                     else:
                         if not value == local_keyval[key]:
-                            raise Exception(f'Unexpected {key}={value}')
+                            raise Exception(f'Unexpected {key}={value}, expected {local_keyval[key]}')
 
                 logger.debug('\tThe provider (with launcher{wo}) returned with terminal status and consistent env variables'
                              .format(wo=' disabled' if disable_launcher else ''))
@@ -176,7 +176,7 @@ class ConfigTester():
         #     fut = executor.submit(square, None, 2)
         #     print(fut.result())
 
-        logger.debug('\nBegin checking the executor(s) in the config')
+        logger.debug('Begin checking the executor(s) in the config')
         executors = self.config.executors
         logger.debug(f'There are {len(executors)} executors in the config')
 
@@ -192,9 +192,9 @@ class ConfigTester():
             fut = executor.submit(func, spec, arg)
             try:
                 if fut.result() == expected:
-                    logger.debug(f'\tWhen starting {block_id}, #{i+1} executor worked properly')
+                    logger.debug(f'\tWhen starting block {block_id}, #{i+1} executor worked properly')
                 else:
-                    logger.error(f'\tWhen starting {block_id}, #{i+1} executor did NOT work properly')
+                    logger.error(f'\tWhen starting block {block_id}, #{i+1} executor did NOT work properly')
             except Exception:
                 raise
 
@@ -222,12 +222,12 @@ def start_logger(filename, name='parsl', level=logging.DEBUG, format_string=None
     file_handler = logging.FileHandler(filename)
     file_handler.setLevel(level)
     file_handler.setFormatter(formatter)
-    logger.addHandle(file_handler)
+    logger.addHandler(file_handler)
 
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel(level)
     stream_handler.setFormatter(formatter)
-    logger.addHandle(stream_handler)
+    logger.addHandler(stream_handler)
 
 
 def cli_run():
@@ -242,12 +242,13 @@ def cli_run():
     args = parser.parse_args()
 
     try:
+        os.makedirs(args.logdir, exist_ok=True)
         probe_log_file = os.path.join(args.logdir, 'parsl-probe.log')
         start_logger(probe_log_file,
                      name='probe_log',
                      level=logging.DEBUG if args.debug else logging.INFO)
 
-        config_tester = ConfigTester(args.config_file)
+        config_tester = ConfigTester(args.file)
     except Exception:
         raise
 
