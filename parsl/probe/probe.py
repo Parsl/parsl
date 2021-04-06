@@ -13,7 +13,6 @@ import argparse
 from importlib.machinery import SourceFileLoader
 
 from parsl.launchers import SimpleLauncher
-from parsl.executors import WorkQueueExecutor
 
 verify_channel_file = '''
 rand=$RANDOM
@@ -29,8 +28,8 @@ rm -r parent
 
 verify_provider = '''
 (
-if [ ! -d ~/parsl_tmp ]; then
-    mkdir ~/parsl_tmp
+if ( [ ! -d ~/parsl_tmp ] && mkdir ~/parsl_tmp ) 2> /dev/null
+then
     echo "HOSTNAME=$HOSTNAME"                                                 > ~/parsl_tmp/env.txt
     echo "WHICHPYTHON=$(which python)"                                       >> ~/parsl_tmp/env.txt
     echo -n "PYTHON_VERSION="                                                >> ~/parsl_tmp/env.txt
@@ -54,11 +53,6 @@ def square(x):
 class ConfigTester():
 
     def __init__(self, config):
-        try:
-            src = SourceFileLoader("config", config).load_module()
-            config = src.config
-        except Exception:
-            raise
         self.config = config
         if os.path.isdir('~/parsl_tmp'):
             shutil.rmtree('~/parsl_tmp')
@@ -74,41 +68,45 @@ class ConfigTester():
                 channels = [executor.provider.channel]
             else:
                 channels = executor.provider.channels
-            logger.debug(f'\tThere are {len(channels)} channels in #{i+1} executor')
+            logger.debug(f'\tThere are {len(channels)} channels in the {executor.__class__.__name__}')
 
             for j, channel in enumerate(channels):
-                logger.debug(f'\t\tBegin checking #{j+1} channel in #{i+1} executor')
+                logger.debug(f'\t\tBegin checking the {channel.__class__.__name__} in the {executor.__class__.__name__}')
                 channel = copy.deepcopy(channel)
                 channel.script_dir = '.'
                 # check file creation
                 try:
                     retcode, outmsg, errmsg = channel.execute_wait(verify_channel_file)
                     if retcode == 0:
-                        logger.debug(f'\t\t#{j+1} channel in #{i+1} executor can create file')
+                        logger.debug(f'\t\t{channel.__class__.__name__} creating file: SUCCEEDED')
                     else:
-                        logger.error(f'\t\t#{j+1} channel in #{i+1} executor CANNOT create file with error msg {errmsg}')
+                        logger.exception(f'\t\t{channel.__class__.__name__} creating file: FAILED, error message {errmsg}')
                 except Exception:
+                    logger.exception(f'\t\t{channel.__class__.__name__} creating file: FAILED')
                     raise
                 # check mkdir
                 try:
                     retcode, outmsg, errmsg = channel.execute_wait(verify_channel_dir)
                     if retcode == 0:
-                        logger.debug(f'\t\t#{j+1} channel in #{i+1} executor can mkdir')
+                        logger.debug(f'\t\t{channel.__class__.__name__} creating directory: SUCCEEDED')
                     else:
-                        logger.error(f'\t\t#{j+1} channel in #{i+1} executor CANNOT mkdir with error msg {errmsg}')
+                        logger.exception(f'\t\t{channel.__class__.__name__} creating directory: FAILED, error message {errmsg}')
                 except Exception:
+                    logger.exception(f'\t\t{channel.__class__.__name__} creating directory: FAILED')
                     raise
                 # check push_file
                 try:
                     dest_file = channel.push_file('./rand.txt', '/tmp')
-                    logger.debug(f'\t\t#{j+1} channel in #{i+1} executor can push file')
+                    logger.debug(f'\t\t{channel.__class__.__name__} pushing file: SUCCEEDED')
                 except Exception:
+                    logger.exception(f'\t\t{channel.__class__.__name__} pushing file: FAILED')
                     raise
                 # check pull_file
                 try:
                     dest_file = channel.pull_file('/tmp/rand.txt', '.')
-                    logger.debug(f'\t\t#{j+1} channel in #{i+1} executor can pull file {dest_file}')
+                    logger.debug(f'\t\t{channel.__class__.__name__} pulling file: SUCCEEDED')
                 except Exception:
+                    logger.exception(f'\t\t{channel.__class__.__name__} pulling {dest_file}: FAILED')
                     raise
 
     def check_provider(self, disable_launcher):
@@ -117,9 +115,10 @@ class ConfigTester():
         logger.debug(f'There are {len(executors)} executors in the config')
 
         for i, executor in enumerate(executors):
-            logger.debug('\tBegin checking the provider in #{} executor, with launcher{wo}'.format(i + 1, wo=' disabled' if disable_launcher else ''))
             provider = copy.deepcopy(executor.provider)
             provider.script_dir = '.'
+            logger.debug('\tBegin checking the {prd} in {ex}, with launcher{wo}'.format(
+                         prd=provider.__class__.__name__, ex=executor.__class__.__name__, wo=' disabled' if disable_launcher else ''))
             if hasattr(provider, 'channel'):
                 provider.channel.script_dir = '.'
             else:
@@ -135,7 +134,10 @@ class ConfigTester():
                     time.sleep(5)
                     job_st = provider.status([job_id])[0]
                 if not job_st.terminal:
-                    raise Exception('The provider ({wo} launcher) did not return with terminal status'.format(wo='without' if disable_launcher else 'with'))
+                    msg = '{prd} ({wo} launcher) submit: FAILED, without terminal status'.format(
+                           prd=provider.__class__.__name__, wo='without' if disable_launcher else 'with')
+                    logger.exception(msg)
+                    raise Exception(msg)
 
                 keyval_file = provider.channel.pull_file(os.path.expanduser('~/parsl_tmp/env.txt'), os.getcwd())
                 keyval_dict = {line.split("=")[0]: line.split("=")[1].strip() for line in open(keyval_file)}
@@ -153,13 +155,18 @@ class ConfigTester():
                 for key, value in keyval_dict.items():
                     if key == 'HOSTNAME':  # hostname should NOT be the same
                         if value == local_keyval[key]:
-                            raise Exception(f'Unexpected {key}={value}')
+                            msg = f'{provider.__class__.__name__} submit: succeeded, BUT returned UNEXPECTED {key}={value}'
+                            logger.exception(msg)
+                            raise Exception(msg)
                     else:
                         if not value == local_keyval[key]:
-                            raise Exception(f'Unexpected {key}={value}, expected {local_keyval[key]}')
+                            msg = f'{provider.__class__.__name__} submit: succeeded, BUT returned UNEXPECTED {key}={value}, \
+                                    expecting {local_keyval[key]}'
+                            logger.exception(msg)
+                            raise Exception(msg)
 
-                logger.debug('\tThe provider (with launcher{wo}) returned with terminal status and consistent env variables'
-                             .format(wo=' disabled' if disable_launcher else ''))
+                logger.debug('\t{prd} (with launcher{wo}) submit: SUCCEEDED'.format(
+                             prd=provider.__class__.__name__, wo=' disabled' if disable_launcher else ''))
                 shutil.rmtree(os.path.expanduser('~/parsl_tmp'))
                 os.remove('./env.txt')
 
@@ -180,23 +187,29 @@ class ConfigTester():
         executors = self.config.executors
         logger.debug(f'There are {len(executors)} executors in the config')
 
-        avail_spec = {'cores': 2, 'memory': 1000, 'disk': 1000}
         for i, executor in enumerate(executors):
-            logger.debug(f'\tBegin checking #{i+1} executor in the config')
+            logger.debug(f'\tBegin checking {executor.__class__.__name__} in the config')
             executor.provider.script_dir = '.'
             executor.provider.channel.script_dir = '.'
             block_id = executor.start()
-            spec = None
-            if type(executor) is WorkQueueExecutor:
-                spec = avail_spec
-            fut = executor.submit(func, spec, arg)
+            fut = executor.submit(func, None, arg)
             try:
                 if fut.result() == expected:
-                    logger.debug(f'\tWhen starting block {block_id}, #{i+1} executor worked properly')
+                    logger.debug(f'\t{executor.__class__.__name__} submit: SUCCEEDED')
                 else:
-                    logger.error(f'\tWhen starting block {block_id}, #{i+1} executor did NOT work properly')
+                    logger.exception(f'\t{executor.__class__.__name__} submit: FAILED in block {block_id}')
+                executor.shutdown()
             except Exception:
                 raise
+
+    def check_all(self):
+        self.check_channel()
+        time.sleep(10)
+        self.check_provider(disable_launcher=True)
+        time.sleep(15)
+        self.check_provider(disable_launcher=False)
+        time.sleep(15)
+        self.check_executor(square, 3, 9)
 
 
 def start_logger(filename, name='parsl', level=logging.DEBUG, format_string=None):
@@ -237,22 +250,32 @@ def cli_run():
                         help="Config file to be tested")
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Set logging debug mode")
-    parser.add_argument("-l", "--logdir", default="config_probe_logs",
-                        help="Config probe log directory")
     args = parser.parse_args()
 
     try:
-        os.makedirs(args.logdir, exist_ok=True)
-        probe_log_file = os.path.join(args.logdir, 'parsl-probe.log')
+        probe_log_file = os.path.join('.', 'parsl-probe.log')
         start_logger(probe_log_file,
-                     name='probe_log',
+                     name="parsl/probe/probe.py",
                      level=logging.DEBUG if args.debug else logging.INFO)
 
-        config_tester = ConfigTester(args.file)
+        src = SourceFileLoader("config", args.file).load_module()
+        config = src.config
+        config_tester = ConfigTester(config)
     except Exception:
         raise
 
-    config_tester.check_channel()
-    config_tester.check_provider(disable_launcher=True)
-    config_tester.check_provider(disable_launcher=False)
-    config_tester.check_executor(square, 3, 9)
+    config_tester.check_all()
+
+
+def check_config(config, debug=True):
+    try:
+        probe_log_file = os.path.join('.', 'parsl-probe.log')
+        start_logger(probe_log_file,
+                     name="parsl/probe/probe.py",
+                     level=logging.DEBUG if debug else logging.INFO)
+
+        config_tester = ConfigTester(config)
+    except Exception:
+        raise
+
+    config_tester.check_all()

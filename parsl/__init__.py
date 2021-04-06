@@ -32,6 +32,7 @@ from parsl.monitoring import MonitoringHub
 from parsl.data_provider.files import File
 
 from parsl.dataflow.dflow import DataFlowKernel, DataFlowKernelLoader
+from parsl.probe.probe import check_config
 
 __author__ = 'The Parsl Team'
 __version__ = VERSION
@@ -69,6 +70,7 @@ clear = DataFlowKernelLoader.clear
 load = DataFlowKernelLoader.load
 dfk = DataFlowKernelLoader.dfk
 wait_for_current_tasks = DataFlowKernelLoader.wait_for_current_tasks
+check_config = check_config
 
 
 class NullHandler(logging.Handler):
