@@ -61,7 +61,7 @@ def workflow(workflow_id):
                                 task_time_returned from task
                                 WHERE run_id='%s'"""
                                 % (workflow_id), db.engine)
-    df_task_tries = pd.read_sql_query("""SELECT task.task_id, task_func_name,
+    df_task_tries = pd.read_sql_query("""SELECT task.task_id, task_func_name, task_time_returned,
                                       task_try_time_running, task_try_time_returned from task, try
                                       WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'"""
                                       % (workflow_id, workflow_id), db.engine)
