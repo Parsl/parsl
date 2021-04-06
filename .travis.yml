@@ -70,6 +70,10 @@ script:
     - pip install .[monitoring]
     - parsl/tests/test-viz.sh
 
+    # once viz has been tested with previous per-config, can run the monitoring-db-destroying
+    # local tests
+    - make config_local_test
+
     # check that 'all' install target works, even though we aren't doing any further
     # testing of what is installed
     - pip install .[all]
