@@ -97,7 +97,7 @@ def resource_time_series(tasks, type='psutil_process_time_user', label='CPU user
 def worker_efficiency(task, node):
     try:
         node['epoch_time'] = (pd.to_datetime(
-            node['reg_time']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+            node['timestamp']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         task['epoch_time_start'] = (pd.to_datetime(
             task['task_try_time_launched']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         task['epoch_time_running'] = (pd.to_datetime(
@@ -131,9 +131,11 @@ def worker_efficiency(task, node):
                              yaxis=dict(title='Number of workers'),
                              title="Worker efficiency"))
         return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
-    except Exception:
+    except Exception as e:
+        print("BENC BENC BENC BENC BENC BENC BENC BENC")
+        print("Exception:")
+        print(repr(e))
         raise
-        # print(e)
         # return "The worker efficiency plot cannot be generated due to missing data."
 
 
@@ -142,7 +144,7 @@ def resource_efficiency(resource, node, label='CPU'):
         resource['epoch_time'] = (pd.to_datetime(
             resource['timestamp']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         node['epoch_time'] = (pd.to_datetime(
-            node['reg_time']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+            node['timestamp']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         resource = resource.sort_values(by='epoch_time')
         start = min(resource['epoch_time'].min(), node['epoch_time'].min())
         end = resource['epoch_time'].max()

@@ -3,4 +3,4 @@
 <Major>.<Minor>.<maintenance>[alpha/beta/..]
 Alphas will be numbered like this -> 0.4.0a0
 """
-VERSION = '1.1.0a1+lsst-dm-20210325a'
+VERSION = '1.1.0a1+lsst-dm-202103-2021.04.03a'

@@ -368,6 +368,13 @@ class DataFlowKernel(object):
         outer_task_id = task_record['id']
 
         try:
+            # TODO: stack traces could be tidier by this call not re-raising the exception,
+            # so that it keeps only the remote part of the exception.
+            # Then the exception handling block directly below would need to be entered
+            # in two ways: either an exception is thrown (because something broke)
+            # or there is a remoteexceptionwrapper, in which case use the contained
+            # exception can be used directly as e without a further raise/except
+            # which i think might then keep stack traces cleaner?
             res = self._unwrap_remote_exception_wrapper(inner_app_future)
 
         except Exception as e:
@@ -478,11 +485,11 @@ class DataFlowKernel(object):
         if self._count_deps(task_record['depends']) == 0:
 
             # We can now launch *task*
-            new_args, kwargs, exceptions = self.sanitize_and_wrap(task_record['args'],
-                                                                  task_record['kwargs'])
+            new_args, kwargs, exceptions_tids = self.sanitize_and_wrap(task_record['args'],
+                                                                       task_record['kwargs'])
             task_record['args'] = new_args
             task_record['kwargs'] = kwargs
-            if not exceptions:
+            if not exceptions_tids:
                 # There are no dependency errors
                 exec_fu = None
                 # Acquire a lock, retest the state, launch
@@ -513,7 +520,7 @@ class DataFlowKernel(object):
                 self._send_task_log_info(task_record)
 
                 exec_fu = Future()
-                exec_fu.set_exception(DependencyError(exceptions,
+                exec_fu.set_exception(DependencyError(exceptions_tids,
                                                       task_id))
 
             if exec_fu:
