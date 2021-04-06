@@ -65,6 +65,12 @@ jobs:
         pip install .[monitoring]
         parsl/tests/test-viz.sh
 
+    # config_local_test comes after viz so that the large monitoring.db
+    # created by `make test` is still around
+    - name: make config_local_test
+      run: |
+        make config_local_test
+
     - name: make coverage
       run: |
         make coverage

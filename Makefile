@@ -87,7 +87,7 @@ perf_test:
 	parsl-perf --time 5 --config parsl/tests/configs/local_threads.py
 
 .PHONY: test ## run all tests with all config types
-test: clean_coverage lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test wqex_local_test vineex_local_test config_local_test perf_test ## run all tests
+test: clean_coverage lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test wqex_local_test vineex_local_test perf_test ## run most tests
 
 .PHONY: tag
 tag: ## create a tag in git. to run, do a 'make VERSION="version string" tag
