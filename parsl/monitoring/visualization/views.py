@@ -21,8 +21,7 @@ def format_time(value):
         rounded_timedelta = datetime.timedelta(days=value.days, seconds=value.seconds)
         return rounded_timedelta
     else:
-        print("Incorrect time format (neither float nor datetime object): {}, type: {}".format(value, type(value)))  # TODO: use logging
-        # raise ValueError("Incorrect time format: {}, type {}".format(value, type(value)))
+        print("Warning: Incorrect time format (neither float nor datetime object): {}, type: {}".format(value, type(value)))  # TODO: use logging
         return "-"
 
 
