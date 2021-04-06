@@ -68,7 +68,10 @@ class SubmitException(ExecutionProviderException):
 
     def __repr__(self):
         # TODO: make this more user-friendly
-        return "Cannot launch task {0}: {1}; stdout={2}, stderr={3}".format(self.task_name,
-                                                                            self.message,
-                                                                            self.stdout,
-                                                                            self.stderr)
+        return "Cannot launch task {0}: {1}; stdout={2}, stderr=\n{3}".format(self.task_name,
+                                                                              self.message,
+                                                                              self.stdout,
+                                                                              self.stderr)
+
+    def __str__(self):
+        return self.__repr__()

@@ -178,6 +178,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         final_cmd = 'bash {0} > {0}.out 2>&1 & \n echo "PID:$!" '.format(script_path)
         retcode, stdout, stderr = channel.execute_wait(final_cmd, self.cmd_timeout)
         if retcode != 0:
+            logger.exception("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
             raise SubmitException(job_name,
                                   f'Submission of command to scale_out failed at {self.__class__} with retcode: {retcode}',
                                   stdout=stdout.strip(),

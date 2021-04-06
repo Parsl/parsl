@@ -153,7 +153,7 @@ class PBSProProvider(TorqueProvider):
             message = "Command '{}' failed with return code {}".format(launch_cmd, retcode)
             if (stdout is not None) and (stderr is not None):
                 message += "\nstderr:{}\nstdout{}".format(stderr.strip(), stdout.strip())
-            logger.error(message)
+            logger.exception(message)
             raise SubmitException(job_name,
                                   f'Submission of command to scale_out failed at {self.__class__} with retcode: {retcode}',
                                   stdout=stdout.strip(),

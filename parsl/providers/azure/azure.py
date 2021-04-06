@@ -297,7 +297,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
             self.cancel([vm_info.name])
             raise KeyboardInterrupt
         except Exception:
-            logger.error(f'{job_name}\'s submission of command failed at {self.__class__}')
+            logger.exception(f'{job_name}\'s submission of command failed at {self.__class__}')
             raise
         return vm_info.name
 

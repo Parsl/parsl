@@ -164,7 +164,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                              volumes=self.persistent_volumes)
             self.resources[pod_name] = {'status': JobStatus(JobState.RUNNING)}
         except Exception:
-            logger.error(f'{job_name}\'s submission of command failed at {self.__class__}')
+            logger.exception(f'{job_name}\'s submission of command failed at {self.__class__}')
             raise
         return pod_name
 

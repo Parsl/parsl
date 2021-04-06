@@ -655,7 +655,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                                         self.nodes_per_block)
             [instance, *rest] = self.spin_up_instance(command=wrapped_cmd, job_name=job_name)
         except Exception:
-            logger.error(f'{job_name}\'s submission of command failed at {self.__class__}')
+            logger.exception(f'{job_name}\'s submission of command failed at {self.__class__}')
             raise
 
         if not instance:

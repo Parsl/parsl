@@ -195,7 +195,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
             job_id = stdout.strip()
             self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
-            logger.error("Submission of command to scale_out failed: {0}".format(stderr))
+            logger.exception("Submission of command to scale_out failed: {0}".format(stderr))
             raise SubmitException(job_name,
                                   f'Submission of command to scale_out failed at {self.__class__} with retcode: {retcode}',
                                   stdout=stdout.strip(),

@@ -118,7 +118,7 @@ class GoogleCloudProvider():
             instance, name = self.create_instance(command=wrapped_cmd)
             self.resources[name] = {"job_id": name, "status": JobStatus(translate_table[instance['status']])}
         except Exception:
-            logger.error(f'{job_name}\'s submission of command failed at {self.__class__}')
+            logger.exception(f'{job_name}\'s submission of command failed at {self.__class__}')
             raise
         return name
 

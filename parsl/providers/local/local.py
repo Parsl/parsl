@@ -236,8 +236,9 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
               'echo $? > {0}.ec ; }} >/dev/null 2>&1 & echo "PID:$!" ; }}\''.format(script_path)
         retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
         if retcode != 0:
+            logger.exception("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
             raise SubmitException(job_name, "Launch command exited with code {0}".format(retcode),
-                                  stdout, stderr)
+                                  stdout.strip(), stderr.strip())
         for line in stdout.split('\n'):
             if line.startswith("PID:"):
                 remote_pid = line.split("PID:")[1].strip()
