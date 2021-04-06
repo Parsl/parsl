@@ -54,6 +54,7 @@ def task_gantt_plot(df_task, df_status, time_completed=None):
               'pending': 'rgb(168, 168, 168)',
               'launched': 'rgb(100, 255, 255)',
               'running': 'rgb(0, 0, 255)',
+              'running_ended': 'rgb(64, 64, 255)',
               'joining': 'rgb(128, 128, 255)',
               'dep_fail': 'rgb(255, 128, 255)',
               'failed': 'rgb(200, 0, 0)',
@@ -81,10 +82,10 @@ def task_per_app_plot(task, status, time_completed):
         task['epoch_time_running'] = (pd.to_datetime(
             task['task_try_time_running']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         task['epoch_time_returned'] = (pd.to_datetime(
-            task['task_try_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+            task['task_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         start = int(task['epoch_time_running'].min())
 
-        end = int(task['epoch_try_time_returned'].max())
+        end = int(task['epoch_time_returned'].max())
         # should we take the max of this and time_completed here?
         # because they might not align just right, and cause array overflows
         # later in this plot? probably yes.  - need to get a notion of
@@ -100,12 +101,12 @@ def task_per_app_plot(task, status, time_completed):
             if math.isnan(row['epoch_time_running']):
                 # Skip rows with no running start time.
                 continue
-            if math.isnan(row['epoch_try_time_returned']):
+            if math.isnan(row['epoch_time_returned']):
                 # Some kind of inference about time returned (workflow end time / current time? see gantt chart for inferences)
 
                 time_returned = end
             else:
-                time_returned = int(row['epoch_try_time_returned'])
+                time_returned = int(row['epoch_time_returned'])
 
             if row['task_func_name'] not in tasks_per_app:
                 tasks_per_app[row['task_func_name']] = [0] * (end - start + 1)
