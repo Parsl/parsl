@@ -25,6 +25,10 @@ Deprecated and Removed features
 New Functionality
 ^^^^^^^^^^^^^^^^^
 
+* Allow HTEX to set CPU affinity (#1853)
+
+* New serialization system to replace IPP serialization (#1806)
+
 * Support python 3.9
 
 * @join_apps are a variation of @python_apps which an app to launch
