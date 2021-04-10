@@ -23,7 +23,11 @@ Deprecated and Removed features
 New Functionality
 ^^^^^^^^^^^^^^^^^
 
-* `join_app` @Ben to update
+* @join_apps are a variation of @python_apps which an app to launch
+  more apps and then complete only after the launched apps are also
+  completed.
+    
+  These are described more fully in docs/userguide/joins.rst
 
 
 
