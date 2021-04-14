@@ -198,8 +198,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
             workdir = kwargs['workdir'] if 'workdir' in kwargs else "parsl" + os.path.sep + appname
 
-            #logger.debug(os.getcwd(), workdir + os.path.sep + 'executor' + os.path.sep + 'logs')
-
             logger.debug("Log file is " + workdir + os.path.sep + 'executor' + os.path.sep +
                   'logs' + os.path.sep + 'executor.log')
 
@@ -230,8 +228,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 logger.debug("{} Inputs: {}".format(appname,json.dumps(inputs)))
                 pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
                 pargs = re.sub(r'\n', "", pargs).strip()
-                #shell_command = "python << HEREDOC\n\nimport pickle\nimport codecs\nSITE_ID={}\nCLASS_PATH='{}'\n{}\npargs = '{}'\nargs = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\nresult = {}(inputs=[*args])\nprint(result)\nHEREDOC".format(
-                #    site_id, class_path, lines, pargs, appname)
+
                 source = "import pickle\n" \
                          "import os\n" \
                          "import json\n" \
@@ -256,7 +253,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "print(result)\n"
 
                 logger.debug(sys.executable)
-                shell_command = sys.executable + ' app.py'
+                shell_command = os.getcwd() + sys.executable + ' app.py'
                 source = source.replace('@python_app','#@python_app')
 
             try:
@@ -291,7 +288,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             if callback:
                 self.balsam_future.add_done_callback(callback)
 
-            #logger.debug("Starting job thread: ", job)
             self.threadpool.submit(self.balsam_future.poll_result)
 
             return self.balsam_future
