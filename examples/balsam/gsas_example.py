@@ -1,5 +1,4 @@
 import parsl
-import os
 from parsl.app.app import python_app
 from parsl.config import Config
 from parsl.executors.balsam.executor import BalsamExecutor
@@ -92,7 +91,6 @@ def RefineGPX(inputs=[]):
 
 create_histograms = CreateHistograms(callback=callback)
 refine_gpx = RefineGPX(callback=callback, inputs=[create_histograms])
-
 hist_stats = HistStats(callback=callback, inputs=[refine_gpx])
 
 print(hist_stats.result())

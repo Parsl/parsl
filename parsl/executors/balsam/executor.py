@@ -279,9 +279,11 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
             os.makedirs(job.resolve_workdir(site_config.data_path), exist_ok=True)
             # Write function source to app.py in job workdir for balsam to pick up
+            logger.debug("Script type is {}".format(str(script)))
             if script != 'bash':
                 with open(job.resolve_workdir(site_config.data_path).joinpath("app.py"), "w") as appsource:
                     appsource.write(source)
+                    logger.debug("Wrote app.py to {}".format(appsource.name))
 
             self.balsam_future = BalsamFuture(job, appname, sleep=sleep, timeout=timeout)
 
