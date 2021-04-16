@@ -253,7 +253,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "print(result)\n"
 
                 logger.debug(sys.executable)
-                shell_command = os.getcwd() + sys.executable + ' app.py'
+                shell_command = sys.executable + ' app.py'
                 source = source.replace('@python_app','#@python_app')
 
             try:
