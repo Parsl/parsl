@@ -12,6 +12,6 @@ class OptionalModuleMissing(ParslError):
         self.reason = reason
 
     def __str__(self) -> str:
-        return "The functionality requested requires missing optional modules {0}, because: {1}".format(
+        return "The functionality requested requires optional modules {0} which could not be imported, because: {1}".format(
             self.module_names, self.reason
         )
