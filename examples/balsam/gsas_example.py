@@ -7,13 +7,15 @@ from parsl.executors.balsam.executor import BalsamExecutor
 config = Config(
     executors=[
         BalsamExecutor(
-            siteid=1,
+            siteid=10,
             maxworkers=3,
+            envdir="/<path>/work",
+            image="/<path>/gsas2.img",
             numnodes=1,
-            timeout=60,
+            timeout=600,
             node_packing_count=8,
-            sitedir='git/site1',
-            project='local'
+            sitedir='<sitedir>',
+            project='APSWorkflows'
         )
     ]
 )
@@ -33,7 +35,7 @@ def callback(future, **kwargs):
 def HistStats(inputs=[]):
     import os
     import sys
-    sys.path.insert(0, '/home/darren/gsas')
+    sys.path.insert(0, '/work/gsas2/GSASII')
     import GSASIIscriptable as G2sc
 
     filename = inputs[0]
@@ -41,7 +43,7 @@ def HistStats(inputs=[]):
     '''prints profile rfactors for all histograms'''
     print(u"*** profile Rwp, " + os.path.split(filename)[1])
     for hist in gpx.histograms():
-        print("\t{:20s}: {:.2f}".format(hist.name, hist.get_wR()))
+        print("\t{}: {}".format(hist.name, hist.get_wR()))
     gpx.save()
 
 
@@ -49,10 +51,10 @@ def HistStats(inputs=[]):
 def CreateHistograms(inputs=[]):
     import os
     import sys
-    sys.path.insert(0, '/home/darren/gsas')
+    sys.path.insert(0, '/work/gsas2/GSASII')
     import GSASIIscriptable as G2sc
 
-    datadir = "/home/darren/gsas/svn/pyGSAS/Tutorials/PythonScript/data"
+    datadir = "/work/data"
     # create a project with a default project name
     gpx = G2sc.G2Project(filename='PbSO4.gpx')
 
@@ -73,7 +75,7 @@ def CreateHistograms(inputs=[]):
 @python_app(executors=['BalsamExecutor'])
 def RefineGPX(inputs=[]):
     import sys
-    sys.path.insert(0, '/home/darren/gsas')
+    sys.path.insert(0, '/work/gsas2/GSASII')
     import GSASIIscriptable as G2sc
 
     filename = inputs[0]

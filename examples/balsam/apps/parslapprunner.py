@@ -6,7 +6,7 @@ class ParslAppRunner(ApplicationDefinition):
     Parsl App Runner. Place this file in your site directory under apps/ directory.
     """
     environment_variables = {}
-    command_template = '/bin/bash -c {{ command }}'
+    command_template = 'singularity exec --bind {{ workdir }}:/work --bind .:/app {{ image }} python /app/app.py'
     parameters = {}
     transfers = {}
 
@@ -16,8 +16,10 @@ class ParslAppRunner(ApplicationDefinition):
 
     def postprocess(self):
         from balsam.api import site_config
+        from pathlib import Path
         import json
 
+	
         workdir = self.job.resolve_workdir(site_config.data_path)
         print('WORKDIR: ', workdir)
         stdout = workdir.joinpath("job.out").read_text().strip()
@@ -45,3 +47,4 @@ class ParslAppRunner(ApplicationDefinition):
 
     def handle_error(self):
         self.job.state = "FAILED"
+

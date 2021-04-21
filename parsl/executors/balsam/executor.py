@@ -58,7 +58,7 @@ class BalsamFuture(Future):
     _appname: str = None
     _sleep: int = 2
 
-    def __init__(self, job, appname, sleep=2, timeout=60):
+    def __init__(self, job, appname, sleep=2, timeout=600):
         super(BalsamFuture, self).__init__()
         self._job = job
         self._appname = appname
@@ -73,6 +73,7 @@ class BalsamFuture(Future):
         Poll Balsam2 API about this Job as long is job is either not finished,
         or gets cancelled by calling future.cancel() on the future object
         """
+        logger.debug("Timeout is {}".format(self._timeout))
         while self._job.state != "JOB_FINISHED":
             if self._job.state == 'FAILED':
                 self.cancel()
@@ -130,6 +131,8 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     def __init__(self,
                  label: str = 'BalsamExecutor',
                  workdir: str = 'parsl',
+                 envdir: str = 'work',
+                 image: str = None,
                  numnodes: int = 1,
                  walltime: int = 30,
                  queue: str = 'local',
@@ -140,7 +143,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  sleep: int = 1,
                  sitedir: str = None,
                  node_packing_count: int = 1,
-                 timeout: int = 60,
+                 timeout: int = 600,
                  classpath: str = 'parslapprunner.ParslAppRunner',
                  tags: Dict[str, str] = {}
                  ):
@@ -166,6 +169,8 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.batchjob = None
         self.balsam_future = None
         self.workdir = workdir
+        self.envdir = envdir
+        self.image = image
 
     def _get_block_and_job_ids(self) -> Tuple[List[str], List[Any]]:
         pass
@@ -240,7 +245,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "args = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\n" \
                          "print(args)\n" \
                          "result = {}(inputs=[*args])\n" \
-                         "with open('output.pickle','ab') as output:\n" \
+                         "with open('/app/output.pickle','ab') as output:\n" \
                          "    pickle.dump(result, output)\n".format(
                             site_id,
                             class_path,
@@ -248,12 +253,13 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                             pargs,
                             appname) + \
                          "metadata = {\"type\":\"python\",\"file\":os.path.abspath('output.pickle')}\n" \
-                         "with open('job.metadata','w') as job:\n" \
+                         "with open('/app/job.metadata','w') as job:\n" \
                          "    job.write(json.dumps(metadata))\n" \
                          "print(result)\n"
 
                 logger.debug(sys.executable)
-                shell_command = sys.executable + ' app.py'
+                #shell_command = sys.executable + ' app.py'
+                shell_command = 'python app.py'
                 source = source.replace('@python_app','#@python_app')
 
             try:
@@ -274,7 +280,9 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 parameters={},
                 node_packing_count=node_packing_count,
             )
-            job.parameters["command"] = shell_command
+            #job.parameters["command"] = shell_command
+            job.parameters["image"] = self.image
+            job.parameters["workdir"] = self.envdir
             job.save()
 
             os.makedirs(job.resolve_workdir(site_config.data_path), exist_ok=True)
