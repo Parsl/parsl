@@ -2,7 +2,7 @@ import logging
 import os
 import requests
 
-from parsl import python_app
+import parsl
 
 from parsl.utils import RepresentationMixin
 from parsl.data_provider.staging import Staging
@@ -85,4 +85,4 @@ def _http_stage_in(working_dir, parent_fut=None, outputs=[], _parsl_staging_inhi
 
 
 def _http_stage_in_app(dm, executor):
-    return python_app(executors=[executor], data_flow_kernel=dm.dfk)(_http_stage_in)
+    return parsl.python_app(executors=[executor], data_flow_kernel=dm.dfk)(_http_stage_in)
