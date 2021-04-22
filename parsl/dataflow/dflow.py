@@ -262,7 +262,7 @@ class DataFlowKernel(object):
         """
         return self._config
 
-    def handle_exec_update(self, task_id, future):
+    def handle_exec_update(self, task_record, future):
         """This function is called only as a callback from an execution
         attempt reaching a final state (either successfully or failing).
 
@@ -270,12 +270,12 @@ class DataFlowKernel(object):
         structure.
 
         Args:
-             task_id (string) : Task id
+             task_record (dict) : Task record
              future (Future) : The future object corresponding to the task which
              makes this callback
         """
 
-        task_record = self.tasks[task_id]
+        task_id = task_record['id']
 
         task_record['try_time_returned'] = datetime.datetime.now()
 
@@ -339,7 +339,7 @@ class DataFlowKernel(object):
                     assert isinstance(inner_future, Future)
                     task_record['status'] = States.joining
                     task_record['joins'] = inner_future
-                    inner_future.add_done_callback(partial(self.handle_join_update, task_id))
+                    inner_future.add_done_callback(partial(self.handle_join_update, task_record))
 
         self._log_std_streams(task_record)
 
@@ -349,9 +349,9 @@ class DataFlowKernel(object):
         # it might be that in the course of the update, we've gone back to being
         # pending - in which case, we should consider ourself for relaunch
         if task_record['status'] == States.pending:
-            self.launch_if_ready(task_id)
+            self.launch_if_ready(task_record)
 
-    def handle_join_update(self, outer_task_id, inner_app_future):
+    def handle_join_update(self, task_record, inner_app_future):
         # Use the result of the inner_app_future as the final result of
         # the outer app future.
 
@@ -359,7 +359,7 @@ class DataFlowKernel(object):
         # their own retrying, and joining state is responsible for passing
         # on whatever the result of that retrying was (if any).
 
-        task_record = self.tasks[outer_task_id]
+        outer_task_id = task_record['id']
 
         try:
             res = self._unwrap_remote_exception_wrapper(inner_app_future)
@@ -384,7 +384,7 @@ class DataFlowKernel(object):
 
         self._send_task_log_info(task_record)
 
-    def handle_app_update(self, task_id, future):
+    def handle_app_update(self, task_record, future):
         """This function is called as a callback when an AppFuture
         is in its final state.
 
@@ -397,12 +397,14 @@ class DataFlowKernel(object):
 
         """
 
-        if not self.tasks[task_id]['app_fu'].done():
+        task_id = task_record['id']
+
+        if not task_record['app_fu'].done():
             logger.error("Internal consistency error: app_fu is not done for task {}".format(task_id))
-        if not self.tasks[task_id]['app_fu'] == future:
+        if not task_record['app_fu'] == future:
             logger.error("Internal consistency error: callback future is not the app_fu in task structure, for task {}".format(task_id))
 
-        self.memoizer.update_memo(task_id, self.tasks[task_id], future)
+        self.memoizer.update_memo(task_id, task_record, future)
 
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint(tasks=[task_id])
@@ -451,7 +453,7 @@ class DataFlowKernel(object):
     def check_staging_inhibited(kwargs):
         return kwargs.get('_parsl_staging_inhibit', False)
 
-    def launch_if_ready(self, task_id):
+    def launch_if_ready(self, task_record):
         """
         launch_if_ready will launch the specified task, if it is ready
         to run (for example, without dependencies, and in pending state).
@@ -466,14 +468,7 @@ class DataFlowKernel(object):
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
         """
-        # after launching the task, self.tasks[task_id] is no longer
-        # guaranteed to exist (because it can complete fast as part of the
-        # submission - eg memoization)
-        task_record = self.tasks.get(task_id)
-        if task_record is None:
-            # assume this task has already been processed to completion
-            logger.debug("Task {} has no task record. Assuming it has already been processed to completion.".format(task_id))
-            return
+        task_id = task_record['id']
         if self._count_deps(task_record['depends']) == 0:
 
             # We can now launch *task*
@@ -519,7 +514,7 @@ class DataFlowKernel(object):
             if exec_fu:
                 assert isinstance(exec_fu, Future)
                 try:
-                    exec_fu.add_done_callback(partial(self.handle_exec_update, task_id))
+                    exec_fu.add_done_callback(partial(self.handle_exec_update, task_record))
                 except Exception:
                     # this exception is ignored here because it is assumed that exception
                     # comes from directly executing handle_exec_update (because exec_fu is
@@ -877,7 +872,7 @@ class DataFlowKernel(object):
 
         task_def['task_launch_lock'] = threading.Lock()
 
-        app_fu.add_done_callback(partial(self.handle_app_update, task_id))
+        app_fu.add_done_callback(partial(self.handle_app_update, task_def))
         task_def['status'] = States.pending
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
 
@@ -898,14 +893,14 @@ class DataFlowKernel(object):
         for d in depends:
 
             def callback_adapter(dep_fut):
-                self.launch_if_ready(task_id)
+                self.launch_if_ready(task_def)
 
             try:
                 d.add_done_callback(callback_adapter)
             except Exception as e:
                 logger.error("add_done_callback got an exception {} which will be ignored".format(e))
 
-        self.launch_if_ready(task_id)
+        self.launch_if_ready(task_def)
 
         return app_fu
 
