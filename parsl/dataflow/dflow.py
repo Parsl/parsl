@@ -384,7 +384,7 @@ class DataFlowKernel(object):
 
         self._send_task_log_info(task_record)
 
-    def handle_app_update(self, task_id, future):
+    def handle_app_update(self, task_record, future):
         """This function is called as a callback when an AppFuture
         is in its final state.
 
@@ -397,12 +397,14 @@ class DataFlowKernel(object):
 
         """
 
-        if not self.tasks[task_id]['app_fu'].done():
+        task_id = task_record['id']
+
+        if not task_record['app_fu'].done():
             logger.error("Internal consistency error: app_fu is not done for task {}".format(task_id))
-        if not self.tasks[task_id]['app_fu'] == future:
+        if not task_record['app_fu'] == future:
             logger.error("Internal consistency error: callback future is not the app_fu in task structure, for task {}".format(task_id))
 
-        self.memoizer.update_memo(task_id, self.tasks[task_id], future)
+        self.memoizer.update_memo(task_id, task_record, future)
 
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint(tasks=[task_id])
@@ -877,7 +879,7 @@ class DataFlowKernel(object):
 
         task_def['task_launch_lock'] = threading.Lock()
 
-        app_fu.add_done_callback(partial(self.handle_app_update, task_id))
+        app_fu.add_done_callback(partial(self.handle_app_update, task_def))
         task_def['status'] = States.pending
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
 
