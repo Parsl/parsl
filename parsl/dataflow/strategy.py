@@ -121,8 +121,6 @@ class Strategy(object):
                            'htex_auto_scale': self._strategy_htex_auto_scale}
 
         self.strategize = self.strategies[self.config.strategy]
-        self.logger_flag = False
-        self.prior_loghandlers = set(logging.getLogger().handlers)
 
         logger.debug("Scaling strategy: {0}".format(self.config.strategy))
 
