@@ -21,7 +21,7 @@ class ChannelRequired(ExecutionProviderException):
 
 
 class ScaleOutFailed(ExecutionProviderException):
-    ''' Generic catch. Scale out failed in the submit phase on the provider side
+    ''' Scale out failed in the submit phase on the provider side
     '''
 
     def __init__(self, provider, reason):
