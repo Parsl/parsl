@@ -280,7 +280,7 @@ class DataFlowKernel(object):
         task_record['try_time_returned'] = datetime.datetime.now()
 
         if not future.done():
-            raise ValueError("done callback called, despite future not reporting itself as done")
+            raise RuntimeError("done callback called, despite future not reporting itself as done")
 
         try:
             res = self._unwrap_remote_exception_wrapper(future)
@@ -781,7 +781,7 @@ class DataFlowKernel(object):
             ignore_for_cache = []
 
         if self.cleanup_called:
-            raise ValueError("Cannot submit to a DFK that has been cleaned up")
+            raise RuntimeError("Cannot submit to a DFK that has been cleaned up")
 
         task_id = self.task_count
         self.task_count += 1
