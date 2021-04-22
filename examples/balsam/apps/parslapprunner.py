@@ -16,10 +16,8 @@ class ParslAppRunner(ApplicationDefinition):
 
     def postprocess(self):
         from balsam.api import site_config
-        from pathlib import Path
         import json
 
-	
         workdir = self.job.resolve_workdir(site_config.data_path)
         print('WORKDIR: ', workdir)
         stdout = workdir.joinpath("job.out").read_text().strip()
@@ -28,8 +26,6 @@ class ParslAppRunner(ApplicationDefinition):
 
         print("METADATA: ", metadata)
         try:
-            # Read from special metadata file instead of job.out
-
             metadata = json.loads(metadata)
             self.job.data = metadata
         except:
