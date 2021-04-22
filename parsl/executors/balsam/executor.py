@@ -16,11 +16,11 @@ from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.utils import RepresentationMixin
 import os
 
+import logging
+logging.basicConfig(
+    format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
-os.makedirs('logs', exist_ok=True)
-fileh = logging.FileHandler(os.getcwd() + os.path.sep + 'logs' + os.path.sep + 'executor.log', 'a')
-logger.addHandler(fileh)
-logging.basicConfig(level=logging.INFO)
+
 
 SITE_ID: int = 0
 CLASS_PATH: int = 1
@@ -224,11 +224,13 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 raise BalsamUnsupportedFeatureException()
 
             if script == 'bash':
+                class_path = 'parslbashrunner.ParslBashRunner' # TBD Balsam App
                 shell_command = func(inputs=inputs)
             else:
                 import json
 
                 lines = inspect.getsource(func)
+                class_path = 'parslapprunner.ParslAppRunner'
 
                 logger.debug("{} Inputs: {}".format(appname,json.dumps(inputs)))
                 pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
@@ -258,7 +260,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "print(result)\n"
 
                 logger.debug(sys.executable)
-                #shell_command = sys.executable + ' app.py'
                 shell_command = 'python app.py'
                 source = source.replace('@python_app','#@python_app')
 
@@ -280,7 +281,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 parameters={},
                 node_packing_count=node_packing_count,
             )
-            #job.parameters["command"] = shell_command
+
             job.parameters["image"] = self.image
             job.parameters["workdir"] = self.envdir
             job.save()
