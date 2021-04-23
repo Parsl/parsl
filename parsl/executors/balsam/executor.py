@@ -281,7 +281,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 node_packing_count=node_packing_count,
             )
 
-            job.parameters["command"] = shell_command
+            #job.parameters["command"] = shell_command
             job.parameters["image"] = self.image
             job.parameters["workdir"] = self.envdir
             job.save()
