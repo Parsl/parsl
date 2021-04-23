@@ -42,7 +42,7 @@ New Functionality
     Remove denormalised workflow duration from monitoring db (#1774)
     Remove hostname from status table (#1847)
     Clarify distinction between tasks and tries to run tasks (#1808)
-    Replace `done` state with exec_done and memo_done (#1848)
+    Replace `done` state with `exec_done` and `memo_done` (#1848)
     Use repr instead of str for monitoring fail history (#1966)
 
 * Monitoring visualization:
