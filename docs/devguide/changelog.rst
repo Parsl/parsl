@@ -20,7 +20,7 @@ Deprecated and Removed features
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * Python 3.5 is no longer supported.
-* Remove almost definitely broken Jetstream provider (#1821)
+* Almost definitely broken Jetstream provider removed (#1821)
 
 New Functionality
 ^^^^^^^^^^^^^^^^^
