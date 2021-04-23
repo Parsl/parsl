@@ -5,7 +5,7 @@ Changelog
 Parsl 1.1.0
 -----------
 
-Released on April 15th, 2021
+Released  (tentatively) on April 26th, 2021.
 
 Parsl v1.1.0 includes 59 closed issues and 243 pull requests with contributions (code, tests, reviews and reports) from:
 
@@ -34,7 +34,7 @@ New Functionality
 * @join_apps are a variation of @python_apps which an app to launch
   more apps and then complete only after the launched apps are also
   completed.
-    
+
   These are described more fully in docs/userguide/joins.rst
 
 * Monitoring:
