@@ -224,13 +224,12 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 raise BalsamUnsupportedFeatureException()
 
             if script == 'bash':
-                class_path = 'parslbashrunner.ParslBashRunner' # TBD Balsam App
+                class_path = 'parsl.BashRunner'
                 shell_command = func(inputs=inputs)
             else:
                 import json
-
                 lines = inspect.getsource(func)
-                class_path = 'parslapprunner.ParslAppRunner'
+                class_path = 'parsl.AppRunner'
 
                 logger.debug("{} Inputs: {}".format(appname,json.dumps(inputs)))
                 pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
@@ -282,6 +281,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 node_packing_count=node_packing_count,
             )
 
+            job.parameters["command"] = shell_command
             job.parameters["image"] = self.image
             job.parameters["workdir"] = self.envdir
             job.save()
