@@ -29,7 +29,7 @@ New Functionality
 
 * New serialization system to replace IPP serialization (#1806)
 
-* Support python 3.9
+* Support for Python 3.9
 
 * @join_apps are a variation of @python_apps which an app to launch
   more apps and then complete only after the launched apps are also
