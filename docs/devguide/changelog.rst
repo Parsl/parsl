@@ -31,7 +31,7 @@ New Functionality
 
 * Support for Python 3.9
 
-* @join_apps are a variation of @python_apps which an app to launch
+* @join_apps are a variation of @python_apps where an app can launch
   more apps and then complete only after the launched apps are also
   completed.
 
