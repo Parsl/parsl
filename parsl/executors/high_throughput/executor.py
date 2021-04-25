@@ -10,9 +10,6 @@ from typing import Dict  # noqa F401 (used in type annotation)
 from typing import List, Optional, Tuple, Union, Any
 import math
 
-import time
-import random
-
 from parsl.serialize import pack_apply_message, deserialize
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
@@ -578,8 +575,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         # Post task to the the outgoing queue
         self.outgoing_q.put(msg)
-
-        time.sleep(random.random())
 
         # Return the future
         return fut
