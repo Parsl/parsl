@@ -151,6 +151,7 @@ def test_invalid_exit(test_fn=invalid_exit):
     return True
 
 
+@pytest.mark.issue363
 def test_not_executable(test_fn=not_executable):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
