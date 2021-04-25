@@ -564,7 +564,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             args_to_print = tuple([arg if len(repr(arg)) < 100 else (repr(arg)[:100] + '...') for arg in args])
         logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
 
-        self.tasks[task_id] = Future()
+        fut = Future()
+        self.tasks[task_id] = fut
 
         try:
             fn_buf = pack_apply_message(func, args, kwargs,
@@ -581,7 +582,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         time.sleep(random.random())
 
         # Return the future
-        return self.tasks[task_id]
+        return fut
 
     @property
     def scaling_enabled(self):
