@@ -5,7 +5,7 @@ Changelog
 Parsl 1.1.0
 -----------
 
-Released  (tentatively) on April 26th, 2021.
+Released on April 26th, 2021.
 
 Parsl v1.1.0 includes 59 closed issues and 243 pull requests with contributions (code, tests, reviews and reports) from:
 
