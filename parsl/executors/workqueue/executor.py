@@ -207,12 +207,8 @@ class WorkQueueExecutor(BlockProviderExecutor):
                  init_command: str = "",
                  worker_options: str = "",
                  full_debug: bool = True,
-                 # ugh c.f. naming with worker_cmd which is better, but already
-                 # used for something slightly different
                  worker_executable: str = 'work_queue_worker'):
         BlockProviderExecutor.__init__(self, provider)
-
-        # ? should this be true even when not using a provider?
         self._scaling_enabled = True
 
         if not _work_queue_enabled:
