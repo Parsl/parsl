@@ -203,7 +203,8 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  autocategory: bool = True,
                  init_command: str = "",
                  worker_options: str = "",
-                 full_debug: bool = True):
+                 full_debug: bool = True,
+                 worker_executable: str = 'work_queue_worker'):
         NoStatusHandlingExecutor.__init__(self)
         self._provider = provider
         self._scaling_enabled = True
@@ -238,6 +239,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.should_stop = multiprocessing.Value(c_bool, False)
         self.cached_envs = {}  # type: Dict[int, str]
         self.worker_options = worker_options
+        self.worker_executable = worker_executable
 
         if not self.address:
             self.address = socket.gethostname()
@@ -437,7 +439,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         return fu
 
     def _construct_worker_command(self):
-        worker_command = 'work_queue_worker'
+        worker_command = self.worker_executable
         if self.project_password_file:
             worker_command += ' --password {}'.format(self.project_password_file)
         if self.worker_options:
