@@ -2,6 +2,62 @@ Changelog
 =========
 
 
+Parsl 1.1.0
+-----------
+
+Released  (tentatively) on April 26th, 2021.
+
+Parsl v1.1.0 includes 59 closed issues and 243 pull requests with contributions (code, tests, reviews and reports) from:
+
+Akila Ravihansa Perera @ravihansa3000, Anna Woodard @annawoodard, @bakerjl, Ben Clifford @benclifford,
+Daniel S. Katz @danielskatz, Douglas Thain @dthain, @gerrick, @JG-Quarknet, Joseph Moon @jmoon1506,
+Kelly L. Rowland @kellyrowland, Lars Bilke @bilke, Logan Ward @WardLT, Kirill Nagaitsev @Loonride,
+Marcus Schwarting @meschw04, Matt Baughman @mattebaughman, Mihael Hategan @hategan, @radiantone,
+Rohan Kumar @rohankumar42, Sohit Miglani @sohitmiglani, Tim Shaffer @trshaffer,
+Tyler J. Skluzacek @tskluzac, Yadu Nand Babuji @yadudoc, and Zhuozhao Li @ZhuozhaoLi
+
+Deprecated and Removed features
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Python 3.5 is no longer supported.
+* Almost definitely broken Jetstream provider removed (#1821)
+
+New Functionality
+^^^^^^^^^^^^^^^^^
+
+* Allow HTEX to set CPU affinity (#1853)
+
+* New serialization system to replace IPP serialization (#1806)
+
+* Support for Python 3.9
+
+* @join_apps are a variation of @python_apps where an app can launch
+  more apps and then complete only after the launched apps are also
+  completed.
+
+  These are described more fully in docs/userguide/joins.rst
+
+* Monitoring:
+    hub.log is now named monitoring_router.log
+    Remove denormalised workflow duration from monitoring db (#1774)
+    Remove hostname from status table (#1847)
+    Clarify distinction between tasks and tries to run tasks (#1808)
+    Replace 'done' state with 'exec_done' and 'memo_done' (#1848)
+    Use repr instead of str for monitoring fail history (#1966)
+
+* Monitoring visualization:
+    Make task list appear under .../task/ not under .../app/ (#1762)
+    Test that parsl-visualize does not return HTTP errors (#1700)
+    Generate Gantt chart from status table rather than task table timestamps (#1767)
+    Hyperlinks for app page to task pages should be on the task ID, not the app name (#1776)
+    Use real final state to color DAG visualization (#1812)
+
+
+* Make task record garbage collection optional. (#1909)
+
+* Make checkpoint_files = get_all_checkpoints() by default (#1918)
+
+
 Parsl 1.0.0
 -----------
 
