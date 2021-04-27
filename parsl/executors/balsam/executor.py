@@ -206,7 +206,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             logger.debug("Log file is " + workdir + os.path.sep + 'executor' + os.path.sep +
                   'logs' + os.path.sep + 'executor.log')
 
-            class_path = kwargs['classpath'] if 'classpath' in kwargs else self.classpath
             callback = kwargs['callback'] if 'callback' in kwargs else None
             inputs = kwargs['inputs'] if 'inputs' in kwargs else []
             script = kwargs['script'] if 'script' in kwargs else None
@@ -226,6 +225,25 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             if script == 'bash':
                 class_path = 'parsl.BashRunner'
                 shell_command = func(inputs=inputs)
+
+                try:
+                    app = App.objects.get(site_id=site_id, class_path=class_path)
+                except Exception as ex:
+                    # Create App if it doesn't exist
+                    app = App.objects.create(site_id=site_id, class_path=class_path)
+                    app.save()
+
+                job = Job(
+                    workdir,
+                    app.id,
+                    wall_time_min=walltime,
+                    num_nodes=numnodes,
+                    parameters={},
+                    node_packing_count=node_packing_count,
+                )
+
+                job.parameters["command"] = shell_command
+                job.save()
             else:
                 import json
                 lines = inspect.getsource(func)
@@ -259,32 +277,31 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "print(result)\n"
 
                 logger.debug(sys.executable)
-                shell_command = 'python /app/app.py'
                 source = source.replace('@python_app','#@python_app')
 
-            try:
-                app = App.objects.get(site_id=site_id, class_path=class_path)
-            except Exception as ex:
-                # Create App if it doesn't exist
-                app = App.objects.create(site_id=site_id, class_path=class_path)
-                app.save()
+                try:
+                    app = App.objects.get(site_id=site_id, class_path=class_path)
+                except Exception as ex:
+                    # Create App if it doesn't exist
+                    app = App.objects.create(site_id=site_id, class_path=class_path)
+                    app.save()
+
+                job = Job(
+                    workdir,
+                    app.id,
+                    wall_time_min=walltime,
+                    num_nodes=numnodes,
+                    parameters={},
+                    node_packing_count=node_packing_count,
+                )
+
+                # job.parameters["command"] = shell_command
+                job.parameters["image"] = self.image
+                job.parameters["workdir"] = self.envdir
+                job.save()
 
             logger.debug("Making workdir for job: {}".format(workdir))
             os.makedirs(workdir, exist_ok=True)
-
-            job = Job(
-                workdir,
-                app.id,
-                wall_time_min=walltime,
-                num_nodes=numnodes,
-                parameters={},
-                node_packing_count=node_packing_count,
-            )
-
-            #job.parameters["command"] = shell_command
-            job.parameters["image"] = self.image
-            job.parameters["workdir"] = self.envdir
-            job.save()
 
             os.makedirs(job.resolve_workdir(site_config.data_path), exist_ok=True)
             # Write function source to app.py in job workdir for balsam to pick up
