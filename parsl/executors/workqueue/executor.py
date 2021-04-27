@@ -180,6 +180,12 @@ class WorkQueueExecutor(BlockProviderExecutor):
 
         worker_options: str
             Extra options passed to work_queue_worker. Default is ''.
+
+        worker_executable: str
+            The command used to invoke work_queue_worker. This can be used
+            when the worker needs to be wrapped inside some other command
+            (for example, to run the worker inside a container). Default is
+            'work_queue_worker'.
     """
 
     radio_mode = "filesystem"
