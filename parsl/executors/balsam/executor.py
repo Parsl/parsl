@@ -144,7 +144,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  sitedir: str = None,
                  node_packing_count: int = 1,
                  timeout: int = 600,
-                 classpath: str = 'parslapprunner.ParslAppRunner',
+                 classpath: str = 'parsl.AppRunner',
                  tags: Dict[str, str] = {}
                  ):
         logger.debug("Initializing BalsamExecutor")
