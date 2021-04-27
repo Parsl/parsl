@@ -416,7 +416,6 @@ class Interchange(object):
 
                     try:
                         msg = json.loads(message[1].decode('utf-8'))
-                        # msg['reg_time'] = datetime.datetime.strptime(msg['reg_time'], "%Y-%m-%d %H:%M:%S")
                         reg_flag = True
                     except Exception:
                         logger.warning("[MAIN] Got Exception reading registration message from manager: {}".format(
