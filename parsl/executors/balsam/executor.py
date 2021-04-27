@@ -8,6 +8,7 @@ from multiprocessing import Condition
 
 from concurrent.futures import Future
 import time
+import yaml
 import typeguard
 
 from concurrent.futures import ThreadPoolExecutor
@@ -26,6 +27,13 @@ SITE_ID: int = 0
 CLASS_PATH: int = 1
 lock = Condition()
 result_lock = Condition()
+
+
+class BalsamExecutorException(Exception):
+    """
+
+    """
+    pass
 
 
 class BalsamJobFailureException(Exception):
@@ -126,6 +134,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     """
     managed = False
     maxworkers = 3
+    exception = False
 
     @typeguard.typechecked
     def __init__(self,
@@ -171,6 +180,24 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.workdir = workdir
         self.envdir = envdir
         self.image = image
+
+        if sitedir is None and 'BALSAM_SITE_PATH' in os.environ:
+            self.sitedir = os.environ['BALSAM_SITE_PATH']
+            # Read site id from settings.yml
+            import yaml
+
+            logger.debug("Loading site settings.yml from: {}".format(self.sitedir))
+            with open(self.sitedir) as site:
+                settings = yaml.load(site, Loader=yaml.FullLoader)
+
+                self.siteid = settings['site_id']
+
+                logger.debug("Setting executor site_id to: {}".format(self.siteid))
+
+        if self.sitedir is None and 'BALSAM_SITE_PATH' not in os.environ:
+            self.exception = True
+
+            raise BalsamExecutorException("Environment variable BALSAM_SITE_PATH must be set if sitedir property is not used.")
 
     def _get_block_and_job_ids(self) -> Tuple[List[str], List[Any]]:
         pass
@@ -361,7 +388,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
     @property
     def executor_exception(self):
-        return False
+        return self.exception
 
     @property
     def error_management_enabled(self):
