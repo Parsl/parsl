@@ -38,20 +38,21 @@ New Functionality
   These are described more fully in docs/userguide/joins.rst
 
 * Monitoring:
-    hub.log is now named monitoring_router.log
-    Remove denormalised workflow duration from monitoring db (#1774)
-    Remove hostname from status table (#1847)
-    Clarify distinction between tasks and tries to run tasks (#1808)
-    Replace 'done' state with 'exec_done' and 'memo_done' (#1848)
-    Use repr instead of str for monitoring fail history (#1966)
+
+  * hub.log is now named monitoring_router.log
+  * Remove denormalised workflow duration from monitoring db (#1774)
+  * Remove hostname from status table (#1847)
+  * Clarify distinction between tasks and tries to run tasks (#1808)
+  * Replace 'done' state with 'exec_done' and 'memo_done' (#1848)
+  * Use repr instead of str for monitoring fail history (#1966)
 
 * Monitoring visualization:
-    Make task list appear under .../task/ not under .../app/ (#1762)
-    Test that parsl-visualize does not return HTTP errors (#1700)
-    Generate Gantt chart from status table rather than task table timestamps (#1767)
-    Hyperlinks for app page to task pages should be on the task ID, not the app name (#1776)
-    Use real final state to color DAG visualization (#1812)
 
+  * Make task list appear under .../task/ not under .../app/ (#1762)
+  * Test that parsl-visualize does not return HTTP errors (#1700)
+  * Generate Gantt chart from status table rather than task table timestamps (#1767)
+  * Hyperlinks for app page to task pages should be on the task ID, not the app name (#1776)
+  * Use real final state to color DAG visualization (#1812)
 
 * Make task record garbage collection optional. (#1909)
 
@@ -89,6 +90,7 @@ New Functionality
 ^^^^^^^^^^^^^^^^^
 
 * `WorkQueueExecutor` introduced in v0.9.0 is now in beta. `WorkQueueExecutor` is designed as a drop-in replacement for `HighThroughputExecutor`. Here are some key features:
+
   * Support for packaging the python environment and shipping it to the worker side. This mechanism addresses propagating python environments in  grid-like systems that lack shared-filesystems or cloud environments.
   * `WorkQueueExecutor` supports resource function tagging and resource specification
   * Support for resource specification kwarg `issue#1675 <https://github.com/Parsl/parsl/issues/1675>`_
