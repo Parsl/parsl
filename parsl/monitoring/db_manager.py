@@ -48,11 +48,11 @@ class Database:
     if not _sqlalchemy_enabled:
         raise OptionalModuleMissing(['sqlalchemy'],
                                     ("Default database logging requires the sqlalchemy library."
-                                     " Enable monitoring support with: pip install parsl[monitoring]"))
+                                     " Enable monitoring support with: pip install 'parsl[monitoring]'"))
     if not _sqlalchemy_utils_enabled:
         raise OptionalModuleMissing(['sqlalchemy_utils'],
                                     ("Default database logging requires the sqlalchemy_utils library."
-                                     " Enable monitoring support with: pip install parsl[monitoring]"))
+                                     " Enable monitoring support with: pip install 'parsl[monitoring]'"))
 
     Base = declarative_base()
 
@@ -156,6 +156,7 @@ class Database:
         task_id = Column('task_id', Integer, nullable=False)
         run_id = Column('run_id', Text, nullable=False)
 
+        block_id = Column('block_id', Text, nullable=True)
         hostname = Column('hostname', Text, nullable=True)
 
         task_executor = Column('task_executor', Text, nullable=False)
@@ -504,7 +505,7 @@ class DatabaseManager:
                     self._update(table=TRY,
                                  columns=['task_try_time_running',
                                           'run_id', 'task_id', 'try_id',
-                                          'hostname'],
+                                          'block_id', 'hostname'],
                                  messages=reprocessable_first_resource_messages)
             except Exception:
                 logger.exception("Exception in db loop: this might have been a malformed message, or some other error. monitoring data may have been lost")

@@ -3,8 +3,13 @@
 The App class encapsulates a generic leaf task that can be executed asynchronously.
 """
 import logging
+import typeguard
 from abc import ABCMeta, abstractmethod
 from inspect import signature
+from typing import List, Optional, Union
+from typing_extensions import Literal
+
+from parsl.dataflow.dflow import DataFlowKernel
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +69,13 @@ class AppBase(metaclass=ABCMeta):
         pass
 
 
-def python_app(function=None, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None, join=False):
+@typeguard.typechecked
+def python_app(function=None,
+               data_flow_kernel: Optional[DataFlowKernel] = None,
+               cache: bool = False,
+               executors: Union[List[str], Literal['all']] = 'all',
+               ignore_for_cache: Optional[List[str]] = None,
+               join: bool = False):
     """Decorator function for making python apps.
 
     Parameters
@@ -102,7 +113,11 @@ def python_app(function=None, data_flow_kernel=None, cache=False, executors='all
     return decorator
 
 
-def join_app(function=None, data_flow_kernel=None, cache=False, ignore_for_cache=None):
+@typeguard.typechecked
+def join_app(function=None,
+             data_flow_kernel: Optional[DataFlowKernel] = None,
+             cache: bool = False,
+             ignore_for_cache: Optional[List[str]] = None):
     return python_app(function=function,
                       data_flow_kernel=data_flow_kernel,
                       cache=cache,
@@ -111,7 +126,12 @@ def join_app(function=None, data_flow_kernel=None, cache=False, ignore_for_cache
                       executors=["_parsl_internal"])
 
 
-def bash_app(function=None, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None):
+@typeguard.typechecked
+def bash_app(function=None,
+             data_flow_kernel: Optional[DataFlowKernel] = None,
+             cache: bool = False,
+             executors: Union[List[str], Literal['all']] = 'all',
+             ignore_for_cache: Optional[List[str]] = None):
     """Decorator function for making bash apps.
 
     Parameters

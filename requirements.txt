@@ -1,5 +1,6 @@
 pyzmq>=17.1.2
 typeguard>=2.10
+typing-extensions
 globus-sdk
 dill
 tblib
