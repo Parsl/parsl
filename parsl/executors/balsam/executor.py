@@ -255,7 +255,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
                 try:
                     app = App.objects.get(site_id=site_id, class_path=class_path)
-                except Exception as ex:
+                except:
                     # Create App if it doesn't exist
                     app = App.objects.create(site_id=site_id, class_path=class_path)
                     app.save()
@@ -322,7 +322,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     node_packing_count=node_packing_count,
                 )
 
-                # job.parameters["command"] = shell_command
                 job.parameters["image"] = self.image
                 job.parameters["workdir"] = self.envdir
                 job.save()
