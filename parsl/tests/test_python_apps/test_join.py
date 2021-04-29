@@ -10,7 +10,7 @@ local_config = fresh_config()
 RESULT_CONSTANT = 3
 
 
-@python_app
+@python_app(cache=True)
 def inner_app():
     time.sleep(1)
     return RESULT_CONSTANT
@@ -34,11 +34,19 @@ def combine(*args):
 
 
 @join_app
-def outer_make_a_dag(n):
+def outer_make_a_dag_combine(n):
     futs = []
     for _ in range(n):
         futs.append(inner_app())
     return combine(*futs)
+
+
+@join_app
+def outer_make_a_dag_multi(n):
+    futs = []
+    for _ in range(n):
+        futs.append(inner_app())
+    return futs
 
 
 def test_result_flow():
@@ -65,6 +73,12 @@ def test_dependency_on_joined():
 
 
 def test_combine():
-    f = outer_make_a_dag(inner_app())
+    f = outer_make_a_dag_combine(inner_app())
+    res = f.result()
+    assert res == [RESULT_CONSTANT] * RESULT_CONSTANT
+
+
+def test_multiple_return():
+    f = outer_make_a_dag_multi(inner_app())
     res = f.result()
     assert res == [RESULT_CONSTANT] * RESULT_CONSTANT
