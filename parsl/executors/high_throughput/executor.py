@@ -252,8 +252,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                "--block_id={{block_id}} "
                                "--hb_period={heartbeat_period} "
                                "{address_probe_timeout_string} "
-                               "--hb_threshold={heartbeat_threshold} ")
-                               #"--cpu-affinity {cpu_affinity} ")
+                               "--hb_threshold={heartbeat_threshold} "
+                               "--cpu-affinity {cpu_affinity} ")
 
     def initialize_scaling(self):
         """ Compose the launch command and call the scale_out

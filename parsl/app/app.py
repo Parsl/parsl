@@ -107,7 +107,9 @@ def python_app(function=None,
                              executors=executors,
                              ignore_for_cache=ignore_for_cache,
                              join=join)
+
         return wrapper(func)
+
     if function is not None:
         return decorator(function)
     return decorator
@@ -160,14 +162,24 @@ def bash_app(function=None,
                            cache=cache,
                            executors=executors,
                            ignore_for_cache=ignore_for_cache)
+
         return wrapper(func)
+
     if function is not None:
         return decorator(function)
     return decorator
 
 
-def balsam_app(function=None, data_flow_kernel=None, cache=False, walltime=60, executors='BalsamExecutor', ignore_for_cache=None):
-    """Decorator function for making balsam apps.
+@typeguard.typechecked
+def singularity_app(function=None,
+                    data_flow_kernel: Optional[DataFlowKernel] = None,
+                    cache: bool = False,
+                    walltime: int = 60,
+                    image: str = "",
+                    cmd: str = "",
+                    executors: Union[List[str], Literal['all']] = 'all',
+                    ignore_for_cache: Optional[List[str]] = None):
+    """Decorator function for making bash apps.
 
     Parameters
     ----------
@@ -186,17 +198,21 @@ def balsam_app(function=None, data_flow_kernel=None, cache=False, walltime=60, e
     cache : bool
         Enable caching of the app call. Default is False.
     """
-    from parsl.app.balsam import BalsamApp
+    from parsl.app.singularity import SingularityApp
 
     def decorator(func):
         def wrapper(f):
-            return BalsamApp(f,
-                           data_flow_kernel=data_flow_kernel,
-                           cache=cache,
-                           walltime=walltime,
-                           executors=executors,
-                           ignore_for_cache=ignore_for_cache)
+            return SingularityApp(f,
+                                  data_flow_kernel=data_flow_kernel,
+                                  cache=cache,
+                                  walltime=walltime,
+                                  image=image,
+                                  cmd=cmd,
+                                  executors=executors,
+                                  ignore_for_cache=ignore_for_cache)
+
         return wrapper(func)
+
     if function is not None:
         return decorator(function)
     return decorator
