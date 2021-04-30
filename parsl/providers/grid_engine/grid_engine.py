@@ -90,6 +90,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                          cmd_timeout=cmd_timeout)
         self.scheduler_options = scheduler_options
         self.worker_init = worker_init
+        self.queue = queue
 
         if launcher in ['srun', 'srun_mpi']:
             logger.warning("Use of {} launcher is usually appropriate for Slurm providers. "
