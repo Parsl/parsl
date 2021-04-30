@@ -116,7 +116,7 @@ def worker_efficiency(task, node):
                 continue
             if math.isnan(row['epoch_time_returned']):
                 # there is no end time for this, so we should assume the "end" time
-                etr = endtime = end
+                etr = end
             else:
                 etr = int(row['epoch_time_returned'])
             for j in range(int(row['epoch_time_running']), etr + 1):
