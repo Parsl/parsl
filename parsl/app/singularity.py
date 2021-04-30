@@ -190,7 +190,8 @@ class SingularityApp(AppBase):
         with open('app.py','w') as app:
             app.write(source)
 
-        shell_app = self.command+" python app.py"
+        #shell_app = self.command+" python app.py"
+        shell_app = self.command+" /files/runapp.sh <<HEREDOC {}\nHEREDOC".format(source)
 
         def invoke_container(command=None):
             return command
