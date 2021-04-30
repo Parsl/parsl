@@ -593,8 +593,7 @@ class Interchange(object):
                         if r['type'] == 'result':
                             # process this for task ID and forward to executor
                             b_messages.append(message)
-                        # TODO: case here for monitoring messages
-                        if r['type'] == 'monitoring':
+                        elif r['type'] == 'monitoring':
                             hub_channel.send_pyobj(r['payload'])
                         else:
                             logger.error("Interchange discarding result_queue message of unknown type: {}".format(r['type']))
