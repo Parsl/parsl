@@ -112,9 +112,14 @@ def worker_efficiency(task, node):
 
         for i, row in task.iterrows():
             if math.isnan(row['epoch_time_running']):
-                # skip tasks with no running start time.
+                # skip tasks with no running start time or return time.
                 continue
-            for j in range(int(row['epoch_time_running']), int(row['epoch_time_returned']) + 1):
+            if math.isnan(row['epoch_time_returned']):
+                # there is no end time for this, so we should assume the "end" time
+                etr = endtime = end
+            else:
+                etr = int(row['epoch_time_returned'])
+            for j in range(int(row['epoch_time_running']), etr + 1):
                 worker_plot[j - start] += 1
         fig = go.Figure(
             data=[go.Scatter(x=list(range(0, end - start + 1)),
