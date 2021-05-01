@@ -51,6 +51,9 @@ mypy: ## run mypy checks
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/sites/
         # only the top level of monitoring is checked here because the visualization code does not type check
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/app/ parsl/channels/ parsl/dataflow/ parsl/data_provider/ parsl/launchers parsl/providers/ parsl/monitoring/*py
+        # process worker pool is explicitly listed to check, because it is not
+        # imported from anywhere in core parsl python code.
+	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/executors/high_throughput/process_worker_pool.py
 
 .PHONY: local_thread_test
 local_thread_test: ## run all tests with local_thread config
