@@ -486,10 +486,14 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
     Pop request from queue
     Put result into result_queue
     """
-    start_file_logger('{}/block-{}/{}/worker_{}.log'.format(args.logdir, args.block_id, pool_id, worker_id),
-                      worker_id,
-                      name="worker_log",
-                      level=logging.DEBUG if args.debug else logging.INFO)
+
+    # override the global logger inherited from the __main__ process (which
+    # usually logs to manager.log) with one specific to this worker.
+    global logger
+    logger = start_file_logger('{}/block-{}/{}/worker_{}.log'.format(args.logdir, args.block_id, pool_id, worker_id),
+                               worker_id,
+                               name="worker_log",
+                               level=logging.DEBUG if args.debug else logging.INFO)
 
     # Store worker ID as an environment variable
     os.environ['PARSL_WORKER_RANK'] = str(worker_id)
@@ -574,7 +578,6 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
     if format_string is None:
         format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(rank)
 
-    global logger
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
     handler = logging.FileHandler(filename)
@@ -582,6 +585,7 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+    return logger
 
 
 if __name__ == "__main__":
@@ -625,9 +629,9 @@ if __name__ == "__main__":
     os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
 
     try:
-        start_file_logger('{}/block-{}/{}/manager.log'.format(args.logdir, args.block_id, args.uid),
-                          0,
-                          level=logging.DEBUG if args.debug is True else logging.INFO)
+        logger = start_file_logger('{}/block-{}/{}/manager.log'.format(args.logdir, args.block_id, args.uid),
+                                   0,
+                                   level=logging.DEBUG if args.debug is True else logging.INFO)
 
         logger.info("Python version: {}".format(sys.version))
         logger.info("Debug logging: {}".format(args.debug))
