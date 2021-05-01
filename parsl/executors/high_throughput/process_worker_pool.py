@@ -22,10 +22,10 @@ from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.probe import probe_addresses
-if platform.system() == 'Darwin':
-    from parsl.executors.high_throughput.mac_safe_queue import MacSafeQueue as mpQueue
-else:
+if platform.system() != 'Darwin':
     from multiprocessing import Queue as mpQueue
+else:
+    from parsl.executors.high_throughput.mac_safe_queue import MacSafeQueue as mpQueue
 
 from parsl.serialize import unpack_apply_message, serialize
 
