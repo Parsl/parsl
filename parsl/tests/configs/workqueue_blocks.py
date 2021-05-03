@@ -10,6 +10,7 @@ from parsl.providers import LocalProvider
 from parsl.monitoring import MonitoringHub
 
 config = Config(executors=[WorkQueueExecutor(port=9000,
+                                             worker_executable="work_queue_worker",
                                              storage_access=[FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging()],
                                              provider=LocalProvider(init_blocks=0, min_blocks=0, max_blocks=1))],
 
