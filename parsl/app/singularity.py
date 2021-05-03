@@ -11,8 +11,7 @@ import re
 import pickle
 
 import logging
-logging.basicConfig(
-    format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
+
 logger = logging.getLogger(__name__)
 
 
@@ -76,24 +75,29 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     returncode = None
     result = None
-    try:
-        proc = subprocess.Popen(command.split(' '), stdout=std_out, stderr=std_err)
-        proc.wait(timeout=timeout)
-        returncode = proc.returncode
-        import pickle
+    with open('log.log','w') as log:
+        try:
+                log.write(command+'\n')
+                proc = subprocess.Popen(command, stdout=std_out, stderr=std_err, shell=True)
+                proc.wait(timeout=timeout)
+                returncode = proc.returncode
 
-        with open('output.pickle', 'rb') as input:
-            result = pickle.load(input)
 
-    except subprocess.TimeoutExpired:
-        raise pe.AppTimeout("[{}] App exceeded walltime: {} seconds".format(func_name, timeout))
+                import pickle
+                log.write("RT: "+str(returncode))
+                with open('output.pickle', 'rb') as input:
+                    result = pickle.load(input)
 
-    except Exception as e:
-        import traceback
-        with open('p.out', 'w') as po:
-            po.write("COMMAND:{}\n".format(command))
-            po.write(traceback.format_exc())
-        raise pe.AppException("[{}] App caught exception with returncode: {}".format(func_name, returncode), e)
+        except subprocess.TimeoutExpired:
+            import traceback
+            log.write(traceback.format_exc())
+            raise pe.AppTimeout("[{}] App exceeded walltime: {} seconds".format(func_name, timeout))
+
+        except Exception as e:
+            import traceback
+            log.write("COMMAND:{}\n".format(command))
+            log.write(traceback.format_exc())
+            raise pe.AppException("[{}] App caught exception with returncode: {}".format(func_name, traceback.format_exc()), e)
 
     if returncode > 1:
         raise pe.BashExitFailure(func_name, proc.returncode)
@@ -121,7 +125,6 @@ class SingularityApp(AppBase):
 
         sig = signature(func)
 
-        # TODO: Put paths into kwargs or configuration
         self.command = "{} exec --bind .:/app {} ".format(cmd,image)
 
         for s in sig.parameters:
@@ -130,6 +133,9 @@ class SingularityApp(AppBase):
 
         remote_fn = partial(remote_side_bash_executor, self.func, image=image, command=self.command, walltime=walltime)
         remote_fn.__name__ = self.func.__name__
+
+        logger.debug("Func name: {}".format(self.func.__name__))
+
         self.wrapped_remote_function = remote_fn
         self.walltime = walltime
 
@@ -161,9 +167,17 @@ class SingularityApp(AppBase):
 
         inputs = kwargs['inputs'] if 'inputs' in kwargs else []
 
-        logger.debug("{} Inputs: {}".format(appname, json.dumps(inputs)))
-        pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
-        pargs = re.sub(r'\n', "", pargs).strip()
+        try:
+            logger.debug("Appname: {} Inputs: {}".format(appname, json.dumps(inputs)))
+        except:
+            logger.debug("Appname: {} ".format(appname))
+
+        try:
+            pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
+            pargs = re.sub(r'\n', "", pargs).strip()
+        except:
+            pargs = codecs.encode(pickle.dumps([]), "base64").decode()
+            pargs = re.sub(r'\n', "", pargs).strip()
 
         source = "import pickle\n" \
                  "import os\n" \
@@ -173,13 +187,13 @@ class SingularityApp(AppBase):
                  "pargs = '{}'\n" \
                  "args = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\n" \
                  "result = {}(inputs=[*args])\n" \
-                 "with open('/app/output.pickle','ab') as output:\n" \
+                 "with open('output.pickle','wb') as output:\n" \
                  "    pickle.dump(result, output)\n".format(
             lines,
             pargs,
             appname) + \
                  "metadata = {\"type\":\"python\",\"file\":os.path.abspath('output.pickle')}\n" \
-                 "with open('/app/job.metadata','w') as job:\n" \
+                 "with open('job.metadata','w') as job:\n" \
                  "    job.write(json.dumps(metadata))\n" \
                  "print(result)\n"
 
@@ -190,10 +204,10 @@ class SingularityApp(AppBase):
         with open('app.py','w') as app:
             app.write(source)
 
-        #shell_app = self.command+" python app.py"
-        shell_app = self.command+" /files/runapp.sh <<HEREDOC {}\nHEREDOC".format(source)
+        shell_app = self.command+" /files/runapp.sh <<HEREDOC\n{}\nHEREDOC".format(source)
 
-        def invoke_container(command=None):
+        def invoke_container(command=None, inputs=[]):
+
             return command
 
         remote_fn = partial(remote_side_bash_executor, invoke_container, command=shell_app)
