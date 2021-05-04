@@ -814,7 +814,7 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
             if task.gpus is not None:
                 t.specify_gpus(task.gpus)
 
-            if max_retries:
+            if max_retries is not None:
                 logger.debug(f"Specifying max_retries {max_retries}")
                 t.specify_max_retries(max_retries)
             else:
