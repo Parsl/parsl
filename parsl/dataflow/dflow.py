@@ -341,15 +341,34 @@ class DataFlowKernel(object):
                     # record the inner app ID in monitoring, and add a completion
                     # listener to that inner future.
 
-                    inner_future = future.result()
+                    joinable = future.result()
 
                     # this assert should actually be a test that causes the
                     # current app to fail cleanly if it is not a Future
-                    XXXX
-                    assert isinstance(inner_future, Future)
-                    task_record['status'] = States.joining
-                    task_record['joins'] = inner_future
-                    inner_future.add_done_callback(partial(self.handle_join_update, task_record))
+                    if isinstance(joinable, Future):
+                        task_record['status'] = States.joining
+                        task_record['joins'] = joinable
+                        joinable.add_done_callback(partial(self.handle_join_update, task_record))
+                    elif isinstance(joinable, list):  # TODO: should this be list or arbitrary iterable?
+                        task_record['status'] = States.joining
+                        task_record['joins'] = joinable
+                        for inner_future in joinable:
+                            # TODO: typechecking and error setting here - perhaps
+                            # should put this and the one-future case inside a
+                            # try and perform the error handling there in an
+                            # except block? (it would be ok to go joining->failed
+                            # which doesn't happen in the type error case but
+                            # does happen in the joined-tasks fail case)
+                            # For now, this assert will cause a DFK hang
+                            assert isinstance(inner_future, Future)
+                            inner_future.add_done_callback(partial(self.handle_join_update, task_record))
+                    else:
+                        task_record['time_returned'] = datetime.datetime.now()
+                        task_record['status'] = States.failed
+                        self.tasks_failed_count += 1
+                        task_record['time_returned'] = datetime.datetime.now()
+                        with task_record['app_fu']._update_lock:
+                            task_record['app_fu'].set_exception(TypeError(f"join_app body must return a Future or collection of Futures, got {type(joinable)}"))
 
         self._log_std_streams(task_record)
 
@@ -362,27 +381,49 @@ class DataFlowKernel(object):
             self.launch_if_ready(task_record)
 
     def handle_join_update(self, task_record, inner_app_future):
-        # Use the result of the inner_app_future as the final result of
+        # inner_app_future has completed, which is one (potentially of many)
+        # futures the outer task is joining on.
+
+        # If the outer task is joining on a single future, then
+        # use the result of the inner_app_future as the final result of
         # the outer app future.
+
+        # If the outer task is joining on a collection of futures, then
+        # check if the collection is all done, and if so, return a list
+        # of the results. Otherwise, this callback can do nothing and
+        # processing will happen in another callback (on the final Future
+        # to complete)
 
         # There is no retry handling here: inner apps are responsible for
         # their own retrying, and joining state is responsible for passing
         # on whatever the result of that retrying was (if any).
 
         outer_task_id = task_record['id']
+        logger.debug(f"Join callback for task {outer_task_id}, inner_app_future {inner_app_future}")
 
-        try:
-            # TODO: stack traces could be tidier by this call not re-raising the exception,
-            # so that it keeps only the remote part of the exception.
-            # Then the exception handling block directly below would need to be entered
-            # in two ways: either an exception is thrown (because something broke)
-            # or there is a remoteexceptionwrapper, in which case use the contained
-            # exception can be used directly as e without a further raise/except
-            # which i think might then keep stack traces cleaner?
-            res = self._unwrap_remote_exception_wrapper(inner_app_future)
+        joinable = task_record['joins']  # Future or collection of futures
 
-        except Exception as e:
-            logger.debug("Task {} failed due to failure of inner join future".format(outer_task_id))
+        if isinstance(joinable, list):  # TODO more generic type than list?
+            for future in joinable:
+                if not future.done():
+                    logger.debug(f"A joinable future {future} is not done for task {outer_task_id} - skipping callback")
+                    return  # abandon this callback processing if joinables are not all done
+
+        # now we know each joinable Future is done
+        # so now look for any exceptions
+        e = None
+        if isinstance(joinable, Future):
+            if joinable.exception():
+                e = joinable.exception()
+        elif isinstance(joinable, list):
+            for future in joinable:
+                if future.exception():
+                    e = future.exception()
+        else:
+            raise TypeError(f"Unknown joinable type {type(joinable)}")
+
+        if e:
+            logger.debug("Task {} failed due to failure of an inner join future".format(outer_task_id))
             # We keep the history separately, since the future itself could be
             # tossed.
             task_record['fail_history'].append(repr(e))
@@ -395,6 +436,16 @@ class DataFlowKernel(object):
                 task_record['app_fu'].set_exception(e)
 
         else:
+            # all the joinables succeeded, so construct a result:
+            if isinstance(joinable, Future):
+                assert inner_app_future is joinable
+                res = joinable.result()
+            elif isinstance(joinable, list):
+                res = []
+                for future in joinable:
+                    res.append(future.result())
+            else:
+                raise TypeError(f"Unknown joinable type {type(joinable)}")
             self._complete_task(task_record, States.exec_done, res)
 
         self._log_std_streams(task_record)

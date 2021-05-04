@@ -1,3 +1,4 @@
+import pytest
 import time
 
 from parsl import join_app, python_app
@@ -64,7 +65,8 @@ def test_wrong_type():
     # so the DFK hangs. What should happen is that the app raises an exception via
     # its app future.
     f = join_wrong_type_app()
-    assert f.exception() is not None # TODO: assert exception type when I know it?
+    with pytest.raises(TypeError):
+        f.result()
 
 
 def test_dependency_on_joined():
@@ -77,6 +79,7 @@ def test_combine():
     f = outer_make_a_dag_combine(inner_app())
     res = f.result()
     assert res == [RESULT_CONSTANT] * RESULT_CONSTANT
+
 
 def test_multiple_return():
     f = outer_make_a_dag_multi(inner_app())
