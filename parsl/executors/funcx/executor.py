@@ -4,6 +4,7 @@ import time
 import logging
 import random
 import os
+import inspect
 from concurrent.futures import Future
 from parsl.utils import RepresentationMixin
 from parsl.executors.status_handling import NoStatusHandlingExecutor
@@ -65,12 +66,14 @@ class FuncXExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         # Start the task submission thread
         self.task_submit_thread = threading.Thread(target=self.task_submit_thread,
                                                    args=(self._kill_event,))
+        self.task_submit_thread.daemon = True
         self.task_submit_thread.start()
         logger.info("Started task submit thread")
 
         # Start the task status poller thread
         self.task_poller_thread = threading.Thread(target=self.task_status_poller,
                                                    args=(self._kill_event,))
+        self.task_poller_thread.daemon = True
         self.task_poller_thread.start()
         logger.info("Started task status poller thread")
 
@@ -98,7 +101,10 @@ class FuncXExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self._task_counter += 1
         task_id = self._task_counter
 
-        logger.info("Submitting function {}".format(func.__dict__))
+        logger.info("Submitting function {} with args {} and kwargs {}".format(func.__dict__, args, kwargs))
+        logger.info("Source code: {}".format(inspect.getsource(func)))
+
+        # The code 
 
         if func not in self.functions:
             try:
@@ -153,7 +159,7 @@ class FuncXExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 # random endpoint selection for v1
                 endpoint = random.choice(self.endpoints)
                 func_uuid, args, kwargs = msg['func_uuid'], msg['args'], msg['kwargs']
-                batch.add(args, kwargs,
+                batch.add(*args, *kwargs,
                           endpoint_id=endpoint,
                           function_id=func_uuid)
                 logger.debug("[TASK_SUBMIT_THREAD] Adding msg {} to funcX batch".format(msg))
