@@ -342,6 +342,10 @@ class DataFlowKernel(object):
                     # listener to that inner future.
 
                     inner_future = future.result()
+
+                    # this assert should actually be a test that causes the
+                    # current app to fail cleanly if it is not a Future
+                    XXXX
                     assert isinstance(inner_future, Future)
                     task_record['status'] = States.joining
                     task_record['joins'] = inner_future

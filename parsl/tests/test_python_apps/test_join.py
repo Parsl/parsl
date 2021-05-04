@@ -29,15 +29,23 @@ def add_one(n):
 @python_app
 def combine(*args):
     """Wait for an arbitrary list of futures and return them as a list"""
-    return args
+    return list(args)
 
 
 @join_app
-def outer_make_a_dag(n):
+def outer_make_a_dag_combine(n):
     futs = []
     for _ in range(n):
         futs.append(inner_app())
     return combine(*futs)
+
+
+@join_app
+def outer_make_a_dag_multi(n):
+    futs = []
+    for _ in range(n):
+        futs.append(inner_app())
+    return futs
 
 
 def test_result_flow():
@@ -46,7 +54,31 @@ def test_result_flow():
     assert res == RESULT_CONSTANT
 
 
+@join_app
+def join_wrong_type_app():
+    return 3
+
+
+def test_wrong_type():
+    # at present, wrong time raises an assert that does not propagate to user level
+    # so the DFK hangs. What should happen is that the app raises an exception via
+    # its app future.
+    f = join_wrong_type_app()
+    assert f.exception() is not None # TODO: assert exception type when I know it?
+
+
 def test_dependency_on_joined():
     g = add_one(outer_app())
     res = g.result()
     assert res == RESULT_CONSTANT + 1
+
+
+def test_combine():
+    f = outer_make_a_dag_combine(inner_app())
+    res = f.result()
+    assert res == [RESULT_CONSTANT] * RESULT_CONSTANT
+
+def test_multiple_return():
+    f = outer_make_a_dag_multi(inner_app())
+    res = f.result()
+    assert res == [RESULT_CONSTANT] * RESULT_CONSTANT
