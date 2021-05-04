@@ -61,7 +61,7 @@ logger = logging.getLogger(__name__)
 
 
 # Support structure to communicate parsl tasks to the work queue submit thread.
-ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category cores memory disk gpus env_pkg map_file function_file result_file input_files output_files')
+ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category cores memory disk gpus priority env_pkg map_file function_file result_file input_files output_files')
 
 # Support structure to communicate final status of work queue tasks to parsl
 # result is only valid if result_received is True
@@ -359,11 +359,12 @@ class WorkQueueExecutor(BlockProviderExecutor):
         memory = None
         disk = None
         gpus = None
+        priority = None
         if resource_specification and isinstance(resource_specification, dict):
             logger.debug("Got resource specification: {}".format(resource_specification))
 
             required_resource_types = set(['cores', 'memory', 'disk'])
-            acceptable_resource_types = set(['cores', 'memory', 'disk', 'gpus'])
+            acceptable_resource_types = set(['cores', 'memory', 'disk', 'gpus', 'priority'])
             keys = set(resource_specification.keys())
 
             if not keys.issubset(acceptable_resource_types):
@@ -389,6 +390,8 @@ class WorkQueueExecutor(BlockProviderExecutor):
                     disk = resource_specification[k]
                 elif k == 'gpus':
                     gpus = resource_specification[k]
+                elif k == 'priority':
+                    priority = resource_specification[k]
 
         self.task_counter += 1
         task_id = self.task_counter
@@ -452,6 +455,7 @@ class WorkQueueExecutor(BlockProviderExecutor):
                                                  memory,
                                                  disk,
                                                  gpus,
+                                                 priority,
                                                  env_pkg,
                                                  map_file,
                                                  function_file,
@@ -857,6 +861,8 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                 t.specify_disk(task.disk)
             if task.gpus is not None:
                 t.specify_gpus(task.gpus)
+            if task.priority is not None:
+                t.specify_priority(task.priority)
 
             if max_retries:
                 logger.debug(f"Specifying max_retries {max_retries}")
