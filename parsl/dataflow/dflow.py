@@ -236,12 +236,15 @@ class DataFlowKernel(object):
         if task_record['depends'] is not None:
             task_log_info['task_depends'] = ",".join([str(t.tid) for t in task_record['depends']
                                                       if isinstance(t, AppFuture) or isinstance(t, DataFuture)])
+        task_log_info['task_joins'] = None
 
-        j = task_record['joins']
-        if isinstance(j, AppFuture) or isinstance(j, DataFuture):
-            task_log_info['task_joins'] = j.tid
-        else:
-            task_log_info['task_joins'] = None
+        if isinstance(task_record['joins'], list):
+            task_log_info['task_joins'] = ",".join([str(t.tid) for t in task_record['joins']
+                                                    if isinstance(t, AppFuture) or isinstance(t, DataFuture)])
+        elif isinstance(task_record['joins'], Future):
+            task_log_info['task_joins'] = ",".join([str(t.tid) for t in [task_record['joins']]
+                                                    if isinstance(t, AppFuture) or isinstance(t, DataFuture)])
+
         return task_log_info
 
     def _count_deps(self, depends):
