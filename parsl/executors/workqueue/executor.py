@@ -173,6 +173,13 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             invocations of an app have similar performance characteristics,
             this will provide a reasonable set of categories automatically.
 
+        max_retries: Optional[int]
+            Set the number of retries that Work Queue will make when a task
+            fails. This is distinct from Parsl level retries configured in
+            parsl.config.Config. Set to None to allow Work Queue to retry
+            tasks forever. By default, this is set to 0, so that all retries
+            will be managed by Parsl.
+
         init_command: str
             Command line to run before executing a task in a worker.
             Default is ''.
@@ -207,6 +214,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  autolabel: bool = False,
                  autolabel_window: int = 1,
                  autocategory: bool = True,
+                 max_retries: Optional[int] = 0,
                  init_command: str = "",
                  worker_options: str = "",
                  full_debug: bool = True,
@@ -242,6 +250,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.autolabel = autolabel
         self.autolabel_window = autolabel_window
         self.autocategory = autocategory
+        self.max_retries = 0
         self.should_stop = multiprocessing.Value(c_bool, False)
         self.cached_envs = {}  # type: Dict[int, str]
         self.worker_options = worker_options
@@ -290,6 +299,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                  "autolabel": self.autolabel,
                                  "autolabel_window": self.autolabel_window,
                                  "autocategory": self.autocategory,
+                                 "max_retries": self.max_retries,
                                  "should_stop": self.should_stop,
                                  "port": self.port,
                                  "wq_log_dir": self.wq_log_dir,
@@ -689,6 +699,7 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                             autolabel=False,
                             autolabel_window=None,
                             autocategory=False,
+                            max_retries=0,
                             should_stop=None,
                             port=WORK_QUEUE_DEFAULT_PORT,
                             wq_log_dir=None,
@@ -802,6 +813,12 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                 t.specify_disk(task.disk)
             if task.gpus is not None:
                 t.specify_gpus(task.gpus)
+
+            if max_retries:
+                logger.debug(f"Specifying max_retries {max_retries}")
+                t.specify_max_retries(max_retries)
+            else:
+                logger.debug("Not specifying max_retries")
 
             # Specify environment variables for the task
             if env is not None:
