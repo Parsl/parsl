@@ -177,7 +177,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             Set the number of retries that Work Queue will make when a task
             fails. This is distinct from Parsl level retries configured in
             parsl.config.Config. Set to None to allow Work Queue to retry
-            tasks forever. By default, this is set to 0, so that all retries
+            tasks forever. By default, this is set to 1, so that all retries
             will be managed by Parsl.
 
         init_command: str
