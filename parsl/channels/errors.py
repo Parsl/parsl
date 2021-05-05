@@ -14,7 +14,7 @@ class ChannelError(Exception):
         self.hostname = hostname
 
     def __repr__(self) -> str:
-        return "Hostname:{0}, Reason:{1}".format(self.hostname, self.reason)
+        return f"Hostname:{self.hostname}, Reason:{self.reason}"
 
     def __str__(self) -> str:
         return self.__repr__()
@@ -72,8 +72,8 @@ class FileExists(ChannelError):
     '''
 
     def __init__(self, e: Exception, hostname: str, filename: Optional[str] = None) -> None:
-        super().__init__("File name collision in channel transport phase: {}".format(filename),
-                         e, hostname)
+        super().__init__(f"File name collision in channel transport phase: "
+                         f"{filename}", e, hostname)
 
 
 class AuthException(ChannelError):
@@ -112,4 +112,4 @@ class FileCopyException(ChannelError):
     '''
 
     def __init__(self, e: Exception, hostname: str) -> None:
-        super().__init__("File copy failed due to {0}".format(e), e, hostname)
+        super().__init__(f"File copy failed due to {e}", e, hostname)

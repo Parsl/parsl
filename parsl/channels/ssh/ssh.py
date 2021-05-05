@@ -74,7 +74,8 @@ class SSHChannel(Channel, RepresentationMixin):
 
     def _connect(self):
         if not self._is_connected():
-            logger.debug(f"connecting to {self.hostname}:{self.port}")
+            logger.debug("connecting to {0}:{1}".format(self.hostname,
+                                                        self.port))
             try:
                 self.ssh_client.connect(
                     self.hostname,
@@ -113,8 +114,9 @@ class SSHChannel(Channel, RepresentationMixin):
         env.update(self.envs)
 
         if len(env.keys()) > 0:
-            env_vars = ' '.join(['{}={}'.format(key, value) for key, value in env.items()])
-            return 'env {0} {1}'.format(env_vars, cmd)
+            env_vars = ' '.join([f'{key}={value}' for key, value in
+                                 env.items()])
+            return f'env {env_vars} {cmd}'
         return cmd
 
     def execute_wait(self, cmd, walltime=2, envs={}):
@@ -252,9 +254,9 @@ class SSHChannel(Channel, RepresentationMixin):
             If False, raise an OSError if the target directory already exists.
         """
         if exist_ok is False and self.isdir(path):
-            raise OSError('Target directory {} already exists'.format(path))
+            raise OSError(f'Target directory {path} already exists')
 
-        self.execute_wait('mkdir -p {}'.format(path))
+        self.execute_wait(f'mkdir -p {path}')
         self._valid_sftp_client().chmod(path, mode)
 
     def abspath(self, path):

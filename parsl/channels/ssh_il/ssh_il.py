@@ -68,7 +68,7 @@ class SSHInteractiveLoginChannel(SSHChannel):
 
         transport = self.ssh_client.get_transport()
 
-        il_password = getpass.getpass('Enter {0} Logon password :'.format(hostname))
+        il_password = getpass.getpass(f'Enter {hostname} Logon password :')
         transport.auth_password(username, il_password)
 
         self.sftp_client = paramiko.SFTPClient.from_transport(transport)
