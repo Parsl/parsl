@@ -214,7 +214,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  autolabel: bool = False,
                  autolabel_window: int = 1,
                  autocategory: bool = True,
-                 max_retries: Optional[int] = 0,
+                 max_retries: Optional[int] = 1,
                  init_command: str = "",
                  worker_options: str = "",
                  full_debug: bool = True,
