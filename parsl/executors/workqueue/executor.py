@@ -250,7 +250,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.autolabel = autolabel
         self.autolabel_window = autolabel_window
         self.autocategory = autocategory
-        self.max_retries = 0
+        self.max_retries = max_retries
         self.should_stop = multiprocessing.Value(c_bool, False)
         self.cached_envs = {}  # type: Dict[int, str]
         self.worker_options = worker_options
