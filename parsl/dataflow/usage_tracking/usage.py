@@ -118,9 +118,10 @@ class UsageTracker (object):
         self.config = self.dfk.config
         self.uuid = str(uuid.uuid4())
         self.parsl_version = PARSL_VERSION
-        self.python_version = "{}.{}.{}".format(sys.version_info.major,
-                                                sys.version_info.minor,
-                                                sys.version_info.micro)
+
+        self.python_version = (f"{sys.version_info.major}."
+                               f"{sys.version_info.minor}."
+                               f"{sys.version_info.micro}")
         self.tracking_enabled = self.check_tracking_enabled()
         logger.debug("Tracking status: {}".format(self.tracking_enabled))
         self.initialized = False  # Once first message is sent this will be True

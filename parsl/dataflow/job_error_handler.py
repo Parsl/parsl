@@ -40,14 +40,14 @@ class JobErrorHandler(object):
         count = 1
         for js in status.values():
             if js.message is not None:
-                err = err + "{}. {}\n".format(count, js.message)
+                err = err + f"{count}. {js.message}\n"
                 count += 1
             stdout = js.stdout_summary
             if stdout:
-                err = err + "\tSTDOUT: {}\n".format(stdout)
+                err = err + f"\tSTDOUT: {stdout}\n"
             stderr = js.stderr_summary
             if stderr:
-                err = err + "\tSTDOUT: {}\n".format(stderr)
+                err = err + f"\tSTDOUT: {stderr}\n"
 
         if len(err) == 0:
             err = "[No error message received]"

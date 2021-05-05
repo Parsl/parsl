@@ -39,7 +39,7 @@ def id_for_memo(obj, output_ref=False):
     where an output filename points at memoization time.
     """
     logger.error("id_for_memo attempted on unknown type {}".format(type(obj)))
-    raise ValueError("unknown type for memoization: {}".format(type(obj)))
+    raise ValueError(f"unknown type for memoization: {type(obj)}")
 
 
 @id_for_memo.register(str)

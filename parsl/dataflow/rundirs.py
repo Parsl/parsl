@@ -29,7 +29,7 @@ def make_rundir(path: str) -> str:
         if prev_rundirs:
             # Since we globbed on files named as 0-9
             x = sorted([int(os.path.basename(x)) for x in prev_rundirs])[-1]
-            current_rundir = os.path.join(path, '{0:03}'.format(x + 1))
+            current_rundir = os.path.join(path, f'{x + 1:03}')
 
         os.makedirs(current_rundir)
         logger.debug("Parsl run initializing in rundir: {0}".format(current_rundir))

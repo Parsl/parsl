@@ -33,7 +33,7 @@ class PollItem(ExecutorStatus):
             context = zmq.Context()
             self.hub_channel = context.socket(zmq.DEALER)
             self.hub_channel.set_hwm(0)
-            self.hub_channel.connect("tcp://{}:{}".format(hub_address, hub_port))
+            self.hub_channel.connect(f"tcp://{hub_address}:{hub_port}")
             logger.info("Monitoring enabled on task status poller")
 
     def _should_poll(self, now: float):

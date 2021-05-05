@@ -115,6 +115,4 @@ class AppFuture(Future):
         return self._outputs
 
     def __repr__(self):
-        return '<%s super=%s>' % (
-            self.__class__.__name__,
-            super().__repr__())
+        return f'<{self.__class__.__name__} super={super().__repr__()}>'

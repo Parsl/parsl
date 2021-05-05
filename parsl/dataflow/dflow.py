@@ -79,7 +79,8 @@ class DataFlowKernel(object):
         self.run_dir = make_rundir(config.run_dir)
 
         if config.initialize_logging:
-            parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
+            parsl.set_file_logger(f"{self.run_dir}/parsl.log",
+                                  level=logging.DEBUG)
 
         logger.debug("Starting DataFlowKernel with config\n{}".format(config))
 
@@ -132,9 +133,9 @@ class DataFlowKernel(object):
             self.workflow_version = self.monitoring.workflow_version
 
         workflow_info = {
-                'python_version': "{}.{}.{}".format(sys.version_info.major,
-                                                    sys.version_info.minor,
-                                                    sys.version_info.micro),
+                'python_version': (f"{sys.version_info.major}."
+                                   f"{sys.version_info.minor}."
+                                   f"{sys.version_info.micro}"),
                 'parsl_version': get_version(),
                 "time_began": self.time_began,
                 'time_completed': None,
@@ -428,7 +429,9 @@ class DataFlowKernel(object):
         else:
             raise RuntimeError(f"Cannot update task counters with unknown final state {new_state}")
 
-        logger.info(f"Task {task_record['id']} completed ({old_state.name} -> {new_state.name})")
+        logger.info("Task {} completed ({} -> {})".format(task_record['id'],
+                                                          old_state.name,
+                                                          new_state.name))
         task_record['time_returned'] = datetime.datetime.now()
 
         with task_record['app_fu']._update_lock:
@@ -566,7 +569,8 @@ class DataFlowKernel(object):
             executor = self.executors[executor_label]
         except Exception:
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
-            raise ValueError("Task {} requested invalid executor {}".format(task_id, executor_label))
+            raise ValueError(f"Task {task_id} requested invalid executor "
+                             f"{executor_label}")
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
@@ -790,7 +794,8 @@ class DataFlowKernel(object):
         elif isinstance(executors, list):
             choices = executors
         else:
-            raise ValueError("Task {} supplied invalid type for executors: {}".format(task_id, type(executors)))
+            raise ValueError(f"Task {task_id} supplied invalid type for "
+                             f"executors: {type(executors)}")
         executor = random.choice(choices)
         logger.debug("Task {} will be sent to executor {}".format(task_id, executor))
 
@@ -806,11 +811,8 @@ class DataFlowKernel(object):
                                 self.run_dir,
                                 'task_logs',
                                 str(int(task_id / 10000)).zfill(4),  # limit logs to 10k entries per directory
-                                'task_{}_{}{}.{}'.format(
-                                    str(task_id).zfill(4),
-                                    func.__name__,
-                                    '' if label is None else '_{}'.format(label),
-                                    kw)
+                                (f"task_{str(task_id).zfill(4)}_{func.__name__}"
+                                 f"{'' if label is None else f'_{label}'}.{kw}")
                     )
 
         resource_specification = app_kwargs.get('parsl_resource_specification', {})
@@ -851,7 +853,8 @@ class DataFlowKernel(object):
 
         if task_id in self.tasks:
             raise DuplicateTaskError(
-                "internal consistency error: Task {0} already exists in task list".format(task_id))
+                f"internal consistency error: "
+                f"Task {task_id} already exists in task list")
         else:
             self.tasks[task_id] = task_def
 
@@ -862,12 +865,12 @@ class DataFlowKernel(object):
         depend_descs = []
         for d in depends:
             if isinstance(d, AppFuture) or isinstance(d, DataFuture):
-                depend_descs.append("task {}".format(d.tid))
+                depend_descs.append(f"task {d.tid}")
             else:
                 depend_descs.append(repr(d))
 
-        if depend_descs != []:
-            waiting_message = "waiting on {}".format(", ".join(depend_descs))
+        if depend_descs:
+            waiting_message = f"waiting on {', '.join(depend_descs)}"
         else:
             waiting_message = "not waiting on any dependency"
 
@@ -1107,7 +1110,7 @@ class DataFlowKernel(object):
             else:
                 checkpoint_queue = list(self.tasks.keys())
 
-            checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
+            checkpoint_dir = f'{self.run_dir}/checkpoint'
             checkpoint_dfk = checkpoint_dir + '/dfk.pkl'
             checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
 

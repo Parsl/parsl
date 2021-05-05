@@ -162,10 +162,7 @@ class Timer(object):
         self._wake_up_time = time.time() + 1
 
         self._kill_event = threading.Event()
-        if name is None:
-            name = "Timer-Thread-{}".format(id(self))
-        else:
-            name = "{}-Timer-Thread-{}".format(name, id(self))
+        name = f"{'' if name is None else f'{name}-'}Timer-Thread-{id(self)}"
         self._thread = threading.Thread(target=self._wake_up_timer, args=(self._kill_event,), name=name)
         self._thread.daemon = True
         self._thread.start()
@@ -222,7 +219,7 @@ if __name__ == "__main__":
 
     def cback(*args):
         print("*" * 40)
-        print("Callback at {0} with args : {1}".format(time.time(), args))
+        print(f"Callback at {time.time()} with args : {args}")
         print("*" * 40)
 
     fc = FlowControl(cback)
@@ -238,4 +235,4 @@ if __name__ == "__main__":
             print("Exiting ...")
             break
         else:
-            print("Continuing.. got[%s]", x)
+            print(f"Continuing.. got[{x}]")
