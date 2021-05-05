@@ -40,7 +40,8 @@ def _get_globus_provider(dfk, executor_label):
         if isinstance(provider, GlobusStaging):
             return provider
 
-    raise Exception('No suitable Globus endpoint defined for executor {}'.format(executor_label))
+    raise Exception(f'No suitable Globus endpoint defined for executor '
+                    f'{executor_label}')
 
 
 def get_globus():
@@ -84,8 +85,8 @@ class Globus(object):
         try:
             task = tc.submit_transfer(td)
         except Exception as e:
-            raise Exception('Globus transfer from {}{} to {}{} failed due to error: {}'.format(
-                src_ep, src_path, dst_ep, dst_path, e))
+            raise Exception(f'Globus transfer from {src_ep}{src_path} to '
+                            f'{dst_ep}{dst_path} failed due to error: {e}')
 
         last_event_time = None
         """
@@ -122,8 +123,10 @@ class Globus(object):
             logger.debug('Globus Transfer task: {}'.format(task))
             events = tc.task_event_list(task['task_id'], num_results=1, filter='is_error:1')
             event = events.data[0]
-            raise Exception('Globus transfer {}, from {}{} to {}{} failed due to error: "{}"'.format(
-                task['task_id'], src_ep, src_path, dst_ep, dst_path, event['details']))
+            raise Exception(f"Globus transfer {task['task_id']}, "
+                            f"from {task['task_id']}{src_path} to "
+                            f"{dst_ep}{dst_path} failed due to error: "
+                            f"'{event['details']}'")
 
     @classmethod
     def _load_tokens_from_file(cls, filepath):
@@ -151,7 +154,8 @@ class Globus(object):
             refresh_tokens=True)
 
         url = client.oauth2_get_authorize_url()
-        print('Please visit the following URL to provide authorization: \n{}'.format(url))
+        print(f'Please visit the following URL to provide authorization: '
+              f'\n{url}')
         auth_code = get_input('Enter the auth code: ').strip()
         token_response = client.oauth2_exchange_code_for_tokens(auth_code)
         return token_response.by_resource_server

@@ -16,7 +16,8 @@ class HTTPSeparateTaskStaging(Staging, RepresentationMixin):
     system on the executor."""
 
     def can_stage_in(self, file):
-        logger.debug("HTTPSeparateTaskStaging checking file {}".format(repr(file)))
+        logger.debug("HTTPSeparateTaskStaging checking file "
+                     "{}".format(repr(file)))
         return file.scheme == 'http' or file.scheme == 'https'
 
     def stage_in(self, dm, executor, file, parent_fut):

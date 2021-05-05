@@ -58,12 +58,13 @@ class File(object):
         return self.filepath
 
     def __repr__(self) -> str:
-        content = "{0} at 0x{1:x} url={2} scheme={3} netloc={4} path={5} filename={6}".format(
-            self.__class__, id(self), self.url, self.scheme, self.netloc, self.path, self.filename)
+        content = (f"{self.__class__} at 0x{id(self):x} url={self.url} "
+                   f"scheme={self.scheme} netloc={self.netloc} path={self.path}"
+                   f" filename={self.filename}")
         if self.local_path is not None:
-            content += " local_path={0}".format(self.local_path)
+            content += f" local_path={self.local_path}"
 
-        return "<{}>".format(content)
+        return f"<{content}>"
 
     def __fspath__(self) -> str:
         return self.filepath
@@ -87,4 +88,4 @@ class File(object):
         if self.scheme in ['file']:
             return self.path
         else:
-            raise ValueError("No local_path set for {}".format(repr(self)))
+            raise ValueError(f"No local_path set for {repr(self)}")

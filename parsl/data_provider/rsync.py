@@ -77,11 +77,9 @@ def in_task_stage_in_wrapper(func, file, working_dir, hostname):
             os.makedirs(working_dir, exist_ok=True)
 
         logger.debug("rsync in_task_stage_in_wrapper calling rsync")
-        r = os.system("rsync {hostname}:{permanent_filepath} {worker_filepath}".format(hostname=hostname,
-                                                                                       permanent_filepath=file.path,
-                                                                                       worker_filepath=file.local_path))
+        r = os.system(f"rsync {hostname}:{file.path} {file.local_path}")
         if r != 0:
-            raise RuntimeError("rsync returned {}, a {}".format(r, type(r)))
+            raise RuntimeError(f"rsync returned {r}, a {type(r)}")
         logger.debug("rsync in_task_stage_in_wrapper calling wrapped function")
         result = func(*args, **kwargs)
         logger.debug("rsync in_task_stage_in_wrapper returned from wrapped function")
@@ -97,12 +95,11 @@ def in_task_stage_out_wrapper(func, file, working_dir, hostname):
 
         logger.debug("rsync in_task_stage_out_wrapper calling wrapped function")
         result = func(*args, **kwargs)
-        logger.debug("rsync in_task_stage_out_wrapper returned from wrapped function, calling rsync")
-        r = os.system("rsync {worker_filepath} {hostname}:{permanent_filepath}".format(hostname=hostname,
-                                                                                       permanent_filepath=file.path,
-                                                                                       worker_filepath=file.local_path))
+        logger.debug("rsync in_task_stage_out_wrapper returned from wrapped "
+                     "function, calling rsync")
+        r = os.system(f"rsync {file.local_path} {hostname}:{file.path}")
         if r != 0:
-            raise RuntimeError("rsync returned {}, a {}".format(r, type(r)))
+            raise RuntimeError(f"rsync returned {r}, a {type(r)}")
         logger.debug("rsync in_task_stage_out_wrapper returned from rsync")
         return result
     return wrapper

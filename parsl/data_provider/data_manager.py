@@ -53,7 +53,7 @@ class DataManager(object):
 
         logger.debug("reached end of staging provider list")
         # if we reach here, we haven't found a suitable staging mechanism
-        raise ValueError("Executor {} cannot stage file {}".format(executor, repr(file)))
+        raise ValueError(f"Executor {executor} cannot stage file {repr(file)}")
 
     def optionally_stage_in(self, input, func, executor):
         if isinstance(input, DataFuture):
@@ -94,7 +94,7 @@ class DataManager(object):
 
         logger.debug("reached end of staging provider list")
         # if we reach here, we haven't found a suitable staging mechanism
-        raise ValueError("Executor {} cannot stage file {}".format(executor, repr(file)))
+        raise ValueError(f"Executor {executor} cannot stage file {repr(file)}")
 
     def stage_in(self, file: File, input: Any, executor: str) -> Any:
         """Transport the input from the input source to the executor, if it is file-like,
@@ -135,7 +135,7 @@ class DataManager(object):
 
         logger.debug("reached end of staging provider list")
         # if we reach here, we haven't found a suitable staging mechanism
-        raise ValueError("Executor {} cannot stage file {}".format(executor, repr(file)))
+        raise ValueError(f"Executor {executor} cannot stage file {repr(file)}")
 
     def stage_out(self, file: File, executor: str, app_fu: Future) -> Optional[Future]:
         """Transport the file from the local filesystem to the remote Globus endpoint.
@@ -163,4 +163,5 @@ class DataManager(object):
 
         logger.debug("reached end of staging provider list")
         # if we reach here, we haven't found a suitable staging mechanism
-        raise ValueError("Executor {} cannot stage out file {}".format(executor, repr(file)))
+        raise ValueError(f"Executor {executor} cannot stage out file "
+                         f"{repr(file)}")

@@ -60,7 +60,7 @@ def in_task_transfer_wrapper(func, file, working_dir):
             ftp = ftplib.FTP(file.netloc)
             ftp.login()
             ftp.cwd(os.path.dirname(file.path))
-            ftp.retrbinary('RETR {}'.format(file.filename), f.write)
+            ftp.retrbinary(f'RETR {file.filename}', f.write)
             ftp.quit()
 
         result = func(*args, **kwargs)
@@ -76,7 +76,7 @@ def _ftp_stage_in(working_dir, parent_fut=None, outputs=[], _parsl_staging_inhib
         ftp = ftplib.FTP(file.netloc)
         ftp.login()
         ftp.cwd(os.path.dirname(file.path))
-        ftp.retrbinary('RETR {}'.format(file.filename), f.write)
+        ftp.retrbinary(f'RETR {file.filename}', f.write)
         ftp.quit()
 
 
