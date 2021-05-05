@@ -129,7 +129,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         the there's sufficient memory for each worker. Default: None
 
     max_workers : int
-        Caps the number of workers launched by the manager. Default: infinity
+        Caps the number of workers launched per node. Default: infinity
 
     cpu_affinity: string
         Whether or how each worker process sets thread affinity. Options are "none" to forgo

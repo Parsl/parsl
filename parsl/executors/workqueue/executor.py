@@ -217,7 +217,7 @@ class WorkQueueExecutor(BlockProviderExecutor):
                  autolabel: bool = False,
                  autolabel_window: int = 1,
                  autocategory: bool = True,
-                 max_retries: Optional[int] = 0,
+                 max_retries: Optional[int] = 1,
                  init_command: str = "",
                  worker_options: str = "",
                  full_debug: bool = True,
@@ -252,7 +252,7 @@ class WorkQueueExecutor(BlockProviderExecutor):
         self.autolabel = autolabel
         self.autolabel_window = autolabel_window
         self.autocategory = autocategory
-        self.max_retries = 0
+        self.max_retries = max_retries
         self.should_stop = multiprocessing.Value(c_bool, False)
         self.cached_envs = {}  # type: Dict[int, str]
         self.worker_options = worker_options
