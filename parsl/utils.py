@@ -151,9 +151,9 @@ def wtime_to_minutes(time_string: str) -> int:
     hours, mins, seconds = time_string.split(':')
     total_mins = int(hours) * 60 + int(mins)
     if total_mins < 1:
-        msg = (f"Time string '{time_string}' parsed to {total_mins} minutes, "
-               f"less than 1")
-        logger.warning(msg)
+        logger.warning(
+            "Time string '{}' parsed to {} minutes, less than 1".format(
+                time_string, total_mins))
     return total_mins
 
 

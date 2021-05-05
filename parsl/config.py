@@ -116,6 +116,7 @@ class Config(RepresentationMixin):
         labels = [e.label for e in executors]
         duplicates = [e for n, e in enumerate(labels) if e in labels[:n]]
         if len(duplicates) > 0:
-            raise ConfigurationError('Executors must have unique labels ({})'.format(
-                ', '.join(['label={}'.format(repr(d)) for d in duplicates])))
+            labels_ = ', '.join([f'label={repr(d)}' for d in duplicates])
+            msg = f'Executors must have unique labels ({labels_})'
+            raise ConfigurationError(msg)
         self._executors = executors

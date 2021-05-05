@@ -58,7 +58,9 @@ def address_by_query(timeout: float = 30) -> str:
         logger.debug("Address found: {}".format(addr))
         return addr
     else:
-        raise RuntimeError("Remote service returned unexpected HTTP status code {}".format(response.status_code))
+        msg = (f"Remote service returned unexpected HTTP status code "
+               f"{response.status_code}")
+        raise RuntimeError(msg)
 
 
 def address_by_hostname() -> str:

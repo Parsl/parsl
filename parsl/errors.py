@@ -10,6 +10,6 @@ class OptionalModuleMissing(ParslError):
         self.reason = reason
 
     def __repr__(self):
-        return "The functionality requested requires a missing optional module:{0},  Reason:{1}".format(
-            self.module_names, self.reason
-        )
+        msg = (f"The functionality requested requires a missing optional module"
+               f":{self.module_names},  Reason:{self.reason}")
+        return msg

@@ -39,7 +39,7 @@ setup(
     author='The Parsl Team',
     author_email='parsl@googlegroups.com',
     license='Apache 2.0',
-    download_url='https://github.com/Parsl/parsl/archive/{}.tar.gz'.format(VERSION),
+    download_url=f'https://github.com/Parsl/parsl/archive/{VERSION}.tar.gz',
     include_package_data=True,
     packages=find_packages(),
     python_requires=">=3.6.0",
