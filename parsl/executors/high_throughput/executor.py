@@ -266,10 +266,10 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         address_probe_timeout_string = ""
         if self.address_probe_timeout:
-            address_probe_timeout_string = "--address_probe_timeout={}".format(self.address_probe_timeout)
-        worker_logdir = "{}/{}".format(self.run_dir, self.label)
+            address_probe_timeout_string = f"--address_probe_timeout={self.address_probe_timeout}"
+        worker_logdir = f"{self.run_dir}/{self.label}"
         if self.worker_logdir_root is not None:
-            worker_logdir = "{}/{}".format(self.worker_logdir_root, self.label)
+            worker_logdir = f"{self.worker_logdir_root}/{self.label}"
 
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,
@@ -414,11 +414,11 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                 elif isinstance(s, Exception):
                                     task_fut.set_exception(s)
                                 else:
-                                    raise ValueError("Unknown exception-like type received: {}".format(type(s)))
+                                    raise ValueError(f"Unknown exception-like type received: {type(s)}")
                             except Exception as e:
                                 # TODO could be a proper wrapped exception?
                                 task_fut.set_exception(
-                                    DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
+                                    DeserializationError(f"Received exception, but handling also threw an exception: {e}"))
                         else:
                             raise BadMessage("Message received is neither result or exception")
 
@@ -448,7 +448,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                           "worker_port_range": self.worker_port_range,
                                           "hub_address": self.hub_address,
                                           "hub_port": self.hub_port,
-                                          "logdir": "{}/{}".format(self.run_dir, self.label),
+                                          "logdir": f"{self.run_dir}/{self.label}",
                                           "heartbeat_threshold": self.heartbeat_threshold,
                                           "poll_period": self.poll_period,
                                           "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
@@ -491,7 +491,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         worker_id : str
             Worker id to be put on hold
         """
-        c = self.command_client.run("HOLD_WORKER;{}".format(worker_id))
+        c = self.command_client.run(f"HOLD_WORKER;{worker_id}")
         logger.debug("Sent hold request to worker: {}".format(worker_id))
         return c
 
@@ -613,7 +613,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                 block_ids.append(block_id)
             except Exception as ex:
                 self._fail_job_async(block_id,
-                                     "Failed to start block {}: {}".format(block_id, ex))
+                                     f"Failed to start block {block_id}: {ex}")
         return block_ids
 
     def _launch_block(self, block_id: str) -> Any:

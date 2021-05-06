@@ -78,8 +78,7 @@ def runner(incoming_q, outgoing_q):
                         kwargname: kwargs,
                         resultname: resultname})
 
-        code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
-                                               argname, kwargname)
+        code = f"{resultname} = {fname}(*{argname}, **{kwargname})"
 
         try:
             logger.debug("[RUNNER] Executing: {0}".format(code))

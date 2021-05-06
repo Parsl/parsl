@@ -124,8 +124,8 @@ class Manager(object):
                 raise Exception("No viable address found")
             else:
                 logger.info("Connection to Interchange successful on {}".format(ix_address))
-                task_q_url = "tcp://{}:{}".format(ix_address, task_port)
-                result_q_url = "tcp://{}:{}".format(ix_address, result_port)
+                task_q_url = f"tcp://{ix_address}:{task_port}"
+                result_q_url = f"tcp://{ix_address}:{result_port}"
                 logger.info("Task url : {}".format(task_q_url))
                 logger.info("Result url : {}".format(result_q_url))
         except Exception:
@@ -190,9 +190,9 @@ class Manager(object):
         """ Creates a registration message to identify the worker to the interchange
         """
         msg = {'parsl_v': PARSL_VERSION,
-               'python_v': "{}.{}.{}".format(sys.version_info.major,
-                                             sys.version_info.minor,
-                                             sys.version_info.micro),
+               'python_v': f"{sys.version_info.major}."
+                           f"{sys.version_info.minor}."
+                           f"{sys.version_info.micro}",
                'worker_count': self.worker_count,
                'uid': self.uid,
                'block_id': self.block_id,
@@ -369,7 +369,7 @@ class Manager(object):
                                                                      self.ready_worker_queue,
                                                                      self._tasks_in_progress,
                                                                      self.cpu_affinity
-                                                                 ), name="HTEX-Worker-{}".format(worker_id))
+                                                                 ), name=f"HTEX-Worker-{worker_id}")
                     self.procs[worker_id] = p
                     logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has been restarted".format(worker_id))
                 time.sleep(self.poll_period)
@@ -395,7 +395,7 @@ class Manager(object):
                                                              self.ready_worker_queue,
                                                              self._tasks_in_progress,
                                                              self.cpu_affinity
-                                                         ), name="HTEX-Worker-{}".format(worker_id))
+                                                         ), name=f"HTEX-Worker-{worker_id}")
             p.start()
             self.procs[worker_id] = p
 
@@ -462,8 +462,7 @@ def execute_task(bufs):
                     kwargname: kwargs,
                     resultname: resultname})
 
-    code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
-                                           argname, kwargname)
+    code = f"{resultname} = {fname}(*{argname}, **{kwargname})"
     try:
         # logger.debug("[RUNNER] Executing: {0}".format(code))
         exec(code, user_ns, user_ns)
@@ -486,7 +485,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
     Pop request from queue
     Put result into result_queue
     """
-    start_file_logger('{}/block-{}/{}/worker_{}.log'.format(args.logdir, args.block_id, pool_id, worker_id),
+    start_file_logger(f'{args.logdir}/block-{args.block_id}/{pool_id}/worker_{worker_id}.log',
                       worker_id,
                       name="worker_log",
                       level=logging.DEBUG if args.debug else logging.INFO)
@@ -515,7 +514,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         elif cpu_affinity == "alternating":
             my_cores = avail_cores[worker_id::pool_size]
         else:
-            raise ValueError("Affinity strategy {} is not supported".format(cpu_affinity))
+            raise ValueError(f"Affinity strategy {cpu_affinity} is not supported")
 
         # Set the affinity for this worker
         os.sched_setaffinity(0, my_cores)
@@ -622,10 +621,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
+    os.makedirs(os.path.join(args.logdir, f"block-{args.block_id}", args.uid), exist_ok=True)
 
     try:
-        start_file_logger('{}/block-{}/{}/manager.log'.format(args.logdir, args.block_id, args.uid),
+        start_file_logger(f'{args.logdir}/block-{args.block_id}/{args.uid}/manager.log',
                           0,
                           level=logging.DEBUG if args.debug is True else logging.INFO)
 

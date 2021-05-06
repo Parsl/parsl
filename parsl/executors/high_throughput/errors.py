@@ -6,7 +6,8 @@ class WorkerLost(Exception):
         self.hostname = hostname
 
     def __repr__(self):
-        return "Task failure due to loss of worker {} on host {}".format(self.worker_id, self.hostname)
+        return (f"Task failure due to loss of worker {self.worker_id} "
+                f"on host {self.hostname}")
 
     def __str__(self):
         return self.__repr__()

@@ -33,7 +33,7 @@ class ShutdownRequest(Exception):
         self.tstamp = time.time()
 
     def __repr__(self):
-        return "Shutdown request received at {}".format(self.tstamp)
+        return f"Shutdown request received at {self.tstamp}"
 
     def __str__(self):
         return self.__repr__()
@@ -49,7 +49,7 @@ class ManagerLost(Exception):
         self.hostname = hostname
 
     def __repr__(self):
-        return "Task failure due to loss of manager {} on host {}".format(self.manager_id.decode(), self.hostname)
+        return f"Task failure due to loss of manager {self.manager_id.decode()} on host {self.hostname}"
 
     def __str__(self):
         return self.__repr__()
@@ -64,9 +64,7 @@ class BadRegistration(Exception):
         self.handled = "critical" if critical else "suppressed"
 
     def __repr__(self):
-        return "Manager {} attempted to register with a bad registration message. Caused a {} failure".format(
-            self.worker_id,
-            self.handled)
+        return f"Manager {self.worker_id} attempted to register with a bad registration message. Caused a {self.handled} failure"
 
     def __str__(self):
         return self.__repr__()
@@ -80,9 +78,7 @@ class VersionMismatch(Exception):
         self.manager_version = manager_version
 
     def __repr__(self):
-        return "Manager version info {} does not match interchange version info {}, causing a critical failure".format(
-            self.interchange_version,
-            self.manager_version)
+        return f"Manager version info {self.interchange_version} does not match interchange version info {self.manager_version}, causing a critical failure"
 
     def __str__(self):
         return self.__repr__()
@@ -156,7 +152,7 @@ class Interchange(object):
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
-        start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
+        start_file_logger(f"{self.logdir}/interchange.log", level=logging_level)
         logger.debug("Initializing Interchange process")
 
         self.client_address = client_address
@@ -169,14 +165,14 @@ class Interchange(object):
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.set_hwm(0)
         self.task_incoming.RCVTIMEO = 10  # in milliseconds
-        self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
+        self.task_incoming.connect(f"tcp://{client_address}:{client_ports[0]}")
         self.results_outgoing = self.context.socket(zmq.DEALER)
         self.results_outgoing.set_hwm(0)
-        self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
+        self.results_outgoing.connect(f"tcp://{client_address}:{client_ports[1]}")
 
         self.command_channel = self.context.socket(zmq.REP)
         self.command_channel.RCVTIMEO = 1000  # in milliseconds
-        self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
+        self.command_channel.connect(f"tcp://{client_address}:{client_ports[2]}")
         logger.info("Connected to client")
 
         self.hub_address = hub_address
@@ -196,8 +192,8 @@ class Interchange(object):
             self.worker_task_port = self.worker_ports[0]
             self.worker_result_port = self.worker_ports[1]
 
-            self.task_outgoing.bind("tcp://*:{}".format(self.worker_task_port))
-            self.results_incoming.bind("tcp://*:{}".format(self.worker_result_port))
+            self.task_outgoing.bind(f"tcp://*:{self.worker_task_port}")
+            self.results_incoming.bind(f"tcp://*:{self.worker_result_port}")
 
         else:
             self.worker_task_port = self.task_outgoing.bind_to_random_port('tcp://*',
@@ -215,9 +211,9 @@ class Interchange(object):
         self.heartbeat_threshold = heartbeat_threshold
 
         self.current_platform = {'parsl_v': PARSL_VERSION,
-                                 'python_v': "{}.{}.{}".format(sys.version_info.major,
-                                                               sys.version_info.minor,
-                                                               sys.version_info.micro),
+                                 'python_v': f"{sys.version_info.major}."
+                                             f"{sys.version_info.minor}."
+                                             f"{sys.version_info.micro}",
                                  'os': platform.system(),
                                  'hostname': platform.node(),
                                  'dir': os.getcwd()}
@@ -284,7 +280,7 @@ class Interchange(object):
             logger.info("Connecting to monitoring")
             hub_channel = self.context.socket(zmq.DEALER)
             hub_channel.set_hwm(0)
-            hub_channel.connect("tcp://{}:{}".format(self.hub_address, self.hub_port))
+            hub_channel.connect(f"tcp://{self.hub_address}:{self.hub_port}")
             logger.info("Monitoring enabled and connected to hub")
             return hub_channel
         else:
@@ -443,11 +439,9 @@ class Interchange(object):
                             logger.warning("[MAIN] Manager {} has incompatible version info with the interchange".format(manager))
                             logger.debug("Setting kill event")
                             self._kill_event.set()
-                            e = VersionMismatch("py.v={} parsl.v={}".format(self.current_platform['python_v'].rsplit(".", 1)[0],
-                                                                            self.current_platform['parsl_v']),
-                                                "py.v={} parsl.v={}".format(msg['python_v'].rsplit(".", 1)[0],
-                                                                            msg['parsl_v'])
-                            )
+                            e = VersionMismatch(f"py.v={self.current_platform['python_v'].rsplit('.', 1)[0]} parsl.v={self.current_platform['parsl_v']}",
+                                                f"py.v={msg['python_v'].rsplit('.', 1)[0]} parsl.v={msg['parsl_v']}"
+                                                )
                             result_package = {'task_id': -1, 'exception': serialize_object(e)}
                             pkl_package = pickle.dumps(result_package)
                             self.results_outgoing.send(pkl_package)

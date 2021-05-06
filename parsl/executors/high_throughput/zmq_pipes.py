@@ -38,11 +38,11 @@ class CommandClient(object):
         self.zmq_socket = self.context.socket(zmq.REQ)
         self.zmq_socket.setsockopt(zmq.LINGER, 0)
         if self.port is None:
-            self.port = self.zmq_socket.bind_to_random_port("tcp://{}".format(self.ip_address),
+            self.port = self.zmq_socket.bind_to_random_port(f"tcp://{self.ip_address}",
                                                             min_port=self.port_range[0],
                                                             max_port=self.port_range[1])
         else:
-            self.zmq_socket.bind("tcp://{}:{}".format(self.ip_address, self.port))
+            self.zmq_socket.bind(f"tcp://{self.ip_address}:{self.port}")
 
     def run(self, message, max_retries=3):
         """ This function needs to be fast at the same time aware of the possibility of
@@ -97,7 +97,7 @@ class TasksOutgoing(object):
         self.context = zmq.Context()
         self.zmq_socket = self.context.socket(zmq.DEALER)
         self.zmq_socket.set_hwm(0)
-        self.port = self.zmq_socket.bind_to_random_port("tcp://{}".format(ip_address),
+        self.port = self.zmq_socket.bind_to_random_port(f"tcp://{ip_address}",
                                                         min_port=port_range[0],
                                                         max_port=port_range[1])
         self.poller = zmq.Poller()
@@ -146,7 +146,7 @@ class ResultsIncoming(object):
         self.context = zmq.Context()
         self.results_receiver = self.context.socket(zmq.DEALER)
         self.results_receiver.set_hwm(0)
-        self.port = self.results_receiver.bind_to_random_port("tcp://{}".format(ip_address),
+        self.port = self.results_receiver.bind_to_random_port(f"tcp://{ip_address}",
                                                               min_port=port_range[0],
                                                               max_port=port_range[1])
 

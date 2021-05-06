@@ -25,8 +25,8 @@ class Interchange(object):
 
         self.result_outgoing.set_hwm(0)
 
-        task_address = "tcp://{}:{}".format(client_address, client_ports[0])
-        result_address = "tcp://{}:{}".format(client_address, client_ports[1])
+        task_address = f"tcp://{client_address}:{client_ports[0]}"
+        result_address = f"tcp://{client_address}:{client_ports[1]}"
         self.task_incoming.connect(task_address)
         self.result_outgoing.connect(result_address)
 
@@ -37,7 +37,7 @@ class Interchange(object):
         self.worker_port_range = worker_port_range
 
         if self.worker_port:
-            worker_task_address = "tcp://*:{}".format(self.worker_port)
+            worker_task_address = f"tcp://*:{self.worker_port}"
             self.worker_messages.bind(worker_task_address)
             logger.debug("Worker task address: {}".format(worker_task_address))
 

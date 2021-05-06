@@ -94,9 +94,9 @@ class Manager(object):
         """ Creates a registration message to identify the worker to the interchange
         """
         msg = {'parsl_v': PARSL_VERSION,
-               'python_v': "{}.{}.{}".format(sys.version_info.major,
-                                             sys.version_info.minor,
-                                             sys.version_info.micro),
+               'python_v': f"{sys.version_info.major}."
+                           f"{sys.version_info.minor}."
+                           f"{sys.version_info.micro}",
                'os': platform.system(),
                'hostname': platform.node(),
                'dir': os.getcwd(),
@@ -368,8 +368,7 @@ def execute_task(bufs):
                     kwargname: kwargs,
                     resultname: resultname})
 
-    code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
-                                           argname, kwargname)
+    code = f"{resultname} = {fname}(*{argname}, **{kwargname})"
 
     try:
         logger.debug("[RUNNER] Executing: {0}".format(code))
@@ -486,14 +485,14 @@ if __name__ == "__main__":
 
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
-    print("Starting rank: {}".format(rank))
+    print(f"Starting rank: {rank}")
 
     os.makedirs(args.logdir, exist_ok=True)
 
     # set_stream_logger()
     try:
         if rank == 0:
-            start_file_logger('{}/manager.mpi_rank_{}.log'.format(args.logdir, rank),
+            start_file_logger(f'{args.logdir}/manager.mpi_rank_{rank}.log',
                               rank,
                               level=logging.DEBUG if args.debug is True else logging.INFO)
 
@@ -509,7 +508,7 @@ if __name__ == "__main__":
             logger.debug("Finalizing MPI Comm")
             comm.Abort()
         else:
-            start_file_logger('{}/worker.mpi_rank_{}.log'.format(args.logdir, rank),
+            start_file_logger(f'{args.logdir}/worker.mpi_rank_{rank}.log',
                               rank,
                               level=logging.DEBUG if args.debug is True else logging.INFO)
             worker(comm, rank)

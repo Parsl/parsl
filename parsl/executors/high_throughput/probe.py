@@ -30,7 +30,7 @@ def probe_addresses(addresses, task_port, timeout=2):
     for addr in addresses:
         socket = context.socket(zmq.DEALER)
         socket.setsockopt(zmq.LINGER, 0)
-        url = "tcp://{}:{}".format(addr, task_port)
+        url = f"tcp://{addr}:{task_port}"
         logger.debug("Trying to connect back on {}".format(url))
         socket.connect(url)
         addr_map[addr] = {'sock': socket,
@@ -69,7 +69,7 @@ class TestWorker(object):
 
         address = probe_addresses(addresses, port)
         print("Viable address :", address)
-        self.task_incoming.connect("tcp://{}:{}".format(address, port))
+        self.task_incoming.connect(f"tcp://{address}:{port}")
         print("Here")
 
     def heartbeat(self):
@@ -78,7 +78,7 @@ class TestWorker(object):
         HEARTBEAT_CODE = (2 ** 32) - 1
         heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
         r = self.task_incoming.send(heartbeat)
-        print("Return from heartbeat: {}".format(r))
+        print(f"Return from heartbeat: {r}")
 
 
 if __name__ == "__main__":

@@ -31,8 +31,7 @@ def execute_task(f, args, kwargs, user_ns):
                     kwargname: kwargs,
                     resultname: resultname})
 
-    code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
-                                           argname, kwargname)
+    code = f"{resultname} = {fname}(*{argname}, **{kwargname})"
     try:
         exec(code, user_ns, user_ns)
 
@@ -60,7 +59,7 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
     try:
         os.makedirs(os.path.dirname(filename), 511, True)
     except Exception as e:
-        print("Caught exception with trying to make log dirs: {}".format(e))
+        print(f"Caught exception with trying to make log dirs: {e}")
 
     if format_string is None:
         format_string = "%(asctime)s %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(
@@ -81,7 +80,7 @@ def worker(worker_id, task_url, debug=True, logdir="workers", uid="1"):
     TODO : Cleanup debug, logdir and uid to function correctly
     """
 
-    start_file_logger('{}/{}/worker_{}.log'.format(logdir, uid, worker_id),
+    start_file_logger(f'{logdir}/{uid}/worker_{worker_id}.log',
                       0,
                       level=logging.DEBUG if debug is True else logging.INFO)
 

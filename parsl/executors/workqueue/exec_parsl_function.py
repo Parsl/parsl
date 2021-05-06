@@ -121,7 +121,7 @@ def encode_function(user_namespace, fn, fn_name, fn_args, fn_kwargs):
 def encode_source_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name):
     # We drop the first line as it names the parsl decorator used (i.e., @python_app)
     source = fn.split('\n')[1:]
-    fn_app = "{0} = {1}(*{2}, **{3})".format(result_name, fn_name, args_name, kwargs_name)
+    fn_app = f"{result_name} = {fn_name}(*{args_name}, **{kwargs_name})"
 
     source.append(fn_app)
 
@@ -131,7 +131,7 @@ def encode_source_code_function(user_namespace, fn, fn_name, args_name, kwargs_n
 
 def encode_byte_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name):
     user_namespace.update({fn_name: fn})
-    code = "{0} = {1}(*{2}, **{3})".format(result_name, fn_name, args_name, kwargs_name)
+    code = f"{result_name} = {fn_name}(*{args_name}, **{kwargs_name})"
     return code
 
 
@@ -179,7 +179,7 @@ if __name__ == "__main__":
         try:
             (map_file, function_file, result_file) = sys.argv[1:]
         except ValueError:
-            print("Usage:\n\t{} function result mapping\n".format(sys.argv[0]))
+            print(f"Usage:\n\t{sys.argv[0]} function result mapping\n")
             raise
 
         try:

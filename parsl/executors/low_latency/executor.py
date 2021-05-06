@@ -86,7 +86,7 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
             l_cmd = self.launch_cmd.format(  # debug=debug_opts,
                 task_url=self.worker_task_url,
                 workers_per_node=self.workers_per_node,
-                logdir="{}/{}".format(self.run_dir, self.label))
+                logdir=f"{self.run_dir}/{self.label}")
             self.launch_cmd = l_cmd
             logger.debug("Launch command: {}".format(self.launch_cmd))
 
@@ -134,8 +134,7 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
                 "Interchange has not completed initialization in 120s. Aborting")
             raise Exception("Interchange failed to start")
 
-        self.worker_task_url = "tcp://{}:{}".format(
-            self.address, worker_port)
+        self.worker_task_url = f"tcp://{self.address}:{worker_port}"
 
     def _start_queue_management_thread(self):
         """ TODO: docstring """
@@ -171,12 +170,12 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
                 logger.warning("Task: {} has returned with an exception")
                 try:
                     s = deserialize(msg['exception'])
-                    exception = ValueError("Remote exception description: {}".format(s))
+                    exception = ValueError(f"Remote exception description: {s}")
                     task_fut.set_exception(exception)
                 except Exception as e:
                     # TODO could be a proper wrapped exception?
                     task_fut.set_exception(
-                        DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
+                        DeserializationError(f"Received exception, but handling also threw an exception: {e}"))
 
             else:
                 raise BadMessage(
@@ -240,7 +239,7 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
                         self._fail_job_async(None, "Failed to launch block")
                     self.blocks.extend([block])
                 except Exception as ex:
-                    self._fail_job_async(None, "Failed to launch block: {}".format(ex))
+                    self._fail_job_async(None, f"Failed to launch block: {ex}")
             else:
                 logger.error("No execution provider available")
                 r = None

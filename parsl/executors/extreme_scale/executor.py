@@ -176,17 +176,17 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
 
         debug_opts = "--debug" if self.worker_debug else ""
         l_cmd = self.launch_cmd.format(debug=debug_opts,
-                                       task_url="tcp://{}:{}".format(self.address,
-                                                                     self.worker_task_port),
-                                       result_url="tcp://{}:{}".format(self.address,
-                                                                       self.worker_result_port),
+                                       task_url=f"tcp://{self.address}:"
+                                                f"{self.worker_task_port}",
+                                       result_url=f"tcp://{self.address}:"
+                                                  f"{self.worker_result_port}",
                                        cores_per_worker=self.cores_per_worker,
                                        # This is here only to support the exex mpiexec call
                                        ranks_per_node=self.ranks_per_node,
                                        nodes_per_block=self.provider.nodes_per_block,
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
-                                       logdir="{}/{}".format(self.run_dir, self.label))
+                                       logdir=f"{self.run_dir}/{self.label}")
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
 

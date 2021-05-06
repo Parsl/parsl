@@ -15,7 +15,7 @@ class ExecutorError(ParslError):
         self.reason = reason
 
     def __str__(self):
-        return "Executor {0} failed due to: {1}".format(self.executor, self.reason)
+        return f"Executor {self.executor} failed due to: {self.reason}"
 
 
 class UnsupportedFeatureError(ExecutorError):
@@ -27,10 +27,7 @@ class UnsupportedFeatureError(ExecutorError):
         self.target_executor = target_executor
 
     def __str__(self):
-        return "The {} feature is unsupported in {}. \
-Please checkout {} for this feature".format(self.feature,
-                                            self.current_executor,
-                                            self.target_executor)
+        return f"The {self.feature} feature is unsupported in {self.current_executor}. Please checkout {self.target_executor} for this feature"
 
 
 class ScalingFailed(ExecutorError):
@@ -49,7 +46,7 @@ class DeserializationError(ExecutorError):
         self.reason = reason
 
     def __str__(self):
-        return "Failed to deserialize return objects. Reason:{}".format(self.reason)
+        return f"Failed to deserialize return objects. Reason:{self.reason}"
 
 
 class SerializationError(ExecutorError):
@@ -61,8 +58,7 @@ class SerializationError(ExecutorError):
         self.troubleshooting = "https://parsl.readthedocs.io/en/latest/faq.html#addressing-serializationerror"
 
     def __str__(self):
-        return "Failed to serialize data objects for {}. Refer {} ".format(self.fname,
-                                                                           self.troubleshooting)
+        return f"Failed to serialize data objects for {self.fname}. Refer {self.troubleshooting} "
 
 
 class BadMessage(ExecutorError):
@@ -73,4 +69,4 @@ class BadMessage(ExecutorError):
         self.reason = reason
 
     def __str__(self):
-        return "Received an unsupported message. Reason:{}".format(self.reason)
+        return f"Received an unsupported message. Reason:{self.reason}"

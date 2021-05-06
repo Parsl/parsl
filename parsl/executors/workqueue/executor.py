@@ -251,7 +251,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             self.address = socket.gethostname()
 
         if self.project_password_file is not None and not os.path.exists(self.project_password_file):
-            raise WorkQueueFailure('Could not find password file: {}'.format(self.project_password_file))
+            raise WorkQueueFailure(f'Could not find password file: {self.project_password_file}')
 
         if self.project_password_file is not None:
             if os.path.exists(self.project_password_file) is False:
@@ -318,7 +318,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             'result': Pickled file that (will) contain the result of the function.
             'map': Pickled file with a dict between local parsl names, and remote work queue names.
         """
-        task_dir = "{:04d}".format(task_id)
+        task_dir = f"{task_id:04d}"
         return os.path.join(self.function_data_dir, task_dir, *path_components)
 
     def submit(self, func, resource_specification, *args, **kwargs):
@@ -447,13 +447,13 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
     def _construct_worker_command(self):
         worker_command = self.worker_executable
         if self.project_password_file:
-            worker_command += ' --password {}'.format(self.project_password_file)
+            worker_command += f' --password {self.project_password_file}'
         if self.worker_options:
-            worker_command += ' {}'.format(self.worker_options)
+            worker_command += f' {self.worker_options}'
         if self.project_name:
-            worker_command += ' -M {}'.format(self.project_name)
+            worker_command += f' -M {self.project_name}'
         else:
-            worker_command += ' {} {}'.format(self.address, self.port)
+            worker_command += f' {self.address} {self.port}'
 
         logger.debug("Using worker command: {}".format(worker_command))
         return worker_command
@@ -541,7 +541,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             logger.debug("Skipping analysis of %s, previously got %s", fn_name, self.cached_envs[fn_id])
             return self.cached_envs[fn_id]
         source_code = inspect.getsource(fn).encode()
-        pkg_dir = os.path.join(tempfile.gettempdir(), "python_package-{}".format(os.geteuid()))
+        pkg_dir = os.path.join(tempfile.gettempdir(), f"python_package-{os.geteuid()}")
         os.makedirs(pkg_dir, exist_ok=True)
         with tempfile.NamedTemporaryFile(suffix='.yaml') as spec:
             logger.info("Analyzing dependencies of %s", fn_name)
@@ -552,7 +552,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             with open(spec.name, mode='rb') as f:
                 spec_hash = hashlib.sha256(f.read()).hexdigest()
                 logger.debug("Spec hash for %s is %s", fn_name, spec_hash)
-                pkg = os.path.join(pkg_dir, "pack-{}.tar.gz".format(spec_hash))
+                pkg = os.path.join(pkg_dir, f"pack-{spec_hash}.tar.gz")
             if os.access(pkg, os.R_OK):
                 self.cached_envs[fn_id] = pkg
                 logger.debug("Cached package for %s found at %s", fn_name, pkg)
@@ -766,8 +766,7 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
 
             pkg_pfx = ""
             if task.env_pkg is not None:
-                pkg_pfx = "./{} -e {} ".format(os.path.basename(package_run_script),
-                                               os.path.basename(task.env_pkg))
+                pkg_pfx = f"./{os.path.basename(package_run_script)} -e {os.path.basename(task.env_pkg)} "
 
             # Create command string
             logger.debug(launch_cmd)
