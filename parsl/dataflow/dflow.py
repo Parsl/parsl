@@ -349,7 +349,7 @@ class DataFlowKernel(object):
         # it might be that in the course of the update, we've gone back to being
         # pending - in which case, we should consider ourself for relaunch
         if task_record['status'] == States.pending:
-            self.launch_if_ready(task_id)
+            self.launch_if_ready(task_record)
 
     def handle_join_update(self, outer_task_id, inner_app_future):
         # Use the result of the inner_app_future as the final result of
@@ -451,7 +451,7 @@ class DataFlowKernel(object):
     def check_staging_inhibited(kwargs):
         return kwargs.get('_parsl_staging_inhibit', False)
 
-    def launch_if_ready(self, task_id):
+    def launch_if_ready(self, task_record):
         """
         launch_if_ready will launch the specified task, if it is ready
         to run (for example, without dependencies, and in pending state).
@@ -466,23 +466,16 @@ class DataFlowKernel(object):
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
         """
-        # after launching the task, self.tasks[task_id] is no longer
-        # guaranteed to exist (because it can complete fast as part of the
-        # submission - eg memoization)
-        task_record = self.tasks.get(task_id)
-        if task_record is None:
-            # assume this task has already been processed to completion
-            logger.debug("Task {} has no task record. Assuming it has already been processed to completion.".format(task_id))
-            return
+        task_id = task_record['id']
         if self._count_deps(task_record['depends']) == 0:
 
             # We can now launch *task*
-            new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id,
-                                                                  task_record['args'],
-                                                                  task_record['kwargs'])
+            new_args, kwargs, exceptions_tids = self.sanitize_and_wrap(task_id,
+                                                                       task_record['args'],
+                                                                       task_record['kwargs'])
             task_record['args'] = new_args
             task_record['kwargs'] = kwargs
-            if not exceptions:
+            if not exceptions_tids:
                 # There are no dependency errors
                 exec_fu = None
                 # Acquire a lock, retest the state, launch
@@ -513,7 +506,7 @@ class DataFlowKernel(object):
                 self._send_task_log_info(task_record)
 
                 exec_fu = Future()
-                exec_fu.set_exception(DependencyError(exceptions,
+                exec_fu.set_exception(DependencyError(exceptions_tids,
                                                       task_id))
 
             if exec_fu:
@@ -898,14 +891,14 @@ class DataFlowKernel(object):
         for d in depends:
 
             def callback_adapter(dep_fut):
-                self.launch_if_ready(task_id)
+                self.launch_if_ready(task_def)
 
             try:
                 d.add_done_callback(callback_adapter)
             except Exception as e:
                 logger.error("add_done_callback got an exception {} which will be ignored".format(e))
 
-        self.launch_if_ready(task_id)
+        self.launch_if_ready(task_def)
 
         return app_fu
 
