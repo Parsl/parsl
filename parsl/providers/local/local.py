@@ -40,7 +40,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=1,
-                 walltime="00:15:00",
                  worker_init='',
                  cmd_timeout=30,
                  parallelism=1,
@@ -54,7 +53,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         self.min_blocks = min_blocks
         self.max_blocks = max_blocks
         self.parallelism = parallelism
-        self.walltime = walltime
         self.script_dir = None
         self.cmd_timeout = cmd_timeout
         self.move_files = move_files
