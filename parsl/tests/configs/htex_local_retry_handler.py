@@ -44,7 +44,7 @@ def test_retry_handler(exception, task_record):
     now = datetime.datetime.now()
     if (now - task_record['time_invoked']).total_seconds() < 120:
         logger.info("RETRY: time invoked is short")
-        return 0.1 # soft retries until 2 minute time limit
+        return 0.1  # soft retries until 2 minute time limit
     else:
         logger.error("RETRY: exceeded maximum allowable retry time")
         return 100
