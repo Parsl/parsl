@@ -530,7 +530,9 @@ is being executed on the login nodes of one of the machines.
 Further help
 ------------
 
-For help constructing a configuration, you can click on class names such as :class:`~parsl.config.Config` or :class:`~parsl.executors.HighThroughputExecutor` to see the associated class documentation. The same documentation can be accessed interactively at the python command line via, for example::
+For help constructing a configuration, you can click on class names such as :class:`~parsl.config.Config` or :class:`~parsl.executors.HighThroughputExecutor` to see the associated class documentation. The same documentation can be accessed interactively at the python command line via, for example:
 
-    >>> from parsl.config import Config
-    >>> help(Config)
+.. code-block:: python
+
+    from parsl.config import Config
+    help(Config)

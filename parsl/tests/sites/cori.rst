@@ -7,36 +7,36 @@ Requirements
 ============
 
 Cori makes Python3.6 available via Conda. We'll use these packages to install Parsl and it's dependencies.
-Load the conda module. Make sure to match your python version with that env you setup on Cori.
+Load the conda module. Make sure to match your python version with that env you setup on Cori.::
 
->>> module load python/3.6-anaconda-4.4
+  module load python/3.6-anaconda-4.4
 
 
-Now let's create a Conda virtual environment to isolate the following package installations and activate it.
+Now let's create a Conda virtual environment to isolate the following package installations and activate it.::
 
->>> conda create --name parsl_env_3.6
->>> source activate parsl_env_3.6
+  conda create --name parsl_env_3.6
+  source activate parsl_env_3.6
 
-Install pip to your conda env:
+Install pip to your conda env::
 
->>> conda install -n parsl_env_3.6 pip
+  conda install -n parsl_env_3.6 pip
 
-Ensure that the pip package is coming from your local conda env dirs.
+Ensure that the pip package is coming from your local conda env dirs.::
 
->>> which pip
->>> pip install parsl
+  which pip
+  pip install parsl
 
-I'd recommend downloading the latest source and adding the source path to your PYTHONPATH.
+I'd recommend downloading the latest source and adding the source path to your PYTHONPATH.::
 
->>> git clone https://github.com/Parsl/parsl.git
->>> export PYTHONPATH=$PWD/parsl:$PYTHONPATH
+  git clone https://github.com/Parsl/parsl.git
+  export PYTHONPATH=$PWD/parsl:$PYTHONPATH
 
 Running IPP
 ===========
 
-In order to run Parsl apps on Cori nodes, we need to first start an IPython controller on the login node.
+In order to run Parsl apps on Cori nodes, we need to first start an IPython controller on the login node.::
 
->>> ipcontroller --port=5XXXX --ip=*
+  ipcontroller --port=5XXXX --ip=*
 
 .. note:: If you are timeout errors from ipengines in the submit script logs it is most likely due to
           connectivity issues between the controller and engine.In which case, try specifying the internal
