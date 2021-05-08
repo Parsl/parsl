@@ -337,8 +337,8 @@ class DataFlowKernel(object):
 
                     inner_future = future.result()
 
-                    # this assert should actually be a test that causes the
-                    # current app to fail cleanly if it is not a Future
+                    # Fail with a TypeError if the joinapp python body returned
+                    # something we can't join on.
                     if isinstance(inner_future, Future):
                         task_record['status'] = States.joining
                         task_record['joins'] = inner_future
