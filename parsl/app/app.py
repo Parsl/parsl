@@ -42,7 +42,6 @@ class AppBase(metaclass=ABCMeta):
         self.__name__ = func.__name__
         self.func = func
         self.data_flow_kernel = data_flow_kernel
-        self.status = 'created'
         self.executors = executors
         self.cache = cache
         self.ignore_for_cache = ignore_for_cache
