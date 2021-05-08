@@ -112,7 +112,7 @@ def worker_efficiency(task, node):
 
         for i, row in task.iterrows():
             if math.isnan(row['epoch_time_running']):
-                # skip tasks with no running start time or return time.
+                # skip tasks with no running start time.
                 continue
             if math.isnan(row['epoch_time_returned']):
                 # there is no end time for this, so we should assume the "end" time
