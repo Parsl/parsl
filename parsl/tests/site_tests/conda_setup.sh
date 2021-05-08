@@ -48,6 +48,22 @@ create_conda() {
         echo "source ~/anaconda3/bin/activate;"          >  ~/setup_parsl_test_env.sh
         echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
 
+    elif [[ "$(hostname)" =~ .*nscc.* ]]
+    then
+        echo "On NSCC Singapore"
+        if [[ -d ~/anaconda3 ]]
+        then
+            echo "Loading anaconda3 from ~/anaconda3"
+            source ~/anaconda3/bin/activate
+        else
+            echo "Please install conda to your home dir at ~/anaconda3"
+        fi
+        conda create -p $CONDA_TARGET python=3.7 --yes --force
+        conda activate $CONDA_TARGET/
+        echo "source ~/anaconda3/bin/activate;"          >  ~/setup_parsl_test_env.sh
+        echo "conda activate $PWD/$CONDA_TARGET/"        >> ~/setup_parsl_test_env.sh
+        echo "module load openmpi/intel/1.10.2;"         >> ~/setup_parsl_test_env.sh
+
     elif [[ "$(hostname -f)" =~ .*summit.* ]]
     then
         echo "On Summit"
