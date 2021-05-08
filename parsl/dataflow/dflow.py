@@ -472,12 +472,12 @@ class DataFlowKernel(object):
         if self._count_deps(task_record['depends']) == 0:
 
             # We can now launch *task*
-            new_args, kwargs, exceptions = self.sanitize_and_wrap(task_id,
-                                                                  task_record['args'],
-                                                                  task_record['kwargs'])
+            new_args, kwargs, exceptions_tids = self.sanitize_and_wrap(task_id,
+                                                                       task_record['args'],
+                                                                       task_record['kwargs'])
             task_record['args'] = new_args
             task_record['kwargs'] = kwargs
-            if not exceptions:
+            if not exceptions_tids:
                 # There are no dependency errors
                 exec_fu = None
                 # Acquire a lock, retest the state, launch
@@ -508,7 +508,7 @@ class DataFlowKernel(object):
                 self._send_task_log_info(task_record)
 
                 exec_fu = Future()
-                exec_fu.set_exception(DependencyError(exceptions,
+                exec_fu.set_exception(DependencyError(exceptions_tids,
                                                       task_id))
 
             if exec_fu:
