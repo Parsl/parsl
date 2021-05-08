@@ -129,7 +129,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         the there's sufficient memory for each worker. Default: None
 
     max_workers : int
-        Caps the number of workers launched by the manager. Default: infinity
+        Caps the number of workers launched per node. Default: infinity
 
     cpu_affinity: string
         Whether or how each worker process sets thread affinity. Options are "none" to forgo
@@ -561,7 +561,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             args_to_print = tuple([arg if len(repr(arg)) < 100 else (repr(arg)[:100] + '...') for arg in args])
         logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
 
-        self.tasks[task_id] = Future()
+        fut = Future()
+        self.tasks[task_id] = fut
 
         try:
             fn_buf = pack_apply_message(func, args, kwargs,
@@ -576,7 +577,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         self.outgoing_q.put(msg)
 
         # Return the future
-        return self.tasks[task_id]
+        return fut
 
     @property
     def scaling_enabled(self):
