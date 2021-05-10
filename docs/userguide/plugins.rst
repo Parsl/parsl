@@ -11,7 +11,7 @@ Executors
 ---------
 When the parsl data flow kernel is ready for a task to run, it passes that
 task to an `Executor`. The executor is then responsible for running the task's
-python code and returning the result. This is the abstraction that allows one
+Python code and returning the result. This is the abstraction that allows one
 executor to run code on the local submitting host, while another executor can
 run the same code on a large supercomputer.
 
