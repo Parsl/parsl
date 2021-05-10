@@ -30,7 +30,7 @@ A `Provider` allows a command line to be submitted as a request to the
 underlying batch system to be run inside an allocation of nodes.
 
 A `Launcher` modifies that command line when run inside the allocation to
-add on any wrappers that are needed to launch the command. (eg srun inside
+add on any wrappers that are needed to launch the command (eg srun inside
 slurm). Providers and launchers are usually paired together for a particular
 system type.
 
