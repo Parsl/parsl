@@ -48,5 +48,6 @@ parsl.executors.ExtremeScaleExecutor
       ~ExtremeScaleExecutor.scaling_enabled
       ~ExtremeScaleExecutor.status_polling_interval
       ~ExtremeScaleExecutor.tasks
+      ~ExtremeScaleExecutor.workers_per_node
    
    

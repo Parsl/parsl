@@ -48,5 +48,6 @@ parsl.executors.HighThroughputExecutor
       ~HighThroughputExecutor.scaling_enabled
       ~HighThroughputExecutor.status_polling_interval
       ~HighThroughputExecutor.tasks
+      ~HighThroughputExecutor.workers_per_node
    
    
