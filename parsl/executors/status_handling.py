@@ -14,7 +14,7 @@ from parsl.providers.provider_base import JobStatus, ExecutionProvider, JobState
 logger = logging.getLogger(__name__)
 
 
-class StatusHandlingExecutor(ParslExecutor):
+class BlockProviderExecutor(ParslExecutor):
     def __init__(self, provider):
         super().__init__()
         self._provider = provider  # type: ExecutionProvider
@@ -26,6 +26,8 @@ class StatusHandlingExecutor(ParslExecutor):
         self._executor_exception = None
         self._generated_block_id_counter = 1
         self._tasks = {}  # type: Dict[object, Future]
+        self.blocks = {}  # type: Dict[str, str]
+        self.block_mapping = {}  # type: Dict[str, str]
 
     def _make_status_dict(self, block_ids: List[str], status_list: List[JobStatus]) -> Dict[str, JobStatus]:
         """Given a list of block ids and a list of corresponding status strings,
@@ -52,11 +54,6 @@ class StatusHandlingExecutor(ParslExecutor):
             return 0
         else:
             return self._provider.status_polling_interval
-
-    @abstractmethod
-    def _get_block_and_job_ids(self) -> Tuple[List[str], List[Any]]:
-        raise NotImplementedError("Classes inheriting from StatusHandlingExecutor must implement "
-                                  "_get_block_and_job_ids()")
 
     def _fail_job_async(self, block_id: Any, message: str):
         """Marks a job that has failed to start but would not otherwise be included in status()
@@ -132,15 +129,6 @@ class StatusHandlingExecutor(ParslExecutor):
         assert len(to_kill) == len(killed)
         # Filters first iterable by bool values in second
         return list(compress(to_kill, killed))
-
-
-class BlockProviderExecutor(StatusHandlingExecutor):
-    """TODO: basically anything to do with providers/scaling/blocks should be moved into this"""
-
-    def __init__(self, provider):
-        super().__init__(provider)
-        self.blocks = {}  # type: Dict[str, str]
-        self.block_mapping = {}  # type: Dict[str, str]
 
     def scale_out(self, blocks: int = 1) -> List[str]:
         """Scales out the number of blocks by "blocks"
