@@ -356,7 +356,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                 logger.error(message)
                 raise ExecutorError(self, message)
 
-            if not self.autolabel and not keys.issuperset(required_resource_types):
+            key_check = required_resource_types.intersection(keys)
+            required_keys_ok = len(key_check) == 0 or key_check == required_resource_types
+            if not self.autolabel and not required_keys_ok:
                 logger.error("Running with `autolabel=False`. In this mode, "
                              "task resource specification requires "
                              "three resources to be specified simultaneously: cores, memory, and disk")
