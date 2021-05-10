@@ -42,21 +42,14 @@ class DependencyError(DataFlowException):
        in a dependency.
 
     Args:
-         - dependent_exceptions: List of exceptions
-         - task_id: Identity of the task failed task
-
-    Contains:
-    reason (string)
-    dependent_exceptions
+         - dependent_exceptions_tids: List of dependency task IDs which failed
+         - task_id: Task ID of the task that failed because of the dependency error
     """
 
     def __init__(self, dependent_exceptions_tids, task_id):
         self.dependent_exceptions_tids = dependent_exceptions_tids
         self.task_id = task_id
 
-    def __repr__(self):
+    def __str__(self):
         dep_tids = [tid for (exception, tid) in self.dependent_exceptions_tids]
         return "Dependency failure for task {} with failed dependencies from tasks {}".format(self.task_id, dep_tids)
-
-    def __str__(self):
-        return self.__repr__()
