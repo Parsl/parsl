@@ -27,7 +27,6 @@ parsl.executors.WorkQueueExecutor
       ~WorkQueueExecutor.start
       ~WorkQueueExecutor.status
       ~WorkQueueExecutor.submit
-      ~WorkQueueExecutor.xxxold_scale_out
    
    
 
