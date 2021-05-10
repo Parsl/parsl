@@ -25,10 +25,9 @@ import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
 from parsl.errors import OptionalModuleMissing
-from parsl.executors.block_based import BlockProviderExecutor
+from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
-from parsl.executors.errors import ScalingFailed
 from parsl.executors.workqueue import exec_parsl_function
 
 import typeguard
@@ -616,25 +615,6 @@ class WorkQueueExecutor(BlockProviderExecutor, psutils.RepresentationMixin):
                 outstanding += 1
         logger.debug(f"Counted {outstanding} outstanding tasks")
         return outstanding
-
-    def xxxold_scale_out(self, blocks=1):
-        """Scale out method.
-
-        We should have the scale out method simply take resource object
-        which will have the scaling methods, scale_out itself should be a coroutine, since
-        scaling tasks can be slow.
-        """
-        if self.provider:
-            for i in range(blocks):
-                external_block = str(len(self.blocks))
-                internal_block = self.provider.submit(self.worker_command, 1)
-                # Failed to create block with provider
-                if not internal_block:
-                    raise(ScalingFailed(self.provider.label, "Attempts to create nodes using the provider has failed"))
-                else:
-                    self.blocks[external_block] = internal_block
-        else:
-            logger.error("No execution provider available to scale")
 
     @property
     def workers_per_node(self) -> Union[int, float]:
