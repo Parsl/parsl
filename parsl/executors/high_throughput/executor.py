@@ -20,7 +20,7 @@ from parsl.executors.errors import (
     UnsupportedFeatureError
 )
 
-from parsl.executors.block_based import BlockProviderExecutor
+from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.data_provider.staging import Staging
 from parsl.addresses import get_all_addresses
