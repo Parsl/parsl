@@ -175,6 +175,7 @@ Internal
     parsl.app.python.PythonApp
     parsl.dataflow.dflow.DataFlowKernel
     parsl.dataflow.flow_control.FlowControl
+    parsl.dataflow.memoization.id_for_memo
     parsl.dataflow.memoization.Memoizer
     parsl.dataflow.strategy.Strategy
     parsl.dataflow.flow_control.Timer
