@@ -142,7 +142,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         cmd = "squeue --job {0}".format(job_id_list)
         logger.debug("Executing sqeueue")
         retcode, stdout, stderr = self.execute_wait(cmd)
-        logger.debug("sqeueue returned")
+        logger.debug(f"SIMONE_DEBUG: sqeueue returned retcode:{retcode} stdout:{stdout} stderr:{stderr}")
 
         # Execute_wait failed. Do no update
         if retcode != 0:
@@ -248,6 +248,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         job_id_list = ' '.join(job_ids)
         retcode, stdout, stderr = self.execute_wait("scancel {0}".format(job_id_list))
+        logger.debug(f"SIMONE_DEBUG Scancel returned. retcode:{retcode} stdout:{stdout} stderr:{stderr}")
         rets = None
         if retcode == 0:
             for jid in job_ids:

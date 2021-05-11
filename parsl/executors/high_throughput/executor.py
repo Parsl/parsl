@@ -691,6 +691,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                     block_ids_to_kill))
 
         logger.debug("Current blocks : {}".format(self.blocks))
+        logger.debug(f"SIMONE_DEBUG block_ids_to_kill: {block_ids_to_kill}")
         # Hold the block
         for block_id in block_ids_to_kill:
             self._hold_block(block_id)
@@ -698,13 +699,16 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         # Now kill via provider
         # Potential issue with multiple threads trying to remove the same blocks
         to_kill = [self.blocks[bid] for bid in block_ids_to_kill if bid in self.blocks]
-
+        logger.debug(f"SIMONE_DEBUG to_kill: {to_kill}")
+    
         r = self.provider.cancel(to_kill)
+        logger.debug(f"SIMONE_DEBUG return for provider.cancel : {r}")
         job_ids = self._filter_scale_in_ids(to_kill, r)
 
         # to_kill block_ids are fetched from self.blocks
         # If a block_id is in self.block, it must exist in self.block_mapping
         block_ids_killed = [self.block_mapping[jid] for jid in job_ids]
+        logger.debug(f"SIMONE_DEBUG block_ids_killed  : {block_ids_killed}")
 
         return block_ids_killed
 
