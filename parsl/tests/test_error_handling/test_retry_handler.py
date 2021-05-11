@@ -6,7 +6,7 @@ import pytest
 def always_fails():
     raise ValueError("always_fails deliberate exception")
 
-def retry_handler_raises(tr):
+def retry_handler_raises(exc, task_record):
     raise RuntimeError("retry_handler_raises deliberate exception")
 
 local_config = parsl.config.Config(retry_handler = retry_handler_raises)
