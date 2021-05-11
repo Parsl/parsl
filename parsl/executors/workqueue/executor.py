@@ -73,7 +73,7 @@ WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason st
 ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name stage cache')
 
 
-class WorkQueueExecutor(BlockProviderExecutor):
+class WorkQueueExecutor(BlockProviderExecutor, psutils.RepresentationMixin):
     """Executor to use Work Queue batch system
 
     The WorkQueueExecutor system utilizes the Work Queue framework to
@@ -233,7 +233,7 @@ class WorkQueueExecutor(BlockProviderExecutor):
         self.use_cache = use_cache
         self.working_dir = working_dir
         self.registered_files = set()  # type: Set[str]
-        self.full = full_debug
+        self.full_debug = full_debug
         self.source = True if pack else source
         self.pack = pack
         self.extra_pkgs = extra_pkgs or []
@@ -288,7 +288,7 @@ class WorkQueueExecutor(BlockProviderExecutor):
                                  "launch_cmd": self.launch_cmd,
                                  "data_dir": self.function_data_dir,
                                  "collector_queue": self.collector_queue,
-                                 "full": self.full,
+                                 "full": self.full_debug,
                                  "shared_fs": self.shared_fs,
                                  "autolabel": self.autolabel,
                                  "autolabel_window": self.autolabel_window,
