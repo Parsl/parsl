@@ -295,7 +295,20 @@ class DataFlowKernel(object):
                 # TODO: put protective code around here for when retry_handler
                 # raises an exception: at which point the task should be
                 # aborted entirely (eg set fail_cost > config retries)
-                task_record['fail_cost'] += self._config.retry_handler(task_record)
+                try:
+                    cost = self._config.retry_handler(e, task_record)
+                except Exception as retry_handler_exception:
+                    logger.exception("retry_handler raised an exception - will not retry")
+
+                    # this can be any amount > self._config.retries, to stop any more
+                    # retries from happening
+                    task_record['fail_cost'] = self._config.retries + 1
+
+                    # make the reported exception be the retry handler's exception,
+                    # rather than the execution level exception
+                    e = retry_handler_exception
+                else:
+                    task_record['fail_cost'] += cost
             else:
                 task_record['fail_cost'] += 1
 
