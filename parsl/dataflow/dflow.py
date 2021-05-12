@@ -302,7 +302,20 @@ class DataFlowKernel(object):
                 # TODO: put protective code around here for when retry_handler
                 # raises an exception: at which point the task should be
                 # aborted entirely (eg set fail_cost > config retries)
-                task_record['fail_cost'] += self._config.retry_handler(e, task_record)
+                try:
+                    cost = self._config.retry_handler(e, task_record)
+                except Exception as retry_handler_exception:
+                    logger.exception("retry_handler raised an exception - will not retry")
+
+                    # this can be any amount > self._config.retries, to stop any more
+                    # retries from happening
+                    task_record['fail_cost'] = self._config.retries + 1
+
+                    # make the reported exception be the retry handler's exception,
+                    # rather than the execution level exception
+                    e = retry_handler_exception
+                else:
+                    task_record['fail_cost'] += cost
             else:
                 task_record['fail_cost'] += 1
 
@@ -353,8 +366,8 @@ class DataFlowKernel(object):
 
                     joinable = future.result()
 
-                    # this assert should actually be a test that causes the
-                    # current app to fail cleanly if it is not a Future
+                    # Fail with a TypeError if the joinapp python body returned
+                    # something we can't join on.
                     if isinstance(joinable, Future):
                         task_record['status'] = States.joining
                         task_record['joins'] = joinable
@@ -1133,12 +1146,15 @@ class DataFlowKernel(object):
         self.usage_tracker.send_message()
         self.usage_tracker.close()
 
-        logger.info("Terminating flow_control and strategy threads")
+        logger.info("Terminating flow control")
         self.flowcontrol.close()
+        logger.info("Terminated flow control")
 
+        logger.info("Terminating executors")
         for executor in self.executors.values():
             if executor.managed and not executor.bad_state_is_set:
                 if executor.scaling_enabled:
+                    logger.info(f"Scaling in executor {executor.label}")
                     job_ids = executor.provider.resources.keys()
                     block_ids = executor.scale_in(len(job_ids))
                     if self.monitoring and block_ids:
@@ -1148,11 +1164,15 @@ class DataFlowKernel(object):
                         msg = executor.create_monitoring_info(new_status)
                         logger.debug("Sending message {} to hub from DFK".format(msg))
                         self.monitoring.send(MessageType.BLOCK_INFO, msg)
+                logger.info(f"Terminating executor {executor.label}")
                 executor.shutdown()
+                logger.info(f"Terminated executor {executor.label}")
 
+        logger.info("Terminated executors")
         self.time_completed = datetime.datetime.now()
 
         if self.monitoring:
+            logger.info("Sending final monitoring message")
             self.monitoring.send(MessageType.WORKFLOW_INFO,
                                  {'tasks_failed_count': self.tasks_failed_count,
                                   'tasks_completed_count': self.tasks_completed_count,
@@ -1160,7 +1180,9 @@ class DataFlowKernel(object):
                                   'time_completed': self.time_completed,
                                   'run_id': self.run_id, 'rundir': self.run_dir})
 
+            logger.info("Terminating monitoring")
             self.monitoring.close()
+            logger.info("Terminated monitoring")
 
         logger.info("DFK cleanup complete")
 

@@ -42,14 +42,12 @@ logger = logging.getLogger("parsl.benc")
 def test_retry_handler(exception, task_record):
     logger.info("in test_retry_handler")
     now = datetime.datetime.now()
-    if (now - task_record['time_invoked']).total_seconds() < 120:
+    if (now - task_record['time_invoked']).total_seconds() < 10:
         logger.info("RETRY: time invoked is short")
-        return 0.1  # soft retries until 2 minute time limit
+        return 0.1  # soft retries until time limit
     else:
         logger.error("RETRY: exceeded maximum allowable retry time")
         return 100
-
-    # return 0.0 # retry forever
 
 
 def fresh_config():

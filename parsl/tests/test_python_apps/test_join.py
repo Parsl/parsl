@@ -61,9 +61,6 @@ def join_wrong_type_app():
 
 
 def test_wrong_type():
-    # at present, wrong time raises an assert that does not propagate to user level
-    # so the DFK hangs. What should happen is that the app raises an exception via
-    # its app future.
     f = join_wrong_type_app()
     with pytest.raises(TypeError):
         f.result()

@@ -26,10 +26,9 @@ import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
 from parsl.errors import OptionalModuleMissing
-from parsl.executors.block_based import BlockProviderExecutor
+from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
-from parsl.executors.errors import ScalingFailed
 from parsl.executors.workqueue import exec_parsl_function
 
 import typeguard
@@ -75,7 +74,7 @@ WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason st
 ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name stage cache')
 
 
-class WorkQueueExecutor(BlockProviderExecutor):
+class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     """Executor to use Work Queue batch system
 
     The WorkQueueExecutor system utilizes the Work Queue framework to
@@ -245,7 +244,7 @@ class WorkQueueExecutor(BlockProviderExecutor):
         self.use_cache = use_cache
         self.working_dir = working_dir
         self.registered_files = set()  # type: Set[str]
-        self.full = full_debug
+        self.full_debug = full_debug
         self.source = True if pack else source
         self.pack = pack
         self.extra_pkgs = extra_pkgs or []
@@ -301,7 +300,7 @@ class WorkQueueExecutor(BlockProviderExecutor):
                                  "launch_cmd": self.launch_cmd,
                                  "data_dir": self.function_data_dir,
                                  "collector_queue": self.collector_queue,
-                                 "full": self.full,
+                                 "full": self.full_debug,
                                  "shared_fs": self.shared_fs,
                                  "autolabel": self.autolabel,
                                  "autolabel_window": self.autolabel_window,
@@ -373,7 +372,9 @@ class WorkQueueExecutor(BlockProviderExecutor):
                 logger.error(message)
                 raise ExecutorError(self, message)
 
-            if not self.autolabel and not keys.issuperset(required_resource_types):
+            key_check = required_resource_types.intersection(keys)
+            required_keys_ok = len(key_check) == 0 or key_check == required_resource_types
+            if not self.autolabel and not required_keys_ok:
                 logger.error("Running with `autolabel=False`. In this mode, "
                              "task resource specification requires "
                              "three resources to be specified simultaneously: cores, memory, and disk")
@@ -617,25 +618,6 @@ class WorkQueueExecutor(BlockProviderExecutor):
                 outstanding += 1
         logger.debug(f"Counted {outstanding} outstanding tasks")
         return outstanding
-
-    def xxxold_scale_out(self, blocks=1):
-        """Scale out method.
-
-        We should have the scale out method simply take resource object
-        which will have the scaling methods, scale_out itself should be a coroutine, since
-        scaling tasks can be slow.
-        """
-        if self.provider:
-            for i in range(blocks):
-                external_block = str(len(self.blocks))
-                internal_block = self.provider.submit(self.worker_command, 1)
-                # Failed to create block with provider
-                if not internal_block:
-                    raise(ScalingFailed(self.provider.label, "Attempts to create nodes using the provider has failed"))
-                else:
-                    self.blocks[external_block] = internal_block
-        else:
-            logger.error("No execution provider available to scale")
 
     @property
     def workers_per_node(self) -> Union[int, float]:
