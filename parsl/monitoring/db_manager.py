@@ -12,6 +12,7 @@ from parsl.dataflow.states import States
 from parsl.errors import OptionalModuleMissing
 from parsl.monitoring.message_type import MessageType
 from parsl.process_loggers import wrap_with_logs
+from parsl.utils import setproctitle
 
 logger = logging.getLogger("database_manager")
 
@@ -674,6 +675,8 @@ def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
     The DFK should start this function. The args, kwargs match that of the monitoring config
 
     """
+    setproctitle("parsl: monitoring database")
+
     try:
         dbm = DatabaseManager(db_url=db_url,
                               logdir=logdir,

@@ -13,6 +13,7 @@ import queue
 import threading
 import json
 
+from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.serialize import ParslSerializer
 serialize_object = ParslSerializer().serialize
@@ -592,6 +593,7 @@ def starter(comm_q, *args, **kwargs):
 
     The executor is expected to call this function. The args, kwargs match that of the Interchange.__init__
     """
+    setproctitle("parsl: HTEX interchange")
     # logger = multiprocessing.get_logger()
     ic = Interchange(*args, **kwargs)
     comm_q.put((ic.worker_task_port,
