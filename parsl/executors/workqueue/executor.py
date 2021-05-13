@@ -29,6 +29,7 @@ from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
 from parsl.executors.workqueue import exec_parsl_function
+from parsl.utils import setproctitle
 
 import typeguard
 from typing import Dict, List, Optional, Set, Union
@@ -735,6 +736,7 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
     module capabilities, rather than shared memory.
     """
     logger.debug("Starting WorkQueue Submit/Wait Process")
+    setproctitle("parsl: Work Queue submit/wait")
 
     # Enable debugging flags and create logging file
     wq_debug_log = None
