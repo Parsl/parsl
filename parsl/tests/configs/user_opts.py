@@ -24,6 +24,9 @@ user_opts = {
     'frontera': {
         'worker_init': 'source ~/setup_parsl_test_env.sh;',
     },
+    'nscc': {
+        'worker_init': 'source ~/setup_parsl_test_env.sh;',
+    },
     'theta': {
         'worker_init': 'source ~/setup_parsl_test_env.sh;',
     },

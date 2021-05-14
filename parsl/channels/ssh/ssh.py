@@ -160,7 +160,7 @@ class SSHChannel(Channel, RepresentationMixin):
             - FileCopyException : FileCopy failed.
 
         '''
-        remote_dest = remote_dir + '/' + os.path.basename(local_source)
+        remote_dest = os.path.join(remote_dir, os.path.basename(local_source))
 
         try:
             self.makedirs(remote_dir, exist_ok=True)
@@ -200,7 +200,7 @@ class SSHChannel(Channel, RepresentationMixin):
             - FileCopyException : FileCopy failed.
         '''
 
-        local_dest = local_dir + '/' + os.path.basename(remote_source)
+        local_dest = os.path.join(local_dir, os.path.basename(remote_source))
 
         try:
             os.makedirs(local_dir)
