@@ -10,7 +10,7 @@ to use them, with links to the API guide.
 Executors
 ---------
 When the parsl dataflow kernel is ready for a task to run, it passes that
-task to an `Executor`. The executor is then responsible for running the task's
+task to an `ParslExecutor`. The executor is then responsible for running the task's
 Python code and returning the result. This is the abstraction that allows one
 executor to run code on the local submitting host, while another executor can
 run the same code on a large supercomputer.
@@ -46,7 +46,7 @@ environment, and copy output files from a task's working environment to
 an arbitrary URL. A small set of data staging providers is installed by default,
 for ``file://`` ``http://`` and ``ftp://`` URLs. More data staging providers can
 be added in the workflow configuration, in the ``storage`` parameter of the
-relevant `Executor`. Each provider should subclass the `Staging` class.
+relevant `ParslExecutor`. Each provider should subclass the `Staging` class.
 
 
 Memoization/checkpointing
