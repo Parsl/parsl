@@ -1,6 +1,4 @@
 import logging
-import sys
-import threading
 import typeguard
 import concurrent.futures as cf
 

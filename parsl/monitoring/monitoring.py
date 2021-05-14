@@ -2,6 +2,7 @@ import os
 import socket
 import pickle
 import logging
+import setproctitle
 import time
 import typeguard
 import datetime
@@ -633,7 +634,8 @@ class MonitoringRouter:
               block_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
               resource_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]") -> None:
         try:
-            while True:
+            router_keep_going = True
+            while router_keep_going:
                 try:
                     data, addr = self.sock.recvfrom(2048)
                     msg = pickle.loads(data)
@@ -643,17 +645,25 @@ class MonitoringRouter:
                     pass
 
                 try:
-                    msg = self.dfk_channel.recv_pyobj()
-                    self.logger.debug("Got ZMQ Message from DFK: {}".format(msg))
-                    if msg[0] == MessageType.BLOCK_INFO:
-                        self.logger.info("Putting that ZMQ message to block_msgs")
-                        block_msgs.put((msg, 0))
-                        self.logger.info("Put that ZMQ message to block_msgs")
-                    else:
-                        self.logger.info("Putting that ZMQ message to priority_msgs by default")
-                        priority_msgs.put((msg, 0))
-                    if msg[0] == MessageType.WORKFLOW_INFO and 'python_version' not in msg[1]:
-                        break
+                    dfk_loop_start = time.time()
+                    while time.time() - dfk_loop_start < 1.0:  # TODO make configurable
+                        # like in the batch receiver helper function.
+                        # This loop can also (more likely) exit if zmq.Again
+                        # is raised, meaning there are no more messages
+                        # This means that there will be one loop-timeout-delay
+                        # per configurable batch time, rather than per message.
+                        # which is a much higher implicit rate limit.
+                        msg = self.dfk_channel.recv_pyobj()
+                        self.logger.debug("Got ZMQ Message from DFK: {}".format(msg))
+                        if msg[0] == MessageType.BLOCK_INFO:
+                            self.logger.info("Putting that ZMQ message to block_msgs")
+                            block_msgs.put((msg, 0))
+                            self.logger.info("Put that ZMQ message to block_msgs")
+                        else:
+                            self.logger.info("Putting that ZMQ message to priority_msgs by default")
+                            priority_msgs.put((msg, 0))
+                        if msg[0] == MessageType.WORKFLOW_INFO and 'python_version' not in msg[1]:
+                            router_keep_going = False
                 except zmq.Again:
                     pass
                 except Exception:
@@ -733,7 +743,7 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    logdir: str,
                    logging_level: int,
                    run_id: str) -> None:
-
+    setproctitle.setproctitle("Parsl monitoring router")
     try:
         router = MonitoringRouter(hub_address=hub_address,
                                   hub_port=hub_port,
