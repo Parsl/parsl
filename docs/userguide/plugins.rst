@@ -9,9 +9,9 @@ to use them, with links to the API guide.
 
 Executors
 ---------
-When the parsl data flow kernel is ready for a task to run, it passes that
+When the parsl dataflow kernel is ready for a task to run, it passes that
 task to an `Executor`. The executor is then responsible for running the task's
-python code and returning the result. This is the abstraction that allows one
+Python code and returning the result. This is the abstraction that allows one
 executor to run code on the local submitting host, while another executor can
 run the same code on a large supercomputer.
 
@@ -30,7 +30,7 @@ A `Provider` allows a command line to be submitted as a request to the
 underlying batch system to be run inside an allocation of nodes.
 
 A `Launcher` modifies that command line when run inside the allocation to
-add on any wrappers that are needed to launch the command. (eg srun inside
+add on any wrappers that are needed to launch the command (eg srun inside
 slurm). Providers and launchers are usually paired together for a particular
 system type.
 
