@@ -83,7 +83,7 @@ def _complete_future(
     if returncode == 0:
         try:  # look for the output file
             with open(expected_file, "rb") as file_handle:
-                future_wrapper.set_result(deserialize(file_handle.read()))
+                task_result = deserialize(file_handle.read())
         except FileNotFoundError:
             future_wrapper.set_exception(
                 FileNotFoundError(
@@ -92,6 +92,11 @@ def _complete_future(
             )
         except Exception as unknown_err:
             future_wrapper.set_exception(unknown_err)
+        else:  # task package deserialized successfully
+            if task_result.exception is not None:
+                future_wrapper.set_exception(task_result.exception)
+            else:
+                future_wrapper.set_result(task_result.returnval)
     else:  # the job exited abnormally
         future_wrapper.set_exception(
             AppException(f"Parsl task exited abnormally: returned {returncode}")

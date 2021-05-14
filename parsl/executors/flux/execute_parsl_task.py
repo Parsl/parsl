@@ -6,6 +6,7 @@ import logging
 
 from parsl.executors.high_throughput.process_worker_pool import execute_task
 from parsl.serialize import serialize
+from parsl.executors.flux import TaskResult
 
 
 def main():
@@ -19,22 +20,23 @@ def main():
     args = parser.parse_args()
     logging.info("Input : %s", args.input)
     logging.info("Output : %s", args.output)
-    result = None
+    returnval = None
+    exception = None
     # open and deserialize the task's pickled input package
     with open(args.input, "rb") as f:
         fn_buf = f.read()
         logging.info("Read input pickle file")
         try:
-            result = execute_task(fn_buf)
+            returnval = execute_task(fn_buf)
         except Exception as e:
             logging.exception("Parsl task execution failed:")
-            result = e
+            exception = e
         else:
             logging.info("Finished execution")
     # only rank 0 should write/return a result; other ranks exit
     if int(os.environ["FLUX_TASK_RANK"]) == 0:
         # write the result to the output file
-        result_buf = serialize(result)
+        result_buf = serialize(TaskResult(returnval, exception))
         with open(args.output, "wb") as f:
             f.write(result_buf)
 

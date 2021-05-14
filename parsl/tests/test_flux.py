@@ -28,7 +28,7 @@ def multiply(x, y):
 
 
 def bad_foo():
-    raise NameError(ERRMSG)
+    raise ValueError(ERRMSG)
 
 
 @require_flux
@@ -53,7 +53,9 @@ def test_except():
     with FluxExecutor() as executor:
         executor.start()
         future = executor.submit(bad_foo, {})
-        assert isinstance(future.result(), NameError)
+        with pytest.raises(ValueError, match=ERRMSG):
+            future.result()
+        assert isinstance(future.exception(), ValueError)
 
 
 @require_flux
