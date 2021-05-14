@@ -18,3 +18,4 @@ User guide
    joins
    performance
    usage_tracking
+   plugins
