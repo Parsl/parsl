@@ -16,8 +16,7 @@ extras_require = {
         'flask_sqlalchemy',
         'pandas',
         'plotly',
-        'python-daemon',
-        'setproctitle'
+        'python-daemon'
     ],
     'aws' : ['boto3'],
     'kubernetes' : ['kubernetes'],
