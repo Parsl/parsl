@@ -5,6 +5,8 @@ import functools
 import os
 import sys
 import uuid
+import threading
+import itertools
 from collections.abc import Sequence, Mapping, Callable
 from typing import Optional, Any
 
@@ -130,7 +132,8 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     managed : bool
         If this executor is managed by the DFK or externally handled.
     working_dir : str
-        Working dir to be used by the executor.
+        Directory in which the executor should place its files, possibly overwriting
+        existing files. If ``None``, generate a unique directory.
     label : str
         Label for this executor instance.
     flux_handle_args: collections.abc.Sequence
@@ -144,19 +147,23 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     def __init__(
         self,
         managed: bool = True,
-        working_dir: Optional[str] = "flux_workdir",
+        working_dir: Optional[str] = None,
         label: str = "FluxExecutor",
         flux_handle_args: Sequence = (),
         flux_handle_kwargs: Mapping = {},
     ):
         super().__init__()
         self.label = label
-        self.working_dir = os.path.abspath(working_dir) if working_dir else os.getcwd()
+        if working_dir is None:
+            working_dir = self.label + "_" + str(uuid.uuid4())
+        self.working_dir = os.path.abspath(working_dir)
         self.managed = managed
         self._flux_executor = None
         self.flux_handle_args = flux_handle_args
         self.flux_handle_kwargs = flux_handle_kwargs
         self._provider = LocalProvider()
+        self._task_id_lock = threading.Lock()  # protects self._task_id_counter
+        self._task_id_counter = itertools.count()
 
     def start(self):
         """Called when DFK starts the executor when the config is loaded.
@@ -207,9 +214,10 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         **kwargs:
             keyword arguments for the callable
         """
-        tid = str(uuid.uuid4())
-        infile = os.path.join(self.working_dir, tid + ".pkl")
-        outfile = os.path.join(self.working_dir, tid + ".out.pkl")
+        with self._task_id_lock:
+            task_id = str(next(self._task_id_counter))
+        infile = os.path.join(self.working_dir, f"{task_id}_in{os.extsep}pkl")
+        outfile = os.path.join(self.working_dir, f"{task_id}_out{os.extsep}pkl")
         try:
             fn_buf = pack_apply_message(
                 func, args, kwargs, buffer_threshold=1024 * 1024
@@ -228,7 +236,7 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         jobspec.cwd = os.getcwd()  # should be self.working_dir?
         jobspec.environment = dict(os.environ)
         jobspec.stdout = os.path.abspath(
-            os.path.join(self.working_dir, tid + "_stdout_stderr.txt")
+            os.path.join(self.working_dir, f"{task_id}_stdout_stderr{os.extsep}txt")
         )
         jobspec.stderr = jobspec.stdout
         flux_future = self._flux_executor.submit(jobspec)
