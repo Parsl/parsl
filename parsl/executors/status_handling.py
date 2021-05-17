@@ -68,7 +68,7 @@ class BlockProviderExecutor(ParslExecutor):
     def outstanding(self) -> int:
         """This should return the number of tasks that the executor has been given to run (waiting to run, and running now)"""
 
-        raise NotImplementedError("Classes inheriting from StatusHandlingExecutor must implement "
+        raise NotImplementedError("Classes inheriting from BlockProviderExecutor must implement "
                                   "outstanding()")
 
     def status(self) -> Dict[str, JobStatus]:

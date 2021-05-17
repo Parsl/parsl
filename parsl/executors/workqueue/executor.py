@@ -73,7 +73,7 @@ WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason st
 ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name stage cache')
 
 
-class WorkQueueExecutor(BlockProviderExecutor, psutils.RepresentationMixin):
+class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     """Executor to use Work Queue batch system
 
     The WorkQueueExecutor system utilizes the Work Queue framework to
