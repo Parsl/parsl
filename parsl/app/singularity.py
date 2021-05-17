@@ -203,7 +203,9 @@ class SingularityApp(AppBase):
                  "print(result)\n"
 
         source = source.replace('@python_app', '#@python_app')
+        print("REPLACED PYTHON APP:",source)
         source = source.replace('@container_app', '#@container_app')
+        print("REPLACED CONTAINER APP:",source)
         source = source.replace('@bash_app', '#@bash_app')
 
         with open('app.py','w') as app:
@@ -211,6 +213,7 @@ class SingularityApp(AppBase):
 
         shell_app = self.command+" /files/runapp.sh <<HEREDOC\n{}\nHEREDOC".format(source)
         print(shell_app)
+
         def invoke_container(command=None, inputs=[]):
 
             return command
