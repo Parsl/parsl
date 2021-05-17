@@ -44,5 +44,6 @@ parsl.executors.LowLatencyExecutor
       ~LowLatencyExecutor.scaling_enabled
       ~LowLatencyExecutor.status_polling_interval
       ~LowLatencyExecutor.tasks
+      ~LowLatencyExecutor.workers_per_node
    
    
