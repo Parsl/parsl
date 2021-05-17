@@ -1,6 +1,6 @@
 import parsl
-from parsl.app.app import python_app
 from parsl.config import Config
+from parsl.app.app import python_app
 from parsl.executors.balsam.executor import BalsamExecutor
 
 
@@ -35,7 +35,6 @@ def callback(future, **kwargs):
 def HistStats(inputs=[]):
     import os
     import sys
-    sys.path.insert(0, '/work/gsas2/GSASII')
     import GSASIIscriptable as G2sc
 
     filename = inputs[0]
@@ -51,10 +50,9 @@ def HistStats(inputs=[]):
 def CreateHistograms(inputs=[]):
     import os
     import sys
-    sys.path.insert(0, '/work/gsas2/GSASII')
     import GSASIIscriptable as G2sc
 
-    datadir = "/work/data"
+    datadir = "/data"
     # create a project with a default project name
     gpx = G2sc.G2Project(filename='PbSO4.gpx')
 
@@ -75,7 +73,6 @@ def CreateHistograms(inputs=[]):
 @python_app(executors=['BalsamExecutor'])
 def RefineGPX(inputs=[]):
     import sys
-    sys.path.insert(0, '/work/gsas2/GSASII')
     import GSASIIscriptable as G2sc
 
     filename = inputs[0]

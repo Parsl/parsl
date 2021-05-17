@@ -1,7 +1,6 @@
 import parsl
-from parsl.app.app import python_app
 from parsl.config import Config
-from parsl.app.app import python_app, singularity_app
+from parsl.app.app import python_app, container_app
 from parsl.providers.local.local import LocalProvider
 from parsl.executors import HighThroughputExecutor
 
@@ -32,12 +31,11 @@ def callback(future, **kwargs):
         print('Future was cancelled!')
 
 
-@singularity_app(image="/home/darren/alcf/singularity/git/gsas2container/gsas2.img", cmd="/home/darren/alcf/singularity/git/singularity/builddir/singularity")
-@python_app(executors=['BalsamExecutor'])
+@container_app(type="singularity", image="/home/darren/alcf/singularity/git/gsas2container/gsas2.img", data="/home/darren/alcf/singularity/work/data", cmd="/home/darren/alcf/singularity/git/singularity/builddir/singularity")
+@python_app(executors=['local_htex'])
 def HistStats(inputs=[]):
     import os
     import sys
-    sys.path.insert(0, '/work/gsas2/GSASII')
     import GSASIIscriptable as G2sc
 
     filename = inputs[0]
@@ -49,17 +47,16 @@ def HistStats(inputs=[]):
     gpx.save()
 
 
-@singularity_app(image="/home/darren/alcf/singularity/git/gsas2container/gsas2.img", cmd="/home/darren/alcf/singularity/git/singularity/builddir/singularity")
-@python_app(executors=['BalsamExecutor'])
+@container_app(type="singularity", image="/home/darren/alcf/singularity/git/gsas2container/gsas2.img", data="/home/darren/alcf/singularity/work/data", cmd="/home/darren/alcf/singularity/git/singularity/builddir/singularity")
+@python_app(executors=['local_htex'])
 def CreateHistograms(inputs=[]):
     import os
     import sys
-    sys.path.insert(0, '/work/gsas2/GSASII')
     import GSASIIscriptable as G2sc
 
-    datadir = "/app"
+    datadir = "/data"
     # create a project with a default project name
-    gpx = G2sc.G2Project(filename='PbSO4.gpx')
+    gpx = G2sc.G2Project(filename='/data/PbSO4.gpx')
 
     # setup step 1: add two histograms to the project
     hist1 = gpx.add_powder_histogram(os.path.join(datadir, "PBSO4.XRA"),
@@ -72,14 +69,13 @@ def CreateHistograms(inputs=[]):
                            histograms=[hist1, hist2])
 
     print('Filename: ' + os.path.abspath('PbSO4.gpx'))
-    return os.path.abspath('PbSO4.gpx')
+    return os.path.abspath('/data/PbSO4.gpx')
 
 
-@singularity_app(image="/home/darren/alcf/singularity/git/gsas2container/gsas2.img", cmd="/home/darren/alcf/singularity/git/singularity/builddir/singularity")
-@python_app(executors=['BalsamExecutor'])
+@container_app(type="singularity", image="/home/darren/alcf/singularity/git/gsas2container/gsas2.img", data="/home/darren/alcf/singularity/work/data", cmd="/home/darren/alcf/singularity/git/singularity/builddir/singularity")
+@python_app(executors=['local_htex'])
 def RefineGPX(inputs=[]):
     import sys
-    sys.path.insert(0, '/work/gsas2/GSASII')
     import GSASIIscriptable as G2sc
 
     filename = inputs[0]

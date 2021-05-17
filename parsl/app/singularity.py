@@ -119,13 +119,19 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
 class SingularityApp(AppBase):
 
-    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None, cmd="/home/darren/alcf/singularity/git/singularity/builddir/singularity", image="/home/darren/alcf/singularity/git/gsas2container/gsas2.img", walltime=60):
+    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None, cmd="/home/darren/alcf/singularity/git/singularity/builddir/singularity", image="/home/darren/alcf/singularity/git/gsas2container/gsas2.img", python="/work/miniconda/bin/python", data=None, walltime=60):
         super().__init__(func, data_flow_kernel=data_flow_kernel, executors=executors, cache=cache, ignore_for_cache=ignore_for_cache)
         self.kwargs = {}
 
         sig = signature(func)
 
-        self.command = "{} exec --bind .:/app {} ".format(cmd,image)
+        if data:
+            self.command = "{} exec --bind {}:/data --bind .:/app {} ".format(cmd, data, image)
+        else:
+            self.command = "{} exec --bind .:/app {} ".format(cmd, image)
+
+        self.python = python
+        self.data = data
 
         for s in sig.parameters:
             if sig.parameters[s].default is not Parameter.empty:
@@ -205,10 +211,13 @@ class SingularityApp(AppBase):
             app.write(source)
 
         shell_app = self.command+" /files/runapp.sh <<HEREDOC\n{}\nHEREDOC".format(source)
-
+        print(shell_app)
         def invoke_container(command=None, inputs=[]):
 
             return command
+
+        with open('cmd.out','w') as cmdout:
+            cmdout.write(shell_app)
 
         remote_fn = partial(remote_side_bash_executor, invoke_container, command=shell_app)
         remote_fn.__name__ = self.func.__name__
