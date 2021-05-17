@@ -82,7 +82,6 @@ def remote_side_bash_executor(func, *args, **kwargs):
                 proc.wait(timeout=timeout)
                 returncode = proc.returncode
 
-
                 import pickle
                 log.write("RT: "+str(returncode))
                 with open('output.pickle', 'rb') as input:
@@ -204,7 +203,7 @@ class SingularityApp(AppBase):
                  "print(result)\n"
 
         source = source.replace('@python_app', '#@python_app')
-        source = source.replace('@singularity_app', '#@singularity_app')
+        source = source.replace('@container_app', '#@container_app')
         source = source.replace('@bash_app', '#@bash_app')
 
         with open('app.py','w') as app:
