@@ -24,9 +24,9 @@ batch system (eg slurm, kubernetes) to start worker processes, which then
 execute tasks.
 
 The particular way in which a system makes those workers start is implemented
-by `Providers` and `Launchers`.
+by providers and launchers.
 
-A `Provider` allows a command line to be submitted as a request to the
+An `ExecutionProvider` allows a command line to be submitted as a request to the
 underlying batch system to be run inside an allocation of nodes.
 
 A `Launcher` modifies that command line when run inside the allocation to
@@ -34,7 +34,7 @@ add on any wrappers that are needed to launch the command (eg srun inside
 slurm). Providers and launchers are usually paired together for a particular
 system type.
 
-A `Channel` allows the commands used to interact with a `Provider` to be
+A `Channel` allows the commands used to interact with an `ExecutionProvider` to be
 executed on a remote system. The default channel executes commands on the
 local system, but a few variants of an `SSHChannel` are provided.
 
