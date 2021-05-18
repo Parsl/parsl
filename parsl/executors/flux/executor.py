@@ -233,12 +233,14 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             cores_per_task=resource_spec.get("cores_per_task", 1),
             gpus_per_task=resource_spec.get("gpus_per_task"),
         )
-        jobspec.cwd = os.getcwd()  # should be self.working_dir?
+        jobspec.cwd = os.getcwd()
         jobspec.environment = dict(os.environ)
         jobspec.stdout = os.path.abspath(
-            os.path.join(self.working_dir, f"{task_id}_stdout_stderr{os.extsep}txt")
+            os.path.join(self.working_dir, f"{task_id}_stdout{os.extsep}txt")
         )
-        jobspec.stderr = jobspec.stdout
+        jobspec.stderr = os.path.abspath(
+            os.path.join(self.working_dir, f"{task_id}_stderr{os.extsep}txt")
+        )
         flux_future = self._flux_executor.submit(jobspec)
         # wrap the underlying executor's future. The underlying future's result
         # is the returncode of the Flux job, but we want the task's resulting Python
