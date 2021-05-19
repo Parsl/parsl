@@ -7,24 +7,27 @@ import sys
 import uuid
 import threading
 import itertools
+import shutil
+import importlib.util
+from socket import gethostname
 from collections.abc import Sequence, Mapping, Callable
 from typing import Optional, Any
 
-try:
-    import flux.job
-except ImportError:
-    _FLUX_AVAIL = False
-else:
-    _FLUX_AVAIL = True
+import zmq
 
 from parsl.utils import RepresentationMixin
 from parsl.executors.status_handling import NoStatusHandlingExecutor
-from parsl.executors.flux.execute_parsl_task import __file__ as _worker_path
-from parsl.executors.errors import SerializationError
-from parsl.errors import OptionalModuleMissing
-from parsl.serialize import pack_apply_message, deserialize
+from parsl.executors.flux.execute_parsl_task import __file__ as _WORKER_PATH
+from parsl.executors.flux.flux_instance_manager import __file__ as _MANAGER_PATH
+from parsl.executors.errors import SerializationError, ScalingFailed
 from parsl.providers import LocalProvider
+from parsl.providers.provider_base import ExecutionProvider
+from parsl.serialize import pack_apply_message, deserialize
 from parsl.app.errors import AppException
+
+
+_WORKER_PATH = os.path.realpath(_WORKER_PATH)
+_MANAGER_PATH = os.path.realpath(_MANAGER_PATH)
 
 
 class FluxFutureWrapper(cf.Future):
@@ -138,49 +141,91 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         Label for this executor instance.
     flux_handle_args: collections.abc.Sequence
         Positional arguments to ``flux.Flux()`` instance, if any.
+        The first positional argument, ``url``, is provided by this executor.
     flux_handle_kwargs: collections.abc.Mapping
         Keyword arguments to pass to ``flux.Flux()`` instance, if any.
-        For instance, the ``url`` argument to ``flux.Flux`` can be used to connect to a
-        remote Flux instance at the given URL.
+        The ``url`` argument is provided by this executor.
+    flux_path: str
+        Path to flux installation to use, or None to search PATH for flux.
+    launch_cmd: str
+        The command to use when launching the executor's backend. The default
+        command is available as ``FluxExecutor.DEFAULT_LAUNCH_COMMAND``.
     """
+
+    DEFAULT_LAUNCH_CMD = "{flux} start {python} {manager} {protocol} {hostname} {port}"
 
     def __init__(
         self,
+        provider: Optional[ExecutionProvider] = None,
         managed: bool = True,
         working_dir: Optional[str] = None,
         label: str = "FluxExecutor",
         flux_handle_args: Sequence = (),
         flux_handle_kwargs: Mapping = {},
+        flux_path: Optional[str] = None,
+        launch_cmd: Optional[str] = None,
     ):
         super().__init__()
+        if provider is None:
+            provider = LocalProvider()
+        self._provider = provider
         self.label = label
         if working_dir is None:
             working_dir = self.label + "_" + str(uuid.uuid4())
         self.working_dir = os.path.abspath(working_dir)
         self.managed = managed
         self._flux_executor = None
+        self._flux_job_module = None
         self.flux_handle_args = flux_handle_args
         self.flux_handle_kwargs = flux_handle_kwargs
-        self._provider = LocalProvider()
+        # check that flux_path is an executable, or look for flux in PATH
+        if flux_path is None:
+            flux_path = shutil.which("flux")
+            if flux_path is None:
+                raise EnvironmentError("Cannot find Flux installation in PATH")
+        self.flux_path = os.path.abspath(flux_path)
         self._task_id_lock = threading.Lock()  # protects self._task_id_counter
         self._task_id_counter = itertools.count()
+        self._socket = zmq.Context().socket(zmq.REP)
+        if launch_cmd is None:
+            self.launch_cmd = self.DEFAULT_LAUNCH_CMD
 
     def start(self):
-        """Called when DFK starts the executor when the config is loaded.
-
-        Raises
-        ------
-        OptionalModuleMissing
-            If ``flux`` package cannot be imported.
-        """
-        if not _FLUX_AVAIL:
-            raise OptionalModuleMissing(
-                "flux", "Cannot initialize FluxExecutor without flux module"
-            )
-        self._flux_executor = flux.job.FluxExecutor(
-            handle_args=self.flux_handle_args, handle_kwargs=self.flux_handle_kwargs
-        )
+        """Called when DFK starts the executor when the config is loaded."""
         os.makedirs(self.working_dir, exist_ok=True)
+        port = self._socket.bind_to_random_port("tcp://*")
+        self.provider.script_dir = self.working_dir
+        job_id = self.provider.submit(
+            self.launch_cmd.format(
+                port=port,
+                protocol="tcp",
+                hostname=gethostname(),
+                python=sys.executable,
+                flux=self.flux_path,
+                manager=_MANAGER_PATH,
+            ),
+            1,
+        )
+        if not job_id:
+            raise (
+                ScalingFailed(
+                    self.provider.label,
+                    "Attempts to provision nodes via provider has failed",
+                )
+            )
+        # receive path to the ``flux.job`` package from ``flux_instance_manager.py``
+        flux_job_path = self._socket.recv().decode()
+        spec = importlib.util.spec_from_file_location("flux.job", flux_job_path)
+        self._flux_job_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self._flux_job_module)
+        self._socket.send(b"ack")
+        # receive the URI of the Flux instance launched by provider
+        flux_instance_uri = self._socket.recv()
+        handle_args = [flux_instance_uri]
+        handle_args.extend(self.flux_handle_args)
+        self._flux_executor = self._flux_job_module.FluxExecutor(
+            handle_args=handle_args, handle_kwargs=self.flux_handle_kwargs
+        )
 
     def shutdown(self, wait=True):
         """Shut down the executor, causing further calls to ``submit`` to fail.
@@ -190,7 +235,9 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         wait
             If ``True``, do not return until all submitted Futures are done.
         """
-        self._flux_executor.shutdown(wait=wait)
+        if self._flux_executor is not None:
+            self._flux_executor.shutdown(wait=wait)
+            self._socket.send(b"shutdown")
 
     def submit(self, func: Callable, resource_spec: Mapping, *args, **kwargs):
         """Wrap a callable in a Flux job and submit it to Flux.
@@ -226,8 +273,8 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             raise SerializationError(func.__name__)
         with open(infile, "wb") as infile_handle:
             infile_handle.write(fn_buf)
-        jobspec = flux.job.JobspecV1.from_command(
-            command=[sys.executable, _worker_path, "-i", infile, "-o", outfile],
+        jobspec = self._flux_job_module.JobspecV1.from_command(
+            command=[sys.executable, _WORKER_PATH, "-i", infile, "-o", outfile],
             num_tasks=resource_spec.get("num_tasks", 1),
             num_nodes=resource_spec.get("num_nodes"),
             cores_per_task=resource_spec.get("cores_per_task", 1),

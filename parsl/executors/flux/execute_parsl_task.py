@@ -23,22 +23,22 @@ def main():
     returnval = None
     exception = None
     # open and deserialize the task's pickled input package
-    with open(args.input, "rb") as f:
-        fn_buf = f.read()
-        logging.info("Read input pickle file")
-        try:
-            returnval = execute_task(fn_buf)
-        except Exception as e:
-            logging.exception("Parsl task execution failed:")
-            exception = e
-        else:
-            logging.info("Finished execution")
+    with open(args.input, "rb") as file_handle:
+        fn_buf = file_handle.read()
+    logging.info("Read input pickle file")
+    try:
+        returnval = execute_task(fn_buf)
+    except Exception as exc:
+        logging.exception("Parsl task execution failed:")
+        exception = exc
+    else:
+        logging.info("Finished execution")
     # only rank 0 should write/return a result; other ranks exit
     if int(os.environ["FLUX_TASK_RANK"]) == 0:
         # write the result to the output file
         result_buf = serialize(TaskResult(returnval, exception))
-        with open(args.output, "wb") as f:
-            f.write(result_buf)
+        with open(args.output, "wb") as file_handle:
+            file_handle.write(result_buf)
 
 
 if __name__ == "__main__":
