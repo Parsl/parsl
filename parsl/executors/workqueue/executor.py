@@ -580,8 +580,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.worker_command = self._construct_worker_command()
         self._patch_providers()
 
-        # TODO: this init_blocks handling should be factored with the
-        # corresponding htex handling and put into the BlockProviderExecutor
         if hasattr(self.provider, 'init_blocks'):
             try:
                 self.scale_out(blocks=self.provider.init_blocks)

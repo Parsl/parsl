@@ -33,6 +33,11 @@ class BlockProviderExecutor(ParslExecutor):
     blocks. It does not provide a ``scale_in`` method, because scale-in
     behaviour is not well defined in the Parsl scaling model and so behaviour
     is left to individual executors.
+
+    Parsl scaling will provide scaling between min_blocks and max_blocks by
+    invoking scale_out, but it will not initialize the blocks requested by
+    any init_blocks parameter. Subclasses must implement that behaviour
+    themselves.
     """
     def __init__(self, provider: ExecutionProvider):
         super().__init__()
