@@ -72,6 +72,7 @@ Executors
     :nosignatures:
 
     parsl.executors.base.ParslExecutor
+    parsl.executors.status_handling.BlockProviderExecutor
     parsl.executors.ThreadPoolExecutor
     parsl.executors.HighThroughputExecutor
     parsl.executors.WorkQueueExecutor
