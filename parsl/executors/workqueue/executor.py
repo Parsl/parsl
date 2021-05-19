@@ -589,8 +589,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
     @property
     def outstanding(self) -> int:
-        """TODO: this is very inefficient and probably should be replaced with
-        counters, but this one is minimally invasive to the rest of the code."""
+        """Count the number of outstanding tasks. This is inefficiently
+        implemented and probably could be replaced with a counter.
+        """
         outstanding = 0
         for fut in self.tasks.values():
             if not fut.done():
