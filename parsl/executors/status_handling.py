@@ -15,6 +15,20 @@ logger = logging.getLogger(__name__)
 
 
 class BlockProviderExecutor(ParslExecutor):
+    """A base class for executors which scale using blocks.
+
+    This base class is intended to help with executors which:
+
+    - use blocks of workers to execute tasks
+    - blocks of workers are launched on a batch system through
+      an `ExecutionProvider`
+
+    An implementing class should implement the abstract methods required by
+    `ParslExecutor` to submit tasks, as well as BlockProviderExecutor
+    abstract methods to provide the executor-specific command to start a block
+    of workers (the _get_launch_command() method), and some basic scaling information
+    (outstanding and workers_per_node properties).
+    """
     def __init__(self, provider):
         super().__init__()
         self._provider = provider  # type: ExecutionProvider
