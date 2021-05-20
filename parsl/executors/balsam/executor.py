@@ -140,7 +140,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     def __init__(self,
                  label: str = 'BalsamExecutor',
                  workdir: str = 'parsl',
-                 envdir: str = 'work',
+                 datadir: str = 'work',
                  image: str = None,
                  numnodes: int = 1,
                  walltime: int = 30,
@@ -178,7 +178,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.batchjob = None
         self.balsam_future = None
         self.workdir = workdir
-        self.envdir = envdir
+        self.datadir = datadir
         self.image = image
 
         if sitedir is None and 'BALSAM_SITE_PATH' in os.environ:
@@ -323,7 +323,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 )
 
                 job.parameters["image"] = self.image
-                job.parameters["workdir"] = self.envdir
+                job.parameters["datadir"] = self.datadir
                 job.save()
 
             logger.debug("Making workdir for job: {}".format(workdir))

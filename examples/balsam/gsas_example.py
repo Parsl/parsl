@@ -9,7 +9,7 @@ config = Config(
         BalsamExecutor(
             siteid=10,
             maxworkers=3,
-            envdir="/<path>/work",
+            datadir="/<path>/work",
             image="/<path>/gsas2.img",
             numnodes=1,
             timeout=600,

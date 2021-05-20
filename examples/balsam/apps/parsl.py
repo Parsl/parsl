@@ -37,7 +37,7 @@ class AppRunner(ApplicationDefinition):
     Parsl App Runner. Place this file in your site directory under apps/ directory.
     """
     environment_variables = {}
-    command_template = 'singularity exec --bind {{ workdir }}:/work --bind .:/app {{ image }} {{ command }}'
+    command_template = 'singularity exec --bind {{ datadir }}:/data --bind .:/app {{ image }} /home/miniconda/bin/python /app/app.py'
     parameters = {}
     transfers = {}
 
