@@ -249,6 +249,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 logger.error("Ignoring the resource specification. ")
                 raise BalsamUnsupportedFeatureException()
 
+            appdir = os.path.abspath(os.getcwd()+os.pathsep+workdir)
             if script == 'bash':
                 class_path = 'parsl.BashRunner'
                 shell_command = func(inputs=inputs)
@@ -292,14 +293,15 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "args = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\n" \
                          "print(args)\n" \
                          "result = {}(inputs=[*args])\n" \
-                         "with open('output.pickle','ab') as output:\n" \
+                         "with open('{}/output.pickle','ab') as output:\n" \
                          "    pickle.dump(result, output)\n".format(
                             site_id,
                             class_path,
                             lines,
                             pargs,
-                            appname) + \
-                         "metadata = {\"type\":\"python\",\"file\":\""+cwd+"/output.pickle\"}\n" \
+                            appname,
+                            appdir) + \
+                         "metadata = {\"type\":\"python\",\"file\":\""+appdir+"/output.pickle\"}\n" \
                          "with open('/app/job.metadata','w') as job:\n" \
                          "    job.write(json.dumps(metadata))\n" \
                          "print(result)\n"
