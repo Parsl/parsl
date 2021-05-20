@@ -249,7 +249,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 logger.error("Ignoring the resource specification. ")
                 raise BalsamUnsupportedFeatureException()
 
-            appdir = os.path.abspath(self.sitedir+'/'+workdir)
+            appdir = os.path.abspath(self.sitedir+'/data/'+workdir)
             if script == 'bash':
                 class_path = 'parsl.BashRunner'
                 shell_command = func(inputs=inputs)
