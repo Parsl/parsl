@@ -2,16 +2,23 @@
 
 import argparse
 import os
+from os.path import dirname
 import logging
 from socket import gethostname, gethostbyname
 
 import zmq
-import flux.job
-import flux
 
 
 def main():
-    """Send"""
+    """Run a Flux instance to completion.
+
+    Send the path to the Flux Python package and the URI of the
+    encapsulating Flux instance.
+    """
+    # flux imports only available when launched under Flux instance
+    import flux.job
+    import flux
+
     logging.basicConfig(
         level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(message)s"
     )
@@ -26,7 +33,7 @@ def main():
         args.protocol + "://" + gethostbyname(args.hostname) + ":" + args.port
     )
     # send the path to the ``flux.job`` package
-    socket.send(os.path.realpath(flux.job.__file__).encode())
+    socket.send(dirname(dirname(os.path.realpath(flux.__file__))).encode())
     logging.debug("Flux package path sent.")
     # collect the encapsulating Flux instance's URI
     local_uri = flux.Flux().attr_get("local-uri")

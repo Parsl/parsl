@@ -34,6 +34,7 @@ parsl.executors.FluxExecutor
 
    .. autosummary::
    
+      ~FluxExecutor.DEFAULT_LAUNCH_CMD
       ~FluxExecutor.bad_state_is_set
       ~FluxExecutor.error_management_enabled
       ~FluxExecutor.executor_exception

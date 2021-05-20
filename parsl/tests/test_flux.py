@@ -11,8 +11,8 @@ from parsl.executors.flux.executor import (
 )
 
 try:
-    import flux.job.executor
-except ImportError as exc:
+    import flux.job.executor  # noqa: F401
+except ImportError:
     FLUX_AVAIL = False
 else:
     FLUX_AVAIL = True
@@ -36,15 +36,12 @@ def bad_foo():
 def test_multiply():
     with FluxExecutor() as executor:
         executor.start()
-        future = executor.submit(multiply, {}, 5, 10)
-        assert future.result() == 50
-        assert future.done()
-        assert future.exception() is None
-        assert isinstance(future, FluxFutureWrapper)
-        future = executor.submit(multiply, {}, 7, -2)
-        assert future.result() == -14
-        assert future.done()
-        assert future.exception() is None
+        futures = [executor.submit(multiply, {}, i, 7) for i in range(5)]
+        for i, future in enumerate(futures):
+            assert future.result() == i * 7
+            assert future.done()
+            assert future.exception() is None
+            assert isinstance(future, FluxFutureWrapper)
 
 
 @require_flux
@@ -95,7 +92,8 @@ def test_cancel():
 @pytest.mark.local
 def test_future_cancel():
     underlying_future = cf.Future()
-    wrapper_future = FluxFutureWrapper(underlying_future)
+    wrapper_future = FluxFutureWrapper()
+    wrapper_future._flux_future = underlying_future
     assert not wrapper_future.done()
     assert not wrapper_future.running()
     assert not wrapper_future.cancelled()
@@ -110,11 +108,12 @@ def test_future_cancel():
 @pytest.mark.local
 def test_future_running():
     underlying_future = cf.Future()
-    wrapper_future = FluxFutureWrapper(underlying_future)
+    wrapper_future = FluxFutureWrapper()
     assert not underlying_future.running()
-    assert not wrapper_future.running()
     assert underlying_future.set_running_or_notify_cancel()
     assert underlying_future.running()
+    assert not wrapper_future.running()
+    wrapper_future._flux_future = underlying_future
     assert wrapper_future.running()
 
 
@@ -123,7 +122,8 @@ def test_future_callback_returncode():
     testfile = ".fluxexecutortest.txt"
     returncode = 1
     underlying_future = cf.Future()
-    wrapper_future = FluxFutureWrapper(underlying_future)
+    wrapper_future = FluxFutureWrapper()
+    wrapper_future._flux_future = underlying_future
     underlying_future.add_done_callback(
         lambda fut: _complete_future(testfile, wrapper_future, fut)
     )
@@ -139,7 +139,8 @@ def test_future_callback_nofile():
     if os.path.isfile(testfile):
         os.remove(testfile)
     underlying_future = cf.Future()
-    wrapper_future = FluxFutureWrapper(underlying_future)
+    wrapper_future = FluxFutureWrapper()
+    wrapper_future._flux_future = underlying_future
     underlying_future.add_done_callback(
         lambda fut: _complete_future(testfile, wrapper_future, fut)
     )
@@ -151,10 +152,19 @@ def test_future_callback_nofile():
 @pytest.mark.local
 def test_future_callback_flux_exception():
     underlying_future = cf.Future()
-    wrapper_future = FluxFutureWrapper(underlying_future)
+    wrapper_future = FluxFutureWrapper()
+    wrapper_future._flux_future = underlying_future
     underlying_future.add_done_callback(
         lambda fut: _complete_future(".fluxexecutortest.txt", wrapper_future, fut)
     )
     underlying_future.set_exception(ValueError())
     assert wrapper_future.done()
     assert isinstance(wrapper_future.exception(), ValueError)
+
+
+@pytest.mark.local
+def test_future_cancel_no_underlying_future():
+    wrapper_future = FluxFutureWrapper()
+    assert wrapper_future.cancel()
+    assert wrapper_future.cancelled()
+    assert not wrapper_future.running()
