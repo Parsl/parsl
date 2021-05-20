@@ -10,7 +10,7 @@ class States(IntEnum):
     In a single successful task execution, tasks will progress in this
     sequence:
 
-    pending -> launched -> running -> running_ended -> exec_done
+    pending -> launched -> running -> exec_done
 
     Other states represent deviations from this path, either due to
     failures, or to deliberate changes to how tasks are executed (for
