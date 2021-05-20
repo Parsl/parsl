@@ -272,13 +272,14 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 job.parameters["command"] = shell_command
                 job.save()
             else:
-                import json
+                import json, os
                 lines = inspect.getsource(func)
                 class_path = 'parsl.AppRunner'
 
                 logger.debug("{} Inputs: {}".format(appname,json.dumps(inputs)))
                 pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
                 pargs = re.sub(r'\n', "", pargs).strip()
+                cwd = os.getcwd()
 
                 source = "import pickle\n" \
                          "import os\n" \
@@ -291,19 +292,18 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "args = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\n" \
                          "print(args)\n" \
                          "result = {}(inputs=[*args])\n" \
-                         "with open('/app/output.pickle','ab') as output:\n" \
+                         "with open('output.pickle','ab') as output:\n" \
                          "    pickle.dump(result, output)\n".format(
                             site_id,
                             class_path,
                             lines,
                             pargs,
                             appname) + \
-                         "metadata = {\"type\":\"python\",\"file\":os.path.abspath('output.pickle')}\n" \
+                         "metadata = {\"type\":\"python\",\"file\":\""+cwd+"/output.pickle\"}\n" \
                          "with open('/app/job.metadata','w') as job:\n" \
                          "    job.write(json.dumps(metadata))\n" \
                          "print(result)\n"
 
-                logger.debug(sys.executable)
                 source = source.replace('@python_app','#@python_app')
 
                 try:
