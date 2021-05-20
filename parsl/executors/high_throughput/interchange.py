@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import functools
+import setproctitle
 import zmq
 import os
 import sys
@@ -682,6 +683,7 @@ def starter(comm_q, *args, **kwargs):
 
     The executor is expected to call this function. The args, kwargs match that of the Interchange.__init__
     """
+    setproctitle.setproctitle("parsl: HTEX interchange")
     # logger = multiprocessing.get_logger()
     ic = Interchange(*args, **kwargs)
     comm_q.put((ic.worker_task_port,

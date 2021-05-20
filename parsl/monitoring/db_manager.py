@@ -4,6 +4,7 @@ import queue
 import os
 import time
 import datetime
+import setproctitle
 
 from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
 
@@ -701,6 +702,8 @@ def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
     The DFK should start this function. The args, kwargs match that of the monitoring config
 
     """
+    setproctitle.setproctitle("parsl: monitoring database")
+
     try:
         dbm = DatabaseManager(db_url=db_url,
                               logdir=logdir,

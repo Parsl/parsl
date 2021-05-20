@@ -1,3 +1,4 @@
+import setproctitle
 import uuid
 import time
 import hashlib
@@ -42,6 +43,8 @@ def udp_messenger(domain_name, UDP_IP, UDP_PORT, sock_timeout, message):
           - sock_timeout (int) : Socket timeout
           - to_send (multiprocessing.Queue) : Queue of outgoing messages to internet
     """
+    setproctitle.setproctitle("parsl: Usage tracking")
+
     try:
         if message is None:
             raise ValueError("message was none")
