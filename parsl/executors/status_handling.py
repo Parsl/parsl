@@ -3,7 +3,7 @@ import threading
 from itertools import compress
 from abc import abstractmethod, abstractproperty
 from concurrent.futures import Future
-from typing import List, Any, Dict, Tuple, Union
+from typing import List, Any, Dict, Optional, Tuple, Union
 
 import parsl  # noqa F401
 from parsl.executors.base import ParslExecutor
@@ -15,15 +15,39 @@ logger = logging.getLogger(__name__)
 
 
 class BlockProviderExecutor(ParslExecutor):
-    def __init__(self, provider):
+    """A base class for executors which scale using blocks.
+
+    This base class is intended to help with executors which:
+
+    - use blocks of workers to execute tasks
+    - blocks of workers are launched on a batch system through
+      an `ExecutionProvider`
+
+    An implementing class should implement the abstract methods required by
+    `ParslExecutor` to submit tasks, as well as BlockProviderExecutor
+    abstract methods to provide the executor-specific command to start a block
+    of workers (the ``_get_launch_command`` method), and some basic scaling
+    information (``outstanding`` and ``workers_per_node`` properties).
+
+    This base class provides a ``scale_out`` method which will launch new
+    blocks. It does not provide a ``scale_in`` method, because scale-in
+    behaviour is not well defined in the Parsl scaling model and so behaviour
+    is left to individual executors.
+
+    Parsl scaling will provide scaling between min_blocks and max_blocks by
+    invoking scale_out, but it will not initialize the blocks requested by
+    any init_blocks parameter. Subclasses must implement that behaviour
+    themselves.
+    """
+    def __init__(self, provider: ExecutionProvider):
         super().__init__()
-        self._provider = provider  # type: ExecutionProvider
+        self._provider = provider
         # errors can happen during the submit call to the provider; this is used
         # to keep track of such errors so that they can be handled in one place
         # together with errors reported by status()
-        self._simulated_status = {}
+        self._simulated_status: Dict[Any, JobStatus] = {}
         self._executor_bad_state = threading.Event()
-        self._executor_exception = None
+        self._executor_exception: Optional[Exception] = None
         self._generated_block_id_counter = 1
         self._tasks = {}  # type: Dict[object, Future]
         self.blocks = {}  # type: Dict[str, str]
@@ -68,7 +92,7 @@ class BlockProviderExecutor(ParslExecutor):
     def outstanding(self) -> int:
         """This should return the number of tasks that the executor has been given to run (waiting to run, and running now)"""
 
-        raise NotImplementedError("Classes inheriting from StatusHandlingExecutor must implement "
+        raise NotImplementedError("Classes inheriting from BlockProviderExecutor must implement "
                                   "outstanding()")
 
     def status(self) -> Dict[str, JobStatus]:

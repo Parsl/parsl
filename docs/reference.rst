@@ -72,6 +72,7 @@ Executors
     :nosignatures:
 
     parsl.executors.base.ParslExecutor
+    parsl.executors.status_handling.BlockProviderExecutor
     parsl.executors.ThreadPoolExecutor
     parsl.executors.HighThroughputExecutor
     parsl.executors.WorkQueueExecutor
@@ -86,6 +87,7 @@ Launchers
     :toctree: stubs
     :nosignatures:
 
+    parsl.launchers.launchers.Launcher
     parsl.launchers.SimpleLauncher
     parsl.launchers.SingleNodeLauncher
     parsl.launchers.SrunLauncher
