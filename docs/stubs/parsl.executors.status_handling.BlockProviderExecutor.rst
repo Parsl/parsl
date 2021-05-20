@@ -40,6 +40,7 @@ parsl.executors.status\_handling.BlockProviderExecutor
       ~BlockProviderExecutor.hub_port
       ~BlockProviderExecutor.outstanding
       ~BlockProviderExecutor.provider
+      ~BlockProviderExecutor.radio_mode
       ~BlockProviderExecutor.run_dir
       ~BlockProviderExecutor.scaling_enabled
       ~BlockProviderExecutor.status_polling_interval
