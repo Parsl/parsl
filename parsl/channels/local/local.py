@@ -94,7 +94,7 @@ class LocalChannel(Channel, RepresentationMixin):
             - FileCopyException : If file copy failed.
         '''
 
-        local_dest = dest_dir + '/' + os.path.basename(source)
+        local_dest = os.path.join(dest_dir, os.path.basename(source))
 
         # Only attempt to copy if the target dir and source dir are different
         if os.path.dirname(source) != dest_dir:
