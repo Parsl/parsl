@@ -388,9 +388,9 @@ class MonitoringHub(RepresentationMixin):
             self.logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
             raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
 
-        udp_dish_port, ic_port = comm_q_result
+        udp_port, ic_port = comm_q_result
 
-        self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_dish_port)
+        self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
         return ic_port
 
     # TODO: tighten the Any message format
