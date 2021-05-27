@@ -390,7 +390,6 @@ class Interchange(object):
         self._command_thread.start()
 
         poller = zmq.Poller()
-        # poller.register(self.task_incoming, zmq.POLLIN)
         poller.register(self.task_outgoing, zmq.POLLIN)
         poller.register(self.results_incoming, zmq.POLLIN)
 
