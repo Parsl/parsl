@@ -32,12 +32,9 @@ jobs:
         python -m cython --version
         python -c "import numpy;print(numpy.__version__)"
 
-    - name: Install parsl with no optional extras
-      run: |
-        make deps
-
     - name: Run tests
       run: |
+        make deps
         make clean_coverage
 
     - name: Documentation checks
@@ -71,3 +68,12 @@ jobs:
         sudo apt-get install -y graphviz
         pip install .[monitoring]
         parsl-visualize &
+        # now wait for this to become responsive to connections
+        wget http://127.0.0.1:8080/ --retry-connrefused --tries 30 --waitretry=1
+        # wget will return a failure code if any of the requested URLs don't return an HTTP 200 result
+        wget http://127.0.0.1:8080/ --recursive --no-verbose --page-requisites --level=inf -e robots=off
+        killall --wait parsl-visualize
+
+    - name: Coverage info
+      run: |
+        make coverage
