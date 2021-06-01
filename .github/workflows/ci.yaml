@@ -1,0 +1,41 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - "*"
+    tags:
+      - "*"
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        python-version: ["3.6", "3.7", "3.8", "3.9"]
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@master
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install python specifics
+      run: |
+        sudo apt-get update -q
+        python -m pip install Cython
+        python -m pip install numpy
+        python --version
+        python -m cython --version
+        python -c "import numpy;print(numpy.__version__)"
+
+    - name: Install parsl with no optional extras
+      run: |
+        make deps
+
+    - name: Run tests
+      run: |
+        make clean_coverage
