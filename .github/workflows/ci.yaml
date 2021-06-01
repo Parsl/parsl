@@ -66,3 +66,26 @@ jobs:
         bash -c '! grep ERROR runinfo*/*/database_manager.log'
         bash -c '! grep ERROR runinfo*/*/monitoring_router.log'
 
+    - name: Checking parsl-visualize
+      run: |
+        # Check that parsl-visualize does not give errors.
+        # 'monitoring.db' needs to exist and have some interesting content in it
+        # which at time of writing comes from the htex_local_alternative test
+        # run.
+        sudo apt-get install -y graphviz
+        pip install .[monitoring]
+        parsl-visualize &
+        # now wait for this to become responsive to connections
+        wget http://127.0.0.1:8080/ --retry-connrefused --tries 30 --waitretry=1
+        # wget will return a failure code if any of the requested URLs don't return an HTTP 200 result
+        wget http://127.0.0.1:8080/ --recursive --no-verbose --page-requisites --level=inf -e robots=off
+        killall --wait parsl-visualize
+
+        # run simple worker test. this is unlikely to scale due to
+        # a stdout/stderr buffering bug in present master.
+        # - coverage run --append --source=parsl parsl/tests/manual_tests/test_worker_count.py -c 1000
+        # TODO: ^ this test has been removed pending investigation ... when restored or removed,
+        #       sort out this commented out block appropriately.
+
+        # prints report of coverage data stored in .coverage
+        make coverage
