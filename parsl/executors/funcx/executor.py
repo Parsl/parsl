@@ -194,9 +194,9 @@ class FuncXExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 logger.debug("[TASK_POLLER_THREAD] To poll tasks {}".format(to_poll_tasks))
                 try:
                     # TODO: using prod funcx now, need to update to get_batch_result for results
-                    batch_results = self.fxc.get_batch_status(to_poll_tasks)
+                    batch_results = self.fxc.get_batch_result(to_poll_tasks)
                 except Exception:
-                    logger.error("[TASK_POLLER_THREAD] Exception in poll tasks in batch")
+                    logger.exception("[TASK_POLLER_THREAD] Exception in polling tasks in batch")
                 else:
                     logger.debug("[TASK_POLLER_THREAD] Got batch results {}".format(batch_results))
                     for tid in batch_results:
