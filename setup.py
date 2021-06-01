@@ -8,7 +8,7 @@ with open('requirements.txt') as f:
 
 extras_require = {
     'monitoring' : [
-        'sqlalchemy>=1.3.0,!=1.3.4',
+        'sqlalchemy>=1.3.0,!=1.3.4,<1.4',
         'sqlalchemy_utils',
         'pydot',
         'networkx',
@@ -62,6 +62,7 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
     keywords=['Workflows', 'Scientific computing'],
     entry_points={'console_scripts':
