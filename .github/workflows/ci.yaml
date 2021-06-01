@@ -65,3 +65,9 @@ jobs:
         # in the absence of that, this is a dirty way to check.
         bash -c '! grep ERROR runinfo*/*/database_manager.log'
         bash -c '! grep ERROR runinfo*/*/monitoring_router.log'
+
+    - name: Checking parsl-visualize
+      run: |
+        sudo apt-get install -y graphviz
+        pip install .[monitoring]
+        parsl-visualize &
