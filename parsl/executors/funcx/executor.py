@@ -159,7 +159,7 @@ class FuncXExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 # random endpoint selection for v1
                 endpoint = random.choice(self.endpoints)
                 func_uuid, args, kwargs = msg['func_uuid'], msg['args'], msg['kwargs']
-                batch.add(*args, *kwargs,
+                batch.add(*args, **kwargs,
                           endpoint_id=endpoint,
                           function_id=func_uuid)
                 logger.debug("[TASK_SUBMIT_THREAD] Adding msg {} to funcX batch".format(msg))
