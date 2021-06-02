@@ -26,7 +26,6 @@ parsl.dataflow.states.States
       ~States.memo_done
       ~States.pending
       ~States.running
-      ~States.running_ended
       ~States.unsched
    
    

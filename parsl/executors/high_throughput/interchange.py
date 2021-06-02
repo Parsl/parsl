@@ -129,8 +129,6 @@ class Interchange(object):
     2. Allow for workers to join and leave the union
     3. Detect workers that have failed using heartbeats
     4. Service single and batch requests from workers
-    5. Be aware of requests worker resource capacity,
-       eg. schedule only jobs that fit into walltime.
 
     TODO: We most likely need a PUB channel to send out global commands, like shutdown
     """
@@ -445,7 +443,6 @@ class Interchange(object):
         self._command_thread.start()
 
         poller = zmq.Poller()
-        # poller.register(self.task_incoming, zmq.POLLIN)
         poller.register(self.task_outgoing, zmq.POLLIN)
         poller.register(self.results_incoming, zmq.POLLIN)
 

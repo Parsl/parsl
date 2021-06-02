@@ -1178,7 +1178,8 @@ class DataFlowKernel(object):
                                   'tasks_completed_count': self.tasks_completed_count,
                                   "time_began": self.time_began,
                                   'time_completed': self.time_completed,
-                                  'run_id': self.run_id, 'rundir': self.run_dir})
+                                  'run_id': self.run_id, 'rundir': self.run_dir,
+                                  'exit_now': True})
 
             logger.info("Terminating monitoring")
             self.monitoring.close()

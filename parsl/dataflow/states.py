@@ -21,7 +21,6 @@ class States(IntEnum):
     """
 
     unsched = -1
-
     pending = 0
     """Task is known to parsl but cannot run yet. Usually, a task cannot
     run because it is waiting for dependency tasks to complete.
