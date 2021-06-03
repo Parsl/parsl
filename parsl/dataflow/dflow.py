@@ -336,10 +336,20 @@ class DataFlowKernel(object):
                     # listener to that inner future.
 
                     inner_future = future.result()
-                    assert isinstance(inner_future, Future)
-                    task_record['status'] = States.joining
-                    task_record['joins'] = inner_future
-                    inner_future.add_done_callback(partial(self.handle_join_update, task_record))
+
+                    # Fail with a TypeError if the joinapp python body returned
+                    # something we can't join on.
+                    if isinstance(inner_future, Future):
+                        task_record['status'] = States.joining
+                        task_record['joins'] = inner_future
+                        inner_future.add_done_callback(partial(self.handle_join_update, task_record))
+                    else:
+                        task_record['time_returned'] = datetime.datetime.now()
+                        task_record['status'] = States.failed
+                        self.tasks_failed_count += 1
+                        task_record['time_returned'] = datetime.datetime.now()
+                        with task_record['app_fu']._update_lock:
+                            task_record['app_fu'].set_exception(TypeError(f"join_app body must return a Future, got {type(inner_future)}"))
 
         self._log_std_streams(task_record)
 
