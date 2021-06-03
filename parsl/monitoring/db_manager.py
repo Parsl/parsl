@@ -546,7 +546,7 @@ class DatabaseManager:
                 elif queue_tag == "block":
                     self.pending_block_queue.put(x[-1])
                 else:
-                    raise RuntimeException(f"queue_tag {queue_tag} is unknown")
+                    raise RuntimeError(f"queue_tag {queue_tag} is unknown")
 
     def _update(self, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
         try:
