@@ -356,6 +356,9 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                 logger.error(message)
                 raise ExecutorError(self, message)
 
+            # this checks that either all of the required resource types are specified, or
+            # that none of them are: the `required_resource_types` are not actually required,
+            # but if one is specified, then they all must be.
             key_check = required_resource_types.intersection(keys)
             required_keys_ok = len(key_check) == 0 or key_check == required_resource_types
             if not self.autolabel and not required_keys_ok:
