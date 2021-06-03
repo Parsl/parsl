@@ -550,8 +550,11 @@ class DatabaseManager:
                     self.db.update(table=table, columns=columns, messages=messages)
                     done = True
                 except sa.exc.OperationalError as e:
-                    # hoping that this is a database locked error during _update, not some other problem
-                    logger.warning("Got an sqlite3 operational error. Ignoring and retying on the assumption that it is recoverable: {}".format(e))
+                    # This code assumes that an OperationalError is something that will go away eventually
+                    # if retried - for example, the database being locked because someone else is readying
+                    # the tables we are trying to write to. If that assumption is wrong, then this loop
+                    # may go on forever.
+                    logger.warning("Got a database OperationalError. Ignoring and retying on the assumption that it is recoverable: {}".format(e))
                     self.db.rollback()
                     time.sleep(1)  # hard coded 1s wait - this should be configurable or exponential backoff or something
 
