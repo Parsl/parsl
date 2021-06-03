@@ -48,11 +48,11 @@ class Database:
     if not _sqlalchemy_enabled:
         raise OptionalModuleMissing(['sqlalchemy'],
                                     ("Default database logging requires the sqlalchemy library."
-                                     " Enable monitoring support with: pip install parsl[monitoring]"))
+                                     " Enable monitoring support with: pip install 'parsl[monitoring]'"))
     if not _sqlalchemy_utils_enabled:
         raise OptionalModuleMissing(['sqlalchemy_utils'],
                                     ("Default database logging requires the sqlalchemy_utils library."
-                                     " Enable monitoring support with: pip install parsl[monitoring]"))
+                                     " Enable monitoring support with: pip install 'parsl[monitoring]'"))
 
     Base = declarative_base()
 
@@ -131,7 +131,7 @@ class Database:
         task_depends = Column('task_depends', Text, nullable=True)
         task_func_name = Column('task_func_name', Text, nullable=False)
         task_memoize = Column('task_memoize', Text, nullable=False)
-        task_hashsum = Column('task_hashsum', Text, nullable=True)
+        task_hashsum = Column('task_hashsum', Text, nullable=True, index=True)
         task_inputs = Column('task_inputs', Text, nullable=True)
         task_outputs = Column('task_outputs', Text, nullable=True)
         task_stdin = Column('task_stdin', Text, nullable=True)
