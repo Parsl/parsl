@@ -27,7 +27,6 @@ if platform.system() != 'Darwin':
     mpProcess = multiprocessing.Process
 else:
     from parsl.executors.high_throughput.mac_safe_queue import MacSafeQueue as mpQueue
-    multiprocessing.set_start_method('fork', force=True)
     mpProcess = multiprocessing.get_context('fork').Process
 
 from parsl.serialize import unpack_apply_message, serialize
