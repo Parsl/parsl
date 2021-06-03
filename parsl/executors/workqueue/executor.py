@@ -74,7 +74,7 @@ WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason st
 ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name stage cache')
 
 
-class WorkQueueExecutor(NoStatusHandlingExecutor):
+class WorkQueueExecutor(NoStatusHandlingExecutor, putils.RepresentationMixin):
     """Executor to use Work Queue batch system
 
     The WorkQueueExecutor system utilizes the Work Queue framework to
@@ -179,6 +179,12 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
 
         worker_options: str
             Extra options passed to work_queue_worker. Default is ''.
+
+        worker_executable: str
+            The command used to invoke work_queue_worker. This can be used
+            when the worker needs to be wrapped inside some other command
+            (for example, to run the worker inside a container). Default is
+            'work_queue_worker'.
     """
 
     @typeguard.typechecked
@@ -203,7 +209,8 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  autocategory: bool = True,
                  init_command: str = "",
                  worker_options: str = "",
-                 full_debug: bool = True):
+                 full_debug: bool = True,
+                 worker_executable: str = 'work_queue_worker'):
         NoStatusHandlingExecutor.__init__(self)
         self._provider = provider
         self._scaling_enabled = True
@@ -228,7 +235,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.use_cache = use_cache
         self.working_dir = working_dir
         self.registered_files = set()  # type: Set[str]
-        self.full = full_debug
+        self.full_debug = full_debug
         self.source = True if pack else source
         self.pack = pack
         self.extra_pkgs = extra_pkgs or []
@@ -238,6 +245,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.should_stop = multiprocessing.Value(c_bool, False)
         self.cached_envs = {}  # type: Dict[int, str]
         self.worker_options = worker_options
+        self.worker_executable = worker_executable
 
         if not self.address:
             self.address = socket.gethostname()
@@ -277,7 +285,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                  "launch_cmd": self.launch_cmd,
                                  "data_dir": self.function_data_dir,
                                  "collector_queue": self.collector_queue,
-                                 "full": self.full,
+                                 "full": self.full_debug,
                                  "shared_fs": self.shared_fs,
                                  "autolabel": self.autolabel,
                                  "autolabel_window": self.autolabel_window,
@@ -437,7 +445,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         return fu
 
     def _construct_worker_command(self):
-        worker_command = 'work_queue_worker'
+        worker_command = self.worker_executable
         if self.project_password_file:
             worker_command += ' --password {}'.format(self.project_password_file)
         if self.worker_options:
