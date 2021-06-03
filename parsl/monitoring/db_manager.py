@@ -63,8 +63,10 @@ class Database:
         self.eng = sa.create_engine(url)
         self.meta = self.Base.metadata
 
-        # TODO: I'm seeing database lock errors happening here with my db lock test.
-        # Is the right behaviour to retry a few times?
+        # TODO: this code wants a read lock on the sqlite3 database, and fails if it cannot
+        # - for example, if someone else is querying the database at the point that the
+        # monitoring system is initialized. See PR #1917 for related locked-for-read fixes
+        # elsewhere in this file.
         self.meta.create_all(self.eng)
 
         self.meta.reflect(bind=self.eng)
