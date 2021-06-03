@@ -28,21 +28,18 @@ def test_row_counts():
     # parsl.load() returns before all initialisation of monitoring
     # is complete, which means it isn't safe to take a read lock on
     # the database yet. This delay tries to work around that - some
-    # better async behaviour might be nice, but I'm not sure what.
+    # better async behaviour might be nice, but what?
+    #
+    # Taking a read lock before monitoring is initialized will cause
+    # a failure in the part of monitoring which creates tables, and
+    # which is not protected against read locks at the time this test
+    # was written.
     time.sleep(10)
 
     # to get an sqlite3 read lock that is held over a controllable
     # long time, create a transaction and perform a SELECT in it.
+    # The lock will be held until the end of the transaction.
     # (see bottom of https://sqlite.org/lockingv3.html)
-
-    # there's an awkward race here: parsl.load() returns before the
-    # database might have been created, and so then the db manager will
-    # crash (and if there is a retry loop there instead, I think it will
-    # hang until after the read lock stuff below is finished? which might
-    # be acceptable? if it's meant to be properly async and not blocking?)
-    # ... in which case, initialise parsl *after taking the lock* would also
-    # work (although the select statement to get that lock wouldn't be the same
-    # because it wouldn't be able to select from the right table)
 
     logger.info("Getting a read lock on the monitoring database")
     with engine.begin() as readlock_connection:
@@ -67,7 +64,8 @@ def test_row_counts():
     parsl.dfk().cleanup()
     parsl.clear()
 
-    # at this point, we should find one row in the monitoring database.
+    # at this point, we should find data consistent with executing one
+    # task in the database.
 
     logger.info("checking database content")
     with engine.begin() as connection:
