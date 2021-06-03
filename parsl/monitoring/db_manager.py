@@ -534,23 +534,19 @@ class DatabaseManager:
                         assert len(x) == 2
                         self.pending_priority_queue.put(cast(Any, x))
                     else:
-                        logger.warning("dropping message with unknown format: {}".format(x))
+                        logger.error("dropping message with unknown format: {}".format(x))
                 elif queue_tag == 'resource':
                     assert len(x) == 3
                     self.pending_resource_queue.put(x[-1])
                 elif queue_tag == 'node':
-                    logger.info("Received these two from node queue")
-                    logger.info("x = {}".format(x))
-                    logger.info("addr = {}".format(addr))
-
                     assert x[0] == MessageType.NODE_INFO, "_migrate_logs_to_internal can only migrate NODE_INFO messages from node queue"
                     assert len(x) == 2, "expected message tuple to have exactly two elements"
 
-                    logger.info("Will put {} to pending node queue".format(x[1]))
                     self.pending_node_queue.put(x[1])
                 elif queue_tag == "block":
                     self.pending_block_queue.put(x[-1])
-                # TODO: else condition here raise an exception.
+                else:
+                    raise RuntimeException(f"queue_tag {queue_tag} is unknown")
 
     def _update(self, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
         try:
