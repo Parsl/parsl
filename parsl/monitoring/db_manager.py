@@ -526,8 +526,7 @@ class DatabaseManager:
                 continue
             else:
                 if queue_tag == 'priority' and x == 'STOP':
-                    if x == 'STOP':
-                        self.close()
+                    self.close()
                 elif queue_tag == 'priority':  # implicitly not 'STOP'
                     if isinstance(x, tuple):
                         assert x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO], \
