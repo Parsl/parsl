@@ -436,7 +436,7 @@ class DataFlowKernel(object):
         if not task_record['app_fu'] == future:
             logger.error("Internal consistency error: callback future is not the app_fu in task structure, for task {}".format(task_id))
 
-        self.memoizer.update_memo(task_id, task_record, future)
+        self.memoizer.update_memo(task_record, future)
 
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint(tasks=[task_id])
@@ -581,7 +581,7 @@ class DataFlowKernel(object):
         task_id = task_record['id']
         task_record['try_time_launched'] = datetime.datetime.now()
 
-        memo_fu = self.memoizer.check_memo(task_id, task_record)
+        memo_fu = self.memoizer.check_memo(task_record)
         if memo_fu:
             logger.info("Reusing cached result for task {}".format(task_id))
             task_record['from_memo'] = True
