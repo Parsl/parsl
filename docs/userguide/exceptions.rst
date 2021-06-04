@@ -145,7 +145,7 @@ A retry handler can be specified in the parsl configuration like this:
           )
 
 
-``example_retry_handler`` should be function defined by the user that will
+``example_retry_handler`` should be a function defined by the user that will
 compute the retry cost for a particular failure, given some information about
 the failure.
 
