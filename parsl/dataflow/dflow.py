@@ -292,9 +292,6 @@ class DataFlowKernel(object):
             task_record['fail_history'].append(repr(e))
             task_record['fail_count'] += 1
             if self._config.retry_handler:
-                # TODO: put protective code around here for when retry_handler
-                # raises an exception: at which point the task should be
-                # aborted entirely (eg set fail_cost > config retries)
                 try:
                     cost = self._config.retry_handler(e, task_record)
                 except Exception as retry_handler_exception:
