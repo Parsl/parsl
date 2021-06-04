@@ -1,14 +1,15 @@
-import argparse
 import os
 import pytest
 
 import parsl
-from parsl import bash_app, python_app
+from parsl import bash_app
 from parsl.tests.configs.local_threads import fresh_config
+
 
 def half_handler(*args):
     """Cost 0.5 for each retry, not the default of 1"""
     return 0.5
+
 
 local_config = fresh_config()
 local_config.retries = 2
@@ -59,4 +60,3 @@ def test_retry():
         fu.result()
 
     assert(fu.exception().exitcode == 5)
-
