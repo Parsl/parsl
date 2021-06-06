@@ -481,8 +481,7 @@ class DataFlowKernel(object):
         if self._count_deps(task_record['depends']) == 0:
 
             # We can now launch *task*
-            new_args, kwargs, exceptions_tids = self.sanitize_and_wrap(task_id,
-                                                                       task_record['args'],
+            new_args, kwargs, exceptions_tids = self.sanitize_and_wrap(task_record['args'],
                                                                        task_record['kwargs'])
             task_record['args'] = new_args
             task_record['kwargs'] = kwargs
@@ -692,14 +691,13 @@ class DataFlowKernel(object):
 
         return depends
 
-    def sanitize_and_wrap(self, task_id, args, kwargs):
+    def sanitize_and_wrap(self, args, kwargs):
         """This function should be called only when all the futures we track have been resolved.
 
         If the user hid futures a level below, we will not catch
         it, and will (most likely) result in a type error.
 
         Args:
-             task_id (str) : Task id
              func (Function) : App function
              args (List) : Positional args to app function
              kwargs (Dict) : Kwargs to app function
