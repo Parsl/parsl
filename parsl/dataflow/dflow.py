@@ -371,10 +371,8 @@ class DataFlowKernel(object):
 
         outer_task_id = task_record['id']
 
-        try:
-            res = self._unwrap_remote_exception_wrapper(inner_app_future)
-
-        except Exception as e:
+        if inner_app_future.exception():
+            e = inner_app_future.exception()
             logger.debug("Task {} failed due to failure of inner join future".format(outer_task_id))
             # We keep the history separately, since the future itself could be
             # tossed.
@@ -388,6 +386,7 @@ class DataFlowKernel(object):
                 task_record['app_fu'].set_exception(e)
 
         else:
+            res = inner_app_future.result()
             self._complete_task(task_record, States.exec_done, res)
 
         self._log_std_streams(task_record)
