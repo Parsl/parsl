@@ -84,7 +84,7 @@ class UDPRadio:
             self.scheme, self.ip, port = (x.strip('/') for x in monitoring_url.split(':'))
             self.port = int(port)
         except Exception:
-            raise Exception("Failed to parse monitoring url: {}".format(monitoring_url))
+            raise Exception(f"Failed to parse monitoring url: {monitoring_url}")
 
         self.sock = socket.socket(socket.AF_INET,
                                   socket.SOCK_DGRAM,
@@ -214,7 +214,7 @@ class MonitoringHub(RepresentationMixin):
         self._dfk_channel = self._context.socket(zmq.DEALER)
         self._dfk_channel.setsockopt(zmq.SNDTIMEO, self.dfk_channel_timeout)
         self._dfk_channel.set_hwm(0)
-        self.dfk_port = self._dfk_channel.bind_to_random_port("tcp://{}".format(self.client_address),
+        self.dfk_port = self._dfk_channel.bind_to_random_port(f"tcp://{self.client_address}",
                                                               min_port=self.client_port_range[0],
                                                               max_port=self.client_port_range[1])
 
@@ -261,11 +261,11 @@ class MonitoringHub(RepresentationMixin):
 
         if isinstance(comm_q_result, str):
             self.logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
-            raise RuntimeError("MonitoringRouter failed to start: {comm_q_result}")
+            raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
 
         udp_dish_port, ic_port = comm_q_result
 
-        self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_dish_port)
+        self.monitoring_hub_url = f"udp://{self.hub_address}:{udp_dish_port}"
         return ic_port
 
     # TODO: tighten the Any message format
@@ -334,7 +334,7 @@ class MonitoringHub(RepresentationMixin):
                                   run_id,
                                   logging_level,
                                   sleep_dur),
-                            name="Monitor-Wrapper-{}".format(task_id))
+                            name=f"Monitor-Wrapper-{task_id}")
                 p.start()
             else:
                 p = None
@@ -390,7 +390,7 @@ class MonitoringRouter:
 
         """
         os.makedirs(logdir, exist_ok=True)
-        self.logger = start_file_logger("{}/monitoring_router.log".format(logdir),
+        self.logger = start_file_logger(f"{logdir}/monitoring_router.log",
                                         name="monitoring_router",
                                         level=logging_level)
         self.logger.debug("Monitoring router starting")
@@ -421,7 +421,7 @@ class MonitoringRouter:
         self.dfk_channel.setsockopt(zmq.LINGER, 0)
         self.dfk_channel.set_hwm(0)
         self.dfk_channel.RCVTIMEO = int(self.loop_freq)  # in milliseconds
-        self.dfk_channel.connect("tcp://{}:{}".format(client_address, client_port))
+        self.dfk_channel.connect(f"tcp://{client_address}:{client_port}")
 
         self.ic_channel = self._context.socket(zmq.DEALER)
         self.ic_channel.setsockopt(zmq.LINGER, 0)
@@ -477,7 +477,7 @@ class MonitoringRouter:
                     elif msg[0] == MessageType.BLOCK_INFO:
                         block_msgs.put((msg, 0))
                     else:
-                        self.logger.error(f"Discarding message from interchange with unknown type {msg[0].value}")
+                        self.logger.error("Discarding message from interchange with unknown type {}".format(msg[0].value))
                 except zmq.Again:
                     pass
 
@@ -585,8 +585,7 @@ def monitor(pid: int,
                      source_id=task_id)
 
     format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-    logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
-        logbase="/tmp", task_id=task_id, pid=pid), level=logging_level, format=format_string)
+    logging.basicConfig(filename=f'/tmp/monitor.{task_id}.{pid}.log', level=logging_level, format=format_string)
 
     logging.debug("start of monitor")
 

@@ -23,7 +23,7 @@ def task_gantt_plot(df_task, df_status, time_completed=None):
     for i, task in df_task.iterrows():
         task_id = task['task_id']
 
-        description = "Task ID: {}, app: {}".format(task['task_id'], task['task_func_name'])
+        description = f"Task ID: {task['task_id']}, app: {task['task_func_name']}"
 
         statuses = df_status.loc[df_status['task_id'] == task_id].sort_values(by=['timestamp'])
 
@@ -110,7 +110,7 @@ def task_per_app_plot(task, status):
                              title="Tasks per app"))
         return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
     except Exception as e:
-        return "The tasks per app plot cannot be generated because of exception {}.".format(e)
+        return f"The tasks per app plot cannot be generated because of exception {e}."
 
 
 def total_tasks_plot(df_task, df_status, columns=20):
@@ -250,8 +250,7 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
         index, _ = groups_list[name]
         node_traces[index]['x'] += tuple([x])
         node_traces[index]['y'] += tuple([y])
-        node_traces[index]['text'] += tuple(
-            ["{}:{}".format(dic['task_func_name'][node], node)])
+        node_traces[index]['text'] += tuple([f"{dic['task_func_name'][node]}:{node}"])
 
     # The edges will be drawn as lines:
     edge_trace = go.Scatter(

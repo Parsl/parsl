@@ -144,13 +144,10 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         """
 
         cur_timestamp = str(time.time() * 1000).split(".")[0]
-        job_name = "{0}-{1}".format(job_name, cur_timestamp)
+        job_name = f"{job_name}-{cur_timestamp}"
 
-        if not self.pod_name:
-            pod_name = '{}'.format(job_name)
-        else:
-            pod_name = '{}-{}'.format(self.pod_name,
-                                      cur_timestamp)
+        pod_name = f"{self.pod_name if self.pod_name else job_name}"
+        pod_name += f"-{cur_timestamp}"
 
         formatted_cmd = template_string.format(command=cmd_string,
                                                worker_init=self.worker_init)
@@ -251,7 +248,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         # Create the enviornment variables and command to initiate IPP
         environment_vars = client.V1EnvVar(name="TEST", value="SOME DATA")
 
-        launch_args = ["-c", "{0};".format(cmd_string)]
+        launch_args = ["-c", f"{cmd_string};"]
 
         volume_mounts = []
         # Create mount paths for the volumes

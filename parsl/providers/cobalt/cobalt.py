@@ -151,11 +151,11 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
 
         """
 
-        account_opt = '-A {}'.format(self.account) if self.account is not None else ''
+        account_opt = f'-A {self.account}' if self.account is not None else ''
 
-        job_name = "parsl.{0}.{1}".format(job_name, time.time())
+        job_name = f"parsl.{job_name}.{time.time()}"
 
-        script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
+        script_path = f"{self.script_dir}/{job_name}.submit"
         script_path = os.path.abspath(script_path)
 
         job_config = {}
@@ -168,15 +168,16 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         # Wrap the command
         job_config["user_script"] = self.launcher(command, tasks_per_node, self.nodes_per_block)
 
-        queue_opt = '-q {}'.format(self.queue) if self.queue is not None else ''
+        queue_opt = f'-q {self.queue}' if self.queue is not None else ''
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        command = 'qsub -n {0} {1} -t {2} {3} {4}'.format(
-            self.nodes_per_block, queue_opt, wtime_to_minutes(self.walltime), account_opt, channel_script_path)
+        command = (f'qsub -n {self.nodes_per_block} {queue_opt} '
+                   f'-t {wtime_to_minutes(self.walltime)} '
+                   f'{account_opt} {channel_script_path}')
         logger.debug("Executing {}".format(command))
 
         retcode, stdout, stderr = self.execute_wait(command)
@@ -212,7 +213,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         """
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = self.execute_wait("qdel {0}".format(job_id_list))
+        retcode, stdout, stderr = self.execute_wait(f"qdel {job_id_list}")
         rets = None
         if retcode == 0:
             for jid in job_ids:

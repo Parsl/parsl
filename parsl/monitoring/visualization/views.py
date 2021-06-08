@@ -53,20 +53,18 @@ def workflow(workflow_id):
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
 
     if workflow_details is None:
-        return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
+        return render_template('error.html', message=f"Workflow {workflow_id} could not be found")
 
     df_status = pd.read_sql_query(
-        "SELECT run_id, task_id, task_status_name, timestamp FROM status WHERE run_id='%s'" % workflow_id, db.engine)
-    df_task = pd.read_sql_query("""SELECT task_id, task_func_name,
+        f"SELECT run_id, task_id, task_status_name, timestamp FROM status WHERE run_id='{workflow_id}'", db.engine)
+    df_task = pd.read_sql_query(f"""SELECT task_id, task_func_name,
                                 task_time_returned from task
-                                WHERE run_id='%s'"""
-                                % (workflow_id), db.engine)
-    df_task_tries = pd.read_sql_query("""SELECT task.task_id, task_func_name,
+                                WHERE run_id='{workflow_id}'""", db.engine)
+    df_task_tries = pd.read_sql_query(f"""SELECT task.task_id, task_func_name,
                                       task_try_time_running, task_try_time_returned from task, try
-                                      WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'"""
-                                      % (workflow_id, workflow_id), db.engine)
+                                      WHERE task.task_id = try.task_id AND task.run_id='{workflow_id}' and try.run_id='{workflow_id}'""", db.engine)
     task_summary = db.engine.execute(
-        "SELECT task_func_name, count(*) as 'frequency' from task WHERE run_id='%s' group by task_func_name;" % workflow_id)
+        f"SELECT task_func_name, count(*) as 'frequency' from task WHERE run_id='{workflow_id}' group by task_func_name;")
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
@@ -79,7 +77,7 @@ def parsl_app(workflow_id, app_name):
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
 
     if workflow_details is None:
-        return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
+        return render_template('error.html', message=f"Workflow {workflow_id} could not be found")
 
     task_summary = Task.query.filter_by(
         run_id=workflow_id, task_func_name=app_name)
@@ -94,7 +92,7 @@ def parsl_apps(workflow_id):
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
 
     if workflow_details is None:
-        return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
+        return render_template('error.html', message=f"Workflow {workflow_id} could not be found")
 
     task_summary = Task.query.filter_by(run_id=workflow_id)
     return render_template('app.html',
@@ -108,7 +106,7 @@ def task(workflow_id, task_id):
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
 
     if workflow_details is None:
-        return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
+        return render_template('error.html', message=f"Workflow {workflow_id} could not be found")
 
     task_details = Task.query.filter_by(
         run_id=workflow_id, task_id=task_id).first()
@@ -116,7 +114,7 @@ def task(workflow_id, task_id):
         run_id=workflow_id, task_id=task_id).order_by(Status.timestamp)
 
     df_resources = pd.read_sql_query(
-        "SELECT * FROM resource WHERE run_id='%s' AND task_id='%s'" % (workflow_id, task_id), db.engine)
+        f"SELECT * FROM resource WHERE run_id='{workflow_id}' AND task_id='{task_id}'", db.engine)
 
     return render_template('task.html',
                            workflow_details=workflow_details,
@@ -133,7 +131,7 @@ def task(workflow_id, task_id):
 @app.route('/workflow/<workflow_id>/dag_<path:path>')
 def workflow_dag_details(workflow_id, path='group_by_apps'):
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
-    query = """SELECT task.task_id, task.task_func_name, task.task_depends, status.task_status_name
+    query = f"""SELECT task.task_id, task.task_func_name, task.task_depends, status.task_status_name
                FROM task LEFT JOIN status
                ON task.task_id = status.task_id
                AND task.run_id = status.run_id
@@ -141,7 +139,7 @@ def workflow_dag_details(workflow_id, path='group_by_apps'):
                                        FROM status
                                        WHERE status.task_id = task.task_id and status.run_id = task.run_id
                                       )
-               WHERE task.run_id='%s'""" % (workflow_id)
+               WHERE task.run_id='{workflow_id}'"""
 
     df_tasks = pd.read_sql_query(query, db.engine)
 
@@ -156,22 +154,21 @@ def workflow_dag_details(workflow_id, path='group_by_apps'):
 def workflow_resources(workflow_id):
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
     if workflow_details is None:
-        return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
+        return render_template('error.html', message=f"Workflow {workflow_id} could not be found")
 
     df_resources = pd.read_sql_query(
-        "SELECT * FROM resource WHERE run_id='%s'" % (workflow_id), db.engine)
+        f"SELECT * FROM resource WHERE run_id='{workflow_id}'", db.engine)
     if df_resources.empty:
         return render_template('error.html',
-                               message="Workflow %s does not have any resource usage records." % workflow_id)
+                               message="Workflow {workflow_id} does not have any resource usage records.")
 
     df_task = pd.read_sql_query(
-        "SELECT * FROM task WHERE run_id='%s'" % (workflow_id), db.engine)
-    df_task_tries = pd.read_sql_query("""SELECT task.task_id, task_func_name,
+        f"SELECT * FROM task WHERE run_id='{workflow_id}'", db.engine)
+    df_task_tries = pd.read_sql_query(f"""SELECT task.task_id, task_func_name,
                                       task_try_time_launched, task_try_time_running, task_try_time_returned from task, try
-                                      WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'"""
-                                      % (workflow_id, workflow_id), db.engine)
+                                      WHERE task.task_id = try.task_id AND task.run_id='{workflow_id}' and try.run_id='{workflow_id}'""", db.engine)
     df_node = pd.read_sql_query(
-        "SELECT * FROM node WHERE run_id='%s'" % (workflow_id), db.engine)
+        f"SELECT * FROM node WHERE run_id='{workflow_id}'", db.engine)
 
     return render_template('resource_usage.html', workflow_details=workflow_details,
                            user_time_distribution_avg_plot=resource_distribution_plot(

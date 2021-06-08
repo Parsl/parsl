@@ -10,4 +10,4 @@ class BadLauncher(ExecutionProviderException):
         self.reason = reason
 
     def __repr__(self):
-        return "Bad Launcher provided:{0} Reason:{1}".format(self.launcher, self.reason)
+        return f"Bad Launcher provided:{self.launcher} Reason:{self.reason}"

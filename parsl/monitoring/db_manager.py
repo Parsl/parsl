@@ -257,7 +257,7 @@ class DatabaseManager:
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
-        set_file_logger("{}/database_manager.log".format(self.logdir), level=logging_level,
+        set_file_logger(f"{self.logdir}/database_manager.log", level=logging_level,
                         format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s",
                         name="database_manager")
 
@@ -401,7 +401,7 @@ class DatabaseManager:
                                     reprocessable_first_resource_messages.append(
                                         deferred_resource_messages.pop(task_try_id))
                         else:
-                            raise RuntimeError("Unexpected message type {} received on priority queue".format(msg_type))
+                            raise RuntimeError(f"Unexpected message type {msg_type} received on priority queue")
 
                     logger.debug("Updating and inserting TASK_INFO to all tables")
                     logger.debug("Updating {} TASK_INFO into workflow table".format(len(task_info_update_messages)))

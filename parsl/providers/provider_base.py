@@ -46,10 +46,8 @@ class JobStatus(object):
         return self.state.status_name
 
     def __repr__(self):
-        if self.message is not None:
-            return "{} ({})".format(self.state, self.message)
-        else:
-            return "{}".format(self.state)
+        return (f"{self.state}"
+                f"{'' if self.message is None else f' ({self.message})'}")
 
     @property
     def stdout(self):

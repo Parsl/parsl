@@ -244,7 +244,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
                                                   self.vm_reference)
 
         # Uniqueness strategy from AWS provider
-        job_name = "{0}-parsl-azure".format(str(time.time()).replace(".", ""))
+        job_name = f"{str(time.time()).replace('.', '')}-parsl-azure"
 
         async_vm_creation = self.compute_client.\
             virtual_machines.create_or_update(
@@ -397,16 +397,15 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         try:
             logger.info('Creating (or updating) Subnet')
             async_subnet_creation = self.network_client.subnets.create_or_update(
-                self.group_name, self.vnet_name, "{}.subnet".format(
-                    self.group_name), {'address_prefix': '10.0.0.0/20'})
+                self.group_name, self.vnet_name, f"{self.group_name}.subnet",
+                {'address_prefix': '10.0.0.0/20'})
             subnet_info = async_subnet_creation.result()
 
             self.resources["subnets"][subnet_info.id] = subnet_info
 
         except CloudError as e:
             if "InUse" in str(e):
-                subnet_info = self.network_client.subnets.get(self.group_name, self.vnet_name, "{}.subnet".format(
-                        self.group_name))
+                subnet_info = self.network_client.subnets.get(self.group_name, self.vnet_name, f"{self.group_name}.subnet")
                 self.resources["subnets"][subnet_info.id] = subnet_info
                 logger.info('Found Existing Subnet. Proceeding.')
             else:
@@ -416,12 +415,12 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         async_nic_creation = self.network_client.network_interfaces.\
             create_or_update(
                 self.group_name,
-                "{}.{}.nic".format(self.group_name, time.time()), {
+                f"{self.group_name}.{time.time()}.nic", {
                     'location':
                     self.location,
                     'ip_configurations': [{
                         'name':
-                        "{}.ip.config".format(self.group_name),
+                        f"{self.group_name}.ip.config",
                         'subnet': {
                             'id': subnet_info.id
                         }
@@ -443,7 +442,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         return {
             'location': self.region,
             'os_profile': {
-                'computer_name': "{}.{}".format(self.vnet_name, time.time()),
+                'computer_name': f"{self.vnet_name}.{time.time()}",
                 'admin_username': self.vm_reference["admin_username"],
                 'admin_password': self.vm_reference["password"]
             },
@@ -470,7 +469,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
 
         Each instance gets one disk"""
         logger.info('Create (empty) managed Data Disk')
-        name = '{}.{}'.format(self.group_name, time.time())
+        name = f'{self.group_name}.{time.time()}'
         async_disk_creation = self.compute_client.disks.create_or_update(
             self.group_name, name, {
                 'location': self.location,

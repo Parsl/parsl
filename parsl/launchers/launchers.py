@@ -57,7 +57,7 @@ class WrappedLauncher(Launcher):
         if nodes_per_block > 1:
             logger.warning('WrappedLauncher ignores the number of nodes per block. '
                            'You may be getting fewer workers than expected')
-        return "{0} {1}".format(self.prepend, command)
+        return f"{self.prepend} {command}"
 
 
 class SingleNodeLauncher(Launcher):
@@ -84,18 +84,18 @@ class SingleNodeLauncher(Launcher):
         fail_on_any_num = int(self.fail_on_any)
         debug_num = int(self.debug)
 
-        x = '''set -e
+        x = f'''set -e
 export CORES=$(getconf _NPROCESSORS_ONLN)
-[[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
+[[ "{debug_num}" == "1" ]] && echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
-FAILONANY={fail_on_any}
+FAILONANY={fail_on_any_num}
 PIDS=""
 
 CMD() {{
 {command}
 }}
 for COUNT in $(seq 1 1 $WORKERCOUNT); do
-    [[ "{debug}" == "1" ]] && echo "Launching worker: $COUNT"
+    [[ "{debug_num}" == "1" ]] && echo "Launching worker: $COUNT"
     CMD $COUNT &
     PIDS="$PIDS $!"
 done
@@ -111,16 +111,13 @@ for PID in $PIDS ; do
     fi
 done
 
-[[ "{debug}" == "1" ]] && echo "All workers done"
+[[ "{debug_num}" == "1" ]] && echo "All workers done"
 if [ "$FAILONANY" == "1" ]; then
     exit $ANYFAILED
 else
     exit $ALLFAILED
 fi
-'''.format(command=command,
-           task_blocks=task_blocks,
-           debug=debug_num,
-           fail_on_any=fail_on_any_num)
+'''
         return x
 
 
@@ -151,9 +148,9 @@ class GnuParallelLauncher(Launcher):
         task_blocks = tasks_per_node * nodes_per_block
         debug_num = int(self.debug)
 
-        x = '''set -e
+        x = f'''set -e
 export CORES=$(getconf _NPROCESSORS_ONLN)
-[[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
+[[ "{debug_num}" == "1" ]] && echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
 
 # Deduplicate the nodefile
@@ -183,11 +180,8 @@ done
 parallel --env _ --joblog "$JOBNAME.sh.parallel.log" \
     --sshloginfile $SSHLOGINFILE --jobs {tasks_per_node} < $PFILE
 
-[[ "{debug}" == "1" ]] && echo "All workers done"
-'''.format(command=command,
-           tasks_per_node=tasks_per_node,
-           task_blocks=task_blocks,
-           debug=debug_num)
+[[ "{debug_num}" == "1" ]] && echo "All workers done"
+'''
         return x
 
 
@@ -215,9 +209,9 @@ class MpiExecLauncher(Launcher):
         task_blocks = tasks_per_node * nodes_per_block
         debug_num = int(self.debug)
 
-        x = '''set -e
+        x = f'''set -e
 export CORES=$(getconf _NPROCESSORS_ONLN)
-[[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
+[[ "{debug_num}" == "1" ]] && echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
 
 # Deduplicate the nodefile
@@ -235,10 +229,8 @@ chmod u+x cmd_$JOBNAME.sh
 
 mpiexec --bind-to none -n $WORKERCOUNT --hostfile $HOSTFILE /usr/bin/sh cmd_$JOBNAME.sh
 
-[[ "{debug}" == "1" ]] && echo "All workers done"
-'''.format(command=command,
-           task_blocks=task_blocks,
-           debug=debug_num)
+[[ "{debug_num}" == "1" ]] && echo "All workers done"
+'''
         return x
 
 
@@ -267,9 +259,9 @@ class MpiRunLauncher(Launcher):
         task_blocks = tasks_per_node * nodes_per_block
         debug_num = int(self.debug)
 
-        x = '''set -e
+        x = f'''set -e
 export CORES=$(getconf _NPROCESSORS_ONLN)
-[[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
+[[ "{debug_num}" == "1" ]] && echo "Found cores : $CORES"
 WORKERCOUNT={task_blocks}
 
 cat << MPIRUN_EOF > cmd_$JOBNAME.sh
@@ -277,13 +269,10 @@ cat << MPIRUN_EOF > cmd_$JOBNAME.sh
 MPIRUN_EOF
 chmod u+x cmd_$JOBNAME.sh
 
-mpirun -np $WORKERCOUNT {bash_location} cmd_$JOBNAME.sh
+mpirun -np $WORKERCOUNT {self.bash_location} cmd_$JOBNAME.sh
 
-[[ "{debug}" == "1" ]] && echo "All workers done"
-'''.format(command=command,
-           task_blocks=task_blocks,
-           bash_location=self.bash_location,
-           debug=debug_num)
+[[ "{debug_num}" == "1" ]] && echo "All workers done"
+'''
         return x
 
 
@@ -314,12 +303,12 @@ class SrunLauncher(Launcher):
         task_blocks = tasks_per_node * nodes_per_block
         debug_num = int(self.debug)
 
-        x = '''set -e
+        x = f'''set -e
 export CORES=$SLURM_CPUS_ON_NODE
 export NODES=$SLURM_JOB_NUM_NODES
 
-[[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
-[[ "{debug}" == "1" ]] && echo "Found nodes : $NODES"
+[[ "{debug_num}" == "1" ]] && echo "Found cores : $CORES"
+[[ "{debug_num}" == "1" ]] && echo "Found nodes : $NODES"
 WORKERCOUNT={task_blocks}
 
 cat << SLURM_EOF > cmd_$SLURM_JOB_NAME.sh
@@ -327,13 +316,10 @@ cat << SLURM_EOF > cmd_$SLURM_JOB_NAME.sh
 SLURM_EOF
 chmod a+x cmd_$SLURM_JOB_NAME.sh
 
-srun --ntasks {task_blocks} -l {overrides} bash cmd_$SLURM_JOB_NAME.sh
+srun --ntasks {task_blocks} -l {self.overrides} bash cmd_$SLURM_JOB_NAME.sh
 
-[[ "{debug}" == "1" ]] && echo "Done"
-'''.format(command=command,
-           task_blocks=task_blocks,
-           overrides=self.overrides,
-           debug=debug_num)
+[[ "{debug_num}" == "1" ]] && echo "Done"
+'''
         return x
 
 
@@ -366,12 +352,12 @@ class SrunMPILauncher(Launcher):
         task_blocks = tasks_per_node * nodes_per_block
         debug_num = int(self.debug)
 
-        x = '''set -e
+        x = f'''set -e
 export CORES=$SLURM_CPUS_ON_NODE
 export NODES=$SLURM_JOB_NUM_NODES
 
-[[ "{debug}" == "1" ]] && echo "Found cores : $CORES"
-[[ "{debug}" == "1" ]] && echo "Found nodes : $NODES"
+[[ "{debug_num}" == "1" ]] && echo "Found cores : $CORES"
+[[ "{debug_num}" == "1" ]] && echo "Found nodes : $NODES"
 WORKERCOUNT={task_blocks}
 
 cat << SLURM_EOF > cmd_$SLURM_JOB_NAME.sh
@@ -384,31 +370,28 @@ TASKBLOCKS={task_blocks}
 # If there are more taskblocks to be launched than nodes use
 if (( "$TASKBLOCKS" > "$NODES" ))
 then
-    [[ "{debug}" == "1" ]] && echo "TaskBlocks:$TASKBLOCKS > Nodes:$NODES"
+    [[ "{debug_num}" == "1" ]] && echo "TaskBlocks:$TASKBLOCKS > Nodes:$NODES"
     CORES_PER_BLOCK=$(($NODES * $CORES / $TASKBLOCKS))
     for blk in $(seq 1 1 $TASKBLOCKS):
     do
-        srun --ntasks $CORES_PER_BLOCK -l {overrides} bash cmd_$SLURM_JOB_NAME.sh &
+        srun --ntasks $CORES_PER_BLOCK -l {self.overrides} bash cmd_$SLURM_JOB_NAME.sh &
     done
     wait
 else
     # A Task block could be integer multiples of Nodes
-    [[ "{debug}" == "1" ]] && echo "TaskBlocks:$TASKBLOCKS <= Nodes:$NODES"
+    [[ "{debug_num}" == "1" ]] && echo "TaskBlocks:$TASKBLOCKS <= Nodes:$NODES"
     NODES_PER_BLOCK=$(( $NODES / $TASKBLOCKS ))
     for blk in $(seq 1 1 $TASKBLOCKS):
     do
-        srun --exclusive --nodes $NODES_PER_BLOCK -l {overrides} bash cmd_$SLURM_JOB_NAME.sh &
+        srun --exclusive --nodes $NODES_PER_BLOCK -l {self.overrides} bash cmd_$SLURM_JOB_NAME.sh &
     done
     wait
 
 fi
 
 
-[[ "{debug}" == "1" ]] && echo "Done"
-'''.format(command=command,
-           task_blocks=task_blocks,
-           overrides=self.overrides,
-           debug=debug_num)
+[[ "{debug_num}" == "1" ]] && echo "Done"
+'''
         return x
 
 
@@ -440,7 +423,7 @@ class AprunLauncher(Launcher):
         tasks_per_block = tasks_per_node * nodes_per_block
         debug_num = int(self.debug)
 
-        x = '''set -e
+        x = f'''set -e
 WORKERCOUNT={tasks_per_block}
 
 cat << APRUN_EOF > cmd_$JOBNAME.sh
@@ -448,15 +431,11 @@ cat << APRUN_EOF > cmd_$JOBNAME.sh
 APRUN_EOF
 chmod a+x cmd_$JOBNAME.sh
 
-aprun -n {tasks_per_block} -N {tasks_per_node} {overrides} /bin/bash cmd_$JOBNAME.sh &
+aprun -n {tasks_per_block} -N {tasks_per_node} {self.overrides} /bin/bash cmd_$JOBNAME.sh &
 wait
 
-[[ "{debug}" == "1" ]] && echo "Done"
-'''.format(command=command,
-           tasks_per_block=tasks_per_block,
-           tasks_per_node=tasks_per_node,
-           overrides=self.overrides,
-           debug=debug_num)
+[[ "{debug_num}" == "1" ]] && echo "Done"
+'''
         return x
 
 
@@ -488,7 +467,7 @@ class JsrunLauncher(Launcher):
         tasks_per_block = tasks_per_node * nodes_per_block
         debug_num = int(self.debug)
 
-        x = '''set -e
+        x = f'''set -e
 WORKERCOUNT={tasks_per_block}
 
 cat << JSRUN_EOF > cmd_$JOBNAME.sh
@@ -496,13 +475,9 @@ cat << JSRUN_EOF > cmd_$JOBNAME.sh
 JSRUN_EOF
 chmod a+x cmd_$JOBNAME.sh
 
-jsrun -n {tasks_per_block} -r {tasks_per_node} {overrides} /bin/bash cmd_$JOBNAME.sh &
+jsrun -n {tasks_per_block} -r {tasks_per_node} {self.overrides} /bin/bash cmd_$JOBNAME.sh &
 wait
 
-[[ "{debug}" == "1" ]] && echo "Done"
-'''.format(command=command,
-           tasks_per_block=tasks_per_block,
-           tasks_per_node=tasks_per_node,
-           overrides=self.overrides,
-           debug=debug_num)
+[[ "{debug_num}" == "1" ]] && echo "Done"
+'''
         return x

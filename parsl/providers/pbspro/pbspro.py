@@ -106,9 +106,9 @@ class PBSProProvider(TorqueProvider):
             Identifier for the job
         """
 
-        job_name = "{0}.{1}".format(job_name, time.time())
+        job_name = f"{job_name}.{time.time()}"
 
-        script_path = os.path.abspath("{0}/{1}.submit".format(self.script_dir, job_name))
+        script_path = os.path.abspath(f"{self.script_dir}/{job_name}.submit")
 
         logger.debug("Requesting {} nodes_per_block, {} tasks_per_node".format(
             self.nodes_per_block, tasks_per_node)
@@ -133,13 +133,10 @@ class PBSProProvider(TorqueProvider):
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        submit_options = ''
-        if self.queue is not None:
-            submit_options = '{0} -q {1}'.format(submit_options, self.queue)
-        if self.account is not None:
-            submit_options = '{0} -A {1}'.format(submit_options, self.account)
+        sub_opt = (f"{'' if self.queue is None else f' -q {self.queue}'}"
+                   f"{'' if self.account is None else f' -A {self.account}'}")  # check this one
 
-        launch_cmd = "qsub {0} {1}".format(submit_options, channel_script_path)
+        launch_cmd = f"qsub {sub_opt} {channel_script_path}"
         retcode, stdout, stderr = self.execute_wait(launch_cmd)
 
         job_id = None
@@ -149,9 +146,10 @@ class PBSProProvider(TorqueProvider):
                     job_id = line.strip()
                     self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
-            message = "Command '{}' failed with return code {}".format(launch_cmd, retcode)
+            message = (f"Command '{launch_cmd}' failed "
+                       f"with return code {retcode}")
             if (stdout is not None) and (stderr is not None):
-                message += "\nstderr:{}\nstdout{}".format(stderr.strip(), stdout.strip())
+                message += f"\nstderr:{stderr.strip()}\nstdout{stdout.strip()}"
             logger.error(message)
 
         return job_id

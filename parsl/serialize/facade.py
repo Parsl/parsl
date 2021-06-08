@@ -105,7 +105,9 @@ class ParslSerializer(object):
             raise last_exception
 
         if len(serialized) > buffer_threshold:
-            logger.warning(f"Serialized object exceeds buffer threshold of {buffer_threshold} bytes, this could cause overflows")
+            logger.warning("Serialized object exceeds buffer threshold of {} "
+                           "bytes, this could cause "
+                           "overflows".format(buffer_threshold))
         return serialized
 
     def deserialize(self, payload):
@@ -122,7 +124,9 @@ class ParslSerializer(object):
         elif header in self.methods_for_data:
             result = self.methods_for_data[header].deserialize(payload)
         else:
-            raise TypeError("Invalid header: {} in data payload. Buffer is either corrupt or not created by ParslSerializer".format(header))
+            raise TypeError(f"Invalid header: {header} in data payload. Buffer "
+                            f"is either corrupt or not created by "
+                            f"ParslSerializer")
 
         return result
 
@@ -168,6 +172,7 @@ class ParslSerializer(object):
             deserialized = self.deserialize(current)
             unpacked.extend([deserialized])
 
-        assert len(unpacked) == 3, "Unpack expects 3 buffers, got {}".format(len(unpacked))
+        assert len(unpacked) == 3, (f"Unpack expects 3 buffers, "
+                                    f"got {len(unpacked)}")
 
         return unpacked

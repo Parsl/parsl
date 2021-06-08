@@ -15,9 +15,8 @@ class ChannelRequired(ExecutionProviderException):
         self.reason = reason
 
     def __repr__(self):
-        return "Unable to Initialize provider.Provider:{0}, Reason:{1}".format(
-            self.provider, self.reason
-        )
+        return (f"Unable to Initialize provider.Provider:{self.provider}, "
+                f"Reason:{self.reason}")
 
 
 class ScaleOutFailed(ExecutionProviderException):
@@ -29,7 +28,7 @@ class ScaleOutFailed(ExecutionProviderException):
         self.reason = reason
 
     def __str__(self):
-        return "Unable to scale out {} provider: {}".format(self.provider, self.reason)
+        return f"Unable to scale out {self.provider} provider: {self.reason}"
 
 
 class SchedulerMissingArgs(ExecutionProviderException):
@@ -41,7 +40,8 @@ class SchedulerMissingArgs(ExecutionProviderException):
         self.sitename = sitename
 
     def __repr__(self):
-        return "SchedulerMissingArgs: Pool:{0} Arg:{1}".format(self.sitename, self.missing_keywords)
+        return (f"SchedulerMissingArgs: Pool:{self.sitename} "
+                f"Arg:{self.missing_keywords}")
 
 
 class ScriptPathError(ExecutionProviderException):
@@ -53,7 +53,8 @@ class ScriptPathError(ExecutionProviderException):
         self.reason = reason
 
     def __repr__(self):
-        return "Unable to write submit script:{0} Reason:{1}".format(self.script_path, self.reason)
+        return (f"Unable to write submit script:{self.script_path} "
+                f"Reason:{self.reason}")
 
 
 class SubmitException(ExecutionProviderException):
@@ -68,7 +69,5 @@ class SubmitException(ExecutionProviderException):
 
     def __repr__(self):
         # TODO: make this more user-friendly
-        return "Cannot launch task {0}: {1}; stdout={2}, stderr={3}".format(self.task_name,
-                                                                            self.message,
-                                                                            self.stdout,
-                                                                            self.stderr)
+        return (f"Cannot launch task {self.task_name}: {self.message}; "
+                f"stdout={self.stdout}, stderr={self.stderr}")

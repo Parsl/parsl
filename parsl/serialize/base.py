@@ -43,7 +43,8 @@ class SerializerBase(object):
         """
         s_id, payload = payload.split(b'\n', 1)
         if (s_id + b'\n') != self.identifier:
-            raise TypeError("Buffer does not start with parsl.serialize identifier:{}".format(self.identifier))
+            raise TypeError(f"Buffer does not start with parsl.serialize "
+                            f"identifier:{self.identifier}")
         return payload
 
     def enable_caching(self, maxsize=128):

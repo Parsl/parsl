@@ -134,10 +134,10 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         '''
 
         # Set job name
-        job_name = "{0}.{1}".format(job_name, time.time())
+        job_name = f"{job_name}.{time.time()}"
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
+        script_path = f"{self.script_dir}/{job_name}.submit"
         script_path = os.path.abspath(script_path)
 
         job_config = self.get_configs(command, tasks_per_node)
@@ -146,10 +146,8 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         self._write_submit_script(template_string, script_path, job_name, job_config)
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
-        if self.queue is not None:
-            cmd = "qsub -q {0} -terse {1}".format(self.queue, channel_script_path)
-        else:
-            cmd = "qsub -terse {0}".format(channel_script_path)
+        cmd = f"qsub " if self.queue is None else f"qsub -q {self.queue} "
+        cmd += f"-terse {channel_script_path}"
         retcode, stdout, stderr = self.execute_wait(cmd)
 
         if retcode == 0:
@@ -213,7 +211,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        cmd = "qdel {}".format(job_id_list)
+        cmd = f"qdel {job_id_list}"
         retcode, stdout, stderr = self.execute_wait(cmd)
 
         rets = None

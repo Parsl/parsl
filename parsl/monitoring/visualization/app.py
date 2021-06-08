@@ -8,7 +8,7 @@ def cli_run():
     """ Instantiates the Monitoring viz server
     """
     parser = argparse.ArgumentParser(description='Parsl visualization tool')
-    parser.add_argument('db_path', type=str, default="sqlite:///{cwd}/monitoring.db".format(cwd=os.getcwd()),
+    parser.add_argument('db_path', type=str, default=f"sqlite:///{os.getcwd()}/monitoring.db",
                         nargs="?", help='Database path in the format sqlite:///<absolute_path_to_db>')
     parser.add_argument('-p', '--port', type=int, default=8080,
                         help='Port at which the monitoring Viz Server is hosted. Default: 8080')

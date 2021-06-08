@@ -117,7 +117,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
         jobs_missing = list(self.resources.keys())
 
-        retcode, stdout, stderr = self.execute_wait("qstat {0}".format(job_id_list))
+        retcode, stdout, stderr = self.execute_wait(f"qstat {job_id_list}")
         for line in stdout.split('\n'):
             parts = line.split()
             if not parts or parts[0].upper().startswith('JOB') or parts[0].startswith('---'):
@@ -163,10 +163,10 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         '''
 
         # Set job name
-        job_name = "parsl.{0}.{1}".format(job_name, time.time())
+        job_name = f"parsl.{job_name}.{time.time()}"
 
         # Set script path
-        script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
+        script_path = f"{self.script_dir}/{job_name}.submit"
         script_path = os.path.abspath(script_path)
 
         logger.debug("Requesting nodes_per_block:%s tasks_per_node:%s", self.nodes_per_block,
@@ -194,13 +194,10 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        submit_options = ''
-        if self.queue is not None:
-            submit_options = '{0} -q {1}'.format(submit_options, self.queue)
-        if self.account is not None:
-            submit_options = '{0} -A {1}'.format(submit_options, self.account)
+        sub_opt = (f"{'' if self.queue is None else f' -q {self.queue}'}"
+                   f"{'' if self.account is None else f' -A {self.account}'}")  # check this one
 
-        launch_cmd = "qsub {0} {1}".format(submit_options, channel_script_path)
+        launch_cmd = f"qsub {sub_opt} {channel_script_path}"
         retcode, stdout, stderr = self.execute_wait(launch_cmd)
 
         job_id = None
@@ -210,9 +207,10 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                     job_id = line.strip()
                     self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
-            message = "Command '{}' failed with return code {}".format(launch_cmd, retcode)
+            message = (f"Command '{launch_cmd}' failed "
+                       f"with return code {retcode}")
             if (stdout is not None) and (stderr is not None):
-                message += "\nstderr:{}\nstdout{}".format(stderr.strip(), stdout.strip())
+                message += f"\nstderr:{stderr.strip()}\nstdout{stdout.strip()}"
             logger.error(message)
 
         return job_id
@@ -228,7 +226,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = self.execute_wait("qdel {0}".format(job_id_list))
+        retcode, stdout, stderr = self.execute_wait(f"qdel {job_id_list}")
         rets = None
         if retcode == 0:
             for jid in job_ids:

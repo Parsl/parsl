@@ -319,11 +319,11 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         for num, zone in enumerate(availability_zones['AvailabilityZones']):
             if zone['State'] == "available":
                 zone_name = zone['ZoneName']
-                tag_spec = self.create_name_tag_spec('subnet', '{0}.{1}'.format(vpc_name, zone_name))
+                tag_spec = self.create_name_tag_spec('subnet', f'{vpc_name}.{zone_name}')
 
                 # Create a large subnet (4000 max nodes)
                 subnet = vpc.create_subnet(
-                    CidrBlock='10.0.{}.0/20'.format(16 * num),
+                    CidrBlock=f'10.0.{16 * num}.0/20',
                     AvailabilityZone=zone_name,
                     TagSpecifications=tag_spec,
                 )
@@ -343,7 +343,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             # this can only be the default security group for this VPC,
             # since no other security groups have been created yet
             security_group.create_tags(
-                Tags=[{'Key': 'Name', 'Value': '{0}.default'.format(vpc_name)}],
+                Tags=[{'Key': 'Name', 'Value': f'{vpc_name}.default'}],
             )
 
         self.security_group(vpc, vpc_name)
@@ -707,16 +707,16 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     def show_summary(self):
         """Print human readable summary of current AWS state to log and to console."""
         self.get_instance_state()
-        status_string = "EC2 Summary:\n\tVPC IDs: {}\n\tSubnet IDs: \
-{}\n\tSecurity Group ID: {}\n\tRunning Instance IDs: {}\n".format(
-            self.vpc_id, self.sn_ids, self.sg_id, self.instances
-        )
-        status_string += "\tInstance States:\n\t\t"
+        status_string = (f"EC2 Summary:\n"
+                         f"\tVPC IDs: {self.vpc_id}\n"
+                         f"\tSubnet IDs: {self.sn_ids}\n"
+                         f"\tSecurity Group ID: {self.sg_id}\n"
+                         f"\tRunning Instance IDs: {self.instances}\n"
+                         f"\tInstance States:\n\t\t")
         self.get_instance_state()
         for state in self.instance_states.keys():
-            status_string += "Instance ID: {}  State: {}\n\t\t".format(
-                state, self.instance_states[state]
-            )
+            status_string += (f"Instance ID: {state}  "
+                              f"State: {self.instance_states[state]}\n\t\t")
         status_string += "\n"
         logger.info(status_string)
         return status_string
@@ -759,7 +759,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         str
             An ID of the form 'parsl.aws.123456.789' for giving resources unique identifiers.
         """
-        return "parsl.aws.{0}".format(time.time())
+        return f"parsl.aws.{time.time()}"
 
     def create_name_tag_spec(self, resource_type, name):
         """Create a new tag specification for a resource name.

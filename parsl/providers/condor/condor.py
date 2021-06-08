@@ -119,7 +119,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
             # To escape literal quote marks, double them
             # See: http://research.cs.wisc.edu/htcondor/manual/v8.6/condor_submit.html
             try:
-                self.environment[key] = "'{}'".format(value.replace("'", '"').replace('"', '""'))
+                self.environment[key] = f"""'{value.replace("'", '"').replace('"', '""')}'"""
             except AttributeError:
                 pass
 
@@ -133,7 +133,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         """Update the resource dictionary with job statuses."""
 
         job_id_list = ' '.join(self.resources.keys())
-        cmd = "condor_q {0} -af:jr JobStatus".format(job_id_list)
+        cmd = f"condor_q {job_id_list} -af:jr JobStatus"
         retcode, stdout, stderr = self.execute_wait(cmd)
         """
         Example output:
@@ -201,35 +201,34 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         logger.debug("Attempting to launch")
 
-        job_name = "parsl.{0}.{1}".format(job_name, time.time())
+        job_name = f"parsl.{job_name}.{time.time()}"
 
         scheduler_options = self.scheduler_options
         worker_init = self.worker_init
         if self.mem_per_slot is not None:
-            scheduler_options += 'RequestMemory = {}\n'.format(self.mem_per_slot * 1024)
-            worker_init += 'export PARSL_MEMORY_GB={}\n'.format(self.mem_per_slot)
+            scheduler_options += f'RequestMemory = {self.mem_per_slot * 1024}\n'
+            worker_init += f'export PARSL_MEMORY_GB={self.mem_per_slot}\n'
         if self.cores_per_slot is not None:
-            scheduler_options += 'RequestCpus = {}\n'.format(self.cores_per_slot)
-            worker_init += 'export PARSL_CORES={}\n'.format(self.cores_per_slot)
+            scheduler_options += f'RequestCpus = {self.cores_per_slot}\n'
+            worker_init += f'export PARSL_CORES={self.cores_per_slot}\n'
 
-        script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
+        script_path = f"{self.script_dir}/{job_name}.submit"
         script_path = os.path.abspath(script_path)
-        userscript_path = "{0}/{1}.script".format(self.script_dir, job_name)
+        userscript_path = f"{self.script_dir}/{job_name}.script"
         userscript_path = os.path.abspath(userscript_path)
 
-        self.environment["JOBNAME"] = "'{}'".format(job_name)
+        self.environment["JOBNAME"] = f"'{job_name}'"
 
-        job_config = {}
-        job_config["job_name"] = job_name
-        job_config["submit_script_dir"] = self.channel.script_dir
-        job_config["project"] = self.project
-        job_config["nodes"] = self.nodes_per_block
-        job_config["scheduler_options"] = scheduler_options
-        job_config["worker_init"] = worker_init
-        job_config["user_script"] = command
-        job_config["tasks_per_node"] = tasks_per_node
-        job_config["requirements"] = self.requirements
-        job_config["environment"] = ' '.join(['{}={}'.format(key, value) for key, value in self.environment.items()])
+        job_config = {"job_name": job_name,
+                      "submit_script_dir": self.channel.script_dir,
+                      "project": self.project, "nodes": self.nodes_per_block,
+                      "scheduler_options": scheduler_options,
+                      "worker_init": worker_init, "user_script": command,
+                      "tasks_per_node": tasks_per_node,
+                      "requirements": self.requirements,
+                      "environment": ' '.join(
+                          [f'{key}={value}' for key, value in
+                           self.environment.items()])}
 
         # Move the user script
         # This is where the command should be wrapped by the launchers.
@@ -249,7 +248,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         self._write_submit_script(template_string, script_path, job_name, job_config)
         channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        cmd = "condor_submit {0}".format(channel_script_path)
+        cmd = f"condor_submit {channel_script_path}"
         try:
             retcode, stdout, stderr = self.execute_wait(cmd)
         except Exception as e:
@@ -272,9 +271,9 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
             self._add_resource(job_id)
             return job_id[0]
         else:
-            message = "Command '{}' failed with return code {}".format(cmd, retcode)
-            message += " and standard output '{}'".format(stdout.strip()) if stdout is not None else ''
-            message += " and standard error '{}'".format(stderr.strip()) if stderr is not None else ''
+            message = f"Command '{cmd}' failed with return code {retcode}"
+            message += f" and standard output '{stdout.strip()}'" if stdout is not None else ''
+            message += f" and standard error '{stderr.strip()}'" if stderr is not None else ''
             raise ScaleOutFailed(self.label, message)
 
     def cancel(self, job_ids):
@@ -292,7 +291,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         """
 
         job_id_list = ' '.join(job_ids)
-        cmd = "condor_rm {0}; condor_rm -forcex {0}".format(job_id_list)
+        cmd = f"condor_rm {job_id_list}; condor_rm -forcex {job_id_list}"
         logger.debug("Attempting removal of jobs : {0}".format(cmd))
         retcode, stdout, stderr = self.execute_wait(cmd)
         rets = None

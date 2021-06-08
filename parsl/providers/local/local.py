@@ -105,15 +105,14 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                     ec = int(str_ec)
                     stdout_path = self._job_file_path(script_path, '.out')
                     stderr_path = self._job_file_path(script_path, '.err')
-                    if ec == 0:
-                        state = JobState.COMPLETED
-                    else:
-                        state = JobState.FAILED
+                    state = JobState.COMPLETED if ec == 0 else JobState.FAILED
                     status = JobStatus(state, exit_code=ec,
-                                       stdout_path=stdout_path, stderr_path=stderr_path)
-                except Exception:
+                                       stdout_path=stdout_path,
+                                       stderr_path=stderr_path)
+                except Exception as e:
                     status = JobStatus(JobState.FAILED,
-                                       'Cannot parse exit code: {}'.format(str_ec))
+                                       f'Cannot parse exit code: {str_ec}, '
+                                       f'raise {e}')
 
             job_dict['status'] = status
 
@@ -121,8 +120,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
     def _is_alive(self, job_dict):
         retcode, stdout, stderr = self.channel.execute_wait(
-            'ps -p {} > /dev/null 2> /dev/null; echo "STATUS:$?" '.format(
-                job_dict['remote_pid']), self.cmd_timeout)
+            f"ps -p {job_dict['remote_pid']} > /dev/null 2> /dev/null; echo 'STATUS:$?' ", self.cmd_timeout)
         for line in stdout.split('\n'):
             if line.startswith("STATUS:"):
                 status = line.split("STATUS:")[1].strip()
@@ -132,7 +130,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                     return False
 
     def _job_file_path(self, script_path: str, suffix: str) -> str:
-        path = '{0}{1}'.format(script_path, suffix)
+        path = f'{script_path}{suffix}'
         if self._should_move_files():
             path = self.channel.pull_file(path, self.script_dir)
         return path
@@ -200,14 +198,15 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         '''
 
-        job_name = "{0}.{1}".format(job_name, time.time())
+        job_name = f"{job_name}.{time.time()}"
 
         # Set script path
-        script_path = "{0}/{1}.sh".format(self.script_dir, job_name)
+        script_path = f"{self.script_dir}/{job_name}.sh"
         script_path = os.path.abspath(script_path)
 
-        wrap_command = self.worker_init + f'\nexport JOBNAME=${job_name}\n' + self.launcher(command, tasks_per_node, self.nodes_per_block)
-
+        wrap_command = self.worker_init + f'\nexport JOBNAME=${job_name}\n'
+        wrap_command += self.launcher(command, tasks_per_node,
+                                      self.nodes_per_block)
         self._write_submit_script(wrap_command, script_path)
 
         job_id = None
@@ -232,11 +231,15 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         # We need to do the >/dev/null 2>&1 so that bash closes stdout, otherwise
         # channel.execute_wait hangs reading the process stdout until all the
         # background commands complete.
-        cmd = '/bin/bash -c \'echo - >{0}.ec && {{ {{ bash {0} 1>{0}.out 2>{0}.err ; ' \
-              'echo $? > {0}.ec ; }} >/dev/null 2>&1 & echo "PID:$!" ; }}\''.format(script_path)
-        retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
+        cmd = (f'/bin/bash -c \'echo - >{script_path}.ec &&'
+               f' {{ {{ bash {script_path} 1>{script_path}.'
+               f'out 2>{script_path}.err ; echo $? > {script_path}.ec ; }} '
+               f'>/dev/null 2>&1 & echo "PID:$!" ; }}\'')
+        retcode, stdout, stderr = self.channel.execute_wait(cmd,
+                                                            self.cmd_timeout)
         if retcode != 0:
-            raise SubmitException(job_name, "Launch command exited with code {0}".format(retcode),
+            raise SubmitException(job_name,
+                                  f"Launch command exited with code {retcode}",
                                   stdout, stderr)
         for line in stdout.split('\n'):
             if line.startswith("PID:"):
@@ -266,7 +269,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
             job_dict = self.resources[job]
             job_dict['cancelled'] = True
             logger.debug("Terminating job/proc_id: {0}".format(job))
-            cmd = "kill -- -$(ps -o pgid= {} | grep -o '[0-9]*')".format(job_dict['remote_pid'])
+            cmd = f"kill -- -$(ps -o pgid= {job_dict['remote_pid']} | grep -o '[0-9]*')"
             retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
             if retcode != 0:
                 logger.warning("Failed to kill PID: {} and child processes on {}".format(job_dict['remote_pid'],

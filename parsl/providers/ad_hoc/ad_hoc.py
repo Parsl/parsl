@@ -155,10 +155,10 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
             logger.warning("All Channels in Ad-Hoc provider are in use")
             return None
 
-        job_name = "{0}.{1}".format(job_name, time.time())
+        job_name = f"{job_name}.{time.time()}"
 
         # Set script path
-        script_path = "{0}/{1}.sh".format(self.script_dir, job_name)
+        script_path = f"{self.script_dir}/{job_name}.sh"
         script_path = os.path.abspath(script_path)
 
         wrap_command = self.worker_init + '\n' + self.launcher(command, tasks_per_node, self.nodes_per_block)
@@ -174,7 +174,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
             script_path = channel.push_file(script_path, channel.script_dir)
 
         # Bash would return until the streams are closed. So we redirect to a outs file
-        final_cmd = 'bash {0} > {0}.out 2>&1 & \n echo "PID:$!" '.format(script_path)
+        final_cmd = f'bash {script_path} > {script_path}.out 2>&1 & \n echo "PID:$!" '
         retcode, stdout, stderr = channel.execute_wait(final_cmd, self.cmd_timeout)
         for line in stdout.split('\n'):
             if line.startswith("PID:"):
@@ -205,8 +205,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         """
         for job_id in job_ids:
             channel = self.resources[job_id]['channel']
-            status_command = "ps --pid {} | grep {}".format(self.resources[job_id]['job_id'],
-                                                            self.resources[job_id]['cmd'].split()[0])
+            status_command = f"ps --pid {self.resources[job_id]['job_id']} | grep {self.resources[job_id]['cmd'].split()[0]}"
             retcode, stdout, stderr = channel.execute_wait(status_command)
             if retcode != 0 and self.resources[job_id]['status'].state == JobState.RUNNING:
                 self.resources[job_id]['status'] = JobStatus(JobState.FAILED)
@@ -229,7 +228,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         rets = []
         for job_id in job_ids:
             channel = self.resources[job_id]['channel']
-            cmd = "kill -TERM -$(ps -o pgid= {} | grep -o '[0-9]*')".format(self.resources[job_id]['job_id'])
+            cmd = f"kill -TERM -$(ps -o pgid= {self.resources[job_id]['job_id']} | grep -o '[0-9]*')"
             retcode, stdout, stderr = channel.execute_wait(cmd)
             if retcode == 0:
                 rets.append(True)

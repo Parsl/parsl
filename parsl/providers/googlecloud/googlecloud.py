@@ -165,7 +165,7 @@ class GoogleCloudProvider():
         self.cancel([i for i in list(self.resources)])
 
     def create_instance(self, command=""):
-        name = "parslauto{}".format(self.num_instances)
+        name = f"parslauto{self.num_instances}"
         self.num_instances += 1
         compute = self.client
         project = self.project_id
@@ -174,7 +174,7 @@ class GoogleCloudProvider():
         source_disk_image = image_response['selfLink']
 
         # Configure the machine
-        machine_type = "zones/{}/machineTypes/{}".format(self.zone, self.instance_type)
+        machine_type = f"zones/{self.zone}/machineTypes/{self.instance_type}"
         startup_script = command
 
         config = {

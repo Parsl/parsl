@@ -124,9 +124,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         if exclusive:
             self.scheduler_options += "#SBATCH --exclusive\n"
         if partition:
-            self.scheduler_options += "#SBATCH --partition={}\n".format(partition)
+            self.scheduler_options += f"#SBATCH --partition={partition}\n"
         if account:
-            self.scheduler_options += "#SBATCH --account={}\n".format(account)
+            self.scheduler_options += f"#SBATCH --account={account}\n"
         self.worker_init = worker_init + '\n'
 
     def _status(self):
@@ -139,7 +139,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
               [status...] : Status list of all jobs
         '''
         job_id_list = ','.join(self.resources.keys())
-        cmd = "squeue --job {0}".format(job_id_list)
+        cmd = f"squeue --job {job_id_list}"
         logger.debug("Executing sqeueue")
         retcode, stdout, stderr = self.execute_wait(cmd)
         logger.debug("sqeueue returned")
@@ -185,16 +185,16 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         scheduler_options = self.scheduler_options
         worker_init = self.worker_init
         if self.mem_per_node is not None:
-            scheduler_options += '#SBATCH --mem={}g\n'.format(self.mem_per_node)
-            worker_init += 'export PARSL_MEMORY_GB={}\n'.format(self.mem_per_node)
+            scheduler_options += f'#SBATCH --mem={self.mem_per_node}g\n'
+            worker_init += f'export PARSL_MEMORY_GB={self.mem_per_node}\n'
         if self.cores_per_node is not None:
             cpus_per_task = math.floor(self.cores_per_node / tasks_per_node)
-            scheduler_options += '#SBATCH --cpus-per-task={}'.format(cpus_per_task)
-            worker_init += 'export PARSL_CORES={}\n'.format(cpus_per_task)
+            scheduler_options += f'#SBATCH --cpus-per-task={cpus_per_task}'
+            worker_init += f'export PARSL_CORES={cpus_per_task}\n'
 
-        job_name = "{0}.{1}".format(job_name, time.time())
+        job_name = f"{job_name}.{time.time()}"
 
-        script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
+        script_path = f"{self.channel.script_dir}/{job_name}.submit"
         script_path = os.path.abspath(script_path)
 
         logger.debug("Requesting one block with {} nodes".format(self.nodes_per_block))
@@ -223,7 +223,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             logger.debug("not moving files")
             channel_script_path = script_path
 
-        retcode, stdout, stderr = self.execute_wait("sbatch {0}".format(channel_script_path))
+        retcode, stdout, stderr = self.execute_wait(f"sbatch {channel_script_path}")
 
         job_id = None
         if retcode == 0:
@@ -247,7 +247,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = self.execute_wait("scancel {0}".format(job_id_list))
+        retcode, stdout, stderr = self.execute_wait(f"scancel {job_id_list}")
         rets = None
         if retcode == 0:
             for jid in job_ids:

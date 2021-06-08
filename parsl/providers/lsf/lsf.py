@@ -107,7 +107,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
               [status...] : Status list of all jobs
         '''
         job_id_list = ','.join(self.resources.keys())
-        cmd = "bjobs {0}".format(job_id_list)
+        cmd = f"bjobs {job_id_list}"
 
         retcode, stdout, stderr = super().execute_wait(cmd)
         # Execute_wait failed. Do no update
@@ -147,27 +147,24 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
             If at capacity, returns None; otherwise, a string identifier for the job
         """
 
-        job_name = "{0}.{1}".format(job_name, time.time())
+        job_name = f"{job_name}.{time.time()}"
 
-        script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
+        script_path = f"{self.script_dir}/{job_name}.submit"
         script_path = os.path.abspath(script_path)
 
         logger.debug("Requesting one block with {} nodes".format(self.nodes_per_block))
 
-        job_config = {}
-        job_config["submit_script_dir"] = self.channel.script_dir
-        job_config["nodes"] = self.nodes_per_block
-        job_config["tasks_per_node"] = tasks_per_node
-        job_config["walltime"] = wtime_to_minutes(self.walltime)
-        job_config["scheduler_options"] = self.scheduler_options
-        job_config["worker_init"] = self.worker_init
-        job_config["project"] = self.project
-        job_config["user_script"] = command
+        job_config = {"submit_script_dir": self.channel.script_dir,
+                      "nodes": self.nodes_per_block,
+                      "tasks_per_node": tasks_per_node,
+                      "walltime": wtime_to_minutes(self.walltime),
+                      "scheduler_options": self.scheduler_options,
+                      "worker_init": self.worker_init, "project": self.project,
+                      "user_script": self.launcher(command,
+                                                   tasks_per_node,
+                                                   self.nodes_per_block)}
 
         # Wrap the command
-        job_config["user_script"] = self.launcher(command,
-                                                  tasks_per_node,
-                                                  self.nodes_per_block)
 
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
@@ -179,7 +176,8 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
             logger.debug("not moving files")
             channel_script_path = script_path
 
-        retcode, stdout, stderr = super().execute_wait("bsub {0}".format(channel_script_path))
+        retcode, stdout, stderr = super().execute_wait(f"bsub "
+                                                       f"{channel_script_path}")
 
         job_id = None
         if retcode == 0:
@@ -203,7 +201,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = super().execute_wait("bkill {0}".format(job_id_list))
+        retcode, stdout, stderr = super().execute_wait(f"bkill {job_id_list}")
         rets = None
         if retcode == 0:
             for jid in job_ids:
