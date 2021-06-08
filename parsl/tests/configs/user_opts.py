@@ -44,32 +44,37 @@ user_opts = {
     },
     # 'comet': {
     #     'username': COMET_USERNAME,
-    #     'script_dir': '/home/{}/parsl_scripts'.format(COMET_USERNAME),
+    #     'script_dir': f'/home/{COMET_USERNAME}/parsl_scripts',
     #     'scheduler_options': "",
-    #     'worker_init': 'export PATH:/home/{}/anaconda3/bin/:$PATH; source activate parsl_0.5.0_py3.6;'.format(COMET_USERNAME),
+    #     'worker_init': (f'export '
+    #                     f'PATH:/home/{COMET_USERNAME}/anaconda3/bin/:$PATH; '
+    #                     f'source activate parsl_0.5.0_py3.6;'),
     # },
     # 'midway': {
     #     'username': MIDWAY_USERNAME,
-    #     'script_dir': '/scratch/midway2/{}/parsl_scripts'.format(MIDWAY_USERNAME),
+    #     'script_dir': f'/scratch/midway2/{MIDWAY_USERNAME}/parsl_scripts',
     #     'scheduler_options': "",
-    #     'worker_init': 'cd /scratch/midway2/{}/parsl_scripts; module load Anaconda3/5.1.0; source activate parsl_testing;'.format(MIDWAY_USERNAME),
+    #     'worker_init': (f'cd '
+    #                     f'/scratch/midway2/{MIDWAY_USERNAME}/parsl_scripts; '
+    #                     f'module load Anaconda3/5.1.0; '
+    #                     f'source activate parsl_testing;'),
     # },
     # 'osg': {
     #     'username': OSG_USERNAME,
-    #     'script_dir': '/home/{}/parsl_scripts'.format(OSG_USERNAME),
+    #     'script_dir': f'/home/{OSG_USERNAME}/parsl_scripts',
     #     'scheduler_options': "",
     #     'worker_init' : 'module load python/3.5.2; python3 -m venv parsl_env; source parsl_env/bin/activate; python3 -m pip install parsl==0.5.2'
     # },
     # 'cori': {
     #     'username': CORI_USERNAME,
-    #     'script_dir': "/global/homes/y/{}/parsl_scripts".format(CORI_USERNAME),
+    #     'script_dir': f"/global/homes/y/{CORI_USERNAME}/parsl_scripts",
     #     'scheduler_options': "#SBATCH --constraint=haswell",
     #     "worker_init": """module load python/3.6-anaconda-4.4 ;
     #     source activate parsl_env_3.6"""
     # },
     # 'swan': {
     #     'username': SWAN_USERNAME,
-    #     'script_dir' : "/home/users/{}/parsl_scripts".format(SWAN_USERNAME),
+    #     'script_dir' : f"/home/users/{SWAN_USERNAME}/parsl_scripts",
     #     'scheduler_options': "",
     #     'worker_init': "module load cray-python/3.6.1.1; source parsl_env/bin/activate"
     # },
@@ -77,7 +82,7 @@ user_opts = {
     #     'username': ALCF_USERNAME,
     #     "account": ALCF_ALLOCATION,
     #     'scheduler_options': "",
-    #     "worker_init": "source /home/{}/setup_cooley_env.sh".format(ALCF_USERNAME),
+    #     "worker_init": f"source /home/{ALCF_USERNAME}/setup_cooley_env.sh",
     #     # Once you log onto Cooley, get the ip address of the login machine
     #     # by running >> ip addr show | grep -o 10.236.1.[0-9]*
     #     'public_ip': '10.236.1.193'
@@ -114,7 +119,7 @@ user_opts = {
     #     'username': ALCF_USERNAME,
     #     "account": ALCF_ALLOCATION,
     #     'scheduler_options': "",
-    #     "worker_init": "source /home/{}/setup_theta_env.sh".format(ALCF_USERNAME),
+    #     "worker_init": f"source /home/{ALCF_USERNAME}/setup_theta_env.sh"
     #     # Once you log onto theta, get the ip address of the login machine
     #     # by running >> ip addr show | grep -o 10.236.1.[0-9]*
     #     'public_ip': '10.236.1.193'

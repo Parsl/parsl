@@ -11,9 +11,9 @@ from parsl.tests.configs.local_threads import config
 @bash_app
 def cat(inputs=[], outputs=[], stdout=None, stderr=None):
     infiles = ' '.join([i.filepath for i in inputs])
-    return """echo {i}
-    cat {i} &> {o}
-    """.format(i=infiles, o=outputs[0])
+    return f"""echo {infiles}
+    cat {infiles} &> {outputs[0]}
+    """
 
 
 @pytest.mark.usefixtures('setup_data')
@@ -34,10 +34,10 @@ def test_files():
 @bash_app
 def increment(inputs=[], outputs=[], stdout=None, stderr=None):
     # Place double braces to avoid python complaining about missing keys for {item = $1}
-    return """
-    x=$(cat {i})
-    echo $(($x+1)) > {o}
-    """.format(i=inputs[0], o=outputs[0])
+    return f"""
+    x=$(cat {inputs[0]})
+    echo $(($x+1)) > {outputs[0]}
+    """
 
 
 @pytest.mark.usefixtures('setup_data')
@@ -52,16 +52,16 @@ def test_increment(depth=5):
     prev = File("test0.txt")
     futs = {}
     for i in range(1, depth):
-        print("Launching {0} with {1}".format(i, prev))
+        print(f"Launching {i} with {prev}")
 
-        if os.path.exists('test{0}.txt'.format(i)):
-            os.remove('test{0}.txt'.format(i))
+        if os.path.exists(f'test{i}.txt'):
+            os.remove(f'test{i}.txt')
 
         fu = increment(inputs=[prev],  # Depend on the future from previous call
                        # Name the file to be created here
-                       outputs=[File("test{0}.txt".format(i))],
-                       stdout="incr{0}.out".format(i),
-                       stderr="incr{0}.err".format(i))
+                       outputs=[File(f"test{i}.txt")],
+                       stdout=f"incr{i}.out",
+                       stderr=f"incr{i}.err")
         [prev] = fu.outputs
         futs[i] = prev
         print(prev.filepath)
@@ -70,8 +70,8 @@ def test_increment(depth=5):
         if key > 0:
             fu = futs[key]
             data = open(fu.result().filepath, 'r').read().strip()
-            assert data == str(
-                key), "[TEST] incr failed for key:{0} got:{1}".format(key, data)
+            assert data == str(key), (f"[TEST] incr failed for key:{key} "
+                                      f"got:{data}")
 
 
 if __name__ == '__main__':

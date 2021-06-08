@@ -15,10 +15,12 @@ def test_files():
 
     for test in strings:
         x = File(test['f'])
-        assert x.scheme == test['scheme'], "[TEST] Scheme error. Expected {0} Got {1}".format(
-            test['scheme'], x.scheme)
-        assert x.filepath == test['path'], "[TEST] Path error. Expected {0} Got {1}".format(
-            test['path'], x.path)
+        assert x.scheme == test['scheme'], (f"[TEST] Scheme error. "
+                                            f"Expected {test['scheme']} "
+                                            f"Got { x.scheme}")
+        assert x.filepath == test['path'], (f"[TEST] Path error. "
+                                            f"Expected {test['path']} "
+                                            f"Got {x.path}")
 
 
 @pytest.mark.local

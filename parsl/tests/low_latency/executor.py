@@ -65,7 +65,7 @@ def dealer_executor(f_all, args_all, kwargs_all, num_tasks, return_dict,
 
     context = zmq.Context()
     dealer = context.socket(zmq.DEALER)
-    dealer.bind("tcp://*:{}".format(port))
+    dealer.bind(f"tcp://*:{port}")
 
     poller = zmq.Poller()
     poller.register(dealer, zmq.POLLIN)
@@ -144,7 +144,7 @@ if __name__ == "__main__":
         ip = address_by_interface("eth0")
         with open(CLIENT_IP_FILE, "w") as fh:
             fh.write(ip)
-        print("Wrote IP address {} to file {}".format(ip, CLIENT_IP_FILE))
+        print(f"Wrote IP address {ip} to file {CLIENT_IP_FILE}")
 
     # Parameters for worker requests
     def f_all():
@@ -180,10 +180,9 @@ if __name__ == "__main__":
     # Print stats
     label = "[DEALER-INTERCHANGE-REP]" if args.interchange else "[DEALER-REP]"
     s = stdev(serialization_times) if len(serialization_times) > 1 else 0
-    print("{} Avg Serialization Time\n"
-          "Mean = {:=10.4f} us, Stdev = {:=10.4f} us"
-          .format(label, mean(serialization_times), s))
+    print(f"{label} Avg Serialization Time\n"
+          f"Mean = {mean(serialization_times):=10.4f} us, "
+          f"Stdev = {s:=10.4f} us")
     s = stdev(execution_times) if len(execution_times) > 1 else 0
-    print("{} Avg Execution Time\n"
-          "Mean = {:=10.4f} us, Stdev = {:=10.4f} us"
-          .format(label, mean(execution_times), s))
+    print(f"{label} Avg Execution Time\n"
+          f"Mean = {mean(execution_times):=10.4f} us, Stdev = {s:=10.4f} us")

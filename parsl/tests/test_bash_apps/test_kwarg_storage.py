@@ -5,8 +5,8 @@ from parsl.app.app import bash_app
 
 @bash_app
 def foo(z=2, stdout=None):
-    return """echo {val}
-    """.format(val=z)
+    return f"""echo {z}
+    """
 
 
 @pytest.mark.issue363
@@ -22,8 +22,8 @@ def test_command_format_1():
     print("app_fu : ", app_fu)
     contents = None
 
-    assert app_fu.result() == 0, "BashApp exited with an error code : {0}".format(
-        app_fu.result())
+    assert app_fu.result() == 0, (f"BashApp exited with an error code: "
+                                  f"{app_fu.result()}")
 
     with open(stdout, 'r') as stdout_f:
         contents = stdout_f.read()
@@ -32,8 +32,8 @@ def test_command_format_1():
     if os.path.exists('stdout_file'):
         os.remove(stdout)
 
-    assert contents == '2\n', 'Output does not match expected string "2", Got: "{0}"'.format(
-        contents)
+    assert contents == '2\n', (f'Output does not match expected string "2", '
+                               f'Got: "{contents}"')
 
 # ===========
 
@@ -45,8 +45,8 @@ def test_command_format_1():
     print("app_fu : ", app_fu)
     contents = None
 
-    assert app_fu.result() == 0, "BashApp exited with an error code : {0}".format(
-        app_fu.result())
+    assert app_fu.result() == 0, (f"BashApp exited with an error code: "
+                                  f"{app_fu.result()}")
 
     with open(stdout, 'r') as stdout_f:
         contents = stdout_f.read()
@@ -55,8 +55,8 @@ def test_command_format_1():
     if os.path.exists('stdout_file'):
         os.remove(stdout)
 
-    assert contents == '3\n', 'Output does not match expected string "3", Got: "{0}"'.format(
-        contents)
+    assert contents == '3\n', (f'Output does not match expected string "3", '
+                               f'Got: "{contents}"')
 
 # ===========
     stdout = os.path.abspath('std.out.2')
@@ -67,8 +67,8 @@ def test_command_format_1():
     print("app_fu : ", app_fu)
     contents = None
 
-    assert app_fu.result() == 0, "BashApp exited with an error code : {0}".format(
-        app_fu.result())
+    assert app_fu.result() == 0, (f"BashApp exited with an error code: "
+                                  f"{app_fu.result()}")
 
     with open(stdout, 'r') as stdout_f:
         contents = stdout_f.read()
@@ -77,8 +77,8 @@ def test_command_format_1():
     if os.path.exists('stdout_file'):
         os.remove(stdout)
 
-    assert contents == '4\n', 'Output does not match expected string "4", Got: "{0}"'.format(
-        contents)
+    assert contents == '4\n', (f'Output does not match expected string "4", '
+                               f'Got: "{contents}"')
 
 # ===========
     stdout = os.path.abspath('std.out.3')
@@ -89,8 +89,8 @@ def test_command_format_1():
     print("app_fu : ", app_fu)
     contents = None
 
-    assert app_fu.result() == 0, "BashApp exited with an error code : {0}".format(
-        app_fu.result())
+    assert app_fu.result() == 0, (f"BashApp exited with an error code: "
+                                  f"{app_fu.result()}")
 
     with open(stdout, 'r') as stdout_f:
         contents = stdout_f.read()
@@ -99,6 +99,6 @@ def test_command_format_1():
     if os.path.exists('stdout_file'):
         os.remove(stdout)
 
-    assert contents == '2\n', 'Output does not match expected string "2", Got: "{0}"'.format(
-        contents)
+    assert contents == '2\n', (f'Output does not match expected string "2", '
+                               f'Got: "{contents}"')
     return True

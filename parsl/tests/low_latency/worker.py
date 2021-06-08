@@ -34,8 +34,7 @@ def execute_task(f, args, kwargs, user_ns):
                     kwargname: kwargs,
                     resultname: resultname})
 
-    code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
-                                           argname, kwargname)
+    code = f"{resultname} = {fname}(*{argname}, **{kwargname})"
     try:
         exec(code, user_ns, user_ns)
 
@@ -70,8 +69,7 @@ def dealer_worker(worker_id, ip="localhost", port=5560):
         reply = {"result": result, "worker_id": worker_id}
         socket.send_multipart([bufs[0]] + serialize_object(reply))
 
-        print("Worker {} received {} tasks"
-              .format(worker_id, len(task_ids_received)))
+        print(f"Worker {worker_id} received {len(task_ids_received)} tasks")
 
 
 if __name__ == "__main__":
@@ -91,8 +89,8 @@ if __name__ == "__main__":
         ip_file = INTERCHANGE_IP_FILE if args.interchange else CLIENT_IP_FILE
         with open(ip_file, "r") as fh:
             ip = fh.read().strip()
-        print("Read IP {} from file {}".format(ip, ip_file))
-        print("Ping time to IP {}: {} us".format(ip, ping_time(ip)))
+        print(f"Read IP {ip} from file {ip_file}")
+        print(f"Ping time to IP {ip}: {ping_time(ip)} us")
     else:
         ip = "localhost"
 

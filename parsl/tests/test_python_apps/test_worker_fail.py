@@ -21,11 +21,10 @@ def test_parallel_for(n=2):
         d[i] = import_echo(2, "hello", sleep=2)
         # time.sleep(0.01)
 
-    assert len(
-        d.keys()) == n, "Only {0}/{1} keys in dict".format(len(d.keys()), n)
+    assert len(d.keys()) == n, f"Only {len(d.keys())}/{n} keys in dict"
 
     [d[i].result() for i in d]
-    print("Duration : {0}s".format(time.time() - start))
+    print(f"Duration : {time.time() - start}s")
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return d
 

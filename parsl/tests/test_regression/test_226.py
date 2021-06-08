@@ -30,7 +30,7 @@ def get_foo_x(a, b=bar, c=None):
 
 @bash_app
 def get_foo_x_bash(a, b=bar, c=None):
-    return "echo {}".format(b.x)
+    return f"echo {b.x}"
 
 
 data = pd.DataFrame({'x': [None, 2, [3]]})
@@ -43,7 +43,7 @@ def get_dataframe(d=data):
 
 @bash_app
 def echo(msg, postfix='there', stdout='std.out'):
-    return 'echo {} {}'.format(msg, postfix)
+    return f'echo {msg} {postfix}'
 
 
 blacklist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*ipp*')
@@ -53,7 +53,7 @@ blacklist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', 
 @pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_no_eq():
     res = get_foo_x('foo').result()
-    assert res == 1, 'Expected 1, returned {}'.format(res)
+    assert res == 1, f'Expected 1, returned {res}'
 
 
 # @pytest.mark.blacklist(blacklist, reason='hangs on Travis')

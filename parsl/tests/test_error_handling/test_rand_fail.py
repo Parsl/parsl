@@ -39,10 +39,9 @@ def test_simple(n=10):
     start = time.time()
     x = double(n)
     print("Result : ", x.result())
-    assert x.result() == n * \
-        2, "Expected double to return:{0} instead got:{1}".format(
-            n * 2, x.result())
-    print("Duration : {0}s".format(time.time() - start))
+    assert x.result() == n * 2, (f"Expected double to return:{n * 2} "
+                                 f"instead got:{x.result()}")
+    print(f"Duration : {time.time() - start}s")
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
@@ -68,7 +67,7 @@ def test_no_deps(numtasks=10):
             print("*" * 20)
             count += 1
 
-    print("Caught failures of  {0}/{1}".format(count, len(fus)))
+    print(f"Caught failures of  {count}/{len(fus)}")
 
 
 @pytest.mark.skip('broken')
@@ -82,17 +81,17 @@ def test_fail_sequence(numtasks=10):
     fail_prob = 0.4
 
     fus = {0: None}
-    for i in range(0, numtasks):
-        print("Chaining {0} to {1}".format(i + 1, fus[i]))
+    for i in range(numtasks):
+        print(f"Chaining {i + 1} to {fus[i]}")
         fus[i + 1] = sleep_fail(sleep_dur, 0, fail_prob, inputs=[fus[i]])
 
     # time.sleep(numtasks*sleep_dur)
     for k in sorted(fus.keys()):
         try:
             x = fus[i].result()
-            print("{0} : {1}".format(k, x))
+            print(f"{k} : {x}")
         except Exception as e:
-            print("{0} : {1}".format(k, e))
+            print(f"{k} : {e}")
 
     return
 
@@ -135,7 +134,7 @@ def test_deps(numtasks=10):
         print("Caught the right exception")
         print("Exception : ", e)
     except Exception as e:
-        assert 5 == 1, "Expected DependencyError got : %s" % e
+        assert 5 == 1, f"Expected DependencyError got: {e}"
     else:
         print("Shoot! no errors ")
 
@@ -162,7 +161,7 @@ def test_fail_nowait(numtasks=10):
     try:
         [x.result() for x in fus]
     except Exception as e:
-        assert isinstance(e, TypeError), "Expected a TypeError, got {}".format(e)
+        assert isinstance(e, TypeError), f"Expected a TypeError, got {e}"
 
     # fus[0].result()
     time.sleep(1)

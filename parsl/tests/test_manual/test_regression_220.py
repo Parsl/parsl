@@ -13,7 +13,7 @@ def test_220():
     with open("/etc/resolv.conf", 'r') as f:
         for line in f.readlines():
             line = line.strip()
-            print("Line: [{}]".format(line))
+            print(f"Line: [{line}]")
             if line.startswith("nameserver") and line != "nameserver 2.2.2.2":
                 assert False, "/etc/resolv.conf should be misconfigured"
 
@@ -22,7 +22,7 @@ def test_220():
     dfk = DataFlowKernel(config=config)
     delta = time.time() - start
     print("Time taken : ", delta)
-    assert delta < 1, "DFK took too much time to start, delta:{}".format(delta)
+    assert delta < 1, f"DFK took too much time to start, delta:{delta}"
     dfk.cleanup()
 
 

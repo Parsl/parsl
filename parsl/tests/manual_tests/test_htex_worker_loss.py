@@ -81,7 +81,7 @@ def test_simple(n=2, dur=10):
     job_ids = dfk.executors['htex_local'].provider.resources.keys()
     dfk.executors['htex_local'].provider.cancel(job_ids)
     print("Result : ", x.result())
-    print("Duration : {0}s".format(time.time() - start))
+    print(f"Duration : {time.time() - start}s")
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
@@ -110,7 +110,7 @@ def test_manager_fail(n=2, dur=10):
     print("We should see suppression of the failure")
     print('*' * 80)
 
-    print("Duration : {0}s".format(time.time() - start))
+    print(f"Duration : {time.time() - start}s")
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     dfk = parsl.dfk()
     for i in range(200):

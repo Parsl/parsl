@@ -15,7 +15,7 @@ def test_cooley():
     url = 'cooley.alcf.anl.gov'
     uname = 'yadunand'
     out = connect_and_list(url, uname)
-    print("Sitename :{0}  hostname:{1}".format(url, out))
+    print(f"Sitename :{url}  hostname:{out}")
     return
 
 

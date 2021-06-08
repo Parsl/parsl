@@ -23,7 +23,7 @@ def dumpstacks(sig, frame):
         thread_names = {thread.ident: thread.name for thread in threading.enumerate()}
         tf = sys._current_frames()
         for thread_id, frame in tf.items():
-            s += '\n\nThread: %s (%d)' % (thread_names[thread_id], thread_id)
+            s += f'\n\nThread: {thread_names[thread_id]} ({thread_id})'
             s += ''.join(traceback.format_stack(frame))
     except Exception:
         s = traceback.format_exc()
@@ -177,14 +177,14 @@ def apply_masks(request, pytestconfig):
     if m is not None:
         if os.path.abspath(config) not in chain.from_iterable([glob(x) for x in m.args]):
             if 'reason' not in m.kwargs:
-                pytest.skip("config '{}' not in whitelist".format(config))
+                pytest.skip(f"config '{config}' not in whitelist")
             else:
                 pytest.skip(m.kwargs['reason'])
     m = request.node.get_closest_marker('blacklist')
     if m is not None:
         if os.path.abspath(config) in chain.from_iterable([glob(x) for x in m.args]):
             if 'reason' not in m.kwargs:
-                pytest.skip("config '{}' is in blacklist".format(config))
+                pytest.skip(f"config '{config}' is in blacklist")
             else:
                 pytest.skip(m.kwargs['reason'])
     m = request.node.get_closest_marker('local')
@@ -238,7 +238,7 @@ def pytest_make_collect_report(collector):
         if call.excinfo.errisinstance(KeyError):
             outcome = "skipped"
             r = collector._repr_failure_py(call.excinfo, "line").reprcrash
-            message = "{} not configured in user_opts.py".format(r.message.split()[-1])
+            message = f"{r.message.split()[-1]} not configured in user_opts.py"
             longrepr = (str(r.path), r.lineno, message)
         elif call.excinfo.errisinstance(skip_exceptions):
             outcome = "skipped"

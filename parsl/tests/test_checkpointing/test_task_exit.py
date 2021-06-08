@@ -54,7 +54,8 @@ def test_at_task_exit(n=2):
     #     While this limit might seem generous at time of writing,
     #     it should be remembered that this is still a race.
 
-    with time_limited_open("{}/checkpoint/tasks.pkl".format(dfk.run_dir), 'rb', seconds=5) as f:
+    with time_limited_open(f"{dfk.run_dir}/checkpoint/tasks.pkl", 'rb',
+                           seconds=5) as f:
         tasks = []
         try:
             while f:
@@ -62,7 +63,8 @@ def test_at_task_exit(n=2):
         except EOFError:
             pass
 
-        assert len(tasks) == n, "Expected {} checkpoint events, got {}".format(n, len(tasks))
+        assert len(tasks) == n, (f"Expected {n} checkpoint events, "
+                                 f"got {len(tasks)}")
 
 
 if __name__ == '__main__':

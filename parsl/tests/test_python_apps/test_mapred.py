@@ -36,8 +36,9 @@ def test_mapred_type1(width=2):
     red = accumulate(inputs=futs)
     # print([(i, i.done()) for i in futs])
     r = sum([x * 2 for x in range(1, width + 1)])
-    assert r == red.result(), "[TEST] MapRed type1 expected %s, got %s" % (
-        r, red.result())
+    assert r == red.result(), (f"[TEST] MapRed type1 expected {r}, "
+                               f"got {red.result()}")
+
 
 
 def test_mapred_type2(width=2):
@@ -55,8 +56,8 @@ def test_mapred_type2(width=2):
 
     # print([(i, i.done()) for i in futs])
     r = sum([x * 2 for x in range(1, width + 1)])
-    assert r == red.result(), "[TEST] MapRed type2 expected %s, got %s" % (
-        r, red.result())
+    assert r == red.result(), (f"[TEST] MapRed type2 expected {r}, "
+                               f"got {red.result()}")
 
 
 if __name__ == '__main__':
@@ -81,9 +82,9 @@ if __name__ == '__main__':
 
             test(width=int(args.width))
         except AssertionError as e:
-            print("[TEST]  %s [FAILED]" % test.__name__)
+            print(f"[TEST]  {test.__name__} [FAILED]")
             print(e)
         else:
-            print("[TEST]  %s type [SUCCESS]" % test.__name__)
+            print(f"[TEST]  {test.__name__} type [SUCCESS]")
 
         print("*" * 50)

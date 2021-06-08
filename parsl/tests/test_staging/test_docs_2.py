@@ -7,7 +7,7 @@ local_config = config
 
 @bash_app
 def cat(inputs=[], stdout='stdout.txt'):
-    return 'cat %s' % (inputs[0])
+    return f'cat {inputs[0]}'
 
 
 @pytest.mark.local

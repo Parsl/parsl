@@ -11,7 +11,7 @@ local_config.executors[0].init_blocks = 0
 @python_app
 def py_app():
     import platform
-    return "Hello from {0}".format(platform.uname())
+    return "Hello from {platform.uname()}"
 
 
 # @pytest.mark.local

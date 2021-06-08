@@ -25,7 +25,7 @@ def succeed_on_retry(filename, success_on=1, stdout="succeed.out"):
     Then, if the file contains success_on lines it exits with 0
     """
 
-    return """if [[ ! -e {filename} ]]; then touch {filename}; fi;
+    return f"""if [[ ! -e {filename} ]]; then touch {filename}; fi;
     tries=`wc -l {filename} | cut -f1 -d' '`
     echo $tries >> {filename}
 
@@ -36,7 +36,7 @@ def succeed_on_retry(filename, success_on=1, stdout="succeed.out"):
         echo "Tries != success_on , exiting with error"
         exit 5
     fi
-    """.format(filename=filename, success_on=success_on)
+    """
 
 
 @python_app

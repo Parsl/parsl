@@ -43,7 +43,7 @@ def test_slow():
         futs[i] = tex.submit(slow_foo, 1, 2)
 
     total = sum([futs[i].result(timeout=10) for i in futs])
-    assert total == 6, "expected 6, got {}".format(total)
+    assert total == 6, f"expected 6, got {total}"
 
 
 @pytest.mark.local

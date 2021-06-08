@@ -6,7 +6,7 @@ import os
 
 @bash_app
 def echo(message, outputs=[]):
-    return 'echo {m} &> {o}'.format(m=message, o=outputs[0])
+    return f'echo {message} &> {outputs[0]}'
 
 
 @python_app

@@ -62,13 +62,18 @@ def test_stage_in_out_globus():
 
     result_file = f.outputs[0].result()
 
-    assert unsorted_file.local_path is None, "Input file on local side has overridden local_path, file: {}".format(repr(unsorted_file))
+    assert unsorted_file.local_path is None, (f"Input file on local side has "
+                                              f"overridden local_path, file: "
+                                              f"{repr(unsorted_file)}")
 
     # use 'is' rather than '==' because specifically want to check
     # object identity rather than value equality
-    assert sorted_file is result_file, "Result file is not the specified input-output file"
+    assert sorted_file is result_file, ("Result file is not the specified "
+                                        "input-output file")
 
-    assert result_file.local_path is None, "Result file on local side has overridden local_path, file: {}".format(repr(result_file))
+    assert result_file.local_path is None, (f"Result file on local side has "
+                                            f"overridden local_path, file: "
+                                            f"{repr(result_file)}")
 
 
 if __name__ == "__main__":

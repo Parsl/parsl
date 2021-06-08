@@ -24,8 +24,8 @@ def test_regress_232_task_exit(count=2):
     if os.path.exists("test.txt"):
         os.remove("test.txt")
 
-    proc = subprocess.Popen("python3 {} -n {} -m task_exit".format(checkpoint_file, count),
-                            shell=True)
+    proc = subprocess.Popen(f"python3 {checkpoint_file} "
+                            f"-n {count} -m task_exit", shell=True)
 
     # Poll for at least 3 seconds
     for i in range(30):
@@ -36,9 +36,9 @@ def test_regress_232_task_exit(count=2):
     proc.send_signal(signal.SIGINT)
     proc.wait()
     # We need to wait after the signal to make sure files were closed and such
-    last = os.path.abspath(
-        'runinfo/{0}/checkpoint'.format(sorted(os.listdir('runinfo/'))[-1]))
-    checkpoint_file = "{}/tasks.pkl".format(last)
+    last = os.path.abspath(f"runinfo/{sorted(os.listdir('runinfo/'))[-1]}"
+                           f"/checkpoint")
+    checkpoint_file = f"{last}/tasks.pkl"
 
     with open(checkpoint_file, 'rb') as f:
         tasks = []
@@ -50,8 +50,8 @@ def test_regress_232_task_exit(count=2):
             print("Caught error")
             pass
         print("Tasks from cache : ", tasks)
-        assert len(tasks) == count, "Expected {} checkpoint events, got {}".format(
-            1, len(tasks))
+        assert len(tasks) == count, (f"Expected {1} checkpoint events, "
+                                     f"got {len(tasks)}")
 
 
 @pytest.mark.local
@@ -62,15 +62,15 @@ def test_regress_232_dfk_exit(count=2):
     cwd = os.path.dirname(os.path.realpath(__file__))
     checkpoint_file = os.path.join(cwd, 'checkpointed.py')
 
-    proc = subprocess.Popen("python3 {} -n {} -m dkf_exit".format(checkpoint_file, count),
+    proc = subprocess.Popen(f"python3 {checkpoint_file} -n {count} -m dkf_exit",
                             shell=True)
     proc.send_signal(signal.SIGINT)
     # We need to wait after the signal to make sure files were closed and such
     proc.wait()
 
-    last = os.path.abspath(
-        'runinfo/{0}/checkpoint'.format(sorted(os.listdir('runinfo/'))[-1]))
-    checkpoint_file = "{}/tasks.pkl".format(last)
+    last = os.path.abspath(f"runinfo/{sorted(os.listdir('runinfo/'))[-1]}"
+                           f"/checkpoint")
+    checkpoint_file = f"{last}/tasks.pkl"
 
     print(checkpoint_file, "now exists")
     with open(checkpoint_file, 'rb') as f:
@@ -82,8 +82,8 @@ def test_regress_232_dfk_exit(count=2):
         except EOFError:
             pass
         print("Tasks from cache : ", tasks)
-        assert len(tasks) == count, "Expected {} checkpoint events, got {}".format(
-            1, len(tasks))
+        assert len(tasks) == count, (f"Expected {1} checkpoint events, "
+                                     f"got {len(tasks)}")
 
 
 if __name__ == "__main__":

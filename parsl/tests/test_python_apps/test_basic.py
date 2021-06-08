@@ -34,10 +34,9 @@ def test_simple(n=2):
     start = time.time()
     x = double(n)
     print("Result : ", x.result())
-    assert x.result() == n * \
-        2, "Expected double to return:{0} instead got:{1}".format(
-            n * 2, x.result())
-    print("Duration : {0}s".format(time.time() - start))
+    assert x.result() == n * 2, (f"Expected double to return:{n * 2} "
+                                 f"instead got:{x.result()}")
+    print(f"Duration : {time.time() - start}s")
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
@@ -46,10 +45,9 @@ def test_imports(n=2):
     start = time.time()
     x = import_echo(n, "hello world")
     print("Result : ", x.result())
-    assert x.result() == n * \
-        5, "Expected double to return:{0} instead got:{1}".format(
-            n * 2, x.result())
-    print("Duration : {0}s".format(time.time() - start))
+    assert x.result() == n * 5, (f"Expected double to return:{n * 2} "
+                                 f"instead got:{x.result()}")  # fixme coeff
+    print(f"Duration : {time.time() - start}s")
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
@@ -61,11 +59,10 @@ def test_parallel_for(n=2):
         d[i] = double(i)
         # time.sleep(0.01)
 
-    assert len(
-        d.keys()) == n, "Only {0}/{1} keys in dict".format(len(d.keys()), n)
+    assert len(d.keys()) == n, f"Only {len(d.keys())}/{n} keys in dict"
 
     [d[i].result() for i in d]
-    print("Duration : {0}s".format(time.time() - start))
+    print(f"Duration : {time.time() - start}s")
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return d
 

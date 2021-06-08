@@ -41,7 +41,7 @@ def test_connect_1():
 
     for site in sites.values():
         out = connect_and_list(site['url'], site['uname'])
-        print("Sitename :{0}  hostname:{1}".format(site['url'], out))
+        print(f"Sitename :{site['url']}  hostname:{out}")
 
 
 if __name__ == "__main__":

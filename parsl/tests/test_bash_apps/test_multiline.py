@@ -16,12 +16,12 @@ def multiline(
         outputs=[],
         stderr=os.path.abspath('std.err'),
         stdout=os.path.abspath('std.out')):
-    return """echo {inputs[0]} &> {outputs[0]}
+    return f"""echo {inputs[0]} &> {outputs[0]}
     echo {inputs[1]} &> {outputs[1]}
     echo {inputs[2]} &> {outputs[2]}
     echo "Testing STDOUT"
     echo "Testing STDERR" 1>&2
-    """.format(inputs=inputs, outputs=outputs)
+    """
 
 
 @pytest.mark.issue363
@@ -38,9 +38,9 @@ def test_multiline():
     f = multiline(
             inputs=["Hello", "This is", "Cat!"],
             outputs=[
-                File('{0}/hello.txt'.format(outdir)),
-                File('{0}/this.txt'.format(outdir)),
-                File('{0}/cat.txt'.format(outdir))
+                File(f'{outdir}/hello.txt'),
+                File(f'{outdir}/this.txt'),
+                File(f'{outdir}/cat.txt')
             ]
     )
     print(f.result())

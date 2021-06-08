@@ -26,7 +26,7 @@ def call_sleep(size):
     primers = [double(i) for i in range(0, 2)]
     [p.result() for p in primers]
     delta = time.time() - start
-    print("Priming done in {:10.4f} s".format(delta))
+    print(f"Priming done in {delta:10.4f} s")
 
     start = time.time()
     tasks = [sleep(0) for _ in range(0, size)]
@@ -34,8 +34,8 @@ def call_sleep(size):
         task.result()
 
     delta = time.time() - start
-    print("Time to complete {} tasks: {:8.3f} s".format(args.count, delta))
-    print("Throughput : {:8.3f} Tasks/s".format(int(args.count) / delta))
+    print(f"Time to complete {args.count} tasks: {delta:8.3f} s")
+    print(f"Throughput : {int(args.count) / delta:8.3f} Tasks/s")
 
 
 def call_double(size, executor):
@@ -45,9 +45,9 @@ def call_double(size, executor):
     primers = [executor.submit(double, i) for i in range(0, 2)]
     print("Got results : ", [p.result() for p in primers])
     delta = time.time() - start
-    print("Priming done in {:10.4f} s".format(delta))
+    print(f"Priming done in {delta:10.4f} s")
 
-    print("Launching tasks: {}".format(size))
+    print(f"Launching tasks: {size}")
     start = time.time()
     tasks = [executor.submit(double, i) for i in range(0, size)]
 
@@ -56,8 +56,8 @@ def call_double(size, executor):
 
     delta = time.time() - start
 
-    print("Time to complete {} tasks: {:8.3f} s".format(args.count, delta))
-    print("Throughput : {:8.3f} Tasks/s".format(int(args.count) / delta))
+    print(f"Time to complete {args.count} tasks: {delta:8.3f} s")
+    print(f"Throughput : {int(args.count) / delta:8.3f} Tasks/s")
 
 
 def measure_latency(size, executor):
@@ -67,9 +67,9 @@ def measure_latency(size, executor):
     primers = [executor.submit(double, i) for i in range(0, 2)]
     print("Got results : ", [p.result() for p in primers])
     delta = time.time() - start
-    print("Priming done in {:10.4f} s".format(delta))
+    print(f"Priming done in {delta:10.4f} s")
 
-    print("Launching tasks: {}".format(size))
+    print(f"Launching tasks: {size}")
 
     start_all = time.time()
     tasks = []
@@ -83,11 +83,9 @@ def measure_latency(size, executor):
 
     delta_all = time.time() - start_all
 
-    print("Time to complete {} tasks: {:8.3f} s".format(args.count, delta_all))
-    print("Latency avg:{:8.3f}ms  min:{:8.3f}ms  max:{:8.3f}ms".format(
-        1000 * sum(tasks) / len(tasks),
-        1000 * min(tasks),
-        1000 * max(tasks)))
+    print(f"Time to complete {args.count} tasks: {delta_all:8.3f} s")
+    print(f"Latency avg:{1000 * sum(tasks) / len(tasks):8.3f}ms  "
+          f"min:{1000 * min(tasks):8.3f}ms  max:{1000 * max(tasks):8.3f}ms")
 
 
 if __name__ == '__main__':

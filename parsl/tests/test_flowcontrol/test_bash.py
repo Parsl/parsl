@@ -12,6 +12,6 @@ def test_bash():
     import os
     fname = os.path.basename(__file__)
 
-    x = bash_app(stdout="{0}.out".format(fname))
+    x = bash_app(stdout=f"{fname}.out")
     print("Waiting ....")
     print(x.result())

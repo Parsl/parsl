@@ -97,7 +97,7 @@ def test_4():
 
 @bash_app
 def echo(message, outputs=[]):
-    return 'echo {0} &> {outputs[0]}'.format(message, outputs=outputs)
+    return f'echo {message} &> {outputs[0]}'
 
 # This app *cat*sthe contents ofthe first file in its inputs[] kwargs to
 # the first file in its outputs[] kwargs
@@ -105,7 +105,7 @@ def echo(message, outputs=[]):
 
 @bash_app
 def cat(inputs=[], outputs=[], stdout='cat.out', stderr='cat.err'):
-    return 'cat {inputs[0]} > {outputs[0]}'.format(inputs=inputs, outputs=outputs)
+    return f'cat {inputs[0]} > {outputs[0]}'
 
 
 @pytest.mark.staging_required

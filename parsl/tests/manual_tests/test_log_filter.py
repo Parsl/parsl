@@ -44,11 +44,11 @@ def test_platform(n=2):
     dfk = parsl.dfk()
     dfk.cleanup()
 
-    with open("{}/parsl.log".format(dfk.run_dir)) as f:
+    with open(f"{dfk.run_dir}/parsl.log") as f:
 
         for line in f.readlines():
             if any(skip in line for skip in skip_tags):
-                raise Exception("Logline {} contains a skip tag".format(line))
+                raise Exception(f"Logline {line} contains a skip tag")
     return True
 
 
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     if args.sitespec:
         c = None
         try:
-            exec("import parsl; from {} import config".format(args.sitespec))
+            exec(f"import parsl; from {args.sitespec} import config")
             parsl.load(c)
         except Exception:
             print("Failed to load the requested config : ", args.sitespec)

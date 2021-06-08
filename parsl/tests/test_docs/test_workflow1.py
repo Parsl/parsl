@@ -19,7 +19,7 @@ def generate(limit):
 
 @bash_app
 def save(message, outputs=[]):
-    return 'echo {m} &> {o}'.format(m=message, o=outputs[0])
+    return f'echo {message} &> {outputs[0]}'
 
 
 @pytest.mark.staging_required

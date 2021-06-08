@@ -82,9 +82,9 @@ if __name__ == '__main__':
 
             test(width=int(args.width))
         except AssertionError as e:
-            print("[TEST]  %s [FAILED]" % test.__name__)
+            print(f"[TEST]  {test.__name__} [FAILED]")
             print(e)
         else:
-            print("[TEST]  %s type [SUCCESS]" % test.__name__)
+            print(f"[TEST]  {test.__name__} type [SUCCESS]")
 
         print("*" * 50)

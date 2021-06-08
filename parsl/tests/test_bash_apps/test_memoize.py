@@ -10,7 +10,7 @@ from parsl.tests.configs.local_threads import config
 
 @bash_app(cache=True)
 def fail_on_presence(outputs=[]):
-    return 'if [ -f {0} ] ; then exit 1 ; else touch {0}; fi'.format(outputs[0])
+    return f'if [ -f {outputs[0]} ] ; then exit 1 ; else touch {outputs[0]}; fi'
 
 
 # This test is an oddity that requires a shared-FS and simply
@@ -42,7 +42,7 @@ def test_bash_memoization(n=2):
 
 @bash_app(cache=True)
 def fail_on_presence_kw(outputs=[], foo={}):
-    return 'if [ -f {0} ] ; then exit 1 ; else touch {0}; fi'.format(outputs[0])
+    return f'if [ -f {outputs[0]} ] ; then exit 1 ; else touch {outputs[0]}; fi'
 
 
 # This test is an oddity that requires a shared-FS and simply

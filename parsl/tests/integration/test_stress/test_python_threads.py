@@ -24,7 +24,7 @@ def test_stress(count=1000):
     for i in range(count):
         x[i] = increment(i)
     end = time.time()
-    print("Launched {0} tasks in {1} s".format(count, end - start))
+    print(f"Launched {count} tasks in {end - start} s")
 
 
 if __name__ == '__main__':

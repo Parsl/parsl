@@ -36,7 +36,7 @@ import parsl
 @parsl.python_app
 def python_app():
     import platform
-    return "Hello from {0}".format(platform.uname())
+    return f"Hello from {platform.uname()}"
 
 
 @parsl.python_app
@@ -44,7 +44,7 @@ def python_app_slow(duration):
     import platform
     import time
     time.sleep(duration)
-    return "Hello from {0}".format(platform.uname())
+    return f"Hello from {platform.uname()}"
 
 
 @parsl.python_app
@@ -109,23 +109,21 @@ def test_python(count):
     min_latency = min(latency) * 1000
     max_latency = max(latency) * 1000
     avg_latency = average(latency) * 1000
-    print("Latency   |   Min:{0:0.3}ms Max:{1:0.3}ms Average:{2:0.3}ms".format(min_latency,
-                                                                               max_latency,
-                                                                               avg_latency))
+    print(f"Latency   |   Min:{min_latency:0.3}ms Max:{max_latency:0.3}ms "
+          f"Average:{avg_latency:0.3}ms")
 
     min_rtt = min(rtt) * 1000
     max_rtt = max(rtt) * 1000
     avg_rtt = average(rtt) * 1000
 
-    print("Roundtrip |   Min:{0:0.3}ms Max:{1:0.3}ms Average:{2:0.3}ms".format(min_rtt,
-                                                                               max_rtt,
-                                                                               avg_rtt))
+    print(f"Roundtrip |   Min:{min_rtt:0.3}ms Max:{max_rtt:0.3}ms "
+          f"Average:{avg_rtt:0.3}ms")
 
 
 def test_bash():
     import os
     fname = os.path.basename(__file__)
 
-    x = bash_app(stdout="{0}.out".format(fname))
+    x = bash_app(stdout=f"{fname}.out")
     print("Waiting ....")
     print(x.result())

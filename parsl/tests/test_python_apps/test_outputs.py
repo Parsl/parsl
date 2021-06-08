@@ -33,15 +33,15 @@ def test_launch_apps(n=2, outdir='outputs'):
 
     all_futs = []
     for i in range(n):
-        fus = double(i, outputs=[File('{0}/{1}.txt'.format(outdir, i))])
+        fus = double(i, outputs=[File(f'{outdir}/{i}.txt')])
         all_futs.append(fus)
 
     wait(all_futs)
 
     stdout_file_count = len(
         [item for item in os.listdir(outdir) if item.endswith('.txt')])
-    assert stdout_file_count == n, "Only {}/{} files in '{}' ".format(
-            len(os.listdir('outputs/')), n, os.listdir(outdir))
+    assert stdout_file_count == n, (f"Only {len(os.listdir('outputs/'))}/{n} "
+                                    f"files in '{os.listdir(outdir)}' ")
 
 
 if __name__ == '__main__':

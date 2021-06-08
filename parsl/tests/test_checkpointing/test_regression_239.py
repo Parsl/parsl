@@ -53,7 +53,8 @@ def test_regression_239():
     """
 
     rundir = run_checkpointed()
-    with time_limited_open("{}/checkpoint/tasks.pkl".format(rundir), 'rb', seconds=2) as f:
+    with time_limited_open(f"{rundir}/checkpoint/tasks.pkl", 'rb',
+                           seconds=2) as f:
         tasks = []
         try:
             while f:
@@ -62,7 +63,8 @@ def test_regression_239():
         except EOFError:
             pass
         print("Tasks from cache : ", tasks)
-        assert len(tasks) == 1, "Expected {} checkpoint events, got {}".format(1, len(tasks))
+        assert len(tasks) == 1, (f"Expected {1} checkpoint events, "
+                                 f"got {len(tasks)}")
 
 
 @pytest.mark.local
@@ -72,7 +74,8 @@ def test_checkpointing_at_dfk_exit():
     """
 
     rundir = run_checkpointed(mode="dfk_exit")
-    with time_limited_open("{}/checkpoint/tasks.pkl".format(rundir), 'rb', seconds=2) as f:
+    with time_limited_open(f"{rundir}/checkpoint/tasks.pkl", 'rb',
+                           seconds=2) as f:
         tasks = []
         try:
             while f:
@@ -81,7 +84,8 @@ def test_checkpointing_at_dfk_exit():
         except EOFError:
             pass
         print("Tasks from cache : ", tasks)
-        assert len(tasks) == 1, "Expected {} checkpoint events, got {}".format(1, len(tasks))
+        assert len(tasks) == 1, (f"Expected {1} checkpoint events, "
+                                 f"got {len(tasks)}")
 
 
 if __name__ == "__main__":

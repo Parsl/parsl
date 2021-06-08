@@ -49,10 +49,9 @@ def test_simple(n=2):
     start = time.time()
     x = double(n)
     print("Result : ", x.result())
-    assert x.result() == n * \
-        2, "Expected double to return:{0} instead got:{1}".format(
-            n * 2, x.result())
-    print("Duration : {0}s".format(time.time() - start))
+    assert x.result() == n * 2, (f"Expected double to return:{n * 2} instead "
+                                 f"got:{x.result()}")
+    print(f"Duration : {time.time() - start}s")
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
@@ -61,10 +60,9 @@ def test_imports(n=2):
     start = time.time()
     x = import_echo(n, "hello world")
     print("Result : ", x.result())
-    assert x.result() == n * \
-        5, "Expected double to return:{0} instead got:{1}".format(
-            n * 2, x.result())
-    print("Duration : {0}s".format(time.time() - start))
+    assert x.result() == n * 5, (f"Expected double to return:{n * 2} instead "
+                                 f"got:{x.result()}")  # fixme coefficients?
+    print(f"Duration : {time.time() - start}s")
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return True
 
@@ -105,7 +103,7 @@ def test_parallel_for(n=2, sleep=1):
     print("Priming ...")
     double(10).result()
     delta = time.time() - start
-    print("Priming done in {} seconds".format(delta))
+    print(f"Priming done in {delta} seconds")
 
     start = time.time()
     for i in range(0, n):
@@ -114,8 +112,8 @@ def test_parallel_for(n=2, sleep=1):
         # time.sleep(0.01)
     [d[i].result() for i in d]
     delta = time.time() - start
-    print("Time to complete {} tasks: {:8.3f} s".format(n, delta))
-    print("Throughput : {:8.3f} Tasks/s".format(n / delta))
+    print(f"Time to complete {n} tasks: {delta:8.3f} s")
+    print(f"Throughput : {n / delta:8.3f} Tasks/s")
     return d
 
 
@@ -135,7 +133,7 @@ if __name__ == '__main__':
         parsl.set_stream_logger()
 
     config = None
-    exec("from {} import config".format(args.fileconfig))
+    exec(f"from {args.fileconfig} import config")
     parsl.load(config)
     # x = test_simple(int(args.count))
     # x = test_imports()

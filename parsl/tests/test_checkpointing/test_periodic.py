@@ -58,7 +58,7 @@ def test_periodic(n=4):
     # Here we will check if the loglines came back with 5 seconds deltas
     print("Rundir: ", dfk.run_dir)
 
-    with open("{}/parsl.log".format(dfk.run_dir), 'r') as f:
+    with open(f"{dfk.run_dir}/parsl.log", 'r') as f:
         log_lines = f.readlines()
         expected_msg = "]  Done checkpointing"
         expected_msg2 = "]  No tasks checkpointed in this pass"

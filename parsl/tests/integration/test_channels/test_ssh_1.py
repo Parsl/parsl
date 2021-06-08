@@ -14,7 +14,7 @@ def test_midway():
     url = 'midway.rcc.uchicago.edu'
     uname = 'yadunand'
     out = connect_and_list(url, uname)
-    print("Sitename :{0}  hostname:{1}".format(url, out))
+    print(f"Sitename :{url}  hostname:{out}")
 
 
 def test_beagle():
@@ -23,7 +23,7 @@ def test_beagle():
     url = 'login04.beagle.ci.uchicago.edu'
     uname = 'yadunandb'
     out = connect_and_list(url, uname)
-    print("Sitename :{0}  hostname:{1}".format(url, out))
+    print(f"Sitename :{url}  hostname:{out}")
 
 
 def test_osg():
@@ -32,7 +32,7 @@ def test_osg():
     url = 'login.osgconnect.net'
     uname = 'yadunand'
     out = connect_and_list(url, uname)
-    print("Sitename :{0}  hostname:{1}".format(url, out))
+    print(f"Sitename :{url}  hostname:{out}")
 
 
 def test_cori():
@@ -41,7 +41,7 @@ def test_cori():
     url = 'cori.nersc.gov'
     uname = 'yadunand'
     out = connect_and_list(url, uname)
-    print("Sitename :{0}  hostname:{1}".format(url, out))
+    print(f"Sitename :{url}  hostname:{out}")
 
 
 if __name__ == "__main__":

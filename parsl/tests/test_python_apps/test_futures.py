@@ -50,8 +50,7 @@ def test_fut_case_1():
     print("Status : ", status)
     print("Result : ", result)
 
-    assert result == 2, 'Output does not match expected 2, goot: "{0}"'.format(
-        result)
+    assert result == 2, f'Output does not match expected 2, got: "{result}"'
     return True
 
 
@@ -68,14 +67,15 @@ def test_fut_case_2():
     print("App_fu  : ", app_fu)
     print("Data_fu : ", data_fu)
 
-    assert os.path.basename(result) == output_f, \
-        "DataFuture did not return the filename, got : {0}".format(result)
+    assert os.path.basename(result) == output_f, (f"DataFuture did not return "
+                                                  f"the filename, "
+                                                  f"got : {result}")
     print("Status : ", data_fu.done())
     print("Result : ", result)
 
     contents = get_contents(result)
-    assert contents == '2', 'Output does not match expected "2", got: "{0}"'.format(
-        contents)
+    assert contents == '2', (f'Output does not match expected "2", '
+                             f'got: "{contents}"')
     return True
 
 
@@ -94,8 +94,7 @@ def test_fut_case_3():
     print("Status : ", status)
     print("Result : ", result)
 
-    assert result == 3, 'Output does not match expected 2, goot: "{0}"'.format(
-        result)
+    assert result == 3, f'Output does not match expected 2, got: "{result}"'
     return True
 
 
@@ -122,12 +121,13 @@ def test_fut_case_4():
     print("Status : ", status)
     print("Result : ", result)
 
-    assert os.path.basename(result) == output_f2, \
-        "DataFuture did not return the filename, got : {0}".format(result)
+    assert os.path.basename(result) == output_f2, (f"DataFuture did not return "
+                                                   f"the filename, "
+                                                   f"got : {result}")
 
     contents = get_contents(result)
-    assert contents == '3', 'Output does not match expected "3", got: "{0}"'.format(
-        result)
+    assert contents == '3', (f'Output does not match expected "3", '
+                             f'got: "{result}"')
     return True
 
 

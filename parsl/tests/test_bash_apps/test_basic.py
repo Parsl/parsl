@@ -18,14 +18,14 @@ def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out'):
     res = ""
     for i in inputs:
         for o in outputs:
-            res += "echo {} >& {}".format(i, o)
+            res += f"echo {i} >& {o}"
     return res
 
 
 @bash_app
 def foo(x, y, z=10, stdout=None, label=None):
-    return """echo {0} {1} {z}
-    """.format(x, y, z=z)
+    return f"""echo {x} {y} {z}
+    """
 
 
 @pytest.mark.issue363
@@ -42,14 +42,14 @@ def test_command_format_1():
     print("[test_command_format_1] foo_future: ", foo_future)
     contents = None
 
-    assert foo_future.result() == 0, "BashApp exited with an error code : {0}".format(
-        foo_future.result())
+    assert foo_future.result() == 0, (f"BashApp exited with an error code: "
+                                      f"{foo_future.result()}")
 
     with open(stdout, 'r') as stdout_f:
         contents = stdout_f.read()
 
-    assert contents == '1 4 10\n', 'Output does not match expected string "1 4 10", Got: "{0}"'.format(
-        contents)
+    assert contents == '1 4 10\n', (f'Output does not match expected string '
+                                    f'"1 4 10", Got: "{contents}"')
     return True
 
 
@@ -64,19 +64,22 @@ def test_auto_log_filename_format():
     print("[test_auto_log_filename_format] foo_future: ", foo_future)
     contents = None
 
-    assert foo_future.result() == 0, "BashApp exited with an error code : {0}".format(
-        foo_future.result())
+    assert foo_future.result() == 0, (f"BashApp exited with an error code: "
+                                      f"{foo_future.result()}")
 
     log_fpath = foo_future.stdout
     log_pattern = fr".*/task_\d+_foo_{app_label}"
-    assert re.match(log_pattern, log_fpath), 'Output file "{0}" does not match pattern "{1}"'.format(
-        log_fpath, log_pattern)
-    assert os.path.exists(log_fpath), 'Output file does not exist "{0}"'.format(log_fpath)
+    assert re.match(log_pattern, log_fpath), (f'Output file "{log_fpath}" does '
+                                              f'not match pattern '
+                                              f'"{log_pattern}"')
+    assert os.path.exists(log_fpath), (f'Output file does not exist '
+                                       f'"{log_fpath}"')
     with open(log_fpath, 'r') as stdout_f:
         contents = stdout_f.read()
 
-    assert contents == '1 {0} 10\n'.format(rand_int), \
-        'Output does not match expected string "1 {0} 10", Got: "{1}"'.format(rand_int, contents)
+    assert contents == f'1 {rand_int} 10\n', (f'Output does not match expected '
+                                              f'string "1 {rand_int} 10", '
+                                              f'Got: "{contents}"')
     return True
 
 
@@ -96,21 +99,21 @@ def test_parallel_for(n=3):
     start = time.time()
     for i in range(0, n):
         d[i] = echo_to_file(
-            inputs=['Hello World {0}'.format(i)],
-            outputs=[File('{0}/out.{1}.txt'.format(outdir, i))],
-            stdout='{0}/std.{1}.out'.format(outdir, i),
-            stderr='{0}/std.{1}.err'.format(outdir, i),
+            inputs=[f'Hello World {i}'],
+            outputs=[File(f'{outdir}/out.{i}.txt')],
+            stdout=f'{outdir}/std.{i}.out',
+            stderr=f'{outdir}/std.{i}.err'
         )
 
     assert len(
-        d.keys()) == n, "Only {0}/{1} keys in dict".format(len(d.keys()), n)
+        d.keys()) == n, f"Only {len(d.keys())}/{n} keys in dict"
 
     [d[i].result() for i in d]
-    print("Duration : {0}s".format(time.time() - start))
+    print(f"Duration : {time.time() - start}s")
     stdout_file_count = len(
         [item for item in os.listdir(outdir) if item.endswith('.out')])
-    assert stdout_file_count == n, "Only {0}/{1} files in '{2}' ".format(len(os.listdir('outputs/')),
-                                                                         n, outdir)
+    assert stdout_file_count == n, (f"Only {len(os.listdir('outputs/'))}/{n} "
+                                    f"files in '{outdir}' ")
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return d
 

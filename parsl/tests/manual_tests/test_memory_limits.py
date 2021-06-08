@@ -56,8 +56,9 @@ def test_simple(mem_per_worker):
     dfk = parsl.dfk()
     connected = dfk.executors['htex_local'].connected_workers
     print("Connected : ", connected)
-    assert expected_workers == connected, "Expected {} workers, instead got {} workers".format(expected_workers,
-                                                                                               connected)
+    assert expected_workers == connected, (f"Expected {expected_workers} "
+                                           f"workers, instead got {connected} "
+                                           f"workers")
     parsl.clear()
     return True
 

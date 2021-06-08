@@ -8,7 +8,7 @@ def ping_time(ip, n=5):
     Note: This function is inherently platform specific.
     It currently works on Midway.
     """
-    cmd = "ping {} -c {}".format(ip, n)
+    cmd = f"ping {ip} -c {n}"
     p = subprocess.Popen(cmd.split(" "), stdout=subprocess.PIPE)
     output = str(p.communicate()[0])
     stats = output.split("\n")[-1].split(" = ")[-1].split("/")

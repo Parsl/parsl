@@ -21,7 +21,7 @@ def app1(inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
 def app2(inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
 
     with open('somefile.txt', 'w') as f:
-        f.write("%s\n" % inputs[0])
+        f.write(f"{inputs[0]}\n")
     cmd_line = """echo '{inputs[0]}' > {outputs[0]}"""
     return cmd_line
 

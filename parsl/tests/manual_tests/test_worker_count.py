@@ -41,13 +41,14 @@ def test_worker(n=2, sleep=0):
     manager_ids = set([f[0] for f in foo])
     worker_ids = set([f[1] for f in foo])
 
-    print("Got workers : {}".format(worker_ids))
-    assert len(manager_ids) == 1, "Expected only 1 manager id, got ids : {}".format(
-        manager_ids)
-    assert len(worker_ids) == EXPECTED_WORKERS, "Expected {} workers, instead got {}".format(EXPECTED_WORKERS,
-                                                                                             len(worker_ids))
+    print(f"Got workers : {worker_ids}")
+    assert len(manager_ids) == 1, (f"Expected only 1 manager id, got ids: "
+                                   f"{manager_ids}")
+    assert len(worker_ids) == EXPECTED_WORKERS, (f"Expected {EXPECTED_WORKERS} "
+                                                 f"workers, instead got "
+                                                 f"{len(worker_ids)}")
 
-    print("Duration : {0}s".format(time.time() - start))
+    print(f"Duration : {0time.time() - start}s")
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return d
 

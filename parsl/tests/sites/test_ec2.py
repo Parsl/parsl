@@ -16,7 +16,7 @@ def python_app_2():
     import threading
     import time
     time.sleep(1)
-    return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
+    return f"Hello from PID[{os.getpid()}] TID[{threading.current_thread()}]"
 
 
 @python_app(executors=['ec2_single_node'])
@@ -25,7 +25,7 @@ def python_app_1():
     import threading
     import time
     time.sleep(1)
-    return "Hello from PID[{}] TID[{}]".format(os.getpid(), threading.current_thread())
+    return f"Hello from PID[{os.getpid()}] TID[{threading.current_thread()}]"
 
 
 @parsl.bash_app
@@ -59,7 +59,7 @@ def test_bash():
     import os
     fname = os.path.basename(__file__)
 
-    x = bash_app(stdout="{0}.out".format(fname))
+    x = bash_app(stdout=f"{fname}.out")
     print("Waiting ....")
     print(x.result())
 

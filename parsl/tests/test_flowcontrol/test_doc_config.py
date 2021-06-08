@@ -12,7 +12,7 @@ def python_app():
     import time
     import platform
     time.sleep(20)
-    return "Hello from {0}:{1}".format(os.getpid(), platform.uname())
+    return f"Hello from {os.getpid()}:{platform.uname()}"
 
 
 @pytest.mark.skip('We shouldnt run tests on midway on CI local env')

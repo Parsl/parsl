@@ -12,12 +12,12 @@ import pytest
 
 @bash_app
 def generate(outputs=[]):
-    return "echo $(( RANDOM % (10 - 5 + 1 ) + 5 )) &> {o}".format(o=outputs[0])
+    return f"echo $(( RANDOM % (10 - 5 + 1 ) + 5 )) &> {outputs[0]}"
 
 
 @bash_app
 def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
-    return "cat {0} >> {1}".format(" ".join(map(lambda x: x.filepath, inputs)), outputs[0])
+    return f"cat {' '.join(map(lambda x: x.filepath, inputs))} >> {outputs[0]}"
 
 
 @python_app
@@ -40,9 +40,9 @@ def test_parallel_dataflow():
     # create 5 files with random numbers
     output_files = []
     for i in range(5):
-        if os.path.exists('random-%s.txt' % i):
-            os.remove('random-%s.txt' % i)
-        output_files.append(generate(outputs=[File('random-%s.txt' % i)]))
+        if os.path.exists(f'random-{i}.txt'):
+            os.remove(f'random-{i}.txt')
+        output_files.append(generate(outputs=[File(f'random-{i}.txt')]))
 
     # concatenate the files into a single file
     cc = concat(inputs=[i.outputs[0]

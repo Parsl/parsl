@@ -41,7 +41,7 @@ def test_platform(n=2, sleep_dur=10):
         d.append(x)
 
     pinfo = set([i.result()for i in d])
-    assert len(pinfo) == 2, "Expected two nodes, instead got {}".format(pinfo)
+    assert len(pinfo) == 2, f"Expected two nodes, instead got {pinfo}"
 
     print("Test passed")
 

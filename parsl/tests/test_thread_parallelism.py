@@ -37,7 +37,7 @@ def test_parallel_sleep_bash(n=3, sleep_dur=2, tolerance=0.3):
         i.result()
     end = time.time()
     delta = end - start
-    print("Sleep time : {0}, expected ~{1}+/- 0.3s".format(delta, sleep_dur))
+    print(f"Sleep time : {delta}, expected ~{sleep_dur}+/- 0.3s")
     assert delta > sleep_dur - tolerance, "Slept too little"
     assert delta < sleep_dur + tolerance, "Slept too much"
 
@@ -60,7 +60,7 @@ def test_parallel_sleep_python(n=3, sleep_dur=2, tolerance=0.3):
         i.result()
     end = time.time()
     delta = end - start
-    print("Sleep time : {0}, expected ~{1}+/- 0.3s".format(delta, sleep_dur))
+    print(f"Sleep time : {delta}, expected ~{sleep_dur}+/- 0.3s")
     assert delta > sleep_dur - tolerance, "Slept too little"
     assert delta < sleep_dur + tolerance, "Slept too much"
 

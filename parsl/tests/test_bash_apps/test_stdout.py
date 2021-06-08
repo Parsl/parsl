@@ -11,7 +11,7 @@ from parsl.tests.configs.local_threads import config
 
 @bash_app
 def echo_to_streams(msg, stderr='std.err', stdout='std.out'):
-    return 'echo "{0}"; echo "{0}" >&2'.format(msg)
+    return f'echo "{msg}"; echo "{msg}" >&2'
 
 
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
@@ -49,7 +49,8 @@ def test_bad_stdout_specs(spec):
         fn.result()
     except Exception as e:
         assert isinstance(
-            e, perror.BadStdStreamFile), "Expected BadStdStreamFile, got: {0}".format(type(e))
+            e, perror.BadStdStreamFile), (f"Expected BadStdStreamFile, "
+                                          f"got: {type(e)}")
     else:
         assert False, "Did not raise expected exception BadStdStreamFile"
 
@@ -70,7 +71,8 @@ def test_bad_stderr_file():
         fn.result()
     except Exception as e:
         assert isinstance(
-            e, perror.BadStdStreamFile), "Expected BadStdStreamFile, got: {0}".format(type(e))
+            e, perror.BadStdStreamFile), (f"Expected BadStdStreamFile, "
+                                          f"got: {type(e)}")
     else:
         assert False, "Did not raise expected exception BadStdStreamFile"
 
@@ -92,7 +94,8 @@ def test_stdout_truncate():
     echo_to_streams('hi', stdout=out, stderr=err).result()
     len2 = len(open(out[0]).readlines())
 
-    assert len1 == len2 == 1, "Line count of output files should both be 1, but: len1={} len2={}".format(len1, len2)
+    assert len1 == len2 == 1, (f"Line count of output files should both be 1, "
+                               f"but: len1={len1} len2={len2}")
 
     os.system('rm -f ' + out[0] + ' ' + err)
 
@@ -112,7 +115,8 @@ def test_stdout_append():
     echo_to_streams('hi', stdout=out, stderr=err).result()
     len2 = len(open(out).readlines())
 
-    assert len1 == 1 and len2 == 2, "Line count of output files should be 1 and 2, but:  len1={} len2={}".format(len1, len2)
+    assert len1 == 1 and len2 == 2, (f"Line count of output files should be "
+                                     f"1 and 2, but:  len1={len1} len2={len2}")
 
     os.system('rm -f ' + out + ' ' + err)
 

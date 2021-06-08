@@ -36,24 +36,24 @@ dfk = DataFlowKernel(workers)
 
 def create_dirs(cwd):
 
-    for dir in ['relax.01', 'relax.02', 'relax.03']:
-        rel_dir = '{0}/{1}'.format(cwd, dir)
+    for dir_ in ['relax.01', 'relax.02', 'relax.03']:
+        rel_dir = f'{cwd}/{dir_}'
         if os.path.exists(rel_dir):
             shutil.rmtree(rel_dir)
         os.makedirs(rel_dir)
-        for i in range(0, random.randint(1, 5)):
-            rdir = '{0}/{1}'.format(rel_dir, i)
+        for i in range(random.randint(1, 5)):
+            rdir = f'{rel_dir}/{i}'
             os.makedirs(rdir)
-            with open('{0}/results'.format(rdir), 'w') as f:
-                f.write("{0} {1} - test data\n".format(i, dir))
+            with open(f'{rdir}/results', 'w') as f:
+                f.write(f"{i} {dir_} - test data\n")
 
-    for dir in ['neb01', 'neb02', 'neb03', 'neb04']:
-        rel_dir = '{0}/{1}'.format(cwd, dir)
+    for dir_ in ['neb01', 'neb02', 'neb03', 'neb04']:
+        rel_dir = f'{cwd}/{dir_}'
         if os.path.exists(rel_dir):
             shutil.rmtree(rel_dir)
         os.makedirs(rel_dir)
-        with open('{0}/{1}.txt'.format(rel_dir, dir), 'w') as f:
-            f.write("{0} test data\n".format(rel_dir))
+        with open(f'{rel_dir}/{dir_}.txt', 'w') as f:
+            f.write(f"{rel_dir} test data\n")
 
 
 @python_app(data_flow_kernel=dfk)
@@ -81,14 +81,14 @@ if __name__ == "__main__":
     ls_fu, [res] = ls(pwd, outputs=['results'])
 
     dir_fus = {}
-    for dir in ls_fu.result():
-        if dir.startswith('relax') and os.path.isdir(dir):
-            print("Launching {0}".format(dir))
-            dir_fus[dir] = catter(dir, outputs=['{0}.allresults'.format(dir)],
-                                  stderr='{0}.stderr'.format(dir))
+    for dir_ in ls_fu.result():
+        if dir_.startswith('relax') and os.path.isdir(dir_):
+            print(f"Launching {dir_}")
+            dir_fus[dir_] = catter(dir_, outputs=[f'{dir_}.allresults'],
+                                   stderr=f'{dir_}.stderr')
 
-    for dir in dir_fus:
+    for dir_ in dir_fus:
         try:
-            print(dir_fus[dir][0].result())
+            print(dir_fus[dir_][0].result())
         except Exception as e:
-            print("Caught exception{0}  on {1}".format(e, dir))
+            print(f"Caught exception{e} on {dir_}")

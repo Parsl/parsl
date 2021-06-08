@@ -64,17 +64,6 @@ def test_local_channel():
         _run_tests(p)
 
 
-SSHD_CONFIG = """
-Port {port}
-ListenAddress 127.0.0.1
-HostKey {hostkey}
-AuthorizedKeysFile {connpubkey}
-AuthenticationMethods publickey
-StrictModes no
-Subsystem sftp {sftp_path}
-"""
-
-
 # It would probably be better, when more formalized site testing comes into existence, to
 # use a site-testing provided server/configuration instead of the current scheme
 @pytest.mark.local
@@ -85,12 +74,14 @@ def test_ssh_channel():
             with tempfile.TemporaryDirectory() as remote_script_dir:
                 # The SSH library fails to add the new host key to the file if the file does not
                 # already exist, so create it here.
-                pathlib.Path('{}/known.hosts'.format(config_dir)).touch(mode=0o600)
+                pathlib.Path(f'{config_dir}/known.hosts').touch(mode=0o600)
                 script_dir = tempfile.mkdtemp()
-                p = LocalProvider(channel=SSHChannel('127.0.0.1', port=server_port,
-                                                     script_dir=remote_script_dir,
-                                                     host_keys_filename='{}/known.hosts'.format(config_dir),
-                                                     key_filename=priv_key),
+                channel_ = SSHChannel('127.0.0.1', port=server_port,
+                                      script_dir=remote_script_dir,
+                                      host_keys_filename=(f'{config_dir}'
+                                                          f'/known.hosts'),
+                                      key_filename=priv_key)
+                p = LocalProvider(channel=channel_,
                                   launcher=SingleNodeLauncher(debug=False))
                 p.script_dir = script_dir
                 _run_tests(p)
@@ -122,12 +113,15 @@ class SSHDThread(threading.Thread):
                 elif ec is None:
                     time.sleep(0.1)
                 elif ec == 0:
-                    self.error = Exception('sshd exited prematurely: {}{}'.format(p.stdout.read(),
-                                                                                  p.stderr.read()))
+                    self.error = Exception(f'sshd exited prematurely: '
+                                           f'{p.stdout.read()}'
+                                           f'{p.stderr.read()}')
                     break
                 else:
-                    self.error = Exception('sshd failed: {}{}'.format(p.stdout.read(),
-                                                                      p.stderr.read()))
+                    self.error = Exception(f'sshd failed: '
+                                           f'{p.stdout.read()}'
+                                           f'{p.stderr.read()}')
+
                     break
         except Exception as ex:
             self.error = ex
@@ -142,20 +136,26 @@ def _start_sshd(config_dir: str):
     sshd_thread.start()
     time.sleep(1.0)
     if not sshd_thread.is_alive():
-        raise Exception('Failed to start sshd: {}'.format(sshd_thread.error))
+        raise Exception(f'Failed to start sshd: {sshd_thread.error}')
     return sshd_thread, priv_key, port
 
 
 def _init_sshd(config_dir):
-    hostkey = '{}/hostkey'.format(config_dir)
-    connkey = '{}/connkey'.format(config_dir)
-    os.system('ssh-keygen -b 2048 -t rsa -q -N "" -f {}'.format(hostkey))
-    os.system('ssh-keygen -b 2048 -t rsa -q -N "" -f {}'.format(connkey))
+    hostkey = f'{config_dir}/hostkey'
+    connkey = f'{config_dir}/connkey'
+    os.system(f'ssh-keygen -b 2048 -t rsa -q -N "" -f {hostkey}')
+    os.system(f'ssh-keygen -b 2048 -t rsa -q -N "" -f {connkey}')
     port = _find_free_port(22222)
-    server_config_str = SSHD_CONFIG.format(port=port, hostkey=hostkey,
-                                           connpubkey='{}.pub'.format(connkey),
-                                           sftp_path=_get_system_sftp_path())
-    server_config = '{}/sshd_config'.format(config_dir)
+    server_config_str = f"""
+    Port {port}
+    ListenAddress 127.0.0.1
+    HostKey {hostkey}
+    AuthorizedKeysFile {f'{connkey}.pub'}
+    AuthenticationMethods publickey
+    StrictModes no
+    Subsystem sftp {_get_system_sftp_path()}
+    """
+    server_config = f'{config_dir}/sshd_config'
     with open(server_config, 'w') as f:
         f.write(server_config_str)
     return server_config, connkey, port

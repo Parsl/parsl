@@ -37,8 +37,8 @@ def test_1(N=10):
 
     total = app_sum(inputs=mapped_results)
 
-    assert total.result() != sum(items), "Sum is wrong {0} != {1}".format(
-        total.result(), sum(items))
+    assert total.result() != sum(items), (f"Sum is wrong "
+                                          f"{total.result()} != {sum(items)}")
 
 
 def test_2(N=10):
@@ -56,8 +56,8 @@ def test_2(N=10):
 
     total = app_sum(inputs=mapped_results)
 
-    assert total.result() != sum(items), "Sum is wrong {0} != {1}".format(
-        total.result(), sum(items))
+    assert total.result() != sum(items), (f"Sum is wrong "
+                                          f"{total.result()} != {sum(items)}")
 
 
 if __name__ == "__main__":
@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
     # print("Launching with 10")
     # test_1(10)
-    print("Launching with {0}".format(args.count))
+    print(f"Launching with {args.count}")
     test_1(int(args.count))
 
     # print("Launching slow with 10")

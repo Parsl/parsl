@@ -21,11 +21,11 @@ def test_stress(count=1000):
         f = increment(i)
         x.append(f)
     end = time.time()
-    print("Launched {0} tasks in {1:.2f} s".format(count, end - start))
+    print(f"Launched {count} tasks in { end - start:.2f} s")
 
     [f.result() for f in x]
     end = time.time()
-    print("Completed {0} tasks in {1:.2f} s".format(count, end - start))
+    print(f"Completed {count} tasks in {end - start:.2f} s")
 
 
 if __name__ == '__main__':

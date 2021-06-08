@@ -50,13 +50,13 @@ if __name__ == "__main__":
     if not args.localhost:
         with open(CLIENT_IP_FILE, "r") as fh:
             client_ip = fh.read().strip()
-        print("Read IP {} from file {}".format(client_ip, CLIENT_IP_FILE))
+        print(f"Read IP {client_ip} from file {CLIENT_IP_FILE}")
 
         interchange_ip = address_by_interface("eth0")
         with open(INTERCHANGE_IP_FILE, "w") as fh:
             fh.write(interchange_ip)
-        print("Wrote IP address {} to file {}"
-              .format(interchange_ip, INTERCHANGE_IP_FILE))
+        print(f"Wrote IP address {interchange_ip} "
+              f"to file {INTERCHANGE_IP_FILE}")
     else:
         client_ip = "localhost"
 

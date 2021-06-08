@@ -15,7 +15,7 @@ local_config.executors[0].parallelism = 0
 @parsl.python_app
 def python_app():
     import platform
-    return "Hello from {0}".format(platform.uname())
+    return f"Hello from {platform.uname()}"
 
 
 @pytest.mark.skip('this test needs to be fixed or removed; it appears we do not expect it to complete')

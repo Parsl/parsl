@@ -39,7 +39,7 @@ def test_no_deps(numtasks=2):
             print("*" * 20)
             count += 1
 
-    print("Caught failures of  {0}/{1}".format(count, len(fus)))
+    print(f"Caught failures of  {count}/{len(fus)}")
 
 
 def test_fail_sequence(numtasks=2):
@@ -53,16 +53,16 @@ def test_fail_sequence(numtasks=2):
 
     fus = {0: None}
     for i in range(0, numtasks):
-        print("Chaining {0} to {1}".format(i + 1, fus[i]))
+        print(f"Chaining {i + 1} to {fus[i]}")
         fus[i + 1] = sleep_fail(sleep_dur, 0, fail_prob, inputs=[fus[i]])
 
     # time.sleep(numtasks*sleep_dur)
     for k in sorted(fus.keys()):
         try:
             x = fus[i].result()
-            print("{0} : {1}".format(k, x))
+            print(f"{k} : {x}")
         except Exception as e:
-            print("{0} : {1}".format(k, e))
+            print(f"{k} : {e}")
 
     return
 
@@ -104,7 +104,7 @@ def test_deps(numtasks=2):
         print("Caught the right exception")
         print("Exception : ", e)
     except Exception as e:
-        assert False, "Expected DependencyError but got: %s" % e
+        assert False, f"Expected DependencyError but got: {e}"
     else:
         raise RuntimeError("Expected DependencyError, but got no exception")
 
