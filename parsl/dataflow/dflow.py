@@ -371,10 +371,8 @@ class DataFlowKernel(object):
 
         outer_task_id = task_record['id']
 
-        try:
-            res = self._unwrap_remote_exception_wrapper(inner_app_future)
-
-        except Exception as e:
+        if inner_app_future.exception():
+            e = inner_app_future.exception()
             logger.debug("Task {} failed due to failure of inner join future".format(outer_task_id))
             # We keep the history separately, since the future itself could be
             # tossed.
@@ -388,6 +386,7 @@ class DataFlowKernel(object):
                 task_record['app_fu'].set_exception(e)
 
         else:
+            res = inner_app_future.result()
             self._complete_task(task_record, States.exec_done, res)
 
         self._log_std_streams(task_record)
@@ -482,8 +481,7 @@ class DataFlowKernel(object):
         if self._count_deps(task_record['depends']) == 0:
 
             # We can now launch *task*
-            new_args, kwargs, exceptions_tids = self.sanitize_and_wrap(task_id,
-                                                                       task_record['args'],
+            new_args, kwargs, exceptions_tids = self.sanitize_and_wrap(task_record['args'],
                                                                        task_record['kwargs'])
             task_record['args'] = new_args
             task_record['kwargs'] = kwargs
@@ -693,14 +691,13 @@ class DataFlowKernel(object):
 
         return depends
 
-    def sanitize_and_wrap(self, task_id, args, kwargs):
+    def sanitize_and_wrap(self, args, kwargs):
         """This function should be called only when all the futures we track have been resolved.
 
         If the user hid futures a level below, we will not catch
         it, and will (most likely) result in a type error.
 
         Args:
-             task_id (str) : Task id
              func (Function) : App function
              args (List) : Positional args to app function
              kwargs (Dict) : Kwargs to app function
