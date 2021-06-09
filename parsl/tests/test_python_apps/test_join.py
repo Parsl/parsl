@@ -1,3 +1,4 @@
+import pytest
 import time
 
 from parsl import join_app, python_app
@@ -44,6 +45,17 @@ def test_result_flow():
     f = outer_app()
     res = f.result()
     assert res == RESULT_CONSTANT
+
+
+@join_app
+def join_wrong_type_app():
+    return 3
+
+
+def test_wrong_type():
+    f = join_wrong_type_app()
+    with pytest.raises(TypeError):
+        f.result()
 
 
 def test_dependency_on_joined():
