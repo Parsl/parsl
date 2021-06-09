@@ -26,7 +26,6 @@ parsl.executors.ExtremeScaleExecutor
       ~ExtremeScaleExecutor.start
       ~ExtremeScaleExecutor.status
       ~ExtremeScaleExecutor.submit
-      ~ExtremeScaleExecutor.weakref_cb
    
    
 

@@ -28,8 +28,8 @@ translate_table = {
     'TO': JobState.TIMEOUT,  # (timeout),
     'NF': JobState.FAILED,  # (node failure),
     'RV': JobState.FAILED,  # (revoked) and
-    'SE': JobState.FAILED
-}  # (special exit state
+    'SE': JobState.FAILED   # (special exit state)
+}
 
 
 class SlurmProvider(ClusterProvider, RepresentationMixin):

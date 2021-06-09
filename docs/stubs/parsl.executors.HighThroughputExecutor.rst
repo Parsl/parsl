@@ -26,7 +26,6 @@ parsl.executors.HighThroughputExecutor
       ~HighThroughputExecutor.start
       ~HighThroughputExecutor.status
       ~HighThroughputExecutor.submit
-      ~HighThroughputExecutor.weakref_cb
    
    
 
