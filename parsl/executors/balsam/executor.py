@@ -86,7 +86,7 @@ class BalsamFuture(Future):
             if self._job.state == 'FAILED':
                 self.cancel()
                 raise BalsamJobFailureException()
-            
+
             result_lock.acquire()
             try:
                 self._timeout -= 1
@@ -115,7 +115,7 @@ class BalsamFuture(Future):
             if metadata['type'] == 'python':
                 with open(metadata['file'], 'rb') as input:
                     result = pickle.load(input)
-                    logger.debug("OUTPUT.PICKLE is "+str(result))
+                    logger.debug("OUTPUT.PICKLE is " + str(result))
                     self.set_result(result)
             else:
                 logger.debug("BASH RESULT is " + self._job.data['result'])
@@ -168,7 +168,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.project = project
         self.mode = mode
         self.tags = tags
-        self.siteid = siteid
+        self.siteid = siteid  # TODO: Load settings.yml from sitedir for this
         self.timeout = timeout
         self.sitedir = sitedir
         self.sleep = sleep
@@ -226,12 +226,14 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             import pickle
 
             appname = func.__name__
+
+            # TODO: Use self.sitedir
             site_id = kwargs['siteid'] if 'siteid' in kwargs else self.siteid
 
             workdir = kwargs['workdir'] if 'workdir' in kwargs else "parsl" + os.path.sep + appname
 
             logger.debug("Log file is " + workdir + os.path.sep + 'executor' + os.path.sep +
-                  'logs' + os.path.sep + 'executor.log')
+                         'logs' + os.path.sep + 'executor.log')
 
             callback = kwargs['callback'] if 'callback' in kwargs else None
             inputs = kwargs['inputs'] if 'inputs' in kwargs else []
@@ -249,7 +251,8 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 logger.error("Ignoring the resource specification. ")
                 raise BalsamUnsupportedFeatureException()
 
-            appdir = os.path.abspath(self.sitedir+'/data/'+workdir)
+            logger.debug("WALLTIME: %s", walltime)
+            appdir = os.path.abspath(self.sitedir + '/data/' + workdir)
             if script == 'bash':
                 class_path = 'parsl.BashRunner'
                 shell_command = func(inputs=inputs)
@@ -264,7 +267,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 job = Job(
                     workdir,
                     app.id,
-                    wall_time_min=walltime,
+                    wall_time_min=0,
                     num_nodes=numnodes,
                     parameters={},
                     node_packing_count=node_packing_count,
@@ -273,11 +276,12 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 job.parameters["command"] = shell_command
                 job.save()
             else:
-                import json, os
+                import json
+                import os
                 lines = inspect.getsource(func)
                 class_path = 'parsl.AppRunner'
 
-                logger.debug("{} Inputs: {}".format(appname,json.dumps(inputs)))
+                logger.debug("{} Inputs: {}".format(appname, json.dumps(inputs)))
                 pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
                 pargs = re.sub(r'\n', "", pargs).strip()
                 cwd = os.getcwd()
@@ -295,18 +299,18 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "result = {}(inputs=[*args])\n" \
                          "with open('{}/output.pickle','ab') as output:\n" \
                          "    pickle.dump(result, output)\n".format(
-                            site_id,
-                            class_path,
-                            lines,
-                            pargs,
-                            appname,
-                            appdir) + \
-                         "metadata = {\"type\":\"python\",\"file\":\""+appdir+"/output.pickle\"}\n" \
+                             site_id,
+                             class_path,
+                             lines,
+                             pargs,
+                             appname,
+                             appdir) + \
+                         "metadata = {\"type\":\"python\",\"file\":\"" + appdir + "/output.pickle\"}\n" \
                          "with open('/app/job.metadata','w') as job:\n" \
                          "    job.write(json.dumps(metadata))\n" \
                          "print(result)\n"
 
-                source = source.replace('@python_app','#@python_app')
+                source = source.replace('@python_app', '#@python_app')
 
                 try:
                     app = App.objects.get(site_id=site_id, class_path=class_path)
@@ -318,7 +322,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 job = Job(
                     workdir,
                     app.id,
-                    wall_time_min=walltime,
+                    wall_time_min=0,
                     num_nodes=numnodes,
                     parameters={},
                     node_packing_count=node_packing_count,
