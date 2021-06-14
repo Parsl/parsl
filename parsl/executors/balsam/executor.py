@@ -2,31 +2,80 @@
 """
 
 import logging
-from typing import Optional, List, Callable, Dict, Any, Tuple, Union
-from balsam.api import Job, App, BatchJob, Site, site_config
-from multiprocessing import Condition
-
-from concurrent.futures import Future
 import time
+import os
 import yaml
 import typeguard
-
+import threading
+from uuid import uuid4
+from concurrent.futures import Future
 from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import Condition
+from typing import Optional, List, Callable, Dict, Any, Tuple, Union
+
+from balsam.api import Job, App, BatchJob, Site, site_config
 from parsl.executors.errors import UnsupportedFeatureError
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.utils import RepresentationMixin
-import os
 
-import logging
 logging.basicConfig(
-    format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+    format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-
-SITE_ID: int = 0
-CLASS_PATH: int = 1
 lock = Condition()
 result_lock = Condition()
+futures_lock = Condition()
+
+PARSL_SESSION = uuid4().hex
+
+JOBS = {}
+
+
+class BalsamBulkPoller:
+
+    _thread = None
+
+    def __init__(self, futures: Dict, sleep: int):
+        _thread = x = threading.Thread(target=self.bulk_poll, args=(futures, sleep))
+        logging.debug("BalsamBulkPoller: Starting...")
+        _thread.start()
+
+    def bulk_poll(self, futures: Dict, sleep: int):
+        import time
+        logging.debug("bulk_poll: start")
+        while True:
+            try:
+                futures_lock.acquire()
+                alldone = True
+
+                try:
+                    for jobid in JOBS:
+                        logging.debug("bulk_poll:JOBID %s", jobid)
+                        _job = JOBS[jobid]
+                        logging.debug("bulk_poll: JOB %s", _job)
+                        if _job.state != "JOB_FINISHED" and _job.state != "JOB_FAILED":
+                            alldone = False
+                            break
+
+                    if len(JOBS) > 0 and alldone:
+                        logging.debug("All jobs completed!")
+                        break
+                except:
+                    import traceback
+                    print(traceback.format_exc())
+
+                logging.debug("bulk_poll: Updating jobs for parsl-id %s", PARSL_SESSION)
+                jobs = Job.objects.filter(tags={"parsl-id": PARSL_SESSION})
+                logging.debug("bulk_poll: Updated jobs for parsl-id %s", PARSL_SESSION)
+                logging.debug("bulk_poll: %s", jobs)
+                for job in jobs:
+                    JOBS[job.id] = job
+                logging.debug("JOBS %s", JOBS)
+            finally:
+                futures_lock.release()
+
+            logging.debug("bulk_poll: Sleeping %s", sleep)
+            time.sleep(sleep)
 
 
 class BalsamExecutorException(Exception):
@@ -76,6 +125,50 @@ class BalsamFuture(Future):
     def submit(self):
         pass
 
+    def poll_bulk_result(self):
+
+        logger.debug("Timeout is {}".format(self._timeout))
+        while self._job.id in JOBS and JOBS[self._job.id].state != "JOB_FINISHED":
+            if JOBS[self._job.id].state == 'FAILED':
+                self.cancel()
+                raise BalsamJobFailureException()
+
+            self._timeout -= 1
+
+            if self._timeout <= 0:
+                logger.debug("Cancelling job due to timeout reached.")
+                self.cancel()
+                self._job.state = "FAILED"
+                self._job.save()
+                return
+
+            time.sleep(self._sleep)
+
+        logging.debug("JOB %s is FINISHED!", self._job.id)
+
+        if not self.cancelled():
+            import pickle
+
+            logger.debug("Result is available[{}]: {} {}".format(self._appname, id(self._job), self._job.data))
+
+            metadata = JOBS[self._job.id].data
+            logger.debug(metadata)
+            if metadata['type'] == 'python':
+                logging.debug("Opening output file %s",metadata['file'])
+                with open(metadata['file'], 'rb') as input:
+                    result = pickle.load(input)
+                    logger.debug("OUTPUT.PICKLE is " + str(result))
+                    self.set_result(result)
+            else:
+                logger.debug("BASH RESULT is " + self._job.data['result'])
+                self.set_result(self._job.data['result'])
+
+            logger.debug("Set result on: {} {} ".format(id(self._job), id(self)))
+            self.done()
+
+        if self.cancelled():
+            logger.debug("Job future was cancelled[{}]: {} {} ".format(self._appname, id(self._job), self._job.data))
+
     def poll_result(self):
         """
         Poll Balsam2 API about this Job as long is job is either not finished,
@@ -88,20 +181,17 @@ class BalsamFuture(Future):
                 raise BalsamJobFailureException()
 
             result_lock.acquire()
-            try:
-                self._timeout -= 1
+            self._timeout -= 1
 
-                logger.debug("Checking result in balsam {} {}...{}".format(str(id(self)), id(self._job), self._appname))
-                self._job.refresh_from_db()
+            logger.debug("Checking result in balsam {} {}...{}".format(str(id(self)), id(self._job), self._appname))
+            self._job.refresh_from_db()
 
-                if self._timeout <= 0:
-                    logger.debug("Cancelling job due to timeout reached.")
-                    self.cancel()
-                    self._job.state = "FAILED"
-                    self._job.save()
-                    return
-            finally:
-                result_lock.release()
+            if self._timeout <= 0:
+                logger.debug("Cancelling job due to timeout reached.")
+                self.cancel()
+                self._job.state = "FAILED"
+                self._job.save()
+                return
 
             time.sleep(self._sleep)
 
@@ -180,6 +270,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.workdir = workdir
         self.datadir = datadir
         self.image = image
+        self.bulkpoller = BalsamBulkPoller({}, self.sleep)
 
         if sitedir is None and 'BALSAM_SITE_PATH' in os.environ:
             self.sitedir = os.environ['BALSAM_SITE_PATH']
@@ -263,18 +354,26 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     # Create App if it doesn't exist
                     app = App.objects.create(site_id=site_id, class_path=class_path)
                     app.save()
+                try:
+                    logging.debug("Acquiring futures_lock")
+                    futures_lock.acquire()
+                    logging.debug("Acquired futures_lock")
+                    job = Job(
+                        workdir,
+                        app.id,
+                        wall_time_min=0,
+                        num_nodes=numnodes,
+                        parameters={},
+                        node_packing_count=node_packing_count,
+                        tags={"parsl-id": PARSL_SESSION}
+                    )
 
-                job = Job(
-                    workdir,
-                    app.id,
-                    wall_time_min=0,
-                    num_nodes=numnodes,
-                    parameters={},
-                    node_packing_count=node_packing_count,
-                )
+                    job.parameters["command"] = shell_command
+                    job.save()
+                    logging.debug("JOB %s saved.", job.id)
+                finally:
+                    futures_lock.release()
 
-                job.parameters["command"] = shell_command
-                job.save()
             else:
                 import json
                 import os
@@ -319,18 +418,27 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     app = App.objects.create(site_id=site_id, class_path=class_path)
                     app.save()
 
-                job = Job(
-                    workdir,
-                    app.id,
-                    wall_time_min=0,
-                    num_nodes=numnodes,
-                    parameters={},
-                    node_packing_count=node_packing_count,
-                )
+                try:
+                    logging.debug("Acquiring futures_lock")
+                    futures_lock.acquire()
+                    logging.debug("Acquired futures_lock")
+                    job = Job(
+                        workdir,
+                        app.id,
+                        wall_time_min=0,
+                        num_nodes=numnodes,
+                        parameters={},
+                        node_packing_count=node_packing_count,
+                        tags={"parsl-id": PARSL_SESSION}
+                    )
 
-                job.parameters["image"] = self.image
-                job.parameters["datadir"] = self.datadir
-                job.save()
+                    job.parameters["image"] = self.image
+                    job.parameters["datadir"] = self.datadir
+                    job.save()
+                    logging.debug("JOB %s saved.", job.id)
+                    JOBS[job.id] = job
+                finally:
+                    futures_lock.release()
 
             logger.debug("Making workdir for job: {}".format(workdir))
             os.makedirs(workdir, exist_ok=True)
@@ -348,7 +456,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             if callback:
                 self.balsam_future.add_done_callback(callback)
 
-            self.threadpool.submit(self.balsam_future.poll_result)
+            self.threadpool.submit(self.balsam_future.poll_bulk_result)
 
             return self.balsam_future
         finally:
