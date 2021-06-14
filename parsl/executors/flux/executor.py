@@ -435,7 +435,13 @@ def _submit_single_job(flux_executor: Any, working_dir: str, jobinfo: _FluxJobIn
     with jobinfo.future._cancellation_lock:
         if jobinfo.future.cancelled():
             return
-        flux_future = flux_executor.submit(jobspec)
+        try:
+            # flux_executor.submit() raises if the executor is broken for any reason
+            # most importantly, it raises if the remote flux instance dies
+            flux_future = flux_executor.submit(jobspec)
+        except Exception as exc:
+            jobinfo.future.set_exception(exc)
+            return
         jobinfo.future._flux_future = flux_future
     # Trigger the user-facing wrapper future to complete when the
     # wrapped ``flux.job.FluxExecutor`` future completes.
