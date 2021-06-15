@@ -299,9 +299,6 @@ class DataFlowKernel(object):
             task_record['fail_history'].append(repr(e))
             task_record['fail_count'] += 1
             if self._config.retry_handler:
-                # TODO: put protective code around here for when retry_handler
-                # raises an exception: at which point the task should be
-                # aborted entirely (eg set fail_cost > config retries)
                 try:
                     cost = self._config.retry_handler(e, task_record)
                 except Exception as retry_handler_exception:
@@ -340,7 +337,7 @@ class DataFlowKernel(object):
 
             else:
                 logger.error("Task {} failed after {} retry attempts. Last exception was: {}: {}".format(task_id,
-                                                                                                         self._config.retries,
+                                                                                                         task_record['try_id'],
                                                                                                          type(e).__name__,
                                                                                                          e))
                 logger.debug("Task {} traceback: {}".format(task_id, traceback.format_tb(e.__traceback__)))
@@ -371,10 +368,12 @@ class DataFlowKernel(object):
                     if isinstance(joinable, Future):
                         task_record['status'] = States.joining
                         task_record['joins'] = joinable
+                        task_record['join_lock'] = threading.Lock()
                         joinable.add_done_callback(partial(self.handle_join_update, task_record))
                     elif isinstance(joinable, list):  # TODO: should this be list or arbitrary iterable?
                         task_record['status'] = States.joining
                         task_record['joins'] = joinable
+                        task_record['join_lock'] = threading.Lock()
                         for inner_future in joinable:
                             # TODO: typechecking and error setting here - perhaps
                             # should put this and the one-future case inside a
@@ -404,6 +403,7 @@ class DataFlowKernel(object):
             self.launch_if_ready(task_record)
 
     def handle_join_update(self, task_record, inner_app_future):
+      with task_record['join_lock']:
         # inner_app_future has completed, which is one (potentially of many)
         # futures the outer task is joining on.
 
@@ -423,6 +423,10 @@ class DataFlowKernel(object):
 
         outer_task_id = task_record['id']
         logger.debug(f"Join callback for task {outer_task_id}, inner_app_future {inner_app_future}")
+
+        if task_record['status'] != States.joining:
+            logger.debug(f"Join callback for task {outer_task_id} skipping because task is not in joining state")
+            return
 
         joinable = task_record['joins']  # Future or collection of futures
 
@@ -484,7 +488,7 @@ class DataFlowKernel(object):
         It will trigger post-app processing such as checkpointing.
 
         Args:
-             task_record : Task
+             task_record : Task record
              future (Future) : The relevant app future (which should be
                  consistent with the task structure 'app_fu' entry
 
@@ -780,19 +784,24 @@ class DataFlowKernel(object):
         return depends
 
     def sanitize_and_wrap(self, args, kwargs):
-        """This function should be called only when all the futures we track have been resolved.
+        """This function should be called when all dependency futures for a task
+        have completed.
+
+        It will rewrite the arguments for that task, replacing each dependency
+        future with the result of that future.
 
         If the user hid futures a level below, we will not catch
         it, and will (most likely) result in a type error.
 
         Args:
-             func (Function) : App function
              args (List) : Positional args to app function
              kwargs (Dict) : Kwargs to app function
 
         Return:
-             partial function evaluated with all dependencies in  args, kwargs and kwargs['inputs'] evaluated.
-
+            a rewritten args list
+            a rewritten kwargs dict
+            pairs of exceptions, task ids from any Futures which stored
+            exceptions rather than results.
         """
         dep_failures = []
 

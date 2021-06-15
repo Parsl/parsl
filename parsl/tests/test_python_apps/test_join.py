@@ -10,7 +10,7 @@ local_config = fresh_config()
 RESULT_CONSTANT = 3
 
 
-@python_app
+@python_app(cache=True)
 def inner_app():
     time.sleep(1)
     return RESULT_CONSTANT

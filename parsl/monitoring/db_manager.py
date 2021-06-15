@@ -64,8 +64,10 @@ class Database:
         self.eng = sa.create_engine(url)
         self.meta = self.Base.metadata
 
-        # TODO: I'm seeing database lock errors happening here with my db lock test.
-        # Is the right behaviour to retry a few times?
+        # TODO: this code wants a read lock on the sqlite3 database, and fails if it cannot
+        # - for example, if someone else is querying the database at the point that the
+        # monitoring system is initialized. See PR #1917 for related locked-for-read fixes
+        # elsewhere in this file.
         self.meta.create_all(self.eng)
 
         self.meta.reflect(bind=self.eng)
@@ -135,7 +137,7 @@ class Database:
         task_depends = Column('task_depends', Text, nullable=True)
         task_func_name = Column('task_func_name', Text, nullable=False)
         task_memoize = Column('task_memoize', Text, nullable=False)
-        task_hashsum = Column('task_hashsum', Text, nullable=True)
+        task_hashsum = Column('task_hashsum', Text, nullable=True, index=True)
         task_inputs = Column('task_inputs', Text, nullable=True)
         task_outputs = Column('task_outputs', Text, nullable=True)
         task_stdin = Column('task_stdin', Text, nullable=True)
@@ -610,8 +612,11 @@ class DatabaseManager:
                     self.db.update(table=table, columns=columns, messages=messages)
                     done = True
                 except sa.exc.OperationalError as e:
-                    # hoping that this is a database locked error during _update, not some other problem
-                    logger.warning("Got an sqlite3 operational error. Ignoring and retying on the assumption that it is recoverable: {}".format(e))
+                    # This code assumes that an OperationalError is something that will go away eventually
+                    # if retried - for example, the database being locked because someone else is readying
+                    # the tables we are trying to write to. If that assumption is wrong, then this loop
+                    # may go on forever.
+                    logger.warning("Got a database OperationalError. Ignoring and retying on the assumption that it is recoverable: {}".format(e))
                     self.db.rollback()
                     time.sleep(1)  # hard coded 1s wait - this should be configurable or exponential backoff or something
 

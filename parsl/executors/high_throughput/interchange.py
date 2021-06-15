@@ -332,9 +332,12 @@ class Interchange(object):
     def _send_monitoring_info(self, hub_channel, manager):
         if hub_channel:
             logger.info("Sending message {} to hub".format(self._ready_manager_queue[manager]))
-            hub_channel.send_pyobj((MessageType.NODE_INFO,
-                                    datetime.datetime.now(),
-                                    self._ready_manager_queue[manager]))
+
+            d = self._ready_manager_queue[manager].copy()
+            d['timestamp'] = datetime.datetime.now()
+            d['last_heartbeat'] = datetime.datetime.fromtimestamp(d['last_heartbeat'])
+
+            hub_channel.send_pyobj((MessageType.NODE_INFO, d))
 
     @wrap_with_logs(target="interchange")
     def _command_server(self, kill_event):

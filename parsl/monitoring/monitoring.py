@@ -641,14 +641,12 @@ class MonitoringRouter:
                         assert len(msg) >= 1, "IC Channel expects tuples of length at least 1, got {}".format(msg)
                         if msg[0] == MessageType.NODE_INFO:
                             self.logger.info("message is NODE_INFO")
-                            assert len(msg) >= 1, "IC Channel expects NODE_INFO tuples of length at least 3, got {}".format(msg)
-                            msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
-                            msg[2]['run_id'] = self.run_id
-                            msg[2]['timestamp'] = msg[1]
+                            assert len(msg) == 2, "IC Channel expects NODE_INFO tuples of length 2, got {}".format(msg)
+                            msg[1]['run_id'] = self.run_id
 
                             # ((tag, dict), addr)
-                            node_msg = ((msg[0], msg[2]), 0)
-                            node_msgs.put(node_msg)
+                            node_msg = (msg, 0)
+                            node_msgs.put(cast(Any, node_msg))
                         elif msg[0] == MessageType.RESOURCE_INFO:
                             # with more uniform handling of messaging, it doesn't matter
                             # too much which queue this goes to now... could be node_msgs
