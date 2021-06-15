@@ -2,6 +2,7 @@
 """
 
 import logging
+from parsl.data_provider.data_manager import DataManager
 import time
 import os
 import yaml
@@ -36,7 +37,7 @@ class BalsamBulkPoller:
     _thread = None
 
     def __init__(self, futures: Dict, sleep: int):
-        _thread = x = threading.Thread(target=self.bulk_poll, args=(futures, sleep))
+        _thread = x = threading.Thread(target=self.bulk_poll, daemon=True, args=(futures, sleep))
         logging.debug("BalsamBulkPoller: Starting...")
         _thread.start()
 
@@ -154,7 +155,7 @@ class BalsamFuture(Future):
             metadata = JOBS[self._job.id].data
             logger.debug(metadata)
             if metadata['type'] == 'python':
-                logging.debug("Opening output file %s",metadata['file'])
+                logging.debug("Opening output file %s", metadata['file'])
                 with open(metadata['file'], 'rb') as input:
                     result = pickle.load(input)
                     logger.debug("OUTPUT.PICKLE is " + str(result))
@@ -320,8 +321,8 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
             # TODO: Use self.sitedir
             site_id = kwargs['siteid'] if 'siteid' in kwargs else self.siteid
-
-            workdir = kwargs['workdir'] if 'workdir' in kwargs else "parsl" + os.path.sep + appname
+            uuid = uuid4().hex
+            workdir = kwargs['workdir'] if 'workdir' in kwargs else "parsl" + os.path.sep + appname + os.path.sep + uuid
 
             logger.debug("Log file is " + workdir + os.path.sep + 'executor' + os.path.sep +
                          'logs' + os.path.sep + 'executor.log')
