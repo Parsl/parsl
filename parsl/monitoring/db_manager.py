@@ -547,7 +547,7 @@ class DatabaseManager:
                     assert len(x) == 2, "expected message tuple to have exactly two elements"
                     assert x[0] == MessageType.NODE_INFO, "_migrate_logs_to_internal can only migrate NODE_INFO messages from node queue"
 
-                    self.pending_node_queue.put(x[1])
+                    self.pending_node_queue.put(x[-1])
                 elif queue_tag == "block":
                     self.pending_block_queue.put(x[-1])
                 else:

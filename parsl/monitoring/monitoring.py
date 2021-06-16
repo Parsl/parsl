@@ -442,8 +442,8 @@ class MonitoringRouter:
                 try:
                     data, addr = self.sock.recvfrom(2048)
                     msg = pickle.loads(data)
-                    self.logger.info("Got UDP Message from {}: {}".format(addr, msg))
                     resource_msgs.put((msg, addr))
+                    self.logger.info("Got UDP Message from {}: {}".format(addr, msg))
                 except socket.timeout:
                     pass
 
