@@ -211,7 +211,7 @@ the task's disk requirement in MB), passed to an app via the special keyword arg
           return x*2
 
 
-or updated when the app is invocated:
+or updated when the app is invoked:
 
    .. code-block:: python
 
