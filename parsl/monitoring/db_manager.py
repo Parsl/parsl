@@ -533,19 +533,17 @@ class DatabaseManager:
                 if queue_tag == 'priority' and x == 'STOP':
                     self.close()
                 elif queue_tag == 'priority':  # implicitly not 'STOP'
-                    if isinstance(x, tuple):
-                        assert x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO], \
-                            "_migrate_logs_to_internal can only migrate WORKFLOW_,TASK_INFO message from priority queue, got x[0] == {}".format(x[0])
-                        assert len(x) == 2
-                        self.pending_priority_queue.put(cast(Any, x))
-                    else:
-                        logger.error("dropping message with unknown format: {}".format(x))
+                    assert isinstance(x, tuple)
+                    assert len(x) == 2
+                    assert x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO], \
+                        "_migrate_logs_to_internal can only migrate WORKFLOW_,TASK_INFO message from priority queue, got x[0] == {}".format(x[0])
+                    self.pending_priority_queue.put(cast(Any, x))
                 elif queue_tag == 'resource':
                     assert len(x) == 3
                     self.pending_resource_queue.put(x[-1])
                 elif queue_tag == 'node':
-                    assert x[0] == MessageType.NODE_INFO, "_migrate_logs_to_internal can only migrate NODE_INFO messages from node queue"
                     assert len(x) == 2, "expected message tuple to have exactly two elements"
+                    assert x[0] == MessageType.NODE_INFO, "_migrate_logs_to_internal can only migrate NODE_INFO messages from node queue"
 
                     self.pending_node_queue.put(x[1])
                 elif queue_tag == "block":
