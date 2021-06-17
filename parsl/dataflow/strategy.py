@@ -4,7 +4,7 @@ import math
 from typing import List
 
 from parsl.dataflow.executor_status import ExecutorStatus
-from parsl.executors import HighThroughputExecutor, ExtremeScaleExecutor
+from parsl.executors import HighThroughputExecutor
 from parsl.providers.provider_base import JobState
 
 logger = logging.getLogger(__name__)
@@ -191,11 +191,7 @@ class Strategy(object):
             # FIXME probably more of this logic should be moved to the provider
             min_blocks = executor.provider.min_blocks
             max_blocks = executor.provider.max_blocks
-            if isinstance(executor, HighThroughputExecutor):
-
-                tasks_per_node = executor.workers_per_node
-            elif isinstance(executor, ExtremeScaleExecutor):
-                tasks_per_node = executor.ranks_per_node
+            tasks_per_node = executor.workers_per_node
 
             nodes_per_block = executor.provider.nodes_per_block
             parallelism = executor.provider.parallelism

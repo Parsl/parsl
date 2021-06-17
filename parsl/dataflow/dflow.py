@@ -336,10 +336,20 @@ class DataFlowKernel(object):
                     # listener to that inner future.
 
                     inner_future = future.result()
-                    assert isinstance(inner_future, Future)
-                    task_record['status'] = States.joining
-                    task_record['joins'] = inner_future
-                    inner_future.add_done_callback(partial(self.handle_join_update, task_record))
+
+                    # Fail with a TypeError if the joinapp python body returned
+                    # something we can't join on.
+                    if isinstance(inner_future, Future):
+                        task_record['status'] = States.joining
+                        task_record['joins'] = inner_future
+                        inner_future.add_done_callback(partial(self.handle_join_update, task_record))
+                    else:
+                        task_record['time_returned'] = datetime.datetime.now()
+                        task_record['status'] = States.failed
+                        self.tasks_failed_count += 1
+                        task_record['time_returned'] = datetime.datetime.now()
+                        with task_record['app_fu']._update_lock:
+                            task_record['app_fu'].set_exception(TypeError(f"join_app body must return a Future, got {type(inner_future)}"))
 
         self._log_std_streams(task_record)
 
@@ -361,10 +371,8 @@ class DataFlowKernel(object):
 
         outer_task_id = task_record['id']
 
-        try:
-            res = self._unwrap_remote_exception_wrapper(inner_app_future)
-
-        except Exception as e:
+        if inner_app_future.exception():
+            e = inner_app_future.exception()
             logger.debug("Task {} failed due to failure of inner join future".format(outer_task_id))
             # We keep the history separately, since the future itself could be
             # tossed.
@@ -378,31 +386,34 @@ class DataFlowKernel(object):
                 task_record['app_fu'].set_exception(e)
 
         else:
+            res = inner_app_future.result()
             self._complete_task(task_record, States.exec_done, res)
 
         self._log_std_streams(task_record)
 
         self._send_task_log_info(task_record)
 
-    def handle_app_update(self, task_id, future):
+    def handle_app_update(self, task_record, future):
         """This function is called as a callback when an AppFuture
         is in its final state.
 
         It will trigger post-app processing such as checkpointing.
 
         Args:
-             task_id (string) : Task id
+             task_record : Task record
              future (Future) : The relevant app future (which should be
                  consistent with the task structure 'app_fu' entry
 
         """
 
-        if not self.tasks[task_id]['app_fu'].done():
+        task_id = task_record['id']
+
+        if not task_record['app_fu'].done():
             logger.error("Internal consistency error: app_fu is not done for task {}".format(task_id))
-        if not self.tasks[task_id]['app_fu'] == future:
+        if not task_record['app_fu'] == future:
             logger.error("Internal consistency error: callback future is not the app_fu in task structure, for task {}".format(task_id))
 
-        self.memoizer.update_memo(task_id, self.tasks[task_id], future)
+        self.memoizer.update_memo(task_record, future)
 
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint(tasks=[task_id])
@@ -470,8 +481,7 @@ class DataFlowKernel(object):
         if self._count_deps(task_record['depends']) == 0:
 
             # We can now launch *task*
-            new_args, kwargs, exceptions_tids = self.sanitize_and_wrap(task_id,
-                                                                       task_record['args'],
+            new_args, kwargs, exceptions_tids = self.sanitize_and_wrap(task_record['args'],
                                                                        task_record['kwargs'])
             task_record['args'] = new_args
             task_record['kwargs'] = kwargs
@@ -483,7 +493,7 @@ class DataFlowKernel(object):
                     if task_record['status'] == States.pending:
                         try:
                             exec_fu = self.launch_task(
-                                task_id, task_record['func'], *new_args, **kwargs)
+                                task_record, task_record['func'], *new_args, **kwargs)
                             assert isinstance(exec_fu, Future)
                         except Exception as e:
                             # task launched failed somehow. the execution might
@@ -523,7 +533,7 @@ class DataFlowKernel(object):
 
                 task_record['exec_fu'] = exec_fu
 
-    def launch_task(self, task_id, executable, *args, **kwargs):
+    def launch_task(self, task_record, executable, *args, **kwargs):
         """Handle the actual submission of the task to the executor layer.
 
         If the app task has the executors attributes not set (default=='all')
@@ -535,7 +545,7 @@ class DataFlowKernel(object):
         targeted at those specific executors.
 
         Args:
-            task_id (string) : A string that uniquely identifies the task
+            task_record : The task record
             executable (callable) : A callable object
             args (list of positional args)
             kwargs (arbitrary keyword arguments)
@@ -544,17 +554,18 @@ class DataFlowKernel(object):
         Returns:
             Future that tracks the execution of the submitted executable
         """
-        self.tasks[task_id]['try_time_launched'] = datetime.datetime.now()
+        task_id = task_record['id']
+        task_record['try_time_launched'] = datetime.datetime.now()
 
-        memo_fu = self.memoizer.check_memo(task_id, self.tasks[task_id])
+        memo_fu = self.memoizer.check_memo(task_record)
         if memo_fu:
             logger.info("Reusing cached result for task {}".format(task_id))
-            self.tasks[task_id]['from_memo'] = True
+            task_record['from_memo'] = True
             assert isinstance(memo_fu, Future)
             return memo_fu
 
-        self.tasks[task_id]['from_memo'] = False
-        executor_label = self.tasks[task_id]["executor"]
+        task_record['from_memo'] = False
+        executor_label = task_record["executor"]
         try:
             executor = self.executors[executor_label]
         except Exception:
@@ -563,7 +574,7 @@ class DataFlowKernel(object):
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
-            try_id = self.tasks[task_id]['fail_count']
+            try_id = task_record['fail_count']
             executable = self.monitoring.monitor_wrapper(executable, try_id, task_id,
                                                          self.monitoring.monitoring_hub_url,
                                                          self.run_id,
@@ -572,14 +583,14 @@ class DataFlowKernel(object):
                                                          executor.monitor_resources())
 
         with self.submitter_lock:
-            exec_fu = executor.submit(executable, self.tasks[task_id]['resource_specification'], *args, **kwargs)
-        self.tasks[task_id]['status'] = States.launched
+            exec_fu = executor.submit(executable, task_record['resource_specification'], *args, **kwargs)
+        task_record['status'] = States.launched
 
-        self._send_task_log_info(self.tasks[task_id])
+        self._send_task_log_info(task_record)
 
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
 
-        self._log_std_streams(self.tasks[task_id])
+        self._log_std_streams(task_record)
 
         return exec_fu
 
@@ -680,14 +691,13 @@ class DataFlowKernel(object):
 
         return depends
 
-    def sanitize_and_wrap(self, task_id, args, kwargs):
+    def sanitize_and_wrap(self, args, kwargs):
         """This function should be called only when all the futures we track have been resolved.
 
         If the user hid futures a level below, we will not catch
         it, and will (most likely) result in a type error.
 
         Args:
-             task_id (str) : Task id
              func (Function) : App function
              args (List) : Positional args to app function
              kwargs (Dict) : Kwargs to app function
@@ -870,7 +880,7 @@ class DataFlowKernel(object):
 
         task_def['task_launch_lock'] = threading.Lock()
 
-        app_fu.add_done_callback(partial(self.handle_app_update, task_id))
+        app_fu.add_done_callback(partial(self.handle_app_update, task_def))
         task_def['status'] = States.pending
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
 
