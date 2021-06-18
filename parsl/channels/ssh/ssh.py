@@ -2,7 +2,13 @@ import errno
 import logging
 import os
 
-import paramiko
+try:
+    import paramiko
+except ImportError:
+    _paramiko_enabled = False
+else:
+    _paramiko_enabled = True
+
 from parsl.channels.base import Channel
 from parsl.channels.errors import BadHostKeyException, AuthException, SSHException, BadScriptPath, BadPermsScriptPath, FileCopyException
 from parsl.utils import RepresentationMixin
@@ -45,6 +51,9 @@ class SSHChannel(Channel, RepresentationMixin):
 
         Raises:
         '''
+
+        if not _paramiko_enabled:
+            raise ImportError("Paramiko is missing")
 
         self.hostname = hostname
         self.username = username

@@ -1,6 +1,12 @@
 import logging
-import paramiko
 import socket
+
+try:
+    import paramiko
+except ImportError:
+    _paramiko_enabled = False
+else:
+    _paramiko_enabled = True
 
 from parsl.errors import OptionalModuleMissing
 from parsl.channels.ssh.ssh import SSHChannel
@@ -37,6 +43,9 @@ class OAuthSSHChannel(SSHChannel):
 
         Raises:
         '''
+        if not _paramiko_enabled:
+            raise ImportError("Paramiko is missing")
+
         if not _oauth_ssh_enabled:
             raise OptionalModuleMissing(['oauth_ssh'],
                                         "OauthSSHChannel requires oauth_ssh module and config.")

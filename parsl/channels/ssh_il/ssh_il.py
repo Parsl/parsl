@@ -1,7 +1,13 @@
 import getpass
 import logging
 
-import paramiko
+try:
+    import paramiko
+except ImportError:
+    _paramiko_enabled = False
+else:
+    _paramiko_enabled = True
+
 from parsl.channels.ssh.ssh import SSHChannel
 
 logger = logging.getLogger(__name__)
@@ -29,6 +35,9 @@ class SSHInteractiveLoginChannel(SSHChannel):
 
         Raises:
         '''
+        if not _paramiko_enabled:
+            raise ImportError("Paramiko is missing")
+
         self.hostname = hostname
         self.username = username
         self.password = password
