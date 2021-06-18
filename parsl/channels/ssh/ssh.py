@@ -4,6 +4,13 @@ import os
 
 try:
     import paramiko
+
+    class NoAuthSSHClient(paramiko.SSHClient):
+
+        def _auth(self, username, *args):
+            self._transport.auth_none(username)
+            return
+
 except ImportError:
     _paramiko_enabled = False
 else:
@@ -14,12 +21,6 @@ from parsl.channels.errors import BadHostKeyException, AuthException, SSHExcepti
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
-
-
-class NoAuthSSHClient(paramiko.SSHClient):
-    def _auth(self, username, *args):
-        self._transport.auth_none(username)
-        return
 
 
 class SSHChannel(Channel, RepresentationMixin):
