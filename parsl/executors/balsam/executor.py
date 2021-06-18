@@ -2,10 +2,8 @@
 """
 
 import logging
-from parsl.data_provider.data_manager import DataManager
 import time
 import os
-import yaml
 import typeguard
 import threading
 from uuid import uuid4
@@ -33,45 +31,34 @@ JOBS = {}
 
 
 class BalsamBulkPoller:
+    """
 
+    """
     _thread = None
 
-    def __init__(self, futures: Dict, sleep: int):
-        _thread = x = threading.Thread(target=self.bulk_poll, daemon=True, args=(futures, sleep))
+    def __init__(self, batchjob: BatchJob, futures: Dict, sleep: int):
+        _thread = x = threading.Thread(target=self.bulk_poll, daemon=True, args=(futures, batchjob, sleep))
         logging.debug("BalsamBulkPoller: Starting...")
         _thread.start()
 
-    def bulk_poll(self, futures: Dict, sleep: int):
+    def bulk_poll(self, futures: Dict, batchjob: BatchJob, sleep: int):
         import time
         logging.debug("bulk_poll: start")
         while True:
             try:
                 futures_lock.acquire()
-                alldone = True
-
-                try:
-                    for jobid in JOBS:
-                        logging.debug("bulk_poll:JOBID %s", jobid)
-                        _job = JOBS[jobid]
-                        logging.debug("bulk_poll: JOB %s", _job)
-                        if _job.state != "JOB_FINISHED" and _job.state != "JOB_FAILED":
-                            alldone = False
-                            break
-
-                    if len(JOBS) > 0 and alldone:
-                        logging.debug("All jobs completed!")
-                        break
-                except:
-                    import traceback
-                    print(traceback.format_exc())
 
                 logging.debug("bulk_poll: Updating jobs for parsl-id %s", PARSL_SESSION)
                 jobs = Job.objects.filter(tags={"parsl-id": PARSL_SESSION})
                 logging.debug("bulk_poll: Updated jobs for parsl-id %s", PARSL_SESSION)
                 logging.debug("bulk_poll: %s", jobs)
+
                 for job in jobs:
                     JOBS[job.id] = job
+
                 logging.debug("JOBS %s", JOBS)
+                self.batchjob.refresh_from_db()
+
             finally:
                 futures_lock.release()
 
@@ -239,7 +226,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  mode: str = 'mpi',
                  maxworkers: int = 3,
                  project: str = 'local',
-                 siteid: int = -1,
+                 siteid: int = None,
                  sleep: int = 1,
                  sitedir: str = None,
                  node_packing_count: int = 1,
@@ -250,6 +237,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         logger.debug("Initializing BalsamExecutor")
 
         NoStatusHandlingExecutor.__init__(self)
+
         self.label = label
         self.workdir = workdir
         self.numnodes = numnodes
@@ -259,32 +247,37 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.project = project
         self.mode = mode
         self.tags = tags
-        self.siteid = siteid  # TODO: Load settings.yml from sitedir for this
+        self.siteid = siteid  
         self.timeout = timeout
         self.sitedir = sitedir
         self.sleep = sleep
         self.classpath = classpath
         self.node_packing_count = node_packing_count
         self.threadpool = None
-        self.batchjob = None
         self.balsam_future = None
         self.workdir = workdir
         self.datadir = datadir
         self.image = image
-        self.bulkpoller = BalsamBulkPoller({}, self.sleep)
 
         if sitedir is None and 'BALSAM_SITE_PATH' in os.environ:
             self.sitedir = os.environ['BALSAM_SITE_PATH']
-            # Read site id from settings.yml
-            import yaml
 
-            logger.debug("Loading site settings.yml from: {}".format(self.sitedir))
-            with open(self.sitedir) as site:
-                settings = yaml.load(site, Loader=yaml.FullLoader)
+        if siteid is None:
+            self.siteid = Site.objects.get(path=self.sitedir).id
 
-                self.siteid = settings['site_id']
+        self.batchjob = BatchJob(
+            num_nodes=self.numnodes,
+            wall_time_min=self.walltime,
+            job_mode=self.mode,
+            queue=self.queue,
+            site_id=self.siteid,
+            project=self.project,
+            filter_tags={"parsl-id": PARSL_SESSION}
+        )
 
-                logger.debug("Setting executor site_id to: {}".format(self.siteid))
+        self.batchjob.save()
+
+        self.bulkpoller = BalsamBulkPoller({}, self.batchjob, self.sleep)
 
         if self.sitedir is None and 'BALSAM_SITE_PATH' not in os.environ:
             self.exception = True
@@ -319,7 +312,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
             appname = func.__name__
 
-            # TODO: Use self.sitedir
             site_id = kwargs['siteid'] if 'siteid' in kwargs else self.siteid
             uuid = uuid4().hex
             workdir = kwargs['workdir'] if 'workdir' in kwargs else "parsl" + os.path.sep + appname + os.path.sep + uuid
@@ -363,7 +355,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                         workdir,
                         app.id,
                         wall_time_min=0,
-                        num_nodes=numnodes,
+                        num_nodes=1,
                         parameters={},
                         node_packing_count=node_packing_count,
                         tags={"parsl-id": PARSL_SESSION}
@@ -498,11 +490,11 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
     @property
     def bad_state_is_set(self):
-        return True
+        return self.batchjob.state.toLower() == "failed"
 
     @property
     def executor_exception(self):
-        return self.exception
+        return self.batchjob.state.toLower() == "failed"
 
     @property
     def error_management_enabled(self):
