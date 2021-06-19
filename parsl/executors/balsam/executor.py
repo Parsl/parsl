@@ -45,6 +45,7 @@ class BalsamBulkPoller:
         import time
         logging.debug("bulk_poll: start")
         while True:
+            logging.debug("bulk_poller")
             try:
                 futures_lock.acquire()
 
@@ -57,7 +58,9 @@ class BalsamBulkPoller:
                     JOBS[job.id] = job
 
                 logging.debug("JOBS %s", JOBS)
-                self.batchjob.refresh_from_db()
+                if batchjob:
+                    logging.debug("Refreshing batchjob from db")
+                    batchjob.refresh_from_db()
 
             finally:
                 futures_lock.release()
@@ -226,6 +229,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  mode: str = 'mpi',
                  maxworkers: int = 3,
                  project: str = 'local',
+                 batchjob: bool = False,
                  siteid: int = None,
                  sleep: int = 1,
                  sitedir: str = None,
@@ -247,7 +251,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.project = project
         self.mode = mode
         self.tags = tags
-        self.siteid = siteid  
+        self.siteid = siteid
         self.timeout = timeout
         self.sitedir = sitedir
         self.sleep = sleep
@@ -265,19 +269,23 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         if siteid is None:
             self.siteid = Site.objects.get(path=self.sitedir).id
 
-        self.batchjob = BatchJob(
-            num_nodes=self.numnodes,
-            wall_time_min=self.walltime,
-            job_mode=self.mode,
-            queue=self.queue,
-            site_id=self.siteid,
-            project=self.project,
-            filter_tags={"parsl-id": PARSL_SESSION}
-        )
+        self.batchjob = None
 
-        self.batchjob.save()
+        if batchjob:
+            print("Batchjob")
+            self.batchjob = BatchJob(
+                num_nodes=self.numnodes,
+                wall_time_min=self.walltime,
+                job_mode=self.mode,
+                queue=self.queue,
+                site_id=self.siteid,
+                project=self.project,
+                filter_tags={"parsl-id": PARSL_SESSION}
+            )
 
-        self.bulkpoller = BalsamBulkPoller({}, self.batchjob, self.sleep)
+            self.batchjob.save()
+
+        self.bulkpoller = BalsamBulkPoller(self.batchjob, {}, self.sleep)
 
         if self.sitedir is None and 'BALSAM_SITE_PATH' not in os.environ:
             self.exception = True
