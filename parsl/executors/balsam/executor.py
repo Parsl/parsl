@@ -272,7 +272,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.batchjob = None
 
         if batchjob:
-            print("Batchjob")
+            logger.debug("Creating Batchjob")
             self.batchjob = BatchJob(
                 num_nodes=self.numnodes,
                 wall_time_min=self.walltime,
@@ -284,6 +284,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             )
 
             self.batchjob.save()
+            logger.debug("Saved Batchjob")
 
         self.bulkpoller = BalsamBulkPoller(self.batchjob, {}, self.sleep)
 
