@@ -428,7 +428,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                         workdir,
                         app.id,
                         wall_time_min=0,
-                        num_nodes=numnodes,
+                        num_nodes=1,
                         parameters={},
                         node_packing_count=node_packing_count,
                         tags={"parsl-id": PARSL_SESSION}
