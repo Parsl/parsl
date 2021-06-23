@@ -200,7 +200,7 @@ However, it is possible to specify the requirements for a particular app,
 and Work Queue will automatically run as many parallel instances as possible on each node.
 Work Queue automatically detects the amount of cores, memory, and other resources available on each execution node.
 To activate this feature, add a resource specification to your apps. A resource specification is a dictionary with
-the following three (case-insensitive) keys: ``cores`` (an integer corresponding to the number of cores required by the task),
+the following three keys: ``cores`` (an integer corresponding to the number of cores required by the task),
 ``memory`` (an integer corresponding to the task's memory requirement in MB), and ``disk`` (an integer corresponding to
 the task's disk requirement in MB), passed to an app via the special keyword argument ``parsl_resource_specification``. The specification can be set for all app invocations via a default, for example:
 
