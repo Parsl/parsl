@@ -464,17 +464,8 @@ def execute_task(bufs):
 
     code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
                                            argname, kwargname)
-    try:
-        # logger.debug("[RUNNER] Executing: {0}".format(code))
-        exec(code, user_ns, user_ns)
-
-    except Exception as e:
-        logger.warning("Caught exception; will raise it: {}".format(e), exc_info=True)
-        raise e
-
-    else:
-        # logger.debug("[RUNNER] Result: {0}".format(user_ns.get(resultname)))
-        return user_ns.get(resultname)
+    exec(code, user_ns, user_ns)
+    return user_ns.get(resultname)
 
 
 @wrap_with_logs(target="worker_log")
