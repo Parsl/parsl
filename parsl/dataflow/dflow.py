@@ -692,11 +692,10 @@ class DataFlowKernel(object):
         return depends
 
     def sanitize_and_wrap(self, args, kwargs):
-        """This function should be called when all dependency futures for a task
-        have completed.
+        """This function should be called when all dependencies have completed.
 
-        It will rewrite the arguments for that task, replacing each dependency
-        future with the result of that future.
+        It will rewrite the arguments for that task, replacing each Future
+        with the result of that future.
 
         If the user hid futures a level below, we will not catch
         it, and will (most likely) result in a type error.
