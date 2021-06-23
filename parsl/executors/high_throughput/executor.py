@@ -526,10 +526,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         Args:
             - func (callable) : Callable function
-            - *args (list) : List of arbitrary positional arguments.
+            - args (list) : List of arbitrary positional arguments.
 
         Kwargs:
-            - **kwargs (dict) : A dictionary of arbitrary keyword args for func.
+            - kwargs (dict) : A dictionary of arbitrary keyword args for func.
 
         Returns:
               Future
@@ -612,8 +612,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
              Used along with blocks to indicate whether blocks should be terminated by force.
              When force = True, we will kill blocks regardless of the blocks being busy
              When force = False, Only idle blocks will be terminated.
-             If the # of `idle_blocks` < `blocks`, the list of jobs marked for termination
-             will be in the range: 0 -`blocks`.
+             If the # of ``idle_blocks`` < ``blocks``, the list of jobs marked for termination
+             will be in the range: 0 - ``blocks``.
 
         max_idletime: float
              A time to indicate how long a block can be idle.
