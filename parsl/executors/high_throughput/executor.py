@@ -5,7 +5,7 @@ import threading
 import queue
 import datetime
 import pickle
-from multiprocessing import Process, Queue
+from multiprocessing import Queue
 from typing import Dict  # noqa F401 (used in type annotation)
 from typing import List, Optional, Tuple, Union, Any
 import math
@@ -26,6 +26,7 @@ from parsl.data_provider.staging import Staging
 from parsl.addresses import get_all_addresses
 from parsl.process_loggers import wrap_with_logs
 
+from parsl.multiprocessing import ForkProcess
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
 
@@ -433,7 +434,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         get the worker task and result ports that the interchange has bound to.
         """
         comm_q = Queue(maxsize=10)
-        self.queue_proc = Process(target=interchange.starter,
+        self.queue_proc = ForkProcess(target=interchange.starter,
                                   args=(comm_q,),
                                   kwargs={"client_ports": (self.outgoing_q.port,
                                                            self.incoming_q.port,
