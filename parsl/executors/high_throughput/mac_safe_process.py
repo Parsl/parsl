@@ -1,10 +1,5 @@
-import multiprocessing
-from typing import Any
+from parsl.multiprocessing import ForkProcess
 
-ForkProcess: Any = multiprocessing.get_context('fork').Process
+from typing import Type
 
-
-class MacSafeProcess(ForkProcess):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+MacSafeProcess: Type = ForkProcess
