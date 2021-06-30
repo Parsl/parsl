@@ -5,7 +5,7 @@ import os
 import time
 import datetime
 
-from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar
+from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
 
 from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
@@ -63,7 +63,12 @@ class Database:
         self.eng = sa.create_engine(url)
         self.meta = self.Base.metadata
 
+        # TODO: this code wants a read lock on the sqlite3 database, and fails if it cannot
+        # - for example, if someone else is querying the database at the point that the
+        # monitoring system is initialized. See PR #1917 for related locked-for-read fixes
+        # elsewhere in this file.
         self.meta.create_all(self.eng)
+
         self.meta.reflect(bind=self.eng)
 
         Session = sessionmaker(bind=self.eng)
@@ -131,7 +136,7 @@ class Database:
         task_depends = Column('task_depends', Text, nullable=True)
         task_func_name = Column('task_func_name', Text, nullable=False)
         task_memoize = Column('task_memoize', Text, nullable=False)
-        task_hashsum = Column('task_hashsum', Text, nullable=True)
+        task_hashsum = Column('task_hashsum', Text, nullable=True, index=True)
         task_inputs = Column('task_inputs', Text, nullable=True)
         task_outputs = Column('task_outputs', Text, nullable=True)
         task_stdin = Column('task_stdin', Text, nullable=True)
@@ -525,21 +530,43 @@ class DatabaseManager:
             except queue.Empty:
                 continue
             else:
-                if queue_tag == 'priority':
-                    if x == 'STOP':
-                        self.close()
-                    else:
-                        self.pending_priority_queue.put(x)
+                if queue_tag == 'priority' and x == 'STOP':
+                    self.close()
+                elif queue_tag == 'priority':  # implicitly not 'STOP'
+                    assert isinstance(x, tuple)
+                    assert len(x) == 2
+                    assert x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO], \
+                        "_migrate_logs_to_internal can only migrate WORKFLOW_,TASK_INFO message from priority queue, got x[0] == {}".format(x[0])
+                    self.pending_priority_queue.put(cast(Any, x))
                 elif queue_tag == 'resource':
+                    assert len(x) == 3
                     self.pending_resource_queue.put(x[-1])
                 elif queue_tag == 'node':
+                    assert len(x) == 2, "expected message tuple to have exactly two elements"
+                    assert x[0] == MessageType.NODE_INFO, "_migrate_logs_to_internal can only migrate NODE_INFO messages from node queue"
+
                     self.pending_node_queue.put(x[-1])
                 elif queue_tag == "block":
                     self.pending_block_queue.put(x[-1])
+                else:
+                    raise RuntimeError(f"queue_tag {queue_tag} is unknown")
 
     def _update(self, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
         try:
-            self.db.update(table=table, columns=columns, messages=messages)
+            done = False
+            while not done:
+                try:
+                    self.db.update(table=table, columns=columns, messages=messages)
+                    done = True
+                except sa.exc.OperationalError as e:
+                    # This code assumes that an OperationalError is something that will go away eventually
+                    # if retried - for example, the database being locked because someone else is readying
+                    # the tables we are trying to write to. If that assumption is wrong, then this loop
+                    # may go on forever.
+                    logger.warning("Got a database OperationalError. Ignoring and retying on the assumption that it is recoverable: {}".format(e))
+                    self.db.rollback()
+                    time.sleep(1)  # hard coded 1s wait - this should be configurable or exponential backoff or something
+
         except KeyboardInterrupt:
             logger.exception("KeyboardInterrupt when trying to update Table {}".format(table))
             try:
@@ -556,7 +583,16 @@ class DatabaseManager:
 
     def _insert(self, table: str, messages: List[Dict[str, Any]]) -> None:
         try:
-            self.db.insert(table=table, messages=messages)
+            done = False
+            while not done:
+                try:
+                    self.db.insert(table=table, messages=messages)
+                    done = True
+                except sa.exc.OperationalError as e:
+                    # hoping that this is a database locked error during _update, not some other problem
+                    logger.warning("Got an sqlite3 operational error. Ignoring and retying on the assumption that it is recoverable: {}".format(e))
+                    self.db.rollback()
+                    time.sleep(1)  # hard coded 1s wait - this should be configurable or exponential backoff or something
         except KeyboardInterrupt:
             logger.exception("KeyboardInterrupt when trying to update Table {}".format(table))
             try:

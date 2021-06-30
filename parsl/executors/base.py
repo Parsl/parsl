@@ -14,6 +14,9 @@ class ParslExecutor(metaclass=ABCMeta):
     This is a metaclass that only enforces concrete implementations of
     functionality by the child classes.
 
+    Can be used as a context manager. On exit, calls ``self.shutdown()`` with
+    no arguments and re-raises any thrown exception.
+
     In addition to the listed methods, a ParslExecutor instance must always
     have a member field:
 
@@ -36,6 +39,13 @@ class ParslExecutor(metaclass=ABCMeta):
     """
 
     label: str
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.shutdown()
+        return False
 
     @abstractmethod
     def start(self) -> Optional[List[str]]:
@@ -128,7 +138,7 @@ class ParslExecutor(metaclass=ABCMeta):
         and this method is a delegate to the corresponding method in the provider.
 
         :return: the number of seconds to wait between calls to status() or zero if no polling
-        should be done
+                 should be done
         """
         pass
 
@@ -137,10 +147,8 @@ class ParslExecutor(metaclass=ABCMeta):
     def error_management_enabled(self) -> bool:
         """Indicates whether worker error management is supported by this executor. Worker error
         management is done externally to the executor. However, the executor must implement
-        certain methods that allow this to function. These methods are:
+        certain status handling methods that allow this to function. These methods are:
 
-        Status Handling Methods
-        -----------------------
         :method:handle_errors
         :method:set_bad_state_and_fail_all
 
