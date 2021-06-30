@@ -166,3 +166,6 @@ by exiting with exitcode 9.
 The retry handler is given two parameters: the exception from execution, and
 the parsl internal task_record. The task record contains details such as the
 app name, parameters and executor.
+
+If a retry handler raises an exception itself, then the task will be aborted
+and no further tries will be attempted.
