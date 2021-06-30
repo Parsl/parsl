@@ -222,9 +222,9 @@ class MonitoringHub(RepresentationMixin):
         comm_q = SizedQueue(maxsize=10)  # type: Queue[Union[Tuple[int, int], str]]
         self.exception_q = SizedQueue(maxsize=10)  # type: Queue[Tuple[str, str]]
         self.priority_msgs = SizedQueue()  # type: Queue[Tuple[Any, int]]
-        self.resource_msgs = SizedQueue()  # type: Queue[Tuple[Any, Any]]
-        self.node_msgs = SizedQueue()  # type: Queue[Tuple[Any, int]]
-        self.block_msgs = SizedQueue()  # type: Queue[Tuple[Any, Any]]
+        self.resource_msgs = SizedQueue()  # type: Queue[Tuple[Dict[str, Any], Any]]
+        self.node_msgs = SizedQueue()  # type: Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]
+        self.block_msgs = SizedQueue()  # type:  Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]
 
         self.router_proc = ForkProcess(target=router_starter,
                                    args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),
@@ -436,9 +436,9 @@ class MonitoringRouter:
 
     def start(self,
               priority_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
-              node_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
-              block_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
-              resource_msgs: "queue.Queue[Tuple[Dict[str, Any], str]]") -> None:
+              node_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
+              block_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
+              resource_msgs: "queue.Queue[Tuple[Dict[str, Any], Any]]") -> None:
         try:
             while True:
                 try:
@@ -470,12 +470,19 @@ class MonitoringRouter:
                 try:
                     msg = self.ic_channel.recv_pyobj()
                     self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
+
+                    assert msg[0] == MessageType.NODE_INFO \
+                        or msg[0] == MessageType.BLOCK_INFO, \
+                        "IC Channel expects only NODE_INFO or BLOCK_INFO and cannot dispatch other message types"
+
                     if msg[0] == MessageType.NODE_INFO:
                         msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
                         msg[2]['run_id'] = self.run_id
                         msg[2]['timestamp'] = msg[1]
-                        msg = (msg[0], msg[2])
-                        node_msgs.put((msg, 0))
+
+                        # ((tag, dict), addr)
+                        node_msg = ((msg[0], msg[2]), 0)
+                        node_msgs.put(node_msg)
                     elif msg[0] == MessageType.BLOCK_INFO:
                         block_msgs.put((msg, 0))
                     else:
@@ -504,8 +511,8 @@ class MonitoringRouter:
 def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    exception_q: "queue.Queue[Tuple[str, str]]",
                    priority_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
-                   node_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
-                   block_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
+                   node_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
+                   block_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
                    resource_msgs: "queue.Queue[Tuple[Dict[str, Any], str]]",
 
                    hub_address: str,
