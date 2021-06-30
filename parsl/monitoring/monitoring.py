@@ -261,7 +261,7 @@ class MonitoringHub(RepresentationMixin):
 
         if isinstance(comm_q_result, str):
             self.logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
-            raise RuntimeError("MonitoringRouter failed to start: {comm_q_result}")
+            raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
 
         udp_dish_port, ic_port = comm_q_result
 
@@ -442,8 +442,8 @@ class MonitoringRouter:
                 try:
                     data, addr = self.sock.recvfrom(2048)
                     msg = pickle.loads(data)
-                    resource_msgs.put((msg, addr))
                     self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
+                    resource_msgs.put((msg, addr))
                 except socket.timeout:
                     pass
 
