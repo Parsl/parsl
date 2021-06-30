@@ -227,29 +227,29 @@ class MonitoringHub(RepresentationMixin):
         self.block_msgs = SizedQueue()  # type:  Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]
 
         self.router_proc = ForkProcess(target=router_starter,
-                                   args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),
-                                   kwargs={"hub_address": self.hub_address,
-                                           "hub_port": self.hub_port,
-                                           "hub_port_range": self.hub_port_range,
-                                           "client_address": self.client_address,
-                                           "client_port": self.dfk_port,
-                                           "logdir": self.logdir,
-                                           "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                           "run_id": run_id
-                                   },
-                                   name="Monitoring-Router-Process",
-                                   daemon=True,
+                                       args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),
+                                       kwargs={"hub_address": self.hub_address,
+                                               "hub_port": self.hub_port,
+                                               "hub_port_range": self.hub_port_range,
+                                               "client_address": self.client_address,
+                                               "client_port": self.dfk_port,
+                                               "logdir": self.logdir,
+                                               "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                               "run_id": run_id
+                                       },
+                                       name="Monitoring-Router-Process",
+                                       daemon=True,
         )
         self.router_proc.start()
 
         self.dbm_proc = ForkProcess(target=dbm_starter,
-                                args=(self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs,),
-                                kwargs={"logdir": self.logdir,
-                                        "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                        "db_url": self.logging_endpoint,
-                                  },
-                                name="Monitoring-DBM-Process",
-                                daemon=True,
+                                    args=(self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs,),
+                                    kwargs={"logdir": self.logdir,
+                                            "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                            "db_url": self.logging_endpoint,
+                                    },
+                                    name="Monitoring-DBM-Process",
+                                    daemon=True,
         )
         self.dbm_proc.start()
         self.logger.info("Started the Hub process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
@@ -328,16 +328,20 @@ class MonitoringHub(RepresentationMixin):
             if monitor_resources:
                 # create the monitor process and start
                 pp = ForkProcess(target=monitor,
-                            args=(os.getpid(),
-                                  try_id,
-                                  task_id,
-                                  monitoring_hub_url,
-                                  run_id,
-                                  logging_level,
-                                  sleep_dur),
-                            name="Monitor-Wrapper-{}".format(task_id))
+                                 args=(os.getpid(),
+                                       try_id,
+                                       task_id,
+                                       monitoring_hub_url,
+                                       run_id,
+                                       logging_level,
+                                       sleep_dur),
+                                 name="Monitor-Wrapper-{}".format(task_id))
                 pp.start()
-                p = pp   # awkwardness because ForkProcess is not directly a constructor and type-checking is expecting it to return type of p (which is Optional) otherwise
+                p = pp
+                #  TODO: awkwardness because ForkProcess is not directly a constructor
+                # and type-checking is expecting p to be optional and cannot
+                # narrow down the type of p in this block.
+
             else:
                 p = None
 
