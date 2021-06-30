@@ -5,7 +5,7 @@ import threading
 import queue
 import datetime
 import pickle
-from multiprocessing import Process, Queue
+from multiprocessing import Queue
 from typing import Dict  # noqa F401 (used in type annotation)
 from typing import List, Optional, Tuple, Union
 import math
@@ -25,6 +25,7 @@ from parsl.data_provider.staging import Staging
 from parsl.addresses import get_all_addresses
 from parsl.process_loggers import wrap_with_logs
 
+from parsl.multiprocessing import ForkProcess
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
 
@@ -430,22 +431,22 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         get the worker task and result ports that the interchange has bound to.
         """
         comm_q = Queue(maxsize=10)
-        self.queue_proc = Process(target=interchange.starter,
-                                  args=(comm_q,),
-                                  kwargs={"client_ports": (self.outgoing_q.port,
-                                                           self.incoming_q.port,
-                                                           self.command_client.port),
-                                          "worker_ports": self.worker_ports,
-                                          "worker_port_range": self.worker_port_range,
-                                          "hub_address": self.hub_address,
-                                          "hub_port": self.hub_port,
-                                          "logdir": "{}/{}".format(self.run_dir, self.label),
-                                          "heartbeat_threshold": self.heartbeat_threshold,
-                                          "poll_period": self.poll_period,
-                                          "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
-                                  },
-                                  daemon=True,
-                                  name="HTEX-Interchange"
+        self.queue_proc = ForkProcess(target=interchange.starter,
+                                      args=(comm_q,),
+                                      kwargs={"client_ports": (self.outgoing_q.port,
+                                                               self.incoming_q.port,
+                                                               self.command_client.port),
+                                              "worker_ports": self.worker_ports,
+                                              "worker_port_range": self.worker_port_range,
+                                              "hub_address": self.hub_address,
+                                              "hub_port": self.hub_port,
+                                              "logdir": "{}/{}".format(self.run_dir, self.label),
+                                              "heartbeat_threshold": self.heartbeat_threshold,
+                                              "poll_period": self.poll_period,
+                                              "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
+                                      },
+                                      daemon=True,
+                                      name="HTEX-Interchange"
         )
         self.queue_proc.start()
         try:
