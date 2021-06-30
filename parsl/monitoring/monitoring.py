@@ -8,7 +8,7 @@ import datetime
 import zmq
 
 import queue
-from parsl.multiprocessing import ForkProcess
+from parsl.multiprocessing import ForkProcess, SizedQueue
 from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
@@ -219,12 +219,12 @@ class MonitoringHub(RepresentationMixin):
                                                               min_port=self.client_port_range[0],
                                                               max_port=self.client_port_range[1])
 
-        comm_q = Queue(maxsize=10)  # type: Queue[Union[Tuple[int, int], str]]
-        self.exception_q = Queue(maxsize=10)  # type: Queue[Tuple[str, str]]
-        self.priority_msgs = Queue()  # type: Queue[Tuple[Any, int]]
-        self.resource_msgs = Queue()  # type: Queue[Tuple[Any, Any]]
-        self.node_msgs = Queue()  # type: Queue[Tuple[Any, int]]
-        self.block_msgs = Queue()  # type: Queue[Tuple[Any, Any]]
+        comm_q = SizedQueue(maxsize=10)  # type: Queue[Union[Tuple[int, int], str]]
+        self.exception_q = SizedQueue(maxsize=10)  # type: Queue[Tuple[str, str]]
+        self.priority_msgs = SizedQueue()  # type: Queue[Tuple[Any, int]]
+        self.resource_msgs = SizedQueue()  # type: Queue[Tuple[Any, Any]]
+        self.node_msgs = SizedQueue()  # type: Queue[Tuple[Any, int]]
+        self.block_msgs = SizedQueue()  # type: Queue[Tuple[Any, Any]]
 
         self.router_proc = ForkProcess(target=router_starter,
                                    args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),

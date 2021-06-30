@@ -51,7 +51,7 @@ class MacSafeQueue(multiprocessing.queues.Queue):
 
 
 if platform.system() != 'Darwin':
-    from multiprocessing import Queue as SizedQueue
+    import multiprocessing
+    SizedQueue = multiprocessing.Queue
 else:
-    from parsl.multiprocessing import MacSafeQueue as SizedQueue
-
+    SizedQueue = MacSafeQueue
