@@ -24,10 +24,7 @@ from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.probe import probe_addresses
 from parsl.multiprocessing import ForkProcess as mpProcess
 
-if platform.system() != 'Darwin':
-    from multiprocessing import Queue as mpQueue
-else:
-    from parsl.executors.high_throughput.mac_safe_queue import MacSafeQueue as mpQueue
+from parsl.multiprocessing import SizedQueue as mpQueue
 
 from parsl.serialize import unpack_apply_message, serialize
 

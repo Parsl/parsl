@@ -1,7 +1,7 @@
 import time
 import multiprocessing
 import pytest
-from parsl.executors.high_throughput.mac_safe_queue import MacSafeQueue
+from parsl.multiprocessing import MacSafeQueue
 import random
 
 

@@ -8,6 +8,7 @@ import datetime
 import zmq
 
 import queue
+from parsl.multiprocessing import ForkProcess
 from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
@@ -225,7 +226,7 @@ class MonitoringHub(RepresentationMixin):
         self.node_msgs = Queue()  # type: Queue[Tuple[Any, int]]
         self.block_msgs = Queue()  # type: Queue[Tuple[Any, Any]]
 
-        self.router_proc = Process(target=router_starter,
+        self.router_proc = ForkProcess(target=router_starter,
                                    args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),
                                    kwargs={"hub_address": self.hub_address,
                                            "hub_port": self.hub_port,
@@ -241,7 +242,7 @@ class MonitoringHub(RepresentationMixin):
         )
         self.router_proc.start()
 
-        self.dbm_proc = Process(target=dbm_starter,
+        self.dbm_proc = ForkProcess(target=dbm_starter,
                                 args=(self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs,),
                                 kwargs={"logdir": self.logdir,
                                         "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
@@ -323,10 +324,10 @@ class MonitoringHub(RepresentationMixin):
                                monitoring_hub_url,
                                run_id)
 
+            p: Optional[Process]
             if monitor_resources:
                 # create the monitor process and start
-                p: Optional[Process]
-                p = Process(target=monitor,
+                pp = ForkProcess(target=monitor,
                             args=(os.getpid(),
                                   try_id,
                                   task_id,
@@ -335,7 +336,8 @@ class MonitoringHub(RepresentationMixin):
                                   logging_level,
                                   sleep_dur),
                             name="Monitor-Wrapper-{}".format(task_id))
-                p.start()
+                pp.start()
+                p = pp   # awkwardness because ForkProcess is not directly a constructor and type-checking is expecting it to return type of p (which is Optional) otherwise
             else:
                 p = None
 
