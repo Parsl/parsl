@@ -307,10 +307,10 @@ class TurbineExecutor(NoStatusHandlingExecutor):
 
         Args:
             - func (callable) : Callable function
-            - *args (list) : List of arbitrary positional arguments.
+            - args (list) : List of arbitrary positional arguments.
 
         Kwargs:
-            - **kwargs (dict) : A dictionary of arbitrary keyword args for func.
+            - kwargs (dict) : A dictionary of arbitrary keyword args for func.
 
         Returns:
               Future

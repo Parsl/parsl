@@ -388,10 +388,8 @@ class DataFlowKernel(object):
 
         outer_task_id = task_record['id']
 
-        try:
-            res = self._unwrap_remote_exception_wrapper(inner_app_future)
-
-        except Exception as e:
+        if inner_app_future.exception():
+            e = inner_app_future.exception()
             logger.debug("Task {} failed due to failure of inner join future".format(outer_task_id))
             # We keep the history separately, since the future itself could be
             # tossed.
@@ -407,6 +405,7 @@ class DataFlowKernel(object):
                 task_record['app_fu'].set_exception(e)
 
         else:
+            res = inner_app_future.result()
             self._complete_task(task_record, States.exec_done, res)
 
         self._log_std_streams(task_record)
@@ -420,7 +419,7 @@ class DataFlowKernel(object):
         It will trigger post-app processing such as checkpointing.
 
         Args:
-             task_id (string) : Task id
+             task_record : Task record
              future (Future) : The relevant app future (which should be
                  consistent with the task structure 'app_fu' entry
 
@@ -433,7 +432,7 @@ class DataFlowKernel(object):
         if not task_record['app_fu'] == future:
             logger.error("Internal consistency error: callback future is not the app_fu in task structure, for task {}".format(task_id))
 
-        self.memoizer.update_memo(task_id, task_record, future)
+        self.memoizer.update_memo(task_record, future)
 
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint(tasks=[task_id])
@@ -501,8 +500,7 @@ class DataFlowKernel(object):
         if self._count_deps(task_record['depends']) == 0:
 
             # We can now launch *task*
-            new_args, kwargs, exceptions_tids = self.sanitize_and_wrap(task_id,
-                                                                       task_record['args'],
+            new_args, kwargs, exceptions_tids = self.sanitize_and_wrap(task_record['args'],
                                                                        task_record['kwargs'])
             task_record['args'] = new_args
             task_record['kwargs'] = kwargs
@@ -578,7 +576,7 @@ class DataFlowKernel(object):
         task_id = task_record['id']
         task_record['try_time_launched'] = datetime.datetime.now()
 
-        memo_fu = self.memoizer.check_memo(task_id, task_record)
+        memo_fu = self.memoizer.check_memo(task_record)
         if memo_fu:
             logger.info("Reusing cached result for task {}".format(task_id))
             task_record['from_memo'] = True
@@ -712,21 +710,24 @@ class DataFlowKernel(object):
 
         return depends
 
-    def sanitize_and_wrap(self, task_id, args, kwargs):
-        """This function should be called only when all the futures we track have been resolved.
+    def sanitize_and_wrap(self, args, kwargs):
+        """This function should be called when all dependencies have completed.
+
+        It will rewrite the arguments for that task, replacing each Future
+        with the result of that future.
 
         If the user hid futures a level below, we will not catch
         it, and will (most likely) result in a type error.
 
         Args:
-             task_id (str) : Task id
-             func (Function) : App function
              args (List) : Positional args to app function
              kwargs (Dict) : Kwargs to app function
 
         Return:
-             partial function evaluated with all dependencies in  args, kwargs and kwargs['inputs'] evaluated.
-
+            a rewritten args list
+            a rewritten kwargs dict
+            pairs of exceptions, task ids from any Futures which stored
+            exceptions rather than results.
         """
         dep_failures = []
 
