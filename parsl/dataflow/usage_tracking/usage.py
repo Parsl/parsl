@@ -8,7 +8,6 @@ import logging
 import socket
 import sys
 import platform
-import multiprocessing as mp
 
 from parsl.multiprocessing import ForkProcess
 from parsl.version import VERSION as PARSL_VERSION
