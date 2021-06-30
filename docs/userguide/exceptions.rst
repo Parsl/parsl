@@ -78,6 +78,8 @@ The following example shows how the number of retries can be set to 2:
 
    parsl.load(config)
 
+More specific retry handling can be specified using retry handlers, documented
+below.
 
 
 Lazy fail
@@ -110,3 +112,60 @@ as they are unaffected by task C's failure.
       (F)           (F)           (!F)
 
       time ----->
+
+
+Retry handlers
+--------------
+
+The basic parsl retry mechanism keeps a count of the number of times a task
+has been (re)tried, and will continue retrying that task until the configured
+retry limit is reached.
+
+Retry handlers generalize this to allow more expressive retry handling:
+parsl keeps a retry cost for a task, and the task will be retried until the
+configured retry limit is reached. Instead of the cost being 1 for each
+failure, user-supplied code can examine the failure and compute a custom
+cost.
+
+This allows user knowledge about failures to influence the retry mechanism:
+an exception which is almost definitely a non-recoverable failure (for example,
+due to bad parameters) can be given a high retry cost (so that it will not
+be retried many times, or at all), and exceptions which are likely to be
+transient (for example, where a worker node has died) can be given a low
+retry cost so they will be retried many times.
+
+A retry handler can be specified in the parsl configuration like this:
+
+
+.. code-block:: python
+
+     Config(
+          retries=2,
+          retry_handler=example_retry_handler
+          )
+
+
+``example_retry_handler`` should be a function defined by the user that will
+compute the retry cost for a particular failure, given some information about
+the failure.
+
+For example, the following handler will give a cost of 1 to all exceptions,
+except when a bash app exits with unix exitcode 9, in which case the cost will
+be 100. This will have the effect that retries will happen as normal for most
+errors, but the bash app can indicate that there is little point in retrying
+by exiting with exitcode 9.
+
+.. code-block:: python
+
+     def example_retry_handler(exception, task_record):
+          if isinstance(exception, BashExitFailure) and exception.exitcode == 9:
+               return 100
+          else
+               return 1
+
+The retry handler is given two parameters: the exception from execution, and
+the parsl internal task_record. The task record contains details such as the
+app name, parameters and executor.
+
+If a retry handler raises an exception itself, then the task will be aborted
+and no further tries will be attempted.
