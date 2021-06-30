@@ -198,7 +198,7 @@ class DataFlowKernel(object):
         """
         Create the dictionary that will be included in the log.
         """
-        info_to_monitor = ['func_name', 'memoize', 'hashsum', 'fail_count', 'status',
+        info_to_monitor = ['func_name', 'memoize', 'hashsum', 'fail_count', 'fail_cost', 'status',
                            'id', 'time_invoked', 'try_time_launched', 'time_returned', 'try_time_returned', 'executor']
 
         task_log_info = {"task_" + k: task_record[k] for k in info_to_monitor}
@@ -291,6 +291,23 @@ class DataFlowKernel(object):
             # tossed.
             task_record['fail_history'].append(repr(e))
             task_record['fail_count'] += 1
+            if self._config.retry_handler:
+                try:
+                    cost = self._config.retry_handler(e, task_record)
+                except Exception as retry_handler_exception:
+                    logger.exception("retry_handler raised an exception - will not retry")
+
+                    # this can be any amount > self._config.retries, to stop any more
+                    # retries from happening
+                    task_record['fail_cost'] = self._config.retries + 1
+
+                    # make the reported exception be the retry handler's exception,
+                    # rather than the execution level exception
+                    e = retry_handler_exception
+                else:
+                    task_record['fail_cost'] += cost
+            else:
+                task_record['fail_cost'] += 1
 
             if task_record['status'] == States.dep_fail:
                 logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
@@ -298,7 +315,7 @@ class DataFlowKernel(object):
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
 
-            elif task_record['fail_count'] <= self._config.retries:
+            elif task_record['fail_cost'] <= self._config.retries:
 
                 # record the final state for this try before we mutate for retries
                 task_record['status'] = States.fail_retryable
@@ -314,7 +331,7 @@ class DataFlowKernel(object):
 
             else:
                 logger.exception("Task {} failed after {} retry attempts".format(task_id,
-                                                                                 self._config.retries))
+                                                                                 task_record['try_id']))
                 task_record['time_returned'] = datetime.datetime.now()
                 task_record['status'] = States.failed
                 self.tasks_failed_count += 1
@@ -378,6 +395,8 @@ class DataFlowKernel(object):
             # tossed.
             task_record['fail_history'].append(repr(e))
             task_record['fail_count'] += 1
+            # no need to update the fail cost because join apps are never
+            # retried
 
             task_record['status'] = States.failed
             self.tasks_failed_count += 1
@@ -829,6 +848,7 @@ class DataFlowKernel(object):
                     'hashsum': None,
                     'exec_fu': None,
                     'fail_count': 0,
+                    'fail_cost': 0,
                     'fail_history': [],
                     'from_memo': None,
                     'ignore_for_cache': ignore_for_cache,
