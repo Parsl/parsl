@@ -261,24 +261,22 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     ):
         """Wrap a callable in a Flux job and submit it to Flux.
 
-        Parameters
-        ----------
-        func: callable
-            The callable to submit as a job to Flux
-        resource_specification: collections.abc.Mapping
-            A mapping defining the resources to allocate to the Flux job.
+        :param func: The callable to submit as a job to Flux
+
+        :param resource_specification: A mapping defining the resources to allocate to the Flux job.
+
             Only the following keys are checked for:
-            * num_tasks: the number of tasks to launch (MPI ranks for an MPI job),
-              default 1
-            * cores_per_task: cores per task, default 1
-            * gpus_per_task: gpus per task, default 1
-            * num_nodes: if > 0, evenly distribute the allocated cores/gpus
-              across the given number of nodes. Does *not* give the job exclusive
-              access to those nodes; this option only affects distribution.
-        *args:
-            positional arguments for the callable
-        **kwargs:
-            keyword arguments for the callable
+
+            -  num_tasks: the number of tasks to launch (MPI ranks for an MPI job), default 1
+            -  cores_per_task: cores per task, default 1
+            -  gpus_per_task: gpus per task, default 1
+            -  num_nodes: if > 0, evenly distribute the allocated cores/gpus
+               across the given number of nodes. Does *not* give the job exclusive
+               access to those nodes; this option only affects distribution.
+
+        :param args: positional arguments for the callable
+
+        :param kwargs: keyword arguments for the callable
         """
         # protect self._task_id_counter and shutdown/submit race
         with self._submission_lock:
