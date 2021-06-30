@@ -5,7 +5,7 @@ import os
 import time
 import datetime
 
-from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar
+from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
 
 from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
@@ -532,17 +532,26 @@ class DatabaseManager:
             except queue.Empty:
                 continue
             else:
-                if queue_tag == 'priority':
-                    if x == 'STOP':
-                        self.close()
-                    else:
-                        self.pending_priority_queue.put(x)
+                if queue_tag == 'priority' and x == 'STOP':
+                    self.close()
+                elif queue_tag == 'priority':  # implicitly not 'STOP'
+                    assert isinstance(x, tuple)
+                    assert len(x) == 2
+                    assert x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO], \
+                        "_migrate_logs_to_internal can only migrate WORKFLOW_,TASK_INFO message from priority queue, got x[0] == {}".format(x[0])
+                    self.pending_priority_queue.put(cast(Any, x))
                 elif queue_tag == 'resource':
+                    assert len(x) == 3
                     self.pending_resource_queue.put(x[-1])
                 elif queue_tag == 'node':
+                    assert len(x) == 2, "expected message tuple to have exactly two elements"
+                    assert x[0] == MessageType.NODE_INFO, "_migrate_logs_to_internal can only migrate NODE_INFO messages from node queue"
+
                     self.pending_node_queue.put(x[-1])
                 elif queue_tag == "block":
                     self.pending_block_queue.put(x[-1])
+                else:
+                    raise RuntimeError(f"queue_tag {queue_tag} is unknown")
 
     def _update(self, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
         try:
