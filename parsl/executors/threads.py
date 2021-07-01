@@ -1,5 +1,4 @@
 import logging
-import sys
 import typeguard
 import concurrent.futures as cf
 
@@ -21,7 +20,7 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     max_threads : int
         Number of threads. Default is 2.
     thread_name_prefix : string
-        Thread name prefix (only supported in python v3.6+).
+        Thread name prefix
     storage_access : list of :class:`~parsl.data_provider.staging.Staging`
         Specifications for accessing data this executor remotely.
     managed : bool
@@ -47,11 +46,8 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.managed = managed
 
     def start(self):
-        if sys.version_info > (3, 6):
-            self.executor = cf.ThreadPoolExecutor(max_workers=self.max_threads,
-                                                  thread_name_prefix=self.thread_name_prefix)
-        else:
-            self.executor = cf.ThreadPoolExecutor(max_workers=self.max_threads)
+        self.executor = cf.ThreadPoolExecutor(max_workers=self.max_threads,
+                                              thread_name_prefix=self.thread_name_prefix)
 
     @property
     def scaling_enabled(self):
