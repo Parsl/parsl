@@ -34,6 +34,10 @@ authors:
 - family-names: "Rowland"
   given-names: "Kelly L."
   orcid: https://orcid.org/0000-0001-5147-0051
+- family-names: "Galewsky"
+  given-names: "Ben"
+- family-names: "Bilke"
+  given-names: "Lars"
 title: "parsl"
 version: 1.1.0
 date-released: 2021-04-26
