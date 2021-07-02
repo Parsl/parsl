@@ -1,25 +1,24 @@
-Babuji, Y., Woodard, A., Li, Z., Katz, D. S., Clifford, B., Kumar, R., Lacinski, L., Chard, R., Wozniak, J., Foster, I., Wilde, M., and Chard, K., Parsl: Pervasive Parallel Programming in Python. 28th ACM International Symposium on High-Performance Parallel and Distributed Computing (HPDC). 2019.
-
+Y. Babuji, A. Woodard, Z. Li, D.S. Katz, B. Clifford, R. Kumar, L. Lacinski, R. Chard, J.M. Wozniak, I. Foster, M. Wilde and K. Chard. "Parsl: Pervasive Parallel Programming in Python." 28th ACM International Symposium on High-Performance Parallel and Distributed Computing (HPDC). 2019. 10.1145/3307681.3325400
 or
 
 ```{tex}
 @inproceedings{babuji19parsl,
-  author       = {Babuji, Yadu and
-                  Woodard, Anna and
-                  Li, Zhuozhao and
-                  Katz, Daniel S. and
-                  Clifford, Ben and
-                  Kumar, Rohan and
-                  Lacinski, Lukasz and
-                  Chard, Ryan and 
-                  Wozniak, Justin and
-                  Foster, Ian and 
-                  Wilde, Mike and
-                  Chard, Kyle},
-  title        = {Parsl: Pervasive Parallel Programming in Python},
-  booktitle    = {28th ACM International Symposium on High-Performance Parallel and Distributed Computing (HPDC)},
-  doi          = {10.1145/3307681.3325400},
-  year         = {2019},
-  url          = {https://doi.org/10.1145/3307681.3325400}
+  title = {Parsl: Pervasive Parallel Programming in Python},
+  author = {Yadu Babuji and 
+            Anna Woodard and 
+            Zhuozhao Li and 
+            Daniel S. Katz and 
+            Ben Clifford and 
+            Rohan Kumar and 
+            Luksaz Lacinski and 
+            Ryan Chard and 
+            Justin M. Wozniak and 
+            Ian Foster and 
+            Michael Wilde and 
+            Kyle Chard},
+  booktitle = {28th ACM International Symposium on High-Performance Parallel and Distributed Computing (HPDC)},
+  year = {2019},
+  url = {https://doi.org/10.1145/3307681.3325400},
+  doi = {10.1145/3307681.3325400},
 }
 ```
