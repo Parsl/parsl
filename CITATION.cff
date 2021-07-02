@@ -1,0 +1,38 @@
+cff-version: 1.1.0
+message: "If you use this software in your work, please cite it using the following metadata."
+authors:
+- family-names: "Nand Babuji"
+  given-names: "Yadu"
+  orcid: https://orcid.org/0000-0002-9162-6003
+- family-names: "Woodard"
+  given-names: "Anna"
+  orcid: https://orcid.org/0000-0002-8640-5417
+- family-names: "Clifford"
+  given-names: "Ben"
+  orcid: https://orcid.org/0000-0001-6397-7239
+- family-names: "Chard"
+  given-names: "Kyle"
+  orcid: https://orcid.org/0000-0002-7370-4805
+- family-names: "Katz"
+  given-names: "Daniel S."
+  orcid: https://orcid.org/0000-0001-5934-7525
+- family-names: "Wilde"
+  given-names: "Michael"
+  orcid: https://orcid.org/0000-0001-6660-6206
+- family-names: "Wozniak"
+  given-names: "Justin"
+  orcid: https://orcid.org/0000-0002-2441-2048
+- family-names: "Foster"
+  given-names: "Ian"
+  orcid: https://orcid.org/0000-0003-2129-5269
+- family-names: "Glick"
+  given-names: "Benjamin"
+  orcid: https://orcid.org/0000-0002-0762-2684
+- family-names: "Rowland"
+  given-names: "Kelly L."
+  orcid: https://orcid.org/0000-0001-5147-0051
+title: "parsl"
+version: 1.1.0
+date-released: 2021-04-26
+
+
