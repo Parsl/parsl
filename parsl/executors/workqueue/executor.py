@@ -833,6 +833,12 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
             else:
                 logger.debug("Not specifying max_retries")
 
+            if max_retries is not None:
+                logger.debug(f"Specifying max_retries {max_retries}")
+                t.specify_max_retries(max_retries)
+            else:
+                logger.debug("Not specifying max_retries")
+
             # Specify environment variables for the task
             if env is not None:
                 for var in env:
