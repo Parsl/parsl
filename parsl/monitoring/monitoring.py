@@ -104,9 +104,7 @@ class FilesystemRadio(MonitoringRadio):
         # TODO: use path operators not string interpolation
         tmp_filename = f"{tmp_path}/{unique_id}"
         new_filename = f"{new_path}/{unique_id}"
-        buffer = ((MessageType.RESOURCE_INFO, (self.source_id,   # Identifier for manager
-                   int(time.time()),  # epoch timestamp
-                   message)), "NA")
+        buffer = ((MessageType.RESOURCE_INFO, message), "NA")
 
         # this will write the message out then atomically
         # move it into new/, so that a partially written
@@ -152,9 +150,7 @@ class HTEXRadio(MonitoringRadio):
 
         # not serialising here because it looks like python objects can go through mp queues without explicit pickling?
         try:
-            buffer = (MessageType.RESOURCE_INFO, (self.source_id,   # Identifier for manager
-                      int(time.time()),  # epoch timestamp
-                      message))
+            buffer = (MessageType.RESOURCE_INFO, message)
         except Exception:
             logging.exception("Exception during pickling", exc_info=True)
             return
@@ -222,9 +218,7 @@ class UDPRadio(MonitoringRadio):
             None
         """
         try:
-            buffer = pickle.dumps((self.source_id,   # Identifier for manager
-                                   int(time.time()),  # epoch timestamp
-                                   message))
+            buffer = pickle.dumps(message)
         except Exception:
             logging.exception("Exception during pickling", exc_info=True)
             return
