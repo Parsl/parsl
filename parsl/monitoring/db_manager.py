@@ -579,8 +579,7 @@ class DatabaseManager:
             self.pending_priority_queue.put(cast(Any, x))
         elif x[0] == MessageType.RESOURCE_INFO:
             body = x[1]
-            assert len(body) == 3
-            self.pending_resource_queue.put(body[-1])
+            self.pending_resource_queue.put(body)
         elif x[0] == MessageType.NODE_INFO:
             assert len(x) == 2, "expected NODE_INFO tuple to have exactly two elements"
 
