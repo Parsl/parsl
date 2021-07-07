@@ -104,8 +104,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             Default is True (managed by DFK).
 
         project_name: str
-            If given, Work Queue master process name. Default is None.
-            Overrides address.
+            If a project_name is given, then Work Queue will periodically
+            report its status and performance back to the global WQ catalog,
+            which can be viewed here:  http://ccl.cse.nd.edu/software/workqueue/status
+            Default is None.  Overrides address.
 
         project_password_file: str
             Optional password file for the work queue project. Default is None.
@@ -866,6 +868,12 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                 t.specify_priority(task.priority)
             if task.running_time_min is not None:
                 t.specify_running_time_min(task.running_time_min)
+
+            if max_retries is not None:
+                logger.debug(f"Specifying max_retries {max_retries}")
+                t.specify_max_retries(max_retries)
+            else:
+                logger.debug("Not specifying max_retries")
 
             if max_retries is not None:
                 logger.debug(f"Specifying max_retries {max_retries}")

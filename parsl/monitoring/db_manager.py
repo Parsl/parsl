@@ -561,27 +561,24 @@ class DatabaseManager:
                 continue
             else:
                 if queue_tag == 'priority' and x == 'STOP':
-                    if x == 'STOP':
-                        self.close()
+                    self.close()
                 elif queue_tag == 'priority':  # implicitly not 'STOP'
-                    if isinstance(x, tuple):
-                        assert x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO], \
-                            "_migrate_logs_to_internal can only migrate WORKFLOW_,TASK_INFO message from priority queue, got x[0] == {}".format(x[0])
-                        self._dispatch_to_internal(x)
-                    else:
-                        logger.warning("dropping message with unknown format: {}".format(x))
+                    assert isinstance(x, tuple)
+                    assert len(x) == 2
+                    assert x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO], \
+                        "_migrate_logs_to_internal can only migrate WORKFLOW_,TASK_INFO message from priority queue, got x[0] == {}".format(x[0])
+                    self._dispatch_to_internal(x)
                 elif queue_tag == 'resource':
                     assert isinstance(x, tuple), "_migrate_logs_to_internal was expecting a tuple, got {}".format(x)
                     assert x[0] == MessageType.RESOURCE_INFO, \
                         "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue, got tag {}, message {}".format(x[0], x)
                     self._dispatch_to_internal(x)
                 elif queue_tag == 'node':
-                    logger.info("Received these two from node queue")
-                    logger.info("x = {}".format(x))
-                    logger.info("addr = {}".format(addr))
+                    assert len(x) == 2, "expected message tuple to have exactly two elements"
+                    assert x[0] == MessageType.NODE_INFO, "_migrate_logs_to_internal can only migrate NODE_INFO messages from node queue"
+
                     self._dispatch_to_internal(x)
-                elif queue_tag == 'block':
-                    logger.info("Received a block queue tag message")
+                elif queue_tag == "block":
                     self._dispatch_to_internal(x)
                 else:
                     logger.error(f"Discarding because unknown queue tag '{queue_tag}', message: {x}")
@@ -591,8 +588,7 @@ class DatabaseManager:
             self.pending_priority_queue.put(cast(Any, x))
         elif x[0] == MessageType.RESOURCE_INFO:
             body = x[1]
-            assert len(body) == 3
-            self.pending_resource_queue.put(body[-1])
+            self.pending_resource_queue.put(body)
         elif x[0] == MessageType.NODE_INFO:
             assert len(x) == 2, "expected NODE_INFO tuple to have exactly two elements"
 

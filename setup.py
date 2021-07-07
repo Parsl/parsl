@@ -27,6 +27,7 @@ extras_require = {
     'gssapi' : ['python-gssapi'],
     'azure' : ['azure<=4', 'msrestazure'],
     'workqueue': ['work_queue'],
+    'flux': ['pyyaml', 'cffi', 'jsonschema'],
 }
 extras_require['all'] = sum(extras_require.values(), [])
 
@@ -48,6 +49,7 @@ setup(
                'parsl/executors/extreme_scale/mpi_worker_pool.py',
                'parsl/executors/low_latency/lowlatency_worker.py',
                'parsl/executors/workqueue/exec_parsl_function.py',
+               'parsl/monitoring/node_reporter.py',
     ],
 
     extras_require=extras_require,

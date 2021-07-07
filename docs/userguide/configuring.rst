@@ -514,6 +514,19 @@ using the `CobaltProvider`. This configuration assumes that the script is being 
 .. literalinclude:: ../../parsl/configs/theta.py
 
 
+TOSS3 (LLNL)
+------------
+
+.. image:: https://hpc.llnl.gov/sites/default/files/Magma--2020-LLNL.jpg
+
+The following snippet shows an example configuration for executing on one of LLNL's **TOSS3**
+machines, such as Quartz, Ruby, Topaz, Jade, or Magma. This example uses the `FluxExecutor`
+and connects to Slurm using the `SlurmProvider`. This configuration assumes that the script
+is being executed on the login nodes of one of the machines.
+
+.. literalinclude:: ../../parsl/configs/toss3_llnl.py
+
+
 Further help
 ------------
 

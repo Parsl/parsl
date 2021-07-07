@@ -10,6 +10,7 @@ import zmq
 
 import queue
 from abc import ABCMeta, abstractmethod
+from parsl.multiprocessing import ForkProcess, SizedQueue
 from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
@@ -103,9 +104,7 @@ class FilesystemRadio(MonitoringRadio):
         # TODO: use path operators not string interpolation
         tmp_filename = f"{tmp_path}/{unique_id}"
         new_filename = f"{new_path}/{unique_id}"
-        buffer = ((MessageType.RESOURCE_INFO, (self.source_id,   # Identifier for manager
-                   int(time.time()),  # epoch timestamp
-                   message)), "NA")
+        buffer = (message, "NA")
 
         # this will write the message out then atomically
         # move it into new/, so that a partially written
@@ -151,9 +150,7 @@ class HTEXRadio(MonitoringRadio):
 
         # not serialising here because it looks like python objects can go through mp queues without explicit pickling?
         try:
-            buffer = (MessageType.RESOURCE_INFO, (self.source_id,   # Identifier for manager
-                      int(time.time()),  # epoch timestamp
-                      message))
+            buffer = message
         except Exception:
             logging.exception("Exception during pickling", exc_info=True)
             return
@@ -221,9 +218,7 @@ class UDPRadio(MonitoringRadio):
             None
         """
         try:
-            buffer = pickle.dumps((self.source_id,   # Identifier for manager
-                                   int(time.time()),  # epoch timestamp
-                                   message))
+            buffer = pickle.dumps(message)
         except Exception:
             logging.exception("Exception during pickling", exc_info=True)
             return
@@ -325,35 +320,36 @@ class MonitoringHub(RepresentationMixin):
 
         self.logger.debug("Initializing ZMQ Pipes to client")
         self.monitoring_hub_active = True
-        comm_q = Queue(maxsize=10)  # type: Queue[Union[Tuple[int, int], str]]
-        self.exception_q = Queue(maxsize=10)  # type: Queue[Tuple[str, str]]
-        self.priority_msgs = Queue()  # type: Queue[Tuple[Any, int]]
-        self.resource_msgs = Queue()  # type: Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]
-        self.node_msgs = Queue()  # type: Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]
-        self.block_msgs = Queue()  # type:  Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]
 
-        self.router_proc = Process(target=router_starter,
-                                   args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),
-                                   kwargs={"hub_address": self.hub_address,
-                                           "hub_port": self.hub_port,
-                                           "hub_port_range": self.hub_port_range,
-                                           "logdir": self.logdir,
-                                           "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                           "run_id": run_id
-                                   },
-                                   name="Monitoring-Router-Process",
-                                   daemon=True,
+        comm_q = SizedQueue(maxsize=10)  # type: Queue[Union[Tuple[int, int], str]]
+        self.exception_q = SizedQueue(maxsize=10)  # type: Queue[Tuple[str, str]]
+        self.priority_msgs = SizedQueue()  # type: Queue[Tuple[Any, int]]
+        self.resource_msgs = SizedQueue()  # type: Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]
+        self.node_msgs = SizedQueue()  # type: Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]
+        self.block_msgs = SizedQueue()  # type:  Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]
+
+        self.router_proc = ForkProcess(target=router_starter,
+                                       args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),
+                                       kwargs={"hub_address": self.hub_address,
+                                               "hub_port": self.hub_port,
+                                               "hub_port_range": self.hub_port_range,
+                                               "logdir": self.logdir,
+                                               "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                               "run_id": run_id
+                                       },
+                                       name="Monitoring-Router-Process",
+                                       daemon=True,
         )
         self.router_proc.start()
 
-        self.dbm_proc = Process(target=dbm_starter,
-                                args=(self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs,),
-                                kwargs={"logdir": self.logdir,
-                                        "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                        "db_url": self.logging_endpoint,
-                                  },
-                                name="Monitoring-DBM-Process",
-                                daemon=True,
+        self.dbm_proc = ForkProcess(target=dbm_starter,
+                                    args=(self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs,),
+                                    kwargs={"logdir": self.logdir,
+                                            "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                            "db_url": self.logging_endpoint,
+                                    },
+                                    name="Monitoring-DBM-Process",
+                                    daemon=True,
         )
         self.dbm_proc.start()
         self.logger.info("Started the Hub process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
@@ -461,22 +457,27 @@ class MonitoringHub(RepresentationMixin):
                                run_dir)
             logger.debug("wrapped: 2. sent first message")
 
+            p: Optional[Process]
             if monitor_resources:
                 # create the monitor process and start
-                p: Optional[Process]
-                p = Process(target=monitor,
-                            args=(os.getpid(),
-                                  try_id,
-                                  task_id,
-                                  monitoring_hub_url,
-                                  run_id,
-                                  radio_mode,
-                                  logging_level,
-                                  sleep_dur, run_dir),
-                            name="Monitor-Wrapper-{}".format(task_id))
-                logger.debug("wrapped: 3. created monitor process, pid {}".format(p.pid))
-                p.start()
-                logger.debug("wrapped: 4. started monitor process, pid {}".format(p.pid))
+                pp = ForkProcess(target=monitor,
+                                 args=(os.getpid(),
+                                       try_id,
+                                       task_id,
+                                       monitoring_hub_url,
+                                       run_id,
+                                       radio_mode,
+                                       logging_level,
+                                       sleep_dur, run_dir),
+                                 name="Monitor-Wrapper-{}".format(task_id))
+                logger.debug("wrapped: 3. created monitor process, pid {}".format(pp.pid))
+                pp.start()
+                logger.debug("wrapped: 4. started monitor process, pid {}".format(pp.pid))
+                p = pp
+                #  TODO: awkwardness because ForkProcess is not directly a constructor
+                # and type-checking is expecting p to be optional and cannot
+                # narrow down the type of p in this block.
+
             else:
                 p = None
 
@@ -627,8 +628,8 @@ class MonitoringRouter:
                 try:
                     data, addr = self.sock.recvfrom(2048)
                     msg = pickle.loads(data)
-                    self.logger.info("Got UDP Message from {}: {}".format(addr, msg))
-                    resource_msgs.put(((MessageType.RESOURCE_INFO, msg), addr))
+                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
+                    resource_msgs.put((msg, addr))
                 except socket.timeout:
                     pass
 
@@ -759,15 +760,16 @@ def send_first_message(try_id: int,
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
-    msg = {'run_id': run_id,
-           'try_id': try_id,
-           'task_id': task_id,
-           'hostname': platform.node(),
-           'block_id': os.environ.get('PARSL_WORKER_BLOCK_ID'),
-           'first_msg': True,
-           'last_msg': False,
-           'timestamp': datetime.datetime.now()
-    }
+    msg = (MessageType.RESOURCE_INFO,
+           {'run_id': run_id,
+            'try_id': try_id,
+            'task_id': task_id,
+            'hostname': platform.node(),
+            'block_id': os.environ.get('PARSL_WORKER_BLOCK_ID'),
+            'first_msg': True,
+            'last_msg': False,
+            'timestamp': datetime.datetime.now()
+    })
     radio.send(msg)
     return
 
@@ -794,15 +796,16 @@ def send_last_message(try_id: int,
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
-    msg = {'run_id': run_id,
-           'try_id': try_id,
-           'task_id': task_id,
-           'hostname': platform.node(),
-           'block_id': os.environ.get('PARSL_WORKER_BLOCK_ID'),
-           'first_msg': False,
-           'last_msg': True,
-           'timestamp': datetime.datetime.now()
-    }
+    msg = (MessageType.RESOURCE_INFO,
+           {'run_id': run_id,
+            'try_id': try_id,
+            'task_id': task_id,
+            'hostname': platform.node(),
+            'block_id': os.environ.get('PARSL_WORKER_BLOCK_ID'),
+            'first_msg': False,
+            'last_msg': True,
+            'timestamp': datetime.datetime.now()
+    })
     radio.send(msg)
     return
 
@@ -908,7 +911,7 @@ def monitor(pid: int,
             d['psutil_process_time_user'] += total_children_user_time
             d['psutil_process_time_system'] += total_children_system_time
             logging.debug("sending message")
-            radio.send(d)
+            radio.send((MessageType.RESOURCE_INFO, d))
         except Exception:
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
 
