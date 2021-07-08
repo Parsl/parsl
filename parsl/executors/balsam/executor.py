@@ -225,6 +225,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  image: str = None,
                  numnodes: int = 1,
                  walltime: int = 30,
+                 jobnodes: int = 1,
                  queue: str = 'local',
                  mode: str = 'mpi',
                  maxworkers: int = 3,
@@ -255,6 +256,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.timeout = timeout
         self.sitedir = sitedir
         self.sleep = sleep
+        self.jobnodes = jobnodes
         self.classpath = classpath
         self.node_packing_count = node_packing_count
         self.threadpool = None
@@ -364,7 +366,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                         workdir,
                         app.id,
                         wall_time_min=0,
-                        num_nodes=1,
+                        num_nodes=self.jobnodes,
                         parameters={},
                         node_packing_count=node_packing_count,
                         tags={"parsl-id": PARSL_SESSION}
@@ -428,7 +430,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                         workdir,
                         app.id,
                         wall_time_min=0,
-                        num_nodes=1,
+                        num_nodes=self.jobnodes,
                         parameters={},
                         node_packing_count=node_packing_count,
                         tags={"parsl-id": PARSL_SESSION}
