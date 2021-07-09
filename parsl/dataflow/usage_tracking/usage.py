@@ -1,4 +1,3 @@
-import setproctitle
 import uuid
 import time
 import hashlib
@@ -10,6 +9,7 @@ import socket
 import sys
 import platform
 
+from parsl.utils import setproctitle
 from parsl.multiprocessing import ForkProcess
 from parsl.version import VERSION as PARSL_VERSION
 
@@ -43,7 +43,7 @@ def udp_messenger(domain_name, UDP_IP, UDP_PORT, sock_timeout, message):
           - sock_timeout (int) : Socket timeout
           - to_send (multiprocessing.Queue) : Queue of outgoing messages to internet
     """
-    setproctitle.setproctitle("parsl: Usage tracking")
+    setproctitle("parsl: Usage tracking")
 
     try:
         if message is None:

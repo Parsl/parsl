@@ -2,7 +2,6 @@ import os
 import socket
 import pickle
 import logging
-import setproctitle
 import time
 import typeguard
 import datetime
@@ -14,6 +13,7 @@ from parsl.multiprocessing import ForkProcess, SizedQueue
 from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
+from parsl.utils import setproctitle
 
 from parsl.serialize import deserialize
 
@@ -512,7 +512,7 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[Tuple[Tuple[MessageType, Di
                                level=logging.DEBUG)
 
     logger.info("Starting filesystem radio receiver")
-    setproctitle.setproctitle("parsl: monitoring filesystem receiver")
+    setproctitle("parsl: monitoring filesystem receiver")
     # TODO: these paths should be created by path tools, not f-strings
     # likewise the other places where tmp_dir, new_dir are created on
     # the sending side.
@@ -715,7 +715,7 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    logdir: str,
                    logging_level: int,
                    run_id: str) -> None:
-    setproctitle.setproctitle("parsl: monitoring router")
+    setproctitle("parsl: monitoring router")
     try:
         router = MonitoringRouter(hub_address=hub_address,
                                   hub_port=hub_port,
