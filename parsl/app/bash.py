@@ -65,7 +65,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     returncode = None
     try:
-        proc = subprocess.Popen(executable, stdout=std_out, stderr=std_err, shell=True, executable='/bin/bash')
+        proc = subprocess.Popen(executable, stdout=std_out, stderr=std_err, shell=True, executable='/bin/bash', close_fds=False)
         proc.wait(timeout=timeout)
         returncode = proc.returncode
 

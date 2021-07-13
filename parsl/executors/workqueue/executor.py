@@ -74,7 +74,7 @@ WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason st
 ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name stage cache')
 
 
-class WorkQueueExecutor(NoStatusHandlingExecutor):
+class WorkQueueExecutor(NoStatusHandlingExecutor, putils.RepresentationMixin):
     """Executor to use Work Queue batch system
 
     The WorkQueueExecutor system utilizes the Work Queue framework to
@@ -102,8 +102,10 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             Default is True (managed by DFK).
 
         project_name: str
-            If given, Work Queue master process name. Default is None.
-            Overrides address.
+            If a project_name is given, then Work Queue will periodically
+            report its status and performance back to the global WQ catalog,
+            which can be viewed here:  http://ccl.cse.nd.edu/software/workqueue/status
+            Default is None.  Overrides address.
 
         project_password_file: str
             Optional password file for the work queue project. Default is None.
@@ -173,12 +175,25 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             invocations of an app have similar performance characteristics,
             this will provide a reasonable set of categories automatically.
 
+        max_retries: Optional[int]
+            Set the number of retries that Work Queue will make when a task
+            fails. This is distinct from Parsl level retries configured in
+            parsl.config.Config. Set to None to allow Work Queue to retry
+            tasks forever. By default, this is set to 1, so that all retries
+            will be managed by Parsl.
+
         init_command: str
             Command line to run before executing a task in a worker.
             Default is ''.
 
         worker_options: str
             Extra options passed to work_queue_worker. Default is ''.
+
+        worker_executable: str
+            The command used to invoke work_queue_worker. This can be used
+            when the worker needs to be wrapped inside some other command
+            (for example, to run the worker inside a container). Default is
+            'work_queue_worker'.
     """
 
     @typeguard.typechecked
@@ -201,9 +216,11 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                  autolabel: bool = False,
                  autolabel_window: int = 1,
                  autocategory: bool = True,
+                 max_retries: Optional[int] = 1,
                  init_command: str = "",
                  worker_options: str = "",
-                 full_debug: bool = True):
+                 full_debug: bool = True,
+                 worker_executable: str = 'work_queue_worker'):
         NoStatusHandlingExecutor.__init__(self)
         self._provider = provider
         self._scaling_enabled = True
@@ -228,16 +245,18 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.use_cache = use_cache
         self.working_dir = working_dir
         self.registered_files = set()  # type: Set[str]
-        self.full = full_debug
+        self.full_debug = full_debug
         self.source = True if pack else source
         self.pack = pack
         self.extra_pkgs = extra_pkgs or []
         self.autolabel = autolabel
         self.autolabel_window = autolabel_window
         self.autocategory = autocategory
+        self.max_retries = max_retries
         self.should_stop = multiprocessing.Value(c_bool, False)
         self.cached_envs = {}  # type: Dict[int, str]
         self.worker_options = worker_options
+        self.worker_executable = worker_executable
 
         if not self.address:
             self.address = socket.gethostname()
@@ -277,11 +296,12 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                  "launch_cmd": self.launch_cmd,
                                  "data_dir": self.function_data_dir,
                                  "collector_queue": self.collector_queue,
-                                 "full": self.full,
+                                 "full": self.full_debug,
                                  "shared_fs": self.shared_fs,
                                  "autolabel": self.autolabel,
                                  "autolabel_window": self.autolabel_window,
                                  "autocategory": self.autocategory,
+                                 "max_retries": self.max_retries,
                                  "should_stop": self.should_stop,
                                  "port": self.port,
                                  "wq_log_dir": self.wq_log_dir,
@@ -437,7 +457,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         return fu
 
     def _construct_worker_command(self):
-        worker_command = 'work_queue_worker'
+        worker_command = self.worker_executable
         if self.project_password_file:
             worker_command += ' --password {}'.format(self.project_password_file)
         if self.worker_options:
@@ -681,6 +701,7 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                             autolabel=False,
                             autolabel_window=None,
                             autocategory=False,
+                            max_retries=0,
                             should_stop=None,
                             port=WORK_QUEUE_DEFAULT_PORT,
                             wq_log_dir=None,
@@ -794,6 +815,12 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                 t.specify_disk(task.disk)
             if task.gpus is not None:
                 t.specify_gpus(task.gpus)
+
+            if max_retries is not None:
+                logger.debug(f"Specifying max_retries {max_retries}")
+                t.specify_max_retries(max_retries)
+            else:
+                logger.debug("Not specifying max_retries")
 
             # Specify environment variables for the task
             if env is not None:

@@ -26,7 +26,7 @@ def get_version() -> str:
             head = subprocess.check_output(cmd, env=env).strip().decode('utf-8')
             diff = subprocess.check_output(shlex.split('git diff HEAD'), env=env)
             status = 'dirty' if diff else 'clean'
-            version = '{v}-{head}-{status}'.format(v=VERSION, head=head, status=status)
+            version = f'{VERSION}-{head}-{status}'
         except Exception:
             pass
 
@@ -54,7 +54,7 @@ def get_all_checkpoints(rundir: str = "runinfo") -> List[str]:
 
     for runid in dirs:
 
-        checkpoint = os.path.abspath('{}/{}/checkpoint'.format(rundir, runid))
+        checkpoint = os.path.abspath(f'{rundir}/{runid}/checkpoint')
 
         if os.path.isdir(checkpoint):
             checkpoints.append(checkpoint)
@@ -87,7 +87,7 @@ def get_last_checkpoint(rundir: str = "runinfo") -> List[str]:
         return []
 
     last_runid = dirs[-1]
-    last_checkpoint = os.path.abspath('{}/{}/checkpoint'.format(rundir, last_runid))
+    last_checkpoint = os.path.abspath(f'{rundir}/{last_runid}/checkpoint')
 
     if(not(os.path.isdir(last_checkpoint))):
         return []
@@ -104,12 +104,17 @@ def get_std_fname_mode(fdname: str, stdfspec: Union[str, Tuple[str, str]]) -> Tu
         mode = 'a+'
     elif isinstance(stdfspec, tuple):
         if len(stdfspec) != 2:
-            raise pe.BadStdStreamFile("std descriptor %s has incorrect tuple length %s" % (fdname, len(stdfspec)), TypeError('Bad Tuple Length'))
+            msg = (f"std descriptor {fdname} has incorrect tuple length "
+                   f"{len(stdfspec)}")
+            raise pe.BadStdStreamFile(msg, TypeError('Bad Tuple Length'))
         fname, mode = stdfspec
         if not isinstance(fname, str) or not isinstance(mode, str):
-            raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
+            msg = (f"std descriptor {fdname} has unexpected type "
+                   f"{type(stdfspec)}")
+            raise pe.BadStdStreamFile(msg, TypeError('Bad Tuple Type'))
     else:
-        raise pe.BadStdStreamFile("std descriptor %s has unexpected type %s" % (fdname, str(type(stdfspec))), TypeError('Bad Tuple Type'))
+        msg = f"std descriptor {fdname} has unexpected type {type(stdfspec)}"
+        raise pe.BadStdStreamFile(msg, TypeError('Bad Tuple Type'))
     return fname, mode
 
 
@@ -146,7 +151,9 @@ def wtime_to_minutes(time_string: str) -> int:
     hours, mins, seconds = time_string.split(':')
     total_mins = int(hours) * 60 + int(mins)
     if total_mins < 1:
-        logger.warning("Time string '{}' parsed to {} minutes, less than 1".format(time_string, total_mins))
+        msg = (f"Time string '{time_string}' parsed to {total_mins} minutes, "
+               f"less than 1")
+        logger.warning(msg)
     return total_mins
 
 
@@ -198,8 +205,10 @@ class RepresentationMixin(object):
 
         for arg in argspec.args[1:]:
             if not hasattr(self, arg):
-                template = 'class {} uses {} in the constructor, but does not define it as an attribute'
-                raise AttributeError(template.format(self.__class__.__name__, arg))
+                template = (f'class {self.__class__.__name__} uses {arg} in the'
+                            f' constructor, but does not define it as an '
+                            f'attribute')
+                raise AttributeError(template)
 
         if len(defaults) != 0:
             args = [getattr(self, a) for a in argspec.args[1:-len(defaults)]]
@@ -213,18 +222,18 @@ class RepresentationMixin(object):
                 if len(lines) <= 1:
                     return text
                 return "\n".join("    " + line for line in lines).strip()
-            args = ["\n    {},".format(indent(repr(a))) for a in args]
-            kwargsl = ["\n    {}={}".format(k, indent(repr(v)))
-                       for k, v in sorted(kwargs.items())]
+            args = [f"\n    {indent(repr(a))}," for a in args]
+            kwargsl = [f"\n    {k}={indent(repr(v))}" for k, v in
+                       sorted(kwargs.items())]
 
             info = "".join(args) + ", ".join(kwargsl)
-            return self.__class__.__name__ + "({}\n)".format(info)
+            return self.__class__.__name__ + f"({info}\n)"
 
         def assemble_line(args: List[str], kwargs: Dict[str, object]) -> str:
-            kwargsl = ['{}={}'.format(k, repr(v)) for k, v in sorted(kwargs.items())]
+            kwargsl = [f'{k}={repr(v)}' for k, v in sorted(kwargs.items())]
 
             info = ", ".join([repr(a) for a in args] + kwargsl)
-            return self.__class__.__name__ + "({})".format(info)
+            return self.__class__.__name__ + f"({info})"
 
         if len(assemble_line(args, kwargs)) <= self.__class__.__max_width__:
             return assemble_line(args, kwargs)
