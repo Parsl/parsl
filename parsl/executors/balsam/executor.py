@@ -10,7 +10,7 @@ from uuid import uuid4
 from concurrent.futures import Future
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Condition
-from typing import Optional, List, Callable, Dict, Any, Tuple, Union
+from typing import Optional, List, Callable, Dict, Any, Tuple
 
 from balsam.api import Job, App, BatchJob, Site, site_config
 from parsl.executors.errors import UnsupportedFeatureError
@@ -32,12 +32,12 @@ JOBS = {}
 
 class BalsamBulkPoller:
     """
-
+    Polls the balsam API for jobs associated with this batch
     """
     _thread = None
 
     def __init__(self, batchjob: BatchJob, futures: Dict, sleep: int):
-        _thread = x = threading.Thread(target=self.bulk_poll, daemon=True, args=(futures, batchjob, sleep))
+        _thread = threading.Thread(target=self.bulk_poll, daemon=True, args=(futures, batchjob, sleep))
         logging.debug("BalsamBulkPoller: Starting...")
         _thread.start()
 
@@ -71,35 +71,35 @@ class BalsamBulkPoller:
 
 class BalsamExecutorException(Exception):
     """
-
+    Generic balsam exception
     """
     pass
 
 
 class BalsamJobFailureException(Exception):
     """
-
+    Balsam Job Failure exception
     """
     pass
 
 
 class BalsamFutureException(Exception):
     """
-
+    Balsam future exception
     """
     pass
 
 
 class BalsamUnsupportedFeatureException(UnsupportedFeatureError):
     """
-
+    Unsupported feature exception
     """
     pass
 
 
 class BalsamFuture(Future):
     """
-
+    A future for a balsam job. Will poll for its result
     """
     _job: Job = None
     _timeout: int = 60
@@ -211,7 +211,7 @@ class BalsamFuture(Future):
 
 class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     """
-
+    Parsl executor for balsam2 jobs
     """
     managed = False
     maxworkers = 3
@@ -315,7 +315,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         """
         try:
             import os
-            import sys
             import inspect
             import codecs
             import re
@@ -334,7 +333,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             inputs = kwargs['inputs'] if 'inputs' in kwargs else []
             script = kwargs['script'] if 'script' in kwargs else None
             sleep = kwargs['sleep'] if 'sleep' in kwargs else self.sleep
-            numnodes = kwargs['numnodes'] if 'numnodes' in kwargs else self.numnodes
             walltime = kwargs['walltime'] if 'walltime' in kwargs else self.walltime
             timeout = kwargs['timeout'] if 'timeout' in kwargs else self.timeout
 
@@ -354,7 +352,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
                 try:
                     app = App.objects.get(site_id=site_id, class_path=class_path)
-                except:
+                except Exception:
                     # Create App if it doesn't exist
                     app = App.objects.create(site_id=site_id, class_path=class_path)
                     app.save()
@@ -387,7 +385,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 logger.debug("{} Inputs: {}".format(appname, json.dumps(inputs)))
                 pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
                 pargs = re.sub(r'\n', "", pargs).strip()
-                cwd = os.getcwd()
 
                 source = "import pickle\n" \
                          "import os\n" \
@@ -417,7 +414,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
                 try:
                     app = App.objects.get(site_id=site_id, class_path=class_path)
-                except Exception as ex:
+                except Exception:
                     # Create App if it doesn't exist
                     app = App.objects.create(site_id=site_id, class_path=class_path)
                     app.save()
