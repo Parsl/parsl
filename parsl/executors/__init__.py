@@ -5,6 +5,7 @@ from parsl.executors.high_throughput.executor import HighThroughputExecutor
 from parsl.executors.extreme_scale.executor import ExtremeScaleExecutor
 from parsl.executors.low_latency.executor import LowLatencyExecutor
 from parsl.executors.balsam.executor import BalsamExecutor
+from parsl.executors.flux.executor import FluxExecutor
 
 __all__ = ['IPyParallelExecutor',
            'ThreadPoolExecutor',
@@ -12,4 +13,5 @@ __all__ = ['IPyParallelExecutor',
            'ExtremeScaleExecutor',
            'LowLatencyExecutor',
            'BalsamExecutor',
-           'WorkQueueExecutor']
+           'WorkQueueExecutor',
+           'FluxExecutor']

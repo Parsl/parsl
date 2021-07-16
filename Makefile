@@ -51,6 +51,9 @@ mypy: ## run mypy checks
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/sites/
         # only the top level of monitoring is checked here because the visualization code does not type check
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/app/ parsl/channels/ parsl/dataflow/ parsl/data_provider/ parsl/launchers parsl/providers/ parsl/monitoring/*py
+        # process worker pool is explicitly listed to check, because it is not
+        # imported from anywhere in core parsl python code.
+	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/executors/high_throughput/process_worker_pool.py
 
 .PHONY: local_thread_test
 local_thread_test: ## run all tests with local_thread config
@@ -76,7 +79,7 @@ workqueue_ex_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex conf
 config_local_test: ## run all tests with workqueue_ex config
 	echo "$(MPI)"
 	parsl/executors/extreme_scale/install-mpi.sh $(MPI)
-	pip3 install ".[extreme_scale]"
+	pip3 install ".[extreme_scale,monitoring]"
 	PYTHONPATH=. pytest parsl/tests/ -k "not cleannet" --config local --cov=parsl --cov-append --cov-report= --random-order
 
 .PHONY: site_test
