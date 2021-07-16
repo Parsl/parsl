@@ -118,7 +118,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
 class SingularityApp(AppBase):
 
-    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None, cmd="/home/darren/alcf/singularity/git/singularity/builddir/singularity", image="/home/darren/alcf/singularity/git/gsas2container/gsas2.img", python="/work/miniconda/bin/python", data=None, walltime=60):
+    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None, cmd=None, image=None, python=None, data=None, walltime=60):
         super().__init__(func, data_flow_kernel=data_flow_kernel, executors=executors, cache=cache, ignore_for_cache=ignore_for_cache)
         self.kwargs = {}
 
@@ -138,7 +138,8 @@ class SingularityApp(AppBase):
 
         remote_fn = partial(remote_side_bash_executor, self.func, image=image, command=self.command, walltime=walltime)
         remote_fn.__name__ = self.func.__name__
-
+        
+        self.kwargs['script'] = 'container'
         logger.debug("Func name: {}".format(self.func.__name__))
 
         self.wrapped_remote_function = remote_fn
@@ -167,7 +168,7 @@ class SingularityApp(AppBase):
             dfk = self.data_flow_kernel
 
         import json
-        lines = inspect.getsource(self.func.func)
+        lines = inspect.getsource(self.func)
         appname = self.func.__name__
 
         inputs = kwargs['inputs'] if 'inputs' in kwargs else []
@@ -206,7 +207,7 @@ class SingularityApp(AppBase):
         source = source.replace('@container_app', '#@container_app')
         source = source.replace('@bash_app', '#@bash_app')
 
-        with open('app.py','w') as app:
+        with open('app.py', 'w') as app:
             app.write(source)
 
         shell_app = self.command+" /files/runapp.sh <<HEREDOC\n{}\nHEREDOC".format(source)
@@ -215,12 +216,10 @@ class SingularityApp(AppBase):
 
             return command
 
-        with open('cmd.out','w') as cmdout:
-            cmdout.write(shell_app)
-
         remote_fn = partial(remote_side_bash_executor, invoke_container, command=shell_app)
         remote_fn.__name__ = self.func.__name__
         self.wrapped_remote_function = wrap_error(remote_fn)
+        self.wrapped_remote_function.func = self.func
 
         app_fut = dfk.submit(self.wrapped_remote_function,
                              app_args=args,

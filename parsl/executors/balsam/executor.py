@@ -376,10 +376,92 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 finally:
                     futures_lock.release()
 
+            elif script == 'container':
+                import json
+                import os
+                import sys
+
+                lines = []
+
+                try:
+                    lines = inspect.getsource(func.func)
+                except:
+                    import traceback
+                    print(traceback.format_exc())
+
+                class_path = 'parsl.ContainerRunner'
+
+                logger.debug("{} Inputs: {}".format(appname, json.dumps(inputs)))
+                pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
+                pargs = re.sub(r'\n', "", pargs).strip()
+
+                source = "import pickle\n" \
+                         "import os\n" \
+                         "import json\n" \
+                         "import codecs\n" \
+                         "SITE_ID={}\n" \
+                         "CLASS_PATH='{}'\n" \
+                         "{}\n" \
+                         "pargs = '{}'\n" \
+                         "args = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\n" \
+                         "print(args)\n" \
+                         "result = {}(inputs=[*args])\n" \
+                         "with open('{}/output.pickle','ab') as output:\n" \
+                         "    pickle.dump(result, output)\n".format(
+                             site_id,
+                             class_path,
+                             lines,
+                             pargs,
+                             appname,
+                             appdir) + \
+                         "metadata = {\"type\":\"python\",\"file\":\"" + appdir + "/output.pickle\"}\n" \
+                         "with open('/app/job.metadata','w') as job:\n" \
+                         "    job.write(json.dumps(metadata))\n" \
+                         "print(result)\n"
+
+                source = source.replace('@container_app', '#@container_app')
+
+                try:
+                    app = App.objects.get(site_id=site_id, class_path=class_path)
+                except Exception:
+                    # Create App if it doesn't exist
+                    app = App.objects.create(site_id=site_id, class_path=class_path)
+                    app.save()
+
+                try:
+                    logging.debug("Acquiring futures_lock")
+                    futures_lock.acquire()
+                    logging.debug("Acquired futures_lock")
+                    job = Job(
+                        workdir,
+                        app.id,
+                        wall_time_min=0,
+                        num_nodes=self.jobnodes,
+                        parameters={},
+                        node_packing_count=node_packing_count,
+                        tags={"parsl-id": PARSL_SESSION}
+                    )
+
+                    job.parameters["image"] = self.image
+                    job.parameters["datadir"] = self.datadir
+                    job.save()
+                    logging.debug("JOB %s saved.", job.id)
+                    JOBS[job.id] = job
+                finally:
+                    futures_lock.release()
+
             else:
                 import json
                 import os
-                lines = inspect.getsource(func)
+                import sys
+
+                lines = []
+                try:
+                    lines = inspect.getsource(func)
+                except:
+                    import traceback
+                    print(traceback.format_exc())
+
                 class_path = 'parsl.AppRunner'
 
                 logger.debug("{} Inputs: {}".format(appname, json.dumps(inputs)))
@@ -433,8 +515,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                         tags={"parsl-id": PARSL_SESSION}
                     )
 
-                    job.parameters["image"] = self.image
-                    job.parameters["datadir"] = self.datadir
+                    job.parameters["python"] = sys.executable
                     job.save()
                     logging.debug("JOB %s saved.", job.id)
                     JOBS[job.id] = job
