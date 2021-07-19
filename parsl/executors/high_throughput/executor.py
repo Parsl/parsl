@@ -393,6 +393,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                             exception = deserialize(msg['exception'])
                             self.set_bad_state_and_fail_all(exception)
                             break
+                        elif tid == -1 and 'heartbeat' in msg:
+                            continue
 
                         task_fut = self.tasks.pop(tid)
 
