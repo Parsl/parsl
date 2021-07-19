@@ -524,7 +524,7 @@ class Interchange(object):
                             if int(r['task_id']) != -1:
                                 self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
                             elif 'heartbeat' in r:
-                                logger.debug("[MAIN] Manager {} sent heartbeat via result connection".format(manager))
+                                logger.debug("[MAIN] Manager {} sent heartbeat via results connection".format(manager))
                         except Exception:
                             # If we reach here, there's something very wrong.
                             logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(
