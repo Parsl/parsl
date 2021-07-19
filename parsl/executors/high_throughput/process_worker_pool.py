@@ -209,7 +209,7 @@ class Manager(object):
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg
 
-    def heartbeat(self):
+    def heartbeat_to_incoming(self):
         """ Send heartbeat to the incoming task queue
         """
         heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
@@ -248,7 +248,7 @@ class Manager(object):
                                                                                         pending_task_count))
 
             if time.time() > last_beat + self.heartbeat_period:
-                self.heartbeat()
+                self.heartbeat_to_incoming()
                 last_beat = time.time()
 
             if pending_task_count < self.max_queue_size and ready_worker_count > 0:
@@ -313,6 +313,7 @@ class Manager(object):
         logger.debug("[RESULT_PUSH_THREAD] push poll period: {}".format(push_poll_period))
 
         last_beat = time.time()
+        last_result_beat = time.time()
         items = []
 
         while not kill_event.is_set():
@@ -324,6 +325,10 @@ class Manager(object):
                 pass
             except Exception as e:
                 logger.exception("[RESULT_PUSH_THREAD] Got an exception: {}".format(e))
+
+            if time.time() > last_result_beat + self.heartbeat_period:
+                last_result_beat = time.time()
+                items.append(pickle.dumps({'task_id': -1, 'heartbeat': True}))
 
             # If we have reached poll_period duration or timer has expired, we send results
             if len(items) >= self.max_queue_size or time.time() > last_beat + push_poll_period:
