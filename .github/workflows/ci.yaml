@@ -21,7 +21,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install python specifics
+    - name: Non-requirements based install
       run: |
         sudo apt-get update -q
         python -m pip install Cython
@@ -30,7 +30,7 @@ jobs:
         python -m cython --version
         python -c "import numpy;print(numpy.__version__)"
 
-    - name: Run tests
+    - name: make deps clean_coverage
       run: |
         make deps
         make clean_coverage
@@ -72,6 +72,6 @@ jobs:
         wget http://127.0.0.1:8080/ --recursive --no-verbose --page-requisites --level=inf -e robots=off
         killall --wait parsl-visualize
 
-    - name: Coverage info
+    - name: make coverage
       run: |
         make coverage
