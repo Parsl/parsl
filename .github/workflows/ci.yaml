@@ -1,12 +1,10 @@
 name: CI/CD
 
 on:
-  push:
-    branches:
-      - "*"
-    tags:
-      - "*"
   pull_request:
+    types:
+      - opened
+      - synchronize
 
 jobs:
   test:
