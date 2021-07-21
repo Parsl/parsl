@@ -1,4 +1,4 @@
-name: CI/CD
+name: Parsl
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
       - synchronize
 
 jobs:
-  test:
+  main test suite:
     strategy:
       matrix:
         python-version: ["3.6", "3.7", "3.8", "3.9"]
