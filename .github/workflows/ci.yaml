@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.6", "3.7", "3.8", "3.9"]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-16.04
 
     steps:
     - uses: actions/checkout@master
@@ -29,6 +29,9 @@ jobs:
         python --version
         python -m cython --version
         python -c "import numpy;print(numpy.__version__)"
+
+        # this is to make the workqueue binary installer happy
+        sudo apt-get install -y libpython3.5
 
     - name: make deps clean_coverage
       run: |
