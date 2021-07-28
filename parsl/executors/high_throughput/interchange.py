@@ -520,7 +520,7 @@ class Interchange(object):
                     tasks_requested = int.from_bytes(message[1], "little")
                     self._ready_manager_queue[manager]['last_heartbeat'] = time.time()
                     if tasks_requested == HEARTBEAT_CODE:
-                        logger.debug("[MAIN] Manager {} sent heartbeat".format(manager))
+                        logger.debug("[MAIN] Manager {} sent heartbeat via tasks connection".format(manager))
                         self.task_outgoing.send_multipart([manager, b'', PKL_HEARTBEAT_CODE])
                     else:
                         logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
@@ -596,19 +596,23 @@ class Interchange(object):
                             b_messages.append(message)
                         elif r['type'] == 'monitoring':
                             hub_channel.send_pyobj(r['payload'])
+                        elif r['type'] == 'heartbeat':
+                            logger.debug("[MAIN] Manager {} sent heartbeat via results connection".format(manager))
+                            b_messages.append(message)
                         else:
                             logger.error("Interchange discarding result_queue message of unknown type: {}".format(r['type']))
 
                     for b_message in b_messages:
                         r = pickle.loads(b_message)
-                        try:
-                            self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
-                        except Exception:
-                            # If we reach here, there's something very wrong.
-                            logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(
-                                r['task_id'],
-                                manager,
-                                self._ready_manager_queue[manager]['tasks']))
+                        if r['type'] == 'result':
+                            try:
+                                self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
+                            except Exception:
+                                # If we reach here, there's something very wrong.
+                                logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(
+                                    r['task_id'],
+                                    manager,
+                                    self._ready_manager_queue[manager]['tasks']))
 
                     if b_messages:
                         self.results_outgoing.send_multipart(b_messages)

@@ -11,6 +11,7 @@ such as the block ID.
 """
 
 import logging
+import os
 import platform
 import psutil
 import subprocess
@@ -32,7 +33,7 @@ def send_msg(*, active, uid, radio):
         'run_id': 'TODO',  # from commandline or environment?
         'hostname': platform.node(),
         'uid': uid,
-        'block_id': 'TODO',  # maybe from environment?
+        'block_id': os.getenv('PARSL_WORKER_BLOCK_ID', "unknown"),
         'cpu_count': psutil.cpu_count(logical=False),
         'total_memory': psutil.virtual_memory().total,
         'active': active,
