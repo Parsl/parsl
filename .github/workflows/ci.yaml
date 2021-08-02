@@ -1,0 +1,79 @@
+name: Parsl
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+jobs:
+  main-test-suite:
+    strategy:
+      matrix:
+        python-version: ["3.6", "3.7", "3.8", "3.9"]
+    runs-on: ubuntu-16.04
+    timeout-minutes: 40
+
+    steps:
+    - uses: actions/checkout@master
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Non-requirements based install
+      run: |
+        sudo apt-get update -q
+        python -m pip install Cython
+        python -m pip install numpy
+        python --version
+        python -m cython --version
+        python -c "import numpy;print(numpy.__version__)"
+
+        # this is to make the workqueue binary installer happy
+        sudo apt-get install -y libpython3.5
+
+    - name: make deps clean_coverage
+      run: |
+        make deps
+        make clean_coverage
+
+    - name: make test
+      run: |
+        make test
+
+    - name: Documentation checks
+      run: |
+        pip install .[docs]
+        sudo apt-get install -y pandoc
+        cd docs
+
+        test ! -e stubs
+
+        # check we can build the docs without warnings
+        make SPHINXOPTS=-W html
+
+        cd ..
+
+        # assert that none of the runs in this test have put an ERROR message into a
+        # database manager log file or monitoring router log file. It would be better if
+        # the tests themselves failed immediately when there was a monitoring error, but
+        # in the absence of that, this is a dirty way to check.
+        bash -c '! grep ERROR runinfo*/*/database_manager.log'
+        bash -c '! grep ERROR runinfo*/*/monitoring_router.log'
+
+    - name: Checking parsl-visualize
+      run: |
+        sudo apt-get install -y graphviz
+        pip install .[monitoring]
+        parsl-visualize &
+        # now wait for this to become responsive to connections
+        wget http://127.0.0.1:8080/ --retry-connrefused --tries 30 --waitretry=1
+        # wget will return a failure code if any of the requested URLs don't return an HTTP 200 result
+        wget http://127.0.0.1:8080/ --recursive --no-verbose --page-requisites --level=inf -e robots=off
+        killall --wait parsl-visualize
+
+    - name: make coverage
+      run: |
+        make coverage
