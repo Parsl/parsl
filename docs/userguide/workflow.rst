@@ -215,3 +215,26 @@ The following figure shows the resulting task graph.
 
 .. image:: ../images/MapReduce.png
 
+
+Other useful patterns
+=====================
+
+This section is intended to list some patterns which are not to do with
+parallelism and concurrency, but still might be useful in parsl workflows
+
+Environment wrappers for bash_apps
+----------------------------------
+
+This usecase comes from DESC DRP v2.
+
+Sometimes a bash app command must be run in a particular environment, for
+example, inside a container started by shifter or singularity. [TODO URLs for
+those two]
+
+So although the app commandline might look like:
+
+.. code-block::
+
+    myscience input.txt 5 10
+
+
