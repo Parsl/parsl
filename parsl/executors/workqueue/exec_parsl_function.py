@@ -188,12 +188,12 @@ if __name__ == "__main__":
             raise
 
         logfile = open(log_file, "w")
-        print(f"{t_start} START",file=logfile) 
-        print(f"{t_postimport} POSTIMPORT",file=logfile) 
-        print(f"{t_mainstart} MAINSTART",file=logfile) 
+        print(f"{t_start} START", file=logfile)
+        print(f"{t_postimport} POSTIMPORT", file=logfile)
+        print(f"{t_mainstart} MAINSTART", file=logfile)
 
         t_loadfunction = time.time()
-        print(f"{t_loadfunction} LOADFUNCTION",file=logfile) 
+        print(f"{t_loadfunction} LOADFUNCTION", file=logfile)
         try:
             (namespace, function_code, result_name) = load_function(map_file, function_file)
         except Exception:
@@ -201,7 +201,7 @@ if __name__ == "__main__":
             raise
 
         t_executefunction = time.time()
-        print(f"{t_executefunction} EXECUTEFUNCTION",file=logfile) 
+        print(f"{t_executefunction} EXECUTEFUNCTION", file=logfile)
         try:
             result = execute_function(namespace, function_code, result_name)
         except Exception:
@@ -214,12 +214,12 @@ if __name__ == "__main__":
     # Write out function result to the result file
     try:
         t_dump = time.time()
-        print(f"{t_dump} DUMP",file=logfile) 
+        print(f"{t_dump} DUMP", file=logfile)
         dump_result_to_file(result_file, result)
     except Exception:
         print("Could not write to result file.")
         traceback.print_exc()
         sys.exit(1)
     t_done = time.time()
-    print(f"{t_done} DONE",file=logfile) 
+    print(f"{t_done} DONE", file=logfile)
     logfile.close()

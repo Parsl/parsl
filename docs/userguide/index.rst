@@ -13,6 +13,7 @@ User guide
    checkpoints
    configuring
    monitoring
+   dnpc
    workflow
    modularizing
    joins

@@ -62,7 +62,8 @@ logger = logging.getLogger(__name__)
 
 # Support structure to communicate parsl tasks to the work queue submit thread.
 ParslTaskToWq = namedtuple('ParslTaskToWq',
-                           'id category cores memory disk gpus priority running_time_min env_pkg map_file function_file result_file log_file input_files output_files')
+                           'id category cores memory disk gpus priority running_time_min '
+                           'env_pkg map_file function_file result_file log_file input_files output_files')
 
 # Support structure to communicate final status of work queue tasks to parsl
 # result is only valid if result_received is True
