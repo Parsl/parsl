@@ -71,6 +71,11 @@ class ParslExecutor(metaclass=ABCMeta):
     @abstractmethod
     def submit(self, func: Callable, resource_specification: Dict[str, Any], *args: Any, **kwargs: Any) -> Future:
         """Submit.
+
+        The executor can optionally set a parsl_executor_task_id attribute on
+        the Future that it returns, and in that case, parsl will log a
+        relationship between the executor's task ID and parsl level try/task
+        IDs.
         """
         pass
 
