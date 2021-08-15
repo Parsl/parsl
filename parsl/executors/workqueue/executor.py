@@ -63,7 +63,8 @@ logger = logging.getLogger(__name__)
 
 # Support structure to communicate parsl tasks to the work queue submit thread.
 ParslTaskToWq = namedtuple('ParslTaskToWq',
-                           'id category cores memory disk gpus priority running_time_min env_pkg map_file function_file result_file input_files output_files')
+                           'id category cores memory disk gpus priority running_time_min '
+                           'env_pkg map_file function_file result_file log_file input_files output_files')
 
 # Support structure to communicate final status of work queue tasks to parsl
 # result is only valid if result_received is True
@@ -275,7 +276,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 self.project_password_file = None
 
         # Build foundations of the launch command
-        self.launch_cmd = ("{package_prefix}python3 exec_parsl_function.py {mapping} {function} {result}")
+        self.launch_cmd = ("{package_prefix}python3 exec_parsl_function.py {mapping} {function} {result} {log}")
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
@@ -448,9 +449,11 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         function_file = self._path_in_task(task_id, "function")
         result_file = self._path_in_task(task_id, "result")
         map_file = self._path_in_task(task_id, "map")
+        log_file = self._path_in_task(task_id, "log")
 
         logger.debug("Creating Task {} with function at: {}".format(task_id, function_file))
         logger.debug("Creating Task {} with result to be found at: {}".format(task_id, result_file))
+        logger.debug("Creating Task {} with log to be found at: {}".format(task_id, log_file))
 
         self._serialize_function(function_file, func, args, kwargs)
 
@@ -481,6 +484,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                                  map_file,
                                                  function_file,
                                                  result_file,
+                                                 log_file,
                                                  input_files,
                                                  output_files))
 
@@ -846,7 +850,8 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
             command_str = launch_cmd.format(package_prefix=pkg_pfx,
                                             mapping=os.path.basename(task.map_file),
                                             function=os.path.basename(task.function_file),
-                                            result=os.path.basename(task.result_file))
+                                            result=os.path.basename(task.result_file),
+                                            log=os.path.basename(task.log_file))
             logger.debug(command_str)
 
             # Create WorkQueue task for the command
@@ -899,6 +904,7 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
             t.specify_input_file(task.function_file, cache=False)
             t.specify_input_file(task.map_file, cache=False)
             t.specify_output_file(task.result_file, cache=False)
+            t.specify_output_file(task.log_file, cache=False)
             t.specify_tag(str(task.id))
             result_file_of_task_id[str(task.id)] = task.result_file
 

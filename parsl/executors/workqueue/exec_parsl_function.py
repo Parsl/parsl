@@ -1,3 +1,6 @@
+import time
+t_start = time.time()
+
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.files import File
 from parsl.utils import get_std_fname_mode
@@ -5,6 +8,7 @@ import traceback
 import sys
 import pickle
 
+t_postimport = time.time()
 # This scripts executes a parsl function which is pickled in a file:
 #
 # exec_parsl_function.py map_file function_file result_file
@@ -169,6 +173,7 @@ def execute_function(namespace, function_code, result_name):
 
 
 if __name__ == "__main__":
+    t_mainstart = time.time()
     try:
         # parse the three required command line arguments:
         # map_file: contains a pickled dictionary to map original names to
@@ -177,17 +182,26 @@ if __name__ == "__main__":
         # result_file: any output (including exceptions) will be written to
         #              this file.
         try:
-            (map_file, function_file, result_file) = sys.argv[1:]
+            (map_file, function_file, result_file, log_file) = sys.argv[1:]
         except ValueError:
             print("Usage:\n\t{} function result mapping\n".format(sys.argv[0]))
             raise
 
+        logfile = open(log_file, "w")
+        print(f"{t_start} START", file=logfile)
+        print(f"{t_postimport} POSTIMPORT", file=logfile)
+        print(f"{t_mainstart} MAINSTART", file=logfile)
+
+        t_loadfunction = time.time()
+        print(f"{t_loadfunction} LOADFUNCTION", file=logfile)
         try:
             (namespace, function_code, result_name) = load_function(map_file, function_file)
         except Exception:
             print("There was an error setting up the function for execution.")
             raise
 
+        t_executefunction = time.time()
+        print(f"{t_executefunction} EXECUTEFUNCTION", file=logfile)
         try:
             result = execute_function(namespace, function_code, result_name)
         except Exception:
@@ -199,8 +213,13 @@ if __name__ == "__main__":
 
     # Write out function result to the result file
     try:
+        t_dump = time.time()
+        print(f"{t_dump} DUMP", file=logfile)
         dump_result_to_file(result_file, result)
     except Exception:
         print("Could not write to result file.")
         traceback.print_exc()
         sys.exit(1)
+    t_done = time.time()
+    print(f"{t_done} DONE", file=logfile)
+    logfile.close()
