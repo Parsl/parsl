@@ -694,15 +694,51 @@ def plot_tasks_status_cumul(db_context):
 def plot_tasks_status_streamgraph(db_context):
 
     all_state_subcontexts = set()
-    all_subcontext_events = []
 
     for wf_context in db_context.subcontexts:
         task_contexts = [sc for sc in wf_context.subcontexts if sc.type == 'parsl.task']
         for task_context in task_contexts:
             state_contexts = [sc for sc in task_context.subcontexts if sc.type == 'parsl.task.states']
             all_state_subcontexts.update(state_contexts)
-            for task_subcontext in state_contexts:
-                all_subcontext_events += task_subcontext.events
+
+    plot_context_streamgraph(all_state_subcontexts, "dnpc-tasks-status-stream.png")
+
+
+def plot_task_running_event_streamgraph(db_context):
+    all_state_subcontexts = set()
+
+    for wf_context in db_context.subcontexts:
+        task_contexts = [sc for sc in wf_context.subcontexts if sc.type == 'parsl.task']
+        for task_context in task_contexts:
+            this_task_contexts = set()
+            # this_task_contexts.add(task_context)
+            try_contexts = [tc for tc in task_context.subcontexts if tc.type == 'parsl.try']
+            # this_task_contexts.update(try_contexts)
+            for try_subcontext in try_contexts:
+                wq_contexts = [tc for tc in try_subcontext.subcontexts if tc.type == 'parsl.try.executor']
+                this_task_contexts.update(wq_contexts)
+                for wq_subcontext in wq_contexts:
+                    all_state_subcontexts.update(wq_subcontext.subcontexts)
+
+            state_contexts = [tc for tc in task_context.subcontexts if tc.type == 'parsl.task.states']
+            this_task_contexts.update(state_contexts)
+            collapsed_context = Context.new_root_context()
+            for c in this_task_contexts:
+                collapsed_context.events += c.events
+            collapsed_context.events.sort(key=lambda e: e.time)
+
+            end_states = ['pending', 'launched', 'WAITING', 'exec_done', 'failed', 'memo_done', 'dep_fail', 'DONE']
+            all_state_subcontexts.add(collapsed_context)
+
+    plot_context_streamgraph(all_state_subcontexts, "dnpc-tasks-running-event-stream.png", hide_states=end_states)
+
+
+def plot_context_streamgraph(all_state_subcontexts, filename, hide_states=[]):
+
+    all_subcontext_events = []
+
+    for context in all_state_subcontexts:
+        all_subcontext_events += context.events
 
     logger.info(f"all subcontext events: {all_subcontext_events}")
 
@@ -724,6 +760,9 @@ def plot_tasks_status_streamgraph(db_context):
         plot_events[t] = []
 
     for s in all_state_subcontexts:
+        if len(s.events) == 0:
+            continue
+
         these_events = [e for e in s.events]  # copy so we can mutate safely
         these_events.sort(key=lambda e: e.time)
 
@@ -782,17 +821,18 @@ def plot_tasks_status_streamgraph(db_context):
 
         logger.info(f"will plot event {event_type} with x={x} and y={y}")
 
-        ys.append(y)
-        labels.append(event_type)
+        if event_type not in hide_states:
+            ys.append(y)
+            labels.append(event_type)
 
     ax.stackplot(canonical_x_axis, ys, labels=labels, baseline='wiggle')
     ax.legend(loc='upper left')
     plt.title("tasks in each state by time")
 
-    plt.savefig("dnpc-tasks-status-stream.png")
+    plt.savefig(filename)
 
 
-def plot_all_task_events_cumul(db_context):
+def plot_all_task_events_cumul(db_context, filename="dnpc-all-task-events-cumul.png"):
     all_subcontext_events = []
 
     # TODO: this should maybe use a set for all_subcontext_events:
@@ -850,7 +890,7 @@ def plot_all_task_events_cumul(db_context):
     ax.legend()
     plt.title("cumulative task events (parsl/wq/worker) by time")
 
-    plt.savefig("dnpc-all-task-events-cumul.png")
+    plt.savefig(filename)
 
 
 def plot_wq_parsl_worker_cumul(db_context):
@@ -984,6 +1024,7 @@ def main() -> None:
     plot_wq_parsl_worker_cumul(monitoring_db_context)
     plot_all_task_events_cumul(monitoring_db_context)
     plot_tasks_status_streamgraph(monitoring_db_context)
+    plot_task_running_event_streamgraph(monitoring_db_context)
 
     logger.info("dnpc end")
 
