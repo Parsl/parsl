@@ -31,24 +31,23 @@ engines that sit alongside parsl helping the tasks run.
 not-goals:
 
 * live information integration between data sources - so components
-can dump out stuff wherever/however without time constraints. this is all
-post-hoc analysis
+  can dump out stuff wherever/however without time constraints. this is all
+  post-hoc analysis
 
 * instrumenting every piece of tech in the stack using the same technology,
-so custom per-component log file scraping is OK. Requiring the components to
-change to work with this logging mechanism is not a requirement (and mostly
-impossible if it's things installed on the host system rather than in a user
-environment)
+  so custom per-component log file scraping is OK. Requiring the components to
+  change to work with this logging mechanism is not a requirement (and mostly
+  impossible if it's things installed on the host system rather than in a user
+  environment)
 
 vocab:
   context - a thing which has states/log lines/... across multiple log sources
       for example a parsl task
   subcontext - a context which is fully contained within another context.
-      for example, a parsl `try` is fully contained within a parsl `task`.
+      for example, a parsl ``try`` is fully contained within a parsl ``task``.
 
 components of the system emit log-like info - logfiles, monitoring.db - which
-associate *events* - eg state transitions, log lines - with a particular
-  context.
+associate *events* - eg state transitions, log lines - with a particular context.
 
 it might be that a particlar source has a particular implicit containing
 context - eg a particular logfile is only for a particular try context, which means
@@ -65,14 +64,13 @@ directly associated with that.
 
 a particular "sub"-context may be contained within multiple parent contexts,
 which suggests that having unique primary keys for a nested context is not
-the right thing to do:
-  for example, a particular try may be (mostly) contained within a worker context
-   (i say mostly, because some of the try happens on the submit side - which
-    suggests theres a worker-side try subcontext, that forms part of the main
-     try context:
-      workflow > task > try > executor-level-try > worker-side-try
-      workflow > executor > block > worker > worker-side-try
-      workflow > executor > executor-level-try
+the right thing to do: for example, a particular try may be (mostly) contained within a worker context
+(i say mostly, because some of the try happens on the submit side - which
+suggests theres a worker-side try subcontext, that forms part of the main
+try context:
+workflow > task > try > executor-level-try > worker-side-try
+workflow > executor > block > worker > worker-side-try
+workflow > executor > executor-level-try
 
 nested contexts should be cheap: easy to create by a new binding, and in the
 tooling easy to ignore layer-wise - in the sense that in the above first
@@ -114,9 +112,11 @@ Example of a context >= than a parsl-level workflow might be:
 Example of a context that is < a parsl-level task try:
   * executor-try - eg workqueue's parsl helper script
   * inside-task progress: eg starting up singularity/shifter in a shell wrapper.
+
 Both of these seem to be potentially large users of worker time in the
 DESC case, and both of these would be useful to understand.
-  * inside-command-line-app progress: eg jim has been pulling out info from the app log files that might be of interest to represent.
+
+- inside-command-line-app progress: eg jim has been pulling out info from the app log files that might be of interest to represent.
 
 
 
