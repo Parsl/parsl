@@ -37,7 +37,6 @@ Parsl can be used to implement various parallel computing paradigms:
 .. toctree::
 
    quickstart
-   1-parsl-introduction.ipynb
    userguide/index
    faq
    reference

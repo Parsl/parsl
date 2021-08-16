@@ -681,6 +681,9 @@ class DataFlowKernel(object):
         self._send_task_log_info(task_record)
 
         logger.info("Task {} launched on executor {}".format(task_id, executor.label))
+        if hasattr(exec_fu, "parsl_executor_task_id"):
+            logger.info("Parsl task {} try {} launched on executor {} with executor id {}".format(task_id, try_id,
+                                                                                                  executor.label, exec_fu.parsl_executor_task_id))
 
         self._log_std_streams(task_record)
 
