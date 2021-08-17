@@ -150,6 +150,7 @@ class Database:
             'task_time_returned', DateTime, nullable=True)
 
         task_fail_count = Column('task_fail_count', Integer, nullable=False)
+        task_fail_cost = Column('task_fail_cost', Float, nullable=False)
 
         __table_args__ = (
             PrimaryKeyConstraint('task_id', 'run_id'),
@@ -427,6 +428,7 @@ class DatabaseManager:
                                               'task_time_returned',
                                               'run_id', 'task_id',
                                               'task_fail_count',
+                                              'task_fail_cost',
                                               'task_hashsum'],
                                      messages=task_info_update_messages)
                     logger.debug("Inserting {} task_info_all_messages into status table".format(len(task_info_all_messages)))

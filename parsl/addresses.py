@@ -10,7 +10,10 @@ import logging
 import platform
 import requests
 import socket
-import fcntl
+try:
+    import fcntl
+except ImportError:
+    fcntl = None  # type: ignore
 import struct
 import typeguard
 import psutil
@@ -85,6 +88,7 @@ def address_by_interface(ifname: str) -> str:
         Name of the interface whose address is to be returned. Required.
 
     """
+    assert fcntl is not None, "This function is not supported on your OS."
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     return socket.inet_ntoa(fcntl.ioctl(
         s.fileno(),

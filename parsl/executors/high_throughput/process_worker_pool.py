@@ -22,12 +22,9 @@ from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.probe import probe_addresses
-if platform.system() != 'Darwin':
-    from multiprocessing import Queue as mpQueue
-    from multiprocessing import Process as mpProcess
-else:
-    from parsl.executors.high_throughput.mac_safe_queue import MacSafeQueue as mpQueue
-    from parsl.executors.high_throughput.mac_safe_process import MacSafeProcess as mpProcess
+from parsl.multiprocessing import ForkProcess as mpProcess
+
+from parsl.multiprocessing import SizedQueue as mpQueue
 
 from parsl.serialize import unpack_apply_message, serialize
 
@@ -209,7 +206,7 @@ class Manager(object):
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg
 
-    def heartbeat(self):
+    def heartbeat_to_incoming(self):
         """ Send heartbeat to the incoming task queue
         """
         heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
@@ -248,7 +245,7 @@ class Manager(object):
                                                                                         pending_task_count))
 
             if time.time() > last_beat + self.heartbeat_period:
-                self.heartbeat()
+                self.heartbeat_to_incoming()
                 last_beat = time.time()
 
             if pending_task_count < self.max_queue_size and ready_worker_count > 0:
@@ -313,6 +310,7 @@ class Manager(object):
         logger.debug("[RESULT_PUSH_THREAD] push poll period: {}".format(push_poll_period))
 
         last_beat = time.time()
+        last_result_beat = time.time()
         items = []
 
         while not kill_event.is_set():
@@ -324,6 +322,10 @@ class Manager(object):
                 pass
             except Exception as e:
                 logger.exception("[RESULT_PUSH_THREAD] Got an exception: {}".format(e))
+
+            if time.time() > last_result_beat + self.heartbeat_period:
+                last_result_beat = time.time()
+                items.append(pickle.dumps({'task_id': -1, 'heartbeat': True}))
 
             # If we have reached poll_period duration or timer has expired, we send results
             if len(items) >= self.max_queue_size or time.time() > last_beat + push_poll_period:
