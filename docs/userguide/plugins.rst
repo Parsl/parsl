@@ -59,6 +59,7 @@ objects, so parsl implements a checkpointing hash function for a few common
 types, and raises an exception on unknown types:
 
 .. code-block::
+
   ValueError("unknown type for memoization ...")
 
 You can plug in your own type-specific hash code for additional types that
