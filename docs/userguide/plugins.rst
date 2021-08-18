@@ -56,8 +56,10 @@ When parsl memoizes/checkpoints an app parameter, it does so by computing a
 hash of that parameter that should be the same if that parameter is the same
 on subsequent invocations. This isn't straightforward to do for arbitrary
 objects, so parsl implements a checkpointing hash function for a few common
-types, and raises an exception on unknown types (TK put in unknown exception
-example text here so searching finds it).
+types, and raises an exception on unknown types:
+
+.. code-block::
+  ValueError("unknown type for memoization ...")
 
 You can plug in your own type-specific hash code for additional types that
 you need and understand using `id_for_memo`.
