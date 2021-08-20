@@ -87,6 +87,7 @@ Launchers
     :toctree: stubs
     :nosignatures:
 
+    parsl.launchers.launchers.Launcher
     parsl.launchers.SimpleLauncher
     parsl.launchers.SingleNodeLauncher
     parsl.launchers.SrunLauncher
@@ -176,6 +177,7 @@ Internal
     parsl.app.python.PythonApp
     parsl.dataflow.dflow.DataFlowKernel
     parsl.dataflow.flow_control.FlowControl
+    parsl.dataflow.memoization.id_for_memo
     parsl.dataflow.memoization.Memoizer
     parsl.dataflow.states.FINAL_STATES
     parsl.dataflow.states.States
