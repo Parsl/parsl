@@ -11,14 +11,14 @@ from parsl.serialize import pack_apply_message, deserialize
 from parsl.executors.low_latency import zmq_pipes
 from parsl.executors.low_latency import interchange
 from parsl.executors.errors import ScalingFailed, DeserializationError, BadMessage, UnsupportedFeatureError
-from parsl.executors.status_handling import StatusHandlingExecutor
+from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
 
 logger = logging.getLogger(__name__)
 
 
-class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
+class LowLatencyExecutor(BlockProviderExecutor, RepresentationMixin):
     """
     TODO: docstring for LowLatencyExecutor
     """
@@ -40,7 +40,7 @@ class LowLatencyExecutor(StatusHandlingExecutor, RepresentationMixin):
                  ):
         logger.debug("Initializing LowLatencyExecutor")
 
-        StatusHandlingExecutor.__init__(self, provider)
+        BlockProviderExecutor.__init__(self, provider)
         self.label = label
         self.launch_cmd = launch_cmd
         self.provider = provider
