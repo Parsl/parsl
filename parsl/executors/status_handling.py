@@ -174,9 +174,6 @@ class BlockProviderExecutor(ParslExecutor):
 
     def _launch_block(self, block_id: str) -> Any:
         launch_cmd = self._get_launch_command(block_id)
-        # if self.launch_cmd is None:
-        #   raise ScalingFailed(self.provider.label, "No launch command")
-        # launch_cmd = self.launch_cmd.format(block_id=block_id)
         job_id = self.provider.submit(launch_cmd, 1)
         logger.debug("Launched block {}->{}".format(block_id, job_id))
         if not job_id:
