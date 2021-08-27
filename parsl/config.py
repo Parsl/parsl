@@ -1,7 +1,7 @@
 import logging
 import typeguard
 
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from parsl.utils import RepresentationMixin
 from parsl.executors.base import ParslExecutor
@@ -41,7 +41,11 @@ class Config(RepresentationMixin):
     monitoring : MonitoringHub, optional
         The config to use for database monitoring. Default is None which does not log to a database.
     retries : int, optional
-        Set the number of retries in case of failure. Default is 0.
+        Set the number of retries (or available retry budget when using retry_handler) in case of failure. Default is 0.
+    retry_handler : function, optional
+        A user pluggable handler to decide if/how a task retry should happen.
+        If no handler is specified, then each task failure incurs a retry cost
+        of 1.
     run_dir : str, optional
         Path to run directory. Default is 'runinfo'.
     strategy : str, optional
@@ -73,6 +77,7 @@ class Config(RepresentationMixin):
                  garbage_collect: bool = True,
                  internal_tasks_max_threads: int = 10,
                  retries: int = 0,
+                 retry_handler: Optional[Callable] = None,
                  run_dir: str = 'runinfo',
                  strategy: Optional[str] = 'simple',
                  max_idletime: float = 120.0,
@@ -100,6 +105,7 @@ class Config(RepresentationMixin):
         self.garbage_collect = garbage_collect
         self.internal_tasks_max_threads = internal_tasks_max_threads
         self.retries = retries
+        self.retry_handler = retry_handler
         self.run_dir = run_dir
         self.strategy = strategy
         self.max_idletime = max_idletime
