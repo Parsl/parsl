@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
 
 
 # Support structure to communicate parsl tasks to the work queue submit thread.
-ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category cores memory disk gpus env_pkg map_file function_file result_file input_files output_files')
+ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category cores memory disk gpus priority env_pkg map_file function_file result_file input_files output_files')
 
 # Support structure to communicate final status of work queue tasks to parsl
 # result is only valid if result_received is True
@@ -74,7 +74,7 @@ WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason st
 ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name stage cache')
 
 
-class WorkQueueExecutor(NoStatusHandlingExecutor):
+class WorkQueueExecutor(NoStatusHandlingExecutor, putils.RepresentationMixin):
     """Executor to use Work Queue batch system
 
     The WorkQueueExecutor system utilizes the Work Queue framework to
@@ -102,8 +102,10 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
             Default is True (managed by DFK).
 
         project_name: str
-            If given, Work Queue master process name. Default is None.
-            Overrides address.
+            If a project_name is given, then Work Queue will periodically
+            report its status and performance back to the global WQ catalog,
+            which can be viewed here:  http://ccl.cse.nd.edu/software/workqueue/status
+            Default is None.  Overrides address.
 
         project_password_file: str
             Optional password file for the work queue project. Default is None.
@@ -243,7 +245,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         self.use_cache = use_cache
         self.working_dir = working_dir
         self.registered_files = set()  # type: Set[str]
-        self.full = full_debug
+        self.full_debug = full_debug
         self.source = True if pack else source
         self.pack = pack
         self.extra_pkgs = extra_pkgs or []
@@ -294,7 +296,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                  "launch_cmd": self.launch_cmd,
                                  "data_dir": self.function_data_dir,
                                  "collector_queue": self.collector_queue,
-                                 "full": self.full,
+                                 "full": self.full_debug,
                                  "shared_fs": self.shared_fs,
                                  "autolabel": self.autolabel,
                                  "autolabel_window": self.autolabel_window,
@@ -352,11 +354,12 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
         memory = None
         disk = None
         gpus = None
+        priority = None
         if resource_specification and isinstance(resource_specification, dict):
             logger.debug("Got resource specification: {}".format(resource_specification))
 
             required_resource_types = set(['cores', 'memory', 'disk'])
-            acceptable_resource_types = set(['cores', 'memory', 'disk', 'gpus'])
+            acceptable_resource_types = set(['cores', 'memory', 'disk', 'gpus', 'priority'])
             keys = set(resource_specification.keys())
 
             if not keys.issubset(acceptable_resource_types):
@@ -365,7 +368,12 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                 logger.error(message)
                 raise ExecutorError(self, message)
 
-            if not self.autolabel and not keys.issuperset(required_resource_types):
+            # this checks that either all of the required resource types are specified, or
+            # that none of them are: the `required_resource_types` are not actually required,
+            # but if one is specified, then they all must be.
+            key_check = required_resource_types.intersection(keys)
+            required_keys_ok = len(key_check) == 0 or key_check == required_resource_types
+            if not self.autolabel and not required_keys_ok:
                 logger.error("Running with `autolabel=False`. In this mode, "
                              "task resource specification requires "
                              "three resources to be specified simultaneously: cores, memory, and disk")
@@ -382,6 +390,8 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                     disk = resource_specification[k]
                 elif k == 'gpus':
                     gpus = resource_specification[k]
+                elif k == 'priority':
+                    priority = resource_specification[k]
 
         self.task_counter += 1
         task_id = self.task_counter
@@ -445,6 +455,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor):
                                                  memory,
                                                  disk,
                                                  gpus,
+                                                 priority,
                                                  env_pkg,
                                                  map_file,
                                                  function_file,
@@ -813,6 +824,14 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                 t.specify_disk(task.disk)
             if task.gpus is not None:
                 t.specify_gpus(task.gpus)
+            if task.priority is not None:
+                t.specify_priority(task.priority)
+
+            if max_retries is not None:
+                logger.debug(f"Specifying max_retries {max_retries}")
+                t.specify_max_retries(max_retries)
+            else:
+                logger.debug("Not specifying max_retries")
 
             if max_retries is not None:
                 logger.debug(f"Specifying max_retries {max_retries}")

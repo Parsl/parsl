@@ -22,10 +22,9 @@ from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.probe import probe_addresses
-if platform.system() != 'Darwin':
-    from multiprocessing import Queue as mpQueue
-else:
-    from parsl.executors.high_throughput.mac_safe_queue import MacSafeQueue as mpQueue
+from parsl.multiprocessing import ForkProcess as mpProcess
+
+from parsl.multiprocessing import SizedQueue as mpQueue
 
 from parsl.serialize import unpack_apply_message, serialize
 
@@ -207,7 +206,7 @@ class Manager(object):
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg
 
-    def heartbeat(self):
+    def heartbeat_to_incoming(self):
         """ Send heartbeat to the incoming task queue
         """
         heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
@@ -246,7 +245,7 @@ class Manager(object):
                                                                                         pending_task_count))
 
             if time.time() > last_beat + self.heartbeat_period:
-                self.heartbeat()
+                self.heartbeat_to_incoming()
                 last_beat = time.time()
 
             if pending_task_count < self.max_queue_size and ready_worker_count > 0:
@@ -311,6 +310,7 @@ class Manager(object):
         logger.debug("[RESULT_PUSH_THREAD] push poll period: {}".format(push_poll_period))
 
         last_beat = time.time()
+        last_result_beat = time.time()
         items = []
 
         while not kill_event.is_set():
@@ -322,6 +322,10 @@ class Manager(object):
                 pass
             except Exception as e:
                 logger.exception("[RESULT_PUSH_THREAD] Got an exception: {}".format(e))
+
+            if time.time() > last_result_beat + self.heartbeat_period:
+                last_result_beat = time.time()
+                items.append(pickle.dumps({'task_id': -1, 'heartbeat': True}))
 
             # If we have reached poll_period duration or timer has expired, we send results
             if len(items) >= self.max_queue_size or time.time() > last_beat + push_poll_period:
@@ -361,15 +365,15 @@ class Manager(object):
                     except KeyError:
                         logger.info("[WORKER_WATCHDOG_THREAD] Worker {} was not busy when it died".format(worker_id))
 
-                    p = multiprocessing.Process(target=worker, args=(worker_id,
-                                                                     self.uid,
-                                                                     self.worker_count,
-                                                                     self.pending_task_queue,
-                                                                     self.pending_result_queue,
-                                                                     self.ready_worker_queue,
-                                                                     self._tasks_in_progress,
-                                                                     self.cpu_affinity
-                                                                 ), name="HTEX-Worker-{}".format(worker_id))
+                    p = mpProcess(target=worker, args=(worker_id,
+                                                       self.uid,
+                                                       self.worker_count,
+                                                       self.pending_task_queue,
+                                                       self.pending_result_queue,
+                                                       self.ready_worker_queue,
+                                                       self._tasks_in_progress,
+                                                       self.cpu_affinity
+                                                 ), name="HTEX-Worker-{}".format(worker_id))
                     self.procs[worker_id] = p
                     logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has been restarted".format(worker_id))
                 time.sleep(self.poll_period)
@@ -387,15 +391,15 @@ class Manager(object):
 
         self.procs = {}
         for worker_id in range(self.worker_count):
-            p = multiprocessing.Process(target=worker, args=(worker_id,
-                                                             self.uid,
-                                                             self.worker_count,
-                                                             self.pending_task_queue,
-                                                             self.pending_result_queue,
-                                                             self.ready_worker_queue,
-                                                             self._tasks_in_progress,
-                                                             self.cpu_affinity
-                                                         ), name="HTEX-Worker-{}".format(worker_id))
+            p = mpProcess(target=worker, args=(worker_id,
+                                               self.uid,
+                                               self.worker_count,
+                                               self.pending_task_queue,
+                                               self.pending_result_queue,
+                                               self.ready_worker_queue,
+                                               self._tasks_in_progress,
+                                               self.cpu_affinity
+                                         ), name="HTEX-Worker-{}".format(worker_id))
             p.start()
             self.procs[worker_id] = p
 
@@ -464,17 +468,8 @@ def execute_task(bufs):
 
     code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
                                            argname, kwargname)
-    try:
-        # logger.debug("[RUNNER] Executing: {0}".format(code))
-        exec(code, user_ns, user_ns)
-
-    except Exception as e:
-        logger.warning("Caught exception; will raise it: {}".format(e), exc_info=True)
-        raise e
-
-    else:
-        # logger.debug("[RUNNER] Result: {0}".format(user_ns.get(resultname)))
-        return user_ns.get(resultname)
+    exec(code, user_ns, user_ns)
+    return user_ns.get(resultname)
 
 
 @wrap_with_logs(target="worker_log")

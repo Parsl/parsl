@@ -5,7 +5,7 @@ import threading
 import queue
 import datetime
 import pickle
-from multiprocessing import Process, Queue
+from multiprocessing import Queue
 from typing import Dict  # noqa F401 (used in type annotation)
 from typing import List, Optional, Tuple, Union, Any
 import math
@@ -26,6 +26,7 @@ from parsl.data_provider.staging import Staging
 from parsl.addresses import get_all_addresses
 from parsl.process_loggers import wrap_with_logs
 
+from parsl.multiprocessing import ForkProcess
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
 
@@ -129,7 +130,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         the there's sufficient memory for each worker. Default: None
 
     max_workers : int
-        Caps the number of workers launched by the manager. Default: infinity
+        Caps the number of workers launched per node. Default: infinity
 
     cpu_affinity: string
         Whether or how each worker process sets thread affinity. Options are "none" to forgo
@@ -395,6 +396,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                             exception = deserialize(msg['exception'])
                             self.set_bad_state_and_fail_all(exception)
                             break
+                        elif tid == -1 and 'heartbeat' in msg:
+                            continue
 
                         task_fut = self.tasks.pop(tid)
 
@@ -426,12 +429,6 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                 break
         logger.info("[MTHREAD] queue management worker finished")
 
-    # When the executor gets lost, the weakref callback will wake up
-    # the queue management thread.
-    def weakref_cb(self, q=None):
-        """We do not use this yet."""
-        q.put(None)
-
     def _start_local_queue_process(self):
         """ Starts the interchange process locally
 
@@ -439,22 +436,22 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         get the worker task and result ports that the interchange has bound to.
         """
         comm_q = Queue(maxsize=10)
-        self.queue_proc = Process(target=interchange.starter,
-                                  args=(comm_q,),
-                                  kwargs={"client_ports": (self.outgoing_q.port,
-                                                           self.incoming_q.port,
-                                                           self.command_client.port),
-                                          "worker_ports": self.worker_ports,
-                                          "worker_port_range": self.worker_port_range,
-                                          "hub_address": self.hub_address,
-                                          "hub_port": self.hub_port,
-                                          "logdir": "{}/{}".format(self.run_dir, self.label),
-                                          "heartbeat_threshold": self.heartbeat_threshold,
-                                          "poll_period": self.poll_period,
-                                          "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
-                                  },
-                                  daemon=True,
-                                  name="HTEX-Interchange"
+        self.queue_proc = ForkProcess(target=interchange.starter,
+                                      args=(comm_q,),
+                                      kwargs={"client_ports": (self.outgoing_q.port,
+                                                               self.incoming_q.port,
+                                                               self.command_client.port),
+                                              "worker_ports": self.worker_ports,
+                                              "worker_port_range": self.worker_port_range,
+                                              "hub_address": self.hub_address,
+                                              "hub_port": self.hub_port,
+                                              "logdir": "{}/{}".format(self.run_dir, self.label),
+                                              "heartbeat_threshold": self.heartbeat_threshold,
+                                              "poll_period": self.poll_period,
+                                              "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
+                                      },
+                                      daemon=True,
+                                      name="HTEX-Interchange"
         )
         self.queue_proc.start()
         try:
@@ -535,10 +532,10 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         Args:
             - func (callable) : Callable function
-            - *args (list) : List of arbitrary positional arguments.
+            - args (list) : List of arbitrary positional arguments.
 
         Kwargs:
-            - **kwargs (dict) : A dictionary of arbitrary keyword args for func.
+            - kwargs (dict) : A dictionary of arbitrary keyword args for func.
 
         Returns:
               Future
@@ -561,7 +558,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             args_to_print = tuple([arg if len(repr(arg)) < 100 else (repr(arg)[:100] + '...') for arg in args])
         logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
 
-        self.tasks[task_id] = Future()
+        fut = Future()
+        self.tasks[task_id] = fut
 
         try:
             fn_buf = pack_apply_message(func, args, kwargs,
@@ -576,7 +574,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         self.outgoing_q.put(msg)
 
         # Return the future
-        return self.tasks[task_id]
+        return fut
 
     @property
     def scaling_enabled(self):
@@ -644,8 +642,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
              Used along with blocks to indicate whether blocks should be terminated by force.
              When force = True, we will kill blocks regardless of the blocks being busy
              When force = False, Only idle blocks will be terminated.
-             If the # of `idle_blocks` < `blocks`, the list of jobs marked for termination
-             will be in the range: 0 -`blocks`.
+             If the # of ``idle_blocks`` < ``blocks``, the list of jobs marked for termination
+             will be in the range: 0 - ``blocks``.
 
         max_idletime: float
              A time to indicate how long a block can be idle.
