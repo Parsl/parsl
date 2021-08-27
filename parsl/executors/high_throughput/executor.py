@@ -561,6 +561,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
 
         fut = Future()
+        fut.parsl_executor_task_id = task_id
         self.tasks[task_id] = fut
 
         try:

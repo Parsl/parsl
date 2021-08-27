@@ -131,3 +131,25 @@ there is no canonical source of information about anything (hence the graph
 merge requirements) - eg multiple entities assert that workflow X has
 task N. (eg monitoring.db, parsl.log) and neither is more authentic than the
 other.
+
+principle:
+components are necessarily aware of each other, nor bound in a strict
+hierarchy
+
+the stack is composed (aka configured) by the workflow author/user, and so
+the performance analysis stack is also composed (aka configured)
+correspondingly.
+
+expect to be doing ad-hoc workflow and query aware remapping of contexts and
+events
+
+expect dirty data that doesn't always align quite right: eg three different
+components might all give their own "end" event with very slightly different
+timing, and not always in the same order - that's part of what I mean by
+"distributed".
+
+components not necessarily built to interoperate with each other from a
+logging/tracking perspective
+
+this code cannot be very prescriptive about how a component records its
+event information.
