@@ -200,7 +200,7 @@ However, it is possible to specify the requirements for a particular app,
 and Work Queue will automatically run as many parallel instances as possible on each node.
 Work Queue automatically detects the amount of cores, memory, and other resources available on each execution node.
 To activate this feature, add a resource specification to your apps. A resource specification is a dictionary with
-the following three (case-insensitive) keys: ``cores`` (an integer corresponding to the number of cores required by the task),
+the following three keys: ``cores`` (an integer corresponding to the number of cores required by the task),
 ``memory`` (an integer corresponding to the task's memory requirement in MB), and ``disk`` (an integer corresponding to
 the task's disk requirement in MB), passed to an app via the special keyword argument ``parsl_resource_specification``. The specification can be set for all app invocations via a default, for example:
 
@@ -211,7 +211,7 @@ the task's disk requirement in MB), passed to an app via the special keyword arg
           return x*2
 
 
-or updated when the app is invocated:
+or updated when the app is invoked:
 
    .. code-block:: python
 
@@ -298,20 +298,14 @@ Any collection of compute nodes without a scheduler can be considered an
 ad-hoc cluster. Often these machines have a shared file system such as NFS or Lustre.
 In order to use these resources with Parsl, they need to set-up for password-less SSH access.
 
-To use these ssh-accessible collection of nodes as an ad-hoc cluster, we create an executor
-for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname. An example
+To use these ssh-accessible collection of nodes as an ad-hoc cluster, we use
+the `AdHocProvider` with an `SSHChannel` to each node. An example
 configuration follows.
 
 .. literalinclude:: ../../parsl/configs/ad_hoc.py
 
 .. note::
    Multiple blocks should not be assigned to each node when using the `HighThroughputExecutor`
-
-.. note::
-   Load-balancing will not work properly with this approach. In future work, a dedicated provider
-   that supports load-balancing will be implemented. You can follow progress on this work
-   `in issue #941 <https://github.com/Parsl/parsl/issues/941>`_.
-
 
 Amazon Web Services
 -------------------
@@ -518,6 +512,19 @@ The following snippet shows an example configuration for executing on Argonne Le
 using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
 
 .. literalinclude:: ../../parsl/configs/theta.py
+
+
+TOSS3 (LLNL)
+------------
+
+.. image:: https://hpc.llnl.gov/sites/default/files/Magma--2020-LLNL.jpg
+
+The following snippet shows an example configuration for executing on one of LLNL's **TOSS3**
+machines, such as Quartz, Ruby, Topaz, Jade, or Magma. This example uses the `FluxExecutor`
+and connects to Slurm using the `SlurmProvider`. This configuration assumes that the script
+is being executed on the login nodes of one of the machines.
+
+.. literalinclude:: ../../parsl/configs/toss3_llnl.py
 
 
 Further help

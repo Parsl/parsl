@@ -100,7 +100,7 @@ class DataManager(object):
         """Transport the input from the input source to the executor, if it is file-like,
         returning a DataFuture that wraps the stage-in operation.
 
-        If no staging in is required - because the `file` parameter is not file-like,
+        If no staging in is required - because the ``file`` parameter is not file-like,
         then return that parameter unaltered.
 
         Args:
