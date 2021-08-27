@@ -138,7 +138,7 @@ class ParslExecutor(metaclass=ABCMeta):
         and this method is a delegate to the corresponding method in the provider.
 
         :return: the number of seconds to wait between calls to status() or zero if no polling
-        should be done
+                 should be done
         """
         pass
 
@@ -147,10 +147,8 @@ class ParslExecutor(metaclass=ABCMeta):
     def error_management_enabled(self) -> bool:
         """Indicates whether worker error management is supported by this executor. Worker error
         management is done externally to the executor. However, the executor must implement
-        certain methods that allow this to function. These methods are:
+        certain status handling methods that allow this to function. These methods are:
 
-        Status Handling Methods
-        -----------------------
         :method:handle_errors
         :method:set_bad_state_and_fail_all
 

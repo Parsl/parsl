@@ -366,3 +366,8 @@ texinfo_documents = [
 # texinfo_no_detailmenu = False
 
 autosummary_generate = True
+
+autodoc_default_options = {
+    'members': True,
+    'undoc-members': True
+}
