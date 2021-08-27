@@ -1,3 +1,4 @@
+import pytest
 import time
 
 from parsl import join_app, python_app
@@ -29,7 +30,7 @@ def add_one(n):
 @python_app
 def combine(*args):
     """Wait for an arbitrary list of futures and return them as a list"""
-    return args
+    return list(args)
 
 
 @join_app
@@ -46,7 +47,24 @@ def test_result_flow():
     assert res == RESULT_CONSTANT
 
 
+@join_app
+def join_wrong_type_app():
+    return 3
+
+
+def test_wrong_type():
+    f = join_wrong_type_app()
+    with pytest.raises(TypeError):
+        f.result()
+
+
 def test_dependency_on_joined():
     g = add_one(outer_app())
     res = g.result()
     assert res == RESULT_CONSTANT + 1
+
+
+def test_combine():
+    f = outer_make_a_dag(inner_app())
+    res = f.result()
+    assert res == [RESULT_CONSTANT] * RESULT_CONSTANT

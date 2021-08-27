@@ -27,6 +27,7 @@ extras_require = {
     'gssapi' : ['python-gssapi'],
     'azure' : ['azure<=4', 'msrestazure'],
     'workqueue': ['work_queue'],
+    'flux': ['pyyaml', 'cffi', 'jsonschema'],
 }
 extras_require['all'] = sum(extras_require.values(), [])
 

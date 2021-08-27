@@ -81,8 +81,8 @@ class VersionMismatch(Exception):
 
     def __repr__(self):
         return "Manager version info {} does not match interchange version info {}, causing a critical failure".format(
-            self.interchange_version,
-            self.manager_version)
+            self.manager_version,
+            self.interchange_version)
 
     def __str__(self):
         return self.__repr__()
@@ -95,8 +95,6 @@ class Interchange(object):
     2. Allow for workers to join and leave the union
     3. Detect workers that have failed using heartbeats
     4. Service single and batch requests from workers
-    5. Be aware of requests worker resource capacity,
-       eg. schedule only jobs that fit into walltime.
 
     TODO: We most likely need a PUB channel to send out global commands, like shutdown
     """
@@ -465,7 +463,7 @@ class Interchange(object):
                     tasks_requested = int.from_bytes(message[1], "little")
                     self._ready_manager_queue[manager]['last_heartbeat'] = time.time()
                     if tasks_requested == HEARTBEAT_CODE:
-                        logger.debug("[MAIN] Manager {} sent heartbeat".format(manager))
+                        logger.debug("[MAIN] Manager {} sent heartbeat via tasks connection".format(manager))
                         self.task_outgoing.send_multipart([manager, b'', PKL_HEARTBEAT_CODE])
                     else:
                         logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
@@ -523,7 +521,10 @@ class Interchange(object):
                     for b_message in b_messages:
                         r = pickle.loads(b_message)
                         try:
-                            self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
+                            if int(r['task_id']) != -1:
+                                self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
+                            elif 'heartbeat' in r:
+                                logger.debug("[MAIN] Manager {} sent heartbeat via results connection".format(manager))
                         except Exception:
                             # If we reach here, there's something very wrong.
                             logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(
