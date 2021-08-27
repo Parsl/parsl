@@ -25,4 +25,4 @@ def fibonacci(n):
 def test_fibonacci():
     assert fibonacci(0).result() == 0
     assert fibonacci(4).result() == 3
-    assert fibonacci(10).result() == 55
+    assert fibonacci(6).result() == 8
