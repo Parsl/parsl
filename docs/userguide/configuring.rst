@@ -298,20 +298,14 @@ Any collection of compute nodes without a scheduler can be considered an
 ad-hoc cluster. Often these machines have a shared file system such as NFS or Lustre.
 In order to use these resources with Parsl, they need to set-up for password-less SSH access.
 
-To use these ssh-accessible collection of nodes as an ad-hoc cluster, we create an executor
-for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname. An example
+To use these ssh-accessible collection of nodes as an ad-hoc cluster, we use
+the `AdHocProvider` with an `SSHChannel` to each node. An example
 configuration follows.
 
 .. literalinclude:: ../../parsl/configs/ad_hoc.py
 
 .. note::
    Multiple blocks should not be assigned to each node when using the `HighThroughputExecutor`
-
-.. note::
-   Load-balancing will not work properly with this approach. In future work, a dedicated provider
-   that supports load-balancing will be implemented. You can follow progress on this work
-   `in issue #941 <https://github.com/Parsl/parsl/issues/941>`_.
-
 
 Amazon Web Services
 -------------------
