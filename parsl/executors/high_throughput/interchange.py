@@ -83,8 +83,8 @@ class VersionMismatch(Exception):
 
     def __repr__(self):
         return "Manager version info {} does not match interchange version info {}, causing a critical failure".format(
-            self.interchange_version,
-            self.manager_version)
+            self.manager_version,
+            self.interchange_version)
 
     def __str__(self):
         return self.__repr__()
