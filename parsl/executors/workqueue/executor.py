@@ -59,7 +59,7 @@ logger = logging.getLogger(__name__)
 
 
 # Support structure to communicate parsl tasks to the work queue submit thread.
-ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category cores memory disk gpus env_pkg map_file function_file result_file input_files output_files')
+ParslTaskToWq = namedtuple('ParslTaskToWq', 'id category cores memory disk gpus priority env_pkg map_file function_file result_file input_files output_files')
 
 # Support structure to communicate final status of work queue tasks to parsl
 # result is only valid if result_received is True
@@ -174,6 +174,13 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             invocations of an app have similar performance characteristics,
             this will provide a reasonable set of categories automatically.
 
+        max_retries: Optional[int]
+            Set the number of retries that Work Queue will make when a task
+            fails. This is distinct from Parsl level retries configured in
+            parsl.config.Config. Set to None to allow Work Queue to retry
+            tasks forever. By default, this is set to 1, so that all retries
+            will be managed by Parsl.
+
         init_command: str
             Command line to run before executing a task in a worker.
             Default is ''.
@@ -208,6 +215,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  autolabel: bool = False,
                  autolabel_window: int = 1,
                  autocategory: bool = True,
+                 max_retries: Optional[int] = 1,
                  init_command: str = "",
                  worker_options: str = "",
                  full_debug: bool = True,
@@ -242,6 +250,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.autolabel = autolabel
         self.autolabel_window = autolabel_window
         self.autocategory = autocategory
+        self.max_retries = max_retries
         self.should_stop = multiprocessing.Value(c_bool, False)
         self.cached_envs = {}  # type: Dict[int, str]
         self.worker_options = worker_options
@@ -295,6 +304,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                  "autolabel": self.autolabel,
                                  "autolabel_window": self.autolabel_window,
                                  "autocategory": self.autocategory,
+                                 "max_retries": self.max_retries,
                                  "should_stop": self.should_stop,
                                  "port": self.port,
                                  "wq_log_dir": self.wq_log_dir,
@@ -347,11 +357,12 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         memory = None
         disk = None
         gpus = None
+        priority = None
         if resource_specification and isinstance(resource_specification, dict):
             logger.debug("Got resource specification: {}".format(resource_specification))
 
             required_resource_types = set(['cores', 'memory', 'disk'])
-            acceptable_resource_types = set(['cores', 'memory', 'disk', 'gpus'])
+            acceptable_resource_types = set(['cores', 'memory', 'disk', 'gpus', 'priority'])
             keys = set(resource_specification.keys())
 
             if not keys.issubset(acceptable_resource_types):
@@ -360,7 +371,12 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 logger.error(message)
                 raise ExecutorError(self, message)
 
-            if not self.autolabel and not keys.issuperset(required_resource_types):
+            # this checks that either all of the required resource types are specified, or
+            # that none of them are: the `required_resource_types` are not actually required,
+            # but if one is specified, then they all must be.
+            key_check = required_resource_types.intersection(keys)
+            required_keys_ok = len(key_check) == 0 or key_check == required_resource_types
+            if not self.autolabel and not required_keys_ok:
                 logger.error("Running with `autolabel=False`. In this mode, "
                              "task resource specification requires "
                              "three resources to be specified simultaneously: cores, memory, and disk")
@@ -377,6 +393,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     disk = resource_specification[k]
                 elif k == 'gpus':
                     gpus = resource_specification[k]
+                elif k == 'priority':
+                    priority = resource_specification[k]
 
         self.task_counter += 1
         task_id = self.task_counter
@@ -440,6 +458,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                                  memory,
                                                  disk,
                                                  gpus,
+                                                 priority,
                                                  env_pkg,
                                                  map_file,
                                                  function_file,
@@ -691,6 +710,7 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                             autolabel=False,
                             autolabel_window=None,
                             autocategory=False,
+                            max_retries=0,
                             should_stop=None,
                             port=WORK_QUEUE_DEFAULT_PORT,
                             wq_log_dir=None,
@@ -804,6 +824,14 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                 t.specify_disk(task.disk)
             if task.gpus is not None:
                 t.specify_gpus(task.gpus)
+            if task.priority is not None:
+                t.specify_priority(task.priority)
+
+            if max_retries is not None:
+                logger.debug(f"Specifying max_retries {max_retries}")
+                t.specify_max_retries(max_retries)
+            else:
+                logger.debug("Not specifying max_retries")
 
             # Specify environment variables for the task
             if env is not None:
