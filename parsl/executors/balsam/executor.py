@@ -230,7 +230,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  mode: str = 'mpi',
                  maxworkers: int = 3,
                  project: str = 'local',
-                 batchjob: bool = False,
+                 batchjob: bool = True,
                  siteid: int = None,
                  sleep: int = 1,
                  sitedir: str = None,
@@ -264,6 +264,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.workdir = workdir
         self.datadir = datadir
         self.image = image
+        self.batchjobs = []
 
         if sitedir is None and 'BALSAM_SITE_PATH' in os.environ:
             self.sitedir = os.environ['BALSAM_SITE_PATH']
@@ -284,7 +285,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 project=self.project,
                 filter_tags={"parsl-id": PARSL_SESSION}
             )
-
+            self.batchjobs += [self.batchjob]
             self.batchjob.save()
             logger.debug("Saved Batchjob")
 
@@ -415,9 +416,9 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                              appname,
                              appdir) + \
                          "metadata = {\"type\":\"python\",\"file\":\"" + appdir + "/output.pickle\"}\n" \
-                         "with open('/app/job.metadata','w') as job:\n" \
+                         "with open('{}job.metadata','w') as job:\n" \
                          "    job.write(json.dumps(metadata))\n" \
-                         "print(result)\n"
+                         "print(result)\n".format(appdir)
 
                 source = source.replace('@container_app', '#@container_app')
 
@@ -553,9 +554,27 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         :return: A list of block ids corresponding to the blocks that were added.
         """
+        logger.debug("Scaling out %s blocks", blocks)
+        
+        added_blocks = []
 
-        raise NotImplementedError
+        for i in range(0, blocks):
+            logger.debug("Creating Batchjob")
+            batchjob = BatchJob(
+                num_nodes=self.numnodes,
+                wall_time_min=self.walltime,
+                job_mode=self.mode,
+                queue=self.queue,
+                site_id=self.siteid,
+                project=self.project,
+                filter_tags={"parsl-id": PARSL_SESSION}
+            )
+            self.batchjobs += [batchjob]
+            batchjob.save()
+            added_blocks += [batchjob]
 
+        return [str(batch.id) for batch in added_blocks]
+            
     def scale_in(self, blocks: int) -> List[str]:
         """Scale in method.
 
@@ -568,7 +587,19 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         :return: A list of block ids corresponding to the blocks that were removed.
         """
 
-        raise NotImplementedError
+        if blocks > len(self.batchjobs):
+            raise BalsamExecutorException
+        
+        removed_blocks = []
+
+        for i in range(0, blocks):
+            self.batchjobs[i].state = "pending_deletion"
+            self.batchjobs[i].save()
+            removed_blocks += [self.batchjobs[i]]
+
+        self.batchjobs = [batch for batch in self.batchjobs if batch not in removed_blocks]
+
+        return [str(batch.id) for batch in removed_blocks]
 
     def shutdown(self) -> bool:
         """Shutdown the executor.
