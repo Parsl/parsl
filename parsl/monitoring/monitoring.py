@@ -389,14 +389,16 @@ class MonitoringHub(RepresentationMixin):
 
     # TODO: tighten the Any message format
     def send(self, mtype: MessageType, message: Any) -> None:
-        self.logger.debug("Sending message {}, {}".format(mtype, message))
+        # this was crazy big
+        self.logger.debug("Sending message type {}".format(mtype))
         try:
             self._dfk_channel.send_pyobj((mtype, message))
         except zmq.Again:
             self.logger.exception(
                 "The monitoring message sent from DFK to Hub timed-out after {}ms".format(self.dfk_channel_timeout))
         else:
-            self.logger.debug("Sent message {}, {}".format(mtype, message))
+            # this was very big
+            self.logger.debug("Sent message type {}".format(mtype))
 
     def close(self) -> None:
         if self.logger:
