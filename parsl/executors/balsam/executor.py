@@ -274,20 +274,20 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         self.batchjob = None
 
-        if batchjob:
-            logger.debug("Creating Batchjob")
-            self.batchjob = BatchJob(
-                num_nodes=self.numnodes,
-                wall_time_min=self.walltime,
-                job_mode=self.mode,
-                queue=self.queue,
-                site_id=self.siteid,
-                project=self.project,
-                filter_tags={"parsl-id": PARSL_SESSION}
-            )
-            self.batchjobs += [self.batchjob]
-            self.batchjob.save()
-            logger.debug("Saved Batchjob")
+        #if batchjob:
+        logger.info("Creating Batchjob")
+        batchjob = BatchJob(
+            num_nodes=self.numnodes,
+            wall_time_min=self.walltime,
+            job_mode=self.mode,
+            queue=self.queue,
+            site_id=self.siteid,
+            project=self.project,
+            filter_tags={"parsl-id": PARSL_SESSION}
+        )
+        self.batchjobs += [batchjob]
+        batchjob.save()
+        logger.info("Saved Batchjob")
 
         self.bulkpoller = BalsamBulkPoller(self.batchjob, {}, self.sleep)
 
