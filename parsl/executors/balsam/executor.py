@@ -534,6 +534,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     appsource.write(source)
                     logger.debug("Wrote app.py to {}".format(appsource.name))
 
+            logger.debug("Batch jobs: %s",self.batchjobs)
             self.balsam_future = BalsamFuture(job, appname, sleep=sleep, timeout=timeout)
 
             if callback:
