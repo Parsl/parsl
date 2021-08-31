@@ -1,12 +1,15 @@
+import os
+import time
+import datetime
 import parsl
 from parsl.config import Config
 from parsl.app.app import python_app, container_app
 from parsl.providers.local.local import LocalProvider
 from parsl.executors import ThreadPoolExecutor
 import glob
-
-
 import matplotlib.pyplot as plt
+
+
 plt.switch_backend('agg')
 
 config = Config(
@@ -172,12 +175,8 @@ data = {
     }
 }
 
-
-import os
 tifs = glob.glob(datadir + "/*.tif")
 
-import time
-import datetime
 pdfs = []
 start = time.time()
 for tif in tifs[:20]:

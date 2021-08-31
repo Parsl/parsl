@@ -4,7 +4,7 @@ import datetime
 import glob
 import parsl
 from parsl.config import Config
-from parsl.app.app import python_app
+from parsl.app.app import python_app, container_app
 from parsl.executors.balsam.executor import BalsamExecutor
 
 datadir = "/home/darren/alcf/singularity/LiquidSulfur/Experimental data/Sample 2 Heat - Wed"
@@ -31,6 +31,7 @@ parsl.load(config)
 
 
 @python_app(executors=['BalsamExecutor'])
+#@container_app(type="singularity", image="/home/darren/alcf/singularity/git/gsas2container/gsas2.img", data="/home/darren/alcf/singularity/work/data", cmd="/home/darren/alcf/singularity/git/singularity/builddir/singularity")
 def PDF_Workflow(inputs=[]):
 
     def generate_charts(data, prefix, dest):
@@ -55,7 +56,6 @@ def PDF_Workflow(inputs=[]):
 
     import numpy as np
     import matplotlib.pyplot as plt
-    from matplotlib.axis import Axis
     import GSASIIscriptable as G2sc
 
     # Create workflow GSAS2 project
@@ -115,10 +115,12 @@ def PDF_Workflow(inputs=[]):
     pdf.data['PDF Controls']['BackRatio'] = 0.184
     pdf.data['PDF Controls']['Rmax'] = 20.0
 
+    for i in range(5):
+        if pdf.optimize():
+            break
+
     pdf.calculate()
-    pdf.optimize()
-    pdf.optimize()
-    pdf.optimize()
+
     pdf.export(data['export']['prefix'], 'I(Q), S(Q), F(Q), G(r)')
 
     gpx.save()

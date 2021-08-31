@@ -1,6 +1,6 @@
 import parsl
 from parsl.config import Config
-from parsl.app.app import python_app
+from parsl.app.app import python_app, container_app
 from parsl.executors.balsam.executor import BalsamExecutor
 import glob
 
@@ -9,7 +9,7 @@ config = Config(
         BalsamExecutor(
             siteid=5,
             maxworkers=3,
-            image="/home/darren/alcf/singularity/git/gsas2container/gsas2.img",
+            # image="/home/darren/alcf/singularity/git/gsas2container/gsas2.img",
             datadir="/home/darren/alcf/singularity/git/gsas2container/gsas/example",
             numnodes=1,
             timeout=60,
@@ -94,15 +94,16 @@ def PDF_Workflow(inputs=[]):
     pdf.data['PDF Controls']['BackRatio'] = 0.184
     pdf.data['PDF Controls']['Rmax'] = 20.0
 
+    for i in range(5):
+        if pdf.optimize():
+            break
     pdf.calculate()
-    pdf.optimize()
-    pdf.optimize()
-    pdf.optimize()
+
     pdf.export(data['export']['prefix'], 'I(Q), S(Q), F(Q), G(r)')
 
     gpx.save()
 
-    x, y = np.loadtxt(data['export']['prefix']+'.gr', unpack=True)
+    x, y = np.loadtxt(data['export']['prefix'] + '.gr', unpack=True)
 
     plt.plot(x, y, label='Sulfur')
     fig = plt.figure(1)

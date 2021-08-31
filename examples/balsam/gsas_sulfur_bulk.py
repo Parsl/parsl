@@ -1,4 +1,7 @@
 import glob
+import os
+import time
+import datetime
 
 datadir = "/home/darren/alcf/singularity/LiquidSulfur/Experimental data/Sample 2 Heat - Wed"
 
@@ -23,6 +26,7 @@ def generate_charts(data, prefix, dest):
     div = plotly.offline.plot(data, include_plotlyjs=False, output_type='div')
     print(div)
     fig.write_html(dest+"/"+prefix+".html")
+
 
 def PDF_Workflow(inputs=[]):
     import numpy as np
@@ -138,10 +142,7 @@ data = {
     }
 }
 
-import os
 tifs = glob.glob(datadir+"/*.tif")
-
-import time, datetime
 
 start = time.time()
 
