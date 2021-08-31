@@ -487,15 +487,18 @@ class Interchange(object):
                     for p_message in all_messages:
                         r = pickle.loads(p_message)
                         if r['type'] == 'result':
+                            logger.debug(f"Result item is result for task {r['task_id']}")
                             # process this for task ID and forward to executor
                             b_messages.append((p_message, r))
                         elif r['type'] == 'monitoring':
+                            logger.debug("Result item is monitoring message - sending on hub_channel")
                             hub_channel.send_pyobj(r['payload'])
+                            logger.debug("Sent monitoring message on hub_channel")
                         elif r['type'] == 'heartbeat':
-                            logger.debug(f"Manager {manager_id} sent heartbeat via results connection")
+                            logger.debug("Result item is a heartbeat on results connection")
                             b_messages.append((p_message, r))
                         else:
-                            logger.error("Interchange discarding result_queue message of unknown type: {}".format(r['type']))
+                            logger.error(f"Result item is of unknown type: {r['type']} - discarding")
 
                     m = self._ready_managers[manager_id]
                     for (b_message, r) in b_messages:
