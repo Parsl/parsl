@@ -274,7 +274,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         self.batchjob = None
 
-        #if batchjob:
+        # if batchjob:
         logger.info("Creating Batchjob")
         batchjob = BatchJob(
             num_nodes=self.numnodes,
@@ -435,7 +435,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     logging.debug("Acquired futures_lock")
                     job = Job(
                         workdir,
-                        app.id,
+                        app_id=app.id,
                         wall_time_min=0,
                         num_nodes=self.jobnodes,
                         parameters={},
@@ -508,7 +508,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     logging.debug("Acquired futures_lock")
                     job = Job(
                         workdir,
-                        app.id,
+                        app_id=app.id,
                         wall_time_min=0,
                         num_nodes=self.jobnodes,
                         parameters={},
