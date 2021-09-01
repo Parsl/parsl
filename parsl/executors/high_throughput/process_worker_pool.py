@@ -219,8 +219,13 @@ class Manager(object):
         """ Send heartbeat to the incoming task queue
         """
         heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
-        r = self.task_incoming.send(heartbeat)
-        logger.debug("Sent heartbeat, return code {}".format(r))
+        self.task_incoming.send(heartbeat)
+        logger.debug("Sent heartbeat")
+        # used to log heartbeat return value, but it is always None -
+        # errors are reported as exceptions.
+        # "return code None" has repeatedly confused me over the years,
+        # because it isn't clear what the meaning is without reading
+        # docs.
 
     @wrap_with_logs
     def pull_tasks(self, kill_event):
@@ -282,8 +287,7 @@ class Manager(object):
 
                 else:
                     task_recv_counter += len(tasks)
-                    logger.debug("[TASK_PULL_THREAD] Got tasks: {} of {}".format([t['task_id'] for t in tasks],
-                                                                                 task_recv_counter))
+                    logger.debug("Got tasks: {}, cumulative count of tasks: {}".format([t['task_id'] for t in tasks], task_recv_counter))
 
                     for task in tasks:
                         self.pending_task_queue.put(task)
@@ -315,7 +319,7 @@ class Manager(object):
               Event to let the thread know when it is time to die.
         """
 
-        logger.debug("[RESULT_PUSH_THREAD] Starting thread")
+        logger.debug("Starting result push thread")
 
         # push_poll_period is in s
 
@@ -323,34 +327,50 @@ class Manager(object):
         # push_poll_period must be at least 10 ms [BENC: why? and why does
         # this one have more of a restriction than any of the other timing
         # parameters? That max statement enforces that. but why enforce it vs other timings?]
-        logger.debug("[RESULT_PUSH_THREAD] push poll period: {}".format(push_poll_period))
+        logger.debug("push poll period: {} seconds".format(push_poll_period))
 
         last_beat = time.time()
         last_result_beat = time.time()
         items = []
 
         while not kill_event.is_set():
-
+            logger.debug("Starting loop")
             try:
+                # TODO: is this timeout= parameter in seconds? yes. according to docs.
+                logger.debug("Starting pending_result_queue get")
                 r = self.pending_result_queue.get(block=True, timeout=push_poll_period)
+                logger.debug("Got a result item")
                 items.append(r)
             except queue.Empty:
+                logger.debug("pending_result_queue get timeout without result item")
                 pass
             except Exception as e:
-                logger.exception("[RESULT_PUSH_THREAD] Got an exception: {}".format(e))
+                logger.exception("Got an exception: {}".format(e))
 
+            # this will send a heartbeat even if results have been sent within the
+            # heartbeat_period.
+            # TODO: check at other end of connection if it is OK to omit a heartbeat
+            # if a result has been sent instead, and if so, reset the heartbeat period
+            # when sending a result
             if time.time() > last_result_beat + self.heartbeat_period:
+                logger.info(f"Sending heartbeat via results connection: last_result_beat={last_result_beat} heartbeat_period={self.heartbeat_period} seconds")
                 last_result_beat = time.time()
                 items.append(pickle.dumps({'type': 'heartbeat'}))
 
-            # If we have reached poll_period duration or timer has expired, we send results
             if len(items) >= self.max_queue_size or time.time() > last_beat + push_poll_period:
+                logger.debug("Check for result send")
                 last_beat = time.time()
                 if items:
+                    logger.debug(f"Pushing {len(items)} items")
                     self.result_outgoing.send_multipart(items)
                     items = []
+                else:
+                    logger.debug("No items to push")
+            else:
+                logger.debug(f"Result send check condition not met - deferring {len(items)} result items")
+            logger.debug("End loop")
 
-        logger.critical("[RESULT_PUSH_THREAD] Exiting")
+        logger.critical("Exiting")
 
     @wrap_with_logs
     def worker_watchdog(self, kill_event):
@@ -580,6 +600,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
 
         result_queue.put(pkl_package)
         tasks_in_progress.pop(worker_id)
+        logger.info("All processing finished for task {}".format(tid))
 
 
 def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
@@ -595,7 +616,9 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
        -  None
     """
     if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(rank)
+        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d " \
+                        "%(processName)s(%(process)d) %(threadName)s Rank:{0} " \
+                        "[%(levelname)s]  %(message)s".format(rank)
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
