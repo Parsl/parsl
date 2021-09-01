@@ -78,3 +78,9 @@ jobs:
     - name: make coverage
       run: |
         make coverage
+
+    - name: Archive runinfo logs
+      uses: actions/upload-artifact@v2
+      with:
+        name: runinfo
+        path: runinfo/
