@@ -16,6 +16,8 @@ from balsam.api import Job, App, BatchJob, Site, site_config
 from parsl.executors.errors import UnsupportedFeatureError
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.utils import RepresentationMixin
+from parsl.serialize import pack_apply_message, deserialize
+
 
 logging.basicConfig(
     format='%(asctime)s : %(levelname)s : %(message)s', level=logging.DEBUG)
@@ -327,9 +329,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             uuid = uuid4().hex
             workdir = kwargs['workdir'] if 'workdir' in kwargs else "parsl" + os.path.sep + appname + os.path.sep + uuid
 
-            logger.debug("Log file is " + workdir + os.path.sep + 'executor' + os.path.sep +
-                         'logs' + os.path.sep + 'executor.log')
-
             callback = kwargs['callback'] if 'callback' in kwargs else None
             inputs = kwargs['inputs'] if 'inputs' in kwargs else []
             script = kwargs['script'] if 'script' in kwargs else None
@@ -416,7 +415,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                              appname,
                              appdir) + \
                          "metadata = {\"type\":\"python\",\"file\":\"" + appdir + "/output.pickle\"}\n" \
-                         "with open('{}job.metadata','w') as job:\n" \
+                         "with open('{}/job.metadata','w') as job:\n" \
                          "    job.write(json.dumps(metadata))\n" \
                          "print(result)\n".format(appdir)
 
@@ -489,9 +488,9 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                              appname,
                              appdir) + \
                          "metadata = {\"type\":\"python\",\"file\":\"" + appdir + "/output.pickle\"}\n" \
-                         "with open('/app/job.metadata','w') as job:\n" \
+                         "with open('{}/job.metadata','w') as job:\n" \
                          "    job.write(json.dumps(metadata))\n" \
-                         "print(result)\n"
+                         "print(result)\n".format(appdir)
 
                 source = source.replace('@python_app', '#@python_app')
 
