@@ -360,7 +360,7 @@ class Manager(object):
                 if items:
                     logger.debug(f"Result send: Pushing {len(items)} items")
                     self.result_outgoing.send_multipart(items)
-                    logger.debug(f"Result send: Pushed")
+                    logger.debug("Result send: Pushed")
                     items = []
                 else:
                     logger.debug("Result send: No items to push")
