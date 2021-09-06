@@ -482,9 +482,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
                 fn_buf = pack_apply_message(func, inputs, kwargs, buffer_threshold=1024 * 1024)
 
-                with open(workdir + os.sep + "func.pickle", "wb") as funcp:
-                    funcp.write(fn_buf)
-
                 source = "import pickle\n" \
                          "import os\n" \
                          "import json\n" \
@@ -536,7 +533,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     )
 
                     job.parameters["python"] = sys.executable
-                    
+
                     job.save()
 
                     logging.debug("JOB %s saved.", job.id)
@@ -553,6 +550,10 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 with open(job.resolve_workdir(site_config.data_path).joinpath("app.py"), "w") as appsource:
                     appsource.write(source)
                     logger.debug("Wrote app.py to {}".format(appsource.name))
+
+                with open(job.resolve_workdir(site_config.data_path).joinpath("func.pickle"), "wb") as funcp:
+                    funcp.write(fn_buf)
+                    logger.debug("Wrote parsl function to {}".format(job.resolve_workdir(site_config.data_path).joinpath("func.pickle")))
 
             logger.debug("Batch jobs: %s", self.batchjobs)
             self.balsam_future = BalsamFuture(job, appname, sleep=sleep, timeout=timeout)
