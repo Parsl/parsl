@@ -263,7 +263,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.node_packing_count = node_packing_count
         self.threadpool = None
         self.balsam_future = None
-        self.workdir = workdir
         self.datadir = datadir
         self.image = image
         self.batchjobs = []
@@ -344,6 +343,9 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 logger.error("Ignoring the resource specification. ")
                 raise BalsamUnsupportedFeatureException()
 
+            logger.debug("Making workdir for job: {}".format(workdir))
+            os.makedirs(workdir, exist_ok=True)
+            
             logger.debug("WALLTIME: %s", walltime)
             appdir = os.path.abspath(self.sitedir + '/data/' + workdir)
             if script == 'bash':
@@ -529,9 +531,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     JOBS[job.id] = job
                 finally:
                     futures_lock.release()
-
-            logger.debug("Making workdir for job: {}".format(workdir))
-            os.makedirs(workdir, exist_ok=True)
 
             os.makedirs(job.resolve_workdir(site_config.data_path), exist_ok=True)
             # Write function source to app.py in job workdir for balsam to pick up
