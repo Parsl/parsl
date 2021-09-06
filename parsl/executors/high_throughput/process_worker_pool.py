@@ -334,7 +334,6 @@ class Manager(object):
         items = []
 
         while not kill_event.is_set():
-            logger.debug("Starting loop")
             try:
                 # TODO: is this timeout= parameter in seconds? yes. according to docs.
                 logger.debug("Starting pending_result_queue get")
@@ -343,7 +342,6 @@ class Manager(object):
                 items.append(r)
             except queue.Empty:
                 logger.debug("pending_result_queue get timeout without result item")
-                pass
             except Exception as e:
                 logger.exception("Got an exception: {}".format(e))
 
@@ -358,17 +356,16 @@ class Manager(object):
                 items.append(pickle.dumps({'type': 'heartbeat'}))
 
             if len(items) >= self.max_queue_size or time.time() > last_beat + push_poll_period:
-                logger.debug("Check for result send")
                 last_beat = time.time()
                 if items:
-                    logger.debug(f"Pushing {len(items)} items")
+                    logger.debug(f"Result send: Pushing {len(items)} items")
                     self.result_outgoing.send_multipart(items)
+                    logger.debug(f"Result send: Pushed")
                     items = []
                 else:
-                    logger.debug("No items to push")
+                    logger.debug("Result send: No items to push")
             else:
-                logger.debug(f"Result send check condition not met - deferring {len(items)} result items")
-            logger.debug("End loop")
+                logger.debug(f"Result send: check condition not met - deferring {len(items)} result items")
 
         logger.critical("Exiting")
 
@@ -617,8 +614,8 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
     """
     if format_string is None:
         format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d " \
-                        "%(processName)s(%(process)d) %(threadName)s Rank:{0} " \
-                        "[%(levelname)s]  %(message)s".format(rank)
+                        "%(process)d %(threadName)s " \
+                        "[%(levelname)s]  %(message)s"
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)

@@ -624,7 +624,7 @@ class Interchange(object):
                         logger.debug("Sent messages on results_outgoing")
 
                     logger.debug(f"Current tasks on manager {manager}: {self._ready_manager_queue[manager]['tasks']}")
-                    if len(self._ready_manager_queue[manager]['tasks']) == 0:
+                    if len(self._ready_manager_queue[manager]['tasks']) == 0 and self._ready_manager_queue[manager]['idle_since'] is None:
                         self._ready_manager_queue[manager]['idle_since'] = time.time()
                 logger.debug("leaving results_incoming section")
 
