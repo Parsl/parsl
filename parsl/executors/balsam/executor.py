@@ -343,11 +343,12 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 logger.error("Ignoring the resource specification. ")
                 raise BalsamUnsupportedFeatureException()
 
-            logger.debug("Making workdir for job: {}".format(workdir))
+            logger.info("Making workdir for job: {}".format(workdir))
             os.makedirs(workdir, exist_ok=True)
-            
+
             logger.debug("WALLTIME: %s", walltime)
             appdir = os.path.abspath(self.sitedir + '/data/' + workdir)
+
             if script == 'bash':
                 class_path = 'parsl.BashRunner'
                 shell_command = func(inputs=inputs)
@@ -373,8 +374,11 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     )
 
                     job.parameters["command"] = shell_command
+
                     job.save()
+
                     logging.debug("JOB %s saved.", job.id)
+
                 finally:
                     futures_lock.release()
 
@@ -432,8 +436,11 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
                 try:
                     logging.debug("Acquiring futures_lock")
+
                     futures_lock.acquire()
+
                     logging.debug("Acquired futures_lock")
+
                     job = Job(
                         workdir,
                         app_id=app.id,
@@ -446,8 +453,11 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
                     job.parameters["image"] = self.image
                     job.parameters["datadir"] = self.datadir
+
                     job.save()
+
                     logging.debug("JOB %s saved.", job.id)
+
                     JOBS[job.id] = job
                 finally:
                     futures_lock.release()
@@ -472,7 +482,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
                 fn_buf = pack_apply_message(func, inputs, kwargs, buffer_threshold=1024 * 1024)
 
-                with open(appdir + os.sep + "func.pickle", "wb") as funcp:
+                with open(workdir + os.sep + "func.pickle", "wb") as funcp:
                     funcp.write(fn_buf)
 
                 source = "import pickle\n" \
@@ -496,11 +506,11 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "    f.write(result_buf)\n".format(
                                 site_id,
                                 class_path,
-                                appdir,
-                                appdir)
+                                workdir,
+                                workdir)
 
-                source += "metadata = {\"type\":\"python\",\"file\":\"" + appdir + "/output.pickle\"}\n" \
-                    "with open('" + appdir + "/job.metadata','w') as job:\n" \
+                source += "metadata = {\"type\":\"python\",\"file\":\"" + workdir + "/output.pickle\"}\n" \
+                    "with open('" + workdir + "/job.metadata','w') as job:\n" \
                     "    job.write(json.dumps(metadata))\n" \
                     "print(result)\n"
 
@@ -526,9 +536,13 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     )
 
                     job.parameters["python"] = sys.executable
+                    
                     job.save()
+
                     logging.debug("JOB %s saved.", job.id)
+
                     JOBS[job.id] = job
+
                 finally:
                     futures_lock.release()
 
