@@ -503,11 +503,11 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "    f.write(result_buf)\n".format(
                                 site_id,
                                 class_path,
-                                workdir,
-                                workdir)
+                                appdir,
+                                appdir)
 
-                source += "metadata = {\"type\":\"python\",\"file\":\"" + workdir + "/output.pickle\"}\n" \
-                    "with open('" + workdir + "/job.metadata','w') as job:\n" \
+                source += "metadata = {\"type\":\"python\",\"file\":\"" + appdir + "/output.pickle\"}\n" \
+                    "with open('" + appdir + "/job.metadata','w') as job:\n" \
                     "    job.write(json.dumps(metadata))\n" \
                     "print(result)\n"
 
