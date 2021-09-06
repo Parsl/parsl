@@ -491,7 +491,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "SITE_ID={}\n" \
                          "CLASS_PATH='{}'\n" \
                          "with open('{}/func.pickle','rb') as funcfile:\n" \
-                         "    fn_buf = f.read()\n" \
+                         "    fn_buf = funcfile.read()\n" \
                          "    try:\n" \
                          "        result = execute_task(fn_buf)\n" \
                          "        print(\"Finished execution\")\n" \
