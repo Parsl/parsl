@@ -149,7 +149,7 @@ class BalsamFuture(Future):
             if metadata['type'] == 'python':
                 logging.debug("Opening output file %s", metadata['file'])
                 with open(metadata['file'], 'rb') as input:
-                    result = pickle.load(input)
+                    result = deserialize(input.read())
                     logger.debug("OUTPUT.PICKLE is " + str(result))
                     self.set_result(result)
             else:
@@ -468,31 +468,39 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
                 pargs = re.sub(r'\n', "", pargs).strip()
 
+                fn_buf = pack_apply_message(func, inputs, kwargs, buffer_threshold=1024 * 1024)
+
+                with open(appdir + os.sep + "func.pickle", "wb") as funcp:
+                    funcp.write(fn_buf)
+
                 source = "import pickle\n" \
                          "import os\n" \
                          "import json\n" \
                          "import codecs\n" \
+                         "from parsl.executors.high_throughput.process_worker_pool import execute_task\n" \
+                         "from parsl.serialize import serialize\n" \
                          "SITE_ID={}\n" \
                          "CLASS_PATH='{}'\n" \
-                         "{}\n" \
-                         "pargs = '{}'\n" \
-                         "args = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\n" \
-                         "print(args)\n" \
-                         "result = {}(inputs=[*args])\n" \
-                         "with open('{}/output.pickle','ab') as output:\n" \
-                         "    pickle.dump(result, output)\n".format(
-                             site_id,
-                             class_path,
-                             lines,
-                             pargs,
-                             appname,
-                             appdir) + \
-                         "metadata = {\"type\":\"python\",\"file\":\"" + appdir + "/output.pickle\"}\n" \
-                         "with open('{}/job.metadata','w') as job:\n" \
-                         "    job.write(json.dumps(metadata))\n" \
-                         "print(result)\n".format(appdir)
+                         "with open('{}/func.pickle','rb') as funcfile:\n" \
+                         "    fn_buf = f.read()\n" \
+                         "    try:\n" \
+                         "        result = execute_task(fn_buf)\n" \
+                         "        print(\"Finished execution\")\n" \
+                         "    except Exception as e:\n" \
+                         "        print(\"Execution failed due to\",e)\n" \
+                         "        result = e\n" \
+                         "    result_buf = serialize(result)\n" \
+                         "with open('{}/output.pickle','ab') as f:\n" \
+                         "    f.write(result_buf)\n".format(
+                                site_id,
+                                class_path,
+                                appdir,
+                                appdir)
 
-                source = source.replace('@python_app', '#@python_app')
+                source += "metadata = {\"type\":\"python\",\"file\":\"" + appdir + "/output.pickle\"}\n" \
+                    "with open('" + appdir + "/job.metadata','w') as job:\n" \
+                    "    job.write(json.dumps(metadata))\n" \
+                    "print(result)\n"
 
                 try:
                     app = App.objects.get(site_id=site_id, class_path=class_path)
@@ -533,7 +541,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     appsource.write(source)
                     logger.debug("Wrote app.py to {}".format(appsource.name))
 
-            logger.debug("Batch jobs: %s",self.batchjobs)
+            logger.debug("Batch jobs: %s", self.batchjobs)
             self.balsam_future = BalsamFuture(job, appname, sleep=sleep, timeout=timeout)
 
             if callback:
@@ -555,7 +563,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         :return: A list of block ids corresponding to the blocks that were added.
         """
         logger.debug("Scaling out %s blocks", blocks)
-        
+
         added_blocks = []
 
         for i in range(0, blocks):
@@ -574,7 +582,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             added_blocks += [batchjob]
 
         return [str(batch.id) for batch in added_blocks]
-            
+
     def scale_in(self, blocks: int) -> List[str]:
         """Scale in method.
 
@@ -589,7 +597,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         if blocks > len(self.batchjobs):
             raise BalsamExecutorException
-        
+
         removed_blocks = []
 
         for i in range(0, blocks):
