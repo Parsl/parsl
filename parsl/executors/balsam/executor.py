@@ -238,6 +238,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  sitedir: str = None,
                  node_packing_count: int = 1,
                  timeout: int = 600,
+                 pythonpath: str = '.',
                  classpath: str = 'parsl.AppRunner',
                  tags: Dict[str, str] = {}
                  ):
@@ -486,6 +487,8 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "import os\n" \
                          "import json\n" \
                          "import codecs\n" \
+                         "import sys\n" \
+                         "sys.path.append(\"/home/dgovoni/miniconda3/GSASII\")\n" \
                          "from parsl.executors.high_throughput.process_worker_pool import execute_task\n" \
                          "from parsl.serialize import serialize\n" \
                          "SITE_ID={}\n" \
