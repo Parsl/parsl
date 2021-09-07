@@ -236,6 +236,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  siteid: int = None,
                  sleep: int = 1,
                  sitedir: str = None,
+                 libpath: str = '.',
                  node_packing_count: int = 1,
                  timeout: int = 600,
                  pythonpath: str = '.',
@@ -267,6 +268,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.datadir = datadir
         self.image = image
         self.pythonpath = pythonpath
+        self.libpath = libpath
         self.batchjobs = []
 
         if sitedir is None and 'BALSAM_SITE_PATH' in os.environ:
@@ -489,7 +491,8 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "import json\n" \
                          "import codecs\n" \
                          "import sys\n" \
-                         "sys.path.append(\"/home/dgovoni/miniconda3/GSASII\")\n" \
+                         "os.environ['LD_LIBRARY_PATH'] = \"{}\"\n" \
+                         "sys.path.append(\"{}\")\n" \
                          "from parsl.executors.high_throughput.process_worker_pool import execute_task\n" \
                          "from parsl.serialize import serialize\n" \
                          "SITE_ID={}\n" \
@@ -505,6 +508,8 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "    result_buf = serialize(result)\n" \
                          "with open('{}/output.pickle','ab') as f:\n" \
                          "    f.write(result_buf)\n".format(
+                                self.libpath,
+                                self.pythonpath,
                                 site_id,
                                 class_path,
                                 appdir,
