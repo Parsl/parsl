@@ -266,6 +266,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.balsam_future = None
         self.datadir = datadir
         self.image = image
+        self.pythonpath = pythonpath
         self.batchjobs = []
 
         if sitedir is None and 'BALSAM_SITE_PATH' in os.environ:
