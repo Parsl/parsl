@@ -542,6 +542,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     )
 
                     job.parameters["python"] = sys.executable
+                    job.parameters["libpath"] = self.libpath
 
                     job.save()
 
