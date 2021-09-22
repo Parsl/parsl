@@ -1,8 +1,9 @@
-cryptography==3.3.2
+cryptography
 pyzmq>=17.1.2
 typeguard>=2.10
 typing-extensions
 globus-sdk
+balsam-flow
 dill
 tblib
 requests
