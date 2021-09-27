@@ -68,9 +68,7 @@ class LocalChannel(Channel, RepresentationMixin):
                 shell=True,
                 preexec_fn=os.setpgrp
             )
-            proc.wait(timeout=walltime)
-            stdout = proc.stdout.read()
-            stderr = proc.stderr.read()
+            (stdout, stderr) = proc.communicate(timeout=walltime)
             retcode = proc.returncode
 
         except Exception as e:
