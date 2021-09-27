@@ -357,34 +357,28 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             appdir = os.path.abspath(self.sitedir + '/data/' + workdir)
 
             if script == 'bash':
-                class_path = 'parsl.BashRunner'
+                from parsl.app.balsam import BashRunner
+
                 shell_command = func(inputs=inputs)
 
-                try:
-                    app = App.objects.get(site_id=site_id, class_path=class_path)
-                except Exception:
-                    # Create App if it doesn't exist
-                    app = App.objects.create(site_id=site_id, class_path=class_path)
-                    app.save()
+                BashRunner.site = site_id
+                BashRunner.sync()
+
                 try:
                     logging.debug("Acquiring futures_lock")
                     futures_lock.acquire()
                     logging.debug("Acquired futures_lock")
-                    job = Job(
-                        workdir,
-                        app.id,
-                        wall_time_min=0,
-                        num_nodes=self.jobnodes,
-                        parameters={},
+
+                    job = BashRunner.submit(
+                        workdir=workdir, 
+                        num_nodes=self.jobnodes, 
                         node_packing_count=node_packing_count,
-                        tags={"parsl-id": PARSL_SESSION}
+                        tags={"parsl-id": PARSL_SESSION},
+                        command=shell_command
                     )
 
-                    job.parameters["command"] = shell_command
-
-                    job.save()
-
-                    logging.debug("JOB %s saved.", job.id)
+                    JOBS[job.id] = job
+                    logging.debug("JOB %s created.", job.id)
 
                 finally:
                     futures_lock.release()
@@ -394,15 +388,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 import os
                 import sys
 
-                lines = []
-
-                try:
-                    lines = inspect.getsource(func.func)
-                except:
-                    import traceback
-                    print(traceback.format_exc())
-
-                class_path = 'parsl.ContainerRunner'
+                from parsl.app.balsam import ContainerRunner
 
                 logger.debug("{} Inputs: {}".format(appname, json.dumps(inputs)))
 
@@ -413,34 +399,34 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "import os\n" \
                          "import json\n" \
                          "import codecs\n" \
+                         "import sys\n" \
+                         "os.environ['LD_LIBRARY_PATH'] = \"{}\"\n" \
+                         "from parsl.executors.high_throughput.process_worker_pool import execute_task\n" \
+                         "from parsl.serialize import serialize\n" \
                          "SITE_ID={}\n" \
-                         "CLASS_PATH='{}'\n" \
-                         "{}\n" \
-                         "pargs = '{}'\n" \
-                         "args = pickle.loads(codecs.decode(pargs.encode(), \"base64\"))\n" \
-                         "print(args)\n" \
-                         "result = {}(inputs=[*args])\n" \
-                         "with open('{}/output.pickle','ab') as output:\n" \
-                         "    pickle.dump(result, output)\n".format(
-                             site_id,
-                             class_path,
-                             lines,
-                             pargs,
-                             appname,
-                             appdir) + \
-                         "metadata = {\"type\":\"python\",\"file\":\"" + appdir + "/output.pickle\"}\n" \
-                         "with open('{}/job.metadata','w') as job:\n" \
-                         "    job.write(json.dumps(metadata))\n" \
-                         "print(result)\n".format(appdir)
+                         "with open('{}/func.pickle','rb') as funcfile:\n" \
+                         "    fn_buf = funcfile.read()\n" \
+                         "    try:\n" \
+                         "        result = execute_task(fn_buf)\n" \
+                         "        print(\"Finished execution\")\n" \
+                         "    except Exception as e:\n" \
+                         "        print(\"Execution failed due to\",e)\n" \
+                         "        result = e\n" \
+                         "    result_buf = serialize(result)\n" \
+                         "with open('{}/output.pickle','ab') as f:\n" \
+                         "    f.write(result_buf)\n".format(
+                                self.pythonpath,
+                                site_id,
+                                appdir,
+                                appdir)
 
-                source = source.replace('@container_app', '#@container_app')
-
-                try:
-                    app = App.objects.get(site_id=site_id, class_path=class_path)
-                except Exception:
-                    # Create App if it doesn't exist
-                    app = App.objects.create(site_id=site_id, class_path=class_path)
-                    app.save()
+                source += "metadata = {\"type\":\"python\",\"file\":\"" + appdir + "/output.pickle\"}\n" \
+                    "with open('" + appdir + "/job.metadata','w') as job:\n" \
+                    "    job.write(json.dumps(metadata))\n" \
+                    "print(result)\n"
+ 
+                ContainerRunner.site = site_id
+                ContainerRunner.sync()
 
                 try:
                     logging.debug("Acquiring futures_lock")
@@ -449,24 +435,19 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
                     logging.debug("Acquired futures_lock")
 
-                    job = Job(
-                        workdir,
-                        app_id=app.id,
-                        wall_time_min=0,
-                        num_nodes=self.jobnodes,
-                        parameters={},
+
+                    job = AppRunner.submit(
+                        workdir=workdir, 
+                        num_nodes=self.jobnodes, 
                         node_packing_count=node_packing_count,
-                        tags={"parsl-id": PARSL_SESSION}
+                        tags={"parsl-id": PARSL_SESSION},
+                        image=self.image,
+                        datasir=self.datadir
                     )
 
-                    job.parameters["image"] = self.image
-                    job.parameters["datadir"] = self.datadir
-
-                    job.save()
-
-                    logging.debug("JOB %s saved.", job.id)
-
                     JOBS[job.id] = job
+
+                    logging.debug("JOB %s created.", job.id)
                 finally:
                     futures_lock.release()
 
@@ -476,15 +457,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 import sys
 
                 from parsl.app.balsam import AppRunner
-                #class_path = 'parsl.AppRunner'
-
-                lines = []
-                try:
-                    lines = inspect.getsource(func)
-                except:
-                    import traceback
-                    print(traceback.format_exc())
-
 
                 logger.debug("{} Inputs: {}".format(appname, json.dumps(inputs)))
                 pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
@@ -501,7 +473,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "from parsl.executors.high_throughput.process_worker_pool import execute_task\n" \
                          "from parsl.serialize import serialize\n" \
                          "SITE_ID={}\n" \
-                         "CLASS_PATH='{}'\n" \
                          "with open('{}/func.pickle','rb') as funcfile:\n" \
                          "    fn_buf = funcfile.read()\n" \
                          "    try:\n" \
@@ -515,7 +486,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "    f.write(result_buf)\n".format(
                                 self.pythonpath,
                                 site_id,
-                                class_path,
                                 appdir,
                                 appdir)
 
@@ -526,14 +496,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
                 AppRunner.site = site_id
                 AppRunner.sync()
-                '''
-                try:
-                    app = App.objects.get(site_id=site_id, class_path=class_path)
-                except Exception:
-                    # Create App if it doesn't exist
-                    app = App.objects.create(site_id=site_id, class_path=class_path)
-                    app.save()
-                '''
 
                 try:
                     logging.debug("Acquiring futures_lock")
@@ -553,6 +515,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
                     JOBS[job.id] = job
 
+                    logging.debug("JOB %s created.", job.id)
                 finally:
                     futures_lock.release()
 
