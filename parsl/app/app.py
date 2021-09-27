@@ -206,16 +206,16 @@ def singularity_app(function=None,
 
 @typeguard.typechecked
 def container_app(function=None,
-                    type: str = "singularity",
-                    data_flow_kernel: Optional[DataFlowKernel] = None,
-                    cache: bool = False,
-                    walltime: int = 60,
-                    image: str = "",
-                    cmd: str = "",
-                    data: str = "",
-                    python: str = "/work/miniconda/bin/python",
-                    executors: Union[List[str], Literal['all']] = 'all',
-                    ignore_for_cache: Optional[List[str]] = None):
+                  type: str = "singularity",
+                  data_flow_kernel: Optional[DataFlowKernel] = None,
+                  cache: bool = False,
+                  walltime: int = 60,
+                  image: str = "",
+                  cmd: str = "",
+                  data: str = "",
+                  python: str = "/work/miniconda/bin/python",
+                  executors: Union[List[str], Literal['all']] = 'all',
+                  ignore_for_cache: Optional[List[str]] = None):
     """
     """
     from parsl.app.singularity import SingularityApp
@@ -225,15 +225,15 @@ def container_app(function=None,
 
             if type == 'singularity':
                 return SingularityApp(f,
-                                    data_flow_kernel=data_flow_kernel,
-                                    cache=cache,
-                                    walltime=walltime,
-                                    image=image,
-                                    cmd=cmd,
-                                    data=data,
-                                    python=python,
-                                    executors=executors,
-                                    ignore_for_cache=ignore_for_cache)
+                                      data_flow_kernel=data_flow_kernel,
+                                      cache=cache,
+                                      walltime=walltime,
+                                      image=image,
+                                      cmd=cmd,
+                                      data=data,
+                                      python=python,
+                                      executors=executors,
+                                      ignore_for_cache=ignore_for_cache)
 
         return wrapper(func)
 
