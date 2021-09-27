@@ -115,7 +115,7 @@ class SingularityApp(AppBase):
 
     def __init__(self, func, data_flow_kernel=None, cache=False, executors='all',
                  ignore_for_cache=None, cmd=None, image=None, python=None, data=None, walltime=60):
-                 
+
         super().__init__(func, data_flow_kernel=data_flow_kernel, executors=executors,
                          cache=cache, ignore_for_cache=ignore_for_cache)
         self.kwargs = {}
