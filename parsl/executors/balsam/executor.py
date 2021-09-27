@@ -281,6 +281,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         # if batchjob:
         logger.info("Creating Batchjob")
+        
         batchjob = BatchJob(
             num_nodes=self.numnodes,
             wall_time_min=self.walltime,
@@ -291,7 +292,9 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             filter_tags={"parsl-id": PARSL_SESSION}
         )
         self.batchjobs += [batchjob]
+
         batchjob.save()
+
         logger.info("Saved Batchjob")
 
         self.bulkpoller = BalsamBulkPoller(self.batchjob, {}, self.sleep)
@@ -402,6 +405,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 class_path = 'parsl.ContainerRunner'
 
                 logger.debug("{} Inputs: {}".format(appname, json.dumps(inputs)))
+
                 pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
                 pargs = re.sub(r'\n', "", pargs).strip()
 
@@ -471,6 +475,9 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 import os
                 import sys
 
+                from parsl.app.balsam import AppRunner
+                #class_path = 'parsl.AppRunner'
+
                 lines = []
                 try:
                     lines = inspect.getsource(func)
@@ -478,7 +485,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     import traceback
                     print(traceback.format_exc())
 
-                class_path = 'parsl.AppRunner'
 
                 logger.debug("{} Inputs: {}".format(appname, json.dumps(inputs)))
                 pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
@@ -492,7 +498,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "import codecs\n" \
                          "import sys\n" \
                          "os.environ['LD_LIBRARY_PATH'] = \"{}\"\n" \
-                         "sys.path.append(\"{}\")\n" \
                          "from parsl.executors.high_throughput.process_worker_pool import execute_task\n" \
                          "from parsl.serialize import serialize\n" \
                          "SITE_ID={}\n" \
@@ -508,7 +513,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                          "    result_buf = serialize(result)\n" \
                          "with open('{}/output.pickle','ab') as f:\n" \
                          "    f.write(result_buf)\n".format(
-                                self.libpath,
                                 self.pythonpath,
                                 site_id,
                                 class_path,
@@ -520,33 +524,32 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     "    job.write(json.dumps(metadata))\n" \
                     "print(result)\n"
 
+                AppRunner.site = site_id
+                AppRunner.sync()
+                '''
                 try:
                     app = App.objects.get(site_id=site_id, class_path=class_path)
                 except Exception:
                     # Create App if it doesn't exist
                     app = App.objects.create(site_id=site_id, class_path=class_path)
                     app.save()
+                '''
 
                 try:
                     logging.debug("Acquiring futures_lock")
+
                     futures_lock.acquire()
+
                     logging.debug("Acquired futures_lock")
-                    job = Job(
-                        workdir,
-                        app_id=app.id,
-                        wall_time_min=0,
-                        num_nodes=self.jobnodes,
-                        parameters={},
+
+                    job = AppRunner.submit(
+                        workdir=workdir, 
+                        num_nodes=self.jobnodes, 
                         node_packing_count=node_packing_count,
-                        tags={"parsl-id": PARSL_SESSION}
+                        tags={"parsl-id": PARSL_SESSION},
+                        python=sys.executable,
+                        libpath=self.libpath
                     )
-
-                    job.parameters["python"] = sys.executable
-                    job.parameters["libpath"] = self.libpath
-
-                    job.save()
-
-                    logging.debug("JOB %s saved.", job.id)
 
                     JOBS[job.id] = job
 
@@ -555,7 +558,9 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
             os.makedirs(job.resolve_workdir(site_config.data_path), exist_ok=True)
             # Write function source to app.py in job workdir for balsam to pick up
+
             logger.debug("Script type is {}".format(str(script)))
+
             if script != 'bash':
                 with open(job.resolve_workdir(site_config.data_path).joinpath("app.py"), "w") as appsource:
                     appsource.write(source)
