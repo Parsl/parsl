@@ -1,3 +1,4 @@
+from functools import partial
 from inspect import signature, Parameter
 from parsl.app.errors import wrap_error
 from parsl.app.app import AppBase
@@ -77,7 +78,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
             returncode = proc.returncode
 
             import pickle
-            log.write("RT: "+str(returncode))
+            log.write("RT: " + str(returncode))
             with open('output.pickle', 'rb') as input:
                 result = pickle.load(input)
 
@@ -112,8 +113,10 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
 class SingularityApp(AppBase):
 
-    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None, cmd=None, image=None, python=None, data=None, walltime=60):
-        super().__init__(func, data_flow_kernel=data_flow_kernel, executors=executors, cache=cache, ignore_for_cache=ignore_for_cache)
+    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', 
+        ignore_for_cache=None, cmd=None, image=None, python=None, data=None, walltime=60):
+        super().__init__(func, data_flow_kernel=data_flow_kernel, executors=executors, 
+                         cache=cache, ignore_for_cache=ignore_for_cache)
         self.kwargs = {}
 
         sig = signature(func)
@@ -206,7 +209,7 @@ class SingularityApp(AppBase):
         with open('app.py', 'w') as app:
             app.write(source)
 
-        shell_app = self.command+" /files/runapp.sh <<HEREDOC\n{}\nHEREDOC".format(source)
+        shell_app = self.command + " /files/runapp.sh <<HEREDOC\n{}\nHEREDOC".format(source)
 
         def invoke_container(command=None, inputs=[]):
 
