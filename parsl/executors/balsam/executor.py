@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Condition
 from typing import Optional, List, Callable, Dict, Any, Tuple
 
-from balsam.api import Job, App, BatchJob, Site, site_config
+from balsam.api import Job, BatchJob, Site, site_config
 from parsl.executors.errors import UnsupportedFeatureError
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.utils import RepresentationMixin
@@ -140,8 +140,6 @@ class BalsamFuture(Future):
         logging.debug("JOB %s is FINISHED!", self._job.id)
 
         if not self.cancelled():
-            import pickle
-
             logger.debug("Result is available[{}]: {} {}".format(self._appname, id(self._job), self._job.data))
 
             metadata = JOBS[self._job.id].data
@@ -281,7 +279,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         # if batchjob:
         logger.info("Creating Batchjob")
-        
+
         batchjob = BatchJob(
             num_nodes=self.numnodes,
             wall_time_min=self.walltime,
@@ -324,7 +322,6 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         """
         try:
             import os
-            import inspect
             import codecs
             import re
             import pickle
@@ -370,8 +367,8 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     logging.debug("Acquired futures_lock")
 
                     job = BashRunner.submit(
-                        workdir=workdir, 
-                        num_nodes=self.jobnodes, 
+                        workdir=workdir,
+                        num_nodes=self.jobnodes,
                         node_packing_count=node_packing_count,
                         tags={"parsl-id": PARSL_SESSION},
                         command=shell_command
@@ -435,10 +432,9 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
                     logging.debug("Acquired futures_lock")
 
-
                     job = AppRunner.submit(
-                        workdir=workdir, 
-                        num_nodes=self.jobnodes, 
+                        workdir=workdir,
+                        num_nodes=self.jobnodes,
                         node_packing_count=node_packing_count,
                         tags={"parsl-id": PARSL_SESSION},
                         image=self.image,
@@ -505,8 +501,8 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     logging.debug("Acquired futures_lock")
 
                     job = AppRunner.submit(
-                        workdir=workdir, 
-                        num_nodes=self.jobnodes, 
+                        workdir=workdir,
+                        num_nodes=self.jobnodes,
                         node_packing_count=node_packing_count,
                         tags={"parsl-id": PARSL_SESSION},
                         python=sys.executable,
