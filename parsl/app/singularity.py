@@ -1,10 +1,7 @@
-from functools import update_wrapper
-from functools import partial
 from inspect import signature, Parameter
 from parsl.app.errors import wrap_error
 from parsl.app.app import AppBase
 from parsl.dataflow.dflow import DataFlowKernelLoader
-import sys
 import inspect
 import codecs
 import re
@@ -26,7 +23,6 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     func_name = func.__name__
     command = kwargs.get('command')
-    walltime = kwargs.get('walltime')
     logger.debug("COMMAND: {}".format(command))
 
     executable = None
@@ -49,8 +45,6 @@ def remote_side_bash_executor(func, *args, **kwargs):
     except Exception as e:
         raise e
 
-    # Updating stdout, stderr if values passed at call time.
-
     def open_std_fd(fdname):
         # fdname is 'stdout' or 'stderr'
         stdfspec = kwargs.get(fdname)  # spec is str name or tuple (name, mode)
@@ -68,24 +62,24 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
     std_out = open_std_fd('stdout')
     std_err = open_std_fd('stderr')
-    timeout = 60 #kwargs.get('walltime')
+    timeout = 60
 
     if std_err is not None:
         print('--> executable follows <--\n{}\n--> end executable <--'.format(executable), file=std_err, flush=True)
 
     returncode = None
     result = None
-    with open('log.log','w') as log:
+    with open('log.log', 'w') as log:
         try:
-                log.write(command+'\n')
-                proc = subprocess.Popen(command, stdout=std_out, stderr=std_err, shell=True)
-                proc.wait(timeout=timeout)
-                returncode = proc.returncode
+            log.write(command + '\n')
+            proc = subprocess.Popen(command, stdout=std_out, stderr=std_err, shell=True)
+            proc.wait(timeout=timeout)
+            returncode = proc.returncode
 
-                import pickle
-                log.write("RT: "+str(returncode))
-                with open('output.pickle', 'rb') as input:
-                    result = pickle.load(input)
+            import pickle
+            log.write("RT: "+str(returncode))
+            with open('output.pickle', 'rb') as input:
+                result = pickle.load(input)
 
         except subprocess.TimeoutExpired:
             import traceback
@@ -175,13 +169,15 @@ class SingularityApp(AppBase):
 
         try:
             logger.debug("Appname: {} Inputs: {}".format(appname, json.dumps(inputs)))
-        except:
+        except Exception as ex:
+            logger.error(ex)
             logger.debug("Appname: {} ".format(appname))
 
         try:
             pargs = codecs.encode(pickle.dumps(inputs), "base64").decode()
             pargs = re.sub(r'\n', "", pargs).strip()
-        except:
+        except Exception as ex:
+            logger.error(ex)
             pargs = codecs.encode(pickle.dumps([]), "base64").decode()
             pargs = re.sub(r'\n', "", pargs).strip()
 
@@ -195,9 +191,9 @@ class SingularityApp(AppBase):
                  "result = {}(inputs=[*args])\n" \
                  "with open('output.pickle','wb') as output:\n" \
                  "    pickle.dump(result, output)\n".format(
-            lines,
-            pargs,
-            appname) + \
+                            lines,
+                            pargs,
+                            appname) + \
                  "metadata = {\"type\":\"python\",\"file\":os.path.abspath('output.pickle')}\n" \
                  "with open('job.metadata','w') as job:\n" \
                  "    job.write(json.dumps(metadata))\n" \
