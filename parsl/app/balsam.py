@@ -57,9 +57,8 @@ class AppRunner(ApplicationDefinition):
         try:
             metadata = json.loads(metadata)
             self.job.data = metadata
-        except:
-            import traceback
-            print(traceback.format_exc())
+        except Exception as ex:
+            print(ex)
             self.job.data = {'result': stdout, 'type': 'bash'}
 
         self.job.state = "POSTPROCESSED"
@@ -73,7 +72,7 @@ class AppRunner(ApplicationDefinition):
 
 class ContainerRunner(ApplicationDefinition):
     """
-    Container Runner. 
+    Container Runner.
     """
     environment_variables = {}
     command_template = 'singularity exec --bind {{ datadir }}:/data --bind .:/app {{ image }} python /app/app.py'
@@ -97,8 +96,7 @@ class ContainerRunner(ApplicationDefinition):
             metadata = json.loads(metadata)
             self.job.data = metadata
         except Exception as ex:
-            import traceback
-            print(traceback.format_exc())
+            print(ex)
             self.job.data = {'result': stdout, 'type': 'bash'}
 
         self.job.state = "POSTPROCESSED"

@@ -421,7 +421,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     "with open('" + appdir + "/job.metadata','w') as job:\n" \
                     "    job.write(json.dumps(metadata))\n" \
                     "print(result)\n"
- 
+
                 ContainerRunner.site = site_id
                 ContainerRunner.sync()
 
@@ -432,7 +432,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
                     logging.debug("Acquired futures_lock")
 
-                    job = AppRunner.submit(
+                    job = ContainerRunner.submit(
                         workdir=workdir,
                         num_nodes=self.jobnodes,
                         node_packing_count=node_packing_count,
