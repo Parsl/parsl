@@ -10,9 +10,9 @@ from uuid import uuid4
 from concurrent.futures import Future
 from concurrent.futures import ThreadPoolExecutor
 from multiprocessing import Condition
-from typing import Optional, List, Callable, Dict, Any, Tuple
+from typing import Optional, List, Callable, Dict, Any, Tuple, Union
 
-from balsam.api import Job, BatchJob, Site, site_config
+from balsam.api import Job, BatchJob, Site, site_config, JobMode
 from parsl.executors.errors import UnsupportedFeatureError
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.utils import RepresentationMixin
@@ -105,7 +105,7 @@ class BalsamFuture(Future):
     """
     _job: Job = None
     _timeout: int = 60
-    _appname: str = None
+    _appname: str = ""
     _sleep: int = 2
 
     def __init__(self, job, appname, sleep=2, timeout=600):
@@ -121,10 +121,7 @@ class BalsamFuture(Future):
     def poll_bulk_result(self):
 
         logger.debug("Timeout is {}".format(self._timeout))
-        while self._job.id in JOBS and JOBS[self._job.id].state != "JOB_FINISHED":
-            if JOBS[self._job.id].state == 'FAILED':
-                self.cancel()
-                raise BalsamJobFailureException()
+        while self._job.id in JOBS and JOBS[self._job.id]:
 
             self._timeout -= 1
 
@@ -227,19 +224,19 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  walltime: int = 30,
                  jobnodes: int = 1,
                  queue: str = 'local',
-                 mode: str = 'mpi',
+                 mode: JobMode = 'mpi',
                  maxworkers: int = 3,
                  project: str = 'local',
                  batchjob: bool = True,
-                 siteid: int = None,
-                 sleep: int = 1,
-                 sitedir: str = None,
+                 siteid: Optional[int] = None,
+                 sleep: Optional[int] = 1,
+                 sitedir: str = '.',
                  libpath: str = '.',
                  node_packing_count: int = 1,
                  timeout: int = 600,
                  pythonpath: str = '.',
                  classpath: str = 'parsl.AppRunner',
-                 tags: Dict[str, str] = {}
+                 tags: Union[List[str], str, None] = []
                  ):
         logger.debug("Initializing BalsamExecutor")
 
@@ -252,6 +249,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.walltime = walltime
         self.queue = queue
         self.project = project
+        self.batchjob = batchjob
         self.mode = mode
         self.tags = tags
         self.siteid = siteid
@@ -261,8 +259,8 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.jobnodes = jobnodes
         self.classpath = classpath
         self.node_packing_count = node_packing_count
-        self.threadpool = None
-        self.balsam_future = None
+        #self.threadpool = None
+        #self.balsam_future = None
         self.datadir = datadir
         self.image = image
         self.pythonpath = pythonpath
@@ -277,10 +275,9 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         self.batchjob = None
 
-        # if batchjob:
         logger.info("Creating Batchjob")
 
-        batchjob = BatchJob(
+        _batchjob = BatchJob(
             num_nodes=self.numnodes,
             wall_time_min=self.walltime,
             job_mode=self.mode,
@@ -289,13 +286,13 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             project=self.project,
             filter_tags={"parsl-id": PARSL_SESSION}
         )
-        self.batchjobs += [batchjob]
+        self.batchjobs += [_batchjob]
 
-        batchjob.save()
+        _batchjob.save()
 
         logger.info("Saved Batchjob")
 
-        self.bulkpoller = BalsamBulkPoller(self.batchjob, {}, self.sleep)
+        self.bulkpoller = BalsamBulkPoller(_batchjob, {}, self.sleep)
 
         if self.sitedir is None and 'BALSAM_SITE_PATH' not in os.environ:
             self.exception = True
@@ -315,6 +312,8 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         Any spin-up operations (for example: starting thread pools) should be performed here.
         """
         self.threadpool = ThreadPoolExecutor(max_workers=self.maxworkers)
+
+        return []
 
     def submit(self, func: Callable, resource_specification: Dict[str, Any], *args: Any, **kwargs: Any) -> Future:
         """Submit
@@ -345,7 +344,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
             if resource_specification:
                 logger.error("Ignoring the resource specification. ")
-                raise BalsamUnsupportedFeatureException()
+                raise BalsamUnsupportedFeatureException(*args)
 
             logger.info("Making workdir for job: {}".format(workdir))
             os.makedirs(workdir, exist_ok=True)
@@ -602,7 +601,7 @@ class BalsamExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         This includes all attached resources such as workers and controllers.
         """
-        self.balsam_future.cancel()
+        return self.balsam_future.cancel()
 
     @property
     def bad_state_is_set(self):
