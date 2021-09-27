@@ -1,8 +1,5 @@
-from functools import update_wrapper
-from functools import partial
 from inspect import signature, Parameter
 
-from parsl.app.errors import wrap_error
 from parsl.app.app import AppBase
 from parsl.dataflow.dflow import DataFlowKernelLoader
 
@@ -17,7 +14,7 @@ class BashRunner(ApplicationDefinition):
     command_template = '/bin/bash -c {{ command }}'
     parameters = {}
     transfers = {}
-    
+
     site = 0
 
     def postprocess(self):
@@ -33,6 +30,7 @@ class BashRunner(ApplicationDefinition):
 
     def handle_error(self):
         self.job.state = "FAILED"
+
 
 class AppRunner(ApplicationDefinition):
     """
@@ -71,7 +69,8 @@ class AppRunner(ApplicationDefinition):
 
     def handle_error(self):
         self.job.state = "FAILED"
-        
+
+
 class ContainerRunner(ApplicationDefinition):
     """
     Container Runner. 
@@ -97,7 +96,7 @@ class ContainerRunner(ApplicationDefinition):
         try:
             metadata = json.loads(metadata)
             self.job.data = metadata
-        except:
+        except Exception as ex:
             import traceback
             print(traceback.format_exc())
             self.job.data = {'result': stdout, 'type': 'bash'}
