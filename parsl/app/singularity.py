@@ -113,9 +113,10 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
 class SingularityApp(AppBase):
 
-    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', 
-        ignore_for_cache=None, cmd=None, image=None, python=None, data=None, walltime=60):
-        super().__init__(func, data_flow_kernel=data_flow_kernel, executors=executors, 
+    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all',
+                 ignore_for_cache=None, cmd=None, image=None, python=None, data=None, walltime=60):
+                 
+        super().__init__(func, data_flow_kernel=data_flow_kernel, executors=executors,
                          cache=cache, ignore_for_cache=ignore_for_cache)
         self.kwargs = {}
 
@@ -135,7 +136,7 @@ class SingularityApp(AppBase):
 
         remote_fn = partial(remote_side_bash_executor, self.func, image=image, command=self.command, walltime=walltime)
         remote_fn.__name__ = self.func.__name__
-        
+
         self.kwargs['script'] = 'container'
         logger.debug("Func name: {}".format(self.func.__name__))
 
