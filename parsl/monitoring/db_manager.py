@@ -541,8 +541,10 @@ class DatabaseManager:
                         "_migrate_logs_to_internal can only migrate WORKFLOW_,TASK_INFO message from priority queue, got x[0] == {}".format(x[0])
                     self.pending_priority_queue.put(cast(Any, x))
                 elif queue_tag == 'resource':
-                    assert len(x) == 3
-                    self.pending_resource_queue.put(x[-1])
+                    assert x[0] == MessageType.RESOURCE_INFO, "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue"
+                    body = x[1]
+                    assert len(body) == 3
+                    self.pending_resource_queue.put(body[-1])
                 elif queue_tag == 'node':
                     assert len(x) == 2, "expected message tuple to have exactly two elements"
                     assert x[0] == MessageType.NODE_INFO, "_migrate_logs_to_internal can only migrate NODE_INFO messages from node queue"
