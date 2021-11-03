@@ -460,7 +460,7 @@ class MonitoringRouter:
                         block_msgs.put((msg, 0))
                     else:
                         priority_msgs.put((msg, 0))
-                    if msg[0] == MessageType.WORKFLOW_INFO and 'python_version' not in msg[1]:
+                    if msg[0] == MessageType.WORKFLOW_INFO and 'exit_now' in msg[1] and msg[1]['exit_now']:
                         break
                 except zmq.Again:
                     pass
