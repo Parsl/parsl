@@ -75,14 +75,7 @@ dfk = DataFlowKernelLoader.dfk
 wait_for_current_tasks = DataFlowKernelLoader.wait_for_current_tasks
 
 
-class NullHandler(logging.Handler):
-    """Setup default logging to /dev/null since this is library."""
-
-    def emit(self, record):
-        pass
-
-
-logging.getLogger('parsl').addHandler(NullHandler())
+logging.getLogger('parsl').addHandler(logging.NullHandler())
 
 if platform.system() == 'Darwin':
     os.environ['OBJC_DISABLE_INITIALIZE_FORK_SAFETY'] = 'YES'
