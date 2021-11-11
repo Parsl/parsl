@@ -18,8 +18,8 @@ config = Config(
                 nodes_per_block=2,
                 init_blocks=1,
                 # string to prepend to #SBATCH blocks in the submit
-                # script to the scheduler eg: '#SBATCH --constraint=knl,quad,cache'
-                scheduler_options='',
+                # script to the scheduler
+                scheduler_options='#SBATCH --constraint=knl',
                 # Command to be run before starting a worker, such as:
                 # 'module load Anaconda; source activate parsl_env'.
                 worker_init='',

@@ -108,14 +108,26 @@ class BlockProviderExecutor(ParslExecutor):
         return status
 
     def set_bad_state_and_fail_all(self, exception: Exception):
-        logger.exception("Exception: {}".format(exception))
+        logger.exception("xException: {}".format(exception))
+        logger.error("Exception class: {}".format(type(exception)))
+        logger.error("Exception repr: {}".format(repr(exception)))
+        logger.error("Raising an exception here to get stack trace")
+        try:
+          raise RuntimeError("BENC: exception for trace")
+        except RuntimeError:
+          logger.exception("BENC: here...")
+     
         self._executor_exception = exception
         # Set bad state to prevent new tasks from being submitted
         self._executor_bad_state.set()
         # We set all current tasks to this exception to make sure that
         # this is raised in the main context.
+ 
         for task in self._tasks:
-            self._tasks[task].set_exception(Exception(str(self._executor_exception)))
+            # Using just Exception here is a bit lame - there are enough other
+            # exception subclasses to justify making a new exception class for this
+            # one too (which perhaps could more accurately represent the encapsulated excpetion?)
+            self._tasks[task].set_exception(RuntimeError(str(self._executor_exception)))
 
     @property
     def bad_state_is_set(self):
@@ -168,6 +180,7 @@ class BlockProviderExecutor(ParslExecutor):
                 self.block_mapping[job_id] = block_id
                 block_ids.append(block_id)
             except Exception as ex:
+                logger.exception("BENC: failing job (async) with exception. fail_job_async is explicitly formatting away the stacktrace for great sadness")
                 self._fail_job_async(block_id,
                                      "Failed to start block {}: {}".format(block_id, ex))
         return block_ids
@@ -175,10 +188,11 @@ class BlockProviderExecutor(ParslExecutor):
     def _launch_block(self, block_id: str) -> Any:
         launch_cmd = self._get_launch_command(block_id)
         job_id = self.provider.submit(launch_cmd, 1)
-        logger.debug("Launched block {}->{}".format(block_id, job_id))
-        if not job_id:
-            raise(ScalingFailed(self.provider.label,
-                                "Attempts to provision nodes via provider has failed"))
+        if job_id is not None: # TODO: is None or False the correct fail value?
+            logger.debug("Launched block {}->{}".format(block_id, job_id))
+        else
+            raise ScalingFailed(self.provider.label,
+                                "Attempt to provision nodes via provider has failed")
         return job_id
 
     @abstractmethod

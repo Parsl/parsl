@@ -33,6 +33,8 @@ Please checkout {} for this feature".format(self.feature,
                                             self.target_executor)
 
 
+# TODO: include 'executor' in str(), rather than just reason
+# and likewise in repr if repr doesnt' already report this.
 class ScalingFailed(ExecutorError):
     """Scaling failed due to error in Execution provider."""
 

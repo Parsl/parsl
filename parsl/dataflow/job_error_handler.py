@@ -1,8 +1,12 @@
+import logging
+
 from typing import List, Dict
 
 from parsl.dataflow.task_status_poller import ExecutorStatus
 from parsl.executors.base import ParslExecutor
 from parsl.providers.provider_base import JobStatus, JobState
+
+logger = logging.getLogger(__name__)
 
 
 class JobErrorHandler(object):
@@ -23,6 +27,7 @@ class JobErrorHandler(object):
     def simple_error_handler(self, executor: ParslExecutor, status: Dict[str, JobStatus], threshold: int):
         (total_jobs, failed_jobs) = self.count_jobs(status)
         if total_jobs >= threshold and failed_jobs == total_jobs:
+            logger.error("Setting bad state, failing all tasks")
             executor.set_bad_state_and_fail_all(self.get_error(status))
 
     def count_jobs(self, status: Dict[str, JobStatus]):
@@ -36,11 +41,12 @@ class JobErrorHandler(object):
 
     def get_error(self, status: Dict[str, JobStatus]) -> Exception:
         """Concatenate all errors."""
+        logger.debug("In get_error, concatenating errors")
         err = ""
         count = 1
         for js in status.values():
             if js.message is not None:
-                err = err + "{}. {}\n".format(count, js.message)
+                err = err + "error #{}: {}\n".format(count, js.message)
                 count += 1
             stdout = js.stdout_summary
             if stdout:
@@ -50,7 +56,8 @@ class JobErrorHandler(object):
                 err = err + "\tSTDOUT: {}\n".format(stderr)
 
         if len(err) == 0:
-            err = "[No error message received]"
+            err = "No error message received"
         # wrapping things in an exception here doesn't really help in providing more information
         # than the string itself
-        return Exception(err)
+        # TODO: this should not be an "Exception", but instead a parsl specific subclass
+        return RuntimeError("jobstatuserrorhandlerexception-BENC: " + err)
