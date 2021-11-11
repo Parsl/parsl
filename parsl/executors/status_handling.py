@@ -190,7 +190,7 @@ class BlockProviderExecutor(ParslExecutor):
         job_id = self.provider.submit(launch_cmd, 1)
         if job_id is not None: # TODO: is None or False the correct fail value?
             logger.debug("Launched block {}->{}".format(block_id, job_id))
-        else
+        else:
             raise ScalingFailed(self.provider.label,
                                 "Attempt to provision nodes via provider has failed")
         return job_id
