@@ -56,6 +56,8 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         Walltime requested per block in HH:MM:SS.
     project : str
         Project to which the resources must be charged
+    queue : str
+        Queue to which to submit the job request
     scheduler_options : str
         String to prepend to the #SBATCH blocks in the submit script to the scheduler.
     worker_init : str
