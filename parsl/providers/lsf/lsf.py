@@ -118,14 +118,14 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         if project:
             self.scheduler_options += "#BSUB -P {}\n".format(project)
         if queue:
-            self.scheduler_options += "#BSUB -q {}\n".format(queue) 
+            self.scheduler_options += "#BSUB -q {}\n".format(queue)
         if request_by_nodes:
             self.scheduler_options += "#BSUB -nnodes {}\n".format(nodes_per_block)
         if cores_per_block and not request_by_nodes:
             self.scheduler_options += "#BSUB -n {}\n".format(cores_per_block)
         if cores_per_block and not request_by_nodes:
             self.scheduler_options += '#BSUB -R "span[ptile={}]"\n'.format(cores_per_node)
-        
+
         self.worker_init = worker_init
 
     def _status(self):
@@ -212,7 +212,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         if self.bsub_redirection:
             cmd = "bsub < {0}".format(channel_script_path)
         else:
-            cmd = "bsub {0}".format(channel_script_path)        
+            cmd = "bsub {0}".format(channel_script_path)
         retcode, stdout, stderr = super().execute_wait(cmd)
 
         job_id = None
