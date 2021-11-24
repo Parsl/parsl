@@ -69,7 +69,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.launchers.AprunLauncher`
     move_files : Optional[Bool]: should files be moved? by default, Parsl will try to move files.
     bsub_redirection: Bool
-        Should a redirection symbol `<` be included when submitting jobs, i.e., Bsub < job_script.
+        Should a redirection symbol "<" be included when submitting jobs, i.e., Bsub < job_script.
     request_by_nodes: Bool
         Request by nodes or request by cores per block. Default is True.
     """
