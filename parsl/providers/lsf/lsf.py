@@ -38,6 +38,10 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
+    cores_per_block : int
+        Cores to provision per block. Enabled only when request_by_nodes is False.
+    cores_per_node: int
+        Cores to provision per node. Enabled only when request_by_nodes is False.
     init_blocks : int
         Number of blocks to request at the start of the run.
     min_blocks : int
@@ -64,6 +68,10 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.launchers.SrunLauncher`, or
         :class:`~parsl.launchers.AprunLauncher`
     move_files : Optional[Bool]: should files be moved? by default, Parsl will try to move files.
+    bsub_redirection: Bool
+        Should a redirection symbol `<` be included when submitting jobs, i.e., Bsub < job_script.
+    request_by_nodes: Bool
+        Request by nodes or request by cores per block. Default is True.
     """
 
     def __init__(self,
