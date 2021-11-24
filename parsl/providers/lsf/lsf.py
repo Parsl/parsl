@@ -1,6 +1,7 @@
 import os
 import time
 import logging
+import math
 
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
@@ -38,6 +39,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
+        When request_by_nodes is False, it is computed by cores_per_block / cores_per_node.
     cores_per_block : int
         Cores to provision per block. Enabled only when request_by_nodes is False.
     cores_per_node: int
@@ -73,7 +75,9 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
     bsub_redirection: Bool
         Should a redirection symbol "<" be included when submitting jobs, i.e., Bsub < job_script.
     request_by_nodes: Bool
-        Request by nodes or request by cores per block. Default is True.
+        Request by nodes or request by cores per block. 
+        When this is set to false, nodes_per_block is computed by cores_per_block / cores_per_node.
+        Default is True.
     """
 
     def __init__(self,
@@ -123,10 +127,10 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
             self.scheduler_options += "#BSUB -q {}\n".format(queue)
         if request_by_nodes:
             self.scheduler_options += "#BSUB -nnodes {}\n".format(nodes_per_block)
-        if cores_per_block and not request_by_nodes:
+        if not request_by_nodes and cores_per_block and cores_per_node:
             self.scheduler_options += "#BSUB -n {}\n".format(cores_per_block)
-        if cores_per_block and not request_by_nodes:
             self.scheduler_options += '#BSUB -R "span[ptile={}]"\n'.format(cores_per_node)
+            self.nodes_per_block = int(math.ceil(cores_per_block / cores_per_node))
 
         self.worker_init = worker_init
 
