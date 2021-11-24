@@ -69,6 +69,8 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
     def __init__(self,
                  channel=LocalChannel(),
                  nodes_per_block=1,
+                 cores_per_block=None,
+                 cores_per_node=None,
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=1,
@@ -77,8 +79,11 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
                  scheduler_options='',
                  worker_init='',
                  project=None,
+                 queue=None,
                  cmd_timeout=120,
                  move_files=True,
+                 bsub_redirection=False,
+                 request_by_nodes=True,
                  launcher=SingleNodeLauncher()):
         label = 'LSF'
         super().__init__(label,
@@ -93,8 +98,26 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
                          launcher=launcher)
 
         self.project = project
+        self.queue = queue
+        self.cores_per_block = cores_per_block
+        self.cores_per_node = cores_per_node
         self.move_files = move_files
-        self.scheduler_options = scheduler_options
+        self.bsub_redirection = bsub_redirection
+        self.request_by_nodes = request_by_nodes
+
+        # Update scheduler options
+        self.scheduler_options = scheduler_options + "\n"
+        if project:
+            self.scheduler_options += "#BSUB -P {}\n".format(project)
+        if queue:
+            self.scheduler_options += "#BSUB -q {}\n".format(queue) 
+        if request_by_nodes:
+            self.scheduler_options += "#BSUB -nnodes {}\n".format(nodes_per_block)
+        if cores_per_block and not request_by_nodes:
+            self.scheduler_options += "#BSUB -n {}\n".format(cores_per_block)
+        if cores_per_block and not request_by_nodes:
+            self.scheduler_options += '#BSUB -R "span[ptile={}]"\n'.format(cores_per_node)
+        
         self.worker_init = worker_init
 
     def _status(self):
@@ -161,7 +184,6 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         job_config["walltime"] = wtime_to_minutes(self.walltime)
         job_config["scheduler_options"] = self.scheduler_options
         job_config["worker_init"] = self.worker_init
-        job_config["project"] = self.project
         job_config["user_script"] = command
 
         # Wrap the command
@@ -179,7 +201,11 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
             logger.debug("not moving files")
             channel_script_path = script_path
 
-        retcode, stdout, stderr = super().execute_wait("bsub {0}".format(channel_script_path))
+        if self.bsub_redirection:
+            cmd = "bsub < {0}".format(channel_script_path)
+        else:
+            cmd = "bsub {0}".format(channel_script_path)        
+        retcode, stdout, stderr = super().execute_wait(cmd)
 
         job_id = None
         if retcode == 0:
