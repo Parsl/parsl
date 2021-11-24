@@ -75,7 +75,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
     bsub_redirection: Bool
         Should a redirection symbol "<" be included when submitting jobs, i.e., Bsub < job_script.
     request_by_nodes: Bool
-        Request by nodes or request by cores per block. 
+        Request by nodes or request by cores per block.
         When this is set to false, nodes_per_block is computed by cores_per_block / cores_per_node.
         Default is True.
     """
