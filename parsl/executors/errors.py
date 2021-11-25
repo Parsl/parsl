@@ -23,7 +23,7 @@ class BadStateException(ExecutorError):
     """
 
     def __init__(self, executor, exception):
-        super().init(executor, str(exception))
+        super().__init__(executor, str(exception))
 
 
 class UnsupportedFeatureError(ExecutorError):
