@@ -160,7 +160,7 @@ class ParslExecutor(metaclass=ABCMeta):
 
         Some of the scaffolding needed for implementing error management inside executors,
         including implementations for the status handling methods above, is available in
-        :class:parsl.executors.status_handling.StatusHandlingExecutor, which, interested executors,
+        :class:parsl.executors.status_handling.BlockProviderExecutor, which interested executors
         should inherit from. Noop versions of methods that are related to status handling and
         running parsl tasks through workers are implemented by
         :class:parsl.executors.status_handling.NoStatusHandlingExecutor.

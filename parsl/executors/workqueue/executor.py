@@ -25,14 +25,13 @@ import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
 from parsl.errors import OptionalModuleMissing
-from parsl.executors.status_handling import NoStatusHandlingExecutor
+from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
-from parsl.executors.errors import ScalingFailed
 from parsl.executors.workqueue import exec_parsl_function
 
 import typeguard
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Union
 from parsl.data_provider.staging import Staging
 
 from .errors import WorkQueueTaskFailure
@@ -74,7 +73,7 @@ WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason st
 ParslFileToWq = namedtuple('ParslFileToWq', 'parsl_name stage cache')
 
 
-class WorkQueueExecutor(NoStatusHandlingExecutor, putils.RepresentationMixin):
+class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     """Executor to use Work Queue batch system
 
     The WorkQueueExecutor system utilizes the Work Queue framework to
@@ -221,8 +220,7 @@ class WorkQueueExecutor(NoStatusHandlingExecutor, putils.RepresentationMixin):
                  worker_options: str = "",
                  full_debug: bool = True,
                  worker_executable: str = 'work_queue_worker'):
-        NoStatusHandlingExecutor.__init__(self)
-        self._provider = provider
+        BlockProviderExecutor.__init__(self, provider)
         self._scaling_enabled = True
 
         if not _work_queue_enabled:
@@ -273,6 +271,11 @@ class WorkQueueExecutor(NoStatusHandlingExecutor, putils.RepresentationMixin):
         self.launch_cmd = ("{package_prefix}python3 exec_parsl_function.py {mapping} {function} {result}")
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
+
+    def _get_launch_command(self, block_id):
+        # this executor uses different terminology for worker/launch
+        # commands than in htex
+        return self.worker_command
 
     def start(self):
         """Create submit process and collector thread to create, send, and
@@ -605,24 +608,21 @@ class WorkQueueExecutor(NoStatusHandlingExecutor, putils.RepresentationMixin):
                 logger.debug("Scaling out failed: {}".format(e))
                 raise e
 
-    def scale_out(self, blocks=1):
-        """Scale out method.
-
-        We should have the scale out method simply take resource object
-        which will have the scaling methods, scale_out itself should be a coroutine, since
-        scaling tasks can be slow.
+    @property
+    def outstanding(self) -> int:
+        """Count the number of outstanding tasks. This is inefficiently
+        implemented and probably could be replaced with a counter.
         """
-        if self.provider:
-            for i in range(blocks):
-                external_block = str(len(self.blocks))
-                internal_block = self.provider.submit(self.worker_command, 1)
-                # Failed to create block with provider
-                if not internal_block:
-                    raise(ScalingFailed(self.provider.label, "Attempts to create nodes using the provider has failed"))
-                else:
-                    self.blocks[external_block] = internal_block
-        else:
-            logger.error("No execution provider available to scale")
+        outstanding = 0
+        for fut in self.tasks.values():
+            if not fut.done():
+                outstanding += 1
+        logger.debug(f"Counted {outstanding} outstanding tasks")
+        return outstanding
+
+    @property
+    def workers_per_node(self) -> Union[int, float]:
+        return 1
 
     def scale_in(self, count):
         """Scale in method. Not implemented.
