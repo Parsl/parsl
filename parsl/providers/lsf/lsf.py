@@ -127,9 +127,16 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
             self.scheduler_options += "#BSUB -q {}\n".format(queue)
         if request_by_nodes:
             self.scheduler_options += "#BSUB -nnodes {}\n".format(nodes_per_block)
-        if not request_by_nodes and cores_per_block and cores_per_node:
+        else:
+            assert cores_per_block is not None and cores_per_node is not None, \
+                       "Requesting resources by the number of cores. " \
+                       "Need to specify cores_per_block and cores_per_node in the LSF provider."
+
             self.scheduler_options += "#BSUB -n {}\n".format(cores_per_block)
             self.scheduler_options += '#BSUB -R "span[ptile={}]"\n'.format(cores_per_node)
+
+            # Set nodes_per_block manually for Parsl strategy
+            assert cores_per_node != 0, "Need to specify a non-zero cores_per_node."
             self.nodes_per_block = int(math.ceil(cores_per_block / cores_per_node))
 
         self.worker_init = worker_init
