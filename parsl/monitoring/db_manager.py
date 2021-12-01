@@ -262,6 +262,8 @@ class DatabaseManager:
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
+        logger.propagate = False
+
         set_file_logger("{}/database_manager.log".format(self.logdir), level=logging_level,
                         format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s",
                         name="database_manager")
