@@ -108,7 +108,7 @@ class BlockProviderExecutor(ParslExecutor):
         return status
 
     def set_bad_state_and_fail_all(self, exception: Exception):
-        logger.exception("Exception: {}".format(exception))
+        logger.exception("Setting bad state due to exception", exc_info=exception)
         self._executor_exception = exception
         # Set bad state to prevent new tasks from being submitted
         self._executor_bad_state.set()

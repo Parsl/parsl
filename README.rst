@@ -103,7 +103,7 @@ Parsl seeks to foster an open and welcoming environment - Please see the `Parsl 
 Contributing
 ============
 
-We welcome contributions from the community. Please see our `contributing guide <CONTRIBUTING.rst>`_.
+We welcome contributions from the community. Please see our `contributing guide <https://github.com/Parsl/parsl/blob/master/CONTRIBUTING.rst>`_.
 
 Research notice
 ===============
