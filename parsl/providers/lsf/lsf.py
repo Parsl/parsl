@@ -1,6 +1,7 @@
 import os
 import time
 import logging
+import math
 
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
@@ -38,6 +39,11 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
+        When request_by_nodes is False, it is computed by cores_per_block / cores_per_node.
+    cores_per_block : int
+        Cores to provision per block. Enabled only when request_by_nodes is False.
+    cores_per_node: int
+        Cores to provision per node. Enabled only when request_by_nodes is False.
     init_blocks : int
         Number of blocks to request at the start of the run.
     min_blocks : int
@@ -52,6 +58,8 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         Walltime requested per block in HH:MM:SS.
     project : str
         Project to which the resources must be charged
+    queue : str
+        Queue to which to submit the job request
     scheduler_options : str
         String to prepend to the #SBATCH blocks in the submit script to the scheduler.
     worker_init : str
@@ -64,11 +72,19 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.launchers.SrunLauncher`, or
         :class:`~parsl.launchers.AprunLauncher`
     move_files : Optional[Bool]: should files be moved? by default, Parsl will try to move files.
+    bsub_redirection: Bool
+        Should a redirection symbol "<" be included when submitting jobs, i.e., Bsub < job_script.
+    request_by_nodes: Bool
+        Request by nodes or request by cores per block.
+        When this is set to false, nodes_per_block is computed by cores_per_block / cores_per_node.
+        Default is True.
     """
 
     def __init__(self,
                  channel=LocalChannel(),
                  nodes_per_block=1,
+                 cores_per_block=None,
+                 cores_per_node=None,
                  init_blocks=1,
                  min_blocks=0,
                  max_blocks=1,
@@ -77,8 +93,11 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
                  scheduler_options='',
                  worker_init='',
                  project=None,
+                 queue=None,
                  cmd_timeout=120,
                  move_files=True,
+                 bsub_redirection=False,
+                 request_by_nodes=True,
                  launcher=SingleNodeLauncher()):
         label = 'LSF'
         super().__init__(label,
@@ -93,8 +112,33 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
                          launcher=launcher)
 
         self.project = project
+        self.queue = queue
+        self.cores_per_block = cores_per_block
+        self.cores_per_node = cores_per_node
         self.move_files = move_files
-        self.scheduler_options = scheduler_options
+        self.bsub_redirection = bsub_redirection
+        self.request_by_nodes = request_by_nodes
+
+        # Update scheduler options
+        self.scheduler_options = scheduler_options + "\n"
+        if project:
+            self.scheduler_options += "#BSUB -P {}\n".format(project)
+        if queue:
+            self.scheduler_options += "#BSUB -q {}\n".format(queue)
+        if request_by_nodes:
+            self.scheduler_options += "#BSUB -nnodes {}\n".format(nodes_per_block)
+        else:
+            assert cores_per_block is not None and cores_per_node is not None, \
+                       "Requesting resources by the number of cores. " \
+                       "Need to specify cores_per_block and cores_per_node in the LSF provider."
+
+            self.scheduler_options += "#BSUB -n {}\n".format(cores_per_block)
+            self.scheduler_options += '#BSUB -R "span[ptile={}]"\n'.format(cores_per_node)
+
+            # Set nodes_per_block manually for Parsl strategy
+            assert cores_per_node != 0, "Need to specify a non-zero cores_per_node."
+            self.nodes_per_block = int(math.ceil(cores_per_block / cores_per_node))
+
         self.worker_init = worker_init
 
     def _status(self):
@@ -161,7 +205,6 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         job_config["walltime"] = wtime_to_minutes(self.walltime)
         job_config["scheduler_options"] = self.scheduler_options
         job_config["worker_init"] = self.worker_init
-        job_config["project"] = self.project
         job_config["user_script"] = command
 
         # Wrap the command
@@ -179,7 +222,11 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
             logger.debug("not moving files")
             channel_script_path = script_path
 
-        retcode, stdout, stderr = super().execute_wait("bsub {0}".format(channel_script_path))
+        if self.bsub_redirection:
+            cmd = "bsub < {0}".format(channel_script_path)
+        else:
+            cmd = "bsub {0}".format(channel_script_path)
+        retcode, stdout, stderr = super().execute_wait(cmd)
 
         job_id = None
         if retcode == 0:
