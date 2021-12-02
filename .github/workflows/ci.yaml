@@ -77,5 +77,5 @@ jobs:
       if: ${{ always() }}
       uses: actions/upload-artifact@v2
       with:
-        name: runinfo
+        name: runinfo-${{ matrix.python-version }}
         path: runinfo/
