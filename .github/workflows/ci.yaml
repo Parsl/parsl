@@ -74,6 +74,7 @@ jobs:
         make coverage
 
     - name: Archive runinfo logs
+      if: ${{ always() }}
       uses: actions/upload-artifact@v2
       with:
         name: runinfo
