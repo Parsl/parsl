@@ -303,12 +303,12 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
             logger.debug("Attempting removal of jobs : {0}".format(cmd))
             retcode, stdout, stderr = self.execute_wait(cmd)
             if retcode == 0:
-                for jid in job_ids:
+                for jid in job_id_chunk:
                     if jid in self.resources:
                         self.resources[jid]['status'] = JobStatus(JobState.CANCELLED)
-                rets.extend([True for i in job_ids])
+                rets.extend([True for i in job_id_chunk])
             else:
-                rets.extend([False for i in job_ids])
+                rets.extend([False for i in job_id_chunk])
 
         return rets
 
