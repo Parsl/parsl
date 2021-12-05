@@ -8,7 +8,6 @@ We have two basic types of futures:
 
 from concurrent.futures import Future
 import logging
-import threading
 
 logger = logging.getLogger(__name__)
 
