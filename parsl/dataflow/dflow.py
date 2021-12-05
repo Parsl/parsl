@@ -312,8 +312,7 @@ class DataFlowKernel(object):
             if task_record['status'] == States.dep_fail:
                 logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
                 task_record['time_returned'] = datetime.datetime.now()
-                with task_record['app_fu']._update_lock:
-                    task_record['app_fu'].set_exception(e)
+                task_record['app_fu'].set_exception(e)
 
             elif task_record['fail_cost'] <= self._config.retries:
 
@@ -336,8 +335,7 @@ class DataFlowKernel(object):
                 task_record['status'] = States.failed
                 self.tasks_failed_count += 1
                 task_record['time_returned'] = datetime.datetime.now()
-                with task_record['app_fu']._update_lock:
-                    task_record['app_fu'].set_exception(e)
+                task_record['app_fu'].set_exception(e)
 
         else:
             if task_record['from_memo']:
@@ -365,8 +363,9 @@ class DataFlowKernel(object):
                         task_record['status'] = States.failed
                         self.tasks_failed_count += 1
                         task_record['time_returned'] = datetime.datetime.now()
-                        with task_record['app_fu']._update_lock:
-                            task_record['app_fu'].set_exception(TypeError(f"join_app body must return a Future, got {type(inner_future)}"))
+                        task_record['app_fu'].set_exception(
+                            TypeError(f"join_app body must return a Future, got {type(inner_future)}")
+                        )
 
         self._log_std_streams(task_record)
 
@@ -401,8 +400,7 @@ class DataFlowKernel(object):
             task_record['status'] = States.failed
             self.tasks_failed_count += 1
             task_record['time_returned'] = datetime.datetime.now()
-            with task_record['app_fu']._update_lock:
-                task_record['app_fu'].set_exception(e)
+            task_record['app_fu'].set_exception(e)
 
         else:
             res = inner_app_future.result()
@@ -461,8 +459,7 @@ class DataFlowKernel(object):
         logger.info(f"Task {task_record['id']} completed ({old_state.name} -> {new_state.name})")
         task_record['time_returned'] = datetime.datetime.now()
 
-        with task_record['app_fu']._update_lock:
-            task_record['app_fu'].set_result(result)
+        task_record['app_fu'].set_result(result)
 
     @staticmethod
     def _unwrap_remote_exception_wrapper(future: Future) -> Any:

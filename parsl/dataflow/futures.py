@@ -65,7 +65,6 @@ class AppFuture(Future):
                    by this future.
         """
         super().__init__()
-        self._update_lock = threading.Lock()
         self._outputs = []
         self.task_def = task_def
 
