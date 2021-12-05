@@ -74,7 +74,9 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         Launcher for this provider. Possible launchers include
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
     cmd_timeout : int
-        Timeout for commands made to the scheduler in seconds
+        Timeout for commands made to the scheduler in seconds.
+    cmd_chunk_size : int
+        Calls to the scheduler will be made for chunks of blocks with this size.
     """
     @typeguard.typechecked
     def __init__(self,
@@ -94,7 +96,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                  worker_init: str = '',
                  launcher: Launcher = SingleNodeLauncher(),
                  requirements: str = '',
-                 cmd_timeout: int = 60) -> None:
+                 cmd_timeout: int = 60,
+                 cmd_chunk_size: int = 100) -> None:
 
         label = 'condor'
         super().__init__(label,
@@ -109,6 +112,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                          cmd_timeout=cmd_timeout)
         self.cores_per_slot = cores_per_slot
         self.mem_per_slot = mem_per_slot
+        self.cmd_chunk_size = cmd_chunk_size
 
         # To Parsl, Condor slots should be treated equivalently to nodes
         self.cores_per_node = cores_per_slot
@@ -132,22 +136,24 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
     def _status(self):
         """Update the resource dictionary with job statuses."""
 
-        job_id_list = ' '.join(self.resources.keys())
-        cmd = "condor_q {0} -af:jr JobStatus".format(job_id_list)
-        retcode, stdout, stderr = self.execute_wait(cmd)
-        """
-        Example output:
+        for job_id_chunk in _chunker(self.resources.keys(), self.cmd_chunk_size):
+            job_id_list = ' '.join(job_id_chunk)
+            cmd = "condor_q {0} -af:jr JobStatus".format(job_id_list)
+            retcode, stdout, stderr = self.execute_wait(cmd)
+            """
+            Example output:
 
-        $ condor_q 34524642.0 34524643.0 -af:jr JobStatus
-        34524642.0 2
-        34524643.0 1
-        """
+            $ condor_q 34524642.0 34524643.0 -af:jr JobStatus
+            34524642.0 2
+            34524643.0 1
+            """
 
-        for line in stdout.splitlines():
-            parts = line.strip().split()
-            job_id = parts[0]
-            state = translate_table.get(parts[1], JobState.UNKNOWN)
-            self.resources[job_id]['status'] = JobStatus(state)
+            for line in stdout.splitlines():
+                parts = line.strip().split()
+                job_id = parts[0]
+                state = translate_table.get(parts[1], JobState.UNKNOWN)
+                if job_id in self.resources:
+                    self.resources[job_id]['status'] = JobStatus(state)
 
     def status(self, job_ids):
         """Get the status of a list of jobs identified by their ids.
@@ -290,18 +296,19 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         list of bool
             Each entry in the list will be True if the job is cancelled succesfully, otherwise False.
         """
-
-        job_id_list = ' '.join(job_ids)
-        cmd = "condor_rm {0}; condor_rm -forcex {0}".format(job_id_list)
-        logger.debug("Attempting removal of jobs : {0}".format(cmd))
-        retcode, stdout, stderr = self.execute_wait(cmd)
-        rets = None
-        if retcode == 0:
-            for jid in job_ids:
-                self.resources[jid]['status'] = JobStatus(JobState.CANCELLED)
-            rets = [True for i in job_ids]
-        else:
-            rets = [False for i in job_ids]
+        rets = []
+        for job_id_chunk in _chunker(job_ids, self.cmd_chunk_size):
+            job_id_list = ' '.join(job_id_chunk)
+            cmd = "condor_rm {0}; condor_rm -forcex {0}".format(job_id_list)
+            logger.debug("Attempting removal of jobs : {0}".format(cmd))
+            retcode, stdout, stderr = self.execute_wait(cmd)
+            if retcode == 0:
+                for jid in job_ids:
+                    if jid in self.resources:
+                        self.resources[jid]['status'] = JobStatus(JobState.CANCELLED)
+                rets.extend([True for i in job_ids])
+            else:
+                rets.extend([False for i in job_ids])
 
         return rets
 
@@ -313,6 +320,18 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
     @property
     def status_polling_interval(self):
         return 60
+
+
+# see https://stackoverflow.com/a/18243990
+def _chunker(seq, size):
+    res = []
+    for el in seq:
+        res.append(el)
+        if len(res) == size:
+            yield res
+            res = []
+    if res:
+        yield res
 
 
 if __name__ == "__main__":
