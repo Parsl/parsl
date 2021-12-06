@@ -58,7 +58,7 @@
             "givenName": "Ian",
             "familyName": "Foster",
             "email": "foster@anl.gov"
-        }, 
+        },
         {
             "@id":"http://orcid.org/0000-0002-0762-2684",
             "@type": "Person",
@@ -72,6 +72,14 @@
             "givenName": "Kelly L.",
             "familyName": "Rowland",
             "email": "kellyrowland@lbl.gov"
+        },
+        {
+            "@id":"https://orcid.org/0000-0001-7774-2246",
+            "@type": "Person",
+            "givenName": "Matthew R.",
+            "familyName": "Becker",
+            "email": "becker.mr@gmail.com"
+        }
     ],
     "softwareRequirements": [
         {

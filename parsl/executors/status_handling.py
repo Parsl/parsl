@@ -2,12 +2,12 @@ import logging
 import threading
 from itertools import compress
 from abc import abstractmethod, abstractproperty
-from concurrent.futures import Future
+from concurrent.futures import Future, InvalidStateError
 from typing import List, Any, Dict, Optional, Tuple, Union
 
 import parsl  # noqa F401
 from parsl.executors.base import ParslExecutor
-from parsl.executors.errors import ScalingFailed
+from parsl.executors.errors import BadStateException, ScalingFailed
 from parsl.providers.provider_base import JobStatus, ExecutionProvider, JobState
 
 
@@ -108,14 +108,22 @@ class BlockProviderExecutor(ParslExecutor):
         return status
 
     def set_bad_state_and_fail_all(self, exception: Exception):
-        logger.exception("Exception: {}".format(exception))
+        logger.exception("Setting bad state due to exception", exc_info=exception)
         self._executor_exception = exception
         # Set bad state to prevent new tasks from being submitted
         self._executor_bad_state.set()
         # We set all current tasks to this exception to make sure that
         # this is raised in the main context.
         for task in self._tasks:
-            self._tasks[task].set_exception(Exception(str(self._executor_exception)))
+            # this set_exception can fail sometimes with an InvalidStateException...
+            # is this assumption that set_bad_state_and_fail_all is only called once?
+            # or is the exception being set after a result?
+            try:
+                f = self._tasks[task]
+                logger.info(f"Setting executor-wide bad state on future: {repr(f)}.")
+                f.set_exception(BadStateException(self, self._executor_exception))
+            except InvalidStateError:
+                logger.exception(f"when setting executor-wide bad state on future: {repr(f)}.")
 
     @property
     def bad_state_is_set(self):

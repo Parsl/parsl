@@ -1,8 +1,6 @@
 template_string = '''#!/bin/bash
 
-#BSUB -P ${project}
 #BSUB -W ${walltime}
-#BSUB -nnodes ${nodes}
 #BSUB -J ${jobname}
 #BSUB -o ${submit_script_dir}/${jobname}.submit.stdout
 #BSUB -e ${submit_script_dir}/${jobname}.submit.stderr

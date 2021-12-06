@@ -49,7 +49,7 @@ during development. Using app caching will ensure that only modified apps are re
 App equivalence 
 ^^^^^^^^^^^^^^^
 
-Parsl determines app equivalence by storing the a hash
+Parsl determines app equivalence by storing the hash
 of the app function. Thus, any changes to the app code (e.g., 
 its signature, its body, or even the docstring within the body)
 will invalidate cached values. 
