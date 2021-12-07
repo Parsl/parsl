@@ -278,8 +278,12 @@ class Strategy(object):
                     # Scale down for htex
                     logger.debug("More slots than tasks")
                     if isinstance(executor, HighThroughputExecutor):
-                        if active_blocks > min_blocks:
-                            exec_status.scale_in(1, force=False, max_idletime=self.max_idletime)
+                        excess_slots = active_slots - active_tasks
+                        excess_blocks = excess_slots // tasks_per_node // nodes_per_block
+                        if active_blocks - excess_blocks < min_blocks:
+                            excess_blocks = active_blocks - min_blocks
+                        if excess_blocks > 0:
+                            exec_status.scale_in(excess_blocks, force=False, max_idletime=self.max_idletime)
 
                 elif strategy_type == 'simple':
                     # skip for simple strategy
