@@ -253,9 +253,10 @@ class MpiRunLauncher(Launcher):
     - mpirun is installed and can be located in $PATH
     - The provider makes available the $PBS_NODEFILE environment variable
     """
-    def __init__(self, debug: bool = True, bash_location: str = '/bin/bash'):
+    def __init__(self, debug: bool = True, bash_location: str = '/bin/bash', overrides: str = ''):
         super().__init__(debug=debug)
         self.bash_location = bash_location
+        self.overrides = overrides
 
     def __call__(self, command, tasks_per_node, nodes_per_block):
         """
@@ -277,11 +278,12 @@ cat << MPIRUN_EOF > cmd_$JOBNAME.sh
 MPIRUN_EOF
 chmod u+x cmd_$JOBNAME.sh
 
-mpirun -np $WORKERCOUNT {bash_location} cmd_$JOBNAME.sh
+mpirun -np $WORKERCOUNT {overrides} {bash_location} cmd_$JOBNAME.sh
 
 [[ "{debug}" == "1" ]] && echo "All workers done"
 '''.format(command=command,
            task_blocks=task_blocks,
+           overrides=self.overrides,
            bash_location=self.bash_location,
            debug=debug_num)
         return x
