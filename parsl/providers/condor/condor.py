@@ -3,6 +3,7 @@ import os
 import re
 import time
 import typeguard
+import atexit
 
 from parsl.channels import LocalChannel
 from parsl.providers.provider_base import JobState, JobStatus
@@ -132,6 +133,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         self.worker_init = worker_init + '\n'
         self.requirements = requirements
         self.transfer_input_files = transfer_input_files
+
+        atexit.register(_kill_all_jobs, self)
 
     def _status(self):
         """Update the resource dictionary with job statuses."""
@@ -332,6 +335,11 @@ def _chunker(seq, size):
             res = []
     if res:
         yield res
+
+
+def _kill_all_jobs(condor_provider):
+    job_ids = list(condor_provider.resources.keys())
+    condor_provider.cancel(job_ids)
 
 
 if __name__ == "__main__":
