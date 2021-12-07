@@ -16,7 +16,7 @@ Join apps allow more naunced dependencies to be expressed that can help with:
 Usage
 -----
 
-A `join_app` looks quite like a `python_app`, but should return one or more ``Future``s,
+A `join_app` looks quite like a `python_app`, but should return one or more ``Future`` objects,
 rather than a value. After the python code has run, the app invocation will not
 complete until those Futures have completed, and the return value of the `join_app`
 will be the return values (or exception) from those Futures.
