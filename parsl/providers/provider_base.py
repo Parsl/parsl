@@ -84,9 +84,10 @@ class JobStatus(object):
                 size = f.tell()
                 f.seek(0, os.SEEK_SET)
                 if size > JobStatus.SUMMARY_TRUNCATION_THRESHOLD:
-                    head = f.read(JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2)
-                    f.seek(size - JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2, os.SEEK_SET)
-                    tail = f.read(JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2)
+                    half_threshold = int(JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2)
+                    head = f.read(half_threshold)
+                    f.seek(size - half_threshold, os.SEEK_SET)
+                    tail = f.read(half_threshold)
                     return head + '\n...\n' + tail
                 else:
                     f.seek(0, os.SEEK_SET)
