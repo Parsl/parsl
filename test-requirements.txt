@@ -10,7 +10,7 @@ nbsphinx
 sphinx_rtd_theme
 mypy==0.910
 types-python-dateutil
-types-request
+types-requests
 sqlalchemy-stubs
 Sphinx==3.4.1
 twine
