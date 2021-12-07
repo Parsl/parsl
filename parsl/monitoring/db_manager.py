@@ -264,6 +264,12 @@ class DatabaseManager:
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
+        # This will make "database_manager" log messages not be passed up to
+        # any root handlers which might have been set by the forking process.
+        # In simple parsl usage, there will not be any, but in more
+        # complicated situations, that sometimes happens.
+        logger.propagate = False
+
         set_file_logger("{}/database_manager.log".format(self.logdir), level=logging_level,
                         format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s",
                         name="database_manager")
