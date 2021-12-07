@@ -486,7 +486,7 @@ class MonitoringRouter:
                         node_msg = ((msg[0], msg[2]), 0)
                         node_msgs.put(node_msg)
                     elif msg[0] == MessageType.RESOURCE_INFO:
-                       resource_msgs.put(cast(Any, msg))
+                        resource_msgs.put(cast(Any, msg))
                     elif msg[0] == MessageType.BLOCK_INFO:
                         block_msgs.put(cast(Any, (msg, 0)))
                     else:
