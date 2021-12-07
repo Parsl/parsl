@@ -55,23 +55,6 @@ class ManagerLost(Exception):
         return self.__repr__()
 
 
-class BadRegistration(Exception):
-    ''' A new Manager tried to join the executor with a BadRegistration message
-    '''
-    def __init__(self, worker_id, critical=False):
-        self.worker_id = worker_id
-        self.tstamp = time.time()
-        self.handled = "critical" if critical else "suppressed"
-
-    def __repr__(self):
-        return "Manager {} attempted to register with a bad registration message. Caused a {} failure".format(
-            self.worker_id,
-            self.handled)
-
-    def __str__(self):
-        return self.__repr__()
-
-
 class VersionMismatch(Exception):
     ''' Manager and Interchange versions do not match
     '''
@@ -81,8 +64,8 @@ class VersionMismatch(Exception):
 
     def __repr__(self):
         return "Manager version info {} does not match interchange version info {}, causing a critical failure".format(
-            self.interchange_version,
-            self.manager_version)
+            self.manager_version,
+            self.interchange_version)
 
     def __str__(self):
         return self.__repr__()
@@ -95,8 +78,6 @@ class Interchange(object):
     2. Allow for workers to join and leave the union
     3. Detect workers that have failed using heartbeats
     4. Service single and batch requests from workers
-    5. Be aware of requests worker resource capacity,
-       eg. schedule only jobs that fit into walltime.
 
     TODO: We most likely need a PUB channel to send out global commands, like shutdown
     """
@@ -392,7 +373,6 @@ class Interchange(object):
         self._command_thread.start()
 
         poller = zmq.Poller()
-        # poller.register(self.task_incoming, zmq.POLLIN)
         poller.register(self.task_outgoing, zmq.POLLIN)
         poller.register(self.results_incoming, zmq.POLLIN)
 
@@ -416,7 +396,6 @@ class Interchange(object):
 
                     try:
                         msg = json.loads(message[1].decode('utf-8'))
-                        msg['reg_time'] = datetime.datetime.strptime(msg['reg_time'], "%Y-%m-%d %H:%M:%S")
                         reg_flag = True
                     except Exception:
                         logger.warning("[MAIN] Got Exception reading registration message from manager: {}".format(
@@ -466,7 +445,7 @@ class Interchange(object):
                     tasks_requested = int.from_bytes(message[1], "little")
                     self._ready_manager_queue[manager]['last_heartbeat'] = time.time()
                     if tasks_requested == HEARTBEAT_CODE:
-                        logger.debug("[MAIN] Manager {} sent heartbeat".format(manager))
+                        logger.debug("[MAIN] Manager {} sent heartbeat via tasks connection".format(manager))
                         self.task_outgoing.send_multipart([manager, b'', PKL_HEARTBEAT_CODE])
                     else:
                         logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
@@ -524,7 +503,10 @@ class Interchange(object):
                     for b_message in b_messages:
                         r = pickle.loads(b_message)
                         try:
-                            self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
+                            if int(r['task_id']) != -1:
+                                self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
+                            elif 'heartbeat' in r:
+                                logger.debug("[MAIN] Manager {} sent heartbeat via results connection".format(manager))
                         except Exception:
                             # If we reach here, there's something very wrong.
                             logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(
@@ -534,7 +516,7 @@ class Interchange(object):
 
                     self.results_outgoing.send_multipart(b_messages)
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
-                    if len(self._ready_manager_queue[manager]['tasks']) == 0:
+                    if len(self._ready_manager_queue[manager]['tasks']) == 0 and self._ready_manager_queue[manager]['idle_since'] is None:
                         self._ready_manager_queue[manager]['idle_since'] = time.time()
                 logger.debug("[MAIN] leaving results_incoming section")
 

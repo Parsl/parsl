@@ -15,7 +15,7 @@ Parsl can be used to implement various parallel computing paradigms:
 * Dynamic workflows in which the workflow is determined during execution
 * Interactive parallel programming through notebooks or another interactive mechanism
 
-The latest Parsl version available on PyPi is v1.0.0.
+The latest Parsl version available on PyPi is v1.1.0.
 
 .. |licence| image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
    :target: https://github.com/Parsl/parsl/blob/master/LICENSE
@@ -103,4 +103,20 @@ Parsl seeks to foster an open and welcoming environment - Please see the `Parsl 
 Contributing
 ============
 
-We welcome contributions from the community. Please see our `contributing guide <CONTRIBUTING.rst>`_.
+We welcome contributions from the community. Please see our `contributing guide <https://github.com/Parsl/parsl/blob/master/CONTRIBUTING.rst>`_.
+
+Research notice
+===============
+
+Please note that this repository is participating in a study into
+sustainability of open source projects. Data will be gathered about this
+repository for approximately the next 12 months, starting from June
+2021.
+
+Data collected will include number of contributors, number of PRs, time
+taken to close/merge these PRs, and issues closed.
+
+For more information, please visit `the informational
+page <https://sustainable-open-science-and-software.github.io/>`__ or
+download the `participant information
+sheet <https://sustainable-open-science-and-software.github.io/assets/PIS_sustainable_software.pdf>`__.

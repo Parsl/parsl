@@ -128,7 +128,7 @@ The following instructions outline how to set up Parsl from source.
     $ cd parsl
     $ pip install .
     ( To install specific extra options from the source :)
-    $ pip install .[<optional_pacakge1>...]
+    $ pip install '.[<optional_package1>...]'
 
 3. Use Parsl!
 

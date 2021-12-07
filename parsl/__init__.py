@@ -33,6 +33,10 @@ from parsl.data_provider.files import File
 
 from parsl.dataflow.dflow import DataFlowKernel, DataFlowKernelLoader
 
+import multiprocessing
+if platform.system() == 'Darwin':
+    multiprocessing.set_start_method('fork', force=True)
+
 __author__ = 'The Parsl Team'
 __version__ = VERSION
 
@@ -71,14 +75,7 @@ dfk = DataFlowKernelLoader.dfk
 wait_for_current_tasks = DataFlowKernelLoader.wait_for_current_tasks
 
 
-class NullHandler(logging.Handler):
-    """Setup default logging to /dev/null since this is library."""
-
-    def emit(self, record):
-        pass
-
-
-logging.getLogger('parsl').addHandler(NullHandler())
+logging.getLogger('parsl').addHandler(logging.NullHandler())
 
 if platform.system() == 'Darwin':
     os.environ['OBJC_DISABLE_INITIALIZE_FORK_SAFETY'] = 'YES'

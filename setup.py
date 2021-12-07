@@ -27,6 +27,7 @@ extras_require = {
     'gssapi' : ['python-gssapi'],
     'azure' : ['azure<=4', 'msrestazure'],
     'workqueue': ['work_queue'],
+    'flux': ['pyyaml', 'cffi', 'jsonschema'],
 }
 extras_require['all'] = sum(extras_require.values(), [])
 
@@ -62,6 +63,7 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
     keywords=['Workflows', 'Scientific computing'],
     entry_points={'console_scripts':

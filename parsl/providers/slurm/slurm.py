@@ -28,8 +28,8 @@ translate_table = {
     'TO': JobState.TIMEOUT,  # (timeout),
     'NF': JobState.FAILED,  # (node failure),
     'RV': JobState.FAILED,  # (revoked) and
-    'SE': JobState.FAILED
-}  # (special exit state
+    'SE': JobState.FAILED   # (special exit state)
+}
 
 
 class SlurmProvider(ClusterProvider, RepresentationMixin):
@@ -42,9 +42,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     Parameters
     ----------
     partition : str
-        Slurm partition to request blocks from. If none, no partition slurm directive will be specified.
+        Slurm partition to request blocks from. If unspecified or ``None``, no partition slurm directive will be specified.
     account : str
-        Slurm account to which to charge resources used by the job. If none, the job will use the
+        Slurm account to which to charge resources used by the job. If unspecified or ``None``, the job will use the
         user's default account.
     channel : Channel
         Channel for accessing this provider. Possible channels include
@@ -85,7 +85,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self,
-                 partition: Optional[str],
+                 partition: Optional[str] = None,
                  account: Optional[str] = None,
                  channel: Channel = LocalChannel(),
                  nodes_per_block: int = 1,

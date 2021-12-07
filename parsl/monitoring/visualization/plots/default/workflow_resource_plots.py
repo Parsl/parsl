@@ -97,7 +97,7 @@ def resource_time_series(tasks, type='psutil_process_time_user', label='CPU user
 def worker_efficiency(task, node):
     try:
         node['epoch_time'] = (pd.to_datetime(
-            node['reg_time']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+            node['timestamp']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         task['epoch_time_start'] = (pd.to_datetime(
             task['task_try_time_launched']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         task['epoch_time_running'] = (pd.to_datetime(
@@ -112,9 +112,14 @@ def worker_efficiency(task, node):
 
         for i, row in task.iterrows():
             if math.isnan(row['epoch_time_running']):
-                # skip tasks with no running start time.
+                # skip tasks with no running start time
                 continue
-            for j in range(int(row['epoch_time_running']), int(row['epoch_time_returned']) + 1):
+            if math.isnan(row['epoch_time_returned']):
+                # there is no end time for this, so we should assume the "end" time
+                etr = end
+            else:
+                etr = int(row['epoch_time_returned'])
+            for j in range(int(row['epoch_time_running']), etr + 1):
                 worker_plot[j - start] += 1
         fig = go.Figure(
             data=[go.Scatter(x=list(range(0, end - start + 1)),
@@ -141,7 +146,7 @@ def resource_efficiency(resource, node, label='CPU'):
         resource['epoch_time'] = (pd.to_datetime(
             resource['timestamp']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         node['epoch_time'] = (pd.to_datetime(
-            node['reg_time']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+            node['timestamp']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
         resource = resource.sort_values(by='epoch_time')
         start = min(resource['epoch_time'].min(), node['epoch_time'].min())
         end = resource['epoch_time'].max()

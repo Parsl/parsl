@@ -8,6 +8,7 @@ import datetime
 import zmq
 
 import queue
+from parsl.multiprocessing import ForkProcess, SizedQueue
 from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
@@ -218,37 +219,37 @@ class MonitoringHub(RepresentationMixin):
                                                               min_port=self.client_port_range[0],
                                                               max_port=self.client_port_range[1])
 
-        comm_q = Queue(maxsize=10)  # type: Queue[Union[Tuple[int, int], str]]
-        self.exception_q = Queue(maxsize=10)  # type: Queue[Tuple[str, str]]
-        self.priority_msgs = Queue()  # type: Queue[Tuple[Any, int]]
-        self.resource_msgs = Queue()  # type: Queue[Tuple[Any, Any]]
-        self.node_msgs = Queue()  # type: Queue[Tuple[Any, int]]
-        self.block_msgs = Queue()  # type: Queue[Tuple[Any, Any]]
+        comm_q = SizedQueue(maxsize=10)  # type: Queue[Union[Tuple[int, int], str]]
+        self.exception_q = SizedQueue(maxsize=10)  # type: Queue[Tuple[str, str]]
+        self.priority_msgs = SizedQueue()  # type: Queue[Tuple[Any, int]]
+        self.resource_msgs = SizedQueue()  # type: Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]
+        self.node_msgs = SizedQueue()  # type: Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]
+        self.block_msgs = SizedQueue()  # type:  Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]
 
-        self.router_proc = Process(target=router_starter,
-                                   args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),
-                                   kwargs={"hub_address": self.hub_address,
-                                           "hub_port": self.hub_port,
-                                           "hub_port_range": self.hub_port_range,
-                                           "client_address": self.client_address,
-                                           "client_port": self.dfk_port,
-                                           "logdir": self.logdir,
-                                           "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                           "run_id": run_id
-                                   },
-                                   name="Monitoring-Router-Process",
-                                   daemon=True,
+        self.router_proc = ForkProcess(target=router_starter,
+                                       args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),
+                                       kwargs={"hub_address": self.hub_address,
+                                               "hub_port": self.hub_port,
+                                               "hub_port_range": self.hub_port_range,
+                                               "client_address": self.client_address,
+                                               "client_port": self.dfk_port,
+                                               "logdir": self.logdir,
+                                               "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                               "run_id": run_id
+                                       },
+                                       name="Monitoring-Router-Process",
+                                       daemon=True,
         )
         self.router_proc.start()
 
-        self.dbm_proc = Process(target=dbm_starter,
-                                args=(self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs,),
-                                kwargs={"logdir": self.logdir,
-                                        "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                        "db_url": self.logging_endpoint,
-                                  },
-                                name="Monitoring-DBM-Process",
-                                daemon=True,
+        self.dbm_proc = ForkProcess(target=dbm_starter,
+                                    args=(self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs,),
+                                    kwargs={"logdir": self.logdir,
+                                            "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                            "db_url": self.logging_endpoint,
+                                    },
+                                    name="Monitoring-DBM-Process",
+                                    daemon=True,
         )
         self.dbm_proc.start()
         self.logger.info("Started the Hub process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
@@ -261,7 +262,7 @@ class MonitoringHub(RepresentationMixin):
 
         if isinstance(comm_q_result, str):
             self.logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
-            raise RuntimeError("MonitoringRouter failed to start: {comm_q_result}")
+            raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
 
         udp_dish_port, ic_port = comm_q_result
 
@@ -323,19 +324,24 @@ class MonitoringHub(RepresentationMixin):
                                monitoring_hub_url,
                                run_id)
 
+            p: Optional[Process]
             if monitor_resources:
                 # create the monitor process and start
-                p: Optional[Process]
-                p = Process(target=monitor,
-                            args=(os.getpid(),
-                                  try_id,
-                                  task_id,
-                                  monitoring_hub_url,
-                                  run_id,
-                                  logging_level,
-                                  sleep_dur),
-                            name="Monitor-Wrapper-{}".format(task_id))
-                p.start()
+                pp = ForkProcess(target=monitor,
+                                 args=(os.getpid(),
+                                       try_id,
+                                       task_id,
+                                       monitoring_hub_url,
+                                       run_id,
+                                       logging_level,
+                                       sleep_dur),
+                                 name="Monitor-Wrapper-{}".format(task_id))
+                pp.start()
+                p = pp
+                #  TODO: awkwardness because ForkProcess is not directly a constructor
+                # and type-checking is expecting p to be optional and cannot
+                # narrow down the type of p in this block.
+
             else:
                 p = None
 
@@ -434,16 +440,16 @@ class MonitoringRouter:
 
     def start(self,
               priority_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
-              node_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
-              block_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
-              resource_msgs: "queue.Queue[Tuple[Dict[str, Any], str]]") -> None:
+              node_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
+              block_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
+              resource_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]") -> None:
         try:
             while True:
                 try:
                     data, addr = self.sock.recvfrom(2048)
                     msg = pickle.loads(data)
-                    resource_msgs.put((msg, addr))
                     self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
+                    resource_msgs.put(((MessageType.RESOURCE_INFO, msg), addr))
                 except socket.timeout:
                     pass
 
@@ -454,7 +460,7 @@ class MonitoringRouter:
                         block_msgs.put((msg, 0))
                     else:
                         priority_msgs.put((msg, 0))
-                    if msg[0] == MessageType.WORKFLOW_INFO and 'python_version' not in msg[1]:
+                    if msg[0] == MessageType.WORKFLOW_INFO and 'exit_now' in msg[1] and msg[1]['exit_now']:
                         break
                 except zmq.Again:
                     pass
@@ -468,12 +474,19 @@ class MonitoringRouter:
                 try:
                     msg = self.ic_channel.recv_pyobj()
                     self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
+
+                    assert msg[0] == MessageType.NODE_INFO \
+                        or msg[0] == MessageType.BLOCK_INFO, \
+                        "IC Channel expects only NODE_INFO or BLOCK_INFO and cannot dispatch other message types"
+
                     if msg[0] == MessageType.NODE_INFO:
                         msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
                         msg[2]['run_id'] = self.run_id
                         msg[2]['timestamp'] = msg[1]
-                        msg = (msg[0], msg[2])
-                        node_msgs.put((msg, 0))
+
+                        # ((tag, dict), addr)
+                        node_msg = ((msg[0], msg[2]), 0)
+                        node_msgs.put(node_msg)
                     elif msg[0] == MessageType.BLOCK_INFO:
                         block_msgs.put((msg, 0))
                     else:
@@ -502,9 +515,9 @@ class MonitoringRouter:
 def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    exception_q: "queue.Queue[Tuple[str, str]]",
                    priority_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
-                   node_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
-                   block_msgs: "queue.Queue[Tuple[Dict[str, Any], int]]",
-                   resource_msgs: "queue.Queue[Tuple[Dict[str, Any], str]]",
+                   node_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
+                   block_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
+                   resource_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], str]]",
 
                    hub_address: str,
                    hub_port: Optional[int],
