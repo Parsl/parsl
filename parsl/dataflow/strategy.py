@@ -121,8 +121,6 @@ class Strategy(object):
                            'htex_auto_scale': self._strategy_htex_auto_scale}
 
         self.strategize = self.strategies[self.config.strategy]
-        self.logger_flag = False
-        self.prior_loghandlers = set(logging.getLogger().handlers)
 
         logger.debug("Scaling strategy: {0}".format(self.config.strategy))
 
@@ -136,20 +134,6 @@ class Strategy(object):
         Args:
             - tasks (task_ids): Not used here.
         """
-
-    def unset_logging(self):
-        """ Mute newly added handlers to the root level, right after calling executor.status
-        """
-        if self.logger_flag is True:
-            return
-
-        root_logger = logging.getLogger()
-
-        for handler in root_logger.handlers:
-            if handler not in self.prior_loghandlers:
-                handler.setLevel(logging.ERROR)
-
-        self.logger_flag = True
 
     def _strategy_simple(self, status_list, tasks):
         self._general_strategy(status_list, tasks, strategy_type='simple')
@@ -185,7 +169,6 @@ class Strategy(object):
             active_tasks = executor.outstanding
 
             status = exec_status.status
-            self.unset_logging()
 
             # FIXME we need to handle case where provider does not define these
             # FIXME probably more of this logic should be moved to the provider
