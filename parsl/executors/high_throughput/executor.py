@@ -5,6 +5,7 @@ import threading
 import queue
 import datetime
 import pickle
+import collections
 from multiprocessing import Queue
 from typing import Dict  # noqa F401 (used in type annotation)
 from typing import List, Optional, Tuple, Union
@@ -630,30 +631,43 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         List of job_ids marked for termination
         """
 
+        stats = collections.namedtuple("stats",
+                                       ("task_count", "idle_duration"),
+                                       defaults=(0, float('inf')))
         if block_ids:
             block_ids_to_kill = block_ids
         else:
             managers = self.connected_managers
             block_info = {}
             for manager in managers:
-                if not manager['active']:
-                    continue
                 b_id = manager['block_id']
                 if b_id not in block_info:
-                    block_info[b_id] = [0, float('inf')]
-                block_info[b_id][0] += manager['tasks']
-                block_info[b_id][1] = min(block_info[b_id][1], manager['idle_duration'])
+                    block_info[b_id] = stats
 
-            sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1][1], item[1][0]))
+                if manager['active']:
+                    block_info[b_id].task_count += manager['tasks']
+                    block_info[b_id].idle_duration = min(block_info[b_id].idle_duration,
+                                                         manager['idle_duration'])
+                else:
+                    # Manager has not registered yet, it is treated as having infinite tasks
+                    # and 0 idle time
+                    block_info[b_id].task_count = float('inf')
+                    block_info[b_id].idle_duration = 0
+
+            sorted_blocks = sorted(block_info.items(),
+                                   key=lambda item: (item[1].idle_duration, item[1].task_count))
+            logger.debug(f"Sorted blocks :{sorted_blocks}")
             if force is True:
                 block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
             else:
+                # Kill only idle blocks
                 if not max_idletime:
-                    block_ids_to_kill = [x[0] for x in sorted_blocks if x[1][0] == 0][:blocks]
+                    # Kill managers with 0 tasks
+                    block_ids_to_kill = [x[0] for x in sorted_blocks if x[1].task_count == 0][:blocks]
                 else:
                     block_ids_to_kill = []
                     for x in sorted_blocks:
-                        if x[1][1] > max_idletime and x[1][0] == 0:
+                        if x[1].idle_duration > max_idletime and x[1].task_count == 0:
                             block_ids_to_kill.append(x[0])
                             if len(block_ids_to_kill) == blocks:
                                 break
