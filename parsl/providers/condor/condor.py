@@ -302,7 +302,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         rets = []
         for job_id_chunk in _chunker(job_ids, self.cmd_chunk_size):
             job_id_list = ' '.join(job_id_chunk)
-            cmd = "condor_rm {0}; condor_rm -forcex {0}".format(job_id_list)
+            cmd = "condor_rm {0}".format(job_id_list)
             logger.debug("Attempting removal of jobs : {0}".format(cmd))
             retcode, stdout, stderr = self.execute_wait(cmd)
             if retcode == 0:
