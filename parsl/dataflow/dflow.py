@@ -1085,7 +1085,7 @@ class DataFlowKernel(object):
             if executor.managed and not executor.bad_state_is_set:
                 if executor.scaling_enabled:
                     job_ids = executor.provider.resources.keys()
-                    block_ids = executor.scale_in(len(job_ids))
+                    block_ids = executor.scale_in(len(job_ids), max_idletime=0, force=True)
                     if self.monitoring and block_ids:
                         new_status = {}
                         for bid in block_ids:
