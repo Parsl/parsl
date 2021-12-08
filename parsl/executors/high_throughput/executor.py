@@ -631,9 +631,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         List of job_ids marked for termination
         """
 
-        stats = collections.namedtuple("stats",
-                                       ("task_count", "idle_duration"),
-                                       defaults=(0, float('inf')))
+        stats = collections.namedtuple("stats", ("task_count", "idle_duration"))
         if block_ids:
             block_ids_to_kill = block_ids
         else:
@@ -645,14 +643,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                     block_info[b_id] = stats
 
                 if manager['active']:
-                    block_info[b_id].task_count += manager['tasks']
-                    block_info[b_id].idle_duration = min(block_info[b_id].idle_duration,
-                                                         manager['idle_duration'])
+                    block_info[b_id] = stats(manager['tasks'],
+                                             min(float('inf'), manager['idle_duration']))
                 else:
                     # Manager has not registered yet, it is treated as having infinite tasks
                     # and 0 idle time
-                    block_info[b_id].task_count = float('inf')
-                    block_info[b_id].idle_duration = 0
+                    block_info[b_id] = stats(float('inf'), 0)
 
             sorted_blocks = sorted(block_info.items(),
                                    key=lambda item: (item[1].idle_duration, item[1].task_count))
