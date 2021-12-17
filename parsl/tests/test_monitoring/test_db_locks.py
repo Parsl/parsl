@@ -20,7 +20,7 @@ def test_row_counts():
         logger.info("Monitoring database already exists - deleting")
         os.remove("monitoring.db")
 
-    engine = sqlalchemy.create_engine("sqlite:///monitoring.db")
+    engine = sqlalchemy.create_engine("sqlite:///runinfo/monitoring.db")
 
     logger.info("loading parsl")
     parsl.load(fresh_config())
