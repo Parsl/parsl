@@ -152,7 +152,6 @@ Exceptions
     parsl.dataflow.error.DependencyError
     parsl.launchers.error.BadLauncher
     parsl.providers.error.ExecutionProviderException
-    parsl.providers.error.ChannelRequired
     parsl.providers.error.ScaleOutFailed
     parsl.providers.error.SchedulerMissingArgs
     parsl.providers.error.ScriptPathError
