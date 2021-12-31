@@ -28,343 +28,171 @@ yongyanrao
 Quentin Le Boulc'h
 
 
-Executors
+High Throughput Executor
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Remove htex self.tasks race condition that shows under high load (#2034)
+* Fix htex scale down breakage due to overly aggressive result heartbeat (#2119)  [ TODO: this fixes a bug introduced since 1.1.0 so note that? #2104 ]
+* Send heartbeats via results connection (#2104)
 
 
-  High Throughput Executor
+Work Queue Executor
+^^^^^^^^^^^^^^^^^^^
 
-    Remove htex self.tasks race condition that shows under high load (#2034)
-    Fix htex scale down breakage due to overly aggressive result heartbeat (#2119)  [ TODO: this fixes a bug introduced since 1.1.0 so note that? #2104 ]
-    Send heartbeats via results connection (#2104)
-
-
-  Work Queue
-==
-    Allow use of WorkQueue running_time_min resource constraint (#2113)
+* Allow use of WorkQueue running_time_min resource constraint (#2113) -WQ recently introduced an additional resource constraint: workers can be aware of their remaining wall time, and tasks can be constrained to only go to workers with sufficient remaining time.
     
-    WQ recently introduced an additional resource constraint: workers can be aware of their remaining wall time, and tasks can be constrained to only go to workers with sufficient remaining time.
-    
-== 
+* Implement priority as a Work Queue resource specification (#2067) - The allows a workflow script to influence the order in which queued tasks are executed using Work Queue's existing priority mechanism.
 
-    Implement priority as a Work Queue resource specification (#2067)
-    
-    The allows a workflow script to influence the order in which queued tasks are executed using Work Queue's existing priority mechanism.
-==
 
-    Disable WQ-level retries with an option to re-enable (#2059)
+* Disable WQ-level retries with an option to re-enable (#2059) - Previously by default, Work Queue will retry tasks that fail at the WQ level (for example, because of worker failure) an infinite number of times, inside the same parsl-level execution try.  That hides the repeated tries from parsl (so monitoring does not report start/end times as might naively be expected for a try, and parsl retry counting does not count).
     
-    Previously by default, Work Queue will retry tasks that fail at the WQ level (for example, because of worker failure) an infinite number of times, inside the same parsl-level execution try.
-    
-    That hides the repeated tries from parsl (so monitoring does not report start/end times as might naively be expected for a try, and parsl retry counting does not count).
-    
-    This PR changes the default so that WQ will only execute a task once (in line with other executors), leaving parsl to handle any retries.
-    
-    A new config parameter, max_retries, allows WQ level retries to be specified (back to infinity, or to any other number) so as to get previous behaviour if that is desired.
-==
-
-    Document WorkqueueExecutor project_name remote reporting better (#2089)
-    wq executor should show itself using representation mixin (#2064)
-    Make WorkQueue worker command configurable (#2036)
+* Document WorkqueueExecutor project_name remote reporting better (#2089)
+* wq executor should show itself using representation mixin (#2064)
+* Make WorkQueue worker command configurable (#2036)
 
 
 
-  Flux
-===
-    docs: add Flux/LLNL TOSS3 configuration (#2098)
-    
-    Co-authored-by: Ben Clifford <benc@hawaga.org.uk>
-===
-    parsl.executors.FluxExecutor (#2051)
-    
-    * Add executor that uses Flux to launch MPI tasks
-    
-    The new FluxExecutor class uses the Flux resource manager
-    (github: flux-framework/flux-core) to launch tasks. Each
-    task is a Flux job.
-===    
+Flux Executor
+^^^^^^^^^^^^^
+
+The new FluxExecutor class uses the Flux resource manager
+(github: flux-framework/flux-core) to launch tasks. Each
+task is a Flux job.
 
 
-Providers
-  Condor
-==
-    Fix bug in condor provider for unknown jobs (#2161)
+Condor Provider
+^^^^^^^^^^^^^^^
+
+* Fix bug in condor provider for unknown jobs (#2161)
     
-    This commit ensure the condor provider doesn't throw an error for
-    pilot jobs it doesn't know about. It also adds the ability to make
-    calls to the scheduler in chunks of pilot jobs to help them timeout
-    less.
-    
-    Fixes #2160
-    Fixes #2159
-==
-  LSF
-==
-    Update LSF provider to make it more friendly for different LSF-based computers (#2149)
+LSF Provider
+^^^^^^^^^^^^
+
+* Update LSF provider to make it more friendly for different LSF-based computers (#2149)
+
+SLURM Provider
+^^^^^^^^^^^^^^
+
+* Improve docs and defaults for slurm partition and account parameters. (#2126)
+
+Grid Engine Provider
+^^^^^^^^^^^^^^^^^^^^
+
+* missing queue from self - causes config serialisation failure (#2042)
 
 
-==
-  SLURM
-    Improve docs and defaults for slurm partition and account parameters. (#2126)
+Monitoring
+^^^^^^^^^^
 
-  Grid Engine
-    missing queue from self - causes config serialisation failure (#2042)
+* Index task_hashsum to give cross-run query speedup (#2085)
+* Fix monitoring "db locked" errors occuring at scale (#1917)
+* Fix worker efficiency plot when tasks are still in progress (#2048)
+* Fix use of previously removed reg_time monitoring field (#2020)
+* Reorder debug message so it happens when the message is received, without necessarily blocking on the resource_msgs queue put (#2093)
 
 
 General new features
+^^^^^^^^^^^^^^^^^^^^
 
-==
-    Workflow-pluggable retry scoring (#2068)
-    When a task fails, instead of causing a retry "cost" of 1 (the previous behaviour), this PR allows that cost to be determined by a user specified function which is given some context about the failure.
-==
-
+* Workflow-pluggable retry scoring (#2068) - When a task fails, instead of causing a retry "cost" of 1 (the previous behaviour), this PR allows that cost to be determined by a user specified function which is given some context about the failure.
 
 General bug fixes
+^^^^^^^^^^^^^^^^^
 
-  Fix type error when job status output is large. (#2129)
-  Fix a race condition in the local channel (#2115)
-  Fix incorrect order of manager and interchange versions in error text (#2108)
-  Fix to macos multiprocessing spawn and context issues (#2076)
-  Tidy tasks_per_node in strategy (#2030)
+* Fix type error when job status output is large. (#2129)
+* Fix a race condition in the local channel (#2115)
+* Fix incorrect order of manager and interchange versions in error text (#2108)
+* Fix to macos multiprocessing spawn and context issues (#2076)
+* Tidy tasks_per_node in strategy (#2030)
+* Fix and test wrong type handling for joinapp returns (#2063)
+* FIX: os independent path (#2043)
 
 Platform and packaging
-    Improve support for Windows (#2107)
-    Reflect python 3.9 support in setup.py metadata (#2023)
-    Remove python <3.6 handling from threadpoolexecutor (#2083)
-    Remove breaking .[all] install target (#2069)
+^^^^^^^^^^^^^^^^^^^^^^
 
+* Improve support for Windows (#2107)
+* Reflect python 3.9 support in setup.py metadata (#2023)
+* Remove python <3.6 handling from threadpoolexecutor (#2083)
+* Remove breaking .[all] install target (#2069)
 
-Tidying and internal architecture - should not be user-affecting
+Internal tidying
+^^^^^^^^^^^^^^^^
 
-  Remove ipp logging hack in PR #204 (#2170)
-  Remove BadRegistration exception definition which has been unused since PR #1671 (#2142)
-  Remove AppFuture.__repr__, because superclass Future repr is sufficient (#2143)
-  Make monitoring hub exit condition more explicit (#2131)
-  Replace parsl's logging NullHandler with python's own NullHandler (#2114)
-  Remove a commented out line of dead code in htex (#2116)
-  Abstract more block handling from HighThroughputExecutor and share with WorkQueue (#2071)
-  Regularise monitoring RESOURCE_INFO messages (#2117)
-  Pull os x multiprocessing code into a single module (#2099)
-  Describe monitoring protocols better (#2029)
-  Remove task_id param from memo functions, as whole task record is available (#2080)
-  remove irrelevant __main__ stub of local provider (#2026)
-  remove unused weakref_cb (#2022)
-  Remove unneeded task_id param from sanitize_and_wrap (#2081)
-  Remove outdated IPP related comment in memoization (#2058)
-  Remove unused AppBase status field (#2053)
-  Do not unwrap joinapp future exceptions unnecessarily (#2084)
-  Eliminate self.tasks[id] calls from joinapp callback (#2015)
-  Looking at eliminating passing of task IDs and passing task records instead (#2016)
-  Eliminate self.tasks[id] from launch_if_ready
-  Eliminate self.tasks[id] calls from launch_task (#2061)
-  Eliminate self.tasks[id] from app done callback (#2017)
-  Make process_worker_pool pass mypy (#2052)
-  Remove unused walltime from LocalProvider (#2057)
-  Tidy human readable text/variable names around DependencyError (#2037)
+* Remove ipp logging hack in PR #204 (#2170)
+* Remove BadRegistration exception definition which has been unused since PR #1671 (#2142)
+* Remove AppFuture.__repr__, because superclass Future repr is sufficient (#2143)
+* Make monitoring hub exit condition more explicit (#2131)
+* Replace parsl's logging NullHandler with python's own NullHandler (#2114)
+* Remove a commented out line of dead code in htex (#2116)
+* Abstract more block handling from HighThroughputExecutor and share with WorkQueue (#2071)
+* Regularise monitoring RESOURCE_INFO messages (#2117)
+* Pull os x multiprocessing code into a single module (#2099)
+* Describe monitoring protocols better (#2029)
+* Remove task_id param from memo functions, as whole task record is available (#2080)
+* remove irrelevant __main__ stub of local provider (#2026)
+* remove unused weakref_cb (#2022)
+* Remove unneeded task_id param from sanitize_and_wrap (#2081)
+* Remove outdated IPP related comment in memoization (#2058)
+* Remove unused AppBase status field (#2053)
+* Do not unwrap joinapp future exceptions unnecessarily (#2084)
+* Eliminate self.tasks[id] calls from joinapp callback (#2015)
+* Looking at eliminating passing of task IDs and passing task records instead (#2016)
+* Eliminate self.tasks[id] from launch_if_ready
+* Eliminate self.tasks[id] calls from launch_task (#2061)
+* Eliminate self.tasks[id] from app done callback (#2017)
+* Make process_worker_pool pass mypy (#2052)
+* Remove unused walltime from LocalProvider (#2057)
+* Tidy human readable text/variable names around DependencyError (#2037)
+* Replace old string formatting with f-strings in utils.py (#2055)
 
-Documentation, error messages and human-readable text (TODO: categorise this by type of documentaiton: docstring, manuals, other?)
+Documentation, error messages and human-readable text
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-  Add a documentation chapter summarizing plugin points (#2066)
-  Correct docstring for set_file_logger (#2156)
-  Fix typo in two db error messages and make consistent with each other (#2152)
-  Update slack join links to currently unexpired link (#2146)
-  small typo fix in doc (#2134)
-  Update CONTRIBUTING.rst (#2144)
-  trying to fix broken link in GitHub (#2133)
-  Add CITATION.cff file (#2100)
-  Refresh the sanitize_and_wrap docstring (#2086)
-  Rephrase ad-hoc config doc now that AdHocProvider (PR #1297) is implemented (#2096)
-  Add research notice to readme (#2097)
-  Remove untrue claim that parsl_resource_specification keys are case insensitive (#2095)
-  Use zsh compatible install syntax (#2009)
-  Remove documentation that interchange is walltime aware (#2082)
-  Configure sphinx to put in full documentation for each method (#2094)
-  autogenerate sphinx stubs rather than requiring manual update each PR (#2087)
-  Update docstring for handle_app_update (#2079)
-  fix a typo (#2024)
-  Switch doc verb from invocated to invoked (#2088)
-  Add documentation on meanings of states (#2075)
-  Fix summary sentence of ScaleOutException (#2021)
-  clarify that max workers is per node (#2056)
-  Tidy up slurm state comment (#2035)
-  Add nscc singapore example config (#2003)
-  better formatting (#2039)
-  Add missing f for an f-string (#2062)
+* Add a documentation chapter summarizing plugin points (#2066)
+* Correct docstring for set_file_logger (#2156)
+* Fix typo in two db error messages and make consistent with each other (#2152)
+* Update slack join links to currently unexpired link (#2146)
+* small typo fix in doc (#2134)
+* Update CONTRIBUTING.rst (#2144)
+* trying to fix broken link in GitHub (#2133)
+* Add CITATION.cff file (#2100)
+* Refresh the sanitize_and_wrap docstring (#2086)
+* Rephrase ad-hoc config doc now that AdHocProvider (PR #1297) is implemented (#2096)
+* Add research notice to readme (#2097)
+* Remove untrue claim that parsl_resource_specification keys are case insensitive (#2095)
+* Use zsh compatible install syntax (#2009)
+* Remove documentation that interchange is walltime aware (#2082)
+* Configure sphinx to put in full documentation for each method (#2094)
+* autogenerate sphinx stubs rather than requiring manual update each PR (#2087)
+* Update docstring for handle_app_update (#2079)
+* fix a typo (#2024)
+* Switch doc verb from invocated to invoked (#2088)
+* Add documentation on meanings of states (#2075)
+* Fix summary sentence of ScaleOutException (#2021)
+* clarify that max workers is per node (#2056)
+* Tidy up slurm state comment (#2035)
+* Add nscc singapore example config (#2003)
+* better formatting (#2039)
+* Add missing f for an f-string (#2062)
+* Rework __repr__ and __str__ for OptionalModuleMissing (#2025)
+* Make executor bad state exception log use the exception (#2155)
 
 CI/testing
+^^^^^^^^^^
 
-  Make changes for CI reliability (#2118)
-  Make missing worker test cleanup DFK at end (#2153)
-  Tidy bash error codes tests. (#2130)
-  Upgrade CI to use recent ubuntu, as old version was deprecated (#2111)
-  Remove travis config, replaced by GitHub Actions in PR #2078 (#2112)
-  Fix CI broken by dependency package changes (#2105)
-  Adding github actions for CI (#2078)
-  Test combine() pattern in joinapps (#2054)
-  Assert that there should be no doc stubs in version control (#2092)
-  Add monitoring dependency to local tests (#2074)
-  Put viz test in a script (#2019)
-  Reduce the size of recursive fibonacci joinapp testing (#2110)
-  Remove disabled midway test (#2028)
-
-=====================
-
-commit 134f4394c3a42baf24bcc8ad777c7aecae2d18e3
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Wed Dec 1 13:25:02 2021 +0000
-
-    Make executor bad state exception log use the exception (#2155)
-    
-    Prior to this, the error message would be reported with no
-    in-context exception, and so would emit a line like this:
-    
-    ```
-    2021-11-26 18:21:10.761 parsl.executors.status_handling:111 [ERROR]  Exception:         STDOUT: /home/benc/parsl/src/parsl/runinfo/018/submit_scripts/parsl.localprovider.1637950869.7853742.sh: line 3: executable_that_hopefully_does_not_exist_1030509.py: command not found
-    
-    NoneType: None
-    ```
-    
-    The NoneType: None happens there because no exception is in
-    scope at the moment.
-    
-    After this change, the log reports:
-    
-    ```
-    2021-11-26 18:09:51.235 parsl.executors.status_handling:111 [ERROR]  Setting bad state due to exception
-    Exception:      STDOUT: /home/benc/parsl/src/parsl/runinfo/008/submit_scripts/parsl.localprovider.1637950190.2711153.sh: line 3: executable_that_hopefully_does_not_exist_1030509.py: command not found
-    ```
-    
-    If the supplied exception object has a stack trace, then that will also be
-    logged at this point now.
-
-
-commit b35f00ffed03bc6d83988fbae047905f3b082f57
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Thu Jun 24 12:53:58 2021 +0000
-
-    Reorder debug message so it happens when the message is received, without necessarily blocking on the resource_msgs queue put (#2093)
-    
-    Previously, this message wouldn't be logged until after the message was
-    sent to the resource_msgs queue; if that queue blocked, the message would
-    not be logged at the right time.
-    
-    Co-authored-by: Zhuozhao Li <zhuozhao@uchicago.edu>
-
-commit 9f7717a824512abeba92f29635b563f4d50262bb
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Wed Jun 9 10:18:18 2021 +0000
-
-    Fix monitoring "db locked" errors occuring at scale (#1917)
-    
-    This PR fixes and tests against a serious database locking problem encountered in LSST DESC.
-    
-    If a parsl monitoring database update is attempted when someone else has a read lock on one of the tables involved, then the parsl code would previously fail, and all monitoring database recording would stop at that point.
-    
-    This happens when making expensive queries against a monitoring database that is also receiving fresh monitoring data from a running workflow.
-    
-    This PR makes the code retry updates repeatedly (at one second intervals). There is no maximum number of tries/timeout: database write attempts will stop when the workflow is explicitly killed.
-    
-    This PR assumes that OperationalErrors will eventually go away if retried enough times. This is reasonable when those operational errors are transient lock conflicts from queries. There may be other OperationalErrors where this is not true, although I have no encountered any.
-    
-    There's a further problem that this PR does not address - that similar errors related to locking the entire database can happen at the point that parsl monitoring asserts that the monitoring tables should exist. This will manifest if the database is locked at the point that monitoring starts up at the beginning of a workflow run.
-
-commit 8fb3c2804a5c02227c07d4941ba9dffb04f28742
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Tue Jun 8 17:38:47 2021 +0000
-
-    Rework __repr__ and __str__ for OptionalModuleMissing (#2025)
-    
-    __repr__ should be quasi-machine-readable, and __str__ human readable
-    
-    See PR #1966, commit a423955f4a9e03cf6986a6e21d285cf46fa3bc88, for
-    further context.
-    
-    Before:
-    
-    >>> str(e)
-    "(['mymod'], 'this test needs demonstrating')"
-    >>> repr(e)
-    "The functionality requested requires a missing optional module:['mymod'],  Reason:this test needs demonstrating"
-    
-    After:
-    
-    >>> str(e)
-    "The functionality requested requires missing optional modules ['mymod'], because: this test needs demonstrating"
-    >>> repr(e)
-    "OptionalModuleMissing(['mymod'], 'this test needs demonstrating')"
-
-commit 76e87e5dcc2a464dcd75e2b4bf88f0214daf2a19
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Fri Jun 4 19:35:45 2021 +0000
-
-    Index task_hashsum to give cross-run query speedup (#2085)
-    
-    Practical experience with wstat has shown this index
-    to give great speedup when making queries which match
-    up tasks between runs based on their checkpointing
-    hashsum.
-
-commit b657f6514842e40477de1679e178d3dff451e4d4
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Thu Jun 3 11:15:04 2021 +0000
-
-    Fix and test wrong type handling for joinapp returns (#2063)
-    
-    Prior to this, returning the wrong type was resulting in a
-    hang.
-    
-    after this, returning the wrong type gives a TypeError - for
-    example:
-    
-    TypeError: join_app body must return a Future, got <class 'list'>
-    
-    Co-authored-by: Yadu Nand Babuji <yadudoc1729@gmail.com>
-
-
-commit 75453fbc6ffe3bc35310be42bded4eba90f9948e
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Wed May 5 12:46:48 2021 +0000
-
-    Fix worker efficiency plot when tasks are still in progress (#2048)
-    
-    Prior to this PR, this plot would crash. After this PR, this plot regards task without an end time as still in progress and occupying a worker.
-
-commit 4d798e35e05954f09424b8e984b6c0f85cea74ea
-Author: Vladimir <6596606+vkhodygo@users.noreply.github.com>
-Date:   Tue May 4 13:40:19 2021 +0100
-
-    Replace old string formatting with f-strings in utils.py (#2055)
-    
-    This is the first commit of the series to improve overall code quality.
-    
-    Part of #2045
-
-commit ce2552caed9d223c3d8a84c16f830abc5f926331
-Author: Vladimir <6596606+vkhodygo@users.noreply.github.com>
-Date:   Mon May 3 11:37:51 2021 +0100
-
-    FIX: os independent path (#2043)
-    
-    This change was originally added by @rantahar to a fork of libsubmit which means it has to be reintroduced again due to all the structural changes.
-    I've found this PR a bit later and it was created not long before the project assimilation so it didn't have a chance to be merged. I'm not sure about line endings though, it looks like a reasonable thing since there is going to be Linux running on the other side.
-    Rather than stacking strings together it's much better to use os module to make it work on Windows as well.
-    originally by j.m.o.rantaharju@swansea.ac.uk
-    
-    Co-authored-by: Ben Clifford <benc@hawaga.org.uk>
-
-commit 9640ea4aaee9b9bbb3d91be7733284b926ad5e69
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Wed Apr 28 17:12:20 2021 +0000
-
-    Fix use of previously removed reg_time monitoring field (#2020)
-    
-    PR 1876 removed the reg_time field from the monitoring database but did not remove attempts to use it from the visualization code, or code that initialises it on the sending side.
-    
-    Visualization was broken because of this.
-    
-    Type of change
-    Bug fix (non-breaking change that fixes an issue)
-    Code maintentance/cleanup
-
+* Make changes for CI reliability (#2118)
+* Make missing worker test cleanup DFK at end (#2153)
+* Tidy bash error codes tests. (#2130)
+* Upgrade CI to use recent ubuntu, as old version was deprecated (#2111)
+* Remove travis config, replaced by GitHub Actions in PR #2078 (#2112)
+* Fix CI broken by dependency package changes (#2105)
+* Adding github actions for CI (#2078)
+* Test combine() pattern in joinapps (#2054)
+* Assert that there should be no doc stubs in version control (#2092)
+* Add monitoring dependency to local tests (#2074)
+* Put viz test in a script (#2019)
+* Reduce the size of recursive fibonacci joinapp testing (#2110)
+* Remove disabled midway test (#2028)
 
 
 Parsl 1.1.0
