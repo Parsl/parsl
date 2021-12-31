@@ -1,6 +1,650 @@
 Changelog
 =========
 
+Parsl 1.2.0
+-----------
+
+Target release date: January 19th, 2022.
+
+Parsl v1.2.0 includes 99 pull requests with contributions from:
+
+TODO: github tags for these
+
+Ben Clifford
+Daniel S. Katz
+Douglas Thain
+James Corbett
+Jonas Rübenach
+Logan Ward
+Matthew R. Becker
+Vladimir
+Yadu Nand Babuji
+Yo Yehudi
+Zhuozhao Li
+yongyanrao
+
+@timj
+@darko-marinov
+
+
+
+Executors
+
+
+  High Throughput Executor
+
+    Remove htex self.tasks race condition that shows under high load (#2034)
+    Fix htex scale down breakage due to overly aggressive result heartbeat (#2119)  [ TODO: this fixes a bug introduced since 1.1.0 so note that? #2104 ]
+    Send heartbeats via results connection (#2104)
+
+
+  Work Queue
+==
+    Allow use of WorkQueue running_time_min resource constraint (#2113)
+    
+    WQ recently introduced an additional resource constraint: workers can be aware of their remaining wall time, and tasks can be constrained to only go to workers with sufficient remaining time.
+    
+== 
+
+    Implement priority as a Work Queue resource specification (#2067)
+    
+    The allows a workflow script to influence the order in which queued tasks are executed using Work Queue's existing priority mechanism.
+==
+
+    Disable WQ-level retries with an option to re-enable (#2059)
+    
+    Previously by default, Work Queue will retry tasks that fail at the WQ level (for example, because of worker failure) an infinite number of times, inside the same parsl-level execution try.
+    
+    That hides the repeated tries from parsl (so monitoring does not report start/end times as might naively be expected for a try, and parsl retry counting does not count).
+    
+    This PR changes the default so that WQ will only execute a task once (in line with other executors), leaving parsl to handle any retries.
+    
+    A new config parameter, max_retries, allows WQ level retries to be specified (back to infinity, or to any other number) so as to get previous behaviour if that is desired.
+==
+
+    Document WorkqueueExecutor project_name remote reporting better (#2089)
+
+
+
+  Flux
+===
+    docs: add Flux/LLNL TOSS3 configuration (#2098)
+    
+    Co-authored-by: Ben Clifford <benc@hawaga.org.uk>
+===
+    parsl.executors.FluxExecutor (#2051)
+    
+    * Add executor that uses Flux to launch MPI tasks
+    
+    The new FluxExecutor class uses the Flux resource manager
+    (github: flux-framework/flux-core) to launch tasks. Each
+    task is a Flux job.
+===    
+
+
+Providers
+  Condor
+==
+    Fix bug in condor provider for unknown jobs (#2161)
+    
+    This commit ensure the condor provider doesn't throw an error for
+    pilot jobs it doesn't know about. It also adds the ability to make
+    calls to the scheduler in chunks of pilot jobs to help them timeout
+    less.
+    
+    Fixes #2160
+    Fixes #2159
+==
+  LSF
+==
+    Update LSF provider to make it more friendly for different LSF-based computers (#2149)
+
+
+==
+  SLURM
+    Improve docs and defaults for slurm partition and account parameters. (#2126)
+
+General bug fixes
+
+  Fix type error when job status output is large. (#2129)
+  Fix a race condition in the local channel (#2115)
+  Fix incorrect order of manager and interchange versions in error text (#2108)
+  Fix to macos multiprocessing spawn and context issues (#2076)
+
+Tidying and internal architecture - should not be user-affecting
+
+  Remove ipp logging hack in PR #204 (#2170)
+  Remove BadRegistration exception definition which has been unused since PR #1671 (#2142)
+  Remove AppFuture.__repr__, because superclass Future repr is sufficient (#2143)
+  Make monitoring hub exit condition more explicit (#2131)
+  Replace parsl's logging NullHandler with python's own NullHandler (#2114)
+  Remove a commented out line of dead code in htex (#2116)
+  Abstract more block handling from HighThroughputExecutor and share with WorkQueue (#2071)
+  Regularise monitoring RESOURCE_INFO messages (#2117)
+  Pull os x multiprocessing code into a single module (#2099)
+  Describe monitoring protocols better (#2029)
+  Remove task_id param from memo functions, as whole task record is available (#2080)
+  remove irrelevant __main__ stub of local provider (#2026)
+  remove unused weakref_cb (#2022)
+  Remove unneeded task_id param from sanitize_and_wrap (#2081)
+  Remove outdated IPP related comment in memoization (#2058)
+  Remove unused AppBase status field (#2053)
+
+Documentation (TODO: categorise this by type of documentaiton: docstring, manuals, other?)
+
+  Add a documentation chapter summarizing plugin points (#2066)
+  Correct docstring for set_file_logger (#2156)
+  Fix typo in two db error messages and make consistent with each other (#2152)
+  Update slack join links to currently unexpired link (#2146)
+  small typo fix in doc (#2134)
+  Update CONTRIBUTING.rst (#2144)
+  trying to fix broken link in GitHub (#2133)
+  Add CITATION.cff file (#2100)
+  Refresh the sanitize_and_wrap docstring (#2086)
+  Rephrase ad-hoc config doc now that AdHocProvider (PR #1297) is implemented (#2096)
+  Add research notice to readme (#2097)
+  Remove untrue claim that parsl_resource_specification keys are case insensitive (#2095)
+  Use zsh compatible install syntax (#2009)
+  Remove documentation that interchange is walltime aware (#2082)
+  Configure sphinx to put in full documentation for each method (#2094)
+  autogenerate sphinx stubs rather than requiring manual update each PR (#2087)
+  Update docstring for handle_app_update (#2079)
+  fix a typo (#2024)
+  Switch doc verb from invocated to invoked (#2088)
+  Add documentation on meanings of states (#2075)
+  Fix summary sentence of ScaleOutException (#2021)
+  clarify that max workers is per node (#2056)
+
+CI/testing
+
+  Make changes for CI reliability (#2118)
+  Make missing worker test cleanup DFK at end (#2153)
+  Tidy bash error codes tests. (#2130)
+  Upgrade CI to use recent ubuntu, as old version was deprecated (#2111)
+  Remove travis config, replaced by GitHub Actions in PR #2078 (#2112)
+  Fix CI broken by dependency package changes (#2105)
+  Adding github actions for CI (#2078)
+  Test combine() pattern in joinapps (#2054)
+  Assert that there should be no doc stubs in version control (#2092)
+  Add monitoring dependency to local tests (#2074)
+
+=====================
+
+commit 134f4394c3a42baf24bcc8ad777c7aecae2d18e3
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Wed Dec 1 13:25:02 2021 +0000
+
+    Make executor bad state exception log use the exception (#2155)
+    
+    Prior to this, the error message would be reported with no
+    in-context exception, and so would emit a line like this:
+    
+    ```
+    2021-11-26 18:21:10.761 parsl.executors.status_handling:111 [ERROR]  Exception:         STDOUT: /home/benc/parsl/src/parsl/runinfo/018/submit_scripts/parsl.localprovider.1637950869.7853742.sh: line 3: executable_that_hopefully_does_not_exist_1030509.py: command not found
+    
+    NoneType: None
+    ```
+    
+    The NoneType: None happens there because no exception is in
+    scope at the moment.
+    
+    After this change, the log reports:
+    
+    ```
+    2021-11-26 18:09:51.235 parsl.executors.status_handling:111 [ERROR]  Setting bad state due to exception
+    Exception:      STDOUT: /home/benc/parsl/src/parsl/runinfo/008/submit_scripts/parsl.localprovider.1637950190.2711153.sh: line 3: executable_that_hopefully_does_not_exist_1030509.py: command not found
+    ```
+    
+    If the supplied exception object has a stack trace, then that will also be
+    logged at this point now.
+
+
+commit 6913e45649d7f56725370a862ba7bfc859134822
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Tue Aug 24 11:30:51 2021 +0000
+
+    Reduce the size of recursive fibonacci joinapp testing (#2110)
+    
+    This test was using about 1/3rd of the testing time of the
+    WQ executor - I haven't profiled for other executors -
+    which is a lot for a fairly obscure feature.
+    
+    Rough timings on my laptop: before: 100s, after 10s
+    
+    Co-authored-by: Yadu Nand Babuji <yadudoc1729@gmail.com>
+
+
+commit ad7d8828c7452951807562f1a2499e9edf9ca4e9
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Wed Aug 18 12:49:04 2021 +0000
+
+    Put viz test in a script (#2019)
+    
+    * put viz test in a script
+    
+    this means that the same test used in CI can also be used on the commandline,
+    and with bisection, 'git bisect run parsl/tests/test-viz'
+    
+    * Update github actions to follow travis change
+    
+    Co-authored-by: Yadu Nand Babuji <yadudoc1729@gmail.com>
+
+commit 31b1fbcd6d08d68ff82472814cff0b59c5be2843
+Author: Logan Ward <WardLT@users.noreply.github.com>
+Date:   Mon Aug 2 09:02:36 2021 -0400
+
+    Improve support for Windows (#2107)
+    
+    Changes made in my efforts to get Parsl working minimally on Windows.
+    
+    Do not crash when fcntl is not found.
+    Addresses #1878, though I would not claim I will fix it completely.
+
+commit 2c734195ac3344285f54f33eca60f2686225b7de
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Wed Jun 30 21:00:48 2021 +0000
+
+    Workflow-pluggable retry scoring (#2068)
+    
+    When a task fails, instead of causing a retry "cost" of 1 (the previous behaviour), this PR allows that cost to be determined by a user specified function which is given some context about the failure.
+    
+    After this PR there is a distinction between the accumulated retry cost, and the number of tries (which were previously the same number). This change is reflected in the monitoring database, with both values available.
+
+
+commit b35f00ffed03bc6d83988fbae047905f3b082f57
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Thu Jun 24 12:53:58 2021 +0000
+
+    Reorder debug message so it happens when the message is received, without necessarily blocking on the resource_msgs queue put (#2093)
+    
+    Previously, this message wouldn't be logged until after the message was
+    sent to the resource_msgs queue; if that queue blocked, the message would
+    not be logged at the right time.
+    
+    Co-authored-by: Zhuozhao Li <zhuozhao@uchicago.edu>
+
+commit 9f7717a824512abeba92f29635b563f4d50262bb
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Wed Jun 9 10:18:18 2021 +0000
+
+    Fix monitoring "db locked" errors occuring at scale (#1917)
+    
+    This PR fixes and tests against a serious database locking problem encountered in LSST DESC.
+    
+    If a parsl monitoring database update is attempted when someone else has a read lock on one of the tables involved, then the parsl code would previously fail, and all monitoring database recording would stop at that point.
+    
+    This happens when making expensive queries against a monitoring database that is also receiving fresh monitoring data from a running workflow.
+    
+    This PR makes the code retry updates repeatedly (at one second intervals). There is no maximum number of tries/timeout: database write attempts will stop when the workflow is explicitly killed.
+    
+    This PR assumes that OperationalErrors will eventually go away if retried enough times. This is reasonable when those operational errors are transient lock conflicts from queries. There may be other OperationalErrors where this is not true, although I have no encountered any.
+    
+    There's a further problem that this PR does not address - that similar errors related to locking the entire database can happen at the point that parsl monitoring asserts that the monitoring tables should exist. This will manifest if the database is locked at the point that monitoring starts up at the beginning of a workflow run.
+
+commit 8fb3c2804a5c02227c07d4941ba9dffb04f28742
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Tue Jun 8 17:38:47 2021 +0000
+
+    Rework __repr__ and __str__ for OptionalModuleMissing (#2025)
+    
+    __repr__ should be quasi-machine-readable, and __str__ human readable
+    
+    See PR #1966, commit a423955f4a9e03cf6986a6e21d285cf46fa3bc88, for
+    further context.
+    
+    Before:
+    
+    >>> str(e)
+    "(['mymod'], 'this test needs demonstrating')"
+    >>> repr(e)
+    "The functionality requested requires a missing optional module:['mymod'],  Reason:this test needs demonstrating"
+    
+    After:
+    
+    >>> str(e)
+    "The functionality requested requires missing optional modules ['mymod'], because: this test needs demonstrating"
+    >>> repr(e)
+    "OptionalModuleMissing(['mymod'], 'this test needs demonstrating')"
+
+commit ddadf94785cc4ca785bacd5eb319904943178897
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Sun Jun 6 19:11:30 2021 +0000
+
+    Do not unwrap joinapp future exceptions unnecessarily (#2084)
+    
+    An AppFuture will always present its exception as a future.exception(),
+    not as a RemoteWrapper. RemoteWrappers are used at the executor future
+    layer.
+
+commit 7d2767f183c7ba7f982d6fc2142ea682ea176e02
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Sun Jun 6 18:27:41 2021 +0000
+
+    Remove python <3.6 handling from threadpoolexecutor (#2083)
+    
+    Co-authored-by: Yadu Nand Babuji <yadudoc1729@gmail.com>
+
+commit 76e87e5dcc2a464dcd75e2b4bf88f0214daf2a19
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Fri Jun 4 19:35:45 2021 +0000
+
+    Index task_hashsum to give cross-run query speedup (#2085)
+    
+    Practical experience with wstat has shown this index
+    to give great speedup when making queries which match
+    up tasks between runs based on their checkpointing
+    hashsum.
+
+commit b657f6514842e40477de1679e178d3dff451e4d4
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Thu Jun 3 11:15:04 2021 +0000
+
+    Fix and test wrong type handling for joinapp returns (#2063)
+    
+    Prior to this, returning the wrong type was resulting in a
+    hang.
+    
+    after this, returning the wrong type gives a TypeError - for
+    example:
+    
+    TypeError: join_app body must return a Future, got <class 'list'>
+    
+    Co-authored-by: Yadu Nand Babuji <yadudoc1729@gmail.com>
+
+commit 282fbdd593e4b8f42df58b7e5c4a3be3a4c0fda7
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Thu Jun 3 10:26:52 2021 +0000
+
+    Eliminate self.tasks[id] calls from launch_task (#2061)
+    
+    See issue #2014
+
+commit e1ee8085cc1f74f432b8a13ff0398a9792f2424f
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Thu Jun 3 10:04:26 2021 +0000
+
+    Eliminate self.tasks[id] from app done callback (#2017)
+    
+    see #2014
+
+commit 66139be8bbdd91af3dedd272bd17288ded06607f
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Mon May 24 09:02:41 2021 +0000
+
+    Add missing f for an f-string (#2062)
+    
+    Co-authored-by: Zhuozhao Li <zhuozhao@uchicago.edu>
+
+commit 2f28b255feb76b5e689c2ac47fde92148c5c3707
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Fri May 21 20:39:03 2021 +0000
+
+    Add monitoring dependency to local tests (#2074)
+    
+    In CI this was not revealed because of the order in which tests are run there.
+
+commit bf83c06af78ac0e4243fa2b6686d3b99110cf01c
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Mon May 17 07:48:02 2021 +0000
+
+    Tidy tasks_per_node in strategy (#2030)
+    
+    tasks_per_node case in general strategy is a mess:
+    the ExtremeScale case will never fire in the current extremescale implementaiton,
+    because an extreme scale executor is also a high throughput executor, and so the
+    earlier htex case will fire.
+    
+    It is possible that extreme scale scaling was broken because of this case. This
+    patch should not make it either better or worse, because it only eliminates dead
+    code.
+    
+    when an executor is not an htex instance, no cases match, but no error is raised
+    here, and so tasks_per_node is never assigned. Later on (line 206) use of
+    tasks_per_node is an error.
+    
+    this entire case is removed, and executor.workers_per_node is always used.
+
+commit 300b79f00227ab450998d2eb5eda59c50a775ec1
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Fri May 14 18:31:02 2021 +0000
+
+    Remove breaking .[all] install target (#2069)
+    
+    This was introduced in PR 1391 to test that all targets could be installed.
+    
+    That target has never really installed properly though - different parts of
+    parsl optional dependencies conflict with each other and this test has
+    previously only passed because pip didn't actually error out when dependencies
+    conflicted.
+    
+    More recently this has become a problem where pip is not trying hard to
+    resolve a dependency that quite likely is not resolveable, and appears
+    to get stuck trying to install msazure and jeepney.
+    
+    INFO: pip is looking at multiple versions of jeepney to determine which version is compatible with other requirements. This could take a while.
+    Collecting jeepney>=0.4.2
+    Downloading jeepney-0.5.0-py3-none-any.whl (45 kB)
+    Downloading jeepney-0.4.3-py3-none-any.whl (21 kB)
+    Downloading jeepney-0.4.2-py3-none-any.whl (21 kB)
+
+commit 50642691326e9bc05b395519cbecb691bfe7a3e2
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Mon May 10 16:16:44 2021 +0000
+
+    wq executor should show itself using representation mixin (#2064)
+    
+    there is an issue for this #2007
+
+commit 7b28e5d413698f072a34347824ed056083de8a8e
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Fri May 7 15:13:55 2021 +0000
+
+    Eliminate self.tasks[id] calls from joinapp callback (#2015)
+    
+    see issue #2014
+
+commit bca4121ab37101025501bb8ba33044333b7b66c5
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Fri May 7 14:46:30 2021 +0000
+
+    looking at eliminating passing of task IDs and passing task records instead (#2016)
+    
+    See issue #2014
+
+commit dea04563730636919a6b784beac64af23e877ae6
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Fri May 7 10:48:44 2021 +0000
+
+    Eliminate self.tasks[id] from launch_if_ready
+    
+    see #2014
+
+commit 3e2d3989341bb0c856cb811472fc3551dc204859
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Thu May 6 14:30:36 2021 +0000
+
+    Tidy human readable text/variable names around DependencyError (#2037)
+    
+    * docstring for DependencyError
+    
+    * use __str__ for human formatted message and allow __repr__ to
+      represent more machine-readable format
+
+commit 23c33f84b748601ca9f3d6f3601c92af1454b58b
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Thu May 6 13:45:55 2021 +0000
+
+    Remove unused AppBase status field (#2053)
+    
+    This was initialized to 'created' and then never changed.
+    
+    It was creating minor confusion wrt DFK task record status fields,
+    which it looks like this was once intended to be similar to.
+
+commit ce92f17a2d9d4ba558620e1cd3d92f04b9b18e2b
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Thu May 6 12:47:39 2021 +0000
+
+    Remove unused walltime from LocalProvider (#2057)
+
+commit 6bcc28c385e1b383bfd39386f4f2b99997ca8e39
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Wed May 5 14:07:04 2021 +0000
+
+    Remove disabled midway test (#2028)
+    
+    The per-site testing mechanism is the way to do per-site testing.
+
+commit 390ff058933aed52e84823ade886b1696cc4a145
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Wed May 5 13:20:59 2021 +0000
+
+    Tidy up slurm state comment (#2035)
+
+commit 75453fbc6ffe3bc35310be42bded4eba90f9948e
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Wed May 5 12:46:48 2021 +0000
+
+    Fix worker efficiency plot when tasks are still in progress (#2048)
+    
+    Prior to this PR, this plot would crash. After this PR, this plot regards task without an end time as still in progress and occupying a worker.
+
+commit d4999d46327086defede0599e297ce27858ecfad
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Wed May 5 12:15:49 2021 +0000
+
+    missing queue from self - causes config serialisation failure (#2042)
+    
+    This fixes a bug in PR #1964 which I think breaks all uses of the grid engine provider.
+    
+    thanks to Quentin Le Boulc'h on LSST slack for reporting
+
+commit 1aeaab6e3f91b4b2262c791b0d6c289ee67063df
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Wed May 5 11:02:11 2021 +0000
+
+    Make process_worker_pool pass mypy (#2052)
+    
+    * Reverse polarity of mac safe queue imports to satisfy mypy
+    
+    mypy determines the type of mpQueue by the type of its first usage.
+    
+    Prior to this commit, that usage was importing MacSafeQueue.
+    That mean the second import did not type check: what it was importing
+    was not MacSafeQueue, but Queue.
+    
+    This commit reverses that, so that mpQueue is now typed as a
+    Queue, and the subsequent import of MacSafeQueue is acceptable:
+    MacSafeQueue is a subclass of Queue.
+    
+    The error message being fixed is this:
+    parsl/executors/high_throughput/process_worker_pool.py:28: error:
+    Incompatible import of "mpQueue" (imported name has type "Type[Queue[Any]]",
+    local name has type "Type[MacSafeQueue]")
+    
+    * Check process_worker_pool.py in mypy
+    
+    * Define process_worker_pool logger differently to pass mypy
+    
+    This defines the global logger variable differently, which appears to pass
+    mypy checking.
+    
+    There is still no guarantee that a global 'logger' value has actually been
+    defined, except when running the process_worker_pool directly as __main__.
+    
+    Co-authored-by: Zhuozhao Li <zhuozhao@uchicago.edu>
+
+commit 03f505771f9a928c2ebd641a6d428168fb84b839
+Author: Zhuozhao Li <zhuozhao@uchicago.edu>
+Date:   Tue May 4 12:18:36 2021 -0500
+
+    Add nscc singapore example config (#2003)
+    
+    * add nscc singapore example config
+    
+    * add conda setup for nscc
+    
+    * update nscc config
+
+commit 4d798e35e05954f09424b8e984b6c0f85cea74ea
+Author: Vladimir <6596606+vkhodygo@users.noreply.github.com>
+Date:   Tue May 4 13:40:19 2021 +0100
+
+    Replace old string formatting with f-strings in utils.py (#2055)
+    
+    This is the first commit of the series to improve overall code quality.
+    
+    Part of #2045
+
+commit ce2552caed9d223c3d8a84c16f830abc5f926331
+Author: Vladimir <6596606+vkhodygo@users.noreply.github.com>
+Date:   Mon May 3 11:37:51 2021 +0100
+
+    FIX: os independent path (#2043)
+    
+    This change was originally added by @rantahar to a fork of libsubmit which means it has to be reintroduced again due to all the structural changes.
+    I've found this PR a bit later and it was created not long before the project assimilation so it didn't have a chance to be merged. I'm not sure about line endings though, it looks like a reasonable thing since there is going to be Linux running on the other side.
+    Rather than stacking strings together it's much better to use os module to make it work on Windows as well.
+    originally by j.m.o.rantaharju@swansea.ac.uk
+    
+    Co-authored-by: Ben Clifford <benc@hawaga.org.uk>
+
+commit 336a4822a2409b98c236901d29ec2645dbae96c3
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Sat May 1 11:25:16 2021 +0000
+
+    Make WorkQueue worker command configurable (#2036)
+    
+    This is useful when launching workqueue workers inside
+    some other environment - for example, when the workers
+    are installed inside a singularity/shifter image.
+
+commit 9eca2a949471520f161a82cc046397a1d69d939c
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Wed Apr 28 17:40:52 2021 +0000
+
+    Reflect python 3.9 support in setup.py metadata (#2023)
+    
+    Python 3.9 has been supported by parsl since #1720
+
+commit 9640ea4aaee9b9bbb3d91be7733284b926ad5e69
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Wed Apr 28 17:12:20 2021 +0000
+
+    Fix use of previously removed reg_time monitoring field (#2020)
+    
+    PR 1876 removed the reg_time field from the monitoring database but did not remove attempts to use it from the visualization code, or code that initialises it on the sending side.
+    
+    Visualization was broken because of this.
+    
+    Type of change
+    Bug fix (non-breaking change that fixes an issue)
+    Code maintentance/cleanup
+
+commit 8a87f9419e4751b937d475f335dd9329ebb0f4a3
+Author: Ben Clifford <benc@hawaga.org.uk>
+Date:   Tue Apr 27 11:42:15 2021 +0000
+
+    Use zsh compatible install syntax (#2009)
+    
+    Without '-marks, zsh tries to resolve our given example installer
+    commandlines as wildcards, resulting in errors like this:
+    
+    $ pip install parsl[monitoring]
+    zsh: no matches found: parsl[monitoring]
+
+commit c8932a43515850afe8940a5284632c557c0ed184
+Author: Daniel S. Katz <d.katz@ieee.org>
+Date:   Mon Apr 26 19:08:03 2021 -0500
+
+    better formatting (#2039)
+
+
+
+
+
+
+
 
 Parsl 1.1.0
 -----------
