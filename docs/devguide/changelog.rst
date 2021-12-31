@@ -22,7 +22,7 @@ High Throughput Executor
 Work Queue Executor
 ^^^^^^^^^^^^^^^^^^^
 
-* Allow use of WorkQueue running_time_min resource constraint (#2113) -WQ recently introduced an additional resource constraint: workers can be aware of their remaining wall time, and tasks can be constrained to only go to workers with sufficient remaining time.
+* Allow use of WorkQueue running_time_min resource constraint (#2113) - WQ recently introduced an additional resource constraint: workers can be aware of their remaining wall time, and tasks can be constrained to only go to workers with sufficient remaining time.
     
 * Implement priority as a Work Queue resource specification (#2067) - The allows a workflow script to influence the order in which queued tasks are executed using Work Queue's existing priority mechanism.
 
