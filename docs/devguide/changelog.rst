@@ -109,6 +109,15 @@ Providers
   Grid Engine
     missing queue from self - causes config serialisation failure (#2042)
 
+
+General new features
+
+==
+    Workflow-pluggable retry scoring (#2068)
+    When a task fails, instead of causing a retry "cost" of 1 (the previous behaviour), this PR allows that cost to be determined by a user specified function which is given some context about the failure.
+==
+
+
 General bug fixes
 
   Fix type error when job status output is large. (#2129)
@@ -116,6 +125,13 @@ General bug fixes
   Fix incorrect order of manager and interchange versions in error text (#2108)
   Fix to macos multiprocessing spawn and context issues (#2076)
   Tidy tasks_per_node in strategy (#2030)
+
+Platform and packaging
+    Improve support for Windows (#2107)
+    Reflect python 3.9 support in setup.py metadata (#2023)
+    Remove python <3.6 handling from threadpoolexecutor (#2083)
+    Remove breaking .[all] install target (#2069)
+
 
 Tidying and internal architecture - should not be user-affecting
 
@@ -142,8 +158,10 @@ Tidying and internal architecture - should not be user-affecting
   Eliminate self.tasks[id] calls from launch_task (#2061)
   Eliminate self.tasks[id] from app done callback (#2017)
   Make process_worker_pool pass mypy (#2052)
+  Remove unused walltime from LocalProvider (#2057)
+  Tidy human readable text/variable names around DependencyError (#2037)
 
-Documentation and human-readable text (TODO: categorise this by type of documentaiton: docstring, manuals, other?)
+Documentation, error messages and human-readable text (TODO: categorise this by type of documentaiton: docstring, manuals, other?)
 
   Add a documentation chapter summarizing plugin points (#2066)
   Correct docstring for set_file_logger (#2156)
@@ -170,6 +188,7 @@ Documentation and human-readable text (TODO: categorise this by type of document
   Tidy up slurm state comment (#2035)
   Add nscc singapore example config (#2003)
   better formatting (#2039)
+  Add missing f for an f-string (#2062)
 
 CI/testing
 
@@ -185,6 +204,7 @@ CI/testing
   Add monitoring dependency to local tests (#2074)
   Put viz test in a script (#2019)
   Reduce the size of recursive fibonacci joinapp testing (#2110)
+  Remove disabled midway test (#2028)
 
 =====================
 
@@ -215,28 +235,6 @@ Date:   Wed Dec 1 13:25:02 2021 +0000
     
     If the supplied exception object has a stack trace, then that will also be
     logged at this point now.
-
-
-commit 31b1fbcd6d08d68ff82472814cff0b59c5be2843
-Author: Logan Ward <WardLT@users.noreply.github.com>
-Date:   Mon Aug 2 09:02:36 2021 -0400
-
-    Improve support for Windows (#2107)
-    
-    Changes made in my efforts to get Parsl working minimally on Windows.
-    
-    Do not crash when fcntl is not found.
-    Addresses #1878, though I would not claim I will fix it completely.
-
-commit 2c734195ac3344285f54f33eca60f2686225b7de
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Wed Jun 30 21:00:48 2021 +0000
-
-    Workflow-pluggable retry scoring (#2068)
-    
-    When a task fails, instead of causing a retry "cost" of 1 (the previous behaviour), this PR allows that cost to be determined by a user specified function which is given some context about the failure.
-    
-    After this PR there is a distinction between the accumulated retry cost, and the number of tries (which were previously the same number). This change is reflected in the monitoring database, with both values available.
 
 
 commit b35f00ffed03bc6d83988fbae047905f3b082f57
@@ -294,14 +292,6 @@ Date:   Tue Jun 8 17:38:47 2021 +0000
     >>> repr(e)
     "OptionalModuleMissing(['mymod'], 'this test needs demonstrating')"
 
-commit 7d2767f183c7ba7f982d6fc2142ea682ea176e02
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Sun Jun 6 18:27:41 2021 +0000
-
-    Remove python <3.6 handling from threadpoolexecutor (#2083)
-    
-    Co-authored-by: Yadu Nand Babuji <yadudoc1729@gmail.com>
-
 commit 76e87e5dcc2a464dcd75e2b4bf88f0214daf2a19
 Author: Ben Clifford <benc@hawaga.org.uk>
 Date:   Fri Jun 4 19:35:45 2021 +0000
@@ -329,78 +319,6 @@ Date:   Thu Jun 3 11:15:04 2021 +0000
     
     Co-authored-by: Yadu Nand Babuji <yadudoc1729@gmail.com>
 
-
-    
-
-commit 66139be8bbdd91af3dedd272bd17288ded06607f
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Mon May 24 09:02:41 2021 +0000
-
-    Add missing f for an f-string (#2062)
-    
-    Co-authored-by: Zhuozhao Li <zhuozhao@uchicago.edu>
-
-commit 300b79f00227ab450998d2eb5eda59c50a775ec1
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Fri May 14 18:31:02 2021 +0000
-
-    Remove breaking .[all] install target (#2069)
-    
-    This was introduced in PR 1391 to test that all targets could be installed.
-    
-    That target has never really installed properly though - different parts of
-    parsl optional dependencies conflict with each other and this test has
-    previously only passed because pip didn't actually error out when dependencies
-    conflicted.
-    
-    More recently this has become a problem where pip is not trying hard to
-    resolve a dependency that quite likely is not resolveable, and appears
-    to get stuck trying to install msazure and jeepney.
-    
-    INFO: pip is looking at multiple versions of jeepney to determine which version is compatible with other requirements. This could take a while.
-    Collecting jeepney>=0.4.2
-    Downloading jeepney-0.5.0-py3-none-any.whl (45 kB)
-    Downloading jeepney-0.4.3-py3-none-any.whl (21 kB)
-    Downloading jeepney-0.4.2-py3-none-any.whl (21 kB)
-
-
-    
-
-commit 3e2d3989341bb0c856cb811472fc3551dc204859
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Thu May 6 14:30:36 2021 +0000
-
-    Tidy human readable text/variable names around DependencyError (#2037)
-    
-    * docstring for DependencyError
-    
-    * use __str__ for human formatted message and allow __repr__ to
-      represent more machine-readable format
-
-commit 23c33f84b748601ca9f3d6f3601c92af1454b58b
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Thu May 6 13:45:55 2021 +0000
-
-    Remove unused AppBase status field (#2053)
-    
-    This was initialized to 'created' and then never changed.
-    
-    It was creating minor confusion wrt DFK task record status fields,
-    which it looks like this was once intended to be similar to.
-
-commit ce92f17a2d9d4ba558620e1cd3d92f04b9b18e2b
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Thu May 6 12:47:39 2021 +0000
-
-    Remove unused walltime from LocalProvider (#2057)
-
-commit 6bcc28c385e1b383bfd39386f4f2b99997ca8e39
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Wed May 5 14:07:04 2021 +0000
-
-    Remove disabled midway test (#2028)
-    
-    The per-site testing mechanism is the way to do per-site testing.
 
 commit 75453fbc6ffe3bc35310be42bded4eba90f9948e
 Author: Ben Clifford <benc@hawaga.org.uk>
@@ -432,14 +350,6 @@ Date:   Mon May 3 11:37:51 2021 +0100
     originally by j.m.o.rantaharju@swansea.ac.uk
     
     Co-authored-by: Ben Clifford <benc@hawaga.org.uk>
-
-commit 9eca2a949471520f161a82cc046397a1d69d939c
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Wed Apr 28 17:40:52 2021 +0000
-
-    Reflect python 3.9 support in setup.py metadata (#2023)
-    
-    Python 3.9 has been supported by parsl since #1720
 
 commit 9640ea4aaee9b9bbb3d91be7733284b926ad5e69
 Author: Ben Clifford <benc@hawaga.org.uk>
