@@ -466,7 +466,7 @@ class DatabaseManager:
                 """
                 block_info_messages = self._get_messages_in_batch(self.pending_block_queue)
                 # Creation of dictionary to store previous block messages to avoid duplicate messages
-                UBM = {}  # type: Optional[Dict[str, str]]
+                UBM = {}  # type: Optional[Dict[Any, Any]]
                 if block_info_messages:
                     logger.debug(
                         "Got {} messages from block queue".format(len(block_info_messages)))
