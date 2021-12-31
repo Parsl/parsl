@@ -463,7 +463,6 @@ class DatabaseManager:
 
                 """
                 BLOCK_INFO messages
-          
                 """
                 block_info_messages = self._get_messages_in_batch(self.pending_block_queue)
                 # Creation of dictionary to store previous block messages to avoid duplicate messages
