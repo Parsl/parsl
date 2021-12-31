@@ -25,7 +25,7 @@ yongyanrao
 
 @timj
 @darko-marinov
-
+Quentin Le Boulc'h
 
 
 Executors
@@ -63,6 +63,8 @@ Executors
 ==
 
     Document WorkqueueExecutor project_name remote reporting better (#2089)
+    wq executor should show itself using representation mixin (#2064)
+    Make WorkQueue worker command configurable (#2036)
 
 
 
@@ -104,12 +106,16 @@ Providers
   SLURM
     Improve docs and defaults for slurm partition and account parameters. (#2126)
 
+  Grid Engine
+    missing queue from self - causes config serialisation failure (#2042)
+
 General bug fixes
 
   Fix type error when job status output is large. (#2129)
   Fix a race condition in the local channel (#2115)
   Fix incorrect order of manager and interchange versions in error text (#2108)
   Fix to macos multiprocessing spawn and context issues (#2076)
+  Tidy tasks_per_node in strategy (#2030)
 
 Tidying and internal architecture - should not be user-affecting
 
@@ -129,8 +135,15 @@ Tidying and internal architecture - should not be user-affecting
   Remove unneeded task_id param from sanitize_and_wrap (#2081)
   Remove outdated IPP related comment in memoization (#2058)
   Remove unused AppBase status field (#2053)
+  Do not unwrap joinapp future exceptions unnecessarily (#2084)
+  Eliminate self.tasks[id] calls from joinapp callback (#2015)
+  Looking at eliminating passing of task IDs and passing task records instead (#2016)
+  Eliminate self.tasks[id] from launch_if_ready
+  Eliminate self.tasks[id] calls from launch_task (#2061)
+  Eliminate self.tasks[id] from app done callback (#2017)
+  Make process_worker_pool pass mypy (#2052)
 
-Documentation (TODO: categorise this by type of documentaiton: docstring, manuals, other?)
+Documentation and human-readable text (TODO: categorise this by type of documentaiton: docstring, manuals, other?)
 
   Add a documentation chapter summarizing plugin points (#2066)
   Correct docstring for set_file_logger (#2156)
@@ -154,6 +167,9 @@ Documentation (TODO: categorise this by type of documentaiton: docstring, manual
   Add documentation on meanings of states (#2075)
   Fix summary sentence of ScaleOutException (#2021)
   clarify that max workers is per node (#2056)
+  Tidy up slurm state comment (#2035)
+  Add nscc singapore example config (#2003)
+  better formatting (#2039)
 
 CI/testing
 
@@ -167,6 +183,8 @@ CI/testing
   Test combine() pattern in joinapps (#2054)
   Assert that there should be no doc stubs in version control (#2092)
   Add monitoring dependency to local tests (#2074)
+  Put viz test in a script (#2019)
+  Reduce the size of recursive fibonacci joinapp testing (#2110)
 
 =====================
 
@@ -198,36 +216,6 @@ Date:   Wed Dec 1 13:25:02 2021 +0000
     If the supplied exception object has a stack trace, then that will also be
     logged at this point now.
 
-
-commit 6913e45649d7f56725370a862ba7bfc859134822
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Tue Aug 24 11:30:51 2021 +0000
-
-    Reduce the size of recursive fibonacci joinapp testing (#2110)
-    
-    This test was using about 1/3rd of the testing time of the
-    WQ executor - I haven't profiled for other executors -
-    which is a lot for a fairly obscure feature.
-    
-    Rough timings on my laptop: before: 100s, after 10s
-    
-    Co-authored-by: Yadu Nand Babuji <yadudoc1729@gmail.com>
-
-
-commit ad7d8828c7452951807562f1a2499e9edf9ca4e9
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Wed Aug 18 12:49:04 2021 +0000
-
-    Put viz test in a script (#2019)
-    
-    * put viz test in a script
-    
-    this means that the same test used in CI can also be used on the commandline,
-    and with bisection, 'git bisect run parsl/tests/test-viz'
-    
-    * Update github actions to follow travis change
-    
-    Co-authored-by: Yadu Nand Babuji <yadudoc1729@gmail.com>
 
 commit 31b1fbcd6d08d68ff82472814cff0b59c5be2843
 Author: Logan Ward <WardLT@users.noreply.github.com>
@@ -306,16 +294,6 @@ Date:   Tue Jun 8 17:38:47 2021 +0000
     >>> repr(e)
     "OptionalModuleMissing(['mymod'], 'this test needs demonstrating')"
 
-commit ddadf94785cc4ca785bacd5eb319904943178897
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Sun Jun 6 19:11:30 2021 +0000
-
-    Do not unwrap joinapp future exceptions unnecessarily (#2084)
-    
-    An AppFuture will always present its exception as a future.exception(),
-    not as a RemoteWrapper. RemoteWrappers are used at the executor future
-    layer.
-
 commit 7d2767f183c7ba7f982d6fc2142ea682ea176e02
 Author: Ben Clifford <benc@hawaga.org.uk>
 Date:   Sun Jun 6 18:27:41 2021 +0000
@@ -351,21 +329,8 @@ Date:   Thu Jun 3 11:15:04 2021 +0000
     
     Co-authored-by: Yadu Nand Babuji <yadudoc1729@gmail.com>
 
-commit 282fbdd593e4b8f42df58b7e5c4a3be3a4c0fda7
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Thu Jun 3 10:26:52 2021 +0000
 
-    Eliminate self.tasks[id] calls from launch_task (#2061)
     
-    See issue #2014
-
-commit e1ee8085cc1f74f432b8a13ff0398a9792f2424f
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Thu Jun 3 10:04:26 2021 +0000
-
-    Eliminate self.tasks[id] from app done callback (#2017)
-    
-    see #2014
 
 commit 66139be8bbdd91af3dedd272bd17288ded06607f
 Author: Ben Clifford <benc@hawaga.org.uk>
@@ -374,35 +339,6 @@ Date:   Mon May 24 09:02:41 2021 +0000
     Add missing f for an f-string (#2062)
     
     Co-authored-by: Zhuozhao Li <zhuozhao@uchicago.edu>
-
-commit 2f28b255feb76b5e689c2ac47fde92148c5c3707
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Fri May 21 20:39:03 2021 +0000
-
-    Add monitoring dependency to local tests (#2074)
-    
-    In CI this was not revealed because of the order in which tests are run there.
-
-commit bf83c06af78ac0e4243fa2b6686d3b99110cf01c
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Mon May 17 07:48:02 2021 +0000
-
-    Tidy tasks_per_node in strategy (#2030)
-    
-    tasks_per_node case in general strategy is a mess:
-    the ExtremeScale case will never fire in the current extremescale implementaiton,
-    because an extreme scale executor is also a high throughput executor, and so the
-    earlier htex case will fire.
-    
-    It is possible that extreme scale scaling was broken because of this case. This
-    patch should not make it either better or worse, because it only eliminates dead
-    code.
-    
-    when an executor is not an htex instance, no cases match, but no error is raised
-    here, and so tasks_per_node is never assigned. Later on (line 206) use of
-    tasks_per_node is an error.
-    
-    this entire case is removed, and executor.workers_per_node is always used.
 
 commit 300b79f00227ab450998d2eb5eda59c50a775ec1
 Author: Ben Clifford <benc@hawaga.org.uk>
@@ -427,37 +363,8 @@ Date:   Fri May 14 18:31:02 2021 +0000
     Downloading jeepney-0.4.3-py3-none-any.whl (21 kB)
     Downloading jeepney-0.4.2-py3-none-any.whl (21 kB)
 
-commit 50642691326e9bc05b395519cbecb691bfe7a3e2
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Mon May 10 16:16:44 2021 +0000
 
-    wq executor should show itself using representation mixin (#2064)
     
-    there is an issue for this #2007
-
-commit 7b28e5d413698f072a34347824ed056083de8a8e
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Fri May 7 15:13:55 2021 +0000
-
-    Eliminate self.tasks[id] calls from joinapp callback (#2015)
-    
-    see issue #2014
-
-commit bca4121ab37101025501bb8ba33044333b7b66c5
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Fri May 7 14:46:30 2021 +0000
-
-    looking at eliminating passing of task IDs and passing task records instead (#2016)
-    
-    See issue #2014
-
-commit dea04563730636919a6b784beac64af23e877ae6
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Fri May 7 10:48:44 2021 +0000
-
-    Eliminate self.tasks[id] from launch_if_ready
-    
-    see #2014
 
 commit 3e2d3989341bb0c856cb811472fc3551dc204859
 Author: Ben Clifford <benc@hawaga.org.uk>
@@ -495,12 +402,6 @@ Date:   Wed May 5 14:07:04 2021 +0000
     
     The per-site testing mechanism is the way to do per-site testing.
 
-commit 390ff058933aed52e84823ade886b1696cc4a145
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Wed May 5 13:20:59 2021 +0000
-
-    Tidy up slurm state comment (#2035)
-
 commit 75453fbc6ffe3bc35310be42bded4eba90f9948e
 Author: Ben Clifford <benc@hawaga.org.uk>
 Date:   Wed May 5 12:46:48 2021 +0000
@@ -508,63 +409,6 @@ Date:   Wed May 5 12:46:48 2021 +0000
     Fix worker efficiency plot when tasks are still in progress (#2048)
     
     Prior to this PR, this plot would crash. After this PR, this plot regards task without an end time as still in progress and occupying a worker.
-
-commit d4999d46327086defede0599e297ce27858ecfad
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Wed May 5 12:15:49 2021 +0000
-
-    missing queue from self - causes config serialisation failure (#2042)
-    
-    This fixes a bug in PR #1964 which I think breaks all uses of the grid engine provider.
-    
-    thanks to Quentin Le Boulc'h on LSST slack for reporting
-
-commit 1aeaab6e3f91b4b2262c791b0d6c289ee67063df
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Wed May 5 11:02:11 2021 +0000
-
-    Make process_worker_pool pass mypy (#2052)
-    
-    * Reverse polarity of mac safe queue imports to satisfy mypy
-    
-    mypy determines the type of mpQueue by the type of its first usage.
-    
-    Prior to this commit, that usage was importing MacSafeQueue.
-    That mean the second import did not type check: what it was importing
-    was not MacSafeQueue, but Queue.
-    
-    This commit reverses that, so that mpQueue is now typed as a
-    Queue, and the subsequent import of MacSafeQueue is acceptable:
-    MacSafeQueue is a subclass of Queue.
-    
-    The error message being fixed is this:
-    parsl/executors/high_throughput/process_worker_pool.py:28: error:
-    Incompatible import of "mpQueue" (imported name has type "Type[Queue[Any]]",
-    local name has type "Type[MacSafeQueue]")
-    
-    * Check process_worker_pool.py in mypy
-    
-    * Define process_worker_pool logger differently to pass mypy
-    
-    This defines the global logger variable differently, which appears to pass
-    mypy checking.
-    
-    There is still no guarantee that a global 'logger' value has actually been
-    defined, except when running the process_worker_pool directly as __main__.
-    
-    Co-authored-by: Zhuozhao Li <zhuozhao@uchicago.edu>
-
-commit 03f505771f9a928c2ebd641a6d428168fb84b839
-Author: Zhuozhao Li <zhuozhao@uchicago.edu>
-Date:   Tue May 4 12:18:36 2021 -0500
-
-    Add nscc singapore example config (#2003)
-    
-    * add nscc singapore example config
-    
-    * add conda setup for nscc
-    
-    * update nscc config
 
 commit 4d798e35e05954f09424b8e984b6c0f85cea74ea
 Author: Vladimir <6596606+vkhodygo@users.noreply.github.com>
@@ -589,16 +433,6 @@ Date:   Mon May 3 11:37:51 2021 +0100
     
     Co-authored-by: Ben Clifford <benc@hawaga.org.uk>
 
-commit 336a4822a2409b98c236901d29ec2645dbae96c3
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Sat May 1 11:25:16 2021 +0000
-
-    Make WorkQueue worker command configurable (#2036)
-    
-    This is useful when launching workqueue workers inside
-    some other environment - for example, when the workers
-    are installed inside a singularity/shifter image.
-
 commit 9eca2a949471520f161a82cc046397a1d69d939c
 Author: Ben Clifford <benc@hawaga.org.uk>
 Date:   Wed Apr 28 17:40:52 2021 +0000
@@ -620,29 +454,6 @@ Date:   Wed Apr 28 17:12:20 2021 +0000
     Type of change
     Bug fix (non-breaking change that fixes an issue)
     Code maintentance/cleanup
-
-commit 8a87f9419e4751b937d475f335dd9329ebb0f4a3
-Author: Ben Clifford <benc@hawaga.org.uk>
-Date:   Tue Apr 27 11:42:15 2021 +0000
-
-    Use zsh compatible install syntax (#2009)
-    
-    Without '-marks, zsh tries to resolve our given example installer
-    commandlines as wildcards, resulting in errors like this:
-    
-    $ pip install parsl[monitoring]
-    zsh: no matches found: parsl[monitoring]
-
-commit c8932a43515850afe8940a5284632c557c0ed184
-Author: Daniel S. Katz <d.katz@ieee.org>
-Date:   Mon Apr 26 19:08:03 2021 -0500
-
-    better formatting (#2039)
-
-
-
-
-
 
 
 
