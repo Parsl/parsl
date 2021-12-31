@@ -463,17 +463,27 @@ class DatabaseManager:
 
                 """
                 BLOCK_INFO messages
-
+          
                 """
                 block_info_messages = self._get_messages_in_batch(self.pending_block_queue)
+                # Creation of dictionary to store previous block messages to avoid duplicate messages
+                UBM = {}
                 if block_info_messages:
                     logger.debug(
                         "Got {} messages from block queue".format(len(block_info_messages)))
-                    # block_info_messages is possibly a nested list of dict (at different polling times)
+                    # block_info_messages is a nested list of dict (at different polling times)
+                    # block_msg is a list of messages (each message is a dict)
                     # Each dict refers to the info of a job/block at one polling time
                     block_messages_to_insert = []  # type: List[Any]
                     for block_msg in block_info_messages:
-                        block_messages_to_insert.extend(block_msg)
+                        for x in range(len(block_msg)):
+                            if block_msg[x]['block_id'] in UBM.keys():
+                                if UBM[block_msg[x]['block_id']] != block_msg[x]['status']:
+                                    block_messages_to_insert.append(block_msg[x])
+                                    UBM[block_msg[x]['block_id']] = block_msg[x]['status']
+                            else:
+                                block_messages_to_insert.append(block_msg[x])
+                                UBM[block_msg[x]['block_id']] = block_msg[x]['status']
                     self._insert(table=BLOCK, messages=block_messages_to_insert)
 
                 """
