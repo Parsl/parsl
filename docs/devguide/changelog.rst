@@ -8,22 +8,19 @@ Target release date: January 19th, 2022.
 
 Parsl v1.2.0 includes 99 pull requests with contributions from:
 
-TODO: github tags for these
-
-Ben Clifford
-Daniel S. Katz
-Douglas Thain
-James Corbett
-Jonas Rübenach
-Logan Ward
-Matthew R. Becker
-Vladimir
-Yadu Nand Babuji
-Yo Yehudi
-Zhuozhao Li
-yongyanrao
-
-@timj
+Ben Clifford @benclifford
+Daniel S. Katz @danielskatz
+Douglas Thain @dthain
+James Corbett @jameshcorbett
+Jonas Rübenach @jrueb
+Logan Ward @WardLT
+Matthew R. Becker @beckermr
+Vladimir @vkhodygo
+Yadu Nand Babuji @yadudoc
+Yo Yehudi @yochannah
+Zhuozhao Li @ZhuozhaoLi
+yongyanrao @yongyanrao
+Tim Jenness @timj
 @darko-marinov
 Quentin Le Boulc'h
 
