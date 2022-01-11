@@ -26,7 +26,14 @@ class JobState(bytes, Enum):
 
 
 class JobStatus(object):
-    """Encapsulates a job state together with other details, presently a (error) message"""
+    """Encapsulates a job state together with other details:
+
+    Args:
+        message: Optional human readable message
+        exit_code: Optional exit code
+        stdout_path: Optional path to a file containing the job's stdout
+        stderr_path: Optional path to a file containing the job's stderr
+    """
     SUMMARY_TRUNCATION_THRESHOLD = 2048
 
     def __init__(self, state: JobState, message: str = None, exit_code: Optional[int] = None,
@@ -125,14 +132,17 @@ class ExecutionProvider(metaclass=ABCMeta):
                                 |
                                 +-------------------
      """
+
+    # these are because these variables are implemented
+    # as properties... 
     _cores_per_node = None  # type: Optional[int]
     _mem_per_node = None  # type: Optional[float]
 
     @abstractmethod
     def submit(self, command: str, tasks_per_node: int, job_name: str = "parsl.auto") -> Any:
         ''' The submit method takes the command string to be executed upon
-        instantiation of a resource most often to start a pilot (such as IPP engine
-        or even Swift-T engines).
+        instantiation of a resource most often to start a pilot (such as for
+        HighThroughputExecutor or WorkQueueExecutor).
 
         Args :
              - command (str) : The bash command string to be executed
@@ -200,8 +210,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         variable PARSL_MEMORY_GB before executing submitted commands.
 
         If this property is set, executors may use it to calculate how many tasks can
-        run concurrently per node. This information is used by dataflow.Strategy to estimate
-        the resources required to run all outstanding tasks.
+        run concurrently per node.
         """
         return self._mem_per_node
 
@@ -218,8 +227,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         variable PARSL_CORES before executing submitted commands.
 
         If this property is set, executors may use it to calculate how many tasks can
-        run concurrently per node. This information is used by dataflow.Strategy to estimate
-        the resources required to run all outstanding tasks.
+        run concurrently per node.
         """
         return self._cores_per_node
 

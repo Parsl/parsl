@@ -172,6 +172,9 @@ class Interchange(object):
         os.makedirs(self.logdir, exist_ok=True)
 
         start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
+        # this causes logger to be set globally ^ (!) so logger can be configured after
+        # this call, but not before. That's probably something to fix.
+        logger.propagate = False
         logger.debug("Initializing Interchange process")
 
         self.client_address = client_address

@@ -639,11 +639,9 @@ class MonitoringRouter:
                     dfk_loop_start = time.time()
                     while time.time() - dfk_loop_start < 1.0:  # TODO make configurable
                         msg = self.ic_channel.recv_pyobj()
-                        self.logger.debug("Got ZMQ Message: {}".format(msg))
                         assert isinstance(msg, tuple), "IC Channel expects only tuples, got {}".format(msg)
                         assert len(msg) >= 1, "IC Channel expects tuples of length at least 1, got {}".format(msg)
                         if msg[0] == MessageType.NODE_INFO:
-                            self.logger.info("message is NODE_INFO")
                             assert len(msg) == 2, "IC Channel expects NODE_INFO tuples of length 2, got {}".format(msg)
                             msg[1]['run_id'] = self.run_id
 
@@ -651,20 +649,9 @@ class MonitoringRouter:
                             node_msg = (msg, 0)
                             node_msgs.put(cast(Any, node_msg))
                         elif msg[0] == MessageType.RESOURCE_INFO:
-                            # with more uniform handling of messaging, it doesn't matter
-                            # too much which queue this goes to now... could be node_msgs
-                            # just as well, I think.
-                            # and if the above message rewriting was got rid of, this block might not need to switch on message tag at all.
-                            self.logger.info("Handling as RESOURCE_INFO")
                             resource_msgs.put(cast(Any, (msg, 0)))
                         elif msg[0] == MessageType.BLOCK_INFO:
-                            self.logger.info("Putting message to block_msgs: {}".format((msg, 0)))
-                            # block_msgs.put((msg, 0))
                             block_msgs.put(cast(Any, (msg, 0)))
-                            # TODO this cast is suspicious and is to make mypy
-                            # trivially pass rather than me paying attention to
-                            # the message structure. so if something breaks in
-                            # this patch, it could well be here.
                         elif msg[0] == MessageType.TASK_INFO:
                             priority_msgs.put((cast(Any, msg), 0))
                         elif msg[0] == MessageType.WORKFLOW_INFO:
