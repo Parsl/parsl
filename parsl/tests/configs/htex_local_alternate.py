@@ -40,7 +40,7 @@ def fresh_config():
     return Config(
         executors=[
             HighThroughputExecutor(
-                launch_cmd="davidadams_reporter.py /tmp/da_test " + DEFAULT_LAUNCH_CMD,
+                launch_cmd="davidadams_reporter.py /tmp/ " + DEFAULT_LAUNCH_CMD,
                 label="htex_Local",
                 address="localhost",
                 working_dir=working_dir,
