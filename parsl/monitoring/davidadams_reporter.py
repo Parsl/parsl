@@ -16,6 +16,7 @@ import subprocess
 import sys
 import time
 
+from typing import Any
 from parsl.log_utils import set_stream_logger
 
 logger = logging.getLogger("parsl.monitoring.davidadams_reporter")
@@ -39,7 +40,9 @@ if __name__ == "__main__":
     csv_filename = report_prefix + "/" + hostname + "." + str(time.time()) + ".csv"
 
     worker_process = subprocess.Popen(args)
-    ret = None
+
+    ret: Any = None
+
     reading = 0
     with open(csv_filename, "w") as csv_file:
         while ret is None:
