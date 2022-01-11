@@ -134,7 +134,7 @@ class ExecutionProvider(metaclass=ABCMeta):
      """
 
     # these are because these variables are implemented
-    # as properties... 
+    # as properties...
     _cores_per_node = None  # type: Optional[int]
     _mem_per_node = None  # type: Optional[float]
 

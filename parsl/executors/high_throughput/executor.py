@@ -48,7 +48,6 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers} "
                       "--cpu-affinity {cpu_affinity} ")
 
 
-
 class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     """Executor designed for cluster-scale
 

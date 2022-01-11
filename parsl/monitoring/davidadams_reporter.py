@@ -10,23 +10,18 @@ such as the block ID.
 """
 
 import logging
-import os
 import platform
 import psutil
 import subprocess
 import sys
 import time
-import uuid
 
-from datetime import datetime
 from parsl.log_utils import set_stream_logger
-from parsl.monitoring.monitoring import FilesystemRadio
 
 logger = logging.getLogger("parsl.monitoring.davidadams_reporter")
 
 
 if __name__ == "__main__":
-
 
     set_stream_logger()
     logger.info(f"reporter starting, with args {sys.argv}")
@@ -43,7 +38,6 @@ if __name__ == "__main__":
     hostname = platform.node()
     csv_filename = report_prefix + "/" + hostname + "." + str(time.time()) + ".csv"
 
-
     worker_process = subprocess.Popen(args)
     ret = None
     reading = 0
@@ -55,7 +49,6 @@ if __name__ == "__main__":
 
             reading += 1
             time.sleep(10)
-
 
     logger.info(f"subprocessed ended with return code {ret.returncode}")
 
