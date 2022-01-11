@@ -111,7 +111,12 @@ def load_dfk_session(request, pytestconfig):
         if DataFlowKernelLoader._dfk is not None:
             raise RuntimeError("DFK didn't start as None - there was a DFK from somewhere already")
 
-        dfk = parsl.load(module.config)
+        if hasattr(module, 'config'):
+            dfk = parsl.load(module.config)
+        elif hasattr(module, 'fresh_config'):
+            dfk = parsl.load(module.fresh_config())
+        else:
+            raise RuntimeError("Config module does not define config or fresh_config")
 
         yield
 

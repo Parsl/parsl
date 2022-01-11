@@ -71,6 +71,3 @@ def fresh_config():
         raise RuntimeError("This site cannot be identified")
 
     return config
-
-
-config = fresh_config()
