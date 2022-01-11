@@ -52,6 +52,8 @@ setup(
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
                'parsl/executors/workqueue/exec_parsl_function.py',
                'parsl/executors/workqueue/parsl_coprocess.py',
+               'parsl/monitoring/node_reporter.py',
+               'parsl/monitoring/davidadams_reporter.py',
     ],
 
     extras_require=extras_require,
