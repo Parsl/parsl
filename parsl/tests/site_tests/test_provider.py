@@ -18,6 +18,7 @@ def platform(sleep=10, stdout=None):
 
 
 @pytest.mark.local
+@pytest.mark.site
 def test_provider():
     """ Provider scaling
     """
