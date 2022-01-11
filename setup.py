@@ -50,6 +50,8 @@ setup(
                'parsl/executors/extreme_scale/mpi_worker_pool.py',
                'parsl/executors/low_latency/lowlatency_worker.py',
                'parsl/executors/workqueue/exec_parsl_function.py',
+               'parsl/monitoring/node_reporter.py',
+               'parsl/monitoring/davidadams_reporter.py',
     ],
 
     extras_require=extras_require,

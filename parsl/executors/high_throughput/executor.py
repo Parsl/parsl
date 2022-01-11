@@ -32,6 +32,22 @@ from parsl.providers import LocalProvider
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers} "
+                      "-a {addresses} "
+                      "-p {prefetch_capacity} "
+                      "-c {cores_per_worker} "
+                      "-m {mem_per_worker} "
+                      "--poll {poll_period} "
+                      "--task_port={task_port} "
+                      "--result_port={result_port} "
+                      "--logdir={logdir} "
+                      "--block_id={{block_id}} "
+                      "--hb_period={heartbeat_period} "
+                      "{address_probe_timeout_string} "
+                      "--hb_threshold={heartbeat_threshold} "
+                      "--cpu-affinity {cpu_affinity} "
+                      "--available-accelerators {accelerators}")
+
 
 class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     """Executor designed for cluster-scale
@@ -259,22 +275,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.cpu_affinity = cpu_affinity
 
         if not launch_cmd:
-            self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
-                               "-a {addresses} "
-                               "-p {prefetch_capacity} "
-                               "-c {cores_per_worker} "
-                               "-m {mem_per_worker} "
-                               "--poll {poll_period} "
-                               "--task_port={task_port} "
-                               "--result_port={result_port} "
-                               "--logdir={logdir} "
-                               "--block_id={{block_id}} "
-                               "--hb_period={heartbeat_period} "
-                               "{address_probe_timeout_string} "
-                               "--hb_threshold={heartbeat_threshold} "
-                               "--cpu-affinity {cpu_affinity} "
-                               "--available-accelerators {accelerators}")
-
+            self.launch_cmd = DEFAULT_LAUNCH_CMD
     radio_mode = "htex"
 
     def initialize_scaling(self):

@@ -26,6 +26,7 @@ from parsl.launchers import SingleNodeLauncher
 
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
+from parsl.executors.high_throughput.executor import DEFAULT_LAUNCH_CMD
 
 
 from parsl.data_provider.http import HTTPInTaskStaging
@@ -39,6 +40,7 @@ def fresh_config():
     return Config(
         executors=[
             HighThroughputExecutor(
+                launch_cmd="davidadams_reporter.py /tmp/ " + DEFAULT_LAUNCH_CMD,
                 label="htex_Local",
                 address="localhost",
                 working_dir=working_dir,
