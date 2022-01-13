@@ -4,7 +4,7 @@ Changelog
 Parsl 1.2.0
 -----------
 
-Target release date: January 19th, 2022.
+Release date: January 13th, 2022.
 
 Parsl v1.2.0 includes 99 pull requests with contributions from:
 
