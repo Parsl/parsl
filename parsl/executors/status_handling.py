@@ -48,7 +48,15 @@ class BlockProviderExecutor(ParslExecutor):
         self._simulated_status: Dict[Any, JobStatus] = {}
         self._executor_bad_state = threading.Event()
         self._executor_exception: Optional[Exception] = None
+
+        # TODO: maybe this can be subsumed into the new block ID allocator?
         self._generated_block_id_counter = 1
+
+        # factor this with the DFK task ID lock code to give an atomic
+        # counter class? if such a thing doesn't exist in python lib already?
+        self._block_sequence_number_lock = threading.Lock()
+        self._block_sequence_number = 0
+
         self._tasks = {}  # type: Dict[object, Future]
         self.blocks = {}  # type: Dict[str, str]
         self.block_mapping = {}  # type: Dict[str, str]
@@ -160,8 +168,12 @@ class BlockProviderExecutor(ParslExecutor):
         if not self.provider:
             raise (ScalingFailed(None, "No execution provider available"))
         block_ids = []
+        logger.info(f"Scaling out by {blocks} blocks")
         for i in range(blocks):
-            block_id = str(len(self.blocks))
+            with self._block_sequence_number_lock:
+                block_id = str(self._block_sequence_number)
+                self._block_sequence_number += 1
+                logger.debug(f"Allocated block ID {block_id}")
             try:
                 job_id = self._launch_block(block_id)
                 self.blocks[block_id] = job_id
