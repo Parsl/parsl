@@ -12,7 +12,7 @@ jobs:
       matrix:
         python-version: ["3.6", "3.7", "3.8", "3.9"]
     runs-on: ubuntu-20.04
-    timeout-minutes: 40
+    timeout-minutes: 60
 
     steps:
     - uses: actions/checkout@master
@@ -72,3 +72,10 @@ jobs:
     - name: make coverage
       run: |
         make coverage
+
+    - name: Archive runinfo logs
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: runinfo-${{ matrix.python-version }}
+        path: runinfo/
