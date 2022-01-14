@@ -242,8 +242,3 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
     @property
     def status_polling_interval(self):
         return 60
-
-
-if __name__ == "__main__":
-
-    print("None")
