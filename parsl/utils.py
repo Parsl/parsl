@@ -3,6 +3,7 @@ import logging
 import os
 import shlex
 import subprocess
+import threading
 import time
 import typeguard
 from contextlib import contextmanager
@@ -239,3 +240,18 @@ class RepresentationMixin(object):
             return assemble_line(args, kwargs)
         else:
             return assemble_multiline(args, kwargs)
+
+
+class AtomicIDCounter:
+    """A class to allocate counter-style IDs, in a thread-safe way.
+    """
+
+    def __init__(self):
+        self.count = 0
+        self.lock = threading.Lock()
+
+    def get_id(self):
+        with self.lock:
+            new_id = self.count
+            self.count += 1
+            return new_id
