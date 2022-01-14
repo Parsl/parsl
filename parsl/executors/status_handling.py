@@ -9,6 +9,7 @@ import parsl  # noqa F401
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
 from parsl.providers.provider_base import JobStatus, ExecutionProvider, JobState
+from parsl.utils import AtomicIDCounter
 
 
 logger = logging.getLogger(__name__)
@@ -49,13 +50,7 @@ class BlockProviderExecutor(ParslExecutor):
         self._executor_bad_state = threading.Event()
         self._executor_exception: Optional[Exception] = None
 
-        # TODO: maybe this can be subsumed into the new block ID allocator?
-        self._generated_block_id_counter = 1
-
-        # factor this with the DFK task ID lock code to give an atomic
-        # counter class? if such a thing doesn't exist in python lib already?
-        self._block_sequence_number_lock = threading.Lock()
-        self._block_sequence_number = 0
+        self._block_id_counter = AtomicIDCounter()
 
         self._tasks = {}  # type: Dict[object, Future]
         self.blocks = {}  # type: Dict[str, str]
@@ -92,8 +87,8 @@ class BlockProviderExecutor(ParslExecutor):
         as failed and report it in status()
         """
         if block_id is None:
-            block_id = "failed-block-{}".format(self._generated_block_id_counter)
-            self._generated_block_id_counter += 1
+            block_id = str(self._block_id_counter.get_id())
+            logger.info(f"Allocated block ID {block_id} for simulated failure")
         self._simulated_status[block_id] = JobStatus(JobState.FAILED, message)
 
     @abstractproperty
@@ -170,10 +165,8 @@ class BlockProviderExecutor(ParslExecutor):
         block_ids = []
         logger.info(f"Scaling out by {blocks} blocks")
         for i in range(blocks):
-            with self._block_sequence_number_lock:
-                block_id = str(self._block_sequence_number)
-                self._block_sequence_number += 1
-                logger.debug(f"Allocated block ID {block_id}")
+            block_id = str(self._block_id_counter.get_id())
+            logger.info(f"Allocated block ID {block_id}")
             try:
                 job_id = self._launch_block(block_id)
                 self.blocks[block_id] = job_id
