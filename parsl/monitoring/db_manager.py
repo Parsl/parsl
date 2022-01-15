@@ -479,7 +479,7 @@ class DatabaseManager:
                             this_id = this_msg['block_id']
                             this_status = this_msg['status']
                             if this_id in UBM.keys():
-                                if UBM[this_id] != this_status]:
+                                if UBM[this_id] != this_status:
                                     block_messages_to_insert.append(this_msg)
                                     UBM[this_id] = this_status
                             else:
