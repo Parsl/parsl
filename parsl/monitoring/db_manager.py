@@ -475,14 +475,16 @@ class DatabaseManager:
                     # Each dict refers to the info of a job/block at one polling time
                     block_messages_to_insert = []  # type: List[Any]
                     for block_msg in block_info_messages:
-                        for x in range(len(block_msg)):
-                            if block_msg[x]['block_id'] in UBM.keys():
-                                if UBM[block_msg[x]['block_id']] != block_msg[x]['status']:
-                                    block_messages_to_insert.append(block_msg[x])
-                                    UBM[block_msg[x]['block_id']] = block_msg[x]['status']
+                        for this_msg in block_msg:
+                            this_id = this_msg['block_id']
+                            this_status = this_msg['status']
+                            if this_id in UBM.keys():
+                                if UBM[this_id] != this_status]:
+                                    block_messages_to_insert.append(this_msg)
+                                    UBM[this_id] = this_status
                             else:
-                                block_messages_to_insert.append(block_msg[x])
-                                UBM[block_msg[x]['block_id']] = block_msg[x]['status']
+                                block_messages_to_insert.append(this_msg)
+                                UBM[this_id] = this_status
                     self._insert(table=BLOCK, messages=block_messages_to_insert)
 
                 """
