@@ -472,7 +472,7 @@ class DatabaseManager:
                         "Got {} messages from block queue".format(len(block_info_messages)))
                     # block_info_messages is a nested list of dict (at different polling times)
                     # block_msg is a list of messages (each message is a dict)
-                    # Each dict refers to the info of a job/block at one polling time
+                    # Each dict refers to the info of a job / block at one polling time
                     block_messages_to_insert = []  # type: List[Any]
                     for block_msg in block_info_messages:
                         for this_msg in block_msg:
