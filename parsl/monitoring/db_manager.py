@@ -275,7 +275,7 @@ class DatabaseManager:
 
         self.pending_priority_queue = queue.Queue()  # type: queue.Queue[Tuple[MessageType, Dict[str, Any]]]
         self.pending_node_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
-        self.pending_block_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
+        self.pending_block_queue = queue.Queue()  # type: queue.Queue[List[Dict[str, Any]]]
         self.pending_resource_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
 
     def start(self,
