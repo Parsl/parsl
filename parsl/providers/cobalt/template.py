@@ -1,4 +1,4 @@
-template_string = '''#!/bin/bash -e
+template_string = '''#!/bin/bash -el
 ${scheduler_options}
 
 ${worker_init}
