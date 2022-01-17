@@ -132,7 +132,7 @@ class MonitoringHub(RepresentationMixin):
 
                  workflow_name: Optional[str] = None,
                  workflow_version: Optional[str] = None,
-                 logging_endpoint: str = 'sqlite:///monitoring.db',
+                 logging_endpoint: str = 'sqlite:///runinfo/monitoring.db',
                  logdir: Optional[str] = None,
                  monitoring_debug: bool = False,
                  resource_monitoring_enabled: bool = True,
