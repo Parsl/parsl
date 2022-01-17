@@ -18,11 +18,11 @@ def test_row_counts():
     import sqlalchemy
     from parsl.tests.configs.workqueue_monitoring import fresh_config
 
-    if os.path.exists("monitoring.db"):
+    if os.path.exists("runinfo/monitoring.db"):
         logger.info("Monitoring database already exists - deleting")
-        os.remove("monitoring.db")
+        os.remove("runinfo/monitoring.db")
 
-    engine = sqlalchemy.create_engine("sqlite:///monitoring.db")
+    engine = sqlalchemy.create_engine("sqlite:///runinfo/monitoring.db")
 
     logger.info("loading parsl")
     parsl.load(fresh_config())
