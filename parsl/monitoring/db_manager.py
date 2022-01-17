@@ -58,7 +58,7 @@ class Database:
     Base = declarative_base()
 
     def __init__(self,
-                 url: str = 'sqlite:///monitoring.db',
+                 url: str = 'sqlite:///runinfomonitoring.db',
                  ):
 
         self.eng = sa.create_engine(url)
@@ -252,7 +252,7 @@ class Database:
 
 class DatabaseManager:
     def __init__(self,
-                 db_url: str = 'sqlite:///monitoring.db',
+                 db_url: str = 'sqlite:///runinfo/monitoring.db',
                  logdir: str = '.',
                  logging_level: int = logging.INFO,
                  batching_interval: float = 1,

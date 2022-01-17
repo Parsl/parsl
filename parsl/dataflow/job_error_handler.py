@@ -50,10 +50,9 @@ class JobErrorHandler(object):
                 err = err + "\tSTDOUT: {}\n".format(stdout)
             stderr = js.stderr_summary
             if stderr:
-                err = err + "\tSTDOUT: {}\n".format(stderr)
+                err = err + "\tSTDERR: {}\n".format(stderr)
             # TODO: what about JobStatus.exitcode?
             # Maybe all this summarisation should live inside JobStatus and this loop just runs through a bunch of them?
-                err = err + "\tSTDERR: {}\n".format(stderr)
 
         if len(err) == 0:
             err = "[No error message received]"
