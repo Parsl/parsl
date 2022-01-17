@@ -910,16 +910,29 @@ def monitor(pid: int,
         logging.debug("sending message")
         return d
 
+    next_send = time.time()
+    accumulate_dur = 5.0  # TODO: make configurable?
+
     while not terminate_event.is_set():
         logging.debug("start of monitoring loop")
         try:
             d = accumulate_and_prepare()
-            radio.send((MessageType.RESOURCE_INFO, d))
+            if time.time() >= next_send:
+                logging.debug("Sending intermediate resource message")
+                radio.send((MessageType.RESOURCE_INFO, d))
+                next_send += sleep_dur
         except Exception:
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
         logging.debug("sleeping")
-        terminate_event.wait(timeout=sleep_dur)
 
+        # wait either until approx next send time, or the accumulation period
+        # so the accumulation period will not be completely precise.
+        # but before this, the sleep period was also not completely precise.
+        # with a minimum floor of 0 to not upset wait
+
+        terminate_event.wait(max(0, min(next_send - time.time(), accumulate_dur)))
+
+    logging.debug("Sending final resource message")
     try:
         d = accumulate_and_prepare()
         radio.send((MessageType.RESOURCE_INFO, d))
