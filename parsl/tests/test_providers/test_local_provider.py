@@ -1,3 +1,4 @@
+import logging
 import os
 import pathlib
 import pytest
@@ -13,6 +14,8 @@ from parsl.channels import LocalChannel, SSHChannel
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers import LocalProvider
 from parsl.providers.provider_base import JobState
+
+logger = logging.getLogger(__name__)
 
 
 def _run_tests(p: LocalProvider):
@@ -112,7 +115,9 @@ class SSHDThread(threading.Thread):
     def run(self):
         try:
             # sshd needs to be run with an absolute path, hence the call to which()
-            p = subprocess.Popen([shutil.which('sshd'), '-D', '-f', self.config_file],
+            sshpath = shutil.which('sshd')
+            assert sshpath is not None, "can find sshd executable"
+            p = subprocess.Popen([sshpath, '-D', '-f', self.config_file],
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             while True:
                 ec = p.poll()
@@ -130,6 +135,7 @@ class SSHDThread(threading.Thread):
                                                                       p.stderr.read()))
                     break
         except Exception as ex:
+            logger.exception("SSHDThread exception from run loop")
             self.error = ex
 
     def stop(self):
