@@ -61,6 +61,8 @@ def test_fail_nowait(numtasks=10):
         assert isinstance(
             e, TypeError), "Expected a TypeError, got {}".format(e)
 
+    # wait for all tasks to complete before ending this test
+    [x.exception() for x in fus]
     print("Done")
 
 
@@ -84,6 +86,8 @@ def test_fail_delayed(numtasks=10):
         assert isinstance(
             e, TypeError), "Expected a TypeError, got {}".format(e)
 
+    # wait for all tasks to complete before ending this test
+    [x.exception() for x in fus]
     print("Done")
 
 
