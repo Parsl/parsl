@@ -8,7 +8,10 @@ pytest-random-order
 mock>=1.0.0
 nbsphinx
 sphinx_rtd_theme
-mypy==0.790
+mypy==0.910
+types-python-dateutil
+types-requests
+types-six
 sqlalchemy-stubs
 Sphinx==3.4.1
 twine

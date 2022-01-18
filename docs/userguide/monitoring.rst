@@ -64,7 +64,7 @@ the ``parsl-visualize`` utility::
    $ parsl-visualize
 
 By default, this command expects that the default ``monitoring.db`` database is used
-in the current working directory. Other databases can be loaded by passing
+in the runinfo directory. Other databases can be loaded by passing
 the database URI on the command line.  For example, if the full path
 to the database is ``/tmp/my_monitoring.db``, run::
 
