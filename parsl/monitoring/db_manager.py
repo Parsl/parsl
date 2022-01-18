@@ -57,7 +57,7 @@ class Database:
     Base = declarative_base()
 
     def __init__(self,
-                 url: str = 'sqlite:///monitoring.db',
+                 url: str = 'sqlite:///runinfomonitoring.db',
                  ):
 
         self.eng = sa.create_engine(url)
@@ -251,7 +251,7 @@ class Database:
 
 class DatabaseManager:
     def __init__(self,
-                 db_url: str = 'sqlite:///monitoring.db',
+                 db_url: str = 'sqlite:///runinfo/monitoring.db',
                  logdir: str = '.',
                  logging_level: int = logging.INFO,
                  batching_interval: float = 1,
@@ -567,7 +567,7 @@ class DatabaseManager:
                     # if retried - for example, the database being locked because someone else is readying
                     # the tables we are trying to write to. If that assumption is wrong, then this loop
                     # may go on forever.
-                    logger.warning("Got a database OperationalError. Ignoring and retying on the assumption that it is recoverable: {}".format(e))
+                    logger.warning("Got a database OperationalError. Ignoring and retrying on the assumption that it is recoverable: {}".format(e))
                     self.db.rollback()
                     time.sleep(1)  # hard coded 1s wait - this should be configurable or exponential backoff or something
 
@@ -594,7 +594,7 @@ class DatabaseManager:
                     done = True
                 except sa.exc.OperationalError as e:
                     # hoping that this is a database locked error during _update, not some other problem
-                    logger.warning("Got an sqlite3 operational error. Ignoring and retying on the assumption that it is recoverable: {}".format(e))
+                    logger.warning("Got a database OperationalError. Ignoring and retrying on the assumption that it is recoverable: {}".format(e))
                     self.db.rollback()
                     time.sleep(1)  # hard coded 1s wait - this should be configurable or exponential backoff or something
         except KeyboardInterrupt:

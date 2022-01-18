@@ -7,7 +7,7 @@
 killall --wait parsl-visualize || echo No previous parsl-visualize to kill
 
 if  [ -n "$1" ]; then
-  rm -f monitoring.db
+  rm -f runinfo/monitoring.db
   pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --cov=parsl --cov-append --cov-report= --random-order
 fi
 
