@@ -352,7 +352,7 @@ class MonitoringHub(RepresentationMixin):
                                     daemon=True,
         )
         self.dbm_proc.start()
-        self.logger.info("Started the Hub process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
+        self.logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
         self.filesystem_proc = Process(target=filesystem_receiver,
                                        args=(self.logdir, self.resource_msgs, run_dir),
@@ -395,7 +395,7 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.send_pyobj((mtype, message))
         except zmq.Again:
             self.logger.exception(
-                "The monitoring message sent from DFK to Hub timed-out after {}ms".format(self.dfk_channel_timeout))
+                "The monitoring message sent from DFK to router timed-out after {}ms".format(self.dfk_channel_timeout))
         else:
             # this was very big
             self.logger.debug("Sent message type {}".format(mtype))
@@ -407,7 +407,7 @@ class MonitoringHub(RepresentationMixin):
         while True:
             try:
                 exception_msgs.append(self.exception_q.get(block=False))
-                self.logger.error("There was a queued exception (Either Hub or DBM process got exception much earlier?)")
+                self.logger.error("There was a queued exception (Either router or DBM process got exception much earlier?)")
             except queue.Empty:
                 break
         if self._dfk_channel and self.monitoring_hub_active:
@@ -420,9 +420,9 @@ class MonitoringHub(RepresentationMixin):
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
                 self.filesystem_proc.terminate()
-            self.logger.info("Waiting for Hub to receive all messages and terminate")
+            self.logger.info("Waiting for router to terminate")
             self.router_proc.join()
-            self.logger.debug("Finished waiting for Hub termination")
+            self.logger.debug("Finished waiting for router termination")
             if len(exception_msgs) == 0:
                 self.priority_msgs.put(("STOP", 0))
             self.dbm_proc.join()
@@ -886,8 +886,8 @@ def monitor(pid: int,
         d['psutil_process_time_system'] = pm.cpu_times().system
         d['psutil_process_children_count'] = len(children)
         try:
-            d['psutil_process_disk_write'] = pm.io_counters().write_bytes
-            d['psutil_process_disk_read'] = pm.io_counters().read_bytes
+            d['psutil_process_disk_write'] = pm.io_counters().write_chars
+            d['psutil_process_disk_read'] = pm.io_counters().read_chars
         except Exception:
             # occasionally pid temp files that hold this information are unvailable to be read so set to zero
             logging.exception("Exception reading IO counters for main process. Recorded IO usage may be incomplete", exc_info=True)
@@ -903,8 +903,8 @@ def monitor(pid: int,
             d['psutil_process_memory_virtual'] += child.memory_info().vms
             d['psutil_process_memory_resident'] += child.memory_info().rss
             try:
-                d['psutil_process_disk_write'] += child.io_counters().write_bytes
-                d['psutil_process_disk_read'] += child.io_counters().read_bytes
+                d['psutil_process_disk_write'] += child.io_counters().write_chars
+                d['psutil_process_disk_read'] += child.io_counters().read_chars
             except Exception:
                 # occassionally pid temp files that hold this information are unvailable to be read so add zero
                 logging.exception("Exception reading IO counters for child {k}. Recorded IO usage may be incomplete".format(k=k), exc_info=True)
