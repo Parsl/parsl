@@ -27,9 +27,9 @@ def test_row_counts():
     import sqlalchemy
     from parsl.tests.configs.htex_local_alternate import fresh_config
 
-    if os.path.exists("monitoring.db"):
+    if os.path.exists("runinfo/monitoring.db"):
         logger.info("Monitoring database already exists - deleting")
-        os.remove("monitoring.db")
+        os.remove("runinfo/monitoring.db")
 
     logger.info("loading parsl")
     parsl.load(fresh_config())
@@ -44,7 +44,7 @@ def test_row_counts():
     # at this point, we should find one row in the monitoring database.
 
     logger.info("checking database content")
-    engine = sqlalchemy.create_engine("sqlite:///monitoring.db")
+    engine = sqlalchemy.create_engine("sqlite:///runinfo/monitoring.db")
     with engine.begin() as connection:
 
         result = connection.execute("SELECT COUNT(*) FROM workflow")
