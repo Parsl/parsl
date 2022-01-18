@@ -18,6 +18,14 @@ class ExecutorError(ParslError):
         return "Executor {0} failed due to: {1}".format(self.executor, self.reason)
 
 
+class BadStateException(ExecutorError):
+    """Error returned by task Futures when an executor is in a bad state.
+    """
+
+    def __init__(self, executor, exception):
+        super().__init__(executor, str(exception))
+
+
 class UnsupportedFeatureError(ExecutorError):
     """Error raised when attemping to use unsupported feature in an Executor"""
 
