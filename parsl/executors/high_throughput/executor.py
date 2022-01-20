@@ -487,7 +487,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             Worker id to be put on hold
         """
         c = self.command_client.run("HOLD_WORKER;{}".format(worker_id))
-        logger.debug("Sent hold request to worker: {}".format(worker_id))
+        logger.debug("Sent hold request to manager: {}".format(worker_id))
         return c
 
     @property

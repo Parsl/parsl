@@ -7,7 +7,7 @@ from typing import List, Any, Dict, Optional, Tuple, Union
 
 import parsl  # noqa F401
 from parsl.executors.base import ParslExecutor
-from parsl.executors.errors import ScalingFailed
+from parsl.executors.errors import BadStateException, ScalingFailed
 from parsl.providers.provider_base import JobStatus, ExecutionProvider, JobState
 from parsl.utils import AtomicIDCounter
 
@@ -118,7 +118,7 @@ class BlockProviderExecutor(ParslExecutor):
         # We set all current tasks to this exception to make sure that
         # this is raised in the main context.
         for task in self._tasks:
-            self._tasks[task].set_exception(Exception(str(self._executor_exception)))
+            self._tasks[task].set_exception(BadStateException(self, self._executor_exception))
 
     @property
     def bad_state_is_set(self):
