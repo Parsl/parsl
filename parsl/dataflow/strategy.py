@@ -262,7 +262,10 @@ class Strategy(object):
                     logger.debug("More slots than tasks")
                     if isinstance(executor, HighThroughputExecutor):
                         if active_blocks > min_blocks:
-                            exec_status.scale_in(1, force=False, max_idletime=self.max_idletime)
+                            exec_status.scale_in(
+                                active_blocks - active_tasks // tasks_per_node // nodes_per_block,
+                                force=False, max_idletime=self.max_idletime
+                            )
 
                 elif strategy_type == 'simple':
                     # skip for simple strategy
