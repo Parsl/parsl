@@ -108,7 +108,7 @@ release: deps tag package deploy   ## create a release. To run, do a 'make VERSI
 .PHONY: coverage
 coverage: ## show the coverage report
 	# coverage report
-        echo no-op coverage report
+	echo no-op coverage report
 
 .PHONY: clean
 clean: ## clean up the environment by deleting the .venv, dist, eggs, mypy caches, coverage info, etc
