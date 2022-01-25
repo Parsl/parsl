@@ -61,8 +61,8 @@ def test_provider():
     # A new PR will handle removing blocks from self.block
     # this includes failed/completed/canceled blocks
     assert len(current_jobs) == 1, "Expected current_jobs == 1"
+    dfk.cleanup()
     parsl.clear()
-    del dfk
     logger.info("Ended test_provider")
     return True
 

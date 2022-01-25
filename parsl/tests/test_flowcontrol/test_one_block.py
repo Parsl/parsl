@@ -61,6 +61,7 @@ def test_one_block():
 
     f = app()
     f.result()
+    parsl.dfk().cleanup()
     parsl.clear()
 
     assert oneshot_provider.recorded_submits == 1

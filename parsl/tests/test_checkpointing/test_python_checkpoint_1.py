@@ -44,6 +44,8 @@ def test_initial_checkpoint_write(n=2):
         cptpath), "Tasks checkpoint missing: {0}".format(cptpath)
 
     run_dir = parsl.dfk().run_dir
+
+    parsl.dfk().cleanup()
     parsl.clear()
 
     return run_dir, results
