@@ -72,6 +72,8 @@ def test_dynamic_executor():
     print("Successfully added htex executor and ran with it. The results are", results)
 
     print("Done testing")
+
+    dfk.cleanup()
     parsl.clear()
 
 

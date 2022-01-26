@@ -23,6 +23,7 @@ def test_lazy_behavior():
         assert isinstance(f.exception(), ZeroDivisionError)
         assert f.done()
 
+    parsl.dfk().cleanup()
     parsl.clear()
     return
 
