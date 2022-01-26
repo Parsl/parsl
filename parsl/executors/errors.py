@@ -15,7 +15,7 @@ class ExecutorError(ParslError):
         self.reason = reason
 
     def __str__(self):
-        return "Executor {0} failed due to: {1}".format(self.executor, self.reason)
+        return "Executor {0} failed due to: {1}".format(self.executor.label, self.reason)
 
 
 class BadStateException(ExecutorError):

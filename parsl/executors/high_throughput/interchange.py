@@ -245,20 +245,24 @@ class Interchange(object):
         poller.register(self.task_incoming, zmq.POLLIN)
 
         while not kill_event.is_set():
+            logger.debug("[TASK_PULL_THREAD] launching recv_pyobj")
             try:
                 msg = self.task_incoming.recv_pyobj()
             except zmq.Again:
                 # We just timed out while attempting to receive
-                logger.debug("[TASK_PULL_THREAD] {} tasks in internal queue".format(self.pending_task_queue.qsize()))
+                logger.debug("[TASK_PULL_THREAD] zmq.Again with {} tasks in internal queue".format(self.pending_task_queue.qsize()))
                 continue
 
             if msg == 'STOP':
+                logger.info("[TASK_PULL_THREAD] received STOP message, setting kill_event")
                 kill_event.set()
                 break
             else:
+                logger.debug("[TASK_PULL_THREAD] putting message onto pending_task_queue")
                 self.pending_task_queue.put(msg)
                 task_counter += 1
                 logger.debug("[TASK_PULL_THREAD] Fetched task:{}".format(task_counter))
+        logger.info("[TASK_PULL_THREAD] reached end of migrate_tasks_to_internal loop")
 
     def _create_monitoring_channel(self):
         if self.hub_address and self.hub_port:
