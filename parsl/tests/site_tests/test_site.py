@@ -45,8 +45,8 @@ def test_platform(n=2, sleep_dur=10):
 
     print("Test passed")
 
+    dfk.cleanup()
     parsl.clear()
-    del dfk
     return True
 
 

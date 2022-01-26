@@ -41,6 +41,7 @@ def test_loading_checkpoint(n=2):
 
     for i in range(n):
         assert relaunched[i] == results[i], "Expected relaunched to contain cached results from first run"
+    parsl.dfk().cleanup()
     parsl.clear()
 
 
