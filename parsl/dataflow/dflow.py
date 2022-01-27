@@ -110,7 +110,6 @@ class DataFlowKernel(object):
         self.time_began = datetime.datetime.now()
         self.time_completed = None
 
-        # TODO: make configurable
         logger.info("Run id is: " + self.run_id)
 
         self.workflow_name = None
@@ -1147,11 +1146,12 @@ class DataFlowKernel(object):
         self.usage_tracker.send_message()
         self.usage_tracker.close()
 
-        logger.info("Terminating flow control")
+        logger.info("Closing flowcontrol")
         self.flowcontrol.close()
         logger.info("Terminated flow control")
 
-        logger.info("Terminating executors")
+        logger.info("Scaling in and shutting down executors")
+
         for executor in self.executors.values():
             if executor.managed and not executor.bad_state_is_set:
                 if executor.scaling_enabled:
@@ -1165,9 +1165,13 @@ class DataFlowKernel(object):
                         msg = executor.create_monitoring_info(new_status)
                         logger.debug("Sending message {} to hub from DFK".format(msg))
                         self.monitoring.send(MessageType.BLOCK_INFO, msg)
-                logger.info(f"Terminating executor {executor.label}")
+                logger.info(f"Shutting down executor {executor.label}")
                 executor.shutdown()
-                logger.info(f"Terminated executor {executor.label}")
+                logger.info(f"Shut down executor {executor.label}")
+            elif executor.managed and executor.bad_state_is_set:  # and bad_state_is_set
+                logger.warn(f"Not shutting down executor {executor.label} because it is in bad state")
+            else:
+                logger.info(f"Not shutting down executor {executor.label} because it is unmanaged")
 
         logger.info("Terminated executors")
         self.time_completed = datetime.datetime.now()
