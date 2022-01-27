@@ -57,23 +57,23 @@ mypy: ## run mypy checks
 
 .PHONY: local_thread_test
 local_thread_test: ## run all tests with local_thread config
-	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/local_threads.py --cov=parsl --cov-append --cov-report= --random-order
+	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/local_threads.py --random-order
 
 .PHONY: htex_local_test
 htex_local_test: ## run all tests with htex_local config
-	PYTHONPATH=.  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local.py --cov=parsl --cov-append --cov-report= --random-order
+	PYTHONPATH=.  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local.py --random-order
 
 .PHONY: htex_local_alternate_test
 htex_local_alternate_test: ## run all tests with htex_local config
 	pip3 install ".[monitoring]"
-	PYTHONPATH=.  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --cov=parsl --cov-append --cov-report= --random-order
+	PYTHONPATH=.  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --random-order
 
 $(WORKQUEUE_INSTALL):
 	parsl/executors/workqueue/install-workqueue.sh
 
 .PHONY: workqueue_ex_test
 workqueue_ex_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
-	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --cov=parsl --cov-append --cov-report= --random-order
+	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --random-order
 
 .PHONY: workqueue_mon_test
 workqueue_mon_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
@@ -86,11 +86,11 @@ config_local_test: ## run all tests with workqueue_ex config
 	echo "$(MPI)"
 	parsl/executors/extreme_scale/install-mpi.sh $(MPI)
 	pip3 install ".[extreme_scale,monitoring]"
-	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages pytest parsl/tests/ -k "not cleannet and not site" --config local --cov=parsl --cov-append --cov-report= --random-order
+	PYTHONPATH=.::/tmp/cctools/lib/python3.8/site-packages pytest parsl/tests/ -k "not cleannet and not site" --config local --random-order
 
 .PHONY: site_test
 site_test:
-	pytest parsl/tests/ -k "not cleannet" ${SHARED_FS_OPTIONS} --config parsl/tests/site_tests/site_config_selector.py --cov=parsl --cov-append --cov-report= --random-order
+	pytest parsl/tests/ -k "not cleannet" ${SHARED_FS_OPTIONS} --config parsl/tests/site_tests/site_config_selector.py --random-order
 	pytest parsl/tests/site_tests/ ${SHARED_FS_OPTIONS} --config local
 
 .PHONY: test ## run all tests with all config types
@@ -113,7 +113,8 @@ release: deps tag package deploy   ## create a release. To run, do a 'make VERSI
 
 .PHONY: coverage
 coverage: ## show the coverage report
-	coverage report
+	# coverage report
+	echo no-op coverage report
 
 .PHONY: clean
 clean: ## clean up the environment by deleting the .venv, dist, eggs, mypy caches, coverage info, etc

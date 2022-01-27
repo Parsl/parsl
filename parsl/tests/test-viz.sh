@@ -11,7 +11,7 @@ if  [ -n "$1" ]; then
   pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --cov=parsl --cov-append --cov-report= --random-order
 fi
 
-parsl-visualize &
+parsl-visualize --debug &
 
 mkdir -p test-parsl-visualize.tmp
 cd test-parsl-visualize.tmp
