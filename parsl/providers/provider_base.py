@@ -29,8 +29,8 @@ class JobStatus(object):
     """Encapsulates a job state together with other details, presently a (error) message"""
     SUMMARY_TRUNCATION_THRESHOLD = 2048
 
-    def __init__(self, state: JobState, message: str = None, exit_code: Optional[int] = None,
-                 stdout_path: str = None, stderr_path: str = None):
+    def __init__(self, state: JobState, message: Optional[str] = None, exit_code: Optional[int] = None,
+                 stdout_path: Optional[str] = None, stderr_path: Optional[str] = None):
         self.state = state
         self.message = message
         self.exit_code = exit_code
@@ -38,28 +38,30 @@ class JobStatus(object):
         self.stderr_path = stderr_path
 
     @property
-    def terminal(self):
+    def terminal(self) -> bool:
         return self.state.terminal
 
     @property
-    def status_name(self):
+    def status_name(self) -> str:
         return self.state.status_name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.message is not None:
             return "{} ({})".format(self.state, self.message)
         else:
             return "{}".format(self.state)
 
     @property
-    def stdout(self):
+    def stdout(self) -> Optional[str]:
         return self._read_file(self.stdout_path)
 
     @property
-    def stderr(self):
+    def stderr(self) -> Optional[str]:
         return self._read_file(self.stderr_path)
 
-    def _read_file(self, path):
+    def _read_file(self, path: Optional[str]) -> Optional[str]:
+        if path is None:
+            return None
         try:
             with open(path, 'r') as f:
                 return f.read()
@@ -67,14 +69,14 @@ class JobStatus(object):
             return None
 
     @property
-    def stdout_summary(self):
+    def stdout_summary(self) -> Optional[str]:
         return self._read_summary(self.stdout_path)
 
     @property
-    def stderr_summary(self):
+    def stderr_summary(self) -> Optional[str]:
         return self._read_summary(self.stderr_path)
 
-    def _read_summary(self, path):
+    def _read_summary(self, path: Optional[str]) -> Optional[str]:
         if not path:
             # can happen for synthetic job failures
             return None
