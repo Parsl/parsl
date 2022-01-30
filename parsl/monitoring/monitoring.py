@@ -252,7 +252,7 @@ class MonitoringHub(RepresentationMixin):
                                     daemon=True,
         )
         self.dbm_proc.start()
-        self.logger.info("Started the Hub process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
+        self.logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
         try:
             comm_q_result = comm_q.get(block=True, timeout=120)
@@ -276,7 +276,7 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.send_pyobj((mtype, message))
         except zmq.Again:
             self.logger.exception(
-                "The monitoring message sent from DFK to Hub timed-out after {}ms".format(self.dfk_channel_timeout))
+                "The monitoring message sent from DFK to router timed-out after {}ms".format(self.dfk_channel_timeout))
 
     def close(self) -> None:
         if self.logger:
@@ -285,7 +285,7 @@ class MonitoringHub(RepresentationMixin):
         while True:
             try:
                 exception_msgs.append(self.exception_q.get(block=False))
-                self.logger.error("There was a queued exception (Either Hub or DBM process got exception much earlier?)")
+                self.logger.error("There was a queued exception (Either router or DBM process got exception much earlier?)")
             except queue.Empty:
                 break
         if self._dfk_channel and self.monitoring_hub_active:
@@ -297,9 +297,9 @@ class MonitoringHub(RepresentationMixin):
                                       exception_msg[1]))
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
-            self.logger.info("Waiting for Hub to receive all messages and terminate")
+            self.logger.info("Waiting for router to terminate")
             self.router_proc.join()
-            self.logger.debug("Finished waiting for Hub termination")
+            self.logger.debug("Finished waiting for router termination")
             if len(exception_msgs) == 0:
                 self.priority_msgs.put(("STOP", 0))
             self.dbm_proc.join()
