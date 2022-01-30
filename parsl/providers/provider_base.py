@@ -7,13 +7,16 @@ from typing import Any, List, Optional
 class JobState(bytes, Enum):
     """Defines a set of states that a job can be in"""
 
-    def __new__(cls, value, terminal, status_name):
-        # noinspection PyArgumentList
+    def __new__(cls, value: int, terminal: bool, status_name: str) -> "JobState":
         obj = bytes.__new__(cls, [value])
         obj._value_ = value
         obj.terminal = terminal
         obj.status_name = status_name
         return obj
+
+    value: int
+    terminal: bool
+    status_name: str
 
     UNKNOWN = (0, False, "UNKNOWN")
     PENDING = (1, False, "PENDING")
