@@ -26,14 +26,6 @@ class BadStateException(ExecutorError):
         super().__init__(executor, str(exception))
 
 
-class BadStateException(ExecutorError):
-    """Error returned by task Futures when an executor is in a bad state.
-    """
-
-    def __init__(self, executor, exception):
-        super().__init__(executor, str(exception))
-
-
 class UnsupportedFeatureError(ExecutorError):
     """Error raised when attemping to use unsupported feature in an Executor"""
 

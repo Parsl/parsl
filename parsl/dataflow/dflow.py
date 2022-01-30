@@ -109,7 +109,6 @@ class DataFlowKernel(object):
         self.time_began = datetime.datetime.now()
         self.time_completed = None
 
-        # TODO: make configurable
         logger.info("Run id is: " + self.run_id)
 
         self.workflow_name = None
