@@ -224,8 +224,6 @@ class Database:
             'resource_monitoring_interval', Float, nullable=True)
         psutil_process_pid = Column(
             'psutil_process_pid', Integer, nullable=True)
-        psutil_process_cpu_percent = Column(
-            'psutil_process_cpu_percent', Float, nullable=True)
         psutil_process_memory_percent = Column(
             'psutil_process_memory_percent', Float, nullable=True)
         psutil_process_children_count = Column(
