@@ -189,7 +189,6 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         """
         for job in job_ids:
             logger.debug("Terminating job/proc_id: {0}".format(job))
-            # Here we are assuming that for local, the job_ids are the process id's
             self._delete_pod(job)
 
             self.resources[job]['status'] = JobStatus(JobState.CANCELLED)
@@ -198,7 +197,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         return rets
 
     def _status(self):
-        """ Internal: Do not call. Returns the status list for a list of job_ids
+        """Returns the status list for a list of job_ids
         Args:
               self
         Returns:
