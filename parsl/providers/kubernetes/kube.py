@@ -188,7 +188,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         [True/False...] : If the cancel operation fails the entire list will be False.
         """
         for job in job_ids:
-            logger.debug("Terminating job/proc_id: {0}".format(job))
+            logger.debug("Terminating job/pod: {0}".format(job))
             self._delete_pod(job)
 
             self.resources[job]['status'] = JobStatus(JobState.CANCELLED)
