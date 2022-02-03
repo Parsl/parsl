@@ -340,6 +340,8 @@ class DatabaseManager:
 
         exception_happened = False
 
+        UBM = {}  # type: Dict[Any, Any]
+        
         while (not self._kill_event.is_set() or
                self.pending_priority_queue.qsize() != 0 or self.pending_resource_queue.qsize() != 0 or
                self.pending_node_queue.qsize() != 0 or self.pending_block_queue.qsize() != 0 or
@@ -466,7 +468,7 @@ class DatabaseManager:
                 """
                 block_info_messages = self._get_messages_in_batch(self.pending_block_queue)
                 # Creation of dictionary to store previous block messages to avoid duplicate messages
-                UBM = {}  # type: Dict[Any, Any]
+            
                 if block_info_messages:
                     logger.debug(
                         "Got {} messages from block queue".format(len(block_info_messages)))
