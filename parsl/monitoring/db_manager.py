@@ -341,7 +341,6 @@ class DatabaseManager:
         exception_happened = False
 
         UBM = {}  # type: Dict[Any, Any]
-        
         while (not self._kill_event.is_set() or
                self.pending_priority_queue.qsize() != 0 or self.pending_resource_queue.qsize() != 0 or
                self.pending_node_queue.qsize() != 0 or self.pending_block_queue.qsize() != 0 or
@@ -467,8 +466,6 @@ class DatabaseManager:
                 BLOCK_INFO messages
                 """
                 block_info_messages = self._get_messages_in_batch(self.pending_block_queue)
-                # Creation of dictionary to store previous block messages to avoid duplicate messages
-            
                 if block_info_messages:
                     logger.debug(
                         "Got {} messages from block queue".format(len(block_info_messages)))
@@ -479,14 +476,15 @@ class DatabaseManager:
                     for block_msg in block_info_messages:
                         for this_msg in block_msg:
                             this_id = this_msg['block_id']
+                            this_executor = this_msg['executor_label']
                             this_status = this_msg['status']
                             if this_id in UBM.keys():
-                                if UBM[this_id] != this_status:
+                                if UBM[this_id][0] != this_status or UBM[this_id][1] != this_executor:
                                     block_messages_to_insert.append(this_msg)
-                                    UBM[this_id] = this_status
+                                    UBM[this_id] = (this_status, this_executor)
                             else:
                                 block_messages_to_insert.append(this_msg)
-                                UBM[this_id] = this_status
+                                UBM[this_id] = (this_status, this_executor)
                     self._insert(table=BLOCK, messages=block_messages_to_insert)
 
                 """
