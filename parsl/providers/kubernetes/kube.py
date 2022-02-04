@@ -67,7 +67,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
     worker_init : str
         Command to be run first for the workers, such as ``python start.py``.
     secret : str
-        Docker secret to use to pull images
+        The Kubernetes ImagePullSecret secret to use to pull images
     pod_name : str
         The name for the pod, will be appended with a timestamp.
         Default is None, meaning parsl automatically names the pod.
@@ -188,8 +188,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         [True/False...] : If the cancel operation fails the entire list will be False.
         """
         for job in job_ids:
-            logger.debug("Terminating job/proc_id: {0}".format(job))
-            # Here we are assuming that for local, the job_ids are the process id's
+            logger.debug("Terminating job/pod: {0}".format(job))
             self._delete_pod(job)
 
             self.resources[job]['status'] = JobStatus(JobState.CANCELLED)
@@ -198,7 +197,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         return rets
 
     def _status(self):
-        """ Internal: Do not call. Returns the status list for a list of job_ids
+        """Returns the status list for a list of job_ids
         Args:
               self
         Returns:
