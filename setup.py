@@ -42,6 +42,7 @@ setup(
     license='Apache 2.0',
     download_url='https://github.com/Parsl/parsl/archive/{}.tar.gz'.format(VERSION),
     include_package_data=True,
+    package_data={'parsl': ['py.typed']},
     packages=find_packages(),
     python_requires=">=3.6.0",
     install_requires=install_requires,

@@ -27,8 +27,8 @@ translate_table = {
 class TorqueProvider(ClusterProvider, RepresentationMixin):
     """Torque Execution Provider
 
-    This provider uses sbatch to submit, squeue for status, and scancel to cancel
-    jobs. The sbatch script to be used is created from a template file in this
+    This provider uses qsub to submit, qstat for status, and qdel to cancel
+    jobs. The qsub script to be used is created from a template file in this
     same module.
 
     Parameters
