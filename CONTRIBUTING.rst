@@ -140,8 +140,7 @@ Developers may find it useful to setup a pre-commit git hook to automatically li
     $ cat ~/parsl/.git/hooks/pre-commit
     #!/bin/sh
 
-    flake8 parsl
-    nosetests -vx parsl/tests/test_threads parsl/tests/test_data parsl/tests/test_checkpointing
+    make lint flake8 mypy local_thread_test
 
 Project documentation
 ---------------------
