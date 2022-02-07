@@ -143,10 +143,17 @@ class MonitoringHub(RepresentationMixin):
         hub_address : str
              The ip address at which the workers will be able to reach the Hub.
         hub_port : int
-             The specific port at which workers will be able to reach the Hub via UDP. Default: None
+             The UDP port to which workers will be able to deliver messages to
+             the monitoring router.
+             Note that despite the similar name, this is not related to
+             hub_port_range.
+             Default: None
         hub_port_range : tuple(int, int)
-             The MonitoringHub picks ports at random from the range which will be used by Hub.
-             This is overridden when the hub_port option is set. Default: (55050, 56000)
+             The port range for a ZMQ channel from an executor process
+             (for example, the interchange in the High Throughput Executor)
+             to deliver monitoring messages to the monitoring router.
+             Note that despite the similar name, this is not related to hub_port.
+             Default: (55050, 56000)
         client_address : str
              The ip address at which the dfk will be able to reach Hub. Default: "127.0.0.1"
         client_port_range : tuple(int, int)
