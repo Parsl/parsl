@@ -23,8 +23,8 @@ class ClusterProvider(ExecutionProvider):
         :class:`~parsl.channels.SSHInteractiveLoginChannel`.
       walltime : str
         Walltime requested per block in HH:MM:SS.
-      launcher : str
-        FIXME
+      launcher : Launcher
+        Launcher for this provider.
       cmd_timeout : int
         Timeout for commands made to the scheduler in seconds
 

@@ -152,7 +152,6 @@ Exceptions
     parsl.dataflow.error.DependencyError
     parsl.launchers.error.BadLauncher
     parsl.providers.error.ExecutionProviderException
-    parsl.providers.error.ChannelRequired
     parsl.providers.error.ScaleOutFailed
     parsl.providers.error.SchedulerMissingArgs
     parsl.providers.error.ScriptPathError
@@ -165,6 +164,7 @@ Exceptions
     parsl.channels.errors.SSHException
     parsl.channels.errors.FileCopyException
     parsl.executors.high_throughput.errors.WorkerLost
+    parsl.executors.high_throughput.interchange.ManagerLost
 
 Internal
 ========
