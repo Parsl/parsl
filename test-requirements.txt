@@ -1,7 +1,7 @@
 flake8==3.8.0
 ipyparallel
 pandas
-pytest>=4.6,<5
+pytest>=6.2.5,<7
 pytest-cov
 pytest-xdist==1.26.1
 pytest-random-order

@@ -14,10 +14,6 @@ logger = logging.getLogger(__name__)
 class PBSProProvider(TorqueProvider):
     """PBS Pro Execution Provider
 
-    This provider uses sbatch to submit, squeue for status, and scancel to cancel
-    jobs. The sbatch script to be used is created from a template file in this
-    same module.
-
     Parameters
     ----------
     channel : Channel
