@@ -138,8 +138,8 @@ class ExecutionProvider(metaclass=ABCMeta):
     @abstractmethod
     def submit(self, command: str, tasks_per_node: int, job_name: str = "parsl.auto") -> Any:
         ''' The submit method takes the command string to be executed upon
-        instantiation of a resource most often to start a pilot (such as IPP engine
-        or even Swift-T engines).
+        instantiation of a resource most often to start a pilot (such as for
+        HighThroughputExecutor or WorkQueueExecutor).
 
         Args :
              - command (str) : The bash command string to be executed

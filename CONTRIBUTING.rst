@@ -7,7 +7,7 @@ Please be aware of `Parsl's Code of Conduct <https://github.com/Parsl/parsl/blob
 
 If you are not familiar with GitHub pull requests, the main mechanism to contribute changes to our code, there is `documentation available  <https://opensource.com/article/19/7/create-pull-request-github>`_.
 
-If you have questions, please ask in our Slack's `#parsl-help channel <https://parsl-project.slack.com/archives/C4KBVPJG0>`_. If needed, `join it here <https://join.slack.com/t/parsl-project/shared_invite/zt-4xbquc5t-Ur65ZeVtUOX51Ts~GRN6_g>`_ first.
+If you have questions or would like to discuss ideas, please post in our Slack's `#parsl-hackers channel <https://parsl-project.slack.com/archives/C02P57G6NCB>`_. You can `join our Slack here <https://join.slack.com/t/parsl-project/shared_invite/zt-4xbquc5t-Ur65ZeVtUOX51Ts~GRN6_g>`_.
 
 
 Coding conventions
@@ -140,8 +140,7 @@ Developers may find it useful to setup a pre-commit git hook to automatically li
     $ cat ~/parsl/.git/hooks/pre-commit
     #!/bin/sh
 
-    flake8 parsl
-    nosetests -vx parsl/tests/test_threads parsl/tests/test_data parsl/tests/test_checkpointing
+    make lint flake8 mypy local_thread_test
 
 Project documentation
 ---------------------

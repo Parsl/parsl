@@ -47,7 +47,7 @@ class JobErrorHandler(object):
                 err = err + "\tSTDOUT: {}\n".format(stdout)
             stderr = js.stderr_summary
             if stderr:
-                err = err + "\tSTDOUT: {}\n".format(stderr)
+                err = err + "\tSTDERR: {}\n".format(stderr)
 
         if len(err) == 0:
             err = "[No error message received]"
