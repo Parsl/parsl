@@ -191,8 +191,8 @@
         "name": "The Python Package Index",
         "url": "https://pypi.org"
     },
-    "runtimePlatform": "Python 3.6.4",
+    "runtimePlatform": "Python 3.7",
     "url": "https://github.com/Parsl/parsl",
     "developmentStatus": "3 - Alpha",
-    "programmingLanguage": "Python :: 3.6"
+    "programmingLanguage": "Python :: 3.7"
 }

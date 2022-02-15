@@ -121,8 +121,6 @@ class Strategy(object):
                            'htex_auto_scale': self._strategy_htex_auto_scale}
 
         self.strategize = self.strategies[self.config.strategy]
-        self.logger_flag = False
-        self.prior_loghandlers = set(logging.getLogger().handlers)
 
         logger.debug("Scaling strategy: {0}".format(self.config.strategy))
 
@@ -136,20 +134,6 @@ class Strategy(object):
         Args:
             - tasks (task_ids): Not used here.
         """
-
-    def unset_logging(self):
-        """ Mute newly added handlers to the root level, right after calling executor.status
-        """
-        if self.logger_flag is True:
-            return
-
-        root_logger = logging.getLogger()
-
-        for handler in root_logger.handlers:
-            if handler not in self.prior_loghandlers:
-                handler.setLevel(logging.ERROR)
-
-        self.logger_flag = True
 
     def _strategy_simple(self, status_list, tasks):
         self._general_strategy(status_list, tasks, strategy_type='simple')
@@ -185,7 +169,6 @@ class Strategy(object):
             active_tasks = executor.outstanding
 
             status = exec_status.status
-            self.unset_logging()
 
             # FIXME we need to handle case where provider does not define these
             # FIXME probably more of this logic should be moved to the provider
@@ -259,8 +242,8 @@ class Strategy(object):
                 # Case 2b
                 else:
                     # logger.debug("Strategy: Case.2b")
-                    excess = math.ceil((active_tasks * parallelism) - active_slots)
-                    excess_blocks = math.ceil(float(excess) / (tasks_per_node * nodes_per_block))
+                    excess_slots = math.ceil((active_tasks * parallelism) - active_slots)
+                    excess_blocks = math.ceil(float(excess_slots) / (tasks_per_node * nodes_per_block))
                     excess_blocks = min(excess_blocks, max_blocks - active_blocks)
                     logger.debug("Requesting {} more blocks".format(excess_blocks))
                     exec_status.scale_out(excess_blocks)
@@ -279,7 +262,10 @@ class Strategy(object):
                     logger.debug("More slots than tasks")
                     if isinstance(executor, HighThroughputExecutor):
                         if active_blocks > min_blocks:
-                            exec_status.scale_in(1, force=False, max_idletime=self.max_idletime)
+                            excess_slots = math.ceil(active_slots - (active_tasks * parallelism))
+                            excess_blocks = math.ceil(float(excess_slots) / (tasks_per_node * nodes_per_block))
+                            excess_blocks = min(excess_blocks, active_blocks - min_blocks)
+                            exec_status.scale_in(excess_blocks, force=False, max_idletime=self.max_idletime)
 
                 elif strategy_type == 'simple':
                     # skip for simple strategy
