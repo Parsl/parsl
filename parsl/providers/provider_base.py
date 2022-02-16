@@ -29,6 +29,7 @@ class JobStatus(object):
     """Encapsulates a job state together with other details:
 
     Args:
+        state: The machine-reachable state of the job this status refers to
         message: Optional human readable message
         exit_code: Optional exit code
         stdout_path: Optional path to a file containing the job's stdout
