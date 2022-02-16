@@ -31,8 +31,8 @@ Installation using Conda
 
 1. Create and activate a new conda environment::
 
-     $ conda create --name parsl_py36 python=3.6
-     $ source activate parsl_py36
+     $ conda create --name parsl_py37 python=3.7
+     $ source activate parsl_py37
 
 2. Install Parsl::
 

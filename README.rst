@@ -42,7 +42,7 @@ The latest Parsl version available on PyPi is v1.1.0.
 QuickStart
 ==========
 
-Parsl is now available on PyPI, but first make sure you have Python3.6+ ::
+Parsl is now available on PyPI, but first make sure you have Python3.7+ ::
 
     $ python3 --version
 
@@ -93,7 +93,7 @@ For Developers
 Requirements
 ============
 
-Parsl is supported in Python 3.6+. Requirements can be found `here <requirements.txt>`_. Requirements for running tests can be found `here <test-requirements.txt>`_.
+Parsl is supported in Python 3.7+. Requirements can be found `here <requirements.txt>`_. Requirements for running tests can be found `here <test-requirements.txt>`_.
 
 Code of Conduct
 ============

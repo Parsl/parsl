@@ -237,9 +237,8 @@ def pytest_make_collect_report(collector):
     if not call.excinfo:
         outcome = "passed"
     else:
-        from _pytest import nose
         from _pytest.outcomes import Skipped
-        skip_exceptions = (Skipped,) + nose.get_skip_exceptions()
+        skip_exceptions = (Skipped,)
 
         # this test for KeyError will mark a test as skipped for every
         # test that fails with a KeyError; it is intended to skip tests
