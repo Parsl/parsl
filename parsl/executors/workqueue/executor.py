@@ -359,6 +359,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         disk = None
         gpus = None
         priority = None
+        category = None
         running_time_min = None
         if resource_specification and isinstance(resource_specification, dict):
             logger.debug("Got resource specification: {}".format(resource_specification))
@@ -397,6 +398,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     gpus = resource_specification[k]
                 elif k == 'priority':
                     priority = resource_specification[k]
+                elif k == 'category':
+                    category = resource_specification[k]
                 elif k == 'running_time_min':
                     running_time_min = resource_specification[k]
 
@@ -455,7 +458,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
-        category = func.__name__ if self.autocategory else 'parsl-default'
+        if category is None:
+            category = func.__name__ if self.autocategory else 'parsl-default'
         self.task_queue.put_nowait(ParslTaskToWq(task_id,
                                                  category,
                                                  cores,
