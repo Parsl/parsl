@@ -217,7 +217,7 @@ def setup_data():
 
 
 @pytest.fixture(autouse=True, scope='function')
-def wait_for_task_completion(pytestconfig):
+def assert_no_outstanding_tasks(pytestconfig):
     """If we're in a config-file based mode, wait for task completion between
        each test. This will detect early on (by hanging) if particular test
        tasks are not finishing, rather than silently falling off the end of
@@ -228,7 +228,11 @@ def wait_for_task_completion(pytestconfig):
     config = pytestconfig.getoption('config')[0]
     yield
     if config != 'local':
-        parsl.dfk().wait_for_current_tasks()
+        logger.info("Checking no outstanding tasks")
+        for task_record in parsl.dfk().tasks.values():
+            fut = task_record['app_fu']
+            assert fut.done(), f"Incomplete task found, task id {task_record['id']}"
+        logger.info("No outstanding tasks found")
 
 
 def pytest_make_collect_report(collector):
