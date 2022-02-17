@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 # TODO:
 # should parametrically test both htex_local and htex_local_alternate
-from parsl.tests.configs.htex_local_alternate import fresh_config
+from parsl.tests.configs.htex_local import fresh_config
 
 
 @parsl.python_app
@@ -18,6 +18,7 @@ def simple_app():
 
 
 @pytest.mark.local
+@pytest.mark.skip("not expected to pass - demonstrates hanging htex with missing interchange")
 @pytest.mark.parametrize("sig", [signal.SIGINT, signal.SIGTERM, signal.SIGKILL])  # are we expecting SIGKILL resilience here? Ideally yes
 def test_kill_router(sig):
     """This tests that we can kill a monitoring process and still have successful shutdown.
@@ -35,9 +36,9 @@ def test_kill_router(sig):
 
     dfk = parsl.dfk()
 
-    assert "htex_Local" in dfk.executors.keys(), "htex required"
+    assert "htex_local" in dfk.executors.keys(), "htex required"
 
-    proc = dfk.executors["htex_Local"].interchange_proc
+    proc = dfk.executors["htex_local"].interchange_proc
 
     assert proc is not None, "Interchange process required"
     assert proc.is_alive(), "Interchange must be alive"

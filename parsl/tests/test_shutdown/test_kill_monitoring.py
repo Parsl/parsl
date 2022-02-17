@@ -7,8 +7,6 @@ import time
 
 logger = logging.getLogger(__name__)
 
-from parsl.tests.configs.htex_local_alternate import fresh_config
-
 
 @parsl.python_app
 def simple_app():
@@ -17,6 +15,7 @@ def simple_app():
 
 @pytest.mark.local
 def test_no_kills():
+    from parsl.tests.configs.htex_local_alternate import fresh_config
     """This tests that we can create a monitoring-enabled DFK and shut it down."""
 
     parsl.load(fresh_config())
@@ -31,6 +30,7 @@ def test_no_kills():
 @pytest.mark.parametrize("sig", [signal.SIGINT, signal.SIGTERM, signal.SIGKILL])  # are we expecting SIGKILL resilience here? Ideally yes
 @pytest.mark.parametrize("process_attr", ["router_proc", "dbm_proc"])
 def test_kill_router(sig, process_attr):
+    from parsl.tests.configs.htex_local_alternate import fresh_config
     """This tests that we can kill a monitoring process and still have successful shutdown.
     This emulates behaviour when ctrl-C is pressed: that all of the processes receive a
     termination signal  - SIGINT for ctrl-C - at once, and so specifically we should be
