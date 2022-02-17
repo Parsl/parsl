@@ -459,7 +459,7 @@ class DataFlowKernel(object):
         """
 
         with self.task_state_counts_lock:
-            if hasattr(task_record, 'status'):
+            if 'status' in task_record:
                 self.task_state_counts[task_record['status']] -= 1
             self.task_state_counts[new_state] += 1
             task_record['status'] = new_state
