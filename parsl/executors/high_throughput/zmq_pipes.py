@@ -121,7 +121,7 @@ class TasksOutgoing(object):
                 return
             else:
                 timeout_ms += 1
-                logger.debug("Not sending due to full zmq pipe, timeout: {} ms".format(timeout_ms))
+                logger.debug("Not sending due to non-ready zmq pipe, timeout: {} ms".format(timeout_ms))
 
     def close(self):
         self.zmq_socket.close()
