@@ -531,7 +531,7 @@ class DataFlowKernel(object):
         """
 
         with self.task_state_counts_lock:
-            if hasattr(task_record, 'status'):
+            if 'status' in task_record:
                 self.task_state_counts[task_record['status']] -= 1
             self.task_state_counts[new_state] += 1
             task_record['status'] = new_state
@@ -1171,7 +1171,7 @@ class DataFlowKernel(object):
                 executor.shutdown()
                 logger.info(f"Shut down executor {executor.label}")
             elif executor.managed and executor.bad_state_is_set:  # and bad_state_is_set
-                logger.warn(f"Not shutting down executor {executor.label} because it is in bad state")
+                logger.warning(f"Not shutting down executor {executor.label} because it is in bad state")
             else:
                 logger.info(f"Not shutting down executor {executor.label} because it is unmanaged")
 

@@ -120,8 +120,12 @@ class TasksOutgoing(object):
                 self.zmq_socket.send_pyobj(message, copy=True)
                 return
             else:
-                timeout_ms += 1
-                logger.debug("Not sending due to full zmq pipe, timeout: {} ms".format(timeout_ms))
+                timeout_ms = max(timeout_ms, 1)
+                timeout_ms *= 2
+                timeout_ms = min(10000, timeout_ms)  # TODO: arbitrary hard coded time bad
+                logger.debug("Not sending due to non-ready zmq pipe, timeout: {} ms".format(timeout_ms))
+                if timeout_ms == 10000:
+                    raise RuntimeError("BENC: hit big timeout for pipe put - failing rather than trying forever")
 
     def close(self):
         self.zmq_socket.close()
