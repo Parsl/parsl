@@ -43,6 +43,9 @@ class PBSProProvider(TorqueProvider):
         Walltime requested per block in HH:MM:SS.
     scheduler_options : str
         String to prepend to the #PBS blocks in the submit script to the scheduler.
+    select_options : str
+        String to append to the #PBS -l select block in the submit script to the scheduler. This can be used to
+        specify ngpus.
     worker_init : str
         Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     launcher : Launcher
@@ -54,6 +57,7 @@ class PBSProProvider(TorqueProvider):
                  account=None,
                  queue=None,
                  scheduler_options='',
+                 select_options='',
                  worker_init='',
                  nodes_per_block=1,
                  cpus_per_node=1,
@@ -81,6 +85,7 @@ class PBSProProvider(TorqueProvider):
         self.template_string = template_string
         self._label = 'pbspro'
         self.cpus_per_node = cpus_per_node
+        self.select_options = select_options
 
     def submit(self, command, tasks_per_node, job_name="parsl"):
         """Submits the command job.
@@ -118,6 +123,12 @@ class PBSProProvider(TorqueProvider):
         job_config["scheduler_options"] = self.scheduler_options
         job_config["worker_init"] = self.worker_init
         job_config["user_script"] = command
+
+        # Add a colon to select_options if one isn't included
+        if self.select_options and not self.select_options.startswith(":"):
+            self.select_options = ":" + self.select_options
+
+        job_config["select_options"] = self.select_options
 
         # Wrap the command
         job_config["user_script"] = self.launcher(command,
