@@ -90,12 +90,11 @@ class DataFlowKernel(object):
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_message()
 
+        self.task_state_counts_lock = threading.Lock()
+        self.task_state_counts = {state: 0 for state in States}
+
         # Monitoring
         self.run_id = str(uuid4())
-        self.tasks_completed_count = 0
-        self.tasks_memo_completed_count = 0
-        self.tasks_failed_count = 0
-        self.tasks_dep_fail_count = 0
 
         self.monitoring = config.monitoring
         # hub address and port for interchange to connect
@@ -141,8 +140,8 @@ class DataFlowKernel(object):
                 'workflow_name': self.workflow_name,
                 'workflow_version': self.workflow_version,
                 'rundir': self.run_dir,
-                'tasks_completed_count': self.tasks_completed_count,
-                'tasks_failed_count': self.tasks_failed_count,
+                'tasks_completed_count': self.task_state_counts[States.exec_done],
+                'tasks_failed_count': self.task_state_counts[States.failed],
                 'user': getuser(),
                 'host': gethostname(),
         }
@@ -205,9 +204,9 @@ class DataFlowKernel(object):
         task_log_info['try_id'] = task_record['try_id']
         task_log_info['timestamp'] = datetime.datetime.now()
         task_log_info['task_status_name'] = task_record['status'].name
-        task_log_info['tasks_failed_count'] = self.tasks_failed_count
-        task_log_info['tasks_completed_count'] = self.tasks_completed_count
-        task_log_info['tasks_memo_completed_count'] = self.tasks_memo_completed_count
+        task_log_info['tasks_failed_count'] = self.task_state_counts[States.failed]
+        task_log_info['tasks_completed_count'] = self.task_state_counts[States.exec_done]
+        task_log_info['tasks_memo_completed_count'] = self.task_state_counts[States.memo_done]
         task_log_info['from_memo'] = task_record['from_memo']
         task_log_info['task_inputs'] = str(task_record['kwargs'].get('inputs', None))
         task_log_info['task_outputs'] = str(task_record['kwargs'].get('outputs', None))
@@ -317,11 +316,11 @@ class DataFlowKernel(object):
             elif task_record['fail_cost'] <= self._config.retries:
 
                 # record the final state for this try before we mutate for retries
-                task_record['status'] = States.fail_retryable
+                self.update_task_state(task_record, States.fail_retryable)
                 self._send_task_log_info(task_record)
 
                 task_record['try_id'] += 1
-                task_record['status'] = States.pending
+                self.update_task_state(task_record, States.pending)
                 task_record['try_time_launched'] = None
                 task_record['try_time_returned'] = None
                 task_record['fail_history'] = []
@@ -332,8 +331,7 @@ class DataFlowKernel(object):
                 logger.exception("Task {} failed after {} retry attempts".format(task_id,
                                                                                  task_record['try_id']))
                 task_record['time_returned'] = datetime.datetime.now()
-                task_record['status'] = States.failed
-                self.tasks_failed_count += 1
+                self.update_task_state(task_record, States.failed)
                 task_record['time_returned'] = datetime.datetime.now()
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
@@ -356,13 +354,12 @@ class DataFlowKernel(object):
                     # Fail with a TypeError if the joinapp python body returned
                     # something we can't join on.
                     if isinstance(inner_future, Future):
-                        task_record['status'] = States.joining
+                        self.update_task_state(task_record, States.joining)
                         task_record['joins'] = inner_future
                         inner_future.add_done_callback(partial(self.handle_join_update, task_record))
                     else:
                         task_record['time_returned'] = datetime.datetime.now()
-                        task_record['status'] = States.failed
-                        self.tasks_failed_count += 1
+                        self.update_task_state(task_record, States.failed)
                         task_record['time_returned'] = datetime.datetime.now()
                         with task_record['app_fu']._update_lock:
                             task_record['app_fu'].set_exception(TypeError(f"join_app body must return a Future, got {type(inner_future)}"))
@@ -397,8 +394,7 @@ class DataFlowKernel(object):
             # no need to update the fail cost because join apps are never
             # retried
 
-            task_record['status'] = States.failed
-            self.tasks_failed_count += 1
+            self.update_task_state(task_record, States.failed)
             task_record['time_returned'] = datetime.datetime.now()
             with task_record['app_fu']._update_lock:
                 task_record['app_fu'].set_exception(e)
@@ -448,20 +444,25 @@ class DataFlowKernel(object):
         assert new_state in FINAL_STATES
         assert new_state not in FINAL_FAILURE_STATES
         old_state = task_record['status']
-        task_record['status'] = new_state
 
-        if new_state == States.exec_done:
-            self.tasks_completed_count += 1
-        elif new_state == States.memo_done:
-            self.tasks_memo_completed_count += 1
-        else:
-            raise RuntimeError(f"Cannot update task counters with unknown final state {new_state}")
+        self.update_task_state(task_record, new_state)
 
         logger.info(f"Task {task_record['id']} completed ({old_state.name} -> {new_state.name})")
         task_record['time_returned'] = datetime.datetime.now()
 
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_result(result)
+
+    def update_task_state(self, task_record, new_state):
+        """Updates a task record state, and recording an appropriate change
+        to task state counters.
+        """
+
+        with self.task_state_counts_lock:
+            if 'status' in task_record:
+                self.task_state_counts[task_record['status']] -= 1
+            self.task_state_counts[new_state] += 1
+            task_record['status'] = new_state
 
     @staticmethod
     def _unwrap_remote_exception_wrapper(future: Future) -> Any:
@@ -528,8 +529,7 @@ class DataFlowKernel(object):
                 logger.info(
                     "Task {} failed due to dependency failure".format(task_id))
                 # Raise a dependency exception
-                task_record['status'] = States.dep_fail
-                self.tasks_dep_fail_count += 1
+                self.update_task_state(task_record, States.dep_fail)
 
                 self._send_task_log_info(task_record)
 
@@ -602,7 +602,7 @@ class DataFlowKernel(object):
 
         with self.submitter_lock:
             exec_fu = executor.submit(executable, task_record['resource_specification'], *args, **kwargs)
-        task_record['status'] = States.launched
+        self.update_task_state(task_record, States.launched)
 
         self._send_task_log_info(task_record)
 
@@ -853,7 +853,6 @@ class DataFlowKernel(object):
                     'ignore_for_cache': ignore_for_cache,
                     'join': join,
                     'joins': None,
-                    'status': States.unsched,
                     'try_id': 0,
                     'id': task_id,
                     'time_invoked': datetime.datetime.now(),
@@ -861,6 +860,8 @@ class DataFlowKernel(object):
                     'try_time_launched': None,
                     'try_time_returned': None,
                     'resource_specification': resource_specification}
+
+        self.update_task_state(task_def, States.unsched)
 
         app_fu = AppFuture(task_def)
 
@@ -904,7 +905,7 @@ class DataFlowKernel(object):
         task_def['task_launch_lock'] = threading.Lock()
 
         app_fu.add_done_callback(partial(self.handle_app_update, task_def))
-        task_def['status'] = States.pending
+        self.update_task_state(task_def, States.pending)
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
 
         self._send_task_log_info(task_def)
@@ -945,24 +946,10 @@ class DataFlowKernel(object):
     def log_task_states(self):
         logger.info("Summary of tasks in DFK:")
 
-        keytasks = {state: 0 for state in States}
+        with self.task_state_counts_lock:
+            for state in States:
+                logger.info("Tasks in state {}: {}".format(str(state), self.task_state_counts[state]))
 
-        for tid in self.tasks:
-            keytasks[self.tasks[tid]['status']] += 1
-        # Fetch from counters since tasks get wiped
-        keytasks[States.exec_done] = self.tasks_completed_count
-        keytasks[States.memo_done] = self.tasks_memo_completed_count
-        keytasks[States.failed] = self.tasks_failed_count
-        keytasks[States.dep_fail] = self.tasks_dep_fail_count
-
-        for state in States:
-            if keytasks[state]:
-                logger.info("Tasks in state {}: {}".format(str(state), keytasks[state]))
-
-        total_summarized = sum(keytasks.values())
-        if total_summarized != self.task_count:
-            logger.error("Task count summarisation was inconsistent: summarised {} tasks, but task counter registered {} tasks".format(
-                total_summarized, self.task_count))
         logger.info("End of summary")
 
     def _create_remote_dirs_over_channel(self, provider, channel):
@@ -972,7 +959,7 @@ class DataFlowKernel(object):
         ----------
         provider: Provider obj
            Provider for which scritps dirs are being created
-        channel: Channel obk
+        channel: Channel obj
            Channel over which the remote dirs are to be created
         """
         run_dir = self.run_dir
@@ -1106,8 +1093,8 @@ class DataFlowKernel(object):
 
         if self.monitoring:
             self.monitoring.send(MessageType.WORKFLOW_INFO,
-                                 {'tasks_failed_count': self.tasks_failed_count,
-                                  'tasks_completed_count': self.tasks_completed_count,
+                                 {'tasks_failed_count': self.task_state_counts[States.failed],
+                                  'tasks_completed_count': self.task_state_counts[States.exec_done],
                                   "time_began": self.time_began,
                                   'time_completed': self.time_completed,
                                   'run_id': self.run_id, 'rundir': self.run_dir,
