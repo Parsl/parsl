@@ -1,16 +1,21 @@
 """Exceptions raise by Executors."""
 from parsl.app.errors import ParslError
+from parsl.executors.base import ParslExecutor
 
 from typing import Optional
 
 
 class ExecutorError(ParslError):
-    """Base class for all exceptions.
+    """Base class for executor related exceptions.
 
     Only to be invoked when only a more specific error is not available.
     """
 
-    def __init__(self, executor, reason):
+    # TODO: this constructor doesn't make sense for most errors here
+    # so it and the __str__ impl shoudl go away, and the few places
+    # that an ExecutorError is directly instantiated shoudl be replaced
+    # by a more specific errror
+    def __init__(self, executor: ParslExecutor, reason):
         self.executor = executor
         self.reason = reason
 
@@ -44,9 +49,12 @@ Please checkout {} for this feature".format(self.feature,
 class ScalingFailed(ExecutorError):
     """Scaling failed due to error in Execution provider."""
 
-    def __init__(self, executor: Optional[str], reason: str):
-        self.executor = executor
+    def __init__(self, executor_label: Optional[str], reason: str):
+        self.executor_label = executor_label
         self.reason = reason
+
+    def __str__(self):
+        return "Executor {0} scaling failed due to: {1}".format(self.executor_label, self.reason)
 
 
 class DeserializationError(ExecutorError):
