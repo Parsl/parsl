@@ -29,6 +29,7 @@ from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
 from parsl.executors.workqueue import exec_parsl_function
+from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
 import typeguard
@@ -315,11 +316,11 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                  "project_password_file": self.project_password_file,
                                  "project_name": self.project_name}
         self.submit_process = multiprocessing.Process(target=_work_queue_submit_wait,
-                                                      name="submit_thread",
+                                                      name="WorkQueue-Submit-Process",
                                                       kwargs=submit_process_kwargs)
 
         self.collector_thread = threading.Thread(target=self._collect_work_queue_results,
-                                                 name="wait_thread")
+                                                 name="WorkQueue-collector-thread")
         self.collector_thread.daemon = True
 
         # Begin both processes
@@ -618,7 +619,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             try:
                 self.scale_out(blocks=self.provider.init_blocks)
             except Exception as e:
-                logger.debug("Scaling out failed: {}".format(e))
+                logger.error("Initial block scaling out failed: {}".format(e))
                 raise e
 
     @property
@@ -679,6 +680,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             self._run_dir = value
         return self._run_dir
 
+    @wrap_with_logs
     def _collect_work_queue_results(self):
         """Sets the values of tasks' futures of tasks completed by work queue.
         """
@@ -714,6 +716,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Exiting Collector Thread")
 
 
+@wrap_with_logs
 def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                             launch_cmd=None,
                             env=None,
