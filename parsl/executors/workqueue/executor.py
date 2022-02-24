@@ -625,7 +625,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             try:
                 self.scale_out(blocks=self.provider.init_blocks)
             except Exception as e:
-                logger.debug("Scaling out failed: {}".format(e))
+                logger.error("Initial block scaling out failed: {}".format(e))
                 raise e
 
     @property
@@ -634,9 +634,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         implemented and probably could be replaced with a counter.
         """
         outstanding = 0
-        for fut in self.tasks.values():
-            if not fut.done():
-                outstanding += 1
+        with self.tasks_lock:
+            for fut in self.tasks.values():
+                if not fut.done():
+                    outstanding += 1
         logger.debug(f"Counted {outstanding} outstanding tasks")
         return outstanding
 
