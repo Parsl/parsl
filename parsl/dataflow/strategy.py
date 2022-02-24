@@ -242,8 +242,8 @@ class Strategy(object):
                 # Case 2b
                 else:
                     # logger.debug("Strategy: Case.2b")
-                    excess = math.ceil((active_tasks * parallelism) - active_slots)
-                    excess_blocks = math.ceil(float(excess) / (tasks_per_node * nodes_per_block))
+                    excess_slots = math.ceil((active_tasks * parallelism) - active_slots)
+                    excess_blocks = math.ceil(float(excess_slots) / (tasks_per_node * nodes_per_block))
                     excess_blocks = min(excess_blocks, max_blocks - active_blocks)
                     logger.debug("Requesting {} more blocks".format(excess_blocks))
                     exec_status.scale_out(excess_blocks)
@@ -262,7 +262,10 @@ class Strategy(object):
                     logger.debug("More slots than tasks")
                     if isinstance(executor, HighThroughputExecutor):
                         if active_blocks > min_blocks:
-                            exec_status.scale_in(1, force=False, max_idletime=self.max_idletime)
+                            excess_slots = math.ceil(active_slots - (active_tasks * parallelism))
+                            excess_blocks = math.ceil(float(excess_slots) / (tasks_per_node * nodes_per_block))
+                            excess_blocks = min(excess_blocks, active_blocks - min_blocks)
+                            exec_status.scale_in(excess_blocks, force=False, max_idletime=self.max_idletime)
 
                 elif strategy_type == 'simple':
                     # skip for simple strategy
