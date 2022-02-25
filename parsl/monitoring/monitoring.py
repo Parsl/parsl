@@ -599,6 +599,12 @@ def monitor(pid: int,
             sleep_dur: float = 10) -> None:
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
+
+    This process makes calls to logging, but deliberately does not attach
+    any log handlers. Previously, there was a handler which logged to a
+    file in /tmp, but this was usually not useful or even accessible.
+    In some circumstances, it might be useful to hack in a handler so the
+    logger calls remain in place.
     """
     import logging
     import platform
@@ -607,10 +613,6 @@ def monitor(pid: int,
 
     radio = UDPRadio(monitoring_hub_url,
                      source_id=task_id)
-
-    format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-    logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
-        logbase="/tmp", task_id=task_id, pid=pid), level=logging_level, format=format_string)
 
     logging.debug("start of monitor")
 
