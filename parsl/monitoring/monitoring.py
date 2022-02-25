@@ -857,9 +857,11 @@ def monitor(pid: int,
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
-    format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-    logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
-        logbase="/tmp", task_id=task_id, pid=pid), level=logging_level, format=format_string)
+    # TODO: should this be enabled by a debugging option?
+
+    # format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+    # logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
+    #    logbase="/tmp", task_id=task_id, pid=pid), level=logging_level, format=format_string)
 
     logging.debug("start of monitor")
 
