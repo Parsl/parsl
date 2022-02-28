@@ -65,6 +65,10 @@ jobs:
         pip install .[monitoring]
         parsl/tests/test-viz.sh
 
+    - name: clear runinfo from all previous steps
+      run: |
+        rm -rfv runinfo/
+
     # config_local_test comes after viz so that the large monitoring.db
     # created by `make test` is still around
     - name: make config_local_test
