@@ -42,7 +42,6 @@ jobs:
     - name: make test
       run: |
         make test
-        rm -rfv runinfo/
 
     - name: Documentation checks
       run: |
@@ -69,6 +68,10 @@ jobs:
         sudo apt-get install -y graphviz
         pip install .[monitoring]
         parsl/tests/test-viz.sh
+
+    - name: clear runinfo from all previous steps
+      run: |
+        rm -rfv runinfo/
 
     # config_local_test comes after viz so that the large monitoring.db
     # created by `make test` is still around
