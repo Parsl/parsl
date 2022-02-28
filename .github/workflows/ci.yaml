@@ -42,6 +42,7 @@ jobs:
     - name: make test
       run: |
         make test
+        rm -rfv runinfo/
 
     - name: Documentation checks
       run: |
