@@ -623,9 +623,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         implemented and probably could be replaced with a counter.
         """
         outstanding = 0
-        for fut in self.tasks.values():
-            if not fut.done():
-                outstanding += 1
+        with self.tasks_lock:
+            for fut in self.tasks.values():
+                if not fut.done():
+                    outstanding += 1
         logger.debug(f"Counted {outstanding} outstanding tasks")
         return outstanding
 
