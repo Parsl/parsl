@@ -891,7 +891,7 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                                                          reason="task could not be submited to work queue",
                                                          status=-1))
                 continue
-            logger.debug("Task {} submitted to WorkQueue with id {}".format(task.id, wq_id))
+            logger.info("Task {} submitted to WorkQueue with id {}".format(task.id, wq_id))
 
         # If the queue is not empty wait on the WorkQueue queue for a task
         task_found = True
