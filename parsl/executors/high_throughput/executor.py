@@ -201,7 +201,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         logger.debug("Initializing HighThroughputExecutor")
 
-        BlockProviderExecutor.__init__(self, provider)
+        BlockProviderExecutor.__init__(self, provider=provider)
         self.label = label
         self.launch_cmd = launch_cmd
         self.worker_debug = worker_debug

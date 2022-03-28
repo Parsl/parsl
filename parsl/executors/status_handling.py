@@ -40,7 +40,7 @@ class BlockProviderExecutor(ParslExecutor):
     any init_blocks parameter. Subclasses must implement that behaviour
     themselves.
     """
-    def __init__(self, provider: ExecutionProvider):
+    def __init__(self, *, provider: ExecutionProvider):
         super().__init__()
         self._provider = provider
         # errors can happen during the submit call to the provider; this is used
