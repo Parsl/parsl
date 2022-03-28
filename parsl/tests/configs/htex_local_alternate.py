@@ -57,6 +57,7 @@ def fresh_config():
                     max_blocks=5,
                     launcher=SingleNodeLauncher(),
                 ),
+                block_error_handler=False
             )
         ],
         strategy='simple',

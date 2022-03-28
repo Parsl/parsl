@@ -48,7 +48,7 @@ class BlockProviderExecutor(ParslExecutor):
                  block_error_handler: bool):
         super().__init__()
         self._provider = provider
-        self._block_error_handler = block_error_handler
+        self.block_error_handler = block_error_handler
         # errors can happen during the submit call to the provider; this is used
         # to keep track of such errors so that they can be handled in one place
         # together with errors reported by status()
@@ -133,11 +133,11 @@ class BlockProviderExecutor(ParslExecutor):
 
     @property
     def error_management_enabled(self):
-        return self._block_error_handler
+        return self.block_error_handler
 
     def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
                       status: Dict[str, JobStatus]) -> None:
-        if not self._block_error_handler:
+        if not self.block_error_handler:
             return
         init_blocks = 3
         if hasattr(self.provider, 'init_blocks'):
