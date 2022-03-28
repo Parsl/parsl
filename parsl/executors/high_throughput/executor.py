@@ -699,7 +699,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     def _get_launch_command(self, block_id: str) -> str:
         if self.launch_cmd is None:
-            raise ScalingFailed(self.provider.label, "No launch command")
+            raise ScalingFailed(self, "No launch command")
         launch_cmd = self.launch_cmd.format(block_id=block_id)
         return launch_cmd
 

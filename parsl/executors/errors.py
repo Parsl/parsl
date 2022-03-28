@@ -2,8 +2,6 @@
 from parsl.app.errors import ParslError
 from parsl.executors.base import ParslExecutor
 
-from typing import Optional
-
 
 class ExecutorError(ParslError):
     """Base class for executor related exceptions.
@@ -11,11 +9,7 @@ class ExecutorError(ParslError):
     Only to be invoked when only a more specific error is not available.
     """
 
-    # TODO: this constructor doesn't make sense for most errors here
-    # so it and the __str__ impl shoudl go away, and the few places
-    # that an ExecutorError is directly instantiated shoudl be replaced
-    # by a more specific errror
-    def __init__(self, executor: ParslExecutor, reason):
+    def __init__(self, executor: ParslExecutor, reason: str):
         self.executor = executor
         self.reason = reason
 
@@ -49,15 +43,11 @@ Please checkout {} for this feature".format(self.feature,
 class ScalingFailed(ExecutorError):
     """Scaling failed due to error in Execution provider."""
 
-    def __init__(self, executor_label: Optional[str], reason: str):
-        self.executor_label = executor_label
-        self.reason = reason
-
     def __str__(self):
-        return "Executor {0} scaling failed due to: {1}".format(self.executor_label, self.reason)
+        return f"Executor {self.executor.label} failed to scale due to: {self.reason}"
 
 
-class DeserializationError(ExecutorError):
+class DeserializationError(ParslError):
     """ Failure at the Deserialization of results/exceptions from remote workers
     """
 
@@ -68,7 +58,7 @@ class DeserializationError(ExecutorError):
         return "Failed to deserialize return objects. Reason:{}".format(self.reason)
 
 
-class SerializationError(ExecutorError):
+class SerializationError(ParslError):
     """ Failure to serialize data arguments for the tasks
     """
 
@@ -81,7 +71,7 @@ class SerializationError(ExecutorError):
                                                                            self.troubleshooting)
 
 
-class BadMessage(ExecutorError):
+class BadMessage(ParslError):
     """ Mangled/Poorly formatted/Unsupported message received
     """
 

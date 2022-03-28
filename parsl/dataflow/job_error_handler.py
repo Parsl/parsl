@@ -5,10 +5,7 @@ from parsl.executors.base import ParslExecutor
 from parsl.providers.provider_base import JobStatus, JobState
 
 
-class JobErrorHandler(object):
-    def __init__(self):
-        pass
-
+class JobErrorHandler:
     def run(self, status: List[ExecutorStatus]):
         for es in status:
             self._check_irrecoverable_executor(es)
