@@ -13,9 +13,7 @@ class JobErrorHandler:
     def _check_irrecoverable_executor(self, es: ExecutorStatus):
         if not es.executor.error_management_enabled:
             return
-        custom_handling = es.executor.handle_errors(self, es.status)
-        if not custom_handling:
-            self.simple_error_handler(es.executor, es.status, 3)
+        es.executor.handle_errors(self, es.status)
 
     def simple_error_handler(self, executor: ParslExecutor, status: Dict[str, JobStatus], threshold: int):
         (total_jobs, failed_jobs) = self.count_jobs(status)
