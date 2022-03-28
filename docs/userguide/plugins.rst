@@ -19,7 +19,7 @@ run the same code on a large supercomputer.
 Providers, Launchers and Channels
 ---------------------------------
 Some executors are based on blocks of workers (for example the
-`HighThroughputExecutor`: the submit side requires a
+`parsl.executors.HighThroughputExecutor`: the submit side requires a
 batch system (eg slurm, kubernetes) to start worker processes, which then
 execute tasks.
 
@@ -36,7 +36,7 @@ system type.
 
 A `Channel` allows the commands used to interact with an `ExecutionProvider` to be
 executed on a remote system. The default channel executes commands on the
-local system, but a few variants of an `SSHChannel` are provided.
+local system, but a few variants of an `parsl.channels.SSHChannel` are provided.
 
 
 File staging
