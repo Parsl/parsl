@@ -13,6 +13,6 @@ types-python-dateutil
 types-requests
 types-six
 sqlalchemy-stubs
-Sphinx==3.4.1
+Sphinx==4.5.0
 twine
 wheel
