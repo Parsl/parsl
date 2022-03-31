@@ -21,7 +21,7 @@ programs.
 .. note::
 	The behavior of a Parsl program can vary in minor respects depending on the
 	Executor used (see :ref:`label-execution`). We focus here on the behavior seen when
-	using the recommended `HighThroughputExecutor` (HTEX).
+	using the recommended `parsl.executors.HighThroughputExecutor` (HTEX).
 
 Parsl and Concurrency
 ---------------------
@@ -77,7 +77,7 @@ them on local or remote resources.
 We briefly describe two of Parsl's most commonly used executors. 
 Other executors are described in :ref:`label-execution`.
 
-The `HighThroughputExecutor` (HTEX) implements a *pilot job model* that enables 
+The `parsl.executors.HighThroughputExecutor` (HTEX) implements a *pilot job model* that enables 
 fine-grain task execution using across one or more provisioned nodes. 
 HTEX can be used on a single node (e.g., a laptop) and will make use of 
 multiple processes for concurrent execution.
@@ -105,7 +105,7 @@ nodes.
 	(`parsl.addresses.address_by_query`).
 
 
-The `ThreadPoolExecutor` allows tasks to be executed on a pool of locally 
+The `parsl.executors.ThreadPoolExecutor` allows tasks to be executed on a pool of locally 
 accessible threads. As execution occurs on the same computer, on a pool of 
 threads forked from the main program, the tasks share memory with one another 
 (this is discussed further in the following sections).
@@ -178,11 +178,11 @@ programs is the environment in which this new task executes: does it have the
 same or different memory, file system, or service environment as its parent 
 task or any other task? The answer, depends on the executor used, and (in the 
 case of the file system environment) where the task executes. 
-Below we describe behavior for the most commonly used `HighThroughputExecutor`
-which is representative of all Parsl executors except the `ThreadPoolExecutor`.
+Below we describe behavior for the most commonly used `parsl.executors.HighThroughputExecutor`
+which is representative of all Parsl executors except the `parsl.executors.ThreadPoolExecutor`.
 
 .. Warning:
-	The `ThreadPoolExecutor` behaves differently than other Parsl executors as
+	The `parsl.executors.ThreadPoolExecutor` behaves differently than other Parsl executors as
 	it allows tasks to share memory.
 
 Memory environment
@@ -205,16 +205,16 @@ print_answer function accesses the global variable "answer", and we see as outpu
     print_answer()
 
 
-In Parsl (except when using the `ThreadPoolExecutor`) a Parsl app is executed
+In Parsl (except when using the `parsl.executors.ThreadPoolExecutor`) a Parsl app is executed
 in a distinct environment that only has access to local variables associated 
 with the app function. Thus, if the program above is executed with say the 
-`HighThroughputExecutor`, will print "the answer is 0" rather than "the answer
+`parsl.executors.HighThroughputExecutor`, will print "the answer is 0" rather than "the answer
 is 42," because the print statement in provide_answer does not have access to 
 the global variable that has been assigned the value 42.  The program will
-run without errors when using the `ThreadPoolExecutor`.
+run without errors when using the `parsl.executors.ThreadPoolExecutor`.
 
 Similarly, the same scoping rules apply to import statements, and thus 
-the following program will run without errors with the `ThreadPoolExecutor`, 
+the following program will run without errors with the `parsl.executors.ThreadPoolExecutor`, 
 but raise errors when run with any other executor, because the return statement 
 in ``ambiguous_double`` refers to a variable (factor) and a module (random) that are 
 not known to the function.
@@ -292,7 +292,7 @@ service. These services are accessible to any task.
 Environment Summary
 ^^^^^^^^^^^^^^^^^^^
 
-As we summarize in the table, if tasks execute with the `ThreadPoolExecutor`, 
+As we summarize in the table, if tasks execute with the `parsl.executors.ThreadPoolExecutor`, 
 they share the memory and file system environment of the parent task. If they
 execute with any other executor, they have a separate memory environment, and
 may or may not share their file system environment with other tasks, depending
