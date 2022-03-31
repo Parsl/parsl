@@ -265,10 +265,10 @@ Deprecated and Removed features
 New Functionality
 ^^^^^^^^^^^^^^^^^
 
-* `WorkQueueExecutor` introduced in v0.9.0 is now in beta. `WorkQueueExecutor` is designed as a drop-in replacement for `HighThroughputExecutor`. Here are some key features:
+* `parsl.executors.WorkQueueExecutor` introduced in v0.9.0 is now in beta. `parsl.executors.WorkQueueExecutor` is designed as a drop-in replacement for `parsl.executors.HighThroughputExecutor`. Here are some key features:
 
   * Support for packaging the python environment and shipping it to the worker side. This mechanism addresses propagating python environments in  grid-like systems that lack shared-filesystems or cloud environments.
-  * `WorkQueueExecutor` supports resource function tagging and resource specification
+  * `parsl.executors.WorkQueueExecutor` supports resource function tagging and resource specification
   * Support for resource specification kwarg `issue#1675 <https://github.com/Parsl/parsl/issues/1675>`_
 
 
@@ -320,9 +320,9 @@ New Functionality
            return 'cat {} > {}'.format(inputs[0].filepath, outputs[0].filepath)
 
 
-* New launcher: `WrappedLauncher` for launching tasks inside containers.
+* New launcher: `parsl.launchers.WrappedLauncher` for launching tasks inside containers.
 
-* `SSHChannel` now supports a ``key_filename`` kwarg `issue#1639 <https://github.com/Parsl/parsl/issues/1639>`_
+* `parsl.channels.SSHChannel` now supports a ``key_filename`` kwarg `issue#1639 <https://github.com/Parsl/parsl/issues/1639>`_
 
 * Newly added Makefile wraps several frequent developer operations such as:
 
@@ -334,9 +334,9 @@ New Functionality
 
   * Tag release and push to release channels: ``make deploy``
 
-* Several updates to the `HighThroughputExecutor`:
+* Several updates to the `parsl.executors.HighThroughputExecutor`:
 
-  * By default, the `HighThroughputExecutor` will now use heuristics to detect and try all addresses
+  * By default, the `parsl.executors.HighThroughputExecutor` will now use heuristics to detect and try all addresses
     when the workers connect back to the parsl master. An address can be configured manually using the
     ``HighThroughputExecutor(address=<address_string>)`` kwarg option.
 
@@ -429,11 +429,11 @@ New Functionality
   ``GlobusScheme`` in 0.8.0 has been renamed `GlobusStaging` and moved to a new
   module, parsl.data_provider.globus
 
-* `WorkQueueExecutor`: a new executor that integrates functionality from `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ is now available.
+* `parsl.executors.WorkQueueExecutor`: a new executor that integrates functionality from `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ is now available.
 * New provider to support for Ad-Hoc clusters `parsl.providers.AdHocProvider`
 * New provider added to support LSF on Summit `parsl.providers.LSFProvider`
 * Support for CPU and Memory resource hints to providers `(github) <https://github.com/Parsl/parsl/issues/942>`_.
-* The ``logging_level=logging.INFO`` in `MonitoringHub` is replaced with ``monitoring_debug=False``:
+* The ``logging_level=logging.INFO`` in `parsl.monitoring.MonitoringHub` is replaced with ``monitoring_debug=False``:
 
    .. code-block:: python
 
@@ -458,8 +458,8 @@ New Functionality
 * Several improvements to the Monitoring interface.
 * Configurable port on `parsl.channels.SSHChannel`.
 * ``suppress_failure`` now defaults to True.
-* `HighThroughputExecutor` is the recommended executor, and ``IPyParallelExecutor`` is deprecated.
-* `HighThroughputExecutor` will expose worker information via environment variables: ``PARSL_WORKER_RANK`` and ``PARSL_WORKER_COUNT``
+* `parsl.executors.HighThroughputExecutor` is the recommended executor, and ``IPyParallelExecutor`` is deprecated.
+* `parsl.executors.HighThroughputExecutor` will expose worker information via environment variables: ``PARSL_WORKER_RANK`` and ``PARSL_WORKER_COUNT``
 
 Bug Fixes
 ^^^^^^^^^
@@ -519,8 +519,8 @@ New Functionality
          return "cat {0} > {1}".format(" ".join(list(map(str,inputs))), outputs[0])
 
 * Cleaner user app file log management.
-* Updated configurations using `HighThroughputExecutor` in the configuration section of the userguide.
-* Support for OAuth based SSH with `OAuthSSHChannel`.
+* Updated configurations using `parsl.executors.HighThroughputExecutor` in the configuration section of the userguide.
+* Support for OAuth based SSH with `parsl.channels.OAuthSSHChannel`.
 
 Bug Fixes
 ^^^^^^^^^
@@ -548,7 +548,7 @@ New Functionality
 * Monitoring: Support for reporting monitoring data to a local sqlite database is now available.
 * Parsl is switching to an opt-in model for anonymous usage tracking. Read more here: :ref:`label-usage-tracking`.
 * `bash_app` now supports specification of write modes for ``stdout`` and ``stderr``.
-* Persistent volume support added to `KubernetesProvider`.
+* Persistent volume support added to `parsl.providers.KubernetesProvider`.
 * Scaling recommendations from study on Bluewaters is now available in the userguide.
 
 
@@ -560,9 +560,9 @@ Released on Jan 18th, 2019
 New Functionality
 ^^^^^^^^^^^^^^^^^
 
-* `LowLatencyExecutor`: a new executor designed to address use-cases with tight latency requirements
+* `parsl.executors.LowLatencyExecutor`: a new executor designed to address use-cases with tight latency requirements
   such as model serving (Machine Learning), function serving and interactive analyses is now available.
-* New options in `HighThroughputExecutor`:
+* New options in `parsl.executors.HighThroughputExecutor`:
      * ``suppress_failure``: Enable suppression of worker rejoin errors.
      * ``max_workers``: Limit workers spawned by manager
 * Late binding of DFK, allows apps to pick DFK dynamically at call time. This functionality adds safety
@@ -571,7 +571,7 @@ New Functionality
 Bug fixes
 ^^^^^^^^^
 
-* A critical bug in `HighThroughputExecutor` that led to debug logs overflowing channels and terminating
+* A critical bug in `parsl.executors.HighThroughputExecutor` that led to debug logs overflowing channels and terminating
   blocks of resource is fixed `issue#738 <https://github.com/Parsl/parsl/issues/738>`_
 
 
@@ -592,7 +592,7 @@ New functionality
 ^^^^^^^^^^^^^^^^^
 
 
-* `HighThroughputExecutor`: a new executor intended to replace the ``IPyParallelExecutor`` is now available.
+* `parsl.executors.HighThroughputExecutor`: a new executor intended to replace the ``IPyParallelExecutor`` is now available.
   This new executor addresses several limitations of ``IPyParallelExecutor`` such as:
 
   * Scale beyond the ~300 worker limitation of IPP.
@@ -626,7 +626,7 @@ New functionality
 
    More information on configuring is available in the :ref:`configuration-section` section.
 
-* `ExtremeScaleExecutor` a new executor targeting supercomputer scale (>1000 nodes) workflows is now available.
+* `parsl.executors.ExtremeScaleExecutor` a new executor targeting supercomputer scale (>1000 nodes) workflows is now available.
 
   Here's a sample configuration for using this executor locally:
 
@@ -677,9 +677,9 @@ New functionality
   for eg:
 
     * ``IPyParallelExecutor`` provides ``workers_per_node``
-    * `HighThroughputExecutor` provides ``cores_per_worker`` to allow for worker launches to be determined based on
+    * `parsl.executors.HighThroughputExecutor` provides ``cores_per_worker`` to allow for worker launches to be determined based on
       the number of cores on the compute node.
-    * `ExtremeScaleExecutor` uses ``ranks_per_node`` to specify the ranks to launch per node.
+    * `parsl.executors.ExtremeScaleExecutor` uses ``ranks_per_node`` to specify the ranks to launch per node.
 
     .. warning::
        This is a breaking change from Parsl v0.6.0
@@ -697,7 +697,7 @@ New functionality
     * ``parsl.addresses.address_by_query``
     * ``parsl.addresses.address_by_hostname``
 
-* `AprunLauncher` now supports ``overrides`` option that allows arbitrary strings to be added
+* `parsl.launchers.AprunLauncher` now supports ``overrides`` option that allows arbitrary strings to be added
   to the aprun launcher call.
 
 * `DataFlowKernel` has a new method ``wait_for_current_tasks()``
@@ -720,7 +720,7 @@ Bug fixes (highlights)
 * Implement per-task locks to avoid deadlocks `issue#591 <https://github.com/Parsl/parsl/issues/591>`_
 * Fixes to internal consistency errors `issue#604 <https://github.com/Parsl/parsl/issues/604>`_
 * Removed unnecessary provider labels `issue#440 <https://github.com/Parsl/parsl/issues/440>`_
-* Fixes to `TorqueProvider` to work on NSCC `issue#489 <https://github.com/Parsl/parsl/issues/489>`_
+* Fixes to `parsl.providers.TorqueProvider` to work on NSCC `issue#489 <https://github.com/Parsl/parsl/issues/489>`_
 * Several fixes and updates to monitoring subsystem `issue#471 <https://github.com/Parsl/parsl/issues/471>`_
 * DataManager calls wrong DFK `issue#412 <https://github.com/Parsl/parsl/issues/412>`_
 * Config isn't reloading properly in notebooks `issue#549 <https://github.com/Parsl/parsl/issues/549>`_
@@ -744,7 +744,7 @@ Bug fixes (highlights)
 * Remove redundant logging `issue#267 <https://github.com/Parsl/parsl/issues/267>`_
 * Zombie ipcontroller processes - Process cleanup in case of interruption `issue#460 <https://github.com/Parsl/parsl/issues/460>`_
 * IPyparallel failure when submitting several apps in parallel threads `issue#451 <https://github.com/Parsl/parsl/issues/451>`_
-* `SlurmProvider` + `SingleNodeLauncher` starts all engines on a single core `issue#454 <https://github.com/Parsl/parsl/issues/454>`_
+* `parsl.providers.SlurmProvider` + `parsl.launchers.SingleNodeLauncher` starts all engines on a single core `issue#454 <https://github.com/Parsl/parsl/issues/454>`_
 * IPP ``engine_dir`` has no effect if indicated dir does not exist `issue#446 <https://github.com/Parsl/parsl/issues/446>`_
 * Clarify AppBadFormatting error `issue#433 <https://github.com/Parsl/parsl/issues/433>`_
 * confusing error message with simple configs `issue#379 <https://github.com/Parsl/parsl/issues/379>`_
