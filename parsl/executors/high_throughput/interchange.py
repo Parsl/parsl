@@ -219,7 +219,7 @@ class Interchange(object):
         return tasks
 
     @wrap_with_logs(target="interchange")
-    def migrate_tasks_to_internal(self, kill_event):
+    def task_puller(self, kill_event):
         """Pull tasks from the incoming tasks 0mq pipe onto the internal
         pending task queue
 
@@ -251,7 +251,7 @@ class Interchange(object):
                 self.pending_task_queue.put(msg)
                 task_counter += 1
                 logger.debug("[TASK_PULL_THREAD] Fetched task:{}".format(task_counter))
-        logger.info("[TASK_PULL_THREAD] reached end of migrate_tasks_to_internal loop")
+        logger.info("[TASK_PULL_THREAD] reached end of task_puller loop")
 
     def _create_monitoring_channel(self):
         if self.hub_address and self.hub_port:
@@ -354,7 +354,7 @@ class Interchange(object):
         count = 0
 
         self._kill_event = threading.Event()
-        self._task_puller_thread = threading.Thread(target=self.migrate_tasks_to_internal,
+        self._task_puller_thread = threading.Thread(target=self.task_puller,
                                                     args=(self._kill_event,),
                                                     name="Interchange-Task-Puller")
         self._task_puller_thread.start()
