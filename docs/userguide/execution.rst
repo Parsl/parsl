@@ -38,17 +38,17 @@ parameters include access keys, instance type, and spot bid price
 
 Parsl currently supports the following providers:
 
-1. `LocalProvider`: The provider allows you to run locally on your laptop or workstation.
-2. `CobaltProvider`: This provider allows you to schedule resources via the Cobalt scheduler.
-3. `SlurmProvider`: This provider allows you to schedule resources via the Slurm scheduler.
-4. `CondorProvider`: This provider allows you to schedule resources via the Condor scheduler.
-5. `GridEngineProvider`: This provider allows you to schedule resources via the GridEngine scheduler.
-6. `TorqueProvider`: This provider allows you to schedule resources via the Torque scheduler.
-7. `AWSProvider`: This provider allows you to provision and manage cloud nodes from Amazon Web Services.
-8. `GoogleCloudProvider`: This provider allows you to provision and manage cloud nodes from Google Cloud.
-9. `KubernetesProvider`: This provider allows you to provision and manage containers on a Kubernetes cluster.
-10. `AdHocProvider`: This provider allows you manage execution over a collection of nodes to form an ad-hoc cluster.
-11. `LSFProvider`: This provider allows you to schedule resources via IBM's LSF scheduler
+1. `parsl.providers.LocalProvider`: The provider allows you to run locally on your laptop or workstation.
+2. `parsl.providers.CobaltProvider`: This provider allows you to schedule resources via the Cobalt scheduler.
+3. `parsl.providers.SlurmProvider`: This provider allows you to schedule resources via the Slurm scheduler.
+4. `parsl.providers.CondorProvider`: This provider allows you to schedule resources via the Condor scheduler.
+5. `parsl.providers.GridEngineProvider`: This provider allows you to schedule resources via the GridEngine scheduler.
+6. `parsl.providers.TorqueProvider`: This provider allows you to schedule resources via the Torque scheduler.
+7. `parsl.providers.AWSProvider`: This provider allows you to provision and manage cloud nodes from Amazon Web Services.
+8. `parsl.providers.GoogleCloudProvider`: This provider allows you to provision and manage cloud nodes from Google Cloud.
+9. `parsl.providers.KubernetesProvider`: This provider allows you to provision and manage containers on a Kubernetes cluster.
+10. `parsl.providers.AdHocProvider`: This provider allows you manage execution over a collection of nodes to form an ad-hoc cluster.
+11. `parsl.providers.LSFProvider`: This provider allows you to schedule resources via IBM's LSF scheduler
 
 
 Executors
@@ -80,13 +80,13 @@ and executing the task in a sandboxed Python environment.
 
 Parsl currently supports the following executors:
 
-1. `ThreadPoolExecutor`: This executor supports multi-thread execution on local resources.
+1. `parsl.executors.ThreadPoolExecutor`: This executor supports multi-thread execution on local resources.
 
-2. `HighThroughputExecutor`: This executor implements hierarchical scheduling and batching using a pilot job model to deliver high throughput task execution on up to 4000 Nodes.
+2. `parsl.executors.HighThroughputExecutor`: This executor implements hierarchical scheduling and batching using a pilot job model to deliver high throughput task execution on up to 4000 Nodes.
 
-3. `WorkQueueExecutor`: [**Beta**] This executor integrates `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ as an execution backend. Work Queue scales to tens of thousands of cores and implements reliable execution of tasks with dynamic resource sizing.
+3. `parsl.executors.WorkQueueExecutor`: [**Beta**] This executor integrates `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ as an execution backend. Work Queue scales to tens of thousands of cores and implements reliable execution of tasks with dynamic resource sizing.
 
-4. `ExtremeScaleExecutor`: [**Beta**] The ExtremeScaleExecutor uses `mpi4py <https://mpi4py.readthedocs.io/en/stable/>`_ to scale to 4000+ nodes. This executor is typically used for executing on supercomputers.
+4. `parsl.executors.ExtremeScaleExecutor`: [**Beta**] The ExtremeScaleExecutor uses `mpi4py <https://mpi4py.readthedocs.io/en/stable/>`_ to scale to 4000+ nodes. This executor is typically used for executing on supercomputers.
 
 These executors cover a broad range of execution requirements. As with other Parsl components, there is a standard interface (ParslExecutor) that can be implemented to add support for other executors.
 
@@ -112,13 +112,13 @@ cores and nodes.
 
 Parsl currently supports the following set of launchers:
 
-1. `SrunLauncher`: Srun based launcher for Slurm based systems.
-2. `AprunLauncher`: Aprun based launcher for Crays.
-3. `SrunMPILauncher`: Launcher for launching MPI applications with Srun.
-4. `GnuParallelLauncher`: Launcher using GNU parallel to launch workers across nodes and cores.
-5. `MpiExecLauncher`: Uses Mpiexec to launch.
-6. `SimpleLauncher`: The launcher default to a single worker launch.
-7. `SingleNodeLauncher`: This launcher launches ``workers_per_node`` count workers on a single node.
+1. `parsl.launchers.SrunLauncher`: Srun based launcher for Slurm based systems.
+2. `parsl.launchers.AprunLauncher`: Aprun based launcher for Crays.
+3. `parsl.launchers.SrunMPILauncher`: Launcher for launching MPI applications with Srun.
+4. `parsl.launchers.GnuParallelLauncher`: Launcher using GNU parallel to launch workers across nodes and cores.
+5. `parsl.launchers.MpiExecLauncher`: Uses Mpiexec to launch.
+6. `parsl.launchers.SimpleLauncher`: The launcher default to a single worker launch.
+7. `parsl.launchers.SingleNodeLauncher`: This launcher launches ``workers_per_node`` count workers on a single node.
 
 Additionally, the launcher interface can be used to implement specialized behaviors
 in custom environments (for example, to
@@ -264,7 +264,7 @@ For example:
 Configuration
 ^^^^^^^^^^^^^
 
-The example below shows how elasticity and parallelism can be configured. Here, a `HighThroughputExecutor`
+The example below shows how elasticity and parallelism can be configured. Here, a `parsl.executors.HighThroughputExecutor`
 is used with a minimum of 1 block and a maximum of 2 blocks, where each block may host
 up to 2 workers per node. Thus this setup is capable of servicing 2 tasks concurrently. 
 Parallelism of 0.5 means that when more than 2 * the total task capacity (i.e., 4 tasks) are queued a new

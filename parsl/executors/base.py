@@ -38,7 +38,7 @@ class ParslExecutor(metaclass=ABCMeta):
               @typeguard the constructor, you'll have to use List[Any] here.
     """
 
-    label: str
+    label: str = "undefined"
 
     def __enter__(self):
         return self
