@@ -220,7 +220,7 @@ class Interchange(object):
 
     @wrap_with_logs(target="interchange")
     def task_puller(self, kill_event):
-        """Pull tasks from the incoming tasks 0mq pipe onto the internal
+        """Pull tasks from the incoming tasks zmq pipe onto the internal
         pending task queue
 
         Parameters:
