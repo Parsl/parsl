@@ -50,7 +50,6 @@ class ParslExecutor(metaclass=ABCMeta):
               @typeguard the constructor, you'll have to use List[Any] here.
     """
 
-
     label: str = "undefined"
     radio_mode: str = "udp"
 
