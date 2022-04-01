@@ -15,7 +15,7 @@ from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
 
 from parsl.monitoring.message_type import MessageType
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import cast, Any, Callable, Dict, List, Optional, Union
 
 _db_manager_excepts: Optional[Exception]
 
@@ -483,12 +483,10 @@ class MonitoringRouter:
                 try:
                     msg = self.ic_channel.recv_pyobj()
                     self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
-
-                    assert msg[0] == MessageType.NODE_INFO \
-                        or msg[0] == MessageType.BLOCK_INFO, \
-                        "IC Channel expects only NODE_INFO or BLOCK_INFO and cannot dispatch other message types"
-
+                    assert isinstance(msg, tuple), "IC Channel expects only tuples, got {}".format(msg)
+                    assert len(msg) >= 1, "IC Channel expects tuples of length at least 1, got {}".format(msg)
                     if msg[0] == MessageType.NODE_INFO:
+                        assert len(msg) >= 1, "IC Channel expects NODE_INFO tuples of length at least 3, got {}".format(msg)
                         msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
                         msg[2]['run_id'] = self.run_id
                         msg[2]['timestamp'] = msg[1]
@@ -496,8 +494,10 @@ class MonitoringRouter:
                         # ((tag, dict), addr)
                         node_msg = ((msg[0], msg[2]), 0)
                         node_msgs.put(node_msg)
+                    elif msg[0] == MessageType.RESOURCE_INFO:
+                        resource_msgs.put(cast(Any, msg))
                     elif msg[0] == MessageType.BLOCK_INFO:
-                        block_msgs.put((msg, 0))
+                        block_msgs.put(cast(Any, (msg, 0)))
                     else:
                         self.logger.error(f"Discarding message from interchange with unknown type {msg[0].value}")
                 except zmq.Again:
