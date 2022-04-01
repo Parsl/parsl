@@ -116,7 +116,7 @@ class Manager(object):
         logger.debug("Return from heartbeat : {}".format(r))
 
     def recv_result_from_workers(self):
-        """ Receives a results from the MPI worker pool and send it out via 0mq
+        """ Receives a results from the MPI worker pool and send it out via zmq
 
         Returns:
         --------
@@ -141,7 +141,7 @@ class Manager(object):
         return worker_rank
 
     def pull_tasks(self, kill_event):
-        """ Pulls tasks from the incoming tasks 0mq pipe onto the internal
+        """ Pulls tasks from the incoming tasks zmq pipe onto the internal
         pending task queue
 
         Parameters:
@@ -217,7 +217,7 @@ class Manager(object):
                     break
 
     def push_results(self, kill_event):
-        """ Listens on the pending_result_queue and sends out results via 0mq
+        """ Listens on the pending_result_queue and sends out results via zmq
 
         Parameters:
         -----------

@@ -1,10 +1,13 @@
 from functools import update_wrapper
 from functools import partial
 from inspect import signature, Parameter
+import logging
 
 from parsl.app.errors import wrap_error
 from parsl.app.app import AppBase
 from parsl.dataflow.dflow import DataFlowKernelLoader
+
+logger = logging.getLogger(__name__)
 
 
 def remote_side_bash_executor(func, *args, **kwargs):
@@ -16,7 +19,11 @@ def remote_side_bash_executor(func, *args, **kwargs):
     import parsl.app.errors as pe
     from parsl.utils import get_std_fname_mode
 
-    func_name = func.__name__
+    if hasattr(func, '__name__'):
+        func_name = func.__name__
+    else:
+        logger.warning('No name for the function. Potentially a result of parsl#2233')
+        func_name = 'bash_app'
 
     executable = None
 
