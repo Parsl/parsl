@@ -14,7 +14,7 @@ import queue
 import threading
 import json
 
-from typing import cast, Any, Dict
+from typing import cast, Any, Dict, Set
 
 from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
@@ -307,12 +307,11 @@ class Interchange(object):
         else:
             return None
 
-    def _send_monitoring_info(self, hub_channel, manager):
+    def _send_monitoring_info(self, hub_channel, manager: ManagerRecord):
         if hub_channel:
-            m = self._ready_managers[manager]
-            logger.info("Sending message {} to hub".format(m))
+            logger.info("Sending message {} to hub".format(manager))
 
-            d: Dict = cast(Dict, m.copy())
+            d: Dict = cast(Dict, manager.copy())
             d['timestamp'] = datetime.datetime.now()
             d['last_heartbeat'] = datetime.datetime.fromtimestamp(d['last_heartbeat'])
 
@@ -335,14 +334,14 @@ class Interchange(object):
                 logger.debug("Received command request: {}".format(command_req))
                 if command_req == "OUTSTANDING_C":
                     outstanding = self.pending_task_queue.qsize()
-                    for manager_id in self._ready_managers:
-                        outstanding += len(self._ready_managers[manager_id]['tasks'])
+                    for manager in self._ready_managers.values():
+                        outstanding += len(manager['tasks'])
                     reply = outstanding
 
                 elif command_req == "WORKERS":
                     num_workers = 0
-                    for manager_id in self._ready_managers:
-                        num_workers += self._ready_managers[manager_id]['worker_count']
+                    for manager in self._ready_managers.values():
+                        num_workers += manager['worker_count']
                     reply = num_workers
 
                 elif command_req == "MANAGERS":
@@ -363,12 +362,13 @@ class Interchange(object):
 
                 elif command_req.startswith("HOLD_WORKER"):
                     cmd, s_manager = command_req.split(';')
-                    manager = s_manager.encode('utf-8')
+                    manager_id = s_manager.encode('utf-8')
                     logger.info("Received HOLD_WORKER for {!r}".format(manager))
                     if manager_id in self._ready_managers:
-                        self._ready_managers[manager_id]['active'] = False
+                        m = self._ready_managers[manager_id]
+                        m['active'] = False
                         reply = True
-                        self._send_monitoring_info(hub_channel, manager_id)
+                        self._send_monitoring_info(hub_channel, m)
                     else:
                         reply = False
 
@@ -390,11 +390,6 @@ class Interchange(object):
     @wrap_with_logs
     def start(self):
         """ Start the interchange
-
-        Parameters:
-        ----------
-
-        TODO: Move task receiving to a thread
         """
         logger.info("Incoming ports bound")
 
@@ -436,7 +431,7 @@ class Interchange(object):
         # for scheduling a job (or maybe any other attention?).
         # Anything altering the state of the manager should add it
         # onto this list.
-        interesting_managers = set()
+        interesting_managers: Set[bytes] = set()
 
         while not self._kill_event.is_set():
             logger.debug(f"Starting poll with timeout {poll_period} ms")
@@ -472,9 +467,10 @@ class Interchange(object):
                     if reg_flag is True:
                         interesting_managers.add(manager_id)
                         logger.info("Adding manager: {} to ready queue".format(manager_id))
-                        self._ready_managers[manager_id].update(msg)
+                        m = self._ready_managers[manager_id]
+                        m.update(msg)
                         logger.info("Registration info for manager {}: {}".format(manager_id, msg))
-                        self._send_monitoring_info(hub_channel, manager_id)
+                        self._send_monitoring_info(hub_channel, m)
 
                         if (msg['python_v'].rsplit(".", 1)[0] != self.current_platform['python_v'].rsplit(".", 1)[0] or
                             msg['parsl_v'] != self.current_platform['parsl_v']):
@@ -622,7 +618,7 @@ class Interchange(object):
                 logger.warning(f"Removing this manager and cancelled htex tasks {m['tasks']}")
                 if m['active']:
                     m['active'] = False
-                    self._send_monitoring_info(hub_channel, manager_id)
+                    self._send_monitoring_info(hub_channel, m)
 
                 logger.warning(f"Cancelling htex tasks {m['tasks']} on removed manager")
                 for tid in m['tasks']:
