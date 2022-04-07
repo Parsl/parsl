@@ -102,6 +102,7 @@ class TasksOutgoing(object):
                                                         max_port=port_range[1])
         self.poller = zmq.Poller()
         self.poller.register(self.zmq_socket, zmq.POLLOUT)
+        self._lock = threading.Lock()
 
     def put(self, message):
         """ This function needs to be fast at the same time aware of the possibility of
@@ -113,21 +114,24 @@ class TasksOutgoing(object):
         This issue can be magnified if each the serialized buffer itself is larger.
         """
         timeout_ms = 1
-        while True:
-            socks = dict(self.poller.poll(timeout=timeout_ms))
-            if self.zmq_socket in socks and socks[self.zmq_socket] == zmq.POLLOUT:
-                # The copy option adds latency but reduces the risk of ZMQ overflow
-                self.zmq_socket.send_pyobj(message, copy=True)
-                return
-            else:
-                timeout_ms *= 2
-                logger.debug("Not sending due to non-ready zmq pipe, timeout: {} ms".format(timeout_ms))
-                if timeout_ms == 10000:
-                    raise RuntimeError("BENC: hit big timeout for pipe put - failing rather than trying forever")
+        with self._lock:
+            while True:
+                socks = dict(self.poller.poll(timeout=timeout_ms))
+                if self.zmq_socket in socks and socks[self.zmq_socket] == zmq.POLLOUT:
+                    # The copy option adds latency but reduces the risk of ZMQ overflow
+                    self.zmq_socket.send_pyobj(message, copy=True)
+                    return
+                else:
+                    timeout_ms = max(timeout_ms, 1)
+                    timeout_ms *= 2
+                    logger.debug("Not sending due to non-ready zmq pipe, timeout: {} ms".format(timeout_ms))
+                    if timeout_ms == 10000:
+                        raise RuntimeError("BENC: hit big timeout for pipe put - failing rather than trying forever")
 
     def close(self):
-        self.zmq_socket.close()
-        self.context.term()
+        with self._lock:
+            self.zmq_socket.close()
+            self.context.term()
 
 
 class ResultsIncoming(object):
@@ -151,15 +155,19 @@ class ResultsIncoming(object):
         self.port = self.results_receiver.bind_to_random_port("tcp://{}".format(ip_address),
                                                               min_port=port_range[0],
                                                               max_port=port_range[1])
+        self._lock = threading.Lock()
 
     def get(self, block=True, timeout=None):
-        return self.results_receiver.recv_multipart()
+        with self._lock:
+            return self.results_receiver.recv_multipart()
 
     def request_close(self):
-        status = self.results_receiver.send(pickle.dumps(None))
-        time.sleep(0.1)
-        return status
+        with self._lock:
+            status = self.results_receiver.send(pickle.dumps(None))
+            time.sleep(0.1)
+            return status
 
     def close(self):
-        self.results_receiver.close()
-        self.context.term()
+        with self._lock:
+            self.results_receiver.close()
+            self.context.term()
