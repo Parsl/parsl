@@ -345,7 +345,7 @@ with the scheduler, and uses the `parsl.launchers.AprunLauncher` to launch worke
 .. literalinclude:: ../../parsl/configs/bluewaters.py
 
 Illinois Campus Cluster (UIUC)
-------------------
+------------------------------
 
 .. image:: https://campuscluster.illinois.edu/wp-content/uploads/2018/02/ND2_3633-sm.jpg
 
