@@ -483,6 +483,9 @@ class DatabaseManager:
                                     if UBM[this_executor][this_id] != this_status:
                                         block_messages_to_insert.append(this_msg)
                                         UBM[this_executor][this_id] = this_status
+                                else:
+                                    block_messages_to_insert.append(this_msg)
+                                    UBM[this_executor][this_id] = this_status
                             else:
                                 block_messages_to_insert.append(this_msg)
                                 UBM[this_executor][this_id] = this_status
