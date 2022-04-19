@@ -659,7 +659,6 @@ class DataFlowKernel(object):
         try:
             executor = self.executors[executor_label]
         except Exception:
-            # TODO: this exception should maybe list self.executors.keys() rather than the entire config?
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
             raise ValueError("Task {} requested invalid executor {}".format(task_id, executor_label))
 
@@ -677,7 +676,6 @@ class DataFlowKernel(object):
                                                          self.run_dir)
 
         with self.submitter_lock:
-            # TODO: that resource_specification parameter might be more obvious as a kwarg?
             exec_fu = executor.submit(executable, task_record['resource_specification'], *args, **kwargs)
         self.update_task_state(task_record, States.launched)
 

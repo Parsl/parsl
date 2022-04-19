@@ -33,9 +33,6 @@ class JobErrorHandler:
         """Concatenate all errors."""
         err = ""
         count = 1
-        # TODO: what is this counting? it's only counting statuses with 'message' defined, not paying attention to the other interesting fields
-        # which probably makes the numbering weird if stdout/err are defined but no message; and overwrites stdout/stderr entirely in the case
-        # of a job status list with no messages at all but plenty of stderrs.
         for js in status.values():
             if js.message is not None:
                 err = err + "{}. {}\n".format(count, js.message)
@@ -46,8 +43,6 @@ class JobErrorHandler:
             stderr = js.stderr_summary
             if stderr:
                 err = err + "\tSTDERR: {}\n".format(stderr)
-            # TODO: what about JobStatus.exitcode?
-            # Maybe all this summarisation should live inside JobStatus and this loop just runs through a bunch of them?
 
         if len(err) == 0:
             err = "[No error message received]"

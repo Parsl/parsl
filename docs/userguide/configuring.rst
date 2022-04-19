@@ -344,6 +344,16 @@ with the scheduler, and uses the `parsl.launchers.AprunLauncher` to launch worke
 
 .. literalinclude:: ../../parsl/configs/bluewaters.py
 
+Illinois Campus Cluster (UIUC)
+------------------------------
+
+.. image:: https://campuscluster.illinois.edu/wp-content/uploads/2018/02/ND2_3633-sm.jpg
+
+The following snippet shows an example configuration for executing on the Illinois Campus Cluster.
+The configuration assumes the user is running on a login node and uses the `parsl.providers.SlurmProvider` to interface
+with the scheduler, and uses the `parsl.launchers.SrunLauncher` to launch workers.
+
+.. literalinclude:: ../../parsl/configs/illinoiscluster.py
 
 Bridges (PSC)
 -------------
