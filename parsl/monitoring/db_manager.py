@@ -485,7 +485,7 @@ class DatabaseManager:
                                         UBM[this_executor][this_id] = this_status
                             else:
                                 block_messages_to_insert.append(this_msg)
-                                UBM[this_executor][this_id] = this_status         
+                                UBM[this_executor][this_id] = this_status
                     self._insert(table=BLOCK, messages=block_messages_to_insert)
 
                 """
