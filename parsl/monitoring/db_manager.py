@@ -340,7 +340,7 @@ class DatabaseManager:
 
         exception_happened = False
 
-        UBM = {}  # type: Dict[Any, Any]
+        UBM = {}  # type: Dict[Any, Dict[Any, Any]]
         while (not self._kill_event.is_set() or
                self.pending_priority_queue.qsize() != 0 or self.pending_resource_queue.qsize() != 0 or
                self.pending_node_queue.qsize() != 0 or self.pending_block_queue.qsize() != 0 or
@@ -478,13 +478,16 @@ class DatabaseManager:
                             this_id = this_msg['block_id']
                             this_executor = this_msg['executor_label']
                             this_status = this_msg['status']
-                            if this_id in UBM.keys():
-                                if UBM[this_id][0] != this_status or UBM[this_id][1] != this_executor:
-                                    block_messages_to_insert.append(this_msg)
-                                    UBM[this_id] = (this_status, this_executor)
+                            
+                            if this_executor in UBM.keys():
+                                if this_id in UBM[this_executor].keys():
+                                    if UBM[this_executor][this_id] != this_status
+                                        block_messages_to_insert.append(this_msg)
+                                        UBM[this_executor][this_id] = this_status
                             else:
                                 block_messages_to_insert.append(this_msg)
-                                UBM[this_id] = (this_status, this_executor)
+                                UBM[this_executor][this_id] = this_status
+                                
                     self._insert(table=BLOCK, messages=block_messages_to_insert)
 
                 """
