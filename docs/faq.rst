@@ -81,7 +81,7 @@ right address or network interface to use.
 
 
 
-For `HighThroughputExecutor` the address is specified in the :class:`~parsl.config.Config`
+For `parsl.executors.HighThroughputExecutor` the address is specified in the :class:`~parsl.config.Config`
 as shown below :
 
 .. code-block:: python
@@ -108,8 +108,8 @@ as shown below :
    the system and the pre-compiled bindings used for pyzmq. As a last resort, you can try:
    ``pip install --upgrade --no-binary pyzmq pyzmq``, which forces re-compilation.
 
-For the `HighThroughputExecutor` as well as the `ExtremeScaleExecutor`, ``address`` is a keyword argument
-taken at initialization. Here is an example for the `HighThroughputExecutor`:
+For the `parsl.executors.HighThroughputExecutor` as well as the `parsl.executors.ExtremeScaleExecutor`, ``address`` is a keyword argument
+taken at initialization. Here is an example for the `parsl.executors.HighThroughputExecutor`:
 
 .. code-block:: python
 
