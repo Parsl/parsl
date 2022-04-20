@@ -58,10 +58,15 @@ class File(object):
         return self.filepath
 
     def __repr__(self) -> str:
-        content = "{0} at 0x{1:x} url={2} scheme={3} netloc={4} path={5} filename={6}".format(
-            self.__class__, id(self), self.url, self.scheme, self.netloc, self.path, self.filename)
+        content = f"{type(self).__name__} " \
+                  f"at 0x{id(self):x} " \
+                  f"url={self.url} " \
+                  f"scheme={self.scheme} " \
+                  f"netloc={self.netloc} " \
+                  f"path={self.path} " \
+                  f"filename={self.filename}"
         if self.local_path is not None:
-            content += " local_path={0}".format(self.local_path)
+            content += f" local_path={self.local_path}"
 
         return "<{}>".format(content)
 
