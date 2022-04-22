@@ -173,7 +173,9 @@ class MonitoringHub(RepresentationMixin):
         monitoring_debug : Bool
              Enable monitoring debug logging. Default: False
         resource_monitoring_enabled : boolean
-             Set this field to True to enable logging the info of resource usage of each task. Default: True
+             Set this field to True to enable logging of information from the worker side.
+             This will include environment information such as start time, hostname and block id,
+             along with periodic resource usage of each task. Default: True
         resource_monitoring_interval : float
              The time interval, in seconds, at which the monitoring records the resource usage of each task. Default: 30 seconds
         """
