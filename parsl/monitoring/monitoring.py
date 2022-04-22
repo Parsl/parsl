@@ -173,7 +173,9 @@ class MonitoringHub(RepresentationMixin):
         monitoring_debug : Bool
              Enable monitoring debug logging. Default: False
         resource_monitoring_enabled : boolean
-             Set this field to True to enable logging the info of resource usage of each task. Default: True
+             Set this field to True to enable logging of information from the worker side.
+             This will include environment information such as start time, hostname and block id,
+             along with periodic resource usage of each task. Default: True
         resource_monitoring_interval : float
              The time interval, in seconds, at which the monitoring records the resource usage of each task. Default: 30 seconds
         """
@@ -613,12 +615,11 @@ def monitor(pid: int,
     logging.debug("start of monitor")
 
     # these values are simple to log. Other information is available in special formats such as memory below.
-    simple = ["cpu_num", 'cpu_percent', 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']
+    simple = ["cpu_num", 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']
     # values that can be summed up to see total resources used by task process and its children
-    summable_values = ['cpu_percent', 'memory_percent', 'num_threads']
+    summable_values = ['memory_percent', 'num_threads']
 
     pm = psutil.Process(pid)
-    pm.cpu_percent()
 
     children_user_time = {}  # type: Dict[int, float]
     children_system_time = {}  # type: Dict[int, float]
