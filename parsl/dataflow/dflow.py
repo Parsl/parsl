@@ -1158,15 +1158,11 @@ class DataFlowKernel(object):
                         t = {'hash': hashsum,
                              'exception': None,
                              'result': None}
-                        try:
-                            # Asking for the result will raise an exception if
-                            # the app had failed. Should we even checkpoint these?
-                            # TODO : Resolve this question ?
-                            r = self.memoizer.hash_lookup(hashsum).result()
-                        except Exception as e:
-                            t['exception'] = e
-                        else:
-                            t['result'] = r
+
+                        fut = self.memoizer.hash_lookup(hashsum)
+                        assert fut.done()
+                        assert fut.exception() is None
+                        t['result'] = fut.result()
 
                         # We are using pickle here since pickle dumps to a file in 'ab'
                         # mode behave like a incremental log.
@@ -1214,10 +1210,8 @@ class DataFlowKernel(object):
                             data = pickle.load(f)
                             # Copy and hash only the input attributes
                             memo_fu = Future()
-                            if data['exception']:
-                                memo_fu.set_exception(data['exception'])
-                            else:
-                                memo_fu.set_result(data['result'])
+                            assert data['exception'] is None
+                            memo_fu.set_result(data['result'])
                             memo_lookup_table[data['hash']] = memo_fu
 
                         except EOFError:
