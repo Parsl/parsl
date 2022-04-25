@@ -107,7 +107,7 @@ def task_per_app_plot(task, status):
             layout=go.Layout(xaxis=dict(autorange=True,
                                         title='Time (seconds)'),
                              yaxis=dict(title='Number of tasks'),
-                             title="Tasks per app"))
+                             title="Execution tries per app"))
         return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
     except Exception as e:
         return "The tasks per app plot cannot be generated because of exception {}.".format(e)

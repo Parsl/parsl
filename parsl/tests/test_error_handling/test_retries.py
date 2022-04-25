@@ -55,14 +55,15 @@ def test_fail_nowait(numtasks=10):
         fu = sleep_then_fail(sleep_dur=0.1)
         fus.extend([fu])
 
+    # wait for all tasks to complete before ending this test
+    [x.exception() for x in fus]
+
     try:
         [x.result() for x in fus]
     except Exception as e:
         assert isinstance(
             e, TypeError), "Expected a TypeError, got {}".format(e)
 
-    # wait for all tasks to complete before ending this test
-    [x.exception() for x in fus]
     print("Done")
 
 
@@ -80,14 +81,15 @@ def test_fail_delayed(numtasks=10):
         fu = sleep_then_fail(inputs=[x], sleep_dur=0.5)
         fus.extend([fu])
 
+    # wait for all tasks to complete before ending this test
+    [x.exception() for x in fus]
+
     try:
         [x.result() for x in fus]
     except Exception as e:
         assert isinstance(
             e, TypeError), "Expected a TypeError, got {}".format(e)
 
-    # wait for all tasks to complete before ending this test
-    [x.exception() for x in fus]
     print("Done")
 
 
