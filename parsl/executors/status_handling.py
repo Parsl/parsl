@@ -158,7 +158,7 @@ class BlockProviderExecutor(ParslExecutor):
         """Scales out the number of blocks by "blocks"
         """
         if not self.provider:
-            raise (ScalingFailed(None, "No execution provider available"))
+            raise ScalingFailed(self, "No execution provider available")
         block_ids = []
         logger.info(f"Scaling out by {blocks} blocks")
         for i in range(blocks):
@@ -179,8 +179,8 @@ class BlockProviderExecutor(ParslExecutor):
         job_id = self.provider.submit(launch_cmd, 1)
         logger.debug("Launched block {}->{}".format(block_id, job_id))
         if not job_id:
-            raise(ScalingFailed(self.provider.label,
-                                "Attempts to provision nodes via provider has failed"))
+            raise ScalingFailed(self,
+                                "Attempt to provision nodes did not return a job ID")
         return job_id
 
     @abstractmethod
