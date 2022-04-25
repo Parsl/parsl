@@ -336,11 +336,6 @@ class Interchange(object):
 
     def start(self, poll_period=None):
         """ Start the interchange
-
-        Parameters:
-        ----------
-
-        TODO: Move task receiving to a thread
         """
         logger.info("Incoming ports bound")
 

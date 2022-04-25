@@ -82,8 +82,6 @@ class Resource(db.Model):
         'resource_monitoring_interval', db.Float, nullable=True)
     psutil_process_pid = db.Column(
         'psutil_process_pid', db.Integer, nullable=True)
-    psutil_process_cpu_percent = db.Column(
-        'psutil_process_cpu_percent', db.Float, nullable=True)
     psutil_process_memory_percent = db.Column(
         'psutil_process_memory_percent', db.Float, nullable=True)
     psutil_process_children_count = db.Column(
