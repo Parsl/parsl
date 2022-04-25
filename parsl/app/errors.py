@@ -44,13 +44,16 @@ class BashExitFailure(AppException):
     """A non-zero exit code returned from a @bash_app
 
     Contains:
-    reason(str)
-    exitcode(int)
+    app name (str)
+    exitcode (int)
     """
 
-    def __init__(self, reason: str, exitcode: int) -> None:
-        self.reason = reason
+    def __init__(self, app_name: str, exitcode: int) -> None:
+        self.app_name = app_name
         self.exitcode = exitcode
+
+    def __str__(self) -> str:
+        return f"bash_app {self.app_name} failed with unix exit code {self.exitcode}"
 
 
 class AppTimeout(AppException):
