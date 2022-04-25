@@ -4,7 +4,7 @@ import pandas as pd
 from parsl.monitoring.visualization.models import Workflow, Task, Status, db
 
 from parsl.monitoring.visualization.plots.default.workflow_plots import task_gantt_plot, task_per_app_plot, workflow_dag_plot
-from parsl.monitoring.visualization.plots.default.task_plots import time_series_cpu_per_task_plot, time_series_memory_per_task_plot
+from parsl.monitoring.visualization.plots.default.task_plots import time_series_memory_per_task_plot
 from parsl.monitoring.visualization.plots.default.workflow_resource_plots import resource_distribution_plot, resource_efficiency, worker_efficiency
 
 dummy = True
@@ -122,8 +122,6 @@ def task(workflow_id, task_id):
                            workflow_details=workflow_details,
                            task_details=task_details,
                            task_status=task_status,
-                           time_series_cpu_percent=time_series_cpu_per_task_plot(
-                               df_resources, 'psutil_process_cpu_percent', 'CPU Utilization'),
                            time_series_memory_resident=time_series_memory_per_task_plot(
                                df_resources, 'psutil_process_memory_resident', 'Memory Usage'),
                            )

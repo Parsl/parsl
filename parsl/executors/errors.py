@@ -47,7 +47,7 @@ class ScalingFailed(ExecutorError):
         return f"Executor {self.executor.label} failed to scale due to: {self.reason}"
 
 
-class DeserializationError(ExecutorError):
+class DeserializationError(ParslError):
     """ Failure at the Deserialization of results/exceptions from remote workers
     """
 
@@ -58,7 +58,7 @@ class DeserializationError(ExecutorError):
         return "Failed to deserialize return objects. Reason:{}".format(self.reason)
 
 
-class SerializationError(ExecutorError):
+class SerializationError(ParslError):
     """ Failure to serialize data arguments for the tasks
     """
 
@@ -71,7 +71,7 @@ class SerializationError(ExecutorError):
                                                                            self.troubleshooting)
 
 
-class BadMessage(ExecutorError):
+class BadMessage(ParslError):
     """ Mangled/Poorly formatted/Unsupported message received
     """
 

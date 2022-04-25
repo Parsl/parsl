@@ -72,9 +72,6 @@ class BlockProviderExecutor(ParslExecutor):
 
         return d
 
-    def _set_provider(self, provider: ExecutionProvider):
-        self._provider = provider
-
     @property
     def status_polling_interval(self):
         if self._provider is None:
