@@ -139,7 +139,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         "alternating" to assign cores to workers in round-robin
         (ex: assign 0,2 to worker 0, 1,3 to worker 1).
 
-    available_accelerators: int | list | None
+    available_accelerators: int | list
         Accelerators available for workers to use. Each worker will be pinned to exactly one of the provided
         accelerators, and no more workers will be launched than the number of accelerators.
 
@@ -234,7 +234,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         if isinstance(available_accelerators, int):
             # If the user provide an integer, create some names for them
             available_accelerators = list(map(str, range(available_accelerators)))
-        self.available_accelerators = available_accelerators.copy()
+        self.available_accelerators = list(available_accelerators)
 
         # Determine the number of workers per node
         self._workers_per_node = min(max_workers, mem_slots, cpu_slots)
