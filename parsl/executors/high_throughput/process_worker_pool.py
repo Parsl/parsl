@@ -176,7 +176,6 @@ class Manager(object):
         self.worker_count = min(max_workers,
                                 mem_slots,
                                 math.floor(cores_on_node / cores_per_worker))
-        logger.info("Manager will spawn {} workers".format(self.worker_count))
 
         self.pending_task_queue = mpQueue()
         self.pending_result_queue = mpQueue()
@@ -190,10 +189,13 @@ class Manager(object):
         self.heartbeat_threshold = heartbeat_threshold
         self.poll_period = poll_period
         self.cpu_affinity = cpu_affinity
+
+        # Define accelerator available, adjust worker count accordingly
         self.available_accelerators = available_accelerators
         self.accelerators_available = len(available_accelerators) > 0
         if self.accelerators_available:
-            assert max_workers <= len(self.available_accelerators), "More workers available than accelerators"
+            self.worker_count = min(len(self.available_accelerators), self.worker_count)
+        logger.info("Manager will spawn {} workers".format(self.worker_count))
 
     def create_reg_message(self):
         """ Creates a registration message to identify the worker to the interchange
