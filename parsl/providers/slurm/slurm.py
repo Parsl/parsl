@@ -155,6 +155,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             if parts and parts[0] != 'JOBID':
                 job_id = parts[0]
                 slurm_state = parts[4]
+                if slurm_state not in translate_table:
+                    logger.warning(f"Slurm status {slurm_state} is not known")
                 status = translate_table.get(slurm_state, JobState.UNKNOWN)
                 logger.debug("Updating job {} with slurm status {} to parsl state {!s}".format(job_id, slurm_state, status))
                 self.resources[job_id]['status'] = JobStatus(status)
