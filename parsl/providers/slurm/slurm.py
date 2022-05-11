@@ -140,9 +140,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         '''
         job_id_list = ','.join(self.resources.keys())
         cmd = "squeue --job {0}".format(job_id_list)
-        logger.debug("Executing sqeueue")
+        logger.debug("Executing squeue")
         retcode, stdout, stderr = self.execute_wait(cmd)
-        logger.debug("sqeueue returned")
+        logger.debug("squeue returned")
 
         # Execute_wait failed. Do no update
         if retcode != 0:
