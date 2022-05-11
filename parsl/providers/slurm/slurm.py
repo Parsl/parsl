@@ -154,8 +154,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             parts = line.split()
             if parts and parts[0] != 'JOBID':
                 job_id = parts[0]
-                status = translate_table.get(parts[4], JobState.UNKNOWN)
-                logger.debug("Updating job {} with slurm status {} to parsl state {!s}".format(job_id, parts[4], status))
+                slurm_state = parts[4]
+                status = translate_table.get(slurm_state, JobState.UNKNOWN)
+                logger.debug("Updating job {} with slurm status {} to parsl state {!s}".format(job_id, slurm_state, status))
                 self.resources[job_id]['status'] = JobStatus(status)
                 jobs_missing.remove(job_id)
 
