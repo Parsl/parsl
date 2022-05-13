@@ -933,7 +933,8 @@ def _work_queue_submit_wait(*,
                                       "parsl_coprocess",
                                       os.path.basename(task.map_file),
                                       os.path.basename(task.function_file),
-                                      os.path.basename(task.result_file))
+                                      os.path.basename(task.result_file),
+                                      os.path.basename(task.log_file))
                     t.specify_exec_method("direct")
                     logger.debug("Sending executor task {} to coprocess".format(task.id))
 

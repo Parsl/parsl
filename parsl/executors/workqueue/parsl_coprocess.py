@@ -120,21 +120,16 @@ def main():
 def name():
     return 'parsl_coprocess'
 @remote_execute
-def run_parsl_task(a, b, c):
+def run_parsl_task(a, b, c, d):
     import parsl.executors.workqueue.exec_parsl_function as epf
-    try:
-        map_file, function_file, result_file = (a, b, c)
+    map_file, function_file, result_file, log_file = (a, b, c, d)
+    with open(log_file, 'w') as logfile:
         try:
-            namespace, function_code, result_name = epf.load_function(map_file, function_file)
-        except Exception:
-            raise
-        try:
+            namespace, function_code, result_name = epf.load_function(map_file, function_file, logfile)
             result = epf.execute_function(namespace, function_code, result_name)
         except Exception:
-            raise
-    except Exception:
-        result = RemoteExceptionWrapper(*sys.exc_info())
-    epf.dump_result_to_file(result_file, result)
+            result = RemoteExceptionWrapper(*sys.exc_info())
+        epf.dump_result_to_file(result_file, result)
     return None
 if __name__ == "__main__":
 	main()
