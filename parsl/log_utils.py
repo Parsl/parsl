@@ -16,6 +16,13 @@ import typeguard
 from typing import Optional
 
 
+DEFAULT_FORMAT = (
+    "%(created)f %(asctime)s %(levelname)s %(processName)s-%(process)d "
+    "%(threadName)s-%(thread)d %(name)s:%(lineno)d %(funcName)s "
+    "%(message)s"
+)
+
+
 @typeguard.typechecked
 def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None):
     """Add a stream log handler.
@@ -60,7 +67,7 @@ def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEB
        -  None
     """
     if format_string is None:
-        format_string = "%(asctime)s %(name)s:%(lineno)d %(processName)s(%(process)d) %(threadName)s [%(levelname)s]  %(message)s"
+        format_string = DEFAULT_FORMAT
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
