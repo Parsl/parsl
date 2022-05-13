@@ -30,8 +30,12 @@ t_postimport = time.time()
 
 
 def load_pickled_file(filename):
+    print(f"{time.time()} LOADPICKLED_OPEN", file=logfile)
     with open(filename, "rb") as f_in:
-        return pickle.load(f_in)
+        print(f"{time.time()} LOADPICKLED_LOAD", file=logfile)
+        v = pickle.load(f_in)
+        print(f"{time.time()} LOADPICKLED_DONE", file=logfile)
+        return v
 
 
 def dump_result_to_file(result_file, result_package):
@@ -139,24 +143,30 @@ def encode_byte_code_function(user_namespace, fn, fn_name, args_name, kwargs_nam
     return code
 
 
-def load_function(map_file, function_file):
+def load_function(map_file, function_file, logfile):
     # Decodes the function and its file arguments to be executed into
     # function_code, and updates a user namespace with the function name and
     # the variable named result_name. When the function is executed, its result
     # will be stored in this variable in the user namespace.
     # Returns (namespace, function_code, result_name)
 
+    print(f"{time.time()} LOADFUNCTION_MAKENS", file=logfile)
     # Create the namespace to isolate the function execution.
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})
 
+    print(f"{time.time()} LOADFUNCTION_LOADPICKLED_FUNCTION", file=logfile)
     function_info = load_pickled_file(function_file)
 
+    print(f"{time.time()} LOADFUNCTION_UNPACK", file=logfile)
     (fn, fn_name, fn_args, fn_kwargs) = unpack_function(function_info, user_ns)
 
+    print(f"{time.time()} LOADFUNCTION_LOAD_PICKLED_MAPPING", file=logfile)
     mapping = load_pickled_file(map_file)
+    print(f"{time.time()} LOADFUNCTION_REMAP", file=logfile)
     remap_all_files(mapping, fn_args, fn_kwargs)
 
+    print(f"{time.time()} LOADFUNCTION_ENCODE", file=logfile)
     (code, result_name) = encode_function(user_ns, fn, fn_name, fn_args, fn_kwargs)
 
     return (user_ns, code, result_name)
@@ -195,7 +205,7 @@ if __name__ == "__main__":
         t_loadfunction = time.time()
         print(f"{t_loadfunction} LOADFUNCTION", file=logfile)
         try:
-            (namespace, function_code, result_name) = load_function(map_file, function_file)
+            (namespace, function_code, result_name) = load_function(map_file, function_file, logfile)
         except Exception:
             print("There was an error setting up the function for execution.")
             raise
