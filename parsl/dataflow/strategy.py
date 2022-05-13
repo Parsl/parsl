@@ -6,6 +6,8 @@ from typing import List
 from parsl.dataflow.executor_status import ExecutorStatus
 from parsl.executors import HighThroughputExecutor
 from parsl.providers.provider_base import JobState
+from parsl.process_loggers import wrap_with_logs
+
 
 logger = logging.getLogger(__name__)
 
@@ -159,8 +161,9 @@ class Strategy(object):
         """
         self._general_strategy(status_list, tasks, strategy_type='htex')
 
+    @wrap_with_logs
     def _general_strategy(self, status_list, tasks, *, strategy_type):
-        logger.debug("general strategy starting")
+        logger.debug(f"general strategy starting for {len(status_list)} executors")
 
         for exec_status in status_list:
             executor = exec_status.executor
