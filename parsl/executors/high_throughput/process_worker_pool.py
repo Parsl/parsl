@@ -10,6 +10,8 @@ import pickle
 import time
 import queue
 import uuid
+from typing import Sequence, Optional
+
 import zmq
 import math
 import json
@@ -61,7 +63,8 @@ class Manager(object):
                  heartbeat_threshold=120,
                  heartbeat_period=30,
                  poll_period=10,
-                 cpu_affinity=False):
+                 cpu_affinity=False,
+                 available_accelerators: Sequence[str] = ()):
         """
         Parameters
         ----------
@@ -120,6 +123,9 @@ class Manager(object):
 
         cpu_affinity : str
              Whether each worker should force its affinity to different CPUs
+
+        available_accelerators: list of str
+            List of accelerators available to the workers. Default: Empty list
         """
 
         logger.info("Manager started")
@@ -177,7 +183,6 @@ class Manager(object):
         self.worker_count = min(max_workers,
                                 mem_slots,
                                 math.floor(cores_on_node / cores_per_worker))
-        logger.info("Manager will spawn {} workers".format(self.worker_count))
 
         self.pending_task_queue = mpQueue()
         self.pending_result_queue = mpQueue()
@@ -191,6 +196,13 @@ class Manager(object):
         self.heartbeat_threshold = heartbeat_threshold
         self.poll_period = poll_period
         self.cpu_affinity = cpu_affinity
+
+        # Define accelerator available, adjust worker count accordingly
+        self.available_accelerators = available_accelerators
+        self.accelerators_available = len(available_accelerators) > 0
+        if self.accelerators_available:
+            self.worker_count = min(len(self.available_accelerators), self.worker_count)
+        logger.info("Manager will spawn {} workers".format(self.worker_count))
 
     def create_reg_message(self):
         """ Creates a registration message to identify the worker to the interchange
@@ -435,8 +447,9 @@ class Manager(object):
                                                self.pending_result_queue,
                                                self.ready_worker_queue,
                                                self._tasks_in_progress,
-                                               self.cpu_affinity
-                                         ), name="HTEX-Worker-{}".format(worker_id))
+                                               self.cpu_affinity,
+                                               self.available_accelerators[worker_id] if self.accelerators_available else None),
+                          name="HTEX-Worker-{}".format(worker_id))
             p.start()
             self.procs[worker_id] = p
 
@@ -510,7 +523,7 @@ def execute_task(bufs):
 
 
 @wrap_with_logs(target="worker_log")
-def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue, tasks_in_progress, cpu_affinity):
+def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue, tasks_in_progress, cpu_affinity, accelerator: Optional[str]):
     """
 
     Put request token into queue
@@ -560,6 +573,13 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         # Set the affinity for this worker
         os.sched_setaffinity(0, my_cores)
         logger.info("Set worker CPU affinity to {}".format(my_cores))
+
+    # If desired, pin to accelerator
+    if accelerator is not None:
+        os.environ["CUDA_VISIBLE_DEVICES"] = accelerator
+        os.environ["ROCR_VISIBLE_DEVICES"] = accelerator
+        os.environ["SYCL_DEVICE_FILTER"] = f"*:*:{accelerator}"
+        logger.info(f'Pinned worker to accelerator: {accelerator}')
 
     while True:
         worker_queue.put(worker_id)
@@ -662,6 +682,8 @@ if __name__ == "__main__":
                         help="REQUIRED: Result port for posting results to the interchange")
     parser.add_argument("--cpu-affinity", type=str, choices=["none", "block", "alternating"],
                         help="Whether/how workers should control CPU affinity.")
+    parser.add_argument("--available-accelerators", type=str, nargs="*",
+                        help="Names of available accelerators")
 
     args = parser.parse_args()
 
@@ -689,6 +711,7 @@ if __name__ == "__main__":
         logger.info("Heartbeat threshold: {}".format(args.hb_threshold))
         logger.info("Heartbeat period: {}".format(args.hb_period))
         logger.info("CPU affinity: {}".format(args.cpu_affinity))
+        logger.info("Accelerators: {}".format(" ".join(args.available_accelerators)))
 
         manager = Manager(task_port=args.task_port,
                           result_port=args.result_port,
@@ -703,7 +726,8 @@ if __name__ == "__main__":
                           heartbeat_threshold=int(args.hb_threshold),
                           heartbeat_period=int(args.hb_period),
                           poll_period=int(args.poll),
-                          cpu_affinity=args.cpu_affinity)
+                          cpu_affinity=args.cpu_affinity,
+                          available_accelerators=args.available_accelerators)
         manager.start()
 
     except Exception:
