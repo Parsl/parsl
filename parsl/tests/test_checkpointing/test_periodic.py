@@ -1,9 +1,7 @@
 import argparse
-import datetime
 import time
 
 import pytest
-from dateutil.parser import parse
 
 import parsl
 from parsl.app.app import python_app

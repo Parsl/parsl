@@ -18,7 +18,6 @@ from parsl.utils import setproctitle
 
 from parsl.serialize import deserialize
 
-# this is needed for htex hack to get at htex result queue
 import parsl.executors.high_throughput.monitoring_info
 
 from parsl.monitoring.message_type import MessageType
