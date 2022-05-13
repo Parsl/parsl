@@ -100,7 +100,7 @@ class LowLatencyExecutor(BlockProviderExecutor, RepresentationMixin):
                             self.launch_cmd, self.workers_per_node)
                         logger.debug("Launched block {}:{}".format(i, block))
                         if not block:
-                            raise(ScalingFailed(self.provider.label,
+                            raise(ScalingFailed(self,
                                                 "Attempts to provision nodes via provider has failed"))
                         self.blocks.extend([block])
 
