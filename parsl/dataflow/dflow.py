@@ -104,7 +104,7 @@ class DataFlowKernel(object):
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
             self.hub_address = self.monitoring.hub_address
-            self.hub_interchange_port = self.monitoring.start(self.run_id)
+            self.hub_interchange_port = self.monitoring.start(self.run_id, self.run_dir)
 
         self.time_began = datetime.datetime.now()
         self.time_completed = None
@@ -599,7 +599,8 @@ class DataFlowKernel(object):
                                                          wrapper_logging_level,
                                                          self.monitoring.resource_monitoring_interval,
                                                          executor.radio_mode,
-                                                         executor.monitor_resources())
+                                                         executor.monitor_resources(),
+                                                         self.run_dir)
 
         with self.submitter_lock:
             exec_fu = executor.submit(executable, task_record['resource_specification'], *args, **kwargs)
