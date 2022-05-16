@@ -334,6 +334,7 @@ class Interchange(object):
                 logger.debug("[COMMAND] is alive")
                 continue
 
+    @wrap_with_logs
     def start(self, poll_period=None):
         """ Start the interchange
         """
