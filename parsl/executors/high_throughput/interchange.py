@@ -415,7 +415,7 @@ class Interchange(object):
                                                 "py.v={} parsl.v={}".format(msg['python_v'].rsplit(".", 1)[0],
                                                                             msg['parsl_v'])
                             )
-                            result_package = {'task_id': -1, 'exception': serialize_object(e)}
+                            result_package = {'type': 'result', 'task_id': -1, 'exception': serialize_object(e)}
                             pkl_package = pickle.dumps(result_package)
                             self.results_outgoing.send(pkl_package)
                             logger.warning("[MAIN] Sent failure reports, unregistering manager")
@@ -489,17 +489,15 @@ class Interchange(object):
                     logger.debug("[MAIN] Got {} result items in batch".format(len(b_messages)))
                     for b_message in b_messages:
                         r = pickle.loads(b_message)
-                        try:
-                            if int(r['task_id']) != -1:
+                        if r['type'] == 'result':
+                            try:
                                 self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
-                            elif 'heartbeat' in r:
-                                logger.debug("[MAIN] Manager {} sent heartbeat via results connection".format(manager))
-                        except Exception:
-                            # If we reach here, there's something very wrong.
-                            logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(
-                                r['task_id'],
-                                manager,
-                                self._ready_manager_queue[manager]['tasks']))
+                            except Exception:
+                                # If we reach here, there's something very wrong.
+                                logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(
+                                    r['task_id'],
+                                    manager,
+                                    self._ready_manager_queue[manager]['tasks']))
 
                     self.results_outgoing.send_multipart(b_messages)
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
@@ -520,7 +518,7 @@ class Interchange(object):
                     try:
                         raise ManagerLost(manager, self._ready_manager_queue[manager]['hostname'])
                     except Exception:
-                        result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
+                        result_package = {'type': 'result', 'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
                         pkl_package = pickle.dumps(result_package)
                         self.results_outgoing.send(pkl_package)
                         logger.warning("[MAIN] Sent failure reports, unregistering manager")
