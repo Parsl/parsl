@@ -1085,7 +1085,7 @@ class DataFlowKernel(object):
                 logger.info(f"Shutting down executor {executor.label}")
                 executor.shutdown()
             elif executor.managed and executor.bad_state_is_set:  # and bad_state_is_set
-                logger.warn(f"Not shutting down executor {executor.label} because it is in bad state")
+                logger.warning(f"Not shutting down executor {executor.label} because it is in bad state")
             else:
                 logger.info(f"Not shutting down executor {executor.label} because it is unmanaged")
 
