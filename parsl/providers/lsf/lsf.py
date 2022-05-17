@@ -235,7 +235,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
                     job_id = line.split()[1].strip('<>')
                     self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
-            logger.warning("Submission of command to submit failed")
+            logger.warning("Submit command failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
         return job_id
 

@@ -161,7 +161,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                 self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
                 return job_id
         else:
-            logger.error("Submission of command to submit failed")
+            logger.error("Submit command failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
 
     def _status(self):
