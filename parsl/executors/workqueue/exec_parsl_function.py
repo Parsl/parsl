@@ -181,11 +181,13 @@ def execute_function(namespace, function_code, result_name):
 
     return result
 
+
 class MetaPathLogger:
 
-   def find_spec(*args, **kwargs):
-     print(f"{time.time()} META_PATH {args[0]}", file=logfile)
-     return None
+    def find_spec(*args, **kwargs):
+        print(f"{time.time()} META_PATH {args[0]}", file=logfile)
+        return None
+
 
 if __name__ == "__main__":
     t_mainstart = time.time()
