@@ -1,5 +1,23 @@
 import time
 t_start = time.time()
+import sys
+from typing import Any, List
+metas = []
+
+
+class MetaPathLogger:
+
+    def find_spec(*args, **kwargs):
+        metas.append(f"{time.time()} META_PATH {args[0]}")
+        return None
+
+
+if __name__ == "__main__":
+    mpl: List[Any]  # failure in CI... doesn't happen on my laptop. I haven't dug into why
+    mpl = [MetaPathLogger]
+    sys.meta_path = mpl + sys.meta_path
+
+t_postmeta = time.time()
 
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.files import File
@@ -199,6 +217,7 @@ if __name__ == "__main__":
 
         logfile = open(log_file, "w")
         print(f"{t_start} START", file=logfile)
+        print(f"{t_postmeta} POSTMETA", file=logfile)
         print(f"{t_postimport} POSTIMPORT", file=logfile)
         print(f"{t_mainstart} MAINSTART", file=logfile)
 
@@ -230,6 +249,11 @@ if __name__ == "__main__":
         print("Could not write to result file.")
         traceback.print_exc()
         sys.exit(1)
+    t_printmetas = time.time()
+    print(f"{t_printmetas} PRINTMETAS", file=logfile)
+    for m in metas:
+        print(m, file=logfile)
     t_done = time.time()
     print(f"{t_done} DONE", file=logfile)
+
     logfile.close()
