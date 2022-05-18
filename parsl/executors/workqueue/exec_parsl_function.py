@@ -7,6 +7,7 @@ from parsl.utils import get_std_fname_mode
 import traceback
 import sys
 import pickle
+from typing import List, Any
 
 t_postimport = time.time()
 # This scripts executes a parsl function which is pickled in a file:
@@ -209,7 +210,10 @@ if __name__ == "__main__":
         print(f"{t_postimport} POSTIMPORT", file=logfile)
         print(f"{t_mainstart} MAINSTART", file=logfile)
 
-        sys.meta_path = [MetaPathLogger] + sys.meta_path
+        mpl: List[Any]
+        mpl = [MetaPathLogger]
+
+        sys.meta_path = mpl + sys.meta_path
 
         t_loadfunction = time.time()
         print(f"{t_loadfunction} LOADFUNCTION", file=logfile)
