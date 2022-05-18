@@ -24,6 +24,7 @@ from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.probe import probe_addresses
+from parsl.executors.high_throughput.zmq_pipes import SignalReceiver, SignalSender
 from parsl.multiprocessing import ForkProcess as mpProcess
 
 from parsl.multiprocessing import SizedQueue as mpQueue
@@ -150,6 +151,9 @@ class Manager(object):
         self.result_outgoing.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         self.result_outgoing.setsockopt(zmq.LINGER, 0)
         self.result_outgoing.connect(result_q_url)
+
+        self.signal_sender = SignalSender(self.context)
+        self.signal_receiver = SignalReceiver(self.context)
         logger.info("Manager connected")
 
         self.uid = uid
@@ -238,6 +242,8 @@ class Manager(object):
         logger.info("[TASK PULL THREAD] starting")
         poller = zmq.Poller()
         poller.register(self.task_incoming, zmq.POLLIN)
+        signal_receiver_socket = self.signal_receiver.socket
+        poller.register(signal_receiver_socket, zmq.POLLIN)
 
         # Send a registration message
         msg = self.create_reg_message()
@@ -291,6 +297,12 @@ class Manager(object):
                         # logger.debug("[TASK_PULL_THREAD] Ready tasks: {}".format(
                         #    [i['task_id'] for i in self.pending_task_queue]))
 
+            elif signal_receiver_socket in socks and socks[signal_receiver_socket] == zmq.POLLIN:
+                # We do nothing with the message because there's no info being transmitted
+                self.signal_receiver.recv()
+                logger.info("[TASK_PULL_THREAD] Received signal from RESULT_PUSH_THREAD")
+                # Reset poll period
+                poll_timer = self.poll_period
             else:
                 logger.debug("[TASK_PULL_THREAD] No incoming tasks")
                 # Limit poll duration to heartbeat_period
@@ -344,6 +356,10 @@ class Manager(object):
                 last_beat = time.time()
                 if items:
                     self.result_outgoing.send_multipart(items)
+                    logger.info("[RESULT_PUSH_THREAD] Sent result")
+                    # Wake up the task_puller from long-poll to re-advertize capacity
+                    logger.info("[RESULT_PUSH_THREAD] Sending wake up signal")
+                    self.signal_sender.send(b'WAKE UP')
                     items = []
 
         logger.critical("[RESULT_PUSH_THREAD] Exiting")
