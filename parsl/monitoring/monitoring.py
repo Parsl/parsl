@@ -80,18 +80,37 @@ class MonitoringRadio(metaclass=ABCMeta):
 
 
 class FilesystemRadio(MonitoringRadio):
-    def __init__(self, *, monitoring_hub_url: str, source_id: int, timeout: int = 10, run_dir: str):
+    """A MonitoringRadio that sends messages over a shared filesystem.
+
+    The messsage directory structure is on maildir,
+    https://en.wikipedia.org/wiki/Maildir
+
+    The writer creates a message in tmp/ and then when it is fully
+    written, moves it atomically into new/
+
+    The reader ignores tmp/ and only reads and deletes messages from
+    new/
+
+    This avoids a race condition of reading partially written messages.
+
+    This radio is likely to give higher shared filesystem load compared to
+    the UDPRadio, but should be much more reliable.
+    """
+
+    def __init__(self, *, monitoring_url: str, source_id: int, timeout: int = 10, run_dir: str):
         logger.info("filesystem based monitoring channel initializing")
         self.source_id = source_id
         self.id_counter = 0
         self.radio_uid = f"host-{socket.gethostname()}-pid-{os.getpid()}-radio-{id(self)}"
         self.base_path = f"{run_dir}/monitor-fs-radio/"
+        self.tmp_path = f"{self.base_path}/tmp"
+        self.new_path = f"{self.base_path}/new"
+
+        os.makedirs(self.tmp_path, exist_ok=True)
+        os.makedirs(self.new_path, exist_ok=True)
 
     def send(self, message: object) -> None:
         logger.info("Sending a monitoring message via filesystem")
-
-        tmp_path = f"{self.base_path}/tmp"
-        new_path = f"{self.base_path}/new"
 
         # this should be randomised by things like worker ID, process ID, whatever
         # because there will in general be many FilesystemRadio objects sharing the
@@ -103,8 +122,8 @@ class FilesystemRadio(MonitoringRadio):
         self.id_counter = self.id_counter + 1
 
         # TODO: use path operators not string interpolation
-        tmp_filename = f"{tmp_path}/{unique_id}"
-        new_filename = f"{new_path}/{unique_id}"
+        tmp_filename = f"{self.tmp_path}/{unique_id}"
+        new_filename = f"{self.new_path}/{unique_id}"
         buffer = (message, "NA")
 
         # this will write the message out then atomically
@@ -359,15 +378,15 @@ class MonitoringHub(RepresentationMixin):
                                             "db_url": self.logging_endpoint,
                                     },
                                     name="Monitoring-DBM-Process",
-                                    daemon=True,
-        )
+                                    daemon=True)
         self.dbm_proc.start()
         self.logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
         self.filesystem_proc = Process(target=filesystem_receiver,
                                        args=(self.logdir, self.resource_msgs, run_dir),
                                        name="Monitoring-Filesystem-Process",
-                                       daemon=True)
+                                       daemon=True
+        )
         self.filesystem_proc.start()
         self.logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
 
@@ -406,9 +425,6 @@ class MonitoringHub(RepresentationMixin):
         except zmq.Again:
             self.logger.exception(
                 "The monitoring message sent from DFK to router timed-out after {}ms".format(self.dfk_channel_timeout))
-        else:
-            # this was very big
-            self.logger.debug("Sent message type {}".format(mtype))
 
     def close(self) -> None:
         if self.logger:
@@ -460,11 +476,7 @@ class MonitoringHub(RepresentationMixin):
         """
         @wraps(f)
         def wrapped(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
-            logger.debug("wrapped: 1. start of wrapped")
-
             terminate_event = Event()
-
-            logger.debug("wrapped: 1.2 sending first message")
             # Send first message to monitoring router
             send_first_message(try_id,
                                task_id,
@@ -472,7 +484,6 @@ class MonitoringHub(RepresentationMixin):
                                run_id,
                                radio_mode,
                                run_dir)
-            logger.debug("wrapped: 2. sent first message")
 
             p: Optional[Process]
             if monitor_resources:
@@ -489,9 +500,7 @@ class MonitoringHub(RepresentationMixin):
                                        run_dir,
                                        terminate_event),
                                  name="Monitor-Wrapper-{}".format(task_id))
-                logger.debug("wrapped: 3. created monitor process, pid {}".format(pp.pid))
                 pp.start()
-                logger.debug("wrapped: 4. started monitor process, pid {}".format(pp.pid))
                 p = pp
                 #  TODO: awkwardness because ForkProcess is not directly a constructor
                 # and type-checking is expecting p to be optional and cannot
@@ -501,17 +510,11 @@ class MonitoringHub(RepresentationMixin):
                 p = None
 
             try:
-                logger.debug("wrapped: 5. invoking wrapped function")
-                r = f(*args, **kwargs)
-                logger.debug("wrapped: 6. back from wrapped function ok")
-                return r
+                return f(*args, **kwargs)
             finally:
-                logger.debug("wrapped: 10 in 2nd finally")
                 # There's a chance of zombification if the workers are killed by some signals (?)
                 if p:
-                    logger.debug("wrapped: 11.1 setting termination event")
                     terminate_event.set()
-                    logger.debug("wrapped: 11.1 waiting for event based termination")
                     p.join(30)  # 30 second delay for this -- this timeout will be hit in the case of an unusually long end-of-loop
                     if p.exitcode is None:
                         logger.warn("Event-based termination of monitoring helper took too long. Using process-based termination.")
@@ -521,14 +524,12 @@ class MonitoringHub(RepresentationMixin):
                         # This is why this log message is a warning
                         p.join()
 
-                    logger.debug("wrapped: 11 done terminating monitor")
-                logger.debug("wrapped: 10.1 sending last message")
                 send_last_message(try_id,
                                   task_id,
                                   monitoring_hub_url,
                                   run_id,
                                   radio_mode, run_dir)
-                logger.debug("wrapped: 10.1 sent last message")
+
         return wrapped
 
 
@@ -541,16 +542,13 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[Tuple[Tuple[MessageType, Di
 
     logger.info("Starting filesystem radio receiver")
     setproctitle("parsl: monitoring filesystem receiver")
-    # TODO: these paths should be created by path tools, not f-strings
-    # likewise the other places where tmp_dir, new_dir are created on
-    # the sending side.
     base_path = f"{run_dir}/monitor-fs-radio/"
     tmp_dir = f"{base_path}/tmp/"
     new_dir = f"{base_path}/new/"
     logger.debug("Creating new and tmp paths")
 
-    os.makedirs(tmp_dir)
-    os.makedirs(new_dir)
+    os.makedirs(tmp_dir, exist_ok=True)
+    os.makedirs(new_dir, exist_ok=True)
 
     while True:  # needs an exit condition, that also copes with late messages
         # like the UDP radio receiver.
@@ -770,7 +768,7 @@ def send_first_message(try_id: int,
         radio = HTEXRadio(monitoring_hub_url,
                           source_id=task_id)
     elif radio_mode == "filesystem":
-        radio = FilesystemRadio(monitoring_hub_url=monitoring_hub_url,
+        radio = FilesystemRadio(monitoring_url=monitoring_hub_url,
                                 source_id=task_id, run_dir=run_dir)
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
@@ -806,7 +804,7 @@ def send_last_message(try_id: int,
         radio = HTEXRadio(monitoring_hub_url,
                           source_id=task_id)
     elif radio_mode == "filesystem":
-        radio = FilesystemRadio(monitoring_hub_url=monitoring_hub_url,
+        radio = FilesystemRadio(monitoring_url=monitoring_hub_url,
                                 source_id=task_id, run_dir=run_dir)
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
@@ -840,6 +838,12 @@ def monitor(pid: int,
             terminate_event: Any) -> None:  # cannot be Event because of multiprocessing type weirdness.
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
+
+    This process makes calls to logging, but deliberately does not attach
+    any log handlers. Previously, there was a handler which logged to a
+    file in /tmp, but this was usually not useful or even accessible.
+    In some circumstances, it might be useful to hack in a handler so the
+    logger calls remain in place.
     """
     import logging
     import platform
@@ -853,16 +857,10 @@ def monitor(pid: int,
         radio = HTEXRadio(monitoring_hub_url,
                           source_id=task_id)
     elif radio_mode == "filesystem":
-        radio = FilesystemRadio(monitoring_hub_url=monitoring_hub_url,
+        radio = FilesystemRadio(monitoring_url=monitoring_hub_url,
                                 source_id=task_id, run_dir=run_dir)
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
-
-    # TODO: should this be enabled by a debugging option?
-
-    # format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-    # logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
-    #    logbase="/tmp", task_id=task_id, pid=pid), level=logging_level, format=format_string)
 
     logging.debug("start of monitor")
 

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import argparse
-import functools
 import zmq
 import os
 import sys
@@ -60,38 +59,6 @@ class VersionMismatch(Exception):
 
     def __str__(self):
         return self.__repr__()
-
-
-@functools.total_ordering
-class PriorityQueueEntry:
-    """ This class is needed because msg will be a dict, and dicts are not
-    comparable to each other (and if they were, this would be an unnecessary
-    expense because the queue only cares about priority). It provides
-    ordering of the priority ignoring the message content, and implements an
-    ordering that places None behind all other orderings, for use as a default
-    value"""
-    def __init__(self, pri, msg):
-        self.pri = pri
-        self.msg = msg
-
-    def __eq__(self, other):
-        if type(self) != type(other):
-            return NotImplemented
-        return self.pri == other.pri
-
-    def __lt__(self, other):
-        # this is deliberately inverted, so that largest priority number comes out of the queue first
-        if type(self) != type(other):
-            return NotImplemented
-        if self.pri is None:  # special case so that None is always less than every other value
-            return False  # we are more than populated priorities, and equal to None, the inverse of <
-        elif self.pri is not None and other.pri is None:
-            return True
-        else:  # self/other both not None
-            c = self.pri.__gt__(other.pri)
-            if c == NotImplemented:
-                raise RuntimeError("priority values are not comparable: {} vs {}".format(self.pri, other.pri))
-            return c
 
 
 class Interchange(object):
@@ -195,7 +162,7 @@ class Interchange(object):
         self.hub_address = hub_address
         self.hub_port = hub_port
 
-        self.pending_task_queue: queue.Queue[Any] = queue.PriorityQueue(maxsize=10 ** 6)
+        self.pending_task_queue: queue.Queue[Any] = queue.Queue(maxsize=10 ** 6)
 
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
@@ -253,11 +220,11 @@ class Interchange(object):
         tasks = []
         for i in range(0, count):
             try:
-                qe = self.pending_task_queue.get(block=False)
+                x = self.pending_task_queue.get(block=False)
             except queue.Empty:
                 break
             else:
-                tasks.append(qe.msg)
+                tasks.append(x)
 
         return tasks
 
@@ -290,8 +257,8 @@ class Interchange(object):
                 kill_event.set()
                 break
             else:
-                logger.debug("putting message onto pending_task_queue")
-                self.pending_task_queue.put(PriorityQueueEntry(msg['priority'], msg))
+                logger.debug("[TASK_PULL_THREAD] putting message onto pending_task_queue")
+                self.pending_task_queue.put(msg)
                 task_counter += 1
                 logger.debug("Fetched task:{}".format(task_counter))
         logger.info("reached end of task_puller loop")

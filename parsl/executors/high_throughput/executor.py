@@ -17,7 +17,8 @@ from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
     BadMessage, ScalingFailed,
-    DeserializationError, SerializationError
+    DeserializationError, SerializationError,
+    UnsupportedFeatureError
 )
 
 from parsl.executors.status_handling import BlockProviderExecutor
@@ -453,7 +454,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                             else:
                                 raise BadMessage("Message received is neither result or exception")
                         else:
-                            # the 'monitoring' message type should not reach this if statement. It should be handled in the interchange.
                             raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
             if not self.is_alive:
@@ -571,6 +571,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         Returns:
               Future
         """
+        if resource_specification:
+            logger.error("Ignoring the resource specification. "
+                         "Parsl resource specification is not supported in HighThroughput Executor. "
+                         "Please check WorkQueueExecutor if resource specification is needed.")
+            raise UnsupportedFeatureError('resource specification', 'HighThroughput Executor', 'WorkQueue Executor')
+
         if self.bad_state_is_set:
             raise self.executor_exception
 
@@ -593,15 +599,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         except TypeError:
             raise SerializationError(func.__name__)
 
-        if resource_specification and "priority" in resource_specification:
-            priority = resource_specification["priority"]
-            logger.debug("Priority {} found in resource specification".format(priority))
-        else:
-            priority = None
-
         msg = {"task_id": task_id,
-               "buffer": fn_buf,
-               "priority": priority}
+               "buffer": fn_buf}
 
         # Post task to the the outgoing queue
         self.outgoing_q.put(msg)
