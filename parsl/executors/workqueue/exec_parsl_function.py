@@ -181,6 +181,11 @@ def execute_function(namespace, function_code, result_name):
 
     return result
 
+class MetaPathLogger:
+
+   def find_spec(*args, **kwargs):
+     print(f"{time.time()} META_PATH {args[0]}", file=logfile)
+     return None
 
 if __name__ == "__main__":
     t_mainstart = time.time()
@@ -201,6 +206,8 @@ if __name__ == "__main__":
         print(f"{t_start} START", file=logfile)
         print(f"{t_postimport} POSTIMPORT", file=logfile)
         print(f"{t_mainstart} MAINSTART", file=logfile)
+
+        sys.meta_path = [MetaPathLogger] + sys.meta_path
 
         t_loadfunction = time.time()
         print(f"{t_loadfunction} LOADFUNCTION", file=logfile)
