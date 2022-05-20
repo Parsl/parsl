@@ -426,7 +426,7 @@ class Interchange(object):
                         self._ready_managers[manager_id] = {'last_heartbeat': time.time(),
                                                             'idle_since': time.time(),
                                                             'free_capacity': 0,
-                                                            # 'block_id': None, -- don't assign a badly typed value
+                                                            'block_id': None,  # don't assign a badly typed value
                                                             'max_capacity': 0,
                                                             'worker_count': 0,
                                                             'active': True,
