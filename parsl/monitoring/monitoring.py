@@ -6,6 +6,7 @@ import logging
 import typeguard
 import datetime
 import zmq
+from functools import wraps
 
 import queue
 from abc import ABCMeta, abstractmethod
@@ -16,8 +17,6 @@ from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
 from parsl.serialize import deserialize
-
-import parsl.executors.high_throughput.monitoring_info
 
 from parsl.monitoring.message_type import MessageType
 from typing import cast, Any, Callable, Dict, List, Optional, Union
@@ -162,6 +161,9 @@ class HTEXRadio(MonitoringRadio):
         Returns:
             None
         """
+
+        import parsl.executors.high_throughput.monitoring_info
+
         # TODO: this message needs to look like the other messages that the interchange will send...
         #            hub_channel.send_pyobj((MessageType.NODE_INFO,
         #                            datetime.datetime.now(),
@@ -473,6 +475,7 @@ class MonitoringHub(RepresentationMixin):
         """ Internal
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
+        @wraps(f)
         def wrapped(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
             terminate_event = Event()
             # Send first message to monitoring router
