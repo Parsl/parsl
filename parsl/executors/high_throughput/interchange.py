@@ -555,6 +555,7 @@ class Interchange(object):
                     m = self._ready_managers[manager_id]
                     for b_message in b_messages:
                         r = pickle.loads(b_message)
+                        assert 'type' in r, f"Message is missing type entry: {r}"
                         if r['type'] == 'result':
                             try:
                                 logger.debug(f"Removing task {r['task_id']} from manager {manager_id} record")

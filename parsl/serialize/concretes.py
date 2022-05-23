@@ -46,7 +46,12 @@ class DillSerializer(SerializerBase):
     _for_data = True
 
     def serialize(self, data):
-        x = dill.dumps(data)
+        # BENC: this is debug info to remove later
+        try:
+            x = dill.dumps(data)
+        except Exception as e:
+            logger.error(f"Could not dump data={data}, because of {e}")
+            raise
         return self.identifier + x
 
     def deserialize(self, payload):
