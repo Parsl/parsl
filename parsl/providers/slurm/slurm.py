@@ -139,7 +139,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
               [status...] : Status list of all jobs
         '''
         job_id_list = ','.join(
-            [jid for jid, job in self.resources.keys() if not job['status'].terminal]
+            [jid for jid, job in self.resources.items() if not job['status'].terminal]
         )
         if not job_id_list:
             logger.debug('No active jobs, skipping status update')
