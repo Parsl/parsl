@@ -117,6 +117,11 @@ class RemoteExceptionWrapper:
         self.e_type = dill.dumps(e_type)
         self.e_value = dill.dumps(e_value)
         self.e_traceback = Traceback(traceback)
+        if e_value.__cause__ is None:
+            self.cause = None
+        else:
+            cause = e_value.__cause__
+            self.cause = self.__class__(type(cause), cause, cause.__traceback__)
 
     def reraise(self) -> None:
 
@@ -128,10 +133,16 @@ class RemoteExceptionWrapper:
         # specific exception type.
         logger.debug("Reraising exception of type {}".format(t))
 
-        v = dill.loads(self.e_value)
-        tb = self.e_traceback.as_traceback()
+        v = self.get_exception()
 
-        reraise(t, v, tb)
+        reraise(t, v, v.__traceback__)
+
+    def get_exception(self) -> Exception:
+        v = dill.loads(self.e_value)
+        if self.cause is not None:
+            v.__cause__ = self.cause.get_exception()
+        tb = self.e_traceback.as_traceback()
+        return v.with_traceback(tb)
 
 
 R = TypeVar('R')
