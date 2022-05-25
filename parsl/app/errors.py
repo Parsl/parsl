@@ -1,6 +1,6 @@
 """Exceptions raised by Apps."""
 from functools import wraps
-from typing import Callable, List, Union, Any, TypeVar
+from typing import Callable, List, Union, Any, TypeVar, Optional
 from types import TracebackType
 
 import dill
@@ -112,11 +112,11 @@ class BadStdStreamFile(ParslError):
 
 
 class RemoteExceptionWrapper:
-    def __init__(self, e_type: type, e_value: Exception, traceback: TracebackType) -> None:
+    def __init__(self, e_type: type, e_value: BaseException, traceback: Optional[TracebackType]) -> None:
 
         self.e_type = dill.dumps(e_type)
         self.e_value = dill.dumps(e_value)
-        self.e_traceback = Traceback(traceback)
+        self.e_traceback = None if traceback is None else Traceback(traceback)
         if e_value.__cause__ is None:
             self.cause = None
         else:
@@ -141,8 +141,11 @@ class RemoteExceptionWrapper:
         v = dill.loads(self.e_value)
         if self.cause is not None:
             v.__cause__ = self.cause.get_exception()
-        tb = self.e_traceback.as_traceback()
-        return v.with_traceback(tb)
+        if self.e_traceback is not None:
+            tb = self.e_traceback.as_traceback()
+            return v.with_traceback(tb)
+        else:
+            return v
 
 
 R = TypeVar('R')
