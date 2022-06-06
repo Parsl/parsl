@@ -139,7 +139,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
               [status...] : Status list of all jobs
         '''
         job_id_list = ','.join(
-            [jid for jid, job in self.resources.keys() if not job['status'].terminal]
+            [jid for jid, job in self.resources.items() if not job['status'].terminal]
         )
         if not job_id_list:
             logger.debug('No active jobs, skipping status update')
@@ -148,7 +148,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         cmd = "squeue --job {0}".format(job_id_list)
         logger.debug("Executing %s", cmd)
         retcode, stdout, stderr = self.execute_wait(cmd)
-        logger.debug("sqeueue returned %s %s", stdout, stderr)
+        logger.debug("squeue returned %s %s", stdout, stderr)
 
         # Execute_wait failed. Do no update
         if retcode != 0:
