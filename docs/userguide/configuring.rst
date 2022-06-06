@@ -291,6 +291,61 @@ and Work Queue does not require Python to run.
    The automatic packaging feature only supports packages installed via ``pip`` or ``conda``.
    Importing from other locations (e.g. via ``$PYTHONPATH``) or importing other modules in the same directory is not supported.
 
+
+Accelerators
+------------
+
+Many modern clusters provide multiple accelerators per compute note, yet many applications are best suited to using a single accelerator per task.
+Parsl supports pinning each worker to difference accelerators using ``available_accelerators`` option of the :class:`~parsl.executors.HighThroughputExecutor`.
+Provide either the number of executors (Parsl will assume they are named in integers starting from zero) or a list of the names of the accelerators available on the node.
+
+.. code-block:: python
+
+    local_config = Config(
+        executors=[
+            HighThroughputExecutor(
+                label="htex_Local",
+                worker_debug=True,
+                available_accelerators=2,
+                provider=LocalProvider(
+                    channel=LocalChannel(),
+                    init_blocks=1,
+                    max_blocks=1,
+                ),
+            )
+        ],
+        strategy=None,
+    )
+
+
+Multi-Threaded Applications
+---------------------------
+
+Workflows which launch multiple workers on a single node which perform multi-threaded tasks (e.g., NumPy, Tensorflow operations) may run into thread contention issues.
+Each worker may try to use the same hardware threads, which leads to performance penalties.
+Use the ``cpu_affinity`` feature of the :class:`~parsl.executors.HighThroughputExecutor` to assign workers to specific cores.
+Parsl provides a 'block' or 'alternate' option on how cores are pinned to each worker (ex: 4 cores are grouped (0, 1) and (2, 3) for block,
+(0, 2) and (1, 3) for alternate).
+Select the best blocking strategy for processor's cache hierarchy (choose 'alternate' if in doubt) to ensure workers to not compete for cores.
+
+.. code-block:: python
+
+    local_config = Config(
+        executors=[
+            HighThroughputExecutor(
+                label="htex_Local",
+                worker_debug=True,
+                cpu_affinity='alternate',
+                provider=LocalProvider(
+                    channel=LocalChannel(),
+                    init_blocks=1,
+                    max_blocks=1,
+                ),
+            )
+        ],
+        strategy=None,
+    )
+
 Ad-Hoc Clusters
 ---------------
 

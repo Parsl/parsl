@@ -138,15 +138,21 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         Returns:
               [status...] : Status list of all jobs
         '''
-        job_id_list = ','.join(self.resources.keys())
+        job_id_list = ','.join(
+            [jid for jid, job in self.resources.items() if not job['status'].terminal]
+        )
+        if not job_id_list:
+            logger.debug('No active jobs, skipping status update')
+            return
+
         cmd = "squeue --job {0}".format(job_id_list)
-        logger.debug("Executing sqeueue")
+        logger.debug("Executing %s", cmd)
         retcode, stdout, stderr = self.execute_wait(cmd)
-        logger.debug("sqeueue returned")
+        logger.debug("squeue returned %s %s", stdout, stderr)
 
         # Execute_wait failed. Do no update
         if retcode != 0:
-            logger.warning("squeue failed with non-zero exit code {} - see https://github.com/Parsl/parsl/issues/1588".format(retcode))
+            logger.warning("squeue failed with non-zero exit code {}".format(retcode))
             return
 
         jobs_missing = list(self.resources.keys())
@@ -235,7 +241,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                     job_id = line.split("Submitted batch job")[1].strip()
                     self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
-            print("Submission of command to scale_out failed")
+            logger.error("Submit command failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
         return job_id
 
