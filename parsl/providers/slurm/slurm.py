@@ -238,7 +238,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                     job_id = line.split("Submitted batch job")[1].strip()
                     self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
-            print("Submission of command to scale_out failed")
+            logger.error("Submit command failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
         return job_id
 
