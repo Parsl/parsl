@@ -539,7 +539,9 @@ class DatabaseManager:
                         "_migrate_logs_to_internal can only migrate WORKFLOW_,TASK_INFO message from priority queue, got x[0] == {}".format(x[0])
                     self._dispatch_to_internal(x)
                 elif queue_tag == 'resource':
-                    assert x[0] == MessageType.RESOURCE_INFO, "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue"
+                    assert isinstance(x, tuple), "_migrate_logs_to_internal was expecting a tuple, got {}".format(x)
+                    assert x[0] == MessageType.RESOURCE_INFO, \
+                        "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue, got tag {}, message {}".format(x[0], x)
                     self._dispatch_to_internal(x)
                 elif queue_tag == 'node':
                     assert len(x) == 2, "expected message tuple to have exactly two elements"
