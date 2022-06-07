@@ -148,7 +148,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         cmd = "squeue --job {0}".format(job_id_list)
         logger.debug("Executing %s", cmd)
         retcode, stdout, stderr = self.execute_wait(cmd)
-        logger.debug("sqeueue returned %s %s", stdout, stderr)
+        logger.debug("squeue returned %s %s", stdout, stderr)
 
         # Execute_wait failed. Do no update
         if retcode != 0:
@@ -160,8 +160,11 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             parts = line.split()
             if parts and parts[0] != 'JOBID':
                 job_id = parts[0]
-                status = translate_table.get(parts[4], JobState.UNKNOWN)
-                logger.debug("Updating job {} with slurm status {} to parsl status {}".format(job_id, parts[4], status))
+                slurm_state = parts[4]
+                if slurm_state not in translate_table:
+                    logger.warning(f"Slurm status {slurm_state} is not known")
+                status = translate_table.get(slurm_state, JobState.UNKNOWN)
+                logger.debug("Updating job {} with slurm status {} to parsl state {!s}".format(job_id, slurm_state, status))
                 self.resources[job_id]['status'] = JobStatus(status)
                 jobs_missing.remove(job_id)
 
@@ -238,7 +241,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                     job_id = line.split("Submitted batch job")[1].strip()
                     self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
-            logger.error("Submission of command to submit failed")
+            logger.error("Submit command failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
         return job_id
 

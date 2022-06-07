@@ -37,7 +37,7 @@ execution on available resources.
     results =  []
     for i in range(0, 10):
         x = app_random()
-        mapped_results.append(x)
+        results.append(x)
 
     for r in results: 
         print(r.result())
