@@ -9,6 +9,7 @@ import zmq
 from functools import wraps
 
 import queue
+from abc import ABCMeta, abstractmethod
 from parsl.multiprocessing import ForkProcess, SizedQueue
 from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
@@ -64,7 +65,13 @@ def start_file_logger(filename: str, name: str = 'monitoring', level: int = logg
     return logger
 
 
-class UDPRadio:
+class MonitoringRadio(metaclass=ABCMeta):
+    @abstractmethod
+    def send(self, message: object) -> None:
+        pass
+
+
+class UDPRadio(MonitoringRadio):
 
     def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
         """
@@ -323,6 +330,7 @@ class MonitoringHub(RepresentationMixin):
                         run_id: str,
                         logging_level: int,
                         sleep_dur: float,
+                        radio_mode: str,
                         monitor_resources: bool) -> Callable:
         """ Internal
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
@@ -333,7 +341,8 @@ class MonitoringHub(RepresentationMixin):
             send_first_message(try_id,
                                task_id,
                                monitoring_hub_url,
-                               run_id)
+                               run_id,
+                               radio_mode)
 
             p: Optional[Process]
             if monitor_resources:
@@ -344,6 +353,7 @@ class MonitoringHub(RepresentationMixin):
                                        task_id,
                                        monitoring_hub_url,
                                        run_id,
+                                       radio_mode,
                                        logging_level,
                                        sleep_dur),
                                  name="Monitor-Wrapper-{}".format(task_id))
@@ -570,12 +580,16 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
 def send_first_message(try_id: int,
                        task_id: int,
                        monitoring_hub_url: str,
-                       run_id: str) -> None:
+                       run_id: str, radio_mode: str) -> None:
     import platform
     import os
 
-    radio = UDPRadio(monitoring_hub_url,
-                     source_id=task_id)
+    radio: MonitoringRadio
+    if radio_mode == "udp":
+        radio = UDPRadio(monitoring_hub_url,
+                         source_id=task_id)
+    else:
+        raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
     msg = {'run_id': run_id,
            'try_id': try_id,
@@ -595,6 +609,7 @@ def monitor(pid: int,
             task_id: int,
             monitoring_hub_url: str,
             run_id: str,
+            radio_mode: str,
             logging_level: int = logging.INFO,
             sleep_dur: float = 10) -> None:
     """Internal
@@ -611,8 +626,12 @@ def monitor(pid: int,
     import psutil
     import time
 
-    radio = UDPRadio(monitoring_hub_url,
-                     source_id=task_id)
+    radio: MonitoringRadio
+    if radio_mode == "udp":
+        radio = UDPRadio(monitoring_hub_url,
+                         source_id=task_id)
+    else:
+        raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
     logging.debug("start of monitor")
 
