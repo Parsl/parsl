@@ -103,12 +103,6 @@ class HTEXRadio(MonitoringRadio):
 
         import parsl.executors.high_throughput.monitoring_info
 
-        # TODO: this message needs to look like the other messages that the interchange will send...
-        #            hub_channel.send_pyobj((MessageType.NODE_INFO,
-        #                            datetime.datetime.now(),
-        #                            self._ready_manager_queue[manager]))
-
-        # not serialising here because it looks like python objects can go through mp queues without explicit pickling?
         try:
             buffer = (MessageType.RESOURCE_INFO, (self.source_id,   # Identifier for manager
                       int(time.time()),  # epoch timestamp
