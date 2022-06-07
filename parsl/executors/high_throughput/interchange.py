@@ -482,13 +482,28 @@ class Interchange(object):
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
                 logger.debug("[MAIN] entering results_incoming section")
-                manager, *b_messages = self.results_incoming.recv_multipart()
+                manager, *all_messages = self.results_incoming.recv_multipart()
                 if manager not in self._ready_manager_queue:
                     logger.warning("[MAIN] Received a result from a un-registered manager: {}".format(manager))
                 else:
-                    logger.debug("[MAIN] Got {} result items in batch".format(len(b_messages)))
-                    for b_message in b_messages:
-                        r = pickle.loads(b_message)
+                    logger.debug("[MAIN] Got {} result items in batch".format(len(all_messages)))
+
+                    b_messages = []
+
+                    for message in all_messages:
+                        r = pickle.loads(message)
+                        if r['type'] == 'result':
+                            # process this for task ID and forward to executor
+                            b_messages.append((message, r))
+                        elif r['type'] == 'monitoring':
+                            hub_channel.send_pyobj(r['payload'])
+                        elif r['type'] == 'heartbeat':
+                            logger.debug("[MAIN] Manager {} sent heartbeat via results connection".format(manager))
+                            b_messages.append((message, r))
+                        else:
+                            logger.error("Interchange discarding result_queue message of unknown type: {}".format(r['type']))
+
+                    for (b_message, r) in b_messages:
                         assert 'type' in r, f"Message is missing type entry: {r}"
                         if r['type'] == 'result':
                             try:
@@ -500,7 +515,13 @@ class Interchange(object):
                                     manager,
                                     self._ready_manager_queue[manager]['tasks']))
 
-                    self.results_outgoing.send_multipart(b_messages)
+                    b_messages_to_send = []
+                    for (b_message, _) in b_messages:
+                        b_messages_to_send.append(b_message)
+
+                    if b_messages_to_send:
+                        self.results_outgoing.send_multipart(b_messages_to_send)
+
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
                     if len(self._ready_manager_queue[manager]['tasks']) == 0 and self._ready_manager_queue[manager]['idle_since'] is None:
                         self._ready_manager_queue[manager]['idle_since'] = time.time()
