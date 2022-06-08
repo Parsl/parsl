@@ -161,17 +161,17 @@ Parsl provides four checkpointing modes:
    (after retries if enabled). This mode minimizes the risk of losing information
    from completed tasks.
 
-   >>> from parsl.configs.local_threads import config
-   >>> config.checkpoint_mode = 'task_exit'
+   from parsl.configs.local_threads import config
+   config.checkpoint_mode = 'task_exit'
 
 
 2. ``periodic``: a checkpoint is created periodically using a user-specified
    checkpointing interval. Results will be saved to the checkpoint file for
    all tasks that have completed during this period.
 
-   >>> from parsl.configs.local_threads import config
-   >>> config.checkpoint_mode = 'periodic'
-   >>> config.checkpoint_period = "01:00:00"
+   from parsl.configs.local_threads import config
+   config.checkpoint_mode = 'periodic'
+   config.checkpoint_period = "01:00:00"
 
 3. ``dfk_exit``: checkpoints are created when Parsl is
    about to exit. This reduces the risk of losing results due to
@@ -179,18 +179,18 @@ Parsl provides four checkpointing modes:
    it is still possible that information might be lost if the program is
    terminated abruptly (machine failure, SIGKILL, etc.)
 
-   >>> from parsl.configs.local_threads import config
-   >>> config.checkpoint_mode = 'dfk_exit'
+   from parsl.configs.local_threads import config
+   config.checkpoint_mode = 'dfk_exit'
 
 4. Manual: in addition to these automated checkpointing modes, it is also possible to manually initiate a checkpoint
    by calling ``DataFlowKernel.checkpoint()`` in the Parsl program code.
 
 
-   >>> import parsl
-   >>> from parsl.configs.local_threads import config
-   >>> dfk = parsl.load(config)
-   >>> ....
-   >>> dfk.checkpoint()
+   import parsl
+   from parsl.configs.local_threads import config
+   dfk = parsl.load(config)
+   ....
+   dfk.checkpoint()
 
 In all cases the checkpoint file is written out to the ``runinfo/RUN_ID/checkpoint/`` directory.
 

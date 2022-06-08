@@ -9,6 +9,7 @@ import zmq
 from functools import wraps
 
 import queue
+from abc import ABCMeta, abstractmethod
 from parsl.multiprocessing import ForkProcess, SizedQueue
 from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
@@ -64,7 +65,75 @@ def start_file_logger(filename: str, name: str = 'monitoring', level: int = logg
     return logger
 
 
-class UDPRadio:
+class MonitoringRadio(metaclass=ABCMeta):
+    @abstractmethod
+    def send(self, message: object) -> None:
+        pass
+
+
+class HTEXRadio(MonitoringRadio):
+
+    def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
+        """
+        Parameters
+        ----------
+
+        monitoring_url : str
+            URL of the form <scheme>://<IP>:<PORT>
+        source_id : str
+            String identifier of the source
+        timeout : int
+            timeout, default=10s
+        """
+        self.source_id = source_id
+        logger.info("htex-based monitoring channel initialising")
+
+    def send(self, message: object) -> None:
+        """ Sends a message to the UDP receiver
+
+        Parameter
+        ---------
+
+        message: object
+            Arbitrary pickle-able object that is to be sent
+
+        Returns:
+            None
+        """
+
+        import parsl.executors.high_throughput.monitoring_info
+
+        try:
+            buffer = (MessageType.RESOURCE_INFO, (self.source_id,   # Identifier for manager
+                      int(time.time()),  # epoch timestamp
+                      message))
+        except Exception:
+            logging.exception("Exception during pickling", exc_info=True)
+            return
+
+        result_queue = parsl.executors.high_throughput.monitoring_info.result_queue
+
+        # this message needs to go in the result queue tagged so that it is treated
+        # i) as a monitoring message by the interchange, and then further more treated
+        # as a RESOURCE_INFO message when received by monitoring (rather than a NODE_INFO
+        # which is the implicit default for messages from the interchange)
+
+        # for the interchange, the outer wrapper, this needs to be a dict:
+
+        interchange_msg = {
+            'type': 'monitoring',
+            'payload': buffer
+        }
+
+        if result_queue:
+            result_queue.put(pickle.dumps(interchange_msg))
+        else:
+            logger.error("result_queue is uninitialized - cannot put monitoring message")
+
+        return
+
+
+class UDPRadio(MonitoringRadio):
 
     def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
         """
@@ -208,7 +277,7 @@ class MonitoringHub(RepresentationMixin):
         self.resource_monitoring_enabled = resource_monitoring_enabled
         self.resource_monitoring_interval = resource_monitoring_interval
 
-    def start(self, run_id: str) -> int:
+    def start(self, run_id: str, run_dir: str) -> int:
 
         if self.logdir is None:
             self.logdir = "."
@@ -274,9 +343,9 @@ class MonitoringHub(RepresentationMixin):
             self.logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
             raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
 
-        udp_dish_port, ic_port = comm_q_result
+        udp_port, ic_port = comm_q_result
 
-        self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_dish_port)
+        self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
         return ic_port
 
     # TODO: tighten the Any message format
@@ -323,7 +392,9 @@ class MonitoringHub(RepresentationMixin):
                         run_id: str,
                         logging_level: int,
                         sleep_dur: float,
-                        monitor_resources: bool) -> Callable:
+                        radio_mode: str,
+                        monitor_resources: bool,
+                        run_dir: str) -> Callable:
         """ Internal
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
@@ -333,7 +404,9 @@ class MonitoringHub(RepresentationMixin):
             send_first_message(try_id,
                                task_id,
                                monitoring_hub_url,
-                               run_id)
+                               run_id,
+                               radio_mode,
+                               run_dir)
 
             p: Optional[Process]
             if monitor_resources:
@@ -344,8 +417,9 @@ class MonitoringHub(RepresentationMixin):
                                        task_id,
                                        monitoring_hub_url,
                                        run_id,
+                                       radio_mode,
                                        logging_level,
-                                       sleep_dur),
+                                       sleep_dur, run_dir),
                                  name="Monitor-Wrapper-{}".format(task_id))
                 pp.start()
                 p = pp
@@ -497,7 +571,7 @@ class MonitoringRouter:
                         node_msg = ((msg[0], msg[2]), 0)
                         node_msgs.put(node_msg)
                     elif msg[0] == MessageType.RESOURCE_INFO:
-                        resource_msgs.put(cast(Any, msg))
+                        resource_msgs.put(cast(Any, (msg, 0)))
                     elif msg[0] == MessageType.BLOCK_INFO:
                         block_msgs.put(cast(Any, (msg, 0)))
                     else:
@@ -570,12 +644,19 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
 def send_first_message(try_id: int,
                        task_id: int,
                        monitoring_hub_url: str,
-                       run_id: str) -> None:
+                       run_id: str, radio_mode: str, run_dir: str) -> None:
     import platform
     import os
 
-    radio = UDPRadio(monitoring_hub_url,
-                     source_id=task_id)
+    radio: MonitoringRadio
+    if radio_mode == "udp":
+        radio = UDPRadio(monitoring_hub_url,
+                         source_id=task_id)
+    elif radio_mode == "htex":
+        radio = HTEXRadio(monitoring_hub_url,
+                          source_id=task_id)
+    else:
+        raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
     msg = {'run_id': run_id,
            'try_id': try_id,
@@ -595,22 +676,32 @@ def monitor(pid: int,
             task_id: int,
             monitoring_hub_url: str,
             run_id: str,
+            radio_mode: str,
             logging_level: int = logging.INFO,
-            sleep_dur: float = 10) -> None:
+            sleep_dur: float = 10, run_dir: str = "./") -> None:
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
+
+    This process makes calls to logging, but deliberately does not attach
+    any log handlers. Previously, there was a handler which logged to a
+    file in /tmp, but this was usually not useful or even accessible.
+    In some circumstances, it might be useful to hack in a handler so the
+    logger calls remain in place.
     """
     import logging
     import platform
     import psutil
     import time
 
-    radio = UDPRadio(monitoring_hub_url,
-                     source_id=task_id)
-
-    format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-    logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
-        logbase="/tmp", task_id=task_id, pid=pid), level=logging_level, format=format_string)
+    radio: MonitoringRadio
+    if radio_mode == "udp":
+        radio = UDPRadio(monitoring_hub_url,
+                         source_id=task_id)
+    elif radio_mode == "htex":
+        radio = HTEXRadio(monitoring_hub_url,
+                          source_id=task_id)
+    else:
+        raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
     logging.debug("start of monitor")
 
