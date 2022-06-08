@@ -25,15 +25,8 @@ class ParslExecutor(metaclass=ABCMeta):
 
     Per-executor monitoring behaviour can be influenced by exposing:
 
-       radio_mode: str - a string describing how monitoring code wrapping individual
-              tasks should send data back to the submit side. This field is messy
-              and should be made more general, but for prototyping for LSST, this
-              is OK. The principal requirement is that HTEX tasks can be told to
-              use the htex channel, and thread executor tasks can use the UDP
-              channel. Further less urgent requirements: other remote executors
-              such as workqueue need a more reliable channel than UDP - because
-              the motivation for this work is that htex + udp isn't providing
-              reliable monitoring.
+       radio_mode: str - a string describing which radio mode should be used to
+              send task resource data back to the submit side.
 
     An executor may optionally expose:
 

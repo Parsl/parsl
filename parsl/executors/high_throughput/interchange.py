@@ -530,31 +530,24 @@ class Interchange(object):
 
                     b_messages = []
 
-                    # this block needs to split messages into 'result' messages, and process as previously;
-                    # monitoring messages, which should be sent to monitoring via whatever is used?
-                    # and others, which should generate a non-fatal error log
-
-                    # TODO: rework to avoid depickling twice... because that's quite expensive I expect
-
                     for message in all_messages:
                         r = pickle.loads(message)
                         if r['type'] == 'result':
                             logger.debug(f"Result item is result for task {r['task_id']}")
                             # process this for task ID and forward to executor
-                            b_messages.append(message)
+                            b_messages.append((message, r))
                         elif r['type'] == 'monitoring':
                             logger.debug("Result item is monitoring message - sending on hub_channel")
                             hub_channel.send_pyobj(r['payload'])
                             logger.debug("Sent monitoring message on hub_channel")
                         elif r['type'] == 'heartbeat':
                             logger.debug("Result item is a heartbeat on results connection")
-                            b_messages.append(message)
+                            b_messages.append((message, r))
                         else:
                             logger.error("Result item is of unknown type: {}".format(r['type']))
 
                     m = self._ready_managers[manager_id]
-                    for b_message in b_messages:
-                        r = pickle.loads(b_message)
+                    for (b_message, r) in b_messages:
                         assert 'type' in r, f"Message is missing type entry: {r}"
                         if r['type'] == 'result':
                             try:
@@ -567,9 +560,13 @@ class Interchange(object):
                                     manager_id,
                                     m['tasks']))
 
-                    if b_messages:
+                    b_messages_to_send = []
+                    for (b_message, _) in b_messages:
+                        b_messages_to_send.append(b_message)
+
+                    if b_messages_to_send:
                         logger.debug("Sending messages on results_outgoing")
-                        self.results_outgoing.send_multipart(b_messages)
+                        self.results_outgoing.send_multipart(b_messages_to_send)
                         logger.debug("Sent messages on results_outgoing")
 
                     logger.debug(f"Current tasks on manager {manager_id}: {m['tasks']}")

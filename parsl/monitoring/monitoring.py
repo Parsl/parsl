@@ -80,7 +80,7 @@ class MonitoringRadio(metaclass=ABCMeta):
 class FilesystemRadio(MonitoringRadio):
     """A MonitoringRadio that sends messages over a shared filesystem.
 
-    The messsage directory structure is on maildir,
+    The messsage directory structure is based on maildir,
     https://en.wikipedia.org/wiki/Maildir
 
     The writer creates a message in tmp/ and then when it is fully
@@ -119,7 +119,6 @@ class FilesystemRadio(MonitoringRadio):
 
         self.id_counter = self.id_counter + 1
 
-        # TODO: use path operators not string interpolation
         tmp_filename = f"{self.tmp_path}/{unique_id}"
         new_filename = f"{self.new_path}/{unique_id}"
         buffer = (message, "NA")
@@ -164,12 +163,6 @@ class HTEXRadio(MonitoringRadio):
 
         import parsl.executors.high_throughput.monitoring_info
 
-        # TODO: this message needs to look like the other messages that the interchange will send...
-        #            hub_channel.send_pyobj((MessageType.NODE_INFO,
-        #                            datetime.datetime.now(),
-        #                            self._ready_manager_queue[manager]))
-
-        # not serialising here because it looks like python objects can go through mp queues without explicit pickling?
         try:
             buffer = message
         except Exception:
@@ -379,7 +372,8 @@ class MonitoringHub(RepresentationMixin):
                                             "db_url": self.logging_endpoint,
                                     },
                                     name="Monitoring-DBM-Process",
-                                    daemon=True)
+                                    daemon=True
+        )
         self.dbm_proc.start()
         self.logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
@@ -534,7 +528,6 @@ class MonitoringHub(RepresentationMixin):
         return wrapped
 
 
-# this needs proper typing, but I was having some problems with typeguard...
 @wrap_with_logs
 def filesystem_receiver(logdir: str, q: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]", run_dir: str) -> None:
     logger = start_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
@@ -546,13 +539,12 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[Tuple[Tuple[MessageType, Di
     base_path = f"{run_dir}/monitor-fs-radio/"
     tmp_dir = f"{base_path}/tmp/"
     new_dir = f"{base_path}/new/"
-    logger.debug("Creating new and tmp paths")
+    logger.debug(f"Creating new and tmp paths under {base_path}")
 
     os.makedirs(tmp_dir, exist_ok=True)
     os.makedirs(new_dir, exist_ok=True)
 
-    while True:  # needs an exit condition, that also copes with late messages
-        # like the UDP radio receiver.
+    while True:  # this loop will end on process termination
         logger.info("Start filesystem radio receiver loop")
 
         # iterate over files in new_dir
@@ -564,9 +556,7 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[Tuple[Tuple[MessageType, Di
                     message = deserialize(f.read())
                 logger.info(f"Message received is: {message}")
                 assert(isinstance(message, tuple))
-                q.put(cast(Any, message))  # TODO: sort this typing/cast out
-                # should this addr field at the end be removed? does it ever
-                # get used in monitoring?
+                q.put(cast(Any, message))  # the type of message is complicated to assert, so cast to Any
                 os.remove(full_path_filename)
             except Exception:
                 logger.exception(f"Exception processing {filename} - probably will be retried next iteration")
