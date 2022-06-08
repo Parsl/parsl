@@ -98,7 +98,7 @@ class TaskStatusPoller(object):
         self._strategy = Strategy(dfk)
         self._error_handler = JobErrorHandler()
 
-    def poll(self, tasks=None, kind=None):
+    def poll(self, tasks=None):
         self._update_state()
         self._error_handler.run(self._poll_items)
         self._strategy.strategize(self._poll_items, tasks)
