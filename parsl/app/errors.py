@@ -1,9 +1,11 @@
 """Exceptions raised by Apps."""
 from functools import wraps
-from typing import Callable, List, Union, Any, TypeVar
+from typing import Callable, List, Union, Any, TypeVar, Optional
 from types import TracebackType
 import logging
 from tblib import Traceback
+
+from six import reraise
 
 from parsl.data_provider.files import File
 
@@ -108,19 +110,20 @@ class BadStdStreamFile(ParslError):
 
 
 class RemoteExceptionWrapper:
-    def __init__(self, e_type: type, e_value: Exception, traceback: TracebackType) -> None:
+    def __init__(self, e_type: type, e_value: BaseException, traceback: Optional[TracebackType]) -> None:
 
         self.e_type = e_type
         self.e_value = e_value
-        self.e_traceback = Traceback(traceback)
-
-        # self.e_type = dill.dumps(e_type)
-        # self.e_value = dill.dumps(e_value)
-        # self.e_traceback = Traceback(traceback)
+        self.e_traceback = None if traceback is None else Traceback(traceback)
+        if e_value.__cause__ is None:
+            self.cause = None
+        else:
+            cause = e_value.__cause__
+            self.cause = self.__class__(type(cause), cause, cause.__traceback__)
 
     def reraise(self) -> None:
 
-        # t = dill.loads(self.e_type)
+        t = self.e_type
 
         # the type is logged here before deserialising v and tb
         # because occasionally there are problems deserialising the
@@ -128,13 +131,19 @@ class RemoteExceptionWrapper:
         # specific exception type.
         logger.debug("Reraising exception of type {}".format(self.e_type))
 
-        # v = dill.loads(self.e_value)
-        # tb = self.e_traceback.as_traceback()
+        v = self.get_exception()
 
-        raise self.e_value.with_traceback(self.e_traceback.as_traceback())
+        reraise(t, v, v.__traceback__)
 
-        # reraise(self.e_type, self.e_value, self.e_traceback)
-        # reraise(t, v, tb)
+    def get_exception(self) -> BaseException:
+        v = self.e_value
+        if self.cause is not None:
+            v.__cause__ = self.cause.get_exception()
+        if self.e_traceback is not None:
+            tb = self.e_traceback.as_traceback()
+            return v.with_traceback(tb)
+        else:
+            return v
 
 
 R = TypeVar('R')
