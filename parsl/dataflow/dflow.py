@@ -104,7 +104,7 @@ class DataFlowKernel(object):
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
             self.hub_address = self.monitoring.hub_address
-            self.hub_interchange_port = self.monitoring.start(self.run_id)
+            self.hub_interchange_port = self.monitoring.start(self.run_id, self.run_dir)
 
         self.time_began = datetime.datetime.now()
         self.time_completed = None
@@ -116,13 +116,16 @@ class DataFlowKernel(object):
             self.workflow_name = self.monitoring.workflow_name
         else:
             for frame in inspect.stack():
+                logger.debug("Considering candidate for workflow name: {}".format(frame.filename))
                 fname = os.path.basename(str(frame.filename))
                 parsl_file_names = ['dflow.py', 'typeguard.py', '__init__.py']
                 # Find first file name not considered a parsl file
                 if fname not in parsl_file_names:
                     self.workflow_name = fname
+                    logger.debug("Using {} as workflow name".format(fname))
                     break
             else:
+                logger.debug("Could not choose a name automatically")
                 self.workflow_name = "unnamed"
 
         self.workflow_version = str(self.time_began.replace(microsecond=0))
@@ -598,7 +601,9 @@ class DataFlowKernel(object):
                                                          self.run_id,
                                                          wrapper_logging_level,
                                                          self.monitoring.resource_monitoring_interval,
-                                                         executor.monitor_resources())
+                                                         executor.radio_mode,
+                                                         executor.monitor_resources(),
+                                                         self.run_dir)
 
         with self.submitter_lock:
             exec_fu = executor.submit(executable, task_record['resource_specification'], *args, **kwargs)
