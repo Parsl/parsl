@@ -116,13 +116,16 @@ class DataFlowKernel(object):
             self.workflow_name = self.monitoring.workflow_name
         else:
             for frame in inspect.stack():
+                logger.debug("Considering candidate for workflow name: {}".format(frame.filename))
                 fname = os.path.basename(str(frame.filename))
                 parsl_file_names = ['dflow.py', 'typeguard.py', '__init__.py']
                 # Find first file name not considered a parsl file
                 if fname not in parsl_file_names:
                     self.workflow_name = fname
+                    logger.debug("Using {} as workflow name".format(fname))
                     break
             else:
+                logger.debug("Could not choose a name automatically")
                 self.workflow_name = "unnamed"
 
         self.workflow_version = str(self.time_began.replace(microsecond=0))
