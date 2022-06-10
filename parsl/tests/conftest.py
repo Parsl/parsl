@@ -14,7 +14,7 @@ import _pytest.runner as runner
 import parsl
 from parsl.dataflow.dflow import DataFlowKernelLoader
 
-logger = logging.getLogger('parsl')
+logger = logging.getLogger(__name__)
 
 
 def dumpstacks(sig, frame):
