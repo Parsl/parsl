@@ -14,6 +14,7 @@ from parsl.multiprocessing import ForkProcess, SizedQueue
 from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
+from parsl.utils import setproctitle
 
 from parsl.serialize import deserialize
 
@@ -519,7 +520,9 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[Tuple[Tuple[MessageType, Di
     logger = start_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
                                name="monitoring_filesystem_radio",
                                level=logging.DEBUG)
+
     logger.info("Starting filesystem radio receiver")
+    setproctitle("parsl: monitoring filesystem receiver")
     base_path = f"{run_dir}/monitor-fs-radio/"
     tmp_dir = f"{base_path}/tmp/"
     new_dir = f"{base_path}/new/"
@@ -722,7 +725,7 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    logdir: str,
                    logging_level: int,
                    run_id: str) -> None:
-
+    setproctitle("parsl: monitoring router")
     try:
         router = MonitoringRouter(hub_address=hub_address,
                                   hub_port=hub_port,
