@@ -1236,9 +1236,13 @@ class DataFlowKernel(object):
             with open(checkpoint_tasks, 'ab') as f:
                 for task_record in checkpoint_queue:
                     task_id = task_record['id']
-                    if task_record['app_fu'] is not None and \
-                       task_record['app_fu'].done() and \
-                       task_record['app_fu'].exception() is None:
+
+                    if task_record['app_fu'] is None:
+                        continue
+
+                    app_fu = task_record['app_fu']
+
+                    if app_fu.done() and app_fu.exception() is None:
                         hashsum = task_record['hashsum']
                         if not hashsum:
                             continue
@@ -1246,10 +1250,7 @@ class DataFlowKernel(object):
                              'exception': None,
                              'result': None}
 
-                        fut = self.memoizer.hash_lookup(hashsum)
-                        assert fut.done()
-                        assert fut.exception() is None
-                        t['result'] = fut.result()
+                        t['result'] = app_fu.result()
 
                         # We are using pickle here since pickle dumps to a file in 'ab'
                         # mode behave like a incremental log.
