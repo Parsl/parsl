@@ -508,6 +508,11 @@ class MonitoringHub(RepresentationMixin):
             try:
                 return f(*args, **kwargs)
             finally:
+                send_last_message(try_id,
+                                  task_id,
+                                  monitoring_hub_url,
+                                  run_id,
+                                  radio_mode, run_dir)
                 # There's a chance of zombification if the workers are killed by some signals
                 if p:
                     p.terminate()
@@ -756,6 +761,24 @@ def send_first_message(try_id: int,
                        task_id: int,
                        monitoring_hub_url: str,
                        run_id: str, radio_mode: str, run_dir: str) -> None:
+    send_first_last_message(try_id, task_id, monitoring_hub_url, run_id,
+                            radio_mode, run_dir, False)
+
+
+@wrap_with_logs
+def send_last_message(try_id: int,
+                      task_id: int,
+                      monitoring_hub_url: str,
+                      run_id: str, radio_mode: str, run_dir: str) -> None:
+    send_first_last_message(try_id, task_id, monitoring_hub_url, run_id,
+                            radio_mode, run_dir, True)
+
+
+def send_first_last_message(try_id: int,
+                            task_id: int,
+                            monitoring_hub_url: str,
+                            run_id: str, radio_mode: str, run_dir: str,
+                            is_last: bool) -> None:
     import platform
     import os
 
@@ -777,7 +800,8 @@ def send_first_message(try_id: int,
            'task_id': task_id,
            'hostname': platform.node(),
            'block_id': os.environ.get('PARSL_WORKER_BLOCK_ID'),
-           'first_msg': True,
+           'first_msg': not is_last,
+           'last_msg': is_last,
            'timestamp': datetime.datetime.now()
     }
     radio.send(msg)
@@ -843,6 +867,7 @@ def monitor(pid: int,
             d['resource_monitoring_interval'] = sleep_dur
             d['hostname'] = platform.node()
             d['first_msg'] = False
+            d['last_msg'] = False
             d['timestamp'] = datetime.datetime.now()
 
             logging.debug("getting children")
