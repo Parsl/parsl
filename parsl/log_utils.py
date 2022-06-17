@@ -10,6 +10,7 @@ However the following helper functions are provided for logging:
     This sets the logging to a file. This is ideal for reporting issues to the dev team.
 
 """
+import io
 import logging
 import typeguard
 
@@ -17,13 +18,15 @@ from typing import Optional
 
 
 @typeguard.typechecked
-def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None):
+def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None, stream: Optional[io.TextIOWrapper] = None):
     """Add a stream log handler.
 
     Args:
          - name (string) : Set the logger name.
          - level (logging.LEVEL) : Set to logging.DEBUG by default.
          - format_string (string) : Set to None by default.
+         - stream (io.TextIOWrapper) : Specify sys.stdout or sys.stderr for stream.
+            If not specified, the default stream for logging.StreamHandler is used.
 
     Returns:
          - None
@@ -34,7 +37,7 @@ def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_st
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
+    handler = logging.StreamHandler(stream)
     handler.setLevel(level)
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
