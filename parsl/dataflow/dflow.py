@@ -509,6 +509,8 @@ class DataFlowKernel(object):
         # results in no processing. So entering the locked section when the task has been "processed" (a new concept)
         # will now be idempotent.
 
+        exec_fu = None
+
         task_id = task_record['id']
         with task_record['task_launch_lock']:
 
@@ -529,7 +531,6 @@ class DataFlowKernel(object):
 
             if not exceptions_tids:
                 # There are no dependency errors
-                exec_fu = None
                 try:
                     exec_fu = self.launch_task(
                         task_record, task_record['func'], *new_args, **kwargs)
@@ -557,19 +558,19 @@ class DataFlowKernel(object):
                 exec_fu.set_exception(DependencyError(exceptions_tids,
                                                       task_id))
 
-            if exec_fu:
-                assert isinstance(exec_fu, Future)
-                try:
-                    exec_fu.add_done_callback(partial(self.handle_exec_update, task_record))
-                except Exception:
-                    # this exception is ignored here because it is assumed that exception
-                    # comes from directly executing handle_exec_update (because exec_fu is
-                    # done already). If the callback executes later, then any exception
-                    # coming out of the callback will be ignored and not propate anywhere,
-                    # so this block attempts to keep the same behaviour here.
-                    logger.error("add_done_callback got an exception which will be ignored", exc_info=True)
+        if exec_fu:
+            assert isinstance(exec_fu, Future)
+            try:
+                exec_fu.add_done_callback(partial(self.handle_exec_update, task_record))
+            except Exception:
+                # this exception is ignored here because it is assumed that exception
+                # comes from directly executing handle_exec_update (because exec_fu is
+                # done already). If the callback executes later, then any exception
+                # coming out of the callback will be ignored and not propate anywhere,
+                # so this block attempts to keep the same behaviour here.
+                logger.error("add_done_callback got an exception which will be ignored", exc_info=True)
 
-                task_record['exec_fu'] = exec_fu
+            task_record['exec_fu'] = exec_fu
 
     def launch_task(self, task_record, executable, *args, **kwargs):
         """Handle the actual submission of the task to the executor layer.
