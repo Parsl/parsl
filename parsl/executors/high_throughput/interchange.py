@@ -13,6 +13,7 @@ import queue
 import threading
 import json
 
+from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.serialize import ParslSerializer
 serialize_object = ParslSerializer().serialize
@@ -24,19 +25,6 @@ from parsl.process_loggers import wrap_with_logs
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
-
-
-class ShutdownRequest(Exception):
-    ''' Exception raised when any async component receives a ShutdownRequest
-    '''
-    def __init__(self):
-        self.tstamp = time.time()
-
-    def __repr__(self):
-        return "Shutdown request received at {}".format(self.tstamp)
-
-    def __str__(self):
-        return self.__repr__()
 
 
 class ManagerLost(Exception):
@@ -347,13 +335,9 @@ class Interchange(object):
                 logger.debug("[COMMAND] is alive")
                 continue
 
+    @wrap_with_logs
     def start(self, poll_period=None):
         """ Start the interchange
-
-        Parameters:
-        ----------
-
-        TODO: Move task receiving to a thread
         """
         logger.info("Incoming ports bound")
 
@@ -432,7 +416,7 @@ class Interchange(object):
                                                 "py.v={} parsl.v={}".format(msg['python_v'].rsplit(".", 1)[0],
                                                                             msg['parsl_v'])
                             )
-                            result_package = {'task_id': -1, 'exception': serialize_object(e)}
+                            result_package = {'type': 'result', 'task_id': -1, 'exception': serialize_object(e)}
                             pkl_package = pickle.dumps(result_package)
                             self.results_outgoing.send(pkl_package)
                             logger.warning("[MAIN] Sent failure reports, unregistering manager")
@@ -499,26 +483,46 @@ class Interchange(object):
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
                 logger.debug("[MAIN] entering results_incoming section")
-                manager, *b_messages = self.results_incoming.recv_multipart()
+                manager, *all_messages = self.results_incoming.recv_multipart()
                 if manager not in self._ready_manager_queue:
                     logger.warning("[MAIN] Received a result from a un-registered manager: {}".format(manager))
                 else:
-                    logger.debug("[MAIN] Got {} result items in batch".format(len(b_messages)))
-                    for b_message in b_messages:
-                        r = pickle.loads(b_message)
-                        try:
-                            if int(r['task_id']) != -1:
-                                self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
-                            elif 'heartbeat' in r:
-                                logger.debug("[MAIN] Manager {} sent heartbeat via results connection".format(manager))
-                        except Exception:
-                            # If we reach here, there's something very wrong.
-                            logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(
-                                r['task_id'],
-                                manager,
-                                self._ready_manager_queue[manager]['tasks']))
+                    logger.debug("[MAIN] Got {} result items in batch".format(len(all_messages)))
 
-                    self.results_outgoing.send_multipart(b_messages)
+                    b_messages = []
+
+                    for message in all_messages:
+                        r = pickle.loads(message)
+                        if r['type'] == 'result':
+                            # process this for task ID and forward to executor
+                            b_messages.append((message, r))
+                        elif r['type'] == 'monitoring':
+                            hub_channel.send_pyobj(r['payload'])
+                        elif r['type'] == 'heartbeat':
+                            logger.debug("[MAIN] Manager {} sent heartbeat via results connection".format(manager))
+                            b_messages.append((message, r))
+                        else:
+                            logger.error("Interchange discarding result_queue message of unknown type: {}".format(r['type']))
+
+                    for (b_message, r) in b_messages:
+                        assert 'type' in r, f"Message is missing type entry: {r}"
+                        if r['type'] == 'result':
+                            try:
+                                self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
+                            except Exception:
+                                # If we reach here, there's something very wrong.
+                                logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(
+                                    r['task_id'],
+                                    manager,
+                                    self._ready_manager_queue[manager]['tasks']))
+
+                    b_messages_to_send = []
+                    for (b_message, _) in b_messages:
+                        b_messages_to_send.append(b_message)
+
+                    if b_messages_to_send:
+                        self.results_outgoing.send_multipart(b_messages_to_send)
+
                     logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
                     if len(self._ready_manager_queue[manager]['tasks']) == 0 and self._ready_manager_queue[manager]['idle_since'] is None:
                         self._ready_manager_queue[manager]['idle_since'] = time.time()
@@ -537,7 +541,7 @@ class Interchange(object):
                     try:
                         raise ManagerLost(manager, self._ready_manager_queue[manager]['hostname'])
                     except Exception:
-                        result_package = {'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
+                        result_package = {'type': 'result', 'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
                         pkl_package = pickle.dumps(result_package)
                         self.results_outgoing.send(pkl_package)
                         logger.warning("[MAIN] Sent failure reports, unregistering manager")
@@ -589,6 +593,7 @@ def starter(comm_q, *args, **kwargs):
 
     The executor is expected to call this function. The args, kwargs match that of the Interchange.__init__
     """
+    setproctitle("parsl: HTEX interchange")
     # logger = multiprocessing.get_logger()
     ic = Interchange(*args, **kwargs)
     comm_q.put((ic.worker_task_port,

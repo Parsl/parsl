@@ -6,7 +6,7 @@ import queue
 import datetime
 import pickle
 from multiprocessing import Queue
-from typing import Dict  # noqa F401 (used in type annotation)
+from typing import Dict, Sequence  # noqa F401 (used in type annotation)
 from typing import List, Optional, Tuple, Union
 import math
 
@@ -139,6 +139,15 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         "alternating" to assign cores to workers in round-robin
         (ex: assign 0,2 to worker 0, 1,3 to worker 1).
 
+    available_accelerators: int | list
+        Accelerators available for workers to use. Each worker will be pinned to exactly one of the provided
+        accelerators, and no more workers will be launched than the number of accelerators.
+
+        Either provide the list of accelerator names or the number available. If a number is provided,
+        Parsl will create names as integers starting with 0.
+
+        default: empty list
+
     prefetch_capacity : int
         Number of tasks that could be prefetched over available worker capacity.
         When there are a few tasks (<100) or when tasks are long running, this option should
@@ -181,6 +190,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  mem_per_worker: Optional[float] = None,
                  max_workers: Union[int, float] = float('inf'),
                  cpu_affinity: str = 'none',
+                 available_accelerators: Union[int, Sequence[str]] = (),
                  prefetch_capacity: int = 0,
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
@@ -220,7 +230,16 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                 self.provider.cores_per_node is not None:
             cpu_slots = math.floor(self.provider.cores_per_node / cores_per_worker)
 
+        # Set the list of available accelerators
+        if isinstance(available_accelerators, int):
+            # If the user provide an integer, create some names for them
+            available_accelerators = list(map(str, range(available_accelerators)))
+        self.available_accelerators = list(available_accelerators)
+
+        # Determine the number of workers per node
         self._workers_per_node = min(max_workers, mem_slots, cpu_slots)
+        if len(self.available_accelerators) > 0:
+            self._workers_per_node = min(self._workers_per_node, len(available_accelerators))
         if self._workers_per_node == float('inf'):
             self._workers_per_node = 1  # our best guess-- we do not have any provider hints
 
@@ -252,7 +271,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                "--hb_period={heartbeat_period} "
                                "{address_probe_timeout_string} "
                                "--hb_threshold={heartbeat_threshold} "
-                               "--cpu-affinity {cpu_affinity} ")
+                               "--cpu-affinity {cpu_affinity} "
+                               "--available-accelerators {accelerators}")
+
+    radio_mode = "htex"
 
     def initialize_scaling(self):
         """ Compose the launch command and call the scale_out
@@ -284,7 +306,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                        heartbeat_threshold=self.heartbeat_threshold,
                                        poll_period=self.poll_period,
                                        logdir=worker_logdir,
-                                       cpu_affinity=self.cpu_affinity)
+                                       cpu_affinity=self.cpu_affinity,
+                                       accelerators=" ".join(self.available_accelerators))
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
 
@@ -382,46 +405,50 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                     for serialized_msg in msgs:
                         try:
                             msg = pickle.loads(serialized_msg)
-                            tid = msg['task_id']
                         except pickle.UnpicklingError:
                             raise BadMessage("Message received could not be unpickled")
 
-                        except Exception:
-                            raise BadMessage("Message received does not contain 'task_id' field")
-
-                        if tid == -1 and 'exception' in msg:
-                            logger.warning("Executor shutting down due to exception from interchange")
-                            exception = deserialize(msg['exception'])
-                            self.set_bad_state_and_fail_all(exception)
-                            break
-                        elif tid == -1 and 'heartbeat' in msg:
+                        if msg['type'] == 'heartbeat':
                             continue
-
-                        task_fut = self.tasks.pop(tid)
-
-                        if 'result' in msg:
-                            result = deserialize(msg['result'])
-                            task_fut.set_result(result)
-
-                        elif 'exception' in msg:
+                        elif msg['type'] == 'result':
                             try:
-                                s = deserialize(msg['exception'])
-                                # s should be a RemoteExceptionWrapper... so we can reraise it
-                                if isinstance(s, RemoteExceptionWrapper):
-                                    try:
-                                        s.reraise()
-                                    except Exception as e:
-                                        task_fut.set_exception(e)
-                                elif isinstance(s, Exception):
-                                    task_fut.set_exception(s)
-                                else:
-                                    raise ValueError("Unknown exception-like type received: {}".format(type(s)))
-                            except Exception as e:
-                                # TODO could be a proper wrapped exception?
-                                task_fut.set_exception(
-                                    DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
+                                tid = msg['task_id']
+                            except Exception:
+                                raise BadMessage("Message received does not contain 'task_id' field")
+
+                            if tid == -1 and 'exception' in msg:
+                                logger.warning("Executor shutting down due to exception from interchange")
+                                exception = deserialize(msg['exception'])
+                                self.set_bad_state_and_fail_all(exception)
+                                break
+
+                            task_fut = self.tasks.pop(tid)
+
+                            if 'result' in msg:
+                                result = deserialize(msg['result'])
+                                task_fut.set_result(result)
+
+                            elif 'exception' in msg:
+                                try:
+                                    s = deserialize(msg['exception'])
+                                    # s should be a RemoteExceptionWrapper... so we can reraise it
+                                    if isinstance(s, RemoteExceptionWrapper):
+                                        try:
+                                            s.reraise()
+                                        except Exception as e:
+                                            task_fut.set_exception(e)
+                                    elif isinstance(s, Exception):
+                                        task_fut.set_exception(s)
+                                    else:
+                                        raise ValueError("Unknown exception-like type received: {}".format(type(s)))
+                                except Exception as e:
+                                    # TODO could be a proper wrapped exception?
+                                    task_fut.set_exception(
+                                        DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
+                            else:
+                                raise BadMessage("Message received is neither result or exception")
                         else:
-                            raise BadMessage("Message received is neither result or exception")
+                            raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
             if not self.is_alive:
                 break
@@ -680,7 +707,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     def _get_launch_command(self, block_id: str) -> str:
         if self.launch_cmd is None:
-            raise ScalingFailed(self.provider.label, "No launch command")
+            raise ScalingFailed(self, "No launch command")
         launch_cmd = self.launch_cmd.format(block_id=block_id)
         return launch_cmd
 

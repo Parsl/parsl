@@ -9,13 +9,19 @@ import zmq
 from functools import wraps
 
 import queue
+from abc import ABCMeta, abstractmethod
 from parsl.multiprocessing import ForkProcess, SizedQueue
 from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
+from parsl.utils import setproctitle
+
+from parsl.serialize import deserialize
 
 from parsl.monitoring.message_type import MessageType
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import cast, Any, Callable, Dict, List, Optional, Union
+
+from parsl.serialize import serialize
 
 _db_manager_excepts: Optional[Exception]
 
@@ -64,7 +70,69 @@ def start_file_logger(filename: str, name: str = 'monitoring', level: int = logg
     return logger
 
 
-class UDPRadio:
+class MonitoringRadio(metaclass=ABCMeta):
+    @abstractmethod
+    def send(self, message: object) -> None:
+        pass
+
+
+class FilesystemRadio(MonitoringRadio):
+    """A MonitoringRadio that sends messages over a shared filesystem.
+
+    The messsage directory structure is based on maildir,
+    https://en.wikipedia.org/wiki/Maildir
+
+    The writer creates a message in tmp/ and then when it is fully
+    written, moves it atomically into new/
+
+    The reader ignores tmp/ and only reads and deletes messages from
+    new/
+
+    This avoids a race condition of reading partially written messages.
+
+    This radio is likely to give higher shared filesystem load compared to
+    the UDPRadio, but should be much more reliable.
+    """
+
+    def __init__(self, *, monitoring_url: str, source_id: int, timeout: int = 10, run_dir: str):
+        logger.info("filesystem based monitoring channel initializing")
+        self.source_id = source_id
+        self.id_counter = 0
+        self.radio_uid = f"host-{socket.gethostname()}-pid-{os.getpid()}-radio-{id(self)}"
+        self.base_path = f"{run_dir}/monitor-fs-radio/"
+        self.tmp_path = f"{self.base_path}/tmp"
+        self.new_path = f"{self.base_path}/new"
+
+        os.makedirs(self.tmp_path, exist_ok=True)
+        os.makedirs(self.new_path, exist_ok=True)
+
+    def send(self, message: object) -> None:
+        logger.info("Sending a monitoring message via filesystem")
+
+        # this should be randomised by things like worker ID, process ID, whatever
+        # because there will in general be many FilesystemRadio objects sharing the
+        # same space (even from the same process). id(self) used here will
+        # disambiguate in one process at one instant, but not between
+        # other things: eg different hosts, different processes, same process different non-overlapping instantiations
+        unique_id = f"msg-{self.radio_uid}-{self.id_counter}"
+
+        self.id_counter = self.id_counter + 1
+
+        tmp_filename = f"{self.tmp_path}/{unique_id}"
+        new_filename = f"{self.new_path}/{unique_id}"
+        buffer = ((MessageType.RESOURCE_INFO, (self.source_id,   # Identifier for manager
+                   int(time.time()),  # epoch timestamp
+                   message)), "NA")
+
+        # this will write the message out then atomically
+        # move it into new/, so that a partially written
+        # file will never be observed in new/
+        with open(tmp_filename, "wb") as f:
+            f.write(serialize(buffer))
+        os.rename(tmp_filename, new_filename)
+
+
+class HTEXRadio(MonitoringRadio):
 
     def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
         """
@@ -78,7 +146,68 @@ class UDPRadio:
         timeout : int
             timeout, default=10s
         """
+        self.source_id = source_id
+        logger.info("htex-based monitoring channel initialising")
 
+    def send(self, message: object) -> None:
+        """ Sends a message to the UDP receiver
+
+        Parameter
+        ---------
+
+        message: object
+            Arbitrary pickle-able object that is to be sent
+
+        Returns:
+            None
+        """
+
+        import parsl.executors.high_throughput.monitoring_info
+
+        try:
+            buffer = (MessageType.RESOURCE_INFO, (self.source_id,   # Identifier for manager
+                      int(time.time()),  # epoch timestamp
+                      message))
+        except Exception:
+            logging.exception("Exception during pickling", exc_info=True)
+            return
+
+        result_queue = parsl.executors.high_throughput.monitoring_info.result_queue
+
+        # this message needs to go in the result queue tagged so that it is treated
+        # i) as a monitoring message by the interchange, and then further more treated
+        # as a RESOURCE_INFO message when received by monitoring (rather than a NODE_INFO
+        # which is the implicit default for messages from the interchange)
+
+        # for the interchange, the outer wrapper, this needs to be a dict:
+
+        interchange_msg = {
+            'type': 'monitoring',
+            'payload': buffer
+        }
+
+        if result_queue:
+            result_queue.put(pickle.dumps(interchange_msg))
+        else:
+            logger.error("result_queue is uninitialized - cannot put monitoring message")
+
+        return
+
+
+class UDPRadio(MonitoringRadio):
+
+    def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
+        """
+        Parameters
+        ----------
+
+        monitoring_url : str
+            URL of the form <scheme>://<IP>:<PORT>
+        source_id : str
+            String identifier of the source
+        timeout : int
+            timeout, default=10s
+        """
         self.monitoring_url = monitoring_url
         self.sock_timeout = timeout
         self.source_id = source_id
@@ -173,7 +302,9 @@ class MonitoringHub(RepresentationMixin):
         monitoring_debug : Bool
              Enable monitoring debug logging. Default: False
         resource_monitoring_enabled : boolean
-             Set this field to True to enable logging the info of resource usage of each task. Default: True
+             Set this field to True to enable logging of information from the worker side.
+             This will include environment information such as start time, hostname and block id,
+             along with periodic resource usage of each task. Default: True
         resource_monitoring_interval : float
              The time interval, in seconds, at which the monitoring records the resource usage of each task. Default: 30 seconds
         """
@@ -206,7 +337,7 @@ class MonitoringHub(RepresentationMixin):
         self.resource_monitoring_enabled = resource_monitoring_enabled
         self.resource_monitoring_interval = resource_monitoring_interval
 
-    def start(self, run_id: str) -> int:
+    def start(self, run_id: str, run_dir: str) -> int:
 
         if self.logdir is None:
             self.logdir = "."
@@ -214,18 +345,9 @@ class MonitoringHub(RepresentationMixin):
         os.makedirs(self.logdir, exist_ok=True)
 
         # Initialize the ZMQ pipe to the Parsl Client
-        self.logger.info("Monitoring Hub initialized")
 
         self.logger.debug("Initializing ZMQ Pipes to client")
         self.monitoring_hub_active = True
-        self.dfk_channel_timeout = 10000  # in milliseconds
-        self._context = zmq.Context()
-        self._dfk_channel = self._context.socket(zmq.DEALER)
-        self._dfk_channel.setsockopt(zmq.SNDTIMEO, self.dfk_channel_timeout)
-        self._dfk_channel.set_hwm(0)
-        self.dfk_port = self._dfk_channel.bind_to_random_port("tcp://{}".format(self.client_address),
-                                                              min_port=self.client_port_range[0],
-                                                              max_port=self.client_port_range[1])
 
         comm_q = SizedQueue(maxsize=10)  # type: Queue[Union[Tuple[int, int], str]]
         self.exception_q = SizedQueue(maxsize=10)  # type: Queue[Tuple[str, str]]
@@ -239,8 +361,6 @@ class MonitoringHub(RepresentationMixin):
                                        kwargs={"hub_address": self.hub_address,
                                                "hub_port": self.hub_port,
                                                "hub_port_range": self.hub_port_range,
-                                               "client_address": self.client_address,
-                                               "client_port": self.dfk_port,
                                                "logdir": self.logdir,
                                                "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                                "run_id": run_id
@@ -262,6 +382,14 @@ class MonitoringHub(RepresentationMixin):
         self.dbm_proc.start()
         self.logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
+        self.filesystem_proc = Process(target=filesystem_receiver,
+                                       args=(self.logdir, self.resource_msgs, run_dir),
+                                       name="Monitoring-Filesystem-Process",
+                                       daemon=True
+        )
+        self.filesystem_proc.start()
+        self.logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
+
         try:
             comm_q_result = comm_q.get(block=True, timeout=120)
         except queue.Empty:
@@ -272,9 +400,20 @@ class MonitoringHub(RepresentationMixin):
             self.logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
             raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
 
-        udp_dish_port, ic_port = comm_q_result
+        udp_port, ic_port = comm_q_result
 
-        self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_dish_port)
+        self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
+
+        context = zmq.Context()
+        self.dfk_channel_timeout = 10000  # in milliseconds
+        self._dfk_channel = context.socket(zmq.DEALER)
+        self._dfk_channel.setsockopt(zmq.LINGER, 0)
+        self._dfk_channel.set_hwm(0)
+        self._dfk_channel.setsockopt(zmq.SNDTIMEO, self.dfk_channel_timeout)
+        self._dfk_channel.connect("tcp://{}:{}".format(self.hub_address, ic_port))
+
+        self.logger.info("Monitoring Hub initialized")
+
         return ic_port
 
     # TODO: tighten the Any message format
@@ -305,6 +444,7 @@ class MonitoringHub(RepresentationMixin):
                                       exception_msg[1]))
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
+                self.filesystem_proc.terminate()
             self.logger.info("Waiting for router to terminate")
             self.router_proc.join()
             self.logger.debug("Finished waiting for router termination")
@@ -312,6 +452,12 @@ class MonitoringHub(RepresentationMixin):
                 self.priority_msgs.put(("STOP", 0))
             self.dbm_proc.join()
             self.logger.debug("Finished waiting for DBM termination")
+
+            # should this be message based? it probably doesn't need to be if
+            # we believe we've received all messages
+            self.logger.info("Terminating filesystem radio receiver process")
+            self.filesystem_proc.terminate()
+            self.filesystem_proc.join()
 
     @staticmethod
     def monitor_wrapper(f: Any,
@@ -321,7 +467,9 @@ class MonitoringHub(RepresentationMixin):
                         run_id: str,
                         logging_level: int,
                         sleep_dur: float,
-                        monitor_resources: bool) -> Callable:
+                        radio_mode: str,
+                        monitor_resources: bool,
+                        run_dir: str) -> Callable:
         """ Internal
         Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
@@ -331,7 +479,9 @@ class MonitoringHub(RepresentationMixin):
             send_first_message(try_id,
                                task_id,
                                monitoring_hub_url,
-                               run_id)
+                               run_id,
+                               radio_mode,
+                               run_dir)
 
             p: Optional[Process]
             if monitor_resources:
@@ -342,8 +492,9 @@ class MonitoringHub(RepresentationMixin):
                                        task_id,
                                        monitoring_hub_url,
                                        run_id,
+                                       radio_mode,
                                        logging_level,
-                                       sleep_dur),
+                                       sleep_dur, run_dir),
                                  name="Monitor-Wrapper-{}".format(task_id))
                 pp.start()
                 p = pp
@@ -357,11 +508,52 @@ class MonitoringHub(RepresentationMixin):
             try:
                 return f(*args, **kwargs)
             finally:
+                send_last_message(try_id,
+                                  task_id,
+                                  monitoring_hub_url,
+                                  run_id,
+                                  radio_mode, run_dir)
                 # There's a chance of zombification if the workers are killed by some signals
                 if p:
                     p.terminate()
                     p.join()
         return wrapped
+
+
+@wrap_with_logs
+def filesystem_receiver(logdir: str, q: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]", run_dir: str) -> None:
+    logger = start_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
+                               name="monitoring_filesystem_radio",
+                               level=logging.DEBUG)
+
+    logger.info("Starting filesystem radio receiver")
+    setproctitle("parsl: monitoring filesystem receiver")
+    base_path = f"{run_dir}/monitor-fs-radio/"
+    tmp_dir = f"{base_path}/tmp/"
+    new_dir = f"{base_path}/new/"
+    logger.debug(f"Creating new and tmp paths under {base_path}")
+
+    os.makedirs(tmp_dir, exist_ok=True)
+    os.makedirs(new_dir, exist_ok=True)
+
+    while True:  # this loop will end on process termination
+        logger.info("Start filesystem radio receiver loop")
+
+        # iterate over files in new_dir
+        for filename in os.listdir(new_dir):
+            try:
+                logger.info(f"Processing filesystem radio file {filename}")
+                full_path_filename = f"{new_dir}/{filename}"
+                with open(full_path_filename, "rb") as f:
+                    message = deserialize(f.read())
+                logger.info(f"Message received is: {message}")
+                assert(isinstance(message, tuple))
+                q.put(cast(Any, message))  # the type of message is complicated to assert, so cast to Any
+                os.remove(full_path_filename)
+            except Exception:
+                logger.exception(f"Exception processing {filename} - probably will be retried next iteration")
+
+        time.sleep(1)  # whats a good time for this poll?
 
 
 class MonitoringRouter:
@@ -371,9 +563,6 @@ class MonitoringRouter:
                  hub_address: str,
                  hub_port: Optional[int] = None,
                  hub_port_range: Tuple[int, int] = (55050, 56000),
-
-                 client_address: str = "127.0.0.1",
-                 client_port: Optional[Tuple[int, int]] = None,
 
                  monitoring_hub_address: str = "127.0.0.1",
                  logdir: str = ".",
@@ -392,10 +581,6 @@ class MonitoringRouter:
         hub_port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
              This is overridden when the hub_port option is set. Default: (55050, 56000)
-        client_address : str
-             The ip address at which the dfk will be able to reach Hub. Default: "127.0.0.1"
-        client_port : tuple(int, int)
-             The port at which the dfk will be able to reach Hub. Default: None
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         logging_level : int
@@ -432,12 +617,6 @@ class MonitoringRouter:
         self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.hub_port))
 
         self._context = zmq.Context()
-        self.dfk_channel = self._context.socket(zmq.DEALER)
-        self.dfk_channel.setsockopt(zmq.LINGER, 0)
-        self.dfk_channel.set_hwm(0)
-        self.dfk_channel.RCVTIMEO = int(self.loop_freq)  # in milliseconds
-        self.dfk_channel.connect("tcp://{}:{}".format(client_address, client_port))
-
         self.ic_channel = self._context.socket(zmq.DEALER)
         self.ic_channel.setsockopt(zmq.LINGER, 0)
         self.ic_channel.set_hwm(0)
@@ -463,32 +642,12 @@ class MonitoringRouter:
                     pass
 
                 try:
-                    msg = self.dfk_channel.recv_pyobj()
-                    self.logger.debug("Got ZMQ Message from DFK: {}".format(msg))
-                    if msg[0] == MessageType.BLOCK_INFO:
-                        block_msgs.put((msg, 0))
-                    else:
-                        priority_msgs.put((msg, 0))
-                    if msg[0] == MessageType.WORKFLOW_INFO and 'exit_now' in msg[1] and msg[1]['exit_now']:
-                        break
-                except zmq.Again:
-                    pass
-                except Exception:
-                    # This will catch malformed messages. What happens if the
-                    # dfk_channel is broken in such a way that it always raises
-                    # an exception? Looping on this would maybe be the wrong
-                    # thing to do.
-                    self.logger.warning("Failure processing a DFK ZMQ message", exc_info=True)
-
-                try:
                     msg = self.ic_channel.recv_pyobj()
-                    self.logger.debug("Got ZMQ Message from interchange: {}".format(msg))
-
-                    assert msg[0] == MessageType.NODE_INFO \
-                        or msg[0] == MessageType.BLOCK_INFO, \
-                        "IC Channel expects only NODE_INFO or BLOCK_INFO and cannot dispatch other message types"
-
+                    self.logger.debug("Got ZMQ Message: {}".format(msg))
+                    assert isinstance(msg, tuple), "IC Channel expects only tuples, got {}".format(msg)
+                    assert len(msg) >= 1, "IC Channel expects tuples of length at least 1, got {}".format(msg)
                     if msg[0] == MessageType.NODE_INFO:
+                        assert len(msg) >= 1, "IC Channel expects NODE_INFO tuples of length at least 3, got {}".format(msg)
                         msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
                         msg[2]['run_id'] = self.run_id
                         msg[2]['timestamp'] = msg[1]
@@ -496,12 +655,35 @@ class MonitoringRouter:
                         # ((tag, dict), addr)
                         node_msg = ((msg[0], msg[2]), 0)
                         node_msgs.put(node_msg)
+                    elif msg[0] == MessageType.RESOURCE_INFO:
+                        resource_msgs.put(cast(Any, (msg, 0)))
                     elif msg[0] == MessageType.BLOCK_INFO:
-                        block_msgs.put((msg, 0))
+                        block_msgs.put(cast(Any, (msg, 0)))
+                    elif msg[0] == MessageType.TASK_INFO:
+                        # priority_msgs has a particular message format
+                        # that msg doesn't necessarily match unless msg[0] == TASK_INFO
+                        # which can't be expressed either as mypy types or
+                        # as assert isinstanceof
+                        # so cast to any here
+                        # it might be better to let msg stay as Any rather than
+                        # messing with type annotations, and instead do the
+                        # message format descriptions as human readable text?
+                        # which is not machine checkable... but this is not machine checkable.
+                        priority_msgs.put((cast(Any, msg), 0))
+                    elif msg[0] == MessageType.WORKFLOW_INFO:
+                        priority_msgs.put((cast(Any, msg), 0))
+                        if 'exit_now' in msg[1] and msg[1]['exit_now']:
+                            break
                     else:
                         self.logger.error(f"Discarding message from interchange with unknown type {msg[0].value}")
                 except zmq.Again:
                     pass
+                except Exception:
+                    # This will catch malformed messages. What happens if the
+                    # channel is broken in such a way that it always raises
+                    # an exception? Looping on this would maybe be the wrong
+                    # thing to do.
+                    self.logger.warning("Failure processing a ZMQ message", exc_info=True)
 
             self.logger.info("Monitoring router draining")
             last_msg_received_time = time.time()
@@ -532,19 +714,14 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    hub_port: Optional[int],
                    hub_port_range: Tuple[int, int],
 
-                   client_address: str,
-                   client_port: Optional[Tuple[int, int]],
-
                    logdir: str,
                    logging_level: int,
                    run_id: str) -> None:
-
+    setproctitle("parsl: monitoring router")
     try:
         router = MonitoringRouter(hub_address=hub_address,
                                   hub_port=hub_port,
                                   hub_port_range=hub_port_range,
-                                  client_address=client_address,
-                                  client_port=client_port,
                                   logdir=logdir,
                                   logging_level=logging_level,
                                   run_id=run_id)
@@ -568,19 +745,48 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
 def send_first_message(try_id: int,
                        task_id: int,
                        monitoring_hub_url: str,
-                       run_id: str) -> None:
+                       run_id: str, radio_mode: str, run_dir: str) -> None:
+    send_first_last_message(try_id, task_id, monitoring_hub_url, run_id,
+                            radio_mode, run_dir, False)
+
+
+@wrap_with_logs
+def send_last_message(try_id: int,
+                      task_id: int,
+                      monitoring_hub_url: str,
+                      run_id: str, radio_mode: str, run_dir: str) -> None:
+    send_first_last_message(try_id, task_id, monitoring_hub_url, run_id,
+                            radio_mode, run_dir, True)
+
+
+def send_first_last_message(try_id: int,
+                            task_id: int,
+                            monitoring_hub_url: str,
+                            run_id: str, radio_mode: str, run_dir: str,
+                            is_last: bool) -> None:
     import platform
     import os
 
-    radio = UDPRadio(monitoring_hub_url,
-                     source_id=task_id)
+    radio: MonitoringRadio
+    if radio_mode == "udp":
+        radio = UDPRadio(monitoring_hub_url,
+                         source_id=task_id)
+    elif radio_mode == "htex":
+        radio = HTEXRadio(monitoring_hub_url,
+                          source_id=task_id)
+    elif radio_mode == "filesystem":
+        radio = FilesystemRadio(monitoring_url=monitoring_hub_url,
+                                source_id=task_id, run_dir=run_dir)
+    else:
+        raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
     msg = {'run_id': run_id,
            'try_id': try_id,
            'task_id': task_id,
            'hostname': platform.node(),
            'block_id': os.environ.get('PARSL_WORKER_BLOCK_ID'),
-           'first_msg': True,
+           'first_msg': not is_last,
+           'last_msg': is_last,
            'timestamp': datetime.datetime.now()
     }
     radio.send(msg)
@@ -593,32 +799,44 @@ def monitor(pid: int,
             task_id: int,
             monitoring_hub_url: str,
             run_id: str,
+            radio_mode: str,
             logging_level: int = logging.INFO,
-            sleep_dur: float = 10) -> None:
+            sleep_dur: float = 10, run_dir: str = "./") -> None:
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
+
+    This process makes calls to logging, but deliberately does not attach
+    any log handlers. Previously, there was a handler which logged to a
+    file in /tmp, but this was usually not useful or even accessible.
+    In some circumstances, it might be useful to hack in a handler so the
+    logger calls remain in place.
     """
     import logging
     import platform
     import psutil
     import time
 
-    radio = UDPRadio(monitoring_hub_url,
-                     source_id=task_id)
-
-    format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-    logging.basicConfig(filename='{logbase}/monitor.{task_id}.{pid}.log'.format(
-        logbase="/tmp", task_id=task_id, pid=pid), level=logging_level, format=format_string)
+    radio: MonitoringRadio
+    if radio_mode == "udp":
+        radio = UDPRadio(monitoring_hub_url,
+                         source_id=task_id)
+    elif radio_mode == "htex":
+        radio = HTEXRadio(monitoring_hub_url,
+                          source_id=task_id)
+    elif radio_mode == "filesystem":
+        radio = FilesystemRadio(monitoring_url=monitoring_hub_url,
+                                source_id=task_id, run_dir=run_dir)
+    else:
+        raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
     logging.debug("start of monitor")
 
     # these values are simple to log. Other information is available in special formats such as memory below.
-    simple = ["cpu_num", 'cpu_percent', 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']
+    simple = ["cpu_num", 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']
     # values that can be summed up to see total resources used by task process and its children
-    summable_values = ['cpu_percent', 'memory_percent', 'num_threads']
+    summable_values = ['memory_percent', 'num_threads']
 
     pm = psutil.Process(pid)
-    pm.cpu_percent()
 
     children_user_time = {}  # type: Dict[int, float]
     children_system_time = {}  # type: Dict[int, float]
@@ -634,6 +852,7 @@ def monitor(pid: int,
             d['resource_monitoring_interval'] = sleep_dur
             d['hostname'] = platform.node()
             d['first_msg'] = False
+            d['last_msg'] = False
             d['timestamp'] = datetime.datetime.now()
 
             logging.debug("getting children")

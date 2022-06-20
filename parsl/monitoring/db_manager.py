@@ -12,6 +12,7 @@ from parsl.dataflow.states import States
 from parsl.errors import OptionalModuleMissing
 from parsl.monitoring.message_type import MessageType
 from parsl.process_loggers import wrap_with_logs
+from parsl.utils import setproctitle
 
 logger = logging.getLogger("database_manager")
 
@@ -224,8 +225,6 @@ class Database:
             'resource_monitoring_interval', Float, nullable=True)
         psutil_process_pid = Column(
             'psutil_process_pid', Integer, nullable=True)
-        psutil_process_cpu_percent = Column(
-            'psutil_process_cpu_percent', Float, nullable=True)
         psutil_process_memory_percent = Column(
             'psutil_process_memory_percent', Float, nullable=True)
         psutil_process_children_count = Column(
@@ -363,6 +362,13 @@ class DatabaseManager:
                 # processed (corresponding by task id)
                 reprocessable_first_resource_messages = []
 
+                # end-of-task-run status messages - handled in similar way as
+                # for last resource messages to try to have symmetry... this
+                # needs a type annotation though reprocessable_first_resource_messages
+                # doesn't... not sure why. Too lazy right now to figure out what,
+                # if any, more specific type than Any the messages have.
+                reprocessable_last_resource_messages: List[Any] = []
+
                 # Get a batch of priority messages
                 priority_messages = self._get_messages_in_batch(self.pending_priority_queue)
                 if priority_messages:
@@ -484,7 +490,11 @@ class DatabaseManager:
 
                 if resource_messages:
                     logger.debug(
-                        "Got {} messages from resource queue, {} reprocessable".format(len(resource_messages), len(reprocessable_first_resource_messages)))
+                        "Got {} messages from resource queue, "
+                        "{} reprocessable as first messages, "
+                        "{} reprocessable as last messages".format(len(resource_messages),
+                                                                   len(reprocessable_first_resource_messages),
+                                                                   len(reprocessable_last_resource_messages)))
 
                     insert_resource_messages = []
                     for msg in resource_messages:
@@ -500,8 +510,14 @@ class DatabaseManager:
                                 if task_try_id in deferred_resource_messages:
                                     logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
                                 deferred_resource_messages[task_try_id] = msg
+                        elif msg['last_msg']:
+                            # This assumes that the primary key has been added
+                            # to the try table already, so doesn't use the same
+                            # deferral logic as the first_msg case.
+                            msg['task_status_name'] = States.running_ended.name
+                            reprocessable_last_resource_messages.append(msg)
                         else:
-                            # Insert to resource table if not first message
+                            # Insert to resource table if not first/last (start/stop) message message
                             insert_resource_messages.append(msg)
 
                     if insert_resource_messages:
@@ -514,6 +530,9 @@ class DatabaseManager:
                                           'run_id', 'task_id', 'try_id',
                                           'block_id', 'hostname'],
                                  messages=reprocessable_first_resource_messages)
+
+                if reprocessable_last_resource_messages:
+                    self._insert(table=STATUS, messages=reprocessable_last_resource_messages)
             except Exception:
                 logger.exception("Exception in db loop: this might have been a malformed message, or some other error. monitoring data may have been lost")
                 exception_happened = True
@@ -539,21 +558,39 @@ class DatabaseManager:
                     assert len(x) == 2
                     assert x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO], \
                         "_migrate_logs_to_internal can only migrate WORKFLOW_,TASK_INFO message from priority queue, got x[0] == {}".format(x[0])
-                    self.pending_priority_queue.put(cast(Any, x))
+                    self._dispatch_to_internal(x)
                 elif queue_tag == 'resource':
-                    assert x[0] == MessageType.RESOURCE_INFO, "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue"
-                    body = x[1]
-                    assert len(body) == 3
-                    self.pending_resource_queue.put(body[-1])
+                    assert isinstance(x, tuple), "_migrate_logs_to_internal was expecting a tuple, got {}".format(x)
+                    assert x[0] == MessageType.RESOURCE_INFO, \
+                        "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue, got tag {}, message {}".format(x[0], x)
+                    self._dispatch_to_internal(x)
                 elif queue_tag == 'node':
                     assert len(x) == 2, "expected message tuple to have exactly two elements"
                     assert x[0] == MessageType.NODE_INFO, "_migrate_logs_to_internal can only migrate NODE_INFO messages from node queue"
 
-                    self.pending_node_queue.put(x[-1])
+                    self._dispatch_to_internal(x)
                 elif queue_tag == "block":
-                    self.pending_block_queue.put(x[-1])
+                    self._dispatch_to_internal(x)
                 else:
-                    raise RuntimeError(f"queue_tag {queue_tag} is unknown")
+                    logger.error(f"Discarding because unknown queue tag '{queue_tag}', message: {x}")
+
+    def _dispatch_to_internal(self, x: Tuple) -> None:
+        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO]:
+            self.pending_priority_queue.put(cast(Any, x))
+        elif x[0] == MessageType.RESOURCE_INFO:
+            body = x[1]
+            assert len(body) == 3
+            self.pending_resource_queue.put(body[-1])
+        elif x[0] == MessageType.NODE_INFO:
+            assert len(x) == 2, "expected NODE_INFO tuple to have exactly two elements"
+
+            logger.info("Will put {} to pending node queue".format(x[1]))
+            self.pending_node_queue.put(x[1])
+        elif x[0] == MessageType.BLOCK_INFO:
+            logger.info("Will put {} to pending block queue".format(x[1]))
+            self.pending_block_queue.put(x[-1])
+        else:
+            logger.error("Discarding message of unknown type {}".format(x[0]))
 
     def _update(self, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
         try:
@@ -658,6 +695,8 @@ def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
     The DFK should start this function. The args, kwargs match that of the monitoring config
 
     """
+    setproctitle("parsl: monitoring database")
+
     try:
         dbm = DatabaseManager(db_url=db_url,
                               logdir=logdir,

@@ -29,6 +29,7 @@ from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
 from parsl.executors.workqueue import exec_parsl_function
+from parsl.utils import setproctitle
 
 import typeguard
 from typing import Dict, List, Optional, Set, Union
@@ -196,6 +197,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             'work_queue_worker'.
     """
 
+    radio_mode = "filesystem"
+
     @typeguard.typechecked
     def __init__(self,
                  label: str = "WorkQueueExecutor",
@@ -359,6 +362,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         disk = None
         gpus = None
         priority = None
+        category = None
         running_time_min = None
         if resource_specification and isinstance(resource_specification, dict):
             logger.debug("Got resource specification: {}".format(resource_specification))
@@ -397,6 +401,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     gpus = resource_specification[k]
                 elif k == 'priority':
                     priority = resource_specification[k]
+                elif k == 'category':
+                    category = resource_specification[k]
                 elif k == 'running_time_min':
                     running_time_min = resource_specification[k]
 
@@ -455,7 +461,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(task_id))
-        category = func.__name__ if self.autocategory else 'parsl-default'
+        if category is None:
+            category = func.__name__ if self.autocategory else 'parsl-default'
         self.task_queue.put_nowait(ParslTaskToWq(task_id,
                                                  category,
                                                  cores,
@@ -619,9 +626,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         implemented and probably could be replaced with a counter.
         """
         outstanding = 0
-        for fut in self.tasks.values():
-            if not fut.done():
-                outstanding += 1
+        with self.tasks_lock:
+            for fut in self.tasks.values():
+                if not fut.done():
+                    outstanding += 1
         logger.debug(f"Counted {outstanding} outstanding tasks")
         return outstanding
 
@@ -733,6 +741,7 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
     module capabilities, rather than shared memory.
     """
     logger.debug("Starting WorkQueue Submit/Wait Process")
+    setproctitle("parsl: Work Queue submit/wait")
 
     # Enable debugging flags and create logging file
     wq_debug_log = None
@@ -882,7 +891,7 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                                                          reason="task could not be submited to work queue",
                                                          status=-1))
                 continue
-            logger.debug("Task {} submitted to WorkQueue with id {}".format(task.id, wq_id))
+            logger.info("Task {} submitted to WorkQueue with id {}".format(task.id, wq_id))
 
         # If the queue is not empty wait on the WorkQueue queue for a task
         task_found = True

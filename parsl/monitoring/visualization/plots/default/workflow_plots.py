@@ -54,6 +54,7 @@ def task_gantt_plot(df_task, df_status, time_completed=None):
               'pending': 'rgb(168, 168, 168)',
               'launched': 'rgb(100, 255, 255)',
               'running': 'rgb(0, 0, 255)',
+              'running_ended': 'rgb(64, 64, 255)',
               'joining': 'rgb(128, 128, 255)',
               'dep_fail': 'rgb(255, 128, 255)',
               'failed': 'rgb(200, 0, 0)',
@@ -107,7 +108,7 @@ def task_per_app_plot(task, status):
             layout=go.Layout(xaxis=dict(autorange=True,
                                         title='Time (seconds)'),
                              yaxis=dict(title='Number of tasks'),
-                             title="Tasks per app"))
+                             title="Execution tries per app"))
         return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
     except Exception as e:
         return "The tasks per app plot cannot be generated because of exception {}.".format(e)

@@ -98,7 +98,7 @@ by pre_process has completed.
 
 * Why can't process be a @python_app?
 
-A python app, if run in a `ThreadPoolExecutor`, can launch more parsl apps;
+A python app, if run in a `parsl.executors.ThreadPoolExecutor`, can launch more parsl apps;
 so a python app implementation of process() would be able to inspect x and
 launch ``option_{one, two}``.
 
