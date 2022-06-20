@@ -56,7 +56,7 @@ class JobStatus(object):
     def status_name(self) -> str:
         return self.state.status_name
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         if self.message is not None:
             return "{} ({})".format(self.state, self.message)
         else:
