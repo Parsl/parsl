@@ -56,6 +56,13 @@ class JobStatus(object):
     def status_name(self) -> str:
         return self.state.status_name
 
+    def __repr__(self) -> str:
+        if self.message is not None:
+            extra = f"state={self.state} message={self.message}".format(self.state, self.message)
+        else:
+            extra = f"state={self.state}".format(self.state)
+        return f"<{type(self).__module__}.{type(self).__qualname__} object at {hex(id(self))}, {extra}>"
+
     def __str__(self) -> str:
         if self.message is not None:
             return "{} ({})".format(self.state, self.message)
