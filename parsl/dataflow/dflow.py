@@ -494,21 +494,13 @@ class DataFlowKernel(object):
         ready to run - launch_if_ready will not incorrectly launch that
         task.
 
+        It is also not an error to call launch_if_ready on a task that has
+        already been launched - launch_if_ready will not re-launch that
+        task.
+
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
         """
-        # issues: exceptions_tids calcuation is not idempotent because we remove the exceptions
-        # from the lists, (vs Future-removal being idempotent(ish) because F(X)->X->X->X->.... fixpointy)
-        # If we put a lock around the whole of launch_if_ready, that will still not work proeprly I think:
-        # the first, abandoning, execution will handle exceptions correctly, but then the subsequent
-        # launch_if_ready will re-fire, and with corrupted structures, will still not behave idempotently,
-        # and will launch a corrupted job.
-        # It fits the "launch_if_ready" idempotent style ot make launch_if_ready ensure that if it has
-        # processed the launch already, then it does nothing: so instead of having two outer states of
-        # not-ready-yet and ok-launch-time, it has a third state, i-have-done-this-already which also
-        # results in no processing. So entering the locked section when the task has been "processed" (a new concept)
-        # will now be idempotent.
-
         exec_fu = None
 
         task_id = task_record['id']
