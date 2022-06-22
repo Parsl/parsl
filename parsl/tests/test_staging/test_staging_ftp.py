@@ -16,8 +16,8 @@ def sort_strings(inputs=[], outputs=[]):
 
 
 @pytest.mark.cleannet
-def test_implicit_staging_ftp():
-    """Test implicit staging for an ftp file
+def test_staging_ftp():
+    """Test staging for an ftp file
 
     Create a remote input file (ftp) that points to file_test_cpt.txt.
     """
@@ -29,20 +29,3 @@ def test_implicit_staging_ftp():
 
     f = sort_strings(inputs=[unsorted_file], outputs=[sorted_file])
     f.result()
-
-
-if __name__ == "__main__":
-
-    import argparse
-
-    parsl.load()
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    test_implicit_staging_ftp()
