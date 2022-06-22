@@ -1,6 +1,5 @@
 import pytest
 
-import parsl
 from parsl.app.app import python_app
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads_ftp_in_task import config
