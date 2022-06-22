@@ -21,6 +21,7 @@ X = TypeVar('X')
 try:
     import sqlalchemy as sa
     from sqlalchemy import Column, Text, Float, Boolean, Integer, DateTime, PrimaryKeyConstraint, Table
+    from sqlalchemy.orm import Mapper
     from sqlalchemy.orm import mapperlib
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.ext.declarative import declarative_base
@@ -65,7 +66,7 @@ class Database:
         Session = sessionmaker(bind=self.eng)
         self.session = Session()
 
-    def _get_mapper(self, table_obj):
+    def _get_mapper(self, table_obj: Table) -> Mapper:
         if hasattr(mapperlib, '_all_registries'):
             all_mappers = set()
             for mapper_registry in mapperlib._all_registries():
