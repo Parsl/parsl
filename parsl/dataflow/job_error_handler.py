@@ -45,7 +45,7 @@ class JobErrorHandler:
                 err = err + "\tSTDERR: {}\n".format(stderr)
 
         if len(err) == 0:
-            err = "[No error message received]"
+            err = "No error message received"
         # wrapping things in an exception here doesn't really help in providing more information
         # than the string itself
         return Exception(err)
