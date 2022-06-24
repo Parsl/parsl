@@ -11,7 +11,7 @@ extras_require = {
         'sqlalchemy>=1.3.0,!=1.3.4,<1.4',
         'sqlalchemy_utils',
         'pydot',
-        'networkx',
+        'networkx>=2.5,<2.6',
         'Flask>=1.0.2',
         'flask_sqlalchemy',
         'pandas<1.4',
@@ -29,6 +29,7 @@ extras_require = {
     'azure' : ['azure<=4', 'msrestazure'],
     'workqueue': ['work_queue'],
     'flux': ['pyyaml', 'cffi', 'jsonschema'],
+    'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
 }
 extras_require['all'] = sum(extras_require.values(), [])
 

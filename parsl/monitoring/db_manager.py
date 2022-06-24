@@ -262,10 +262,6 @@ class DatabaseManager:
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
-        # This will make "database_manager" log messages not be passed up to
-        # any root handlers which might have been set by the forking process.
-        # In simple parsl usage, there will not be any, but in more
-        # complicated situations, that sometimes happens.
         logger.propagate = False
 
         set_file_logger("{}/database_manager.log".format(self.logdir), level=logging_level,
@@ -517,18 +513,11 @@ class DatabaseManager:
                                     logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
                                 deferred_resource_messages[task_try_id] = msg
                         elif msg['last_msg']:
-                            # TODO: i haven't thought about htis logic, but
-                            # first_msg, last_msg doesn't make much sense as a flag
-                            # any more - should be a separate message type for
-                            #   i) run/end run messages, ii) resource messages
-                            # Update the running time to try table if first message
+                            # This assumes that the primary key has been added
+                            # to the try table already, so doesn't use the same
+                            # deferral logic as the first_msg case.
                             msg['task_status_name'] = States.running_ended.name
-                            # making some assumptions that the primary key has
-                            # been added to inserted_tries already... but maybe
-                            # that assumption is made for insert_resource_messages
-                            # messages too?
                             reprocessable_last_resource_messages.append(msg)
-
                         else:
                             # Insert to resource table if not first/last (start/stop) message message
                             insert_resource_messages.append(msg)

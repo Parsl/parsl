@@ -145,7 +145,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             logger.debug('No active jobs, skipping status update')
             return
 
-        cmd = "squeue --job {0}".format(job_id_list)
+        cmd = "squeue --noheader --format='%i %t' --job '{0}'".format(job_id_list)
         logger.debug("Executing %s", cmd)
         retcode, stdout, stderr = self.execute_wait(cmd)
         logger.debug("squeue returned %s %s", stdout, stderr)
@@ -155,18 +155,18 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             logger.warning("squeue failed with non-zero exit code {}".format(retcode))
             return
 
-        jobs_missing = list(self.resources.keys())
+        jobs_missing = set(self.resources.keys())
         for line in stdout.split('\n'):
-            parts = line.split()
-            if parts and parts[0] != 'JOBID':
-                job_id = parts[0]
-                slurm_state = parts[4]
-                if slurm_state not in translate_table:
-                    logger.warning(f"Slurm status {slurm_state} is not known")
-                status = translate_table.get(slurm_state, JobState.UNKNOWN)
-                logger.debug("Updating job {} with slurm status {} to parsl state {!s}".format(job_id, slurm_state, status))
-                self.resources[job_id]['status'] = JobStatus(status)
-                jobs_missing.remove(job_id)
+            if not line:
+                # Blank line
+                continue
+            job_id, slurm_state = line.split()
+            if slurm_state not in translate_table:
+                logger.warning(f"Slurm status {slurm_state} is not recognized")
+            status = translate_table.get(slurm_state, JobState.UNKNOWN)
+            logger.debug("Updating job {} with slurm status {} to parsl state {!s}".format(job_id, slurm_state, status))
+            self.resources[job_id]['status'] = JobStatus(status)
+            jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.

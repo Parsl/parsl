@@ -372,7 +372,7 @@ class MonitoringHub(RepresentationMixin):
                                             "db_url": self.logging_endpoint,
                                     },
                                     name="Monitoring-DBM-Process",
-                                    daemon=True
+                                    daemon=True,
         )
         self.dbm_proc.start()
         self.logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
@@ -644,16 +644,19 @@ class MonitoringRouter:
             while router_keep_going:
                 try:
                     data, addr = self.sock.recvfrom(2048)
-                    msg = pickle.loads(data)
-                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
-                    resource_msgs.put((msg, addr))
+                    resource_msg = pickle.loads(data)
+                    self.logger.debug("Got UDP Message from {}: {}".format(addr, resource_msg))
+                    resource_msgs.put((resource_msg, addr))
                 except socket.timeout:
                     pass
 
                 try:
                     dfk_loop_start = time.time()
                     while time.time() - dfk_loop_start < 1.0:  # TODO make configurable
+                        # note that nothing checks that msg really is of the annotated type
+                        msg: Tuple[MessageType, Dict[str, Any]]
                         msg = self.ic_channel.recv_pyobj()
+
                         assert isinstance(msg, tuple), "IC Channel expects only tuples, got {}".format(msg)
                         assert len(msg) >= 1, "IC Channel expects tuples of length at least 1, got {}".format(msg)
                         if msg[0] == MessageType.NODE_INFO:
@@ -662,7 +665,7 @@ class MonitoringRouter:
 
                             # ((tag, dict), addr)
                             node_msg = (msg, 0)
-                            node_msgs.put(cast(Any, node_msg))
+                            node_msgs.put(node_msg)
                         elif msg[0] == MessageType.RESOURCE_INFO:
                             resource_msgs.put(cast(Any, (msg, 0)))
                         elif msg[0] == MessageType.BLOCK_INFO:
@@ -685,9 +688,6 @@ class MonitoringRouter:
                     self.logger.warning("Failure processing a ZMQ message", exc_info=True)
 
             self.logger.info("Monitoring router draining")
-            # TODO: should this drain loop deal with all the connections, or just the UDP drain? I think all of them.
-            # it might just be chance that we're not losing (or not noticing lost) data here?
-            # so that main loop ^ could be refactored into a normal+draining exit condition
             last_msg_received_time = time.time()
             while time.time() - last_msg_received_time < self.atexit_timeout:
                 try:
@@ -748,42 +748,24 @@ def send_first_message(try_id: int,
                        task_id: int,
                        monitoring_hub_url: str,
                        run_id: str, radio_mode: str, run_dir: str) -> None:
-    import platform
-    import os
-
-    radio: MonitoringRadio
-    if radio_mode == "udp":
-        radio = UDPRadio(monitoring_hub_url,
-                         source_id=task_id)
-    elif radio_mode == "htex":
-        radio = HTEXRadio(monitoring_hub_url,
-                          source_id=task_id)
-    elif radio_mode == "filesystem":
-        radio = FilesystemRadio(monitoring_url=monitoring_hub_url,
-                                source_id=task_id, run_dir=run_dir)
-    else:
-        raise RuntimeError(f"Unknown radio mode: {radio_mode}")
-
-    msg = (MessageType.RESOURCE_INFO,
-           {'run_id': run_id,
-            'try_id': try_id,
-            'task_id': task_id,
-            'hostname': platform.node(),
-            'block_id': os.environ.get('PARSL_WORKER_BLOCK_ID'),
-            'first_msg': True,
-            'last_msg': False,
-            'timestamp': datetime.datetime.now()
-    })
-    radio.send(msg)
-    return
+    send_first_last_message(try_id, task_id, monitoring_hub_url, run_id,
+                            radio_mode, run_dir, False)
 
 
-# TODO: factor with send_first_message
 @wrap_with_logs
 def send_last_message(try_id: int,
                       task_id: int,
                       monitoring_hub_url: str,
                       run_id: str, radio_mode: str, run_dir: str) -> None:
+    send_first_last_message(try_id, task_id, monitoring_hub_url, run_id,
+                            radio_mode, run_dir, True)
+
+
+def send_first_last_message(try_id: int,
+                            task_id: int,
+                            monitoring_hub_url: str,
+                            run_id: str, radio_mode: str, run_dir: str,
+                            is_last: bool) -> None:
     import platform
     import os
 
@@ -806,8 +788,8 @@ def send_last_message(try_id: int,
             'task_id': task_id,
             'hostname': platform.node(),
             'block_id': os.environ.get('PARSL_WORKER_BLOCK_ID'),
-            'first_msg': False,
-            'last_msg': True,
+            'first_msg': not is_last,
+            'last_msg': is_last,
             'timestamp': datetime.datetime.now()
     })
     radio.send(msg)

@@ -439,13 +439,15 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
     logger.addHandler(handler)
 
 
-def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
+def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None, stream=None):
     """Add a stream log handler.
 
     Args:
          - name (string) : Set the logger name.
          - level (logging.LEVEL) : Set to logging.DEBUG by default.
          - format_string (sting) : Set to None by default.
+         - stream (io.TextIOWrapper) : Specify sys.stdout or sys.stderr for stream.
+            If not specified, the default stream for logging.StreamHandler is used.
 
     Returns:
          - None
@@ -457,7 +459,7 @@ def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
     global logger
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
+    handler = logging.StreamHandler(stream)
     handler.setLevel(level)
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
