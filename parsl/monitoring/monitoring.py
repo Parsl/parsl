@@ -1,8 +1,8 @@
 import os
 import socket
+import time
 import pickle
 import logging
-import time
 import typeguard
 import datetime
 import zmq
@@ -11,7 +11,7 @@ from functools import wraps
 import queue
 from abc import ABCMeta, abstractmethod
 from parsl.multiprocessing import ForkProcess, SizedQueue
-from multiprocessing import Process, Queue
+from multiprocessing import Event, Process, Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
@@ -470,6 +470,7 @@ class MonitoringHub(RepresentationMixin):
         """
         @wraps(f)
         def wrapped(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
+            terminate_event = Event()
             # Send first message to monitoring router
             send_first_message(try_id,
                                task_id,
@@ -489,7 +490,9 @@ class MonitoringHub(RepresentationMixin):
                                        run_id,
                                        radio_mode,
                                        logging_level,
-                                       sleep_dur, run_dir),
+                                       sleep_dur,
+                                       run_dir,
+                                       terminate_event),
                                  name="Monitor-Wrapper-{}".format(task_id))
                 pp.start()
                 p = pp
@@ -503,15 +506,24 @@ class MonitoringHub(RepresentationMixin):
             try:
                 return f(*args, **kwargs)
             finally:
+                # There's a chance of zombification if the workers are killed by some signals (?)
+                if p:
+                    terminate_event.set()
+                    p.join(30)  # 30 second delay for this -- this timeout will be hit in the case of an unusually long end-of-loop
+                    if p.exitcode is None:
+                        logger.warn("Event-based termination of monitoring helper took too long. Using process-based termination.")
+                        p.terminate()
+                        # DANGER: this can corrupt shared queues according to docs.
+                        # So, better that the above termination event worked.
+                        # This is why this log message is a warning
+                        p.join()
+
                 send_last_message(try_id,
                                   task_id,
                                   monitoring_hub_url,
                                   run_id,
                                   radio_mode, run_dir)
-                # There's a chance of zombification if the workers are killed by some signals
-                if p:
-                    p.terminate()
-                    p.join()
+
         return wrapped
 
 
@@ -789,8 +801,12 @@ def monitor(pid: int,
             monitoring_hub_url: str,
             run_id: str,
             radio_mode: str,
-            logging_level: int = logging.INFO,
-            sleep_dur: float = 10, run_dir: str = "./") -> None:
+            logging_level: int,
+            sleep_dur: float,
+            run_dir: str,
+            # removed all defaults because unused and there's no meaningful default for terminate_event.
+            # these probably should become named arguments, with a *, and named at invocation.
+            terminate_event: Any) -> None:  # cannot be Event because of multiprocessing type weirdness.
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
 
@@ -803,7 +819,6 @@ def monitor(pid: int,
     import logging
     import platform
     import psutil
-    import time
 
     radio: MonitoringRadio
     if radio_mode == "udp":
@@ -831,8 +846,10 @@ def monitor(pid: int,
     children_system_time = {}  # type: Dict[int, float]
     total_children_user_time = 0.0
     total_children_system_time = 0.0
-    while True:
+
+    while not terminate_event.is_set():
         logging.debug("start of monitoring loop")
+
         try:
             d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
             d["run_id"] = run_id
@@ -889,4 +906,6 @@ def monitor(pid: int,
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
 
         logging.debug("sleeping")
-        time.sleep(sleep_dur)
+        terminate_event.wait(timeout=sleep_dur)
+
+    logging.debug("End of monitoring helper")
