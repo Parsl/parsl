@@ -593,9 +593,10 @@ class DataFlowKernel(object):
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
             raise ValueError("Task {} requested invalid executor {}".format(task_id, executor_label))
 
+        try_id = task_record['fail_count']
+
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
-            try_id = task_record['fail_count']
             executable = self.monitoring.monitor_wrapper(executable, try_id, task_id,
                                                          self.monitoring.monitoring_hub_url,
                                                          self.run_id,
@@ -611,7 +612,10 @@ class DataFlowKernel(object):
 
         self._send_task_log_info(task_record)
 
-        logger.info("Task {} launched on executor {}".format(task_id, executor.label))
+        if hasattr(exec_fu, "parsl_executor_task_id"):
+            logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label} with executor id {exec_fu.parsl_executor_task_id}")
+        else:
+            logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}")
 
         self._log_std_streams(task_record)
 
