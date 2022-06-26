@@ -844,8 +844,6 @@ def monitor(pid: int,
 
     children_user_time = {}  # type: Dict[int, float]
     children_system_time = {}  # type: Dict[int, float]
-    total_children_user_time = 0.0
-    total_children_system_time = 0.0
 
     while not terminate_event.is_set():
         logging.debug("start of monitoring loop")
@@ -884,8 +882,6 @@ def monitor(pid: int,
                     d['psutil_process_' + str(k)] += v
                 child_user_time = child.cpu_times().user
                 child_system_time = child.cpu_times().system
-                total_children_user_time += child_user_time - children_user_time.get(child.pid, 0)
-                total_children_system_time += child_system_time - children_system_time.get(child.pid, 0)
                 children_user_time[child.pid] = child_user_time
                 children_system_time[child.pid] = child_system_time
                 d['psutil_process_memory_virtual'] += child.memory_info().vms
@@ -898,6 +894,12 @@ def monitor(pid: int,
                     logging.exception("Exception reading IO counters for child {k}. Recorded IO usage may be incomplete".format(k=k), exc_info=True)
                     d['psutil_process_disk_write'] += 0
                     d['psutil_process_disk_read'] += 0
+            total_children_user_time = 0.0
+            for child_pid in children_user_time:
+                total_children_user_time += children_user_time[child_pid]
+            total_children_system_time = 0.0
+            for child_pid in children_system_time:
+                total_children_system_time += children_system_time[child_pid]
             d['psutil_process_time_user'] += total_children_user_time
             d['psutil_process_time_system'] += total_children_system_time
             logging.debug("sending message")
