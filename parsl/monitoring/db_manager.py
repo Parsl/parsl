@@ -11,6 +11,7 @@ from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
 from parsl.errors import OptionalModuleMissing
 from parsl.monitoring.message_type import MessageType
+from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
@@ -286,13 +287,13 @@ class DatabaseManager:
         self.batching_interval = batching_interval
         self.batching_threshold = batching_threshold
 
-        self.pending_priority_queue = queue.Queue()  # type: queue.Queue[Tuple[MessageType, Dict[str, Any]]]
+        self.pending_priority_queue = queue.Queue()  # type: queue.Queue[TaggedMonitoringMessage]
         self.pending_node_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
         self.pending_block_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
         self.pending_resource_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
 
     def start(self,
-              priority_queue: "queue.Queue[Tuple[MessageType, Dict[str, Any]]]",
+              priority_queue: "queue.Queue[TaggedMonitoringMessage]",
               node_queue: "queue.Queue[Dict[str, Any]]",
               block_queue: "queue.Queue[Dict[str, Any]]",
               resource_queue: "queue.Queue[Dict[str, Any]]") -> None:
@@ -696,7 +697,7 @@ class DatabaseManager:
 
 @wrap_with_logs(target="database_manager")
 def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
-                priority_msgs: "queue.Queue[Tuple[MessageType, Dict[str, Any]]]",
+                priority_msgs: "queue.Queue[TaggedMonitoringMessage]",
                 node_msgs: "queue.Queue[Dict[str, Any]]",
                 block_msgs: "queue.Queue[Dict[str, Any]]",
                 resource_msgs: "queue.Queue[Dict[str, Any]]",
