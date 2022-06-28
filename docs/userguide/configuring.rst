@@ -132,9 +132,6 @@ WorkQueueExecutor is available in ``v1.0.0`` in beta status.
 .. [*] The maximum number of nodes tested for the `parsl.executors.WorkQueueExecutor` is 10,000 GPU cores and
        20,000 CPU cores.
 
-.. warning:: ``IPyParallelExecutor`` is  deprecated as of Parsl v0.8.0. `parsl.executors.HighThroughputExecutor`
-   is the recommended replacement.
-
 
 3. Should Parsl request multiple nodes in an individual scheduler job? 
 (Here the term block is equivalent to a single scheduler job.)

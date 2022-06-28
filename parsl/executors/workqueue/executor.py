@@ -433,6 +433,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Create a Future object and have it be mapped from the task ID in the tasks dictionary
         fu = Future()
+        fu.parsl_executor_task_id = task_id
         with self.tasks_lock:
             self.tasks[str(task_id)] = fu
 

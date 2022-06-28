@@ -274,6 +274,8 @@ class DatabaseManager:
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
+        logger.propagate = False
+
         set_file_logger("{}/database_manager.log".format(self.logdir), level=logging_level,
                         format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s",
                         name="database_manager")
@@ -591,8 +593,7 @@ class DatabaseManager:
             self.pending_priority_queue.put(cast(Any, x))
         elif x[0] == MessageType.RESOURCE_INFO:
             body = x[1]
-            assert len(body) == 3
-            self.pending_resource_queue.put(body[-1])
+            self.pending_resource_queue.put(body)
         elif x[0] == MessageType.NODE_INFO:
             assert len(x) == 2, "expected NODE_INFO tuple to have exactly two elements"
 
