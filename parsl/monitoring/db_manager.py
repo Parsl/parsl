@@ -11,6 +11,7 @@ from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
 from parsl.errors import OptionalModuleMissing
 from parsl.monitoring.message_type import MessageType
+from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
@@ -21,6 +22,8 @@ X = TypeVar('X')
 try:
     import sqlalchemy as sa
     from sqlalchemy import Column, Text, Float, Boolean, Integer, DateTime, PrimaryKeyConstraint, Table
+    from sqlalchemy.orm import Mapper
+    from sqlalchemy.orm import mapperlib
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.ext.declarative import declarative_base
 except ImportError:
@@ -28,12 +31,6 @@ except ImportError:
 else:
     _sqlalchemy_enabled = True
 
-try:
-    from sqlalchemy_utils import get_mapper
-except ImportError:
-    _sqlalchemy_utils_enabled = False
-else:
-    _sqlalchemy_utils_enabled = True
 
 WORKFLOW = 'workflow'    # Workflow table includes workflow metadata
 TASK = 'task'            # Task table includes task metadata
@@ -50,11 +47,6 @@ class Database:
         raise OptionalModuleMissing(['sqlalchemy'],
                                     ("Default database logging requires the sqlalchemy library."
                                      " Enable monitoring support with: pip install 'parsl[monitoring]'"))
-    if not _sqlalchemy_utils_enabled:
-        raise OptionalModuleMissing(['sqlalchemy_utils'],
-                                    ("Default database logging requires the sqlalchemy_utils library."
-                                     " Enable monitoring support with: pip install 'parsl[monitoring]'"))
-
     Base = declarative_base()
 
     def __init__(self,
@@ -75,18 +67,39 @@ class Database:
         Session = sessionmaker(bind=self.eng)
         self.session = Session()
 
+    def _get_mapper(self, table_obj: Table) -> Mapper:
+        if hasattr(mapperlib, '_all_registries'):
+            all_mappers = set()
+            for mapper_registry in mapperlib._all_registries():  # type: ignore
+                all_mappers.update(mapper_registry.mappers)
+        else:  # SQLAlchemy <1.4
+            all_mappers = mapperlib._mapper_registry  # type: ignore
+        mapper_gen = (
+            mapper for mapper in all_mappers
+            if table_obj in mapper.tables
+        )
+        try:
+            mapper = next(mapper_gen)
+            second_mapper = next(mapper_gen, False)
+        except StopIteration:
+            raise ValueError(f"Could not get mapper for table {table_obj}")
+
+        if second_mapper:
+            raise ValueError(f"Multiple mappers for table {table_obj}")
+        return mapper
+
     def update(self, *, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
         table_obj = self.meta.tables[table]
         mappings = self._generate_mappings(table_obj, columns=columns,
                                            messages=messages)
-        mapper = get_mapper(table_obj)
+        mapper = self._get_mapper(table_obj)
         self.session.bulk_update_mappings(mapper, mappings)
         self.session.commit()
 
     def insert(self, *, table: str, messages: List[Dict[str, Any]]) -> None:
         table_obj = self.meta.tables[table]
         mappings = self._generate_mappings(table_obj, messages=messages)
-        mapper = get_mapper(table_obj)
+        mapper = self._get_mapper(table_obj)
         self.session.bulk_insert_mappings(mapper, mappings)
         self.session.commit()
 
@@ -274,13 +287,13 @@ class DatabaseManager:
         self.batching_interval = batching_interval
         self.batching_threshold = batching_threshold
 
-        self.pending_priority_queue = queue.Queue()  # type: queue.Queue[Tuple[MessageType, Dict[str, Any]]]
+        self.pending_priority_queue = queue.Queue()  # type: queue.Queue[TaggedMonitoringMessage]
         self.pending_node_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
         self.pending_block_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
         self.pending_resource_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
 
     def start(self,
-              priority_queue: "queue.Queue[Tuple[MessageType, Dict[str, Any]]]",
+              priority_queue: "queue.Queue[TaggedMonitoringMessage]",
               node_queue: "queue.Queue[Dict[str, Any]]",
               block_queue: "queue.Queue[Dict[str, Any]]",
               resource_queue: "queue.Queue[Dict[str, Any]]") -> None:
@@ -684,7 +697,7 @@ class DatabaseManager:
 
 @wrap_with_logs(target="database_manager")
 def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
-                priority_msgs: "queue.Queue[Tuple[MessageType, Dict[str, Any]]]",
+                priority_msgs: "queue.Queue[TaggedMonitoringMessage]",
                 node_msgs: "queue.Queue[Dict[str, Any]]",
                 block_msgs: "queue.Queue[Dict[str, Any]]",
                 resource_msgs: "queue.Queue[Dict[str, Any]]",

@@ -269,9 +269,7 @@ class Memoizer(object):
             return
 
         if task['hashsum'] in self.memo_lookup_table:
-            logger.info('Updating app cache entry with latest %s:%s call' %
-                        (task['func_name'], task_id))
-            self.memo_lookup_table[task['hashsum']] = r
+            logger.info(f"Replacing app cache entry {task['hashsum']} with result from task {task_id}")
         else:
-            logger.debug("Storing original memo for task {}".format(task_id))
-            self.memo_lookup_table[task['hashsum']] = r
+            logger.debug(f"Storing app cache entry {task['hashsum']} with result from task {task_id}")
+        self.memo_lookup_table[task['hashsum']] = r
