@@ -11,7 +11,7 @@ from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
 from parsl.errors import OptionalModuleMissing
 from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.types import TaggedMonitoringMessage
+from parsl.monitoring.types import MonitoringMessage, TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
@@ -88,7 +88,7 @@ class Database:
             raise ValueError(f"Multiple mappers for table {table_obj}")
         return mapper
 
-    def update(self, *, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
+    def update(self, *, table: str, columns: List[str], messages: List[MonitoringMessage]) -> None:
         table_obj = self.meta.tables[table]
         mappings = self._generate_mappings(table_obj, columns=columns,
                                            messages=messages)
@@ -96,7 +96,7 @@ class Database:
         self.session.bulk_update_mappings(mapper, mappings)
         self.session.commit()
 
-    def insert(self, *, table: str, messages: List[Dict[str, Any]]) -> None:
+    def insert(self, *, table: str, messages: List[MonitoringMessage]) -> None:
         table_obj = self.meta.tables[table]
         mappings = self._generate_mappings(table_obj, messages=messages)
         mapper = self._get_mapper(table_obj)
@@ -106,7 +106,7 @@ class Database:
     def rollback(self) -> None:
         self.session.rollback()
 
-    def _generate_mappings(self, table: Table, columns: Optional[List[str]] = None, messages: List[Dict[str, Any]] = []) -> List[Dict[str, Any]]:
+    def _generate_mappings(self, table: Table, columns: Optional[List[str]] = None, messages: List[MonitoringMessage] = []) -> List[Dict[str, Any]]:
         mappings = []
         for msg in messages:
             m = {}
@@ -271,7 +271,7 @@ class DatabaseManager:
                  ):
 
         self.workflow_end = False
-        self.workflow_start_message = None  # type: Optional[Dict[str, Any]]
+        self.workflow_start_message = None  # type: Optional[MonitoringMessage]
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
@@ -288,15 +288,15 @@ class DatabaseManager:
         self.batching_threshold = batching_threshold
 
         self.pending_priority_queue = queue.Queue()  # type: queue.Queue[TaggedMonitoringMessage]
-        self.pending_node_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
-        self.pending_block_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
-        self.pending_resource_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
+        self.pending_node_queue = queue.Queue()  # type: queue.Queue[MonitoringMessage]
+        self.pending_block_queue = queue.Queue()  # type: queue.Queue[MonitoringMessage]
+        self.pending_resource_queue = queue.Queue()  # type: queue.Queue[MonitoringMessage]
 
     def start(self,
               priority_queue: "queue.Queue[TaggedMonitoringMessage]",
-              node_queue: "queue.Queue[Dict[str, Any]]",
-              block_queue: "queue.Queue[Dict[str, Any]]",
-              resource_queue: "queue.Queue[Dict[str, Any]]") -> None:
+              node_queue: "queue.Queue[MonitoringMessage]",
+              block_queue: "queue.Queue[MonitoringMessage]",
+              resource_queue: "queue.Queue[MonitoringMessage]") -> None:
 
         self._kill_event = threading.Event()
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
@@ -350,7 +350,7 @@ class DatabaseManager:
         # assumed-to-be-unique first message (with first message flag set).
         # The code prior to this patch will discard previous message in
         # the case of multiple messages to defer.
-        deferred_resource_messages = {}  # type: Dict[str, Any]
+        deferred_resource_messages = {}  # type: MonitoringMessage
 
         exception_happened = False
 
@@ -606,7 +606,7 @@ class DatabaseManager:
         else:
             logger.error("Discarding message of unknown type {}".format(x[0]))
 
-    def _update(self, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
+    def _update(self, table: str, columns: List[str], messages: List[MonitoringMessage]) -> None:
         try:
             done = False
             while not done:
@@ -636,7 +636,7 @@ class DatabaseManager:
             except Exception:
                 logger.exception("Rollback failed")
 
-    def _insert(self, table: str, messages: List[Dict[str, Any]]) -> None:
+    def _insert(self, table: str, messages: List[MonitoringMessage]) -> None:
         try:
             done = False
             while not done:
@@ -698,9 +698,9 @@ class DatabaseManager:
 @wrap_with_logs(target="database_manager")
 def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
                 priority_msgs: "queue.Queue[TaggedMonitoringMessage]",
-                node_msgs: "queue.Queue[Dict[str, Any]]",
-                block_msgs: "queue.Queue[Dict[str, Any]]",
-                resource_msgs: "queue.Queue[Dict[str, Any]]",
+                node_msgs: "queue.Queue[MonitoringMessage]",
+                block_msgs: "queue.Queue[MonitoringMessage]",
+                resource_msgs: "queue.Queue[MonitoringMessage]",
                 db_url: str,
                 logdir: str,
                 logging_level: int) -> None:
