@@ -73,9 +73,9 @@ $(WORKQUEUE_INSTALL):
 
 .PHONY: workqueue_ex_test
 workqueue_ex_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
-        pwd
-        ls
-        ls parsl/
+	pwd
+	ls
+	ls parsl/
 	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --random-order
 
 .PHONY: config_local_test
