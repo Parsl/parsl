@@ -94,9 +94,12 @@ jobs:
       with:
         python-version: "3.10"
 
-    - name: Documentation checks
+    - name: Make deps
       run: |
         make deps
+
+    - name: Documentation checks
+      run: |
         pip install .[docs]
         sudo apt-get install -y pandoc
         cd docs
