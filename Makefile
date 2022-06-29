@@ -49,10 +49,10 @@ mypy: ## run mypy checks
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/configs/
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/test*/
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/sites/
-        # only the top level of monitoring is checked here because the visualization code does not type check
+	# only the top level of monitoring is checked here because the visualization code does not type check
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/app/ parsl/channels/ parsl/dataflow/ parsl/data_provider/ parsl/launchers parsl/providers/ parsl/monitoring/*py
-        # process worker pool is explicitly listed to check, because it is not
-        # imported from anywhere in core parsl python code.
+	# process worker pool is explicitly listed to check, because it is not
+	# imported from anywhere in core parsl python code.
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/executors/high_throughput/process_worker_pool.py
 
 .PHONY: local_thread_test
@@ -73,7 +73,7 @@ $(WORKQUEUE_INSTALL):
 
 .PHONY: workqueue_ex_test
 workqueue_ex_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
-        pip3 install .
+	pip3 install .
 	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --random-order
 
 .PHONY: config_local_test
