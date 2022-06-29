@@ -74,8 +74,19 @@ jobs:
   documentation:
     runs-on: ubuntu-20.04
     timeout-minutes: 30
-
     steps:
+    - name: copy of arbitrary installs from above
+      run: |
+        sudo apt-get update -q
+        python -m pip install Cython
+        python -m pip install numpy
+        python --version
+        python -m cython --version
+        python -c "import numpy;print(numpy.__version__)"
+
+        # this is to make the workqueue binary installer happy
+        sudo apt-get install -y libpython3.5
+
     - uses: actions/checkout@master
 
     - name: Set up Python 3.10
