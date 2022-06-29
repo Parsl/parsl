@@ -51,6 +51,7 @@ jobs:
         parsl/tests/test-viz.sh
 
     - name: Check monitoring did not report errors
+      run: |
         # assert that none of the runs in this test have put an ERROR message into a
         # database manager log file or monitoring router log file. It would be better if
         # the tests themselves failed immediately when there was a monitoring error, but
