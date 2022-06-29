@@ -11,7 +11,12 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.7", "3.8", "3.9", "3.10"]
-        makefile-target: ["test"]
+        makefile-target: ["lint flake8 mypy",
+                          "local_thread_test",
+                          "htex_local_test",
+                          "htex_local_alternate_test",
+                          "workqueue_ex_test",
+                          "config_local_test"]
     runs-on: ubuntu-20.04
     timeout-minutes: 30
 
