@@ -126,6 +126,7 @@ class Interchange(object):
         os.makedirs(self.logdir, exist_ok=True)
 
         start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
+        logger.propagate = False
         logger.debug("Initializing Interchange process")
 
         self.client_address = client_address
@@ -266,9 +267,12 @@ class Interchange(object):
     def _send_monitoring_info(self, hub_channel, manager):
         if hub_channel:
             logger.info("Sending message {} to hub".format(self._ready_manager_queue[manager]))
-            hub_channel.send_pyobj((MessageType.NODE_INFO,
-                                    datetime.datetime.now(),
-                                    self._ready_manager_queue[manager]))
+
+            d = self._ready_manager_queue[manager].copy()
+            d['timestamp'] = datetime.datetime.now()
+            d['last_heartbeat'] = datetime.datetime.fromtimestamp(d['last_heartbeat'])
+
+            hub_channel.send_pyobj((MessageType.NODE_INFO, d))
 
     @wrap_with_logs(target="interchange")
     def _command_server(self, kill_event):
