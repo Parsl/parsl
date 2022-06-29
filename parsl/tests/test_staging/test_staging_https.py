@@ -22,8 +22,8 @@ def sort_strings(inputs=[], outputs=[]):
 
 
 @pytest.mark.cleannet
-def test_implicit_staging_https():
-    """Test implicit staging for an ftp file
+def test_staging_https():
+    """Test staging for an https file
 
     Create a remote input file (https) that points to unsorted.txt.
     """
@@ -50,7 +50,7 @@ def sort_strings_kw(x=None, outputs=[]):
 
 
 @pytest.mark.cleannet
-def test_implicit_staging_https_kwargs():
+def test_staging_https_kwargs():
 
     # unsorted_file = File('https://testbed.petrel.host/test/public/unsorted.txt')
     unsorted_file = File('https://gist.githubusercontent.com/yadudoc/7f21dd15e64a421990a46766bfa5359c/'
@@ -74,7 +74,7 @@ def sort_strings_arg(x, outputs=[]):
 
 
 @pytest.mark.cleannet
-def test_implicit_staging_https_args():
+def test_staging_https_args():
 
     # unsorted_file = File('https://testbed.petrel.host/test/public/unsorted.txt')
     unsorted_file = File('https://gist.githubusercontent.com/yadudoc/7f21dd15e64a421990a46766bfa5359c/'
@@ -99,8 +99,8 @@ def sort_strings_additional_executor(inputs=[], outputs=[]):
 
 @pytest.mark.cleannet
 @pytest.mark.local
-def test_implicit_staging_https_additional_executor():
-    """Test implicit staging for an ftp file
+def test_staging_https_additional_executor():
+    """Test staging for an https file
 
     Create a remote input file (https) that points to unsorted.txt.
     """
@@ -118,20 +118,3 @@ def test_implicit_staging_https_additional_executor():
 
     f = sort_strings_additional_executor(inputs=[unsorted_file], outputs=[sorted_file])
     f.result()
-
-
-if __name__ == "__main__":
-
-    parsl.load()
-
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    test_implicit_staging_https()
