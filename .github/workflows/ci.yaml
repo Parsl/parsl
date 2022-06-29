@@ -42,7 +42,7 @@ jobs:
 
     - name: make ${{ matrix.makefile-target }}
       run: |
-        make test
+        make ${{ matrix.makefile-target }}
 
     - name: Checking parsl-visualize
       run: |
