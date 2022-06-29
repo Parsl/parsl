@@ -96,6 +96,7 @@ jobs:
 
     - name: Documentation checks
       run: |
+        make deps
         pip install .[docs]
         sudo apt-get install -y pandoc
         cd docs
