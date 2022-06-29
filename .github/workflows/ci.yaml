@@ -15,7 +15,7 @@ jobs:
                            # "local_thread_test",
                            # "htex_local_test",
                            # "htex_local_alternate_test",
-                          "clean_coverage lint flake8 mypy local_thread_test htex_local_test workqueue_ex_test" ]
+                          "htex_local_alternate_test workqueue_ex_test" ]
                            # "config_local_test"]
     runs-on: ubuntu-20.04
     timeout-minutes: 30
