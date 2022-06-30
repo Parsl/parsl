@@ -25,11 +25,7 @@ jobs:
     - name: Non-requirements based install
       run: |
         sudo apt-get update -q
-        python -m pip install Cython
-        python -m pip install numpy
         python --version
-        python -m cython --version
-        python -c "import numpy;print(numpy.__version__)"
 
         # this is to make the workqueue binary installer happy
         sudo apt-get install -y libpython3.5

@@ -1,6 +1,6 @@
 """Following the general logging philosophy of python libraries, by default
-`Parsl <https://github.com/swift-lang/swift-e-lab/>`_ doesn't log anything.
-However the following helper functions are provided for logging:
+Parsl doesn't log anything.  However the following helper functions are
+provided for logging:
 
 1. set_stream_logger
     This sets the logger to the StreamHandler. This is quite useful when working from

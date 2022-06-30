@@ -672,8 +672,7 @@ class MonitoringRouter:
 
                         if msg[0] == MessageType.NODE_INFO:
                             msg[1]['run_id'] = self.run_id
-                            node_msg = msg_0
-                            node_msgs.put(node_msg)
+                            node_msgs.put(msg_0)
                         elif msg[0] == MessageType.RESOURCE_INFO:
                             resource_msgs.put(msg_0)
                         elif msg[0] == MessageType.BLOCK_INFO:
