@@ -150,7 +150,7 @@ class Manager(object):
         self.result_outgoing.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         self.result_outgoing.setsockopt(zmq.LINGER, 0)
         self.result_outgoing.connect(result_q_url)
-        logger.info("Manager connected")
+        logger.info("Manager connected to interchange")
 
         self.uid = uid
         self.block_id = block_id
