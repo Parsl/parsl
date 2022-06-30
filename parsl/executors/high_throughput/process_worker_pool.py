@@ -36,7 +36,7 @@ HEARTBEAT_CODE = (2 ** 32) - 1
 class Manager(object):
     """ Manager manages task execution by the workers
 
-                |         0mq              |    Manager         |   Worker Processes
+                |         zmq              |    Manager         |   Worker Processes
                 |                          |                    |
                 | <-----Request N task-----+--Count task reqs   |      Request task<--+
     Interchange | -------------------------+->Receive task batch|          |          |
@@ -227,7 +227,7 @@ class Manager(object):
 
     @wrap_with_logs
     def pull_tasks(self, kill_event):
-        """ Pull tasks from the incoming tasks 0mq pipe onto the internal
+        """ Pull tasks from the incoming tasks zmq pipe onto the internal
         pending task queue
 
         Parameters:
@@ -308,7 +308,7 @@ class Manager(object):
 
     @wrap_with_logs
     def push_results(self, kill_event):
-        """ Listens on the pending_result_queue and sends out results via 0mq
+        """ Listens on the pending_result_queue and sends out results via zmq
 
         Parameters:
         -----------
