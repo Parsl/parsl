@@ -416,7 +416,7 @@ class Manager(object):
             p.start()
             self.procs[worker_id] = p
 
-        logger.debug("Manager synced with workers")
+        logger.debug("Workers started")
 
         self._task_puller_thread = threading.Thread(target=self.pull_tasks,
                                                     args=(self._kill_event,),
