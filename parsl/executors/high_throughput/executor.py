@@ -335,7 +335,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         self._queue_management_thread = None
         self._start_queue_management_thread()
-        self._start_local_queue_process()
+        self._start_local_interchange_process()
 
         logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
@@ -454,31 +454,31 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                 break
         logger.info("[MTHREAD] queue management worker finished")
 
-    def _start_local_queue_process(self):
+    def _start_local_interchange_process(self):
         """ Starts the interchange process locally
 
         Starts the interchange process locally and uses an internal command queue to
         get the worker task and result ports that the interchange has bound to.
         """
         comm_q = Queue(maxsize=10)
-        self.queue_proc = ForkProcess(target=interchange.starter,
-                                      args=(comm_q,),
-                                      kwargs={"client_ports": (self.outgoing_q.port,
-                                                               self.incoming_q.port,
-                                                               self.command_client.port),
-                                              "worker_ports": self.worker_ports,
-                                              "worker_port_range": self.worker_port_range,
-                                              "hub_address": self.hub_address,
-                                              "hub_port": self.hub_port,
-                                              "logdir": "{}/{}".format(self.run_dir, self.label),
-                                              "heartbeat_threshold": self.heartbeat_threshold,
-                                              "poll_period": self.poll_period,
-                                              "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
-                                      },
-                                      daemon=True,
-                                      name="HTEX-Interchange"
+        self.interchange_proc = ForkProcess(target=interchange.starter,
+                                            args=(comm_q,),
+                                            kwargs={"client_ports": (self.outgoing_q.port,
+                                                                     self.incoming_q.port,
+                                                                     self.command_client.port),
+                                                    "worker_ports": self.worker_ports,
+                                                    "worker_port_range": self.worker_port_range,
+                                                    "hub_address": self.hub_address,
+                                                    "hub_port": self.hub_port,
+                                                    "logdir": "{}/{}".format(self.run_dir, self.label),
+                                                    "heartbeat_threshold": self.heartbeat_threshold,
+                                                    "poll_period": self.poll_period,
+                                                    "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
+                                            },
+                                            daemon=True,
+                                            name="HTEX-Interchange"
         )
-        self.queue_proc.start()
+        self.interchange_proc.start()
         try:
             (self.worker_task_port, self.worker_result_port) = comm_q.get(block=True, timeout=120)
         except queue.Empty:
@@ -657,12 +657,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         -------
         List of job_ids marked for termination
         """
-
+        logger.debug(f"Scale in called, blocks={blocks}, block_ids={block_ids}")
         if block_ids:
             block_ids_to_kill = block_ids
         else:
             managers = self.connected_managers
-            block_info = {}
+            block_info = {}  # block id -> list( tasks, idle duration )
             for manager in managers:
                 if not manager['active']:
                     continue
@@ -673,6 +673,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                 block_info[b_id][1] = min(block_info[b_id][1], manager['idle_duration'])
 
             sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1][1], item[1][0]))
+            logger.debug(f"Scale in selecting from {len(sorted_blocks)} blocks")
             if force is True:
                 block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
             else:
@@ -685,10 +686,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                             block_ids_to_kill.append(x[0])
                             if len(block_ids_to_kill) == blocks:
                                 break
-                logger.debug("Selecting block ids to kill since they are idle : {}".format(
+                logger.debug("Selected idle block ids to kill: {}".format(
                     block_ids_to_kill))
+                if len(block_ids_to_kill) < blocks:
+                    logger.warning(f"Could not find enough blocks to kill: wanted {blocks} but only selected {len(block_ids_to_kill)}")
 
-        logger.debug("Current blocks : {}".format(self.blocks))
         # Hold the block
         for block_id in block_ids_to_kill:
             self._hold_block(block_id)
@@ -717,5 +719,5 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """
 
         logger.info("Attempting HighThroughputExecutor shutdown")
-        self.queue_proc.terminate()
+        self.interchange_proc.terminate()
         logger.info("Finished HighThroughputExecutor shutdown attempt")
