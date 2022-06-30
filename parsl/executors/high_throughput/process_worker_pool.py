@@ -222,8 +222,8 @@ class Manager(object):
         """ Send heartbeat to the incoming task queue
         """
         heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
-        r = self.task_incoming.send(heartbeat)
-        logger.debug("Return from heartbeat: {}".format(r))
+        self.task_incoming.send(heartbeat)
+        logger.debug("Sent heartbeat")
 
     @wrap_with_logs
     def pull_tasks(self, kill_event):
