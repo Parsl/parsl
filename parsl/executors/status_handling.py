@@ -130,14 +130,13 @@ class BlockProviderExecutor(ParslExecutor):
         return True
 
     def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
-                      status: Dict[str, JobStatus]) -> bool:
+                      status: Dict[str, JobStatus]) -> None:
         init_blocks = 3
         if hasattr(self.provider, 'init_blocks'):
             init_blocks = self.provider.init_blocks  # type: ignore
         if init_blocks < 1:
             init_blocks = 1
         error_handler.simple_error_handler(self, status, init_blocks)
-        return True
 
     @property
     def tasks(self) -> Dict[object, Future]:
@@ -231,8 +230,8 @@ class NoStatusHandlingExecutor(ParslExecutor):
         return {}
 
     def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
-                      status: Dict[str, JobStatus]) -> bool:
-        return False
+                      status: Dict[str, JobStatus]) -> None:
+        pass
 
     @property
     def tasks(self) -> Dict[object, Future]:
