@@ -1,6 +1,6 @@
 """Following the general logging philosophy of python libraries, by default
-`Parsl <https://github.com/swift-lang/swift-e-lab/>`_ doesn't log anything.
-However the following helper functions are provided for logging:
+Parsl doesn't log anything.  However the following helper functions are
+provided for logging:
 
 1. set_stream_logger
     This sets the logger to the StreamHandler. This is quite useful when working from
@@ -15,6 +15,13 @@ import logging
 import typeguard
 
 from typing import Optional
+
+
+DEFAULT_FORMAT = (
+    "%(created)f %(asctime)s %(processName)s-%(process)d "
+    "%(threadName)s-%(thread)d %(name)s:%(lineno)d %(funcName)s %(levelname)s: "
+    "%(message)s"
+)
 
 
 @typeguard.typechecked
@@ -64,7 +71,7 @@ def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEB
        -  None
     """
     if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+        format_string = DEFAULT_FORMAT
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)

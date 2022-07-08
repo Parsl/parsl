@@ -31,6 +31,7 @@ from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
+from parsl.process_loggers import wrap_with_logs
 from parsl.providers.provider_base import JobStatus, JobState
 from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints
 
@@ -1040,6 +1041,7 @@ class DataFlowKernel(object):
 
         logger.info("All remaining tasks completed")
 
+    @wrap_with_logs
     def cleanup(self):
         """DataFlowKernel cleanup.
 
@@ -1075,6 +1077,7 @@ class DataFlowKernel(object):
 
         logger.info("Closing flowcontrol")
         self.flowcontrol.close()
+        logger.info("Terminated flow control")
 
         logger.info("Scaling in and shutting down executors")
 
@@ -1093,14 +1096,17 @@ class DataFlowKernel(object):
                         self.monitoring.send(MessageType.BLOCK_INFO, msg)
                 logger.info(f"Shutting down executor {executor.label}")
                 executor.shutdown()
+                logger.info(f"Shut down executor {executor.label}")
             elif executor.managed and executor.bad_state_is_set:  # and bad_state_is_set
                 logger.warning(f"Not shutting down executor {executor.label} because it is in bad state")
             else:
                 logger.info(f"Not shutting down executor {executor.label} because it is unmanaged")
 
+        logger.info("Terminated executors")
         self.time_completed = datetime.datetime.now()
 
         if self.monitoring:
+            logger.info("Sending final monitoring message")
             self.monitoring.send(MessageType.WORKFLOW_INFO,
                                  {'tasks_failed_count': self.task_state_counts[States.failed],
                                   'tasks_completed_count': self.task_state_counts[States.exec_done],
@@ -1109,7 +1115,9 @@ class DataFlowKernel(object):
                                   'run_id': self.run_id, 'rundir': self.run_dir,
                                   'exit_now': True})
 
+            logger.info("Terminating monitoring")
             self.monitoring.close()
+            logger.info("Terminated monitoring")
 
         logger.info("DFK cleanup complete")
 
