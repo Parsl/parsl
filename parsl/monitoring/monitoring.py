@@ -446,7 +446,11 @@ class MonitoringHub(RepresentationMixin):
             self.router_proc.join()
             self.logger.debug("Finished waiting for router termination")
             if len(exception_msgs) == 0:
+                self.logger.debug("Sending STOP to DBM")
                 self.priority_msgs.put(("STOP", 0))
+            else:
+                self.logger.debug("Not sending STOP to DBM, because there were DBM exceptions")
+            self.logger.debug("Waiting for DB termination")
             self.dbm_proc.join()
             self.logger.debug("Finished waiting for DBM termination")
 
