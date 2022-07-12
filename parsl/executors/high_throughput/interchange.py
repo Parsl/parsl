@@ -219,8 +219,8 @@ class Interchange(object):
         return tasks
 
     @wrap_with_logs(target="interchange")
-    def migrate_tasks_to_internal(self, kill_event):
-        """Pull tasks from the incoming tasks 0mq pipe onto the internal
+    def task_puller(self, kill_event):
+        """Pull tasks from the incoming tasks zmq pipe onto the internal
         pending task queue
 
         Parameters:
@@ -251,7 +251,7 @@ class Interchange(object):
                 self.pending_task_queue.put(msg)
                 task_counter += 1
                 logger.debug("[TASK_PULL_THREAD] Fetched task:{}".format(task_counter))
-        logger.info("[TASK_PULL_THREAD] reached end of migrate_tasks_to_internal loop")
+        logger.info("[TASK_PULL_THREAD] reached end of task_puller loop")
 
     def _create_monitoring_channel(self):
         if self.hub_address and self.hub_port:
@@ -354,7 +354,7 @@ class Interchange(object):
         count = 0
 
         self._kill_event = threading.Event()
-        self._task_puller_thread = threading.Thread(target=self.migrate_tasks_to_internal,
+        self._task_puller_thread = threading.Thread(target=self.task_puller,
                                                     args=(self._kill_event,),
                                                     name="Interchange-Task-Puller")
         self._task_puller_thread.start()
@@ -392,7 +392,7 @@ class Interchange(object):
                     except Exception:
                         logger.warning("[MAIN] Got Exception reading registration message from manager: {}".format(
                             manager), exc_info=True)
-                        logger.debug("[MAIN] Message :\n{}\n".format(message[0]))
+                        logger.debug("[MAIN] Message: \n{}\n".format(message[1]))
                     else:
                         # We set up an entry only if registration works correctly
                         self._ready_manager_queue[manager] = {'last_heartbeat': time.time(),
