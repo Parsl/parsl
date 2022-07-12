@@ -446,7 +446,11 @@ class MonitoringHub(RepresentationMixin):
             self.router_proc.join()
             self.logger.debug("Finished waiting for router termination")
             if len(exception_msgs) == 0:
+                self.logger.debug("Sending STOP to DBM")
                 self.priority_msgs.put(("STOP", 0))
+            else:
+                self.logger.debug("Not sending STOP to DBM, because there were DBM exceptions")
+            self.logger.debug("Waiting for DB termination")
             self.dbm_proc.join()
             self.logger.debug("Finished waiting for DBM termination")
 
@@ -660,21 +664,22 @@ class MonitoringRouter:
 
                         assert isinstance(msg, tuple), "IC Channel expects only tuples, got {}".format(msg)
                         assert len(msg) >= 1, "IC Channel expects tuples of length at least 1, got {}".format(msg)
-                        if msg[0] == MessageType.NODE_INFO:
-                            assert len(msg) == 2, "IC Channel expects NODE_INFO tuples of length 2, got {}".format(msg)
-                            msg[1]['run_id'] = self.run_id
+                        assert len(msg) == 2, "IC Channel expects message tuples of exactly length 2, got {}".format(msg)
 
-                            # ((tag, dict), addr)
-                            node_msg = (msg, 0)
-                            node_msgs.put(node_msg)
+                        msg_0: AddressedMonitoringMessage
+                        msg_0 = (msg, 0)
+
+                        if msg[0] == MessageType.NODE_INFO:
+                            msg[1]['run_id'] = self.run_id
+                            node_msgs.put(msg_0)
                         elif msg[0] == MessageType.RESOURCE_INFO:
-                            resource_msgs.put(cast(AddressedMonitoringMessage, (msg, 0)))
+                            resource_msgs.put(msg_0)
                         elif msg[0] == MessageType.BLOCK_INFO:
-                            block_msgs.put(cast(AddressedMonitoringMessage, (msg, 0)))
+                            block_msgs.put(msg_0)
                         elif msg[0] == MessageType.TASK_INFO:
-                            priority_msgs.put((cast(TaggedMonitoringMessage, msg), 0))
+                            priority_msgs.put(msg_0)
                         elif msg[0] == MessageType.WORKFLOW_INFO:
-                            priority_msgs.put((cast(TaggedMonitoringMessage, msg), 0))
+                            priority_msgs.put(msg_0)
                             if 'exit_now' in msg[1] and msg[1]['exit_now']:
                                 router_keep_going = False
                         else:
