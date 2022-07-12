@@ -14,7 +14,6 @@
         <th>Status</th>
         <th>Runtime (s)</th>
         <th>Tasks</th>
-        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -29,9 +28,6 @@
              <span class="task task-complete">{{ w['tasks_completed_count'] }}</span>
              <span class="task task-failed">{{ w['tasks_failed_count'] }}</span>
 
-        </td>
-        <td>
-          <a href="workflow/{{ w['run_id'] }}/resource_usage"><span class="fas fa-chart-bar"></span></a>
         </td>
       </tr>
     {% endfor %}
