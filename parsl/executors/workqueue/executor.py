@@ -327,6 +327,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         self._port_mailbox = multiprocessing.Queue()
 
+        logger.warning("BODGE: delay here for hack around often observed futex race...")
+        time.sleep(15)
+        logger.warning("BODGE: delay finished")
+
         # Create a Process to perform WorkQueue submissions
         submit_process_kwargs = {"task_queue": self.task_queue,
                                  "launch_cmd": self.launch_cmd,
