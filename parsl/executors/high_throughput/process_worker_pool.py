@@ -233,11 +233,6 @@ class Manager(object):
         heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
         self.task_incoming.send(heartbeat)
         logger.debug("Sent heartbeat")
-        # used to log heartbeat return value, but it is always None -
-        # errors are reported as exceptions.
-        # "return code None" has repeatedly confused me over the years,
-        # because it isn't clear what the meaning is without reading
-        # docs.
 
     @wrap_with_logs
     def pull_tasks(self, kill_event):
@@ -383,7 +378,7 @@ class Manager(object):
 
     @wrap_with_logs
     def worker_watchdog(self, kill_event):
-        """ Keeps workers alive.
+        """Keeps workers alive.
 
         Parameters:
         -----------

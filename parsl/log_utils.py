@@ -18,8 +18,8 @@ from typing import Optional
 
 
 DEFAULT_FORMAT = (
-    "%(created)f %(asctime)s %(levelname)s %(processName)s-%(process)d "
-    "%(threadName)s-%(thread)d %(name)s:%(lineno)d %(funcName)s "
+    "%(created)f %(asctime)s %(processName)s-%(process)d "
+    "%(threadName)s-%(thread)d %(name)s:%(lineno)d %(funcName)s %(levelname)s: "
     "%(message)s"
 )
 
@@ -39,7 +39,8 @@ def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_st
          - None
     """
     if format_string is None:
-        format_string = "%(asctime)s %(name)s:%(lineno)d %(processName)s(%(process)d) %(threadName)s [%(levelname)s]  %(message)s"
+        # format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
+        format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)

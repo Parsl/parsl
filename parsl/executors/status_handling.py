@@ -185,7 +185,7 @@ class BlockProviderExecutor(ParslExecutor):
         launch_cmd = self._get_launch_command(block_id)
         job_id = self.provider.submit(launch_cmd, 1)
         if job_id:
-            logger.debug("Launched block {}->{}".format(block_id, job_id))
+            logger.debug(f"Launched block {block_id} on executor {self.label} with job ID {job_id}")
         else:
             raise ScalingFailed(self,
                                 "Attempt to provision nodes did not return a job ID")

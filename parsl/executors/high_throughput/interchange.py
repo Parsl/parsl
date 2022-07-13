@@ -418,7 +418,7 @@ class Interchange(object):
                     except Exception:
                         logger.warning("Got Exception reading registration message from manager: {}".format(
                             manager_id), exc_info=True)
-                        logger.debug("Message :\n{}\n".format(message[1]))
+                        logger.debug("Message: \n{}\n".format(message[1]))
                     else:
                         # We set up an entry only if registration works correctly
                         self._ready_managers[manager_id] = {'last_heartbeat': time.time(),

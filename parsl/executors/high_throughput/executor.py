@@ -679,7 +679,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                 block_info[b_id][1] = min(block_info[b_id][1], manager['idle_duration'])
 
             sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1][1], item[1][0]))
-            logger.debug(f"scale in selecting from {len(sorted_blocks)} blocks")
+            logger.debug(f"Scale in selecting from {len(sorted_blocks)} blocks")
             if force is True:
                 block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
             else:
@@ -692,14 +692,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                             block_ids_to_kill.append(x[0])
                             if len(block_ids_to_kill) == blocks:
                                 break
-                logger.debug("Selecting block ids to kill since they are idle: {}".format(
+                logger.debug("Selected idle block ids to kill: {}".format(
                     block_ids_to_kill))
                 if len(block_ids_to_kill) < blocks:
                     logger.warning(f"Could not find enough blocks to kill: wanted {blocks} but only selected {len(block_ids_to_kill)}")
-                    if sorted_blocks == []:
-                        logger.warning("sorted_blocks is empty")
-                    else:
-                        logger.warning(f"sorted_blocks: first {sorted_blocks[0]}, last {sorted_blocks[-1]}")
 
         # Hold the block
         for block_id in block_ids_to_kill:
