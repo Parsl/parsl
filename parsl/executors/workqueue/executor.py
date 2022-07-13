@@ -17,6 +17,7 @@ import os
 import socket
 import pickle
 import queue
+import time
 import inspect
 import shutil
 import itertools
@@ -301,6 +302,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         os.mkdir(self.wq_log_dir)
 
         logger.debug("Starting WorkQueueExectutor")
+
+        logger.warning("BODGE: delay here for hack around often observed futex race...")
+        time.sleep(15)
+        logger.warning("BODGE: delay finished")
 
         # Create a Process to perform WorkQueue submissions
         submit_process_kwargs = {"task_queue": self.task_queue,
