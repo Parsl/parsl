@@ -27,6 +27,7 @@ class CommandClient:
         self.port = None
         self.create_socket_and_bind()
         self._lock = threading.Lock()
+        self._my_thread = None
 
     def create_socket_and_bind(self):
         """ Creates socket and binds to a port.
@@ -51,6 +52,13 @@ class CommandClient:
         in ZMQ sockets reaching a broken state once there are ~10k tasks in flight.
         This issue can be magnified if each the serialized buffer itself is larger.
         """
+
+        if self._my_thread is None:
+            self._my_thread = threading.current_thread()
+        elif self._my_thread != threading.current_thread():
+            logger.warning(f"Command socket suspicious thread usage: {self._my_thread} vs {threading.current_thread()}")
+        # otherwise, _my_thread and current_thread match, which is ok and no need to log
+
         reply = '__PARSL_ZMQ_PIPES_MAGIC__'
         with self._lock:
             for _ in range(max_retries):
@@ -59,11 +67,12 @@ class CommandClient:
                     reply = self.zmq_socket.recv_pyobj()
                 except zmq.ZMQError:
                     logger.exception("Potential ZMQ REQ-REP deadlock caught")
-                    logger.info("Trying to reestablish context")
+                    logger.info("Trying to reestablish context after ZMQError")
                     self.zmq_socket.close()
                     self.context.destroy()
                     self.context = zmq.Context()
                     self.create_socket_and_bind()
+                    self._my_thread = None
                 else:
                     break
 
@@ -111,6 +120,7 @@ class TasksOutgoing:
         in ZMQ sockets reaching a broken state once there are ~10k tasks in flight.
         This issue can be magnified if each the serialized buffer itself is larger.
         """
+        logger.debug("Putting task to outgoing_q")
         timeout_ms = 1
         with self._lock:
             while True:
