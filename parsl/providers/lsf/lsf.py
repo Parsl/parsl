@@ -165,9 +165,11 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
             parts = line.split()
             if parts and parts[0] != 'JOBID':
                 job_id = parts[0]
-                state = translate_table.get(parts[2], JobState.UNKNOWN)
-                self.resources[job_id]['status'] = JobStatus(state)
-                jobs_missing.remove(job_id)
+                # the line can be uncompleted. len > 2 ensures safe indexing.
+                if len(parts) > 2:
+                    state = translate_table.get(parts[2], JobState.UNKNOWN)
+                    self.resources[job_id]['status'] = JobStatus(state)
+                    jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.

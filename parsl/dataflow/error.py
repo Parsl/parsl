@@ -11,11 +11,6 @@ class ConfigurationError(DataFlowException):
     """
 
 
-class DuplicateTaskError(DataFlowException):
-    """Raised by the DataFlowKernel when it finds that a job with the same task-id has been launched before.
-    """
-
-
 class BadCheckpoint(DataFlowException):
     """Error raised at the end of app execution due to missing output files.
 
