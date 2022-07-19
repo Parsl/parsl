@@ -23,7 +23,7 @@ from parsl.app.futures import DataFuture
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
-from parsl.dataflow.error import BadCheckpoint, ConfigurationError, DependencyError, DuplicateTaskError
+from parsl.dataflow.error import BadCheckpoint, ConfigurationError, DependencyError
 from parsl.dataflow.flow_control import FlowControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
@@ -886,11 +886,9 @@ class DataFlowKernel(object):
                     'kwargs': app_kwargs,
                     'app_fu': app_fu})
 
-        if task_id in self.tasks:
-            raise DuplicateTaskError(
-                "internal consistency error: Task {0} already exists in task list".format(task_id))
-        else:
-            self.tasks[task_id] = task_def
+        assert task_id not in self.tasks
+
+        self.tasks[task_id] = task_def
 
         # Get the list of dependencies for the task
         depends = self._gather_all_deps(app_args, app_kwargs)
@@ -1016,7 +1014,10 @@ class DataFlowKernel(object):
 
     def atexit_cleanup(self):
         if not self.cleanup_called:
+            logger.info("DFK cleanup because python process is exiting")
             self.cleanup()
+        else:
+            logger.info("python process is exiting, but DFK has already been cleaned up")
 
     def wait_for_current_tasks(self):
         """Waits for all tasks in the task list to be completed, by waiting for their
