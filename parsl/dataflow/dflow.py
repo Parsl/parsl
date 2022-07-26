@@ -23,7 +23,7 @@ from parsl.app.futures import DataFuture
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
-from parsl.dataflow.error import BadCheckpoint, ConfigurationError, DependencyError, DuplicateTaskError
+from parsl.dataflow.error import BadCheckpoint, ConfigurationError, DependencyError
 from parsl.dataflow.flow_control import FlowControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
@@ -243,9 +243,7 @@ class DataFlowKernel(object):
         return task_log_info
 
     def _count_deps(self, depends):
-        """Internal.
-
-        Count the number of unresolved futures in the list depends.
+        """Count the number of unresolved futures in the list depends.
         """
         count = 0
         for dep in depends:
@@ -497,38 +495,50 @@ class DataFlowKernel(object):
         ready to run - launch_if_ready will not incorrectly launch that
         task.
 
+        It is also not an error to call launch_if_ready on a task that has
+        already been launched - launch_if_ready will not re-launch that
+        task.
+
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
         """
-        task_id = task_record['id']
-        if self._count_deps(task_record['depends']) == 0:
+        exec_fu = None
 
-            # We can now launch *task*
-            new_args, kwargs, exceptions_tids = self.sanitize_and_wrap(task_record['args'],
-                                                                       task_record['kwargs'])
+        task_id = task_record['id']
+        with task_record['task_launch_lock']:
+
+            if task_record['status'] != States.pending:
+                logger.debug(f"Task {task_id} is not pending, so launch_if_ready skipping")
+                return
+
+            if self._count_deps(task_record['depends']) != 0:
+                logger.debug(f"Task {task_id} has outstanding dependencies, so launch_if_ready skipping")
+                return
+
+            # We can now launch the task or handle any dependency failures
+
+            new_args, kwargs, exceptions_tids = self._unwrap_futures(task_record['args'],
+                                                                     task_record['kwargs'])
             task_record['args'] = new_args
             task_record['kwargs'] = kwargs
+
             if not exceptions_tids:
                 # There are no dependency errors
-                exec_fu = None
-                # Acquire a lock, retest the state, launch
-                with task_record['task_launch_lock']:
-                    if task_record['status'] == States.pending:
-                        try:
-                            exec_fu = self.launch_task(
-                                task_record, task_record['func'], *new_args, **kwargs)
-                            assert isinstance(exec_fu, Future)
-                        except Exception as e:
-                            # task launched failed somehow. the execution might
-                            # have been launched and an exception raised after
-                            # that, though. that's hard to detect from here.
-                            # we don't attempt retries here. This is an error with submission
-                            # even though it might come from user code such as a plugged-in
-                            # executor or memoization hash function.
+                try:
+                    exec_fu = self.launch_task(
+                        task_record, task_record['func'], *new_args, **kwargs)
+                    assert isinstance(exec_fu, Future)
+                except Exception as e:
+                    # task launched failed somehow. the execution might
+                    # have been launched and an exception raised after
+                    # that, though. that's hard to detect from here.
+                    # we don't attempt retries here. This is an error with submission
+                    # even though it might come from user code such as a plugged-in
+                    # executor or memoization hash function.
 
-                            logger.debug("Got an exception launching task", exc_info=True)
-                            exec_fu = Future()
-                            exec_fu.set_exception(e)
+                    logger.debug("Got an exception launching task", exc_info=True)
+                    exec_fu = Future()
+                    exec_fu.set_exception(e)
             else:
                 logger.info(
                     "Task {} failed due to dependency failure".format(task_id))
@@ -541,19 +551,19 @@ class DataFlowKernel(object):
                 exec_fu.set_exception(DependencyError(exceptions_tids,
                                                       task_id))
 
-            if exec_fu:
-                assert isinstance(exec_fu, Future)
-                try:
-                    exec_fu.add_done_callback(partial(self.handle_exec_update, task_record))
-                except Exception:
-                    # this exception is ignored here because it is assumed that exception
-                    # comes from directly executing handle_exec_update (because exec_fu is
-                    # done already). If the callback executes later, then any exception
-                    # coming out of the callback will be ignored and not propate anywhere,
-                    # so this block attempts to keep the same behaviour here.
-                    logger.error("add_done_callback got an exception which will be ignored", exc_info=True)
+        if exec_fu:
+            assert isinstance(exec_fu, Future)
+            try:
+                exec_fu.add_done_callback(partial(self.handle_exec_update, task_record))
+            except Exception:
+                # this exception is ignored here because it is assumed that exception
+                # comes from directly executing handle_exec_update (because exec_fu is
+                # done already). If the callback executes later, then any exception
+                # coming out of the callback will be ignored and not propate anywhere,
+                # so this block attempts to keep the same behaviour here.
+                logger.error("add_done_callback got an exception which will be ignored", exc_info=True)
 
-                task_record['exec_fu'] = exec_fu
+            task_record['exec_fu'] = exec_fu
 
     def launch_task(self, task_record, executable, *args, **kwargs):
         """Handle the actual submission of the task to the executor layer.
@@ -719,7 +729,7 @@ class DataFlowKernel(object):
 
         return depends
 
-    def sanitize_and_wrap(self, args, kwargs):
+    def _unwrap_futures(self, args, kwargs):
         """This function should be called when all dependencies have completed.
 
         It will rewrite the arguments for that task, replacing each Future
@@ -886,11 +896,9 @@ class DataFlowKernel(object):
                     'kwargs': app_kwargs,
                     'app_fu': app_fu})
 
-        if task_id in self.tasks:
-            raise DuplicateTaskError(
-                "internal consistency error: Task {0} already exists in task list".format(task_id))
-        else:
-            self.tasks[task_id] = task_def
+        assert task_id not in self.tasks
+
+        self.tasks[task_id] = task_def
 
         # Get the list of dependencies for the task
         depends = self._gather_all_deps(app_args, app_kwargs)
@@ -1016,7 +1024,10 @@ class DataFlowKernel(object):
 
     def atexit_cleanup(self):
         if not self.cleanup_called:
+            logger.info("DFK cleanup because python process is exiting")
             self.cleanup()
+        else:
+            logger.info("python process is exiting, but DFK has already been cleaned up")
 
     def wait_for_current_tasks(self):
         """Waits for all tasks in the task list to be completed, by waiting for their

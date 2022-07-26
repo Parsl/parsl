@@ -54,7 +54,6 @@ class FlowControl(object):
              - threshold (int) : Tasks after which the callback is triggered
              - interval (int) : seconds after which timer expires
         """
-        self.dfk = dfk
         self.threshold = threshold
         self.interval = interval
         self.cb_args = args
