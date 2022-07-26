@@ -253,8 +253,8 @@ class Manager(object):
             ready_worker_count = self.ready_worker_queue.qsize()
             pending_task_count = self.pending_task_queue.qsize()
 
-            logger.debug("[TASK_PULL_THREAD] ready workers:{}, pending tasks:{}".format(ready_worker_count,
-                                                                                        pending_task_count))
+            logger.debug("[TASK_PULL_THREAD] ready workers: {}, pending tasks: {}".format(ready_worker_count,
+                                                                                          pending_task_count))
 
             if time.time() > last_beat + self.heartbeat_period:
                 self.heartbeat_to_incoming()
