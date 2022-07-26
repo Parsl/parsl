@@ -1,5 +1,4 @@
 import logging
-import sys
 import threading
 import time
 
@@ -197,37 +196,3 @@ class Timer(object):
         """
         self._kill_event.set()
         self._thread.join()
-
-
-if __name__ == "__main__":
-
-    def foo():
-        print("Callback made at :", time.time())
-
-    timer = Timer(foo)
-
-    time.sleep(60)
-    timer.close()
-    exit(0)
-
-    print("This is broken")
-
-    def cback(*args):
-        print("*" * 40)
-        print("Callback at {0} with args : {1}".format(time.time(), args))
-        print("*" * 40)
-
-    fc = FlowControl(cback)
-
-    print("Testing")
-    print("Press E(Enter) to create and event, X(Enter) to exit")
-    while True:
-        x = sys.stdin.read(1)
-        if x.lower() == 'e':
-            print("Event")
-            fc.notify()
-        elif x.lower() == 'x':
-            print("Exiting ...")
-            break
-        else:
-            print("Continuing.. got[%s]", x)
