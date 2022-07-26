@@ -435,7 +435,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Create a Future object and have it be mapped from the task ID in the tasks dictionary
         fu = Future()
         fu.parsl_executor_task_id = task_id
+        logger.debug("Getting tasks_lock to set WQ-level task entry")
         with self.tasks_lock:
+            logger.debug("Got tasks_lock to set WQ-level task entry")
             self.tasks[str(task_id)] = fu
 
         logger.debug("Creating task {} for function {} with args {}".format(task_id, func, args))
@@ -656,16 +658,21 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the Work Queue system submission.
         """
+        logger.debug("Work Queue shutdown started")
         self.should_stop.value = True
 
         # Remove the workers that are still going
         kill_ids = [self.blocks[block] for block in self.blocks.keys()]
         if self.provider:
+            logger.debug("Cancelling blocks")
             self.provider.cancel(kill_ids)
 
+        logger.debug("Joining on submit process")
         self.submit_process.join()
+        logger.debug("Joining on collector thread")
         self.collector_thread.join()
 
+        logger.debug("Work Queue shutdown completed")
         return True
 
     def scaling_enabled(self):
@@ -708,7 +715,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     # work queue modes, such as resource exhaustion.
                     future.set_exception(WorkQueueTaskFailure(task_report.reason, task_report.result))
         finally:
+            logger.debug("Marking all outstanding tasks as failed")
+            logger.debug("Acquiring tasks_lock")
             with self.tasks_lock:
+                logger.debug("Acquired tasks_lock")
                 # set exception for tasks waiting for results that work queue did not execute
                 for fu in self.tasks.values():
                     if not fu.done():
