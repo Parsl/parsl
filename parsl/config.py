@@ -83,7 +83,7 @@ class Config(RepresentationMixin):
                  max_idletime: float = 120.0,
                  monitoring: Optional[MonitoringHub] = None,
                  usage_tracking: bool = False,
-                 initialize_logging: bool = True):
+                 initialize_logging: bool = True) -> None:
         if executors is None:
             executors = [ThreadPoolExecutor()]
         self.executors = executors
