@@ -327,6 +327,7 @@ class Manager(object):
 
         while not kill_event.is_set():
             try:
+                # TODO: is this timeout= parameter in seconds? yes. according to docs.
                 logger.debug("Starting pending_result_queue get")
                 r = self.pending_result_queue.get(block=True, timeout=push_poll_period)
                 logger.debug("Got a result item")
@@ -336,6 +337,11 @@ class Manager(object):
             except Exception as e:
                 logger.exception("Got an exception: {}".format(e))
 
+            # this will send a heartbeat even if results have been sent within the
+            # heartbeat_period.
+            # TODO: check at other end of connection if it is OK to omit a heartbeat
+            # if a result has been sent instead, and if so, reset the heartbeat period
+            # when sending a result
             if time.time() > last_result_beat + self.heartbeat_period:
                 logger.info(f"Sending heartbeat via results connection: last_result_beat={last_result_beat} heartbeat_period={self.heartbeat_period} seconds")
                 last_result_beat = time.time()
