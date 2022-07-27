@@ -123,7 +123,7 @@ class FilesystemRadio(MonitoringRadio):
 
         tmp_filename = f"{self.tmp_path}/{unique_id}"
         new_filename = f"{self.new_path}/{unique_id}"
-        buffer = ((MessageType.RESOURCE_INFO, message), "NA")
+        buffer = (message, "NA")
 
         # this will write the message out then atomically
         # move it into new/, so that a partially written
@@ -166,7 +166,7 @@ class HTEXRadio(MonitoringRadio):
         import parsl.executors.high_throughput.monitoring_info
 
         try:
-            buffer = (MessageType.RESOURCE_INFO, message)
+            buffer = message
         except Exception:
             logging.exception("Exception during pickling", exc_info=True)
             return
@@ -651,7 +651,7 @@ class MonitoringRouter:
                     data, addr = self.sock.recvfrom(2048)
                     resource_msg = pickle.loads(data)
                     self.logger.debug("Got UDP Message from {}: {}".format(addr, resource_msg))
-                    resource_msgs.put(((MessageType.RESOURCE_INFO, resource_msg), addr))
+                    resource_msgs.put((resource_msg, addr))
                 except socket.timeout:
                     pass
 
@@ -788,15 +788,16 @@ def send_first_last_message(try_id: int,
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
-    msg = {'run_id': run_id,
-           'try_id': try_id,
-           'task_id': task_id,
-           'hostname': platform.node(),
-           'block_id': os.environ.get('PARSL_WORKER_BLOCK_ID'),
-           'first_msg': not is_last,
-           'last_msg': is_last,
-           'timestamp': datetime.datetime.now()
-    }
+    msg = (MessageType.RESOURCE_INFO,
+           {'run_id': run_id,
+            'try_id': try_id,
+            'task_id': task_id,
+            'hostname': platform.node(),
+            'block_id': os.environ.get('PARSL_WORKER_BLOCK_ID'),
+            'first_msg': not is_last,
+            'last_msg': is_last,
+            'timestamp': datetime.datetime.now()
+    })
     radio.send(msg)
     return
 
@@ -910,7 +911,7 @@ def monitor(pid: int,
             d['psutil_process_time_user'] += total_children_user_time
             d['psutil_process_time_system'] += total_children_system_time
             logging.debug("sending message")
-            radio.send(d)
+            radio.send((MessageType.RESOURCE_INFO, d))
         except Exception:
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
 

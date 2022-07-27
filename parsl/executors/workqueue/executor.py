@@ -297,7 +297,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         os.mkdir(self.package_dir)
         os.mkdir(self.wq_log_dir)
 
-        logger.debug("Starting WorkQueueExectutor")
+        logger.debug("Starting WorkQueueExecutor")
 
         # Create a Process to perform WorkQueue submissions
         submit_process_kwargs = {"task_queue": self.task_queue,
