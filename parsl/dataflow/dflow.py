@@ -1327,7 +1327,7 @@ class DataFlowKernelLoader(object):
         return cls._dfk
 
     @classmethod
-    def wait_for_current_tasks(cls):
+    def wait_for_current_tasks(cls) -> None:
         """Waits for all tasks in the task list to be completed, by waiting for their
         AppFuture to be completed. This method will not necessarily wait for any tasks
         added after cleanup has started such as data stageout.
