@@ -1307,7 +1307,7 @@ class DataFlowKernelLoader(object):
 
     @classmethod
     @typeguard.typechecked
-    def load(cls, config: Optional[Config] = None):
+    def load(cls, config: Optional[Config] = None) -> DataFlowKernel:
         """Load a DataFlowKernel.
 
         Args:
