@@ -26,6 +26,7 @@ def cli_run():
     with app.app_context():
         db.create_all()
         from parsl.monitoring.visualization import views
+        views.dummy = False
         app.run(host=args.listen, port=args.port, debug=args.debug)
 
 

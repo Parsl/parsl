@@ -301,7 +301,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         os.mkdir(self.package_dir)
         os.mkdir(self.wq_log_dir)
 
-        logger.debug("Starting WorkQueueExectutor")
+        logger.debug("Starting WorkQueueExecutor")
 
         logger.warning("BODGE: delay here for hack around often observed futex race...")
         time.sleep(15)

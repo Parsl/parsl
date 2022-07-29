@@ -415,7 +415,6 @@ class MonitoringHub(RepresentationMixin):
 
     # TODO: tighten the Any message format
     def send(self, mtype: MessageType, message: Any) -> None:
-        # this was crazy big
         self.logger.debug("Sending message type {}".format(mtype))
         try:
             self._dfk_channel.send_pyobj((mtype, message))

@@ -244,7 +244,7 @@ class Manager(object):
         kill_event : threading.Event
               Event to let the thread know when it is time to die.
         """
-        logger.info("[TASK PULL THREAD] starting")
+        logger.info("starting")
         poller = zmq.Poller()
         poller.register(self.task_incoming, zmq.POLLIN)
 
@@ -263,15 +263,15 @@ class Manager(object):
             ready_worker_count = self.ready_worker_queue.qsize()
             pending_task_count = self.pending_task_queue.qsize()
 
-            logger.debug("[TASK_PULL_THREAD] ready workers: {}, pending tasks: {}".format(ready_worker_count,
-                                                                                          pending_task_count))
+            logger.debug("ready workers: {}, pending tasks: {}".format(ready_worker_count,
+                                                                       pending_task_count))
 
             if time.time() > last_beat + self.heartbeat_period:
                 self.heartbeat_to_incoming()
                 last_beat = time.time()
 
             if pending_task_count < self.max_queue_size and ready_worker_count > 0:
-                logger.debug("[TASK_PULL_THREAD] Requesting tasks: {}".format(ready_worker_count))
+                logger.debug("Requesting tasks: {}".format(ready_worker_count))
                 msg = ((ready_worker_count).to_bytes(4, "little"))
                 self.task_incoming.send(msg)
 
@@ -285,7 +285,7 @@ class Manager(object):
                 logger.debug("Updating time of last heartbeat from interchange at {}".format(last_interchange_contact))
 
                 if tasks == 'STOP':
-                    logger.critical("[TASK_PULL_THREAD] Received stop request")
+                    logger.critical("Received stop request")
                     kill_event.set()
                     break
 
@@ -298,11 +298,11 @@ class Manager(object):
 
                     for task in tasks:
                         self.pending_task_queue.put(task)
-                        # logger.debug("[TASK_PULL_THREAD] Ready tasks: {}".format(
+                        # logger.debug("Ready tasks: {}".format(
                         #    [i['task_id'] for i in self.pending_task_queue]))
 
             else:
-                logger.debug("[TASK_PULL_THREAD] No incoming tasks")
+                logger.debug("No incoming tasks")
                 # Limit poll duration to heartbeat_period
                 # heartbeat_period is in s vs poll_timer in ms
                 if not poll_timer:
@@ -311,9 +311,9 @@ class Manager(object):
 
                 # Only check if no messages were received.
                 if time.time() > last_interchange_contact + self.heartbeat_threshold:
-                    logger.critical("[TASK_PULL_THREAD] Missing contact with interchange beyond heartbeat_threshold")
+                    logger.critical("Missing contact with interchange beyond heartbeat_threshold")
                     kill_event.set()
-                    logger.critical("[TASK_PULL_THREAD] Exiting")
+                    logger.critical("Exiting")
                     break
 
     @wrap_with_logs
@@ -328,13 +328,11 @@ class Manager(object):
 
         logger.debug("Starting result push thread")
 
-        # push_poll_period is in s
-
         push_poll_period = max(10, self.poll_period) / 1000
         # push_poll_period must be at least 10 ms [BENC: why? and why does
         # this one have more of a restriction than any of the other timing
         # parameters? That max statement enforces that. but why enforce it vs other timings?]
-        logger.debug("push poll period: {} seconds".format(push_poll_period))
+        logger.debug("push poll period: {}".format(push_poll_period))
 
         last_beat = time.time()
         last_result_beat = time.time()
@@ -386,25 +384,25 @@ class Manager(object):
               Event to let the thread know when it is time to die.
         """
 
-        logger.debug("[WORKER_WATCHDOG_THREAD] Starting thread")
+        logger.debug("Starting worker watchdog")
 
         while not kill_event.is_set():
             logger.debug("[WORKER_WATCHDOG_THREAD] Loop")
             for worker_id, p in self.procs.items():
                 if not p.is_alive():
-                    logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has died".format(worker_id))
+                    logger.info("Worker {} has died".format(worker_id))
                     try:
                         task = self._tasks_in_progress.pop(worker_id)
-                        logger.info("[WORKER_WATCHDOG_THREAD] Worker {} was busy when it died".format(worker_id))
+                        logger.info("Worker {} was busy when it died".format(worker_id))
                         try:
                             raise WorkerLost(worker_id, platform.node())
                         except Exception:
-                            logger.info("[WORKER_WATCHDOG_THREAD] Putting exception for task {} in the pending result queue".format(task['task_id']))
+                            logger.info("Putting exception for task {} in the pending result queue".format(task['task_id']))
                             result_package = {'type': 'result', 'task_id': task['task_id'], 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
                             pkl_package = pickle.dumps(result_package)
                             self.pending_result_queue.put(pkl_package)
                     except KeyError:
-                        logger.info("[WORKER_WATCHDOG_THREAD] Worker {} was not busy when it died".format(worker_id))
+                        logger.info("Worker {} was not busy when it died".format(worker_id))
 
                     p = mpProcess(target=worker, args=(worker_id,
                                                        self.uid,
@@ -416,13 +414,13 @@ class Manager(object):
                                                        self.cpu_affinity
                                                  ), name="HTEX-Worker-{}".format(worker_id))
                     self.procs[worker_id] = p
-                    logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has been restarted".format(worker_id))
+                    logger.info("Worker {} has been restarted".format(worker_id))
                 else:
-                    logger.info("[WORKER_WATCHDOG_THREAD] Worker {} is alive".format(worker_id))
+                    logger.info("Worker {} is alive".format(worker_id))
                 # time.sleep(self.poll_period) # is this seconds (like sleep) or ms (like self.poll_period)
                 time.sleep(30)  # LSST specific timing
 
-        logger.critical("[WORKER_WATCHDOG_THREAD] Exiting")
+        logger.critical("Exiting")
 
     def start(self):
         """ Start the worker processes.
@@ -468,7 +466,7 @@ class Manager(object):
         # TODO : Add mechanism in this loop to stop the worker pool
         # This might need a multiprocessing event to signal back.
         self._kill_event.wait()
-        logger.critical("[MAIN] Received kill event, terminating worker processes")
+        logger.critical("Received kill event, terminating worker processes")
 
         self._task_puller_thread.join()
         self._result_pusher_thread.join()

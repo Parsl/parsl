@@ -43,6 +43,9 @@ def sleeper(t):
     return random.randint(0, 10000)
 
 
+# see issue #1885 for details of failures of this test.
+# at the time of issue #1885 this test was failing frequently
+# in CI.
 @pytest.mark.local
 def test_scale_out():
     dfk = parsl.dfk()

@@ -255,7 +255,7 @@ class Interchange(object):
                 kill_event.set()
                 break
             else:
-                logger.debug("[TASK_PULL_THREAD] putting message onto pending_task_queue")
+                logger.debug("putting message onto pending_task_queue")
                 self.pending_task_queue.put(msg)
                 task_counter += 1
                 logger.debug("Fetched task:{}".format(task_counter))
@@ -349,7 +349,7 @@ class Interchange(object):
                 self.command_channel.send_pyobj(reply)
 
             except zmq.Again:
-                logger.debug("is alive")
+                logger.debug("Command thread is alive")
                 continue
 
     @wrap_with_logs
