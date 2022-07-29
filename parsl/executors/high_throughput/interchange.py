@@ -379,7 +379,7 @@ class Interchange(object):
 
             # Listen for requests for work
             if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
-                logger.debug("[MAIN] starting task_outgoing section")
+                logger.debug("starting task_outgoing section")
                 message = self.task_outgoing.recv_multipart()
                 manager = message[0]
 
@@ -390,9 +390,9 @@ class Interchange(object):
                         msg = json.loads(message[1].decode('utf-8'))
                         reg_flag = True
                     except Exception:
-                        logger.warning("[MAIN] Got Exception reading registration message from manager: {}".format(
+                        logger.warning("Got Exception reading registration message from manager: {}".format(
                             manager), exc_info=True)
-                        logger.debug("[MAIN] Message: \n{}\n".format(message[1]))
+                        logger.debug("Message: \n{}\n".format(message[1]))
                     else:
                         # We set up an entry only if registration works correctly
                         self._ready_manager_queue[manager] = {'last_heartbeat': time.time(),
@@ -405,14 +405,14 @@ class Interchange(object):
                                                               'tasks': []}
                     if reg_flag is True:
                         interesting_managers.add(manager)
-                        logger.info("[MAIN] Adding manager: {} to ready queue".format(manager))
+                        logger.info("Adding manager: {} to ready queue".format(manager))
                         self._ready_manager_queue[manager].update(msg)
-                        logger.info("[MAIN] Registration info for manager {}: {}".format(manager, msg))
+                        logger.info("Registration info for manager {}: {}".format(manager, msg))
                         self._send_monitoring_info(hub_channel, manager)
 
                         if (msg['python_v'].rsplit(".", 1)[0] != self.current_platform['python_v'].rsplit(".", 1)[0] or
                             msg['parsl_v'] != self.current_platform['parsl_v']):
-                            logger.warning("[MAIN] Manager {} has incompatible version info with the interchange".format(manager))
+                            logger.warning("Manager {} has incompatible version info with the interchange".format(manager))
                             logger.debug("Setting kill event")
                             self._kill_event.set()
                             e = VersionMismatch("py.v={} parsl.v={}".format(self.current_platform['python_v'].rsplit(".", 1)[0],
@@ -423,27 +423,27 @@ class Interchange(object):
                             result_package = {'type': 'result', 'task_id': -1, 'exception': serialize_object(e)}
                             pkl_package = pickle.dumps(result_package)
                             self.results_outgoing.send(pkl_package)
-                            logger.warning("[MAIN] Sent failure reports, unregistering manager")
+                            logger.warning("Sent failure reports, unregistering manager")
                         else:
-                            logger.info("[MAIN] Manager {} has compatible Parsl version {}".format(manager, msg['parsl_v']))
-                            logger.info("[MAIN] Manager {} has compatible Python version {}".format(manager,
-                                                                                                    msg['python_v'].rsplit(".", 1)[0]))
+                            logger.info("Manager {} has compatible Parsl version {}".format(manager, msg['parsl_v']))
+                            logger.info("Manager {} has compatible Python version {}".format(manager,
+                                                                                             msg['python_v'].rsplit(".", 1)[0]))
                     else:
                         # Registration has failed.
-                        logger.debug("[MAIN] Suppressing bad registration from manager:{}".format(
+                        logger.debug("Suppressing bad registration from manager:{}".format(
                             manager))
 
                 else:
                     tasks_requested = int.from_bytes(message[1], "little")
                     self._ready_manager_queue[manager]['last_heartbeat'] = time.time()
                     if tasks_requested == HEARTBEAT_CODE:
-                        logger.debug("[MAIN] Manager {} sent heartbeat via tasks connection".format(manager))
+                        logger.debug("Manager {} sent heartbeat via tasks connection".format(manager))
                         self.task_outgoing.send_multipart([manager, b'', PKL_HEARTBEAT_CODE])
                     else:
-                        logger.debug("[MAIN] Manager {} requested {} tasks".format(manager, tasks_requested))
+                        logger.debug("Manager {} requested {} tasks".format(manager, tasks_requested))
                         self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
                         interesting_managers.add(manager)
-                logger.debug("[MAIN] leaving task_outgoing section")
+                logger.debug("leaving task_outgoing section")
 
             # If we had received any requests, check if there are tasks that could be passed
 
@@ -471,27 +471,27 @@ class Interchange(object):
                             self._ready_manager_queue[manager]['free_capacity'] -= task_count
                             self._ready_manager_queue[manager]['tasks'].extend(tids)
                             self._ready_manager_queue[manager]['idle_since'] = None
-                            logger.debug("[MAIN] Sent tasks: {} to manager {}".format(tids, manager))
+                            logger.debug("Sent tasks: {} to manager {}".format(tids, manager))
                             if self._ready_manager_queue[manager]['free_capacity'] > 0:
-                                logger.debug("[MAIN] Manager {} has free_capacity {}".format(manager, self._ready_manager_queue[manager]['free_capacity']))
+                                logger.debug("Manager {} has free_capacity {}".format(manager, self._ready_manager_queue[manager]['free_capacity']))
                                 # ... so keep it in the interesting_managers list
                             else:
-                                logger.debug("[MAIN] Manager {} is now saturated".format(manager))
+                                logger.debug("Manager {} is now saturated".format(manager))
                                 interesting_managers.remove(manager)
                     else:
                         interesting_managers.remove(manager)
                         # logger.debug("Nothing to send to manager {}".format(manager))
-                logger.debug("[MAIN] leaving _ready_manager_queue section, with {} managers still interesting".format(len(interesting_managers)))
+                logger.debug("leaving _ready_manager_queue section, with {} managers still interesting".format(len(interesting_managers)))
             else:
-                logger.debug("[MAIN] either no interesting managers or no tasks, so skipping manager pass")
+                logger.debug("either no interesting managers or no tasks, so skipping manager pass")
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
-                logger.debug("[MAIN] entering results_incoming section")
+                logger.debug("entering results_incoming section")
                 manager, *all_messages = self.results_incoming.recv_multipart()
                 if manager not in self._ready_manager_queue:
-                    logger.warning("[MAIN] Received a result from a un-registered manager: {}".format(manager))
+                    logger.warning("Received a result from a un-registered manager: {}".format(manager))
                 else:
-                    logger.debug("[MAIN] Got {} result items in batch".format(len(all_messages)))
+                    logger.debug("Got {} result items in batch".format(len(all_messages)))
 
                     b_messages = []
 
@@ -503,7 +503,7 @@ class Interchange(object):
                         elif r['type'] == 'monitoring':
                             hub_channel.send_pyobj(r['payload'])
                         elif r['type'] == 'heartbeat':
-                            logger.debug("[MAIN] Manager {} sent heartbeat via results connection".format(manager))
+                            logger.debug("Manager {} sent heartbeat via results connection".format(manager))
                             b_messages.append((message, r))
                         else:
                             logger.error("Interchange discarding result_queue message of unknown type: {}".format(r['type']))
@@ -527,16 +527,16 @@ class Interchange(object):
                     if b_messages_to_send:
                         self.results_outgoing.send_multipart(b_messages_to_send)
 
-                    logger.debug("[MAIN] Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
+                    logger.debug("Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
                     if len(self._ready_manager_queue[manager]['tasks']) == 0 and self._ready_manager_queue[manager]['idle_since'] is None:
                         self._ready_manager_queue[manager]['idle_since'] = time.time()
-                logger.debug("[MAIN] leaving results_incoming section")
+                logger.debug("leaving results_incoming section")
 
             bad_managers = [manager for manager in self._ready_manager_queue if
                             time.time() - self._ready_manager_queue[manager]['last_heartbeat'] > self.heartbeat_threshold]
             for manager in bad_managers:
-                logger.debug("[MAIN] Last: {} Current: {}".format(self._ready_manager_queue[manager]['last_heartbeat'], time.time()))
-                logger.warning("[MAIN] Too many heartbeats missed for manager {}".format(manager))
+                logger.debug("Last: {} Current: {}".format(self._ready_manager_queue[manager]['last_heartbeat'], time.time()))
+                logger.warning("Too many heartbeats missed for manager {}".format(manager))
                 if self._ready_manager_queue[manager]['active']:
                     self._ready_manager_queue[manager]['active'] = False
                     self._send_monitoring_info(hub_channel, manager)
@@ -548,7 +548,7 @@ class Interchange(object):
                         result_package = {'type': 'result', 'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
                         pkl_package = pickle.dumps(result_package)
                         self.results_outgoing.send(pkl_package)
-                        logger.warning("[MAIN] Sent failure reports, unregistering manager")
+                        logger.warning("Sent failure reports, unregistering manager")
                 self._ready_manager_queue.pop(manager, 'None')
                 if manager in interesting_managers:
                     interesting_managers.remove(manager)
