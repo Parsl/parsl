@@ -228,30 +228,30 @@ class Interchange(object):
         kill_event : threading.Event
               Event to let the thread know when it is time to die.
         """
-        logger.info("[TASK_PULL_THREAD] Starting")
+        logger.info("Starting")
         task_counter = 0
         poller = zmq.Poller()
         poller.register(self.task_incoming, zmq.POLLIN)
 
         while not kill_event.is_set():
-            logger.debug("[TASK_PULL_THREAD] launching recv_pyobj")
+            logger.debug("launching recv_pyobj")
             try:
                 msg = self.task_incoming.recv_pyobj()
             except zmq.Again:
                 # We just timed out while attempting to receive
-                logger.debug("[TASK_PULL_THREAD] zmq.Again with {} tasks in internal queue".format(self.pending_task_queue.qsize()))
+                logger.debug("zmq.Again with {} tasks in internal queue".format(self.pending_task_queue.qsize()))
                 continue
 
             if msg == 'STOP':
-                logger.info("[TASK_PULL_THREAD] received STOP message, setting kill_event")
+                logger.info("received STOP message, setting kill_event")
                 kill_event.set()
                 break
             else:
-                logger.debug("[TASK_PULL_THREAD] putting message onto pending_task_queue")
+                logger.debug("putting message onto pending_task_queue")
                 self.pending_task_queue.put(msg)
                 task_counter += 1
-                logger.debug("[TASK_PULL_THREAD] Fetched task:{}".format(task_counter))
-        logger.info("[TASK_PULL_THREAD] reached end of task_puller loop")
+                logger.debug("Fetched task:{}".format(task_counter))
+        logger.info("reached end of task_puller loop")
 
     def _create_monitoring_channel(self):
         if self.hub_address and self.hub_port:
@@ -278,7 +278,7 @@ class Interchange(object):
     def _command_server(self, kill_event):
         """ Command server to run async command to the interchange
         """
-        logger.debug("[COMMAND] Command Server Starting")
+        logger.debug("Command Server Starting")
 
         # Need to create a new ZMQ socket for command server thread
         hub_channel = self._create_monitoring_channel()
@@ -286,7 +286,7 @@ class Interchange(object):
         while not kill_event.is_set():
             try:
                 command_req = self.command_channel.recv_pyobj()
-                logger.debug("[COMMAND] Received command request: {}".format(command_req))
+                logger.debug("Received command request: {}".format(command_req))
                 if command_req == "OUTSTANDING_C":
                     outstanding = self.pending_task_queue.qsize()
                     for manager in self._ready_manager_queue:
@@ -316,7 +316,7 @@ class Interchange(object):
                 elif command_req.startswith("HOLD_WORKER"):
                     cmd, s_manager = command_req.split(';')
                     manager = s_manager.encode('utf-8')
-                    logger.info("[CMD] Received HOLD_WORKER for {}".format(manager))
+                    logger.info("Received HOLD_WORKER for {}".format(manager))
                     if manager in self._ready_manager_queue:
                         self._ready_manager_queue[manager]['active'] = False
                         reply = True
@@ -325,18 +325,18 @@ class Interchange(object):
                         reply = False
 
                 elif command_req == "SHUTDOWN":
-                    logger.info("[CMD] Received SHUTDOWN command")
+                    logger.info("Received SHUTDOWN command")
                     kill_event.set()
                     reply = True
 
                 else:
                     reply = None
 
-                logger.debug("[COMMAND] Reply: {}".format(reply))
+                logger.debug("Reply: {}".format(reply))
                 self.command_channel.send_pyobj(reply)
 
             except zmq.Again:
-                logger.debug("[COMMAND] is alive")
+                logger.debug("Command thread is alive")
                 continue
 
     @wrap_with_logs
