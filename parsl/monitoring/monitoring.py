@@ -123,7 +123,7 @@ class FilesystemRadio(MonitoringRadio):
 
         tmp_filename = f"{self.tmp_path}/{unique_id}"
         new_filename = f"{self.new_path}/{unique_id}"
-        buffer = ((MessageType.RESOURCE_INFO, message), "NA")
+        buffer = (message, "NA")
 
         # this will write the message out then atomically
         # move it into new/, so that a partially written
@@ -166,7 +166,7 @@ class HTEXRadio(MonitoringRadio):
         import parsl.executors.high_throughput.monitoring_info
 
         try:
-            buffer = (MessageType.RESOURCE_INFO, message)
+            buffer = message
         except Exception:
             logging.exception("Exception during pickling", exc_info=True)
             return
@@ -651,7 +651,7 @@ class MonitoringRouter:
                     data, addr = self.sock.recvfrom(2048)
                     resource_msg = pickle.loads(data)
                     self.logger.debug("Got UDP Message from {}: {}".format(addr, resource_msg))
-                    resource_msgs.put(((MessageType.RESOURCE_INFO, resource_msg), addr))
+                    resource_msgs.put((resource_msg, addr))
                 except socket.timeout:
                     pass
 
@@ -788,15 +788,16 @@ def send_first_last_message(try_id: int,
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
-    msg = {'run_id': run_id,
-           'try_id': try_id,
-           'task_id': task_id,
-           'hostname': platform.node(),
-           'block_id': os.environ.get('PARSL_WORKER_BLOCK_ID'),
-           'first_msg': not is_last,
-           'last_msg': is_last,
-           'timestamp': datetime.datetime.now()
-    }
+    msg = (MessageType.RESOURCE_INFO,
+           {'run_id': run_id,
+            'try_id': try_id,
+            'task_id': task_id,
+            'hostname': platform.node(),
+            'block_id': os.environ.get('PARSL_WORKER_BLOCK_ID'),
+            'first_msg': not is_last,
+            'last_msg': is_last,
+            'timestamp': datetime.datetime.now()
+    })
     radio.send(msg)
     return
 
@@ -852,69 +853,89 @@ def monitor(pid: int,
     children_user_time = {}  # type: Dict[int, float]
     children_system_time = {}  # type: Dict[int, float]
 
+    def accumulate_and_prepare() -> Dict[str, Any]:
+        d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
+        d["run_id"] = run_id
+        d["task_id"] = task_id
+        d["try_id"] = try_id
+        d['resource_monitoring_interval'] = sleep_dur
+        d['hostname'] = platform.node()
+        d['first_msg'] = False
+        d['last_msg'] = False
+        d['timestamp'] = datetime.datetime.now()
+
+        logging.debug("getting children")
+        children = pm.children(recursive=True)
+        logging.debug("got children")
+
+        d["psutil_cpu_count"] = psutil.cpu_count()
+        d['psutil_process_memory_virtual'] = pm.memory_info().vms
+        d['psutil_process_memory_resident'] = pm.memory_info().rss
+        d['psutil_process_time_user'] = pm.cpu_times().user
+        d['psutil_process_time_system'] = pm.cpu_times().system
+        d['psutil_process_children_count'] = len(children)
+        try:
+            d['psutil_process_disk_write'] = pm.io_counters().write_chars
+            d['psutil_process_disk_read'] = pm.io_counters().read_chars
+        except Exception:
+            # occasionally pid temp files that hold this information are unvailable to be read so set to zero
+            logging.exception("Exception reading IO counters for main process. Recorded IO usage may be incomplete", exc_info=True)
+            d['psutil_process_disk_write'] = 0
+            d['psutil_process_disk_read'] = 0
+        for child in children:
+            for k, v in child.as_dict(attrs=summable_values).items():
+                d['psutil_process_' + str(k)] += v
+            child_user_time = child.cpu_times().user
+            child_system_time = child.cpu_times().system
+            children_user_time[child.pid] = child_user_time
+            children_system_time[child.pid] = child_system_time
+            d['psutil_process_memory_virtual'] += child.memory_info().vms
+            d['psutil_process_memory_resident'] += child.memory_info().rss
+            try:
+                d['psutil_process_disk_write'] += child.io_counters().write_chars
+                d['psutil_process_disk_read'] += child.io_counters().read_chars
+            except Exception:
+                # occassionally pid temp files that hold this information are unvailable to be read so add zero
+                logging.exception("Exception reading IO counters for child {k}. Recorded IO usage may be incomplete".format(k=k), exc_info=True)
+                d['psutil_process_disk_write'] += 0
+                d['psutil_process_disk_read'] += 0
+        total_children_user_time = 0.0
+        for child_pid in children_user_time:
+            total_children_user_time += children_user_time[child_pid]
+        total_children_system_time = 0.0
+        for child_pid in children_system_time:
+            total_children_system_time += children_system_time[child_pid]
+        d['psutil_process_time_user'] += total_children_user_time
+        d['psutil_process_time_system'] += total_children_system_time
+        logging.debug("sending message")
+        return d
+
+    next_send = time.time()
+    accumulate_dur = 5.0  # TODO: make configurable?
+
     while not terminate_event.is_set():
         logging.debug("start of monitoring loop")
-
         try:
-            d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
-            d["run_id"] = run_id
-            d["task_id"] = task_id
-            d["try_id"] = try_id
-            d['resource_monitoring_interval'] = sleep_dur
-            d['hostname'] = platform.node()
-            d['first_msg'] = False
-            d['last_msg'] = False
-            d['timestamp'] = datetime.datetime.now()
-
-            logging.debug("getting children")
-            children = pm.children(recursive=True)
-            logging.debug("got children")
-
-            d["psutil_cpu_count"] = psutil.cpu_count()
-            d['psutil_process_memory_virtual'] = pm.memory_info().vms
-            d['psutil_process_memory_resident'] = pm.memory_info().rss
-            d['psutil_process_time_user'] = pm.cpu_times().user
-            d['psutil_process_time_system'] = pm.cpu_times().system
-            d['psutil_process_children_count'] = len(children)
-            try:
-                d['psutil_process_disk_write'] = pm.io_counters().write_bytes
-                d['psutil_process_disk_read'] = pm.io_counters().read_bytes
-            except Exception:
-                # occasionally pid temp files that hold this information are unvailable to be read so set to zero
-                logging.exception("Exception reading IO counters for main process. Recorded IO usage may be incomplete", exc_info=True)
-                d['psutil_process_disk_write'] = 0
-                d['psutil_process_disk_read'] = 0
-            for child in children:
-                for k, v in child.as_dict(attrs=summable_values).items():
-                    d['psutil_process_' + str(k)] += v
-                child_user_time = child.cpu_times().user
-                child_system_time = child.cpu_times().system
-                children_user_time[child.pid] = child_user_time
-                children_system_time[child.pid] = child_system_time
-                d['psutil_process_memory_virtual'] += child.memory_info().vms
-                d['psutil_process_memory_resident'] += child.memory_info().rss
-                try:
-                    d['psutil_process_disk_write'] += child.io_counters().write_bytes
-                    d['psutil_process_disk_read'] += child.io_counters().read_bytes
-                except Exception:
-                    # occassionally pid temp files that hold this information are unvailable to be read so add zero
-                    logging.exception("Exception reading IO counters for child {k}. Recorded IO usage may be incomplete".format(k=k), exc_info=True)
-                    d['psutil_process_disk_write'] += 0
-                    d['psutil_process_disk_read'] += 0
-            total_children_user_time = 0.0
-            for child_pid in children_user_time:
-                total_children_user_time += children_user_time[child_pid]
-            total_children_system_time = 0.0
-            for child_pid in children_system_time:
-                total_children_system_time += children_system_time[child_pid]
-            d['psutil_process_time_user'] += total_children_user_time
-            d['psutil_process_time_system'] += total_children_system_time
-            logging.debug("sending message")
-            radio.send(d)
+            d = accumulate_and_prepare()
+            if time.time() >= next_send:
+                logging.debug("Sending intermediate resource message")
+                radio.send((MessageType.RESOURCE_INFO, d))
+                next_send += sleep_dur
         except Exception:
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
-
         logging.debug("sleeping")
-        terminate_event.wait(timeout=sleep_dur)
 
+        # wait either until approx next send time, or the accumulation period
+        # so the accumulation period will not be completely precise.
+        # but before this, the sleep period was also not completely precise.
+        # with a minimum floor of 0 to not upset wait
+
+        terminate_event.wait(max(0, min(next_send - time.time(), accumulate_dur)))
+
+    logging.debug("Sending final resource message")
+    try:
+        d = accumulate_and_prepare()
+        radio.send((MessageType.RESOURCE_INFO, d))
+    except Exception:
+        logging.exception("Exception getting the resource usage. Not sending final usage to Hub", exc_info=True)
     logging.debug("End of monitoring helper")
