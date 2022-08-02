@@ -1,7 +1,7 @@
 import logging
 import typeguard
 
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Sequence
 
 from parsl.utils import RepresentationMixin
 from parsl.executors.base import ParslExecutor
@@ -23,7 +23,7 @@ class Config(RepresentationMixin):
         Default is [:class:`~parsl.executors.threads.ThreadPoolExecutor()`].
     app_cache : bool, optional
         Enable app caching. Default is True.
-    checkpoint_files : list of str, optional
+    checkpoint_files : sequence of str, optional
         List of paths to checkpoint files. See :func:`parsl.utils.get_all_checkpoints` and
         :func:`parsl.utils.get_last_checkpoint` for helpers. Default is None.
     checkpoint_mode : str, optional
@@ -71,7 +71,7 @@ class Config(RepresentationMixin):
     def __init__(self,
                  executors: Optional[List[ParslExecutor]] = None,
                  app_cache: bool = True,
-                 checkpoint_files: Optional[List[str]] = None,
+                 checkpoint_files: Optional[Sequence[str]] = None,
                  checkpoint_mode: Optional[str] = None,
                  checkpoint_period: Optional[str] = None,
                  garbage_collect: bool = True,
@@ -83,7 +83,7 @@ class Config(RepresentationMixin):
                  max_idletime: float = 120.0,
                  monitoring: Optional[MonitoringHub] = None,
                  usage_tracking: bool = False,
-                 initialize_logging: bool = True):
+                 initialize_logging: bool = True) -> None:
         if executors is None:
             executors = [ThreadPoolExecutor()]
         self.executors = executors
@@ -114,11 +114,11 @@ class Config(RepresentationMixin):
         self.monitoring = monitoring
 
     @property
-    def executors(self):
+    def executors(self) -> Sequence[ParslExecutor]:
         return self._executors
 
     @executors.setter
-    def executors(self, executors):
+    def executors(self, executors: Sequence[ParslExecutor]):
         labels = [e.label for e in executors]
         duplicates = [e for n, e in enumerate(labels) if e in labels[:n]]
         if len(duplicates) > 0:
