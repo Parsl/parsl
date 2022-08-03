@@ -177,8 +177,10 @@ class Memoizer(object):
             - hash (str) : A unique hash string
         """
         # Function name TODO: Add fn body later
+        logger.debug("make_hash beginning for task {t['id']}")
 
         t = []
+        logger.debug(f"initialised t, t={t}")
 
         # if kwargs contains an outputs parameter, that parameter is removed
         # and normalised differently - with output_ref set to True.
@@ -197,13 +199,19 @@ class Memoizer(object):
             outputs = task['kwargs']['outputs']
             del filtered_kw['outputs']
             t = t + [id_for_memo(outputs, output_ref=True)]   # TODO: use append?
+            logger.debug(f"added outputs {outputs}, t={t}")
 
         t = t + [id_for_memo(filtered_kw)]
-        t = t + [id_for_memo(task['func']),
-                 id_for_memo(task['args'])]
+        logger.debug(f"added filtered_kw {filtered_kw}, t={t}")
+        t = t + [id_for_memo(task['func'])]
+        logger.debug(f"added func {task['func']}, t={t}")
+        t = t + [id_for_memo(task['args'])]
+        logger.debug(f"added args {task['args']}, t={t}")
+        logger.debug(f"final t to create hash: t={t}")
 
         x = b''.join(t)
         hashedsum = hashlib.md5(x).hexdigest()
+        logger.debug(f"final hash {hashedsum} for t={t}")
         return hashedsum
 
     def check_memo(self, task):
