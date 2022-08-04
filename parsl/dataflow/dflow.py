@@ -1023,14 +1023,14 @@ class DataFlowKernel(object):
                 self.monitoring.send(MessageType.BLOCK_INFO, msg)
         self.flowcontrol.add_executors(executors)
 
-    def atexit_cleanup(self):
+    def atexit_cleanup(self) -> None:
         if not self.cleanup_called:
             logger.info("DFK cleanup because python process is exiting")
             self.cleanup()
         else:
             logger.info("python process is exiting, but DFK has already been cleaned up")
 
-    def wait_for_current_tasks(self):
+    def wait_for_current_tasks(self) -> None:
         """Waits for all tasks in the task list to be completed, by waiting for their
         AppFuture to be completed. This method will not necessarily wait for any tasks
         added after cleanup has started (such as data stageout?)
@@ -1054,7 +1054,7 @@ class DataFlowKernel(object):
         logger.info("All remaining tasks completed")
 
     @wrap_with_logs
-    def cleanup(self):
+    def cleanup(self) -> None:
         """DataFlowKernel cleanup.
 
         This involves releasing all resources explicitly.
