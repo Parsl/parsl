@@ -230,8 +230,6 @@ class Interchange(object):
         """
         logger.info("Starting")
         task_counter = 0
-        poller = zmq.Poller()
-        poller.register(self.task_incoming, zmq.POLLIN)
 
         while not kill_event.is_set():
             logger.debug("launching recv_pyobj")
