@@ -387,7 +387,7 @@ class Manager(object):
         logger.debug("Starting worker watchdog")
 
         while not kill_event.is_set():
-            logger.debug("[WORKER_WATCHDOG_THREAD] Loop")
+            logger.debug("Loop")
             for worker_id, p in self.procs.items():
                 if not p.is_alive():
                     logger.info("Worker {} has died".format(worker_id))

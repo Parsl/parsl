@@ -21,7 +21,6 @@ extras_require = {
     'kubernetes' : ['kubernetes'],
     'oauth_ssh' : ['oauth-ssh>=0.9'],
     'extreme_scale' : ['mpi4py'],
-    'dnpc': ['matplotlib'],
     'docs' : ['nbsphinx', 'sphinx_rtd_theme', 'ipython'],
     'google_cloud' : ['google-auth', 'google-api-python-client'],
     'gssapi' : ['python-gssapi'],
