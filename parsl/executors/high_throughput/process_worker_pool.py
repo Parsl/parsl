@@ -394,7 +394,7 @@ class Manager(object):
                                                  ), name="HTEX-Worker-{}".format(worker_id))
                     self.procs[worker_id] = p
                     logger.info("Worker {} has been restarted".format(worker_id))
-                time.sleep(self.poll_period)
+                time.sleep(self.poll_period / 1000.0)
 
         logger.critical("Exiting")
 
