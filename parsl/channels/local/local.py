@@ -130,7 +130,7 @@ class LocalChannel(Channel, RepresentationMixin):
 
         return os.path.isdir(path)
 
-    def makedirs(self, path, mode=511, exist_ok=False):
+    def makedirs(self, path, mode=0o777, exist_ok=False):
         """Create a directory.
 
         If intermediate directories do not exist, they will be created.
