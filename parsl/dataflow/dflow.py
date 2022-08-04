@@ -1,3 +1,4 @@
+from __future__ import annotations
 import atexit
 import logging
 import os
@@ -1297,16 +1298,16 @@ class DataFlowKernelLoader(object):
     need to instantiate this class.
     """
 
-    _dfk = None
+    _dfk: Optional[DataFlowKernel] = None
 
     @classmethod
-    def clear(cls):
+    def clear(cls) -> None:
         """Clear the active DataFlowKernel so that a new one can be loaded."""
         cls._dfk = None
 
     @classmethod
     @typeguard.typechecked
-    def load(cls, config: Optional[Config] = None):
+    def load(cls, config: Optional[Config] = None) -> DataFlowKernel:
         """Load a DataFlowKernel.
 
         Args:
@@ -1326,7 +1327,7 @@ class DataFlowKernelLoader(object):
         return cls._dfk
 
     @classmethod
-    def wait_for_current_tasks(cls):
+    def wait_for_current_tasks(cls) -> None:
         """Waits for all tasks in the task list to be completed, by waiting for their
         AppFuture to be completed. This method will not necessarily wait for any tasks
         added after cleanup has started such as data stageout.
@@ -1334,7 +1335,7 @@ class DataFlowKernelLoader(object):
         cls.dfk().wait_for_current_tasks()
 
     @classmethod
-    def dfk(cls):
+    def dfk(cls) -> DataFlowKernel:
         """Return the currently-loaded DataFlowKernel."""
         if cls._dfk is None:
             raise RuntimeError('Must first load config')
