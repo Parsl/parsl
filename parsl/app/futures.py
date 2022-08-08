@@ -3,7 +3,6 @@
 import logging
 from concurrent.futures import Future
 
-from parsl.dataflow.futures import _STATE_TO_DESCRIPTION_MAP, FINISHED
 from parsl.app.errors import NotFutureError
 from parsl.data_provider.files import File
 
@@ -96,32 +95,8 @@ class DataFuture(Future):
         else:
             return False
 
-    def __repr__(self):
-
-        parent = self.parent
-
-        if parent:
-            with parent._condition:
-                if parent._state == FINISHED:
-                    if parent._exception:
-                        return '<%s at %#x state=%s raised %s>' % (
-                            self.__class__.__name__,
-                            id(self),
-                            _STATE_TO_DESCRIPTION_MAP[parent._state],
-                            parent._exception.__class__.__name__)
-                    else:
-                        return '<%s at %#x state=%s with file %s>' % (
-                            self.__class__.__name__,
-                            id(self),
-                            _STATE_TO_DESCRIPTION_MAP[parent._state],
-                            repr(self.file_obj))
-                return '<%s at %#x state=%s>' % (
-                    self.__class__.__name__,
-                    id(self),
-                    _STATE_TO_DESCRIPTION_MAP[parent._state])
-
-        else:
-            return '<%s at %#x state=%s>' % (
-                self.__class__.__name__,
-                id(self),
-                _STATE_TO_DESCRIPTION_MAP[self._state])
+    def __repr__(self) -> str:
+        type_ = type(self)
+        module = type_.__module__
+        qualname = type_.__qualname__
+        return f"<{module}.{qualname} object at {hex(id(self))} representing file {repr(self.file_obj)}>"
