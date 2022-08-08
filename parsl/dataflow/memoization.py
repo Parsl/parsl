@@ -3,6 +3,7 @@ import hashlib
 from functools import lru_cache, singledispatch
 from inspect import getsource
 import logging
+from parsl.dataflow.taskrecord import TaskRecord
 
 from typing import Dict, Any, List, Optional, TYPE_CHECKING
 
@@ -176,7 +177,7 @@ class Memoizer(object):
             logger.info("App caching disabled for all apps")
             self.memo_lookup_table = {}
 
-    def make_hash(self, task: Dict) -> str:
+    def make_hash(self, task: TaskRecord) -> str:
         """Create a hash of the task inputs.
 
         Args:
@@ -215,7 +216,7 @@ class Memoizer(object):
         hashedsum = hashlib.md5(x).hexdigest()
         return hashedsum
 
-    def check_memo(self, task: Dict) -> Optional[Future[Any]]:
+    def check_memo(self, task: TaskRecord) -> Optional[Future[Any]]:
         """Create a hash of the task and its inputs and check the lookup table for this hash.
 
         If present, the results are returned.
@@ -264,7 +265,7 @@ class Memoizer(object):
         """
         return self.memo_lookup_table[hashsum]
 
-    def update_memo(self, task: Dict, r: Future[Any]) -> None:
+    def update_memo(self, task: TaskRecord, r: Future[Any]) -> None:
         """Updates the memoization lookup table with the result from a task.
 
         Args:
