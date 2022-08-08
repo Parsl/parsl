@@ -99,4 +99,8 @@ class DataFuture(Future):
         type_ = type(self)
         module = type_.__module__
         qualname = type_.__qualname__
-        return f"<{module}.{qualname} object at {hex(id(self))} representing file {repr(self.file_obj)}>"
+        if self.done():
+            done = "done"
+        else:
+            done = "not done"
+        return f"<{module}.{qualname} object at {hex(id(self))} representing file {repr(self.file_obj)} {done}>"
