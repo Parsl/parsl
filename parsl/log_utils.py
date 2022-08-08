@@ -1,6 +1,6 @@
 """Following the general logging philosophy of python libraries, by default
-`Parsl <https://github.com/swift-lang/swift-e-lab/>`_ doesn't log anything.
-However the following helper functions are provided for logging:
+Parsl doesn't log anything.  However the following helper functions are
+provided for logging:
 
 1. set_stream_logger
     This sets the logger to the StreamHandler. This is quite useful when working from
@@ -10,20 +10,30 @@ However the following helper functions are provided for logging:
     This sets the logging to a file. This is ideal for reporting issues to the dev team.
 
 """
+import io
 import logging
 import typeguard
 
 from typing import Optional
 
 
+DEFAULT_FORMAT = (
+    "%(created)f %(asctime)s %(processName)s-%(process)d "
+    "%(threadName)s-%(thread)d %(name)s:%(lineno)d %(funcName)s %(levelname)s: "
+    "%(message)s"
+)
+
+
 @typeguard.typechecked
-def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None):
+def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None, stream: Optional[io.TextIOWrapper] = None):
     """Add a stream log handler.
 
     Args:
          - name (string) : Set the logger name.
          - level (logging.LEVEL) : Set to logging.DEBUG by default.
          - format_string (string) : Set to None by default.
+         - stream (io.TextIOWrapper) : Specify sys.stdout or sys.stderr for stream.
+            If not specified, the default stream for logging.StreamHandler is used.
 
     Returns:
          - None
@@ -34,7 +44,7 @@ def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_st
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
+    handler = logging.StreamHandler(stream)
     handler.setLevel(level)
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
@@ -49,7 +59,7 @@ def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_st
 
 @typeguard.typechecked
 def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None):
-    """Add a stream log handler.
+    """Add a file log handler.
 
     Args:
         - filename (string): Name of the file to write logs to
@@ -61,7 +71,7 @@ def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEB
        -  None
     """
     if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+        format_string = DEFAULT_FORMAT
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)

@@ -1,5 +1,4 @@
 import logging
-import sys
 import threading
 import time
 
@@ -54,7 +53,6 @@ class FlowControl(object):
              - threshold (int) : Tasks after which the callback is triggered
              - interval (int) : seconds after which timer expires
         """
-        self.dfk = dfk
         self.threshold = threshold
         self.interval = interval
         self.cb_args = args
@@ -87,10 +85,7 @@ class FlowControl(object):
             if time_to_die:
                 return
 
-            if prev == self._wake_up_time:
-                self.make_callback(kind='timer')
-            else:
-                print("Sleeping a bit more")
+            self.make_callback()
 
     def notify(self, event_id):
         """Let the FlowControl system know that there is an event."""
@@ -98,18 +93,14 @@ class FlowControl(object):
         self._event_count += 1
         if self._event_count >= self.threshold:
             logger.debug("Eventcount >= threshold")
-            self.make_callback(kind="event")
+            self.make_callback()
 
-    def make_callback(self, kind=None):
+    def make_callback(self):
         """Makes the callback and resets the timer.
-
-        KWargs:
-               - kind (str): Default=None, used to pass information on what
-                 triggered the callback
         """
         self._wake_up_time = time.time() + self.interval
         try:
-            self.callback(tasks=self._event_buffer, kind=kind)
+            self.callback(tasks=self._event_buffer)
         except Exception:
             logger.error("Flow control callback threw an exception - logging and proceeding anyway", exc_info=True)
         self._event_buffer = []
@@ -190,11 +181,11 @@ class Timer(object):
                 return
 
             if prev == self._wake_up_time:
-                self.make_callback(kind='timer')
+                self.make_callback()
             else:
                 print("Sleeping a bit more")
 
-    def make_callback(self, kind=None):
+    def make_callback(self):
         """Makes the callback and resets the timer.
         """
         self._wake_up_time = time.time() + self.interval
@@ -205,37 +196,3 @@ class Timer(object):
         """
         self._kill_event.set()
         self._thread.join()
-
-
-if __name__ == "__main__":
-
-    def foo():
-        print("Callback made at :", time.time())
-
-    timer = Timer(foo)
-
-    time.sleep(60)
-    timer.close()
-    exit(0)
-
-    print("This is broken")
-
-    def cback(*args):
-        print("*" * 40)
-        print("Callback at {0} with args : {1}".format(time.time(), args))
-        print("*" * 40)
-
-    fc = FlowControl(cback)
-
-    print("Testing")
-    print("Press E(Enter) to create and event, X(Enter) to exit")
-    while True:
-        x = sys.stdin.read(1)
-        if x.lower() == 'e':
-            print("Event")
-            fc.notify()
-        elif x.lower() == 'x':
-            print("Exiting ...")
-            break
-        else:
-            print("Continuing.. got[%s]", x)

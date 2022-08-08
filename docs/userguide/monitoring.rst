@@ -15,10 +15,10 @@ SQLite tools.
 Monitoring configuration
 ------------------------
 
-Parsl monitoring is only supported with the `HighThroughputExecutor`. 
+Parsl monitoring is only supported with the `parsl.executors.HighThroughputExecutor`. 
 
 The following example shows how to enable monitoring in the Parsl
-configuration. Here the `MonitoringHub` is specified to use port
+configuration. Here the `parsl.monitoring.MonitoringHub` is specified to use port
 55055 to receive monitoring messages from workers every 10 seconds.
 
 .. code-block:: python
@@ -56,7 +56,7 @@ Visualization
 To run the web dashboard utility ``parsl-visualize`` you first need to install
 its dependencies:
 
-   $ pip install parsl[monitoring]
+   $ pip install 'parsl[monitoring]'
 
 To view the web dashboard while or after a Parsl program has executed, run
 the ``parsl-visualize`` utility::
@@ -64,7 +64,7 @@ the ``parsl-visualize`` utility::
    $ parsl-visualize
 
 By default, this command expects that the default ``monitoring.db`` database is used
-in the current working directory. Other databases can be loaded by passing
+in the runinfo directory. Other databases can be loaded by passing
 the database URI on the command line.  For example, if the full path
 to the database is ``/tmp/my_monitoring.db``, run::
 

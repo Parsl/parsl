@@ -1,7 +1,7 @@
 import logging
 import typeguard
 
-from typing import List, Optional
+from typing import Callable, List, Optional, Sequence
 
 from parsl.utils import RepresentationMixin
 from parsl.executors.base import ParslExecutor
@@ -23,7 +23,7 @@ class Config(RepresentationMixin):
         Default is [:class:`~parsl.executors.threads.ThreadPoolExecutor()`].
     app_cache : bool, optional
         Enable app caching. Default is True.
-    checkpoint_files : list of str, optional
+    checkpoint_files : sequence of str, optional
         List of paths to checkpoint files. See :func:`parsl.utils.get_all_checkpoints` and
         :func:`parsl.utils.get_last_checkpoint` for helpers. Default is None.
     checkpoint_mode : str, optional
@@ -41,14 +41,18 @@ class Config(RepresentationMixin):
     monitoring : MonitoringHub, optional
         The config to use for database monitoring. Default is None which does not log to a database.
     retries : int, optional
-        Set the number of retries in case of failure. Default is 0.
+        Set the number of retries (or available retry budget when using retry_handler) in case of failure. Default is 0.
+    retry_handler : function, optional
+        A user pluggable handler to decide if/how a task retry should happen.
+        If no handler is specified, then each task failure incurs a retry cost
+        of 1.
     run_dir : str, optional
         Path to run directory. Default is 'runinfo'.
     strategy : str, optional
-        Strategy to use for scaling resources according to workflow needs. Can be 'simple' or `None`. If `None`, dynamic
-        scaling will be disabled. Default is 'simple'.
+        Strategy to use for scaling blocks according to workflow needs. Can be 'simple', 'htex_auto_scale' or `None`.
+        If `None`, dynamic scaling will be disabled. Default is 'simple'.
     max_idletime : float, optional
-        The maximum idle time allowed for an executor before strategy could shut down unused resources (scheduler jobs). Default is 120.0 seconds.
+        The maximum idle time allowed for an executor before strategy could shut down unused blocks. Default is 120.0 seconds.
     usage_tracking : bool, optional
         Set this field to True to opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
         information used for reporting to our funding agencies. Default is False.
@@ -67,18 +71,19 @@ class Config(RepresentationMixin):
     def __init__(self,
                  executors: Optional[List[ParslExecutor]] = None,
                  app_cache: bool = True,
-                 checkpoint_files: Optional[List[str]] = None,
+                 checkpoint_files: Optional[Sequence[str]] = None,
                  checkpoint_mode: Optional[str] = None,
                  checkpoint_period: Optional[str] = None,
                  garbage_collect: bool = True,
                  internal_tasks_max_threads: int = 10,
                  retries: int = 0,
+                 retry_handler: Optional[Callable] = None,
                  run_dir: str = 'runinfo',
                  strategy: Optional[str] = 'simple',
                  max_idletime: float = 120.0,
                  monitoring: Optional[MonitoringHub] = None,
                  usage_tracking: bool = False,
-                 initialize_logging: bool = True):
+                 initialize_logging: bool = True) -> None:
         if executors is None:
             executors = [ThreadPoolExecutor()]
         self.executors = executors
@@ -100,6 +105,7 @@ class Config(RepresentationMixin):
         self.garbage_collect = garbage_collect
         self.internal_tasks_max_threads = internal_tasks_max_threads
         self.retries = retries
+        self.retry_handler = retry_handler
         self.run_dir = run_dir
         self.strategy = strategy
         self.max_idletime = max_idletime
@@ -108,11 +114,11 @@ class Config(RepresentationMixin):
         self.monitoring = monitoring
 
     @property
-    def executors(self):
+    def executors(self) -> Sequence[ParslExecutor]:
         return self._executors
 
     @executors.setter
-    def executors(self, executors):
+    def executors(self, executors: Sequence[ParslExecutor]):
         labels = [e.label for e in executors]
         duplicates = [e for n, e in enumerate(labels) if e in labels[:n]]
         if len(duplicates) > 0:

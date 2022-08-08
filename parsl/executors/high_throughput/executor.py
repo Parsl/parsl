@@ -5,9 +5,9 @@ import threading
 import queue
 import datetime
 import pickle
-from multiprocessing import Process, Queue
-from typing import Dict  # noqa F401 (used in type annotation)
-from typing import List, Optional, Tuple, Union, Any
+from multiprocessing import Queue
+from typing import Dict, Sequence  # noqa F401 (used in type annotation)
+from typing import List, Optional, Tuple, Union
 import math
 
 from parsl.serialize import pack_apply_message, deserialize
@@ -20,19 +20,20 @@ from parsl.executors.errors import (
     UnsupportedFeatureError
 )
 
-from parsl.executors.status_handling import StatusHandlingExecutor
+from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.data_provider.staging import Staging
 from parsl.addresses import get_all_addresses
 from parsl.process_loggers import wrap_with_logs
 
+from parsl.multiprocessing import ForkProcess
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
 
 logger = logging.getLogger(__name__)
 
 
-class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
+class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     """Executor designed for cluster-scale
 
     The HighThroughputExecutor system has the following components:
@@ -129,7 +130,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         the there's sufficient memory for each worker. Default: None
 
     max_workers : int
-        Caps the number of workers launched by the manager. Default: infinity
+        Caps the number of workers launched per node. Default: infinity
 
     cpu_affinity: string
         Whether or how each worker process sets thread affinity. Options are "none" to forgo
@@ -137,6 +138,15 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         (ex: assign 0-1 to worker 0, 2-3 to worker 1), and
         "alternating" to assign cores to workers in round-robin
         (ex: assign 0,2 to worker 0, 1,3 to worker 1).
+
+    available_accelerators: int | list
+        Accelerators available for workers to use. Each worker will be pinned to exactly one of the provided
+        accelerators, and no more workers will be launched than the number of accelerators.
+
+        Either provide the list of accelerator names or the number available. If a number is provided,
+        Parsl will create names as integers starting with 0.
+
+        default: empty list
 
     prefetch_capacity : int
         Number of tasks that could be prefetched over available worker capacity.
@@ -180,6 +190,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                  mem_per_worker: Optional[float] = None,
                  max_workers: Union[int, float] = float('inf'),
                  cpu_affinity: str = 'none',
+                 available_accelerators: Union[int, Sequence[str]] = (),
                  prefetch_capacity: int = 0,
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
@@ -190,15 +201,13 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         logger.debug("Initializing HighThroughputExecutor")
 
-        StatusHandlingExecutor.__init__(self, provider)
+        BlockProviderExecutor.__init__(self, provider)
         self.label = label
         self.launch_cmd = launch_cmd
         self.worker_debug = worker_debug
         self.storage_access = storage_access
         self.working_dir = working_dir
         self.managed = managed
-        self.blocks = {}  # type: Dict[str, str]
-        self.block_mapping = {}  # type: Dict[str, str]
         self.cores_per_worker = cores_per_worker
         self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
@@ -221,9 +230,18 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                 self.provider.cores_per_node is not None:
             cpu_slots = math.floor(self.provider.cores_per_node / cores_per_worker)
 
-        self.workers_per_node = min(max_workers, mem_slots, cpu_slots)
-        if self.workers_per_node == float('inf'):
-            self.workers_per_node = 1  # our best guess-- we do not have any provider hints
+        # Set the list of available accelerators
+        if isinstance(available_accelerators, int):
+            # If the user provide an integer, create some names for them
+            available_accelerators = list(map(str, range(available_accelerators)))
+        self.available_accelerators = list(available_accelerators)
+
+        # Determine the number of workers per node
+        self._workers_per_node = min(max_workers, mem_slots, cpu_slots)
+        if len(self.available_accelerators) > 0:
+            self._workers_per_node = min(self._workers_per_node, len(available_accelerators))
+        if self._workers_per_node == float('inf'):
+            self._workers_per_node = 1  # our best guess-- we do not have any provider hints
 
         self._task_counter = 0
         self.run_id = None  # set to the correct run_id in dfk
@@ -253,7 +271,10 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                "--hb_period={heartbeat_period} "
                                "{address_probe_timeout_string} "
                                "--hb_threshold={heartbeat_threshold} "
-                               "--cpu-affinity {cpu_affinity} ")
+                               "--cpu-affinity {cpu_affinity} "
+                               "--available-accelerators {accelerators}")
+
+    radio_mode = "htex"
 
     def initialize_scaling(self):
         """ Compose the launch command and call the scale_out
@@ -285,7 +306,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                                        heartbeat_threshold=self.heartbeat_threshold,
                                        poll_period=self.poll_period,
                                        logdir=worker_logdir,
-                                       cpu_affinity=self.cpu_affinity)
+                                       cpu_affinity=self.cpu_affinity,
+                                       accelerators=" ".join(self.available_accelerators))
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
 
@@ -313,7 +335,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         self._queue_management_thread = None
         self._start_queue_management_thread()
-        self._start_local_queue_process()
+        self._start_local_interchange_process()
 
         logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
@@ -383,80 +405,80 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                     for serialized_msg in msgs:
                         try:
                             msg = pickle.loads(serialized_msg)
-                            tid = msg['task_id']
                         except pickle.UnpicklingError:
                             raise BadMessage("Message received could not be unpickled")
 
-                        except Exception:
-                            raise BadMessage("Message received does not contain 'task_id' field")
-
-                        if tid == -1 and 'exception' in msg:
-                            logger.warning("Executor shutting down due to exception from interchange")
-                            exception = deserialize(msg['exception'])
-                            self.set_bad_state_and_fail_all(exception)
-                            break
-
-                        task_fut = self.tasks.pop(tid)
-
-                        if 'result' in msg:
-                            result = deserialize(msg['result'])
-                            task_fut.set_result(result)
-
-                        elif 'exception' in msg:
+                        if msg['type'] == 'heartbeat':
+                            continue
+                        elif msg['type'] == 'result':
                             try:
-                                s = deserialize(msg['exception'])
-                                # s should be a RemoteExceptionWrapper... so we can reraise it
-                                if isinstance(s, RemoteExceptionWrapper):
-                                    try:
-                                        s.reraise()
-                                    except Exception as e:
-                                        task_fut.set_exception(e)
-                                elif isinstance(s, Exception):
-                                    task_fut.set_exception(s)
-                                else:
-                                    raise ValueError("Unknown exception-like type received: {}".format(type(s)))
-                            except Exception as e:
-                                # TODO could be a proper wrapped exception?
-                                task_fut.set_exception(
-                                    DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
+                                tid = msg['task_id']
+                            except Exception:
+                                raise BadMessage("Message received does not contain 'task_id' field")
+
+                            if tid == -1 and 'exception' in msg:
+                                logger.warning("Executor shutting down due to exception from interchange")
+                                exception = deserialize(msg['exception'])
+                                self.set_bad_state_and_fail_all(exception)
+                                break
+
+                            task_fut = self.tasks.pop(tid)
+
+                            if 'result' in msg:
+                                result = deserialize(msg['result'])
+                                task_fut.set_result(result)
+
+                            elif 'exception' in msg:
+                                try:
+                                    s = deserialize(msg['exception'])
+                                    # s should be a RemoteExceptionWrapper... so we can reraise it
+                                    if isinstance(s, RemoteExceptionWrapper):
+                                        try:
+                                            s.reraise()
+                                        except Exception as e:
+                                            task_fut.set_exception(e)
+                                    elif isinstance(s, Exception):
+                                        task_fut.set_exception(s)
+                                    else:
+                                        raise ValueError("Unknown exception-like type received: {}".format(type(s)))
+                                except Exception as e:
+                                    # TODO could be a proper wrapped exception?
+                                    task_fut.set_exception(
+                                        DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
+                            else:
+                                raise BadMessage("Message received is neither result or exception")
                         else:
-                            raise BadMessage("Message received is neither result or exception")
+                            raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
             if not self.is_alive:
                 break
         logger.info("[MTHREAD] queue management worker finished")
 
-    # When the executor gets lost, the weakref callback will wake up
-    # the queue management thread.
-    def weakref_cb(self, q=None):
-        """We do not use this yet."""
-        q.put(None)
-
-    def _start_local_queue_process(self):
+    def _start_local_interchange_process(self):
         """ Starts the interchange process locally
 
         Starts the interchange process locally and uses an internal command queue to
         get the worker task and result ports that the interchange has bound to.
         """
         comm_q = Queue(maxsize=10)
-        self.queue_proc = Process(target=interchange.starter,
-                                  args=(comm_q,),
-                                  kwargs={"client_ports": (self.outgoing_q.port,
-                                                           self.incoming_q.port,
-                                                           self.command_client.port),
-                                          "worker_ports": self.worker_ports,
-                                          "worker_port_range": self.worker_port_range,
-                                          "hub_address": self.hub_address,
-                                          "hub_port": self.hub_port,
-                                          "logdir": "{}/{}".format(self.run_dir, self.label),
-                                          "heartbeat_threshold": self.heartbeat_threshold,
-                                          "poll_period": self.poll_period,
-                                          "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
-                                  },
-                                  daemon=True,
-                                  name="HTEX-Interchange"
+        self.interchange_proc = ForkProcess(target=interchange.starter,
+                                            args=(comm_q,),
+                                            kwargs={"client_ports": (self.outgoing_q.port,
+                                                                     self.incoming_q.port,
+                                                                     self.command_client.port),
+                                                    "worker_ports": self.worker_ports,
+                                                    "worker_port_range": self.worker_port_range,
+                                                    "hub_address": self.hub_address,
+                                                    "hub_port": self.hub_port,
+                                                    "logdir": "{}/{}".format(self.run_dir, self.label),
+                                                    "heartbeat_threshold": self.heartbeat_threshold,
+                                                    "poll_period": self.poll_period,
+                                                    "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
+                                            },
+                                            daemon=True,
+                                            name="HTEX-Interchange"
         )
-        self.queue_proc.start()
+        self.interchange_proc.start()
         try:
             (self.worker_task_port, self.worker_result_port) = comm_q.get(block=True, timeout=120)
         except queue.Empty:
@@ -477,7 +499,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             logger.debug("Started queue management thread")
 
         else:
-            logger.debug("Management thread already exists, returning")
+            logger.error("Management thread already exists, returning")
 
     def hold_worker(self, worker_id):
         """Puts a worker on hold, preventing scheduling of additional tasks to it.
@@ -492,7 +514,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             Worker id to be put on hold
         """
         c = self.command_client.run("HOLD_WORKER;{}".format(worker_id))
-        logger.debug("Sent hold request to worker: {}".format(worker_id))
+        logger.debug("Sent hold request to manager: {}".format(worker_id))
         return c
 
     @property
@@ -535,10 +557,10 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         Args:
             - func (callable) : Callable function
-            - *args (list) : List of arbitrary positional arguments.
+            - args (list) : List of arbitrary positional arguments.
 
         Kwargs:
-            - **kwargs (dict) : A dictionary of arbitrary keyword args for func.
+            - kwargs (dict) : A dictionary of arbitrary keyword args for func.
 
         Returns:
               Future
@@ -561,7 +583,9 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             args_to_print = tuple([arg if len(repr(arg)) < 100 else (repr(arg)[:100] + '...') for arg in args])
         logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
 
-        self.tasks[task_id] = Future()
+        fut = Future()
+        fut.parsl_executor_task_id = task_id
+        self.tasks[task_id] = fut
 
         try:
             fn_buf = pack_apply_message(func, args, kwargs,
@@ -576,7 +600,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         self.outgoing_q.put(msg)
 
         # Return the future
-        return self.tasks[task_id]
+        return fut
 
     @property
     def scaling_enabled(self):
@@ -598,34 +622,9 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
             msg.append(d)
         return msg
 
-    def scale_out(self, blocks=1):
-        """Scales out the number of blocks by "blocks"
-        """
-        if not self.provider:
-            raise (ScalingFailed(None, "No execution provider available"))
-        block_ids = []
-        for i in range(blocks):
-            block_id = str(len(self.blocks))
-            try:
-                job_id = self._launch_block(block_id)
-                self.blocks[block_id] = job_id
-                self.block_mapping[job_id] = block_id
-                block_ids.append(block_id)
-            except Exception as ex:
-                self._fail_job_async(block_id,
-                                     "Failed to start block {}: {}".format(block_id, ex))
-        return block_ids
-
-    def _launch_block(self, block_id: str) -> Any:
-        if self.launch_cmd is None:
-            raise ScalingFailed(self.provider.label, "No launch command")
-        launch_cmd = self.launch_cmd.format(block_id=block_id)
-        job_id = self.provider.submit(launch_cmd, 1)
-        logger.debug("Launched block {}->{}".format(block_id, job_id))
-        if not job_id:
-            raise(ScalingFailed(self.provider.label,
-                                "Attempts to provision nodes via provider has failed"))
-        return job_id
+    @property
+    def workers_per_node(self) -> Union[int, float]:
+        return self._workers_per_node
 
     def scale_in(self, blocks=None, block_ids=[], force=True, max_idletime=None):
         """Scale in the number of active blocks by specified amount.
@@ -644,8 +643,8 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
              Used along with blocks to indicate whether blocks should be terminated by force.
              When force = True, we will kill blocks regardless of the blocks being busy
              When force = False, Only idle blocks will be terminated.
-             If the # of `idle_blocks` < `blocks`, the list of jobs marked for termination
-             will be in the range: 0 -`blocks`.
+             If the # of ``idle_blocks`` < ``blocks``, the list of jobs marked for termination
+             will be in the range: 0 - ``blocks``.
 
         max_idletime: float
              A time to indicate how long a block can be idle.
@@ -658,12 +657,12 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
         -------
         List of job_ids marked for termination
         """
-
+        logger.debug(f"Scale in called, blocks={blocks}, block_ids={block_ids}")
         if block_ids:
             block_ids_to_kill = block_ids
         else:
             managers = self.connected_managers
-            block_info = {}
+            block_info = {}  # block id -> list( tasks, idle duration )
             for manager in managers:
                 if not manager['active']:
                     continue
@@ -674,6 +673,7 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                 block_info[b_id][1] = min(block_info[b_id][1], manager['idle_duration'])
 
             sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1][1], item[1][0]))
+            logger.debug(f"Scale in selecting from {len(sorted_blocks)} blocks")
             if force is True:
                 block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
             else:
@@ -686,10 +686,11 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
                             block_ids_to_kill.append(x[0])
                             if len(block_ids_to_kill) == blocks:
                                 break
-                logger.debug("Selecting block ids to kill since they are idle : {}".format(
+                logger.debug("Selected idle block ids to kill: {}".format(
                     block_ids_to_kill))
+                if len(block_ids_to_kill) < blocks:
+                    logger.warning(f"Could not find enough blocks to kill: wanted {blocks} but only selected {len(block_ids_to_kill)}")
 
-        logger.debug("Current blocks : {}".format(self.blocks))
         # Hold the block
         for block_id in block_ids_to_kill:
             self._hold_block(block_id)
@@ -707,28 +708,16 @@ class HighThroughputExecutor(StatusHandlingExecutor, RepresentationMixin):
 
         return block_ids_killed
 
-    def _get_block_and_job_ids(self) -> Tuple[List[str], List[Any]]:
-        # Not using self.blocks.keys() and self.blocks.values() simultaneously
-        # The dictionary may be changed during invoking this function
-        # As scale_in and scale_out are invoked in multiple threads
-        block_ids = list(self.blocks.keys())
-        job_ids = []  # types: List[Any]
-        for bid in block_ids:
-            job_ids.append(self.blocks[bid])
-        return block_ids, job_ids
+    def _get_launch_command(self, block_id: str) -> str:
+        if self.launch_cmd is None:
+            raise ScalingFailed(self, "No launch command")
+        launch_cmd = self.launch_cmd.format(block_id=block_id)
+        return launch_cmd
 
-    def shutdown(self, hub=True, targets='all', block=False):
+    def shutdown(self):
         """Shutdown the executor, including all workers and controllers.
-
-        This is not implemented.
-
-        Kwargs:
-            - hub (Bool): Whether the hub should be shutdown, Default: True,
-            - targets (list of ints| 'all'): List of block id's to kill, Default: 'all'
-            - block (Bool): To block for confirmations or not
         """
 
         logger.info("Attempting HighThroughputExecutor shutdown")
-        self.queue_proc.terminate()
+        self.interchange_proc.terminate()
         logger.info("Finished HighThroughputExecutor shutdown attempt")
-        return True

@@ -14,11 +14,19 @@ class ParslExecutor(metaclass=ABCMeta):
     This is a metaclass that only enforces concrete implementations of
     functionality by the child classes.
 
+    Can be used as a context manager. On exit, calls ``self.shutdown()`` with
+    no arguments and re-raises any thrown exception.
+
     In addition to the listed methods, a ParslExecutor instance must always
     have a member field:
 
        label: str - a human readable label for the executor, unique
               with respect to other executors.
+
+    Per-executor monitoring behaviour can be influenced by exposing:
+
+       radio_mode: str - a string describing which radio mode should be used to
+              send task resource data back to the submit side.
 
     An executor may optionally expose:
 
@@ -35,7 +43,15 @@ class ParslExecutor(metaclass=ABCMeta):
               @typeguard the constructor, you'll have to use List[Any] here.
     """
 
-    label: str
+    label: str = "undefined"
+    radio_mode: str = "udp"
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.shutdown()
+        return False
 
     @abstractmethod
     def start(self) -> Optional[List[str]]:
@@ -48,6 +64,11 @@ class ParslExecutor(metaclass=ABCMeta):
     @abstractmethod
     def submit(self, func: Callable, resource_specification: Dict[str, Any], *args: Any, **kwargs: Any) -> Future:
         """Submit.
+
+        The executor can optionally set a parsl_executor_task_id attribute on
+        the Future that it returns, and in that case, parsl will log a
+        relationship between the executor's task ID and parsl level try/task
+        IDs.
         """
         pass
 
@@ -128,7 +149,7 @@ class ParslExecutor(metaclass=ABCMeta):
         and this method is a delegate to the corresponding method in the provider.
 
         :return: the number of seconds to wait between calls to status() or zero if no polling
-        should be done
+                 should be done
         """
         pass
 
@@ -137,10 +158,8 @@ class ParslExecutor(metaclass=ABCMeta):
     def error_management_enabled(self) -> bool:
         """Indicates whether worker error management is supported by this executor. Worker error
         management is done externally to the executor. However, the executor must implement
-        certain methods that allow this to function. These methods are:
+        certain status handling methods that allow this to function. These methods are:
 
-        Status Handling Methods
-        -----------------------
         :method:handle_errors
         :method:set_bad_state_and_fail_all
 
@@ -152,7 +171,7 @@ class ParslExecutor(metaclass=ABCMeta):
 
         Some of the scaffolding needed for implementing error management inside executors,
         including implementations for the status handling methods above, is available in
-        :class:parsl.executors.status_handling.StatusHandlingExecutor, which, interested executors,
+        :class:parsl.executors.status_handling.BlockProviderExecutor, which interested executors
         should inherit from. Noop versions of methods that are related to status handling and
         running parsl tasks through workers are implemented by
         :class:parsl.executors.status_handling.NoStatusHandlingExecutor.
@@ -161,7 +180,7 @@ class ParslExecutor(metaclass=ABCMeta):
 
     @abstractmethod
     def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
-                      status: Dict[str, JobStatus]) -> bool:
+                      status: Dict[str, JobStatus]) -> None:
         """This method is called by the error management infrastructure after a status poll. The
         executor implementing this method is then responsible for detecting abnormal conditions
         based on the status of submitted jobs. If the executor does not implement any special
@@ -169,7 +188,6 @@ class ParslExecutor(metaclass=ABCMeta):
         scheme will be used.
         :param error_handler: a reference to the generic error handler calling this method
         :param status: status of all jobs launched by this executor
-        :return: True if this executor implements custom error handling, or False otherwise
         """
         pass
 

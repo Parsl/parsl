@@ -68,9 +68,7 @@ class LocalChannel(Channel, RepresentationMixin):
                 shell=True,
                 preexec_fn=os.setpgrp
             )
-            proc.wait(timeout=walltime)
-            stdout = proc.stdout.read()
-            stderr = proc.stderr.read()
+            (stdout, stderr) = proc.communicate(timeout=walltime)
             retcode = proc.returncode
 
         except Exception as e:
@@ -94,7 +92,7 @@ class LocalChannel(Channel, RepresentationMixin):
             - FileCopyException : If file copy failed.
         '''
 
-        local_dest = dest_dir + '/' + os.path.basename(source)
+        local_dest = os.path.join(dest_dir, os.path.basename(source))
 
         # Only attempt to copy if the target dir and source dir are different
         if os.path.dirname(source) != dest_dir:
@@ -132,7 +130,7 @@ class LocalChannel(Channel, RepresentationMixin):
 
         return os.path.isdir(path)
 
-    def makedirs(self, path, mode=511, exist_ok=False):
+    def makedirs(self, path, mode=0o777, exist_ok=False):
         """Create a directory.
 
         If intermediate directories do not exist, they will be created.

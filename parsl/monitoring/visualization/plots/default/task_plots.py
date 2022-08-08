@@ -3,10 +3,7 @@ from plotly.offline import plot
 
 
 def time_series_cpu_per_task_plot(df_resources, resource_type, label):
-    if resource_type == "psutil_process_cpu_percent":
-        yaxis = dict(title="CPU utilization")
-    else:
-        yaxis = dict(title='Accumulated CPU user time (seconds)')
+    yaxis = dict(title='Accumulated CPU user time (seconds)')
     fig = go.Figure(data=[go.Scatter(x=df_resources['timestamp'],
                                      y=df_resources[resource_type])],
                     layout=go.Layout(xaxis=dict(tickformat='%m-%d\n%H:%M:%S',

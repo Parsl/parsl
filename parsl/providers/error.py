@@ -6,22 +6,8 @@ class ExecutionProviderException(Exception):
     pass
 
 
-class ChannelRequired(ExecutionProviderException):
-    ''' Execution provider requires a channel.
-    '''
-
-    def __init__(self, provider, reason):
-        self.provider = provider
-        self.reason = reason
-
-    def __repr__(self):
-        return "Unable to Initialize provider.Provider:{0}, Reason:{1}".format(
-            self.provider, self.reason
-        )
-
-
 class ScaleOutFailed(ExecutionProviderException):
-    ''' Generic catch. Scale out failed in the submit phase on the provider side
+    ''' Scale out failed in the submit phase on the provider side
     '''
 
     def __init__(self, provider, reason):

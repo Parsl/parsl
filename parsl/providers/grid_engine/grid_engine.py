@@ -90,6 +90,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                          cmd_timeout=cmd_timeout)
         self.scheduler_options = scheduler_options
         self.worker_init = worker_init
+        self.queue = queue
 
         if launcher in ['srun', 'srun_mpi']:
             logger.warning("Use of {} launcher is usually appropriate for Slurm providers. "
@@ -160,7 +161,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                 self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
                 return job_id
         else:
-            print("[WARNING!!] Submission of command to scale_out failed")
+            logger.error("Submit command failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
 
     def _status(self):

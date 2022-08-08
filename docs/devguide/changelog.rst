@@ -1,6 +1,239 @@
 Changelog
 =========
 
+Parsl 1.2.0
+-----------
+
+Release date: January 13th, 2022.
+
+Parsl v1.2.0 includes 99 pull requests with contributions from:
+
+Ben Clifford @benclifford, Daniel S. Katz @danielskatz, Douglas Thain @dthain, James Corbett @jameshcorbett, Jonas Rübenach @jrueb, Logan Ward @WardLT, Matthew R. Becker @beckermr, Vladimir @vkhodygo, Yadu Nand Babuji @yadudoc, Yo Yehudi @yochannah, Zhuozhao Li @ZhuozhaoLi, yongyanrao @yongyanrao, Tim Jenness @timj, Darko Marinov @darko-marinov, Quentin Le Boulc'h
+
+
+High Throughput Executor
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Remove htex self.tasks race condition that shows under high load (#2034)
+* Fix htex scale down breakage due to overly aggressive result heartbeat (#2119)  [ TODO: this fixes a bug introduced since 1.1.0 so note that? #2104 ]
+* Send heartbeats via results connection (#2104)
+
+
+Work Queue Executor
+^^^^^^^^^^^^^^^^^^^
+
+* Allow use of WorkQueue running_time_min resource constraint (#2113) - WQ recently introduced an additional resource constraint: workers can be aware of their remaining wall time, and tasks can be constrained to only go to workers with sufficient remaining time.
+    
+* Implement priority as a Work Queue resource specification (#2067) - The allows a workflow script to influence the order in which queued tasks are executed using Work Queue's existing priority mechanism.
+
+
+* Disable WQ-level retries with an option to re-enable (#2059) - Previously by default, Work Queue will retry tasks that fail at the WQ level (for example, because of worker failure) an infinite number of times, inside the same parsl-level execution try.  That hides the repeated tries from parsl (so monitoring does not report start/end times as might naively be expected for a try, and parsl retry counting does not count).
+    
+* Document WorkqueueExecutor project_name remote reporting better (#2089)
+* wq executor should show itself using representation mixin (#2064)
+* Make WorkQueue worker command configurable (#2036)
+
+
+
+Flux Executor
+^^^^^^^^^^^^^
+
+The new FluxExecutor class uses the Flux resource manager
+(github: flux-framework/flux-core) to launch tasks. Each
+task is a Flux job.
+
+
+Condor Provider
+^^^^^^^^^^^^^^^
+
+* Fix bug in condor provider for unknown jobs (#2161)
+    
+LSF Provider
+^^^^^^^^^^^^
+
+* Update LSF provider to make it more friendly for different LSF-based computers (#2149)
+
+SLURM Provider
+^^^^^^^^^^^^^^
+
+* Improve docs and defaults for slurm partition and account parameters. (#2126)
+
+Grid Engine Provider
+^^^^^^^^^^^^^^^^^^^^
+
+* missing queue from self - causes config serialisation failure (#2042)
+
+
+Monitoring
+^^^^^^^^^^
+
+* Index task_hashsum to give cross-run query speedup (#2085)
+* Fix monitoring "db locked" errors occuring at scale (#1917)
+* Fix worker efficiency plot when tasks are still in progress (#2048)
+* Fix use of previously removed reg_time monitoring field (#2020)
+* Reorder debug message so it happens when the message is received, without necessarily blocking on the resource_msgs queue put (#2093)
+
+
+General new features
+^^^^^^^^^^^^^^^^^^^^
+
+* Workflow-pluggable retry scoring (#2068) - When a task fails, instead of causing a retry "cost" of 1 (the previous behaviour), this PR allows that cost to be determined by a user specified function which is given some context about the failure.
+
+General bug fixes
+^^^^^^^^^^^^^^^^^
+
+* Fix type error when job status output is large. (#2129)
+* Fix a race condition in the local channel (#2115)
+* Fix incorrect order of manager and interchange versions in error text (#2108)
+* Fix to macos multiprocessing spawn and context issues (#2076)
+* Tidy tasks_per_node in strategy (#2030)
+* Fix and test wrong type handling for joinapp returns (#2063)
+* FIX: os independent path (#2043)
+
+Platform and packaging
+^^^^^^^^^^^^^^^^^^^^^^
+
+* Improve support for Windows (#2107)
+* Reflect python 3.9 support in setup.py metadata (#2023)
+* Remove python <3.6 handling from threadpoolexecutor (#2083)
+* Remove breaking .[all] install target (#2069)
+
+Internal tidying
+^^^^^^^^^^^^^^^^
+
+* Remove ipp logging hack in PR #204 (#2170)
+* Remove BadRegistration exception definition which has been unused since PR #1671 (#2142)
+* Remove AppFuture.__repr__, because superclass Future repr is sufficient (#2143)
+* Make monitoring hub exit condition more explicit (#2131)
+* Replace parsl's logging NullHandler with python's own NullHandler (#2114)
+* Remove a commented out line of dead code in htex (#2116)
+* Abstract more block handling from HighThroughputExecutor and share with WorkQueue (#2071)
+* Regularise monitoring RESOURCE_INFO messages (#2117)
+* Pull os x multiprocessing code into a single module (#2099)
+* Describe monitoring protocols better (#2029)
+* Remove task_id param from memo functions, as whole task record is available (#2080)
+* remove irrelevant __main__ stub of local provider (#2026)
+* remove unused weakref_cb (#2022)
+* Remove unneeded task_id param from sanitize_and_wrap (#2081)
+* Remove outdated IPP related comment in memoization (#2058)
+* Remove unused AppBase status field (#2053)
+* Do not unwrap joinapp future exceptions unnecessarily (#2084)
+* Eliminate self.tasks[id] calls from joinapp callback (#2015)
+* Looking at eliminating passing of task IDs and passing task records instead (#2016)
+* Eliminate self.tasks[id] from launch_if_ready
+* Eliminate self.tasks[id] calls from launch_task (#2061)
+* Eliminate self.tasks[id] from app done callback (#2017)
+* Make process_worker_pool pass mypy (#2052)
+* Remove unused walltime from LocalProvider (#2057)
+* Tidy human readable text/variable names around DependencyError (#2037)
+* Replace old string formatting with f-strings in utils.py (#2055)
+
+Documentation, error messages and human-readable text
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Add a documentation chapter summarizing plugin points (#2066)
+* Correct docstring for set_file_logger (#2156)
+* Fix typo in two db error messages and make consistent with each other (#2152)
+* Update slack join links to currently unexpired link (#2146)
+* small typo fix in doc (#2134)
+* Update CONTRIBUTING.rst (#2144)
+* trying to fix broken link in GitHub (#2133)
+* Add CITATION.cff file (#2100)
+* Refresh the sanitize_and_wrap docstring (#2086)
+* Rephrase ad-hoc config doc now that AdHocProvider (PR #1297) is implemented (#2096)
+* Add research notice to readme (#2097)
+* Remove untrue claim that parsl_resource_specification keys are case insensitive (#2095)
+* Use zsh compatible install syntax (#2009)
+* Remove documentation that interchange is walltime aware (#2082)
+* Configure sphinx to put in full documentation for each method (#2094)
+* autogenerate sphinx stubs rather than requiring manual update each PR (#2087)
+* Update docstring for handle_app_update (#2079)
+* fix a typo (#2024)
+* Switch doc verb from invocated to invoked (#2088)
+* Add documentation on meanings of states (#2075)
+* Fix summary sentence of ScaleOutException (#2021)
+* clarify that max workers is per node (#2056)
+* Tidy up slurm state comment (#2035)
+* Add nscc singapore example config (#2003)
+* better formatting (#2039)
+* Add missing f for an f-string (#2062)
+* Rework __repr__ and __str__ for OptionalModuleMissing (#2025)
+* Make executor bad state exception log use the exception (#2155)
+
+CI/testing
+^^^^^^^^^^
+
+* Make changes for CI reliability (#2118)
+* Make missing worker test cleanup DFK at end (#2153)
+* Tidy bash error codes tests. (#2130)
+* Upgrade CI to use recent ubuntu, as old version was deprecated (#2111)
+* Remove travis config, replaced by GitHub Actions in PR #2078 (#2112)
+* Fix CI broken by dependency package changes (#2105)
+* Adding github actions for CI (#2078)
+* Test combine() pattern in joinapps (#2054)
+* Assert that there should be no doc stubs in version control (#2092)
+* Add monitoring dependency to local tests (#2074)
+* Put viz test in a script (#2019)
+* Reduce the size of recursive fibonacci joinapp testing (#2110)
+* Remove disabled midway test (#2028)
+
+
+Parsl 1.1.0
+-----------
+
+Released on April 26th, 2021.
+
+Parsl v1.1.0 includes 59 closed issues and 243 pull requests with contributions (code, tests, reviews and reports) from:
+
+Akila Ravihansa Perera @ravihansa3000, Anna Woodard @annawoodard, @bakerjl, Ben Clifford @benclifford,
+Daniel S. Katz @danielskatz, Douglas Thain @dthain, @gerrick, @JG-Quarknet, Joseph Moon @jmoon1506,
+Kelly L. Rowland @kellyrowland, Lars Bilke @bilke, Logan Ward @WardLT, Kirill Nagaitsev @Loonride,
+Marcus Schwarting @meschw04, Matt Baughman @mattebaughman, Mihael Hategan @hategan, @radiantone,
+Rohan Kumar @rohankumar42, Sohit Miglani @sohitmiglani, Tim Shaffer @trshaffer,
+Tyler J. Skluzacek @tskluzac, Yadu Nand Babuji @yadudoc, and Zhuozhao Li @ZhuozhaoLi
+
+Deprecated and Removed features
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* Python 3.5 is no longer supported.
+* Almost definitely broken Jetstream provider removed (#1821)
+
+New Functionality
+^^^^^^^^^^^^^^^^^
+
+* Allow HTEX to set CPU affinity (#1853)
+
+* New serialization system to replace IPP serialization (#1806)
+
+* Support for Python 3.9
+
+* @join_apps are a variation of @python_apps where an app can launch
+  more apps and then complete only after the launched apps are also
+  completed.
+
+  These are described more fully in docs/userguide/joins.rst
+
+* Monitoring:
+
+  * hub.log is now named monitoring_router.log
+  * Remove denormalised workflow duration from monitoring db (#1774)
+  * Remove hostname from status table (#1847)
+  * Clarify distinction between tasks and tries to run tasks (#1808)
+  * Replace 'done' state with 'exec_done' and 'memo_done' (#1848)
+  * Use repr instead of str for monitoring fail history (#1966)
+
+* Monitoring visualization:
+
+  * Make task list appear under .../task/ not under .../app/ (#1762)
+  * Test that parsl-visualize does not return HTTP errors (#1700)
+  * Generate Gantt chart from status table rather than task table timestamps (#1767)
+  * Hyperlinks for app page to task pages should be on the task ID, not the app name (#1776)
+  * Use real final state to color DAG visualization (#1812)
+
+* Make task record garbage collection optional. (#1909)
+
+* Make checkpoint_files = get_all_checkpoints() by default (#1918)
+
 
 Parsl 1.0.0
 -----------
@@ -32,9 +265,10 @@ Deprecated and Removed features
 New Functionality
 ^^^^^^^^^^^^^^^^^
 
-* `WorkQueueExecutor` introduced in v0.9.0 is now in beta. `WorkQueueExecutor` is designed as a drop-in replacement for `HighThroughputExecutor`. Here are some key features:
+* `parsl.executors.WorkQueueExecutor` introduced in v0.9.0 is now in beta. `parsl.executors.WorkQueueExecutor` is designed as a drop-in replacement for `parsl.executors.HighThroughputExecutor`. Here are some key features:
+
   * Support for packaging the python environment and shipping it to the worker side. This mechanism addresses propagating python environments in  grid-like systems that lack shared-filesystems or cloud environments.
-  * `WorkQueueExecutor` supports resource function tagging and resource specification
+  * `parsl.executors.WorkQueueExecutor` supports resource function tagging and resource specification
   * Support for resource specification kwarg `issue#1675 <https://github.com/Parsl/parsl/issues/1675>`_
 
 
@@ -86,9 +320,9 @@ New Functionality
            return 'cat {} > {}'.format(inputs[0].filepath, outputs[0].filepath)
 
 
-* New launcher: `WrappedLauncher` for launching tasks inside containers.
+* New launcher: `parsl.launchers.WrappedLauncher` for launching tasks inside containers.
 
-* `SSHChannel` now supports a ``key_filename`` kwarg `issue#1639 <https://github.com/Parsl/parsl/issues/1639>`_
+* `parsl.channels.SSHChannel` now supports a ``key_filename`` kwarg `issue#1639 <https://github.com/Parsl/parsl/issues/1639>`_
 
 * Newly added Makefile wraps several frequent developer operations such as:
 
@@ -100,9 +334,9 @@ New Functionality
 
   * Tag release and push to release channels: ``make deploy``
 
-* Several updates to the `HighThroughputExecutor`:
+* Several updates to the `parsl.executors.HighThroughputExecutor`:
 
-  * By default, the `HighThroughputExecutor` will now use heuristics to detect and try all addresses
+  * By default, the `parsl.executors.HighThroughputExecutor` will now use heuristics to detect and try all addresses
     when the workers connect back to the parsl master. An address can be configured manually using the
     ``HighThroughputExecutor(address=<address_string>)`` kwarg option.
 
@@ -195,11 +429,11 @@ New Functionality
   ``GlobusScheme`` in 0.8.0 has been renamed `GlobusStaging` and moved to a new
   module, parsl.data_provider.globus
 
-* `WorkQueueExecutor`: a new executor that integrates functionality from `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ is now available.
+* `parsl.executors.WorkQueueExecutor`: a new executor that integrates functionality from `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ is now available.
 * New provider to support for Ad-Hoc clusters `parsl.providers.AdHocProvider`
 * New provider added to support LSF on Summit `parsl.providers.LSFProvider`
 * Support for CPU and Memory resource hints to providers `(github) <https://github.com/Parsl/parsl/issues/942>`_.
-* The ``logging_level=logging.INFO`` in `MonitoringHub` is replaced with ``monitoring_debug=False``:
+* The ``logging_level=logging.INFO`` in `parsl.monitoring.MonitoringHub` is replaced with ``monitoring_debug=False``:
 
    .. code-block:: python
 
@@ -224,8 +458,8 @@ New Functionality
 * Several improvements to the Monitoring interface.
 * Configurable port on `parsl.channels.SSHChannel`.
 * ``suppress_failure`` now defaults to True.
-* `HighThroughputExecutor` is the recommended executor, and ``IPyParallelExecutor`` is deprecated.
-* `HighThroughputExecutor` will expose worker information via environment variables: ``PARSL_WORKER_RANK`` and ``PARSL_WORKER_COUNT``
+* `parsl.executors.HighThroughputExecutor` is the recommended executor, and ``IPyParallelExecutor`` is deprecated.
+* `parsl.executors.HighThroughputExecutor` will expose worker information via environment variables: ``PARSL_WORKER_RANK`` and ``PARSL_WORKER_COUNT``
 
 Bug Fixes
 ^^^^^^^^^
@@ -285,8 +519,8 @@ New Functionality
          return "cat {0} > {1}".format(" ".join(list(map(str,inputs))), outputs[0])
 
 * Cleaner user app file log management.
-* Updated configurations using `HighThroughputExecutor` in the configuration section of the userguide.
-* Support for OAuth based SSH with `OAuthSSHChannel`.
+* Updated configurations using `parsl.executors.HighThroughputExecutor` in the configuration section of the userguide.
+* Support for OAuth based SSH with `parsl.channels.OAuthSSHChannel`.
 
 Bug Fixes
 ^^^^^^^^^
@@ -314,7 +548,7 @@ New Functionality
 * Monitoring: Support for reporting monitoring data to a local sqlite database is now available.
 * Parsl is switching to an opt-in model for anonymous usage tracking. Read more here: :ref:`label-usage-tracking`.
 * `bash_app` now supports specification of write modes for ``stdout`` and ``stderr``.
-* Persistent volume support added to `KubernetesProvider`.
+* Persistent volume support added to `parsl.providers.KubernetesProvider`.
 * Scaling recommendations from study on Bluewaters is now available in the userguide.
 
 
@@ -326,9 +560,9 @@ Released on Jan 18th, 2019
 New Functionality
 ^^^^^^^^^^^^^^^^^
 
-* `LowLatencyExecutor`: a new executor designed to address use-cases with tight latency requirements
+* `parsl.executors.LowLatencyExecutor`: a new executor designed to address use-cases with tight latency requirements
   such as model serving (Machine Learning), function serving and interactive analyses is now available.
-* New options in `HighThroughputExecutor`:
+* New options in `parsl.executors.HighThroughputExecutor`:
      * ``suppress_failure``: Enable suppression of worker rejoin errors.
      * ``max_workers``: Limit workers spawned by manager
 * Late binding of DFK, allows apps to pick DFK dynamically at call time. This functionality adds safety
@@ -337,7 +571,7 @@ New Functionality
 Bug fixes
 ^^^^^^^^^
 
-* A critical bug in `HighThroughputExecutor` that led to debug logs overflowing channels and terminating
+* A critical bug in `parsl.executors.HighThroughputExecutor` that led to debug logs overflowing channels and terminating
   blocks of resource is fixed `issue#738 <https://github.com/Parsl/parsl/issues/738>`_
 
 
@@ -358,7 +592,7 @@ New functionality
 ^^^^^^^^^^^^^^^^^
 
 
-* `HighThroughputExecutor`: a new executor intended to replace the ``IPyParallelExecutor`` is now available.
+* `parsl.executors.HighThroughputExecutor`: a new executor intended to replace the ``IPyParallelExecutor`` is now available.
   This new executor addresses several limitations of ``IPyParallelExecutor`` such as:
 
   * Scale beyond the ~300 worker limitation of IPP.
@@ -392,7 +626,7 @@ New functionality
 
    More information on configuring is available in the :ref:`configuration-section` section.
 
-* `ExtremeScaleExecutor` a new executor targeting supercomputer scale (>1000 nodes) workflows is now available.
+* `parsl.executors.ExtremeScaleExecutor` a new executor targeting supercomputer scale (>1000 nodes) workflows is now available.
 
   Here's a sample configuration for using this executor locally:
 
@@ -443,9 +677,9 @@ New functionality
   for eg:
 
     * ``IPyParallelExecutor`` provides ``workers_per_node``
-    * `HighThroughputExecutor` provides ``cores_per_worker`` to allow for worker launches to be determined based on
+    * `parsl.executors.HighThroughputExecutor` provides ``cores_per_worker`` to allow for worker launches to be determined based on
       the number of cores on the compute node.
-    * `ExtremeScaleExecutor` uses ``ranks_per_node`` to specify the ranks to launch per node.
+    * `parsl.executors.ExtremeScaleExecutor` uses ``ranks_per_node`` to specify the ranks to launch per node.
 
     .. warning::
        This is a breaking change from Parsl v0.6.0
@@ -463,7 +697,7 @@ New functionality
     * ``parsl.addresses.address_by_query``
     * ``parsl.addresses.address_by_hostname``
 
-* `AprunLauncher` now supports ``overrides`` option that allows arbitrary strings to be added
+* `parsl.launchers.AprunLauncher` now supports ``overrides`` option that allows arbitrary strings to be added
   to the aprun launcher call.
 
 * `DataFlowKernel` has a new method ``wait_for_current_tasks()``
@@ -486,7 +720,7 @@ Bug fixes (highlights)
 * Implement per-task locks to avoid deadlocks `issue#591 <https://github.com/Parsl/parsl/issues/591>`_
 * Fixes to internal consistency errors `issue#604 <https://github.com/Parsl/parsl/issues/604>`_
 * Removed unnecessary provider labels `issue#440 <https://github.com/Parsl/parsl/issues/440>`_
-* Fixes to `TorqueProvider` to work on NSCC `issue#489 <https://github.com/Parsl/parsl/issues/489>`_
+* Fixes to `parsl.providers.TorqueProvider` to work on NSCC `issue#489 <https://github.com/Parsl/parsl/issues/489>`_
 * Several fixes and updates to monitoring subsystem `issue#471 <https://github.com/Parsl/parsl/issues/471>`_
 * DataManager calls wrong DFK `issue#412 <https://github.com/Parsl/parsl/issues/412>`_
 * Config isn't reloading properly in notebooks `issue#549 <https://github.com/Parsl/parsl/issues/549>`_
@@ -510,7 +744,7 @@ Bug fixes (highlights)
 * Remove redundant logging `issue#267 <https://github.com/Parsl/parsl/issues/267>`_
 * Zombie ipcontroller processes - Process cleanup in case of interruption `issue#460 <https://github.com/Parsl/parsl/issues/460>`_
 * IPyparallel failure when submitting several apps in parallel threads `issue#451 <https://github.com/Parsl/parsl/issues/451>`_
-* `SlurmProvider` + `SingleNodeLauncher` starts all engines on a single core `issue#454 <https://github.com/Parsl/parsl/issues/454>`_
+* `parsl.providers.SlurmProvider` + `parsl.launchers.SingleNodeLauncher` starts all engines on a single core `issue#454 <https://github.com/Parsl/parsl/issues/454>`_
 * IPP ``engine_dir`` has no effect if indicated dir does not exist `issue#446 <https://github.com/Parsl/parsl/issues/446>`_
 * Clarify AppBadFormatting error `issue#433 <https://github.com/Parsl/parsl/issues/433>`_
 * confusing error message with simple configs `issue#379 <https://github.com/Parsl/parsl/issues/379>`_

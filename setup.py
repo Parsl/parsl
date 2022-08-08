@@ -8,13 +8,12 @@ with open('requirements.txt') as f:
 
 extras_require = {
     'monitoring' : [
-        'sqlalchemy>=1.3.0,!=1.3.4,<1.4',
-        'sqlalchemy_utils',
+        'sqlalchemy>=1.3.0',
         'pydot',
-        'networkx',
+        'networkx>=2.5,<2.6',
         'Flask>=1.0.2',
         'flask_sqlalchemy',
-        'pandas',
+        'pandas<1.4',
         'plotly',
         'python-daemon'
     ],
@@ -27,6 +26,8 @@ extras_require = {
     'gssapi' : ['python-gssapi'],
     'azure' : ['azure<=4', 'msrestazure'],
     'workqueue': ['work_queue'],
+    'flux': ['pyyaml', 'cffi', 'jsonschema'],
+    'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
 }
 extras_require['all'] = sum(extras_require.values(), [])
 
@@ -41,8 +42,9 @@ setup(
     license='Apache 2.0',
     download_url='https://github.com/Parsl/parsl/archive/{}.tar.gz'.format(VERSION),
     include_package_data=True,
+    package_data={'parsl': ['py.typed']},
     packages=find_packages(),
-    python_requires=">=3.6.0",
+    python_requires=">=3.7.0",
     install_requires=install_requires,
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
                'parsl/executors/extreme_scale/mpi_worker_pool.py',
@@ -59,9 +61,10 @@ setup(
         # Licence, must match with licence above
         'License :: OSI Approved :: Apache Software License',
         # Python versions supported
-        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
     keywords=['Workflows', 'Scientific computing'],
     entry_points={'console_scripts':

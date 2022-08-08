@@ -8,8 +8,10 @@ import logging
 import socket
 import sys
 import platform
-import multiprocessing as mp
 
+from parsl.utils import setproctitle
+from parsl.multiprocessing import ForkProcess
+from parsl.dataflow.states import States
 from parsl.version import VERSION as PARSL_VERSION
 
 logger = logging.getLogger(__name__)
@@ -19,7 +21,7 @@ def async_process(fn):
     """ Decorator function to launch a function as a separate process """
 
     def run(*args, **kwargs):
-        proc = mp.Process(target=fn, args=args, kwargs=kwargs, name="Usage-Tracking")
+        proc = ForkProcess(target=fn, args=args, kwargs=kwargs, name="Usage-Tracking")
         proc.start()
         return proc
 
@@ -42,6 +44,8 @@ def udp_messenger(domain_name, UDP_IP, UDP_PORT, sock_timeout, message):
           - sock_timeout (int) : Socket timeout
           - to_send (multiprocessing.Queue) : Queue of outgoing messages to internet
     """
+    setproctitle("parsl: Usage tracking")
+
     try:
         if message is None:
             raise ValueError("message was none")
@@ -178,7 +182,7 @@ class UsageTracker (object):
 
         site_count = len([x for x in self.dfk.config.executors if x.managed])
 
-        app_fails = self.dfk.tasks_failed_count + self.dfk.tasks_dep_fail_count
+        app_fails = self.dfk.task_state_counts[States.failed] + self.dfk.task_state_counts[States.dep_fail]
 
         message = {'uuid': self.uuid,
                    'end': time.time(),

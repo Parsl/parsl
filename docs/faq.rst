@@ -4,9 +4,12 @@ FAQ
 How can I debug a Parsl script?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Parsl interfaces with the Python logger. To enable logging of Parsl's
-progress to stdout, turn on the logger as follows. Alternatively, you
-can configure the file logger to write to an output file.
+Parsl interfaces with the Python logger and automatically logs Parsl-related messages a ``runinfo`` directory.
+The ``runinfo`` directory will be created in the folder from which you run the Parsl script
+and it will contain a series of subfolders for each time you run the code.
+Your latest run will be the largest number.
+
+Alternatively, you can configure the file logger to write to an output file.
 
 .. code-block:: python
 
@@ -81,7 +84,7 @@ right address or network interface to use.
 
 
 
-For `HighThroughputExecutor` the address is specified in the :class:`~parsl.config.Config`
+For `parsl.executors.HighThroughputExecutor` the address is specified in the :class:`~parsl.config.Config`
 as shown below :
 
 .. code-block:: python
@@ -108,8 +111,8 @@ as shown below :
    the system and the pre-compiled bindings used for pyzmq. As a last resort, you can try:
    ``pip install --upgrade --no-binary pyzmq pyzmq``, which forces re-compilation.
 
-For the `HighThroughputExecutor` as well as the `ExtremeScaleExecutor`, ``address`` is a keyword argument
-taken at initialization. Here is an example for the `HighThroughputExecutor`:
+For the `parsl.executors.HighThroughputExecutor` as well as the `parsl.executors.ExtremeScaleExecutor`, ``address`` is a keyword argument
+taken at initialization. Here is an example for the `parsl.executors.HighThroughputExecutor`:
 
 .. code-block:: python
 

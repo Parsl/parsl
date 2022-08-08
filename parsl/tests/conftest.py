@@ -14,7 +14,7 @@ import _pytest.runner as runner
 import parsl
 from parsl.dataflow.dflow import DataFlowKernelLoader
 
-logger = logging.getLogger('parsl')
+logger = logging.getLogger(__name__)
 
 
 def dumpstacks(sig, frame):
@@ -109,14 +109,19 @@ def load_dfk_session(request, pytestconfig):
         spec.loader.exec_module(module)
 
         if DataFlowKernelLoader._dfk is not None:
-            raise ValueError("DFK didn't start as None - there was a DFK from somewhere already")
+            raise RuntimeError("DFK didn't start as None - there was a DFK from somewhere already")
 
-        dfk = parsl.load(module.config)
+        if hasattr(module, 'config'):
+            dfk = parsl.load(module.config)
+        elif hasattr(module, 'fresh_config'):
+            dfk = parsl.load(module.fresh_config())
+        else:
+            raise RuntimeError("Config module does not define config or fresh_config")
 
         yield
 
         if(parsl.dfk() != dfk):
-            raise ValueError("DFK changed unexpectedly during test")
+            raise RuntimeError("DFK changed unexpectedly during test")
         dfk.cleanup()
         parsl.clear()
     else:
@@ -156,7 +161,7 @@ def load_dfk_local_module(request, pytestconfig):
 
         if(local_config):
             if(parsl.dfk() != dfk):
-                raise ValueError("DFK changed unexpectedly during test")
+                raise RuntimeError("DFK changed unexpectedly during test")
             dfk.cleanup()
             parsl.clear()
 
@@ -232,9 +237,8 @@ def pytest_make_collect_report(collector):
     if not call.excinfo:
         outcome = "passed"
     else:
-        from _pytest import nose
         from _pytest.outcomes import Skipped
-        skip_exceptions = (Skipped,) + nose.get_skip_exceptions()
+        skip_exceptions = (Skipped,)
         if call.excinfo.errisinstance(KeyError):
             outcome = "skipped"
             r = collector._repr_failure_py(call.excinfo, "line").reprcrash

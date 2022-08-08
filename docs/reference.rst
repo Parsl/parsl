@@ -72,11 +72,13 @@ Executors
     :nosignatures:
 
     parsl.executors.base.ParslExecutor
+    parsl.executors.status_handling.BlockProviderExecutor
     parsl.executors.ThreadPoolExecutor
     parsl.executors.HighThroughputExecutor
     parsl.executors.WorkQueueExecutor
     parsl.executors.ExtremeScaleExecutor
     parsl.executors.LowLatencyExecutor
+    parsl.executors.FluxExecutor
     parsl.executors.swift_t.TurbineExecutor
 
 Launchers
@@ -86,6 +88,7 @@ Launchers
     :toctree: stubs
     :nosignatures:
 
+    parsl.launchers.launchers.Launcher
     parsl.launchers.SimpleLauncher
     parsl.launchers.SingleNodeLauncher
     parsl.launchers.SrunLauncher
@@ -144,12 +147,10 @@ Exceptions
     parsl.executors.errors.BadMessage
     parsl.dataflow.error.DataFlowException
     parsl.dataflow.error.ConfigurationError
-    parsl.dataflow.error.DuplicateTaskError
     parsl.dataflow.error.BadCheckpoint
     parsl.dataflow.error.DependencyError
     parsl.launchers.error.BadLauncher
     parsl.providers.error.ExecutionProviderException
-    parsl.providers.error.ChannelRequired
     parsl.providers.error.ScaleOutFailed
     parsl.providers.error.SchedulerMissingArgs
     parsl.providers.error.ScriptPathError
@@ -162,6 +163,7 @@ Exceptions
     parsl.channels.errors.SSHException
     parsl.channels.errors.FileCopyException
     parsl.executors.high_throughput.errors.WorkerLost
+    parsl.executors.high_throughput.interchange.ManagerLost
 
 Internal
 ========
@@ -175,6 +177,9 @@ Internal
     parsl.app.python.PythonApp
     parsl.dataflow.dflow.DataFlowKernel
     parsl.dataflow.flow_control.FlowControl
+    parsl.dataflow.memoization.id_for_memo
     parsl.dataflow.memoization.Memoizer
+    parsl.dataflow.states.FINAL_STATES
+    parsl.dataflow.states.States
     parsl.dataflow.strategy.Strategy
     parsl.dataflow.flow_control.Timer

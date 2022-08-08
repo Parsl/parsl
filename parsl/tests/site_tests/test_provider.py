@@ -18,6 +18,7 @@ def platform(sleep=10, stdout=None):
 
 
 @pytest.mark.local
+@pytest.mark.skip("This test cannot run on sites which cannot be identified by site_config_selector")
 def test_provider():
     """ Provider scaling
     """
@@ -61,8 +62,8 @@ def test_provider():
     # A new PR will handle removing blocks from self.block
     # this includes failed/completed/canceled blocks
     assert len(current_jobs) == 1, "Expected current_jobs == 1"
+    dfk.cleanup()
     parsl.clear()
-    del dfk
     logger.info("Ended test_provider")
     return True
 

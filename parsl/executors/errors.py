@@ -1,21 +1,28 @@
 """Exceptions raise by Executors."""
 from parsl.app.errors import ParslError
-
-from typing import Optional
+from parsl.executors.base import ParslExecutor
 
 
 class ExecutorError(ParslError):
-    """Base class for all exceptions.
+    """Base class for executor related exceptions.
 
     Only to be invoked when only a more specific error is not available.
     """
 
-    def __init__(self, executor, reason):
+    def __init__(self, executor: ParslExecutor, reason: str):
         self.executor = executor
         self.reason = reason
 
     def __str__(self):
-        return "Executor {0} failed due to: {1}".format(self.executor, self.reason)
+        return "Executor {0} failed due to: {1}".format(self.executor.label, self.reason)
+
+
+class BadStateException(ExecutorError):
+    """Error returned by task Futures when an executor is in a bad state.
+    """
+
+    def __init__(self, executor, exception):
+        super().__init__(executor, str(exception))
 
 
 class UnsupportedFeatureError(ExecutorError):
@@ -36,12 +43,11 @@ Please checkout {} for this feature".format(self.feature,
 class ScalingFailed(ExecutorError):
     """Scaling failed due to error in Execution provider."""
 
-    def __init__(self, executor: Optional[str], reason: str):
-        self.executor = executor
-        self.reason = reason
+    def __str__(self):
+        return f"Executor {self.executor.label} failed to scale due to: {self.reason}"
 
 
-class DeserializationError(ExecutorError):
+class DeserializationError(ParslError):
     """ Failure at the Deserialization of results/exceptions from remote workers
     """
 
@@ -52,7 +58,7 @@ class DeserializationError(ExecutorError):
         return "Failed to deserialize return objects. Reason:{}".format(self.reason)
 
 
-class SerializationError(ExecutorError):
+class SerializationError(ParslError):
     """ Failure to serialize data arguments for the tasks
     """
 
@@ -65,7 +71,7 @@ class SerializationError(ExecutorError):
                                                                            self.troubleshooting)
 
 
-class BadMessage(ExecutorError):
+class BadMessage(ParslError):
     """ Mangled/Poorly formatted/Unsupported message received
     """
 

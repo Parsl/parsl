@@ -1,0 +1,46 @@
+name: Parsl
+icon: https://parsl-project.org/images/logos/parsl-logo.png
+headline: Productive parallel programming in Python
+description: |
+  Parsl is a flexible and scalable parallel programming library for Python.
+  Parsl augments Python with simple constructs for encoding parallelism. 
+  Developers annotate Python functions to specify opportunities for 
+  concurrent execution. These annotated functions, called apps, may represent 
+  pure Python functions or calls to external applications. Parsl further 
+  allows invocations of these apps, called tasks, to be connected by shared 
+  input/output data (e.g., Python objects or files) via which Parsl 
+  constructs a dynamic dependency graph of tasks to manage concurrent task 
+  execution where possible.
+
+language: Python
+
+release: 
+  version: 1.2.0
+  date: 2022-01-13
+
+documentation:
+  general: https://parsl.readthedocs.io/en/stable/
+  installation: https://parsl.readthedocs.io/en/stable/quickstart.html
+  tutorial: https://parsl-project.org/binder
+
+social:
+  twitter: ParslProject
+
+execution_environment:
+  interfaces:
+    - Python API
+  resource_managers:
+    - Slurm
+    - LSF
+    - PBS
+    - Cobalt
+    - GridEngine
+    - HTCondor
+    - AWS
+    - Google Cloud
+    - Kubernetes
+  transfer_protocols:
+    - Globus
+    - HTTP
+    - FTP
+    - rsync

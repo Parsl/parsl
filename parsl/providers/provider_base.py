@@ -1,19 +1,26 @@
 import os
 from abc import ABCMeta, abstractmethod, abstractproperty
 from enum import Enum
-from typing import Any, List, Optional
+import logging
+from typing import Any, Dict, List, Optional
+
+from parsl.channels.base import Channel
+
+logger = logging.getLogger(__name__)
 
 
 class JobState(bytes, Enum):
     """Defines a set of states that a job can be in"""
-
-    def __new__(cls, value, terminal, status_name):
-        # noinspection PyArgumentList
+    def __new__(cls, value: int, terminal: bool, status_name: str) -> "JobState":
         obj = bytes.__new__(cls, [value])
         obj._value_ = value
         obj.terminal = terminal
         obj.status_name = status_name
         return obj
+
+    value: int
+    terminal: bool
+    status_name: str
 
     UNKNOWN = (0, False, "UNKNOWN")
     PENDING = (1, False, "PENDING")
@@ -26,11 +33,19 @@ class JobState(bytes, Enum):
 
 
 class JobStatus(object):
-    """Encapsulates a job state together with other details, presently a (error) message"""
+    """Encapsulates a job state together with other details:
+
+    Args:
+        state: The machine-reachable state of the job this status refers to
+        message: Optional human readable message
+        exit_code: Optional exit code
+        stdout_path: Optional path to a file containing the job's stdout
+        stderr_path: Optional path to a file containing the job's stderr
+    """
     SUMMARY_TRUNCATION_THRESHOLD = 2048
 
-    def __init__(self, state: JobState, message: str = None, exit_code: Optional[int] = None,
-                 stdout_path: str = None, stderr_path: str = None):
+    def __init__(self, state: JobState, message: Optional[str] = None, exit_code: Optional[int] = None,
+                 stdout_path: Optional[str] = None, stderr_path: Optional[str] = None):
         self.state = state
         self.message = message
         self.exit_code = exit_code
@@ -38,43 +53,53 @@ class JobStatus(object):
         self.stderr_path = stderr_path
 
     @property
-    def terminal(self):
+    def terminal(self) -> bool:
         return self.state.terminal
 
     @property
-    def status_name(self):
+    def status_name(self) -> str:
         return self.state.status_name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        if self.message is not None:
+            extra = f"state={self.state} message={self.message}".format(self.state, self.message)
+        else:
+            extra = f"state={self.state}".format(self.state)
+        return f"<{type(self).__module__}.{type(self).__qualname__} object at {hex(id(self))}, {extra}>"
+
+    def __str__(self) -> str:
         if self.message is not None:
             return "{} ({})".format(self.state, self.message)
         else:
             return "{}".format(self.state)
 
     @property
-    def stdout(self):
+    def stdout(self) -> Optional[str]:
         return self._read_file(self.stdout_path)
 
     @property
-    def stderr(self):
+    def stderr(self) -> Optional[str]:
         return self._read_file(self.stderr_path)
 
-    def _read_file(self, path):
+    def _read_file(self, path: Optional[str]) -> Optional[str]:
+        if path is None:
+            return None
         try:
             with open(path, 'r') as f:
                 return f.read()
         except Exception:
+            logger.exception("Converting exception to None")
             return None
 
     @property
-    def stdout_summary(self):
+    def stdout_summary(self) -> Optional[str]:
         return self._read_summary(self.stdout_path)
 
     @property
-    def stderr_summary(self):
+    def stderr_summary(self) -> Optional[str]:
         return self._read_summary(self.stderr_path)
 
-    def _read_summary(self, path):
+    def _read_summary(self, path: Optional[str]) -> Optional[str]:
         if not path:
             # can happen for synthetic job failures
             return None
@@ -84,9 +109,10 @@ class JobStatus(object):
                 size = f.tell()
                 f.seek(0, os.SEEK_SET)
                 if size > JobStatus.SUMMARY_TRUNCATION_THRESHOLD:
-                    head = f.read(JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2)
-                    f.seek(size - JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2, os.SEEK_SET)
-                    tail = f.read(JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2)
+                    half_threshold = int(JobStatus.SUMMARY_TRUNCATION_THRESHOLD / 2)
+                    head = f.read(half_threshold)
+                    f.seek(size - half_threshold, os.SEEK_SET)
+                    tail = f.read(half_threshold)
                     return head + '\n...\n' + tail
                 else:
                     f.seek(0, os.SEEK_SET)
@@ -124,14 +150,25 @@ class ExecutionProvider(metaclass=ABCMeta):
                                 |
                                 +-------------------
      """
-    _cores_per_node = None  # type: Optional[int]
-    _mem_per_node = None  # type: Optional[float]
 
     @abstractmethod
-    def submit(self, command: str, tasks_per_node: int, job_name: str = "parsl.auto") -> Any:
+    def __init__(self) -> None:
+        self.min_blocks: int
+        self.max_blocks: int
+        self.init_blocks: int
+        self.nodes_per_block: int
+        self.script_dir: Optional[str]
+        self.parallelism: float
+        self.resources: Dict[object, Any]
+        self._cores_per_node: Optional[int] = None
+        self._mem_per_node: Optional[float] = None
+        pass
+
+    @abstractmethod
+    def submit(self, command: str, tasks_per_node: int, job_name: str = "parsl.auto") -> object:
         ''' The submit method takes the command string to be executed upon
-        instantiation of a resource most often to start a pilot (such as IPP engine
-        or even Swift-T engines).
+        instantiation of a resource most often to start a pilot (such as for
+        HighThroughputExecutor or WorkQueueExecutor).
 
         Args :
              - command (str) : The bash command string to be executed
@@ -143,7 +180,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         Returns:
              - A job identifier, this could be an integer, string etc
                or None or any other object that evaluates to boolean false
-                  if submission failed but an exception isn't thrown.
+               if submission failed but an exception isn't thrown.
 
         Raises:
              - ExecutionProviderException or its subclasses
@@ -152,7 +189,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def status(self, job_ids: List[Any]) -> List[JobStatus]:
+    def status(self, job_ids: List[object]) -> List[JobStatus]:
         ''' Get the status of a list of jobs identified by the job identifiers
         returned from the submit request.
 
@@ -170,7 +207,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def cancel(self, job_ids: List[Any]) -> List[bool]:
+    def cancel(self, job_ids: List[object]) -> List[bool]:
         ''' Cancels the resources identified by the job_ids provided by the user.
 
         Args:
@@ -199,8 +236,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         variable PARSL_MEMORY_GB before executing submitted commands.
 
         If this property is set, executors may use it to calculate how many tasks can
-        run concurrently per node. This information is used by dataflow.Strategy to estimate
-        the resources required to run all outstanding tasks.
+        run concurrently per node.
         """
         return self._mem_per_node
 
@@ -217,8 +253,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         variable PARSL_CORES before executing submitted commands.
 
         If this property is set, executors may use it to calculate how many tasks can
-        run concurrently per node. This information is used by dataflow.Strategy to estimate
-        the resources required to run all outstanding tasks.
+        run concurrently per node.
         """
         return self._cores_per_node
 
@@ -233,4 +268,19 @@ class ExecutionProvider(metaclass=ABCMeta):
 
         :return: the number of seconds to wait between calls to status()
         """
+        pass
+
+
+class Channeled():
+    """A marker type to indicate that parsl should manage a Channel for this provider"""
+    def __init__(self) -> None:
+        self.channel: Channel
+        pass
+
+
+class MultiChanneled():
+    """A marker type to indicate that parsl should manage multiple Channels for this provider"""
+
+    def __init__(self) -> None:
+        self.channels: List[Channel]
         pass

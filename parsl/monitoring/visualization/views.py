@@ -4,7 +4,7 @@ import pandas as pd
 from parsl.monitoring.visualization.models import Workflow, Task, Status, db
 
 from parsl.monitoring.visualization.plots.default.workflow_plots import task_gantt_plot, task_per_app_plot, workflow_dag_plot
-from parsl.monitoring.visualization.plots.default.task_plots import time_series_cpu_per_task_plot, time_series_memory_per_task_plot
+from parsl.monitoring.visualization.plots.default.task_plots import time_series_memory_per_task_plot
 from parsl.monitoring.visualization.plots.default.workflow_resource_plots import resource_distribution_plot, resource_efficiency, worker_efficiency
 
 dummy = True
@@ -61,7 +61,7 @@ def workflow(workflow_id):
                                 task_time_returned from task
                                 WHERE run_id='%s'"""
                                 % (workflow_id), db.engine)
-    df_task_tries = pd.read_sql_query("""SELECT task.task_id, task_func_name,
+    df_task_tries = pd.read_sql_query("""SELECT task.task_id, task_func_name, task_time_returned,
                                       task_try_time_running, task_try_time_returned from task, try
                                       WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'"""
                                       % (workflow_id, workflow_id), db.engine)
@@ -71,7 +71,7 @@ def workflow(workflow_id):
                            workflow_details=workflow_details,
                            task_summary=task_summary,
                            task_gantt=task_gantt_plot(df_task, df_status, time_completed=workflow_details.time_completed),
-                           task_per_app=task_per_app_plot(df_task_tries, df_status))
+                           task_per_app=task_per_app_plot(df_task_tries, df_status, time_completed=workflow_details.time_completed))
 
 
 @app.route('/workflow/<workflow_id>/app/<app_name>')
@@ -122,8 +122,6 @@ def task(workflow_id, task_id):
                            workflow_details=workflow_details,
                            task_details=task_details,
                            task_status=task_status,
-                           time_series_cpu_percent=time_series_cpu_per_task_plot(
-                               df_resources, 'psutil_process_cpu_percent', 'CPU Utilization'),
                            time_series_memory_resident=time_series_memory_per_task_plot(
                                df_resources, 'psutil_process_memory_resident', 'Memory Usage'),
                            )

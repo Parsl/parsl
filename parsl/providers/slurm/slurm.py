@@ -28,8 +28,8 @@ translate_table = {
     'TO': JobState.TIMEOUT,  # (timeout),
     'NF': JobState.FAILED,  # (node failure),
     'RV': JobState.FAILED,  # (revoked) and
-    'SE': JobState.FAILED
-}  # (special exit state
+    'SE': JobState.FAILED   # (special exit state)
+}
 
 
 class SlurmProvider(ClusterProvider, RepresentationMixin):
@@ -42,9 +42,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     Parameters
     ----------
     partition : str
-        Slurm partition to request blocks from. If none, no partition slurm directive will be specified.
+        Slurm partition to request blocks from. If unspecified or ``None``, no partition slurm directive will be specified.
     account : str
-        Slurm account to which to charge resources used by the job. If none, the job will use the
+        Slurm account to which to charge resources used by the job. If unspecified or ``None``, the job will use the
         user's default account.
     channel : Channel
         Channel for accessing this provider. Possible channels include
@@ -85,7 +85,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self,
-                 partition: Optional[str],
+                 partition: Optional[str] = None,
                  account: Optional[str] = None,
                  channel: Channel = LocalChannel(),
                  nodes_per_block: int = 1,
@@ -138,26 +138,35 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         Returns:
               [status...] : Status list of all jobs
         '''
-        job_id_list = ','.join(self.resources.keys())
-        cmd = "squeue --job {0}".format(job_id_list)
-        logger.debug("Executing sqeueue")
+        job_id_list = ','.join(
+            [jid for jid, job in self.resources.items() if not job['status'].terminal]
+        )
+        if not job_id_list:
+            logger.debug('No active jobs, skipping status update')
+            return
+
+        cmd = "squeue --noheader --format='%i %t' --job '{0}'".format(job_id_list)
+        logger.debug("Executing %s", cmd)
         retcode, stdout, stderr = self.execute_wait(cmd)
-        logger.debug("sqeueue returned")
+        logger.debug("squeue returned %s %s", stdout, stderr)
 
         # Execute_wait failed. Do no update
         if retcode != 0:
-            logger.warning("squeue failed with non-zero exit code {} - see https://github.com/Parsl/parsl/issues/1588".format(retcode))
+            logger.warning("squeue failed with non-zero exit code {}".format(retcode))
             return
 
-        jobs_missing = list(self.resources.keys())
+        jobs_missing = set(self.resources.keys())
         for line in stdout.split('\n'):
-            parts = line.split()
-            if parts and parts[0] != 'JOBID':
-                job_id = parts[0]
-                status = translate_table.get(parts[4], JobState.UNKNOWN)
-                logger.debug("Updating job {} with slurm status {} to parsl status {}".format(job_id, parts[4], status))
-                self.resources[job_id]['status'] = JobStatus(status)
-                jobs_missing.remove(job_id)
+            if not line:
+                # Blank line
+                continue
+            job_id, slurm_state = line.split()
+            if slurm_state not in translate_table:
+                logger.warning(f"Slurm status {slurm_state} is not recognized")
+            status = translate_table.get(slurm_state, JobState.UNKNOWN)
+            logger.debug("Updating job {} with slurm status {} to parsl state {!s}".format(job_id, slurm_state, status))
+            self.resources[job_id]['status'] = JobStatus(status)
+            jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
@@ -232,7 +241,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                     job_id = line.split("Submitted batch job")[1].strip()
                     self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
-            print("Submission of command to scale_out failed")
+            logger.error("Submit command failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
         return job_id
 

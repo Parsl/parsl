@@ -14,8 +14,8 @@ queues, durations, and data management options.
 
 The following example shows a basic configuration object (:class:`~parsl.config.Config`) for the Frontera
 supercomputer at TACC.
-This config uses the `HighThroughputExecutor` to submit
-tasks from a login node (`LocalChannel`). It requests an allocation of
+This config uses the `parsl.executors.HighThroughputExecutor` to submit
+tasks from a login node (`parsl.channels.LocalChannel`). It requests an allocation of
 128 nodes, deploying 1 worker for each of the 56 cores per node, from the normal partition.
 The config uses the `address_by_hostname()` helper function to determine
 the login node's IP address.
@@ -69,37 +69,37 @@ Stepping through the following question should help formulate a suitable configu
 
 1. Where should apps be executed?
 
-+---------------------+-------------------------------+------------------------+
-| Target              | Executor                      | Provider               |
-+=====================+===============================+========================+
-| Laptop/Workstation  | * `HighThroughputExecutor`    | `LocalProvider`        |
-|                     | * `ThreadPoolExecutor`        |                        |
-|                     | * `WorkQueueExecutor` beta_   |                        |
-+---------------------+-------------------------------+------------------------+
-| Amazon Web Services | * `HighThroughputExecutor`    | `AWSProvider`          |
-+---------------------+-------------------------------+------------------------+
-| Google Cloud        | * `HighThroughputExecutor`    | `GoogleCloudProvider`  |
-+---------------------+-------------------------------+------------------------+
-| Slurm based system  | * `ExtremeScaleExecutor`      | `SlurmProvider`        |
-|                     | * `HighThroughputExecutor`    |                        |
-|                     | * `WorkQueueExecutor` beta_   |                        |
-+---------------------+-------------------------------+------------------------+
-| Torque/PBS based    | * `ExtremeScaleExecutor`      | `TorqueProvider`       |
-| system              | * `HighThroughputExecutor`    |                        |
-|                     | * `WorkQueueExecutor` beta_   |                        |
-+---------------------+-------------------------------+------------------------+
-| Cobalt based system | * `ExtremeScaleExecutor`      | `CobaltProvider`       |
-|                     | * `HighThroughputExecutor`    |                        |
-|                     | * `WorkQueueExecutor` beta_   |                        |
-+---------------------+-------------------------------+------------------------+
-| GridEngine based    | * `HighThroughputExecutor`    | `GridEngineProvider`   |
-| system              | * `WorkQueueExecutor` beta_   |                        |
-+---------------------+-------------------------------+------------------------+
-| Condor based        | * `HighThroughputExecutor`    | `CondorProvider`       |
-| cluster or grid     | * `WorkQueueExecutor` beta_   |                        |
-+---------------------+-------------------------------+------------------------+
-| Kubernetes cluster  | * `HighThroughputExecutor`    | `KubernetesProvider`   |
-+---------------------+-------------------------------+------------------------+
++---------------------+-----------------------------------------------+----------------------------------------+
+| Target              | Executor                                      | Provider                               |
++=====================+===============================================+========================================+
+| Laptop/Workstation  | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.LocalProvider`        |
+|                     | * `parsl.executors.ThreadPoolExecutor`        |                                        |
+|                     | * `parsl.executors.WorkQueueExecutor` beta_   |                                        |
++---------------------+-----------------------------------------------+----------------------------------------+
+| Amazon Web Services | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.AWSProvider`          |
++---------------------+-----------------------------------------------+----------------------------------------+
+| Google Cloud        | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.GoogleCloudProvider`  |
++---------------------+-----------------------------------------------+----------------------------------------+
+| Slurm based system  | * `parsl.executors.ExtremeScaleExecutor`      | `parsl.providers.SlurmProvider`        |
+|                     | * `parsl.executors.HighThroughputExecutor`    |                                        |
+|                     | * `parsl.executors.WorkQueueExecutor` beta_   |                                        |
++---------------------+-----------------------------------------------+----------------------------------------+
+| Torque/PBS based    | * `parsl.executors.ExtremeScaleExecutor`      | `parsl.providers.TorqueProvider`       |
+| system              | * `parsl.executors.HighThroughputExecutor`    |                                        |
+|                     | * `parsl.executors.WorkQueueExecutor` beta_   |                                        |
++---------------------+-----------------------------------------------+----------------------------------------+
+| Cobalt based system | * `parsl.executors.ExtremeScaleExecutor`      | `parsl.providers.CobaltProvider`       |
+|                     | * `parsl.executors.HighThroughputExecutor`    |                                        |
+|                     | * `parsl.executors.WorkQueueExecutor` beta_   |                                        |
++---------------------+-----------------------------------------------+----------------------------------------+
+| GridEngine based    | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.GridEngineProvider`   |
+| system              | * `parsl.executors.WorkQueueExecutor` beta_   |                                        |
++---------------------+-----------------------------------------------+----------------------------------------+
+| Condor based        | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.CondorProvider`       |
+| cluster or grid     | * `parsl.executors.WorkQueueExecutor` beta_   |                                        |
++---------------------+-----------------------------------------------+----------------------------------------+
+| Kubernetes cluster  | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.KubernetesProvider`   |
++---------------------+-----------------------------------------------+----------------------------------------+
 
 .. _beta:
 
@@ -109,80 +109,77 @@ WorkQueueExecutor is available in ``v1.0.0`` in beta status.
 2.  How many nodes will be used to execute the apps? What task durations are necessary to achieve good performance?
 
 
-+--------------------------+----------------------+-------------------------------------+
-| Executor                 | Number of Nodes [*]_ | Task duration for good performance  |
-+==========================+======================+=====================================+
-| `ThreadPoolExecutor`     | 1 (Only local)       | Any                                 |
-+--------------------------+----------------------+-------------------------------------+
-| `HighThroughputExecutor` | <=2000               | Task duration(s)/#nodes >= 0.01     |
-|                          |                      | longer tasks needed at higher scale |
-+--------------------------+----------------------+-------------------------------------+
-| `ExtremeScaleExecutor`   | >1000, <=8000 [*]_   | >minutes                            |
-+--------------------------+----------------------+-------------------------------------+
-| `WorkQueueExecutor`      | <=1000 [*]_          | 10s+                                |
-+--------------------------+----------------------+-------------------------------------+
++------------------------------------------+----------------------+-------------------------------------+
+| Executor                                 | Number of Nodes [*]_ | Task duration for good performance  |
++==========================================+======================+=====================================+
+| `parsl.executors.ThreadPoolExecutor`     | 1 (Only local)       | Any                                 |
++------------------------------------------+----------------------+-------------------------------------+
+| `parsl.executors.HighThroughputExecutor` | <=2000               | Task duration(s)/#nodes >= 0.01     |
+|                                          |                      | longer tasks needed at higher scale |
++------------------------------------------+----------------------+-------------------------------------+
+| `parsl.executors.ExtremeScaleExecutor`   | >1000, <=8000 [*]_   | >minutes                            |
++------------------------------------------+----------------------+-------------------------------------+
+| `parsl.executors.WorkQueueExecutor`      | <=1000 [*]_          | 10s+                                |
++------------------------------------------+----------------------+-------------------------------------+
 
 
 .. [*] Assuming 32 workers per node. If there are fewer workers launched
        per node, a larger number of nodes could be supported.
 
 .. [*] 8,000 nodes with 32 workers (256,000 workers) is the maximum scale at which
-       the `ExtremeScaleExecutor` has been tested.
+       the `parsl.executors.ExtremeScaleExecutor` has been tested.
 
-.. [*] The maximum number of nodes tested for the `WorkQueueExecutor` is 10,000 GPU cores and
+.. [*] The maximum number of nodes tested for the `parsl.executors.WorkQueueExecutor` is 10,000 GPU cores and
        20,000 CPU cores.
-
-.. warning:: ``IPyParallelExecutor`` is  deprecated as of Parsl v0.8.0. `HighThroughputExecutor`
-   is the recommended replacement.
 
 
 3. Should Parsl request multiple nodes in an individual scheduler job? 
 (Here the term block is equivalent to a single scheduler job.)
 
-+----------------------------------------------------------------------------+
-| ``nodes_per_block = 1``                                                    |
-+---------------------+--------------------------+---------------------------+
-| Provider            | Executor choice          | Suitable Launchers        |
-+=====================+==========================+===========================+
-| Systems that don't  | Any                      | * `SingleNodeLauncher`    |
-| use Aprun           |                          | * `SimpleLauncher`        |
-+---------------------+--------------------------+---------------------------+
-| Aprun based systems | Any                      | * `AprunLauncher`         |
-+---------------------+--------------------------+---------------------------+
++--------------------------------------------------------------------------------------------+
+| ``nodes_per_block = 1``                                                                    |
++---------------------+--------------------------+-------------------------------------------+
+| Provider            | Executor choice          | Suitable Launchers                        |
++=====================+==========================+===========================================+
+| Systems that don't  | Any                      | * `parsl.launchers.SingleNodeLauncher`    |
+| use Aprun           |                          | * `parsl.launchers.SimpleLauncher`        |
++---------------------+--------------------------+-------------------------------------------+
+| Aprun based systems | Any                      | * `parsl.launchers.AprunLauncher`         |
++---------------------+--------------------------+-------------------------------------------+
 
-+-------------------------------------------------------------------------------------+
-| ``nodes_per_block > 1``                                                             |
-+---------------------+--------------------------+------------------------------------+
-| Provider            | Executor choice          | Suitable Launchers                 |
-+=====================+==========================+====================================+
-| `TorqueProvider`    | Any                      | * `AprunLauncher`                  |
-|                     |                          | * `MpiExecLauncher`                |
-+---------------------+--------------------------+------------------------------------+
-| `CobaltProvider`    | Any                      | * `AprunLauncher`                  |
-+---------------------+--------------------------+------------------------------------+
-| `SlurmProvider`     | Any                      | * `SrunLauncher`  if native slurm  |
-|                     |                          | * `AprunLauncher`, otherwise       |
-+---------------------+--------------------------+------------------------------------+
++---------------------------------------------------------------------------------------------------------------------+
+| ``nodes_per_block > 1``                                                                                             |
++-------------------------------------+--------------------------+----------------------------------------------------+
+| Provider                            | Executor choice          | Suitable Launchers                                 |
++=====================================+==========================+====================================================+
+| `parsl.providers.TorqueProvider`    | Any                      | * `parsl.launchers.AprunLauncher`                  |
+|                                     |                          | * `parsl.launchers.MpiExecLauncher`                |
++-------------------------------------+--------------------------+----------------------------------------------------+
+| `parsl.providers.CobaltProvider`    | Any                      | * `parsl.launchers.AprunLauncher`                  |
++-------------------------------------+--------------------------+----------------------------------------------------+
+| `parsl.providers.SlurmProvider`     | Any                      | * `parsl.launchers.SrunLauncher`  if native slurm  |
+|                                     |                          | * `parsl.launchers.AprunLauncher`, otherwise       |
++-------------------------------------+--------------------------+----------------------------------------------------+
 
-.. note:: If using a Cray system, you most likely need to use the `AprunLauncher` to launch workers unless you
+.. note:: If using a Cray system, you most likely need to use the `parsl.launchers.AprunLauncher` to launch workers unless you
           are on a **native Slurm** system like :ref:`configuring_nersc_cori`
 
 
 4) Where will the main Parsl program run and how will it communicate with the apps?
 
-+------------------------+--------------------------+------------------------------------+
-| Parsl program location | App execution target     | Suitable channel                   |
-+========================+==========================+====================================+
-| Laptop/Workstation     | Laptop/Workstation       | `LocalChannel`                     |
-+------------------------+--------------------------+------------------------------------+
-| Laptop/Workstation     | Cloud Resources          | No channel is needed               |
-+------------------------+--------------------------+------------------------------------+
-| Laptop/Workstation     | Clusters with no 2FA     | `SSHChannel`                       |
-+------------------------+--------------------------+------------------------------------+
-| Laptop/Workstation     | Clusters with 2FA        | `SSHInteractiveLoginChannel`       |
-+------------------------+--------------------------+------------------------------------+
-| Login node             | Cluster/Supercomputer    | `LocalChannel`                     |
-+------------------------+--------------------------+------------------------------------+
++------------------------+--------------------------+---------------------------------------------------+
+| Parsl program location | App execution target     | Suitable channel                                  |
++========================+==========================+===================================================+
+| Laptop/Workstation     | Laptop/Workstation       | `parsl.channels.LocalChannel`                     |
++------------------------+--------------------------+---------------------------------------------------+
+| Laptop/Workstation     | Cloud Resources          | No channel is needed                              |
++------------------------+--------------------------+---------------------------------------------------+
+| Laptop/Workstation     | Clusters with no 2FA     | `parsl.channels.SSHChannel`                       |
++------------------------+--------------------------+---------------------------------------------------+
+| Laptop/Workstation     | Clusters with 2FA        | `parsl.channels.SSHInteractiveLoginChannel`       |
++------------------------+--------------------------+---------------------------------------------------+
+| Login node             | Cluster/Supercomputer    | `parsl.channels.LocalChannel`                     |
++------------------------+--------------------------+---------------------------------------------------+
 
 Heterogeneous Resources
 -----------------------
@@ -194,13 +191,13 @@ In addition, the software and filesystem setup can vary from node to node.
 A Condor cluster may not provide shared filesystem access at all,
 and may include nodes with a variety of Python versions and available libraries.
 
-The `WorkQueueExecutor` provides several features to work with heterogeneous resources.
+The `parsl.executors.WorkQueueExecutor` provides several features to work with heterogeneous resources.
 By default, Parsl only runs one app at a time on each worker node.
 However, it is possible to specify the requirements for a particular app,
 and Work Queue will automatically run as many parallel instances as possible on each node.
 Work Queue automatically detects the amount of cores, memory, and other resources available on each execution node.
 To activate this feature, add a resource specification to your apps. A resource specification is a dictionary with
-the following three (case-insensitive) keys: ``cores`` (an integer corresponding to the number of cores required by the task),
+the following three keys: ``cores`` (an integer corresponding to the number of cores required by the task),
 ``memory`` (an integer corresponding to the task's memory requirement in MB), and ``disk`` (an integer corresponding to
 the task's disk requirement in MB), passed to an app via the special keyword argument ``parsl_resource_specification``. The specification can be set for all app invocations via a default, for example:
 
@@ -211,7 +208,7 @@ the task's disk requirement in MB), passed to an app via the special keyword arg
           return x*2
 
 
-or updated when the app is invocated:
+or updated when the app is invoked:
 
    .. code-block:: python
 
@@ -291,6 +288,61 @@ and Work Queue does not require Python to run.
    The automatic packaging feature only supports packages installed via ``pip`` or ``conda``.
    Importing from other locations (e.g. via ``$PYTHONPATH``) or importing other modules in the same directory is not supported.
 
+
+Accelerators
+------------
+
+Many modern clusters provide multiple accelerators per compute note, yet many applications are best suited to using a single accelerator per task.
+Parsl supports pinning each worker to difference accelerators using ``available_accelerators`` option of the :class:`~parsl.executors.HighThroughputExecutor`.
+Provide either the number of executors (Parsl will assume they are named in integers starting from zero) or a list of the names of the accelerators available on the node.
+
+.. code-block:: python
+
+    local_config = Config(
+        executors=[
+            HighThroughputExecutor(
+                label="htex_Local",
+                worker_debug=True,
+                available_accelerators=2,
+                provider=LocalProvider(
+                    channel=LocalChannel(),
+                    init_blocks=1,
+                    max_blocks=1,
+                ),
+            )
+        ],
+        strategy=None,
+    )
+
+
+Multi-Threaded Applications
+---------------------------
+
+Workflows which launch multiple workers on a single node which perform multi-threaded tasks (e.g., NumPy, Tensorflow operations) may run into thread contention issues.
+Each worker may try to use the same hardware threads, which leads to performance penalties.
+Use the ``cpu_affinity`` feature of the :class:`~parsl.executors.HighThroughputExecutor` to assign workers to specific cores.
+Parsl provides a 'block' or 'alternate' option on how cores are pinned to each worker (ex: 4 cores are grouped (0, 1) and (2, 3) for block,
+(0, 2) and (1, 3) for alternate).
+Select the best blocking strategy for processor's cache hierarchy (choose 'alternate' if in doubt) to ensure workers to not compete for cores.
+
+.. code-block:: python
+
+    local_config = Config(
+        executors=[
+            HighThroughputExecutor(
+                label="htex_Local",
+                worker_debug=True,
+                cpu_affinity='alternate',
+                provider=LocalProvider(
+                    channel=LocalChannel(),
+                    init_blocks=1,
+                    max_blocks=1,
+                ),
+            )
+        ],
+        strategy=None,
+    )
+
 Ad-Hoc Clusters
 ---------------
 
@@ -298,20 +350,14 @@ Any collection of compute nodes without a scheduler can be considered an
 ad-hoc cluster. Often these machines have a shared file system such as NFS or Lustre.
 In order to use these resources with Parsl, they need to set-up for password-less SSH access.
 
-To use these ssh-accessible collection of nodes as an ad-hoc cluster, we create an executor
-for each node, using the `LocalProvider` with `SSHChannel` to identify the node by hostname. An example
+To use these ssh-accessible collection of nodes as an ad-hoc cluster, we use
+the `parsl.providers.AdHocProvider` with an `parsl.channels.SSHChannel` to each node. An example
 configuration follows.
 
 .. literalinclude:: ../../parsl/configs/ad_hoc.py
 
 .. note::
-   Multiple blocks should not be assigned to each node when using the `HighThroughputExecutor`
-
-.. note::
-   Load-balancing will not work properly with this approach. In future work, a dedicated provider
-   that supports load-balancing will be implemented. You can follow progress on this work
-   `in issue #941 <https://github.com/Parsl/parsl/issues/941>`_.
-
+   Multiple blocks should not be assigned to each node when using the `parsl.executors.HighThroughputExecutor`
 
 Amazon Web Services
 -------------------
@@ -319,12 +365,12 @@ Amazon Web Services
 .. image:: ./aws_image.png
 
 .. note::
-   To use AWS with Parsl, install Parsl with AWS dependencies via ``python3 -m pip install parsl[aws]``
+   To use AWS with Parsl, install Parsl with AWS dependencies via ``python3 -m pip install 'parsl[aws]'``
 
 Amazon Web Services is a commercial cloud service which allows users to rent a range of computers and other computing services.
 The following snippet shows how Parsl can be configured to provision nodes from the Elastic Compute Cloud (EC2) service.
 The first time this configuration is used, Parsl will configure a Virtual Private Cloud and other networking and security infrastructure that will be
-re-used in subsequent executions. The configuration uses the `AWSProvider` to connect to AWS.
+re-used in subsequent executions. The configuration uses the `parsl.providers.AWSProvider` to connect to AWS.
 
 .. literalinclude:: ../../parsl/configs/ec2.py
 
@@ -334,7 +380,7 @@ ASPIRE 1 (NSCC)
 
 .. image:: https://www.nscc.sg/wp-content/uploads/2017/04/ASPIRE1Img.png
 
-The following snippet shows an example configuration for accessing NSCC's **ASPIRE 1** supercomputer. This example uses the `HighThroughputExecutor` executor and connects to ASPIRE1's PBSPro scheduler. It also shows how ``scheduler_options`` parameter could be used for scheduling array jobs in PBSPro.
+The following snippet shows an example configuration for accessing NSCC's **ASPIRE 1** supercomputer. This example uses the `parsl.executors.HighThroughputExecutor` executor and connects to ASPIRE1's PBSPro scheduler. It also shows how ``scheduler_options`` parameter could be used for scheduling array jobs in PBSPro.
 
 .. literalinclude:: ../../parsl/configs/ASPIRE1.py
 
@@ -345,11 +391,21 @@ Blue Waters (NCSA)
 .. image:: https://www.cray.com/sites/default/files/images/Solutions_Images/bluewaters.png
 
 The following snippet shows an example configuration for executing remotely on Blue Waters, a flagship machine at the National Center for Supercomputing Applications.
-The configuration assumes the user is running on a login node and uses the `TorqueProvider` to interface
-with the scheduler, and uses the `AprunLauncher` to launch workers.
+The configuration assumes the user is running on a login node and uses the `parsl.providers.TorqueProvider` to interface
+with the scheduler, and uses the `parsl.launchers.AprunLauncher` to launch workers.
 
 .. literalinclude:: ../../parsl/configs/bluewaters.py
 
+Illinois Campus Cluster (UIUC)
+------------------------------
+
+.. image:: https://campuscluster.illinois.edu/wp-content/uploads/2018/02/ND2_3633-sm.jpg
+
+The following snippet shows an example configuration for executing on the Illinois Campus Cluster.
+The configuration assumes the user is running on a login node and uses the `parsl.providers.SlurmProvider` to interface
+with the scheduler, and uses the `parsl.launchers.SrunLauncher` to launch workers.
+
+.. literalinclude:: ../../parsl/configs/illinoiscluster.py
 
 Bridges (PSC)
 -------------
@@ -357,8 +413,8 @@ Bridges (PSC)
 .. image:: https://insidehpc.com/wp-content/uploads/2016/08/Bridges_FB1b.jpg
 
 The following snippet shows an example configuration for executing on the Bridges supercomputer at the Pittsburgh Supercomputing Center.
-The configuration assumes the user is running on a login node and uses the `SlurmProvider` to interface
-with the scheduler, and uses the `SrunLauncher` to launch workers.
+The configuration assumes the user is running on a login node and uses the `parsl.providers.SlurmProvider` to interface
+with the scheduler, and uses the `parsl.launchers.SrunLauncher` to launch workers.
 
 .. literalinclude:: ../../parsl/configs/bridges.py
 
@@ -370,8 +426,8 @@ CC-IN2P3
 .. image:: https://cc.in2p3.fr/wp-content/uploads/2017/03/bandeau_accueil.jpg
 
 The snippet below shows an example configuration for executing from a login node on IN2P3's Computing Centre.
-The configuration uses the `LocalProvider` to run on a login node primarily to avoid GSISSH, which Parsl does not support yet.
-This system uses Grid Engine which Parsl interfaces with using the `GridEngineProvider`.
+The configuration uses the `parsl.providers.LocalProvider` to run on a login node primarily to avoid GSISSH, which Parsl does not support yet.
+This system uses Grid Engine which Parsl interfaces with using the `parsl.providers.GridEngineProvider`.
 
 .. literalinclude:: ../../parsl/configs/cc_in2p3.py
 
@@ -393,7 +449,7 @@ To utilize Work Queue with Parsl, please install the full CCTools software packa
 This creates a Conda environment on your machine with all the necessary tools and setup needed to utilize Work Queue with the Parsl library.
 
 The following snippet shows an example configuration for using the Work Queue distributed framework to run applications on remote machines at large.
-This examples uses the `WorkQueueExecutor` to schedule tasks locally,
+This examples uses the `parsl.executors.WorkQueueExecutor` to schedule tasks locally,
 and assumes that Work Queue workers have been externally connected to the master using the
 `work_queue_factory <https://cctools.readthedocs.io/en/latest/man_pages/work_queue_factory/>`_ or
 `condor_submit_workers <https://cctools.readthedocs.io/en/latest/man_pages/condor_submit_workers/>`_ command line utilities from CCTools.
@@ -409,7 +465,7 @@ Comet (SDSC)
 
 The following snippet shows an example configuration for executing remotely on San Diego Supercomputer
 Center's **Comet** supercomputer. The example is designed to be executed on the login nodes, using the
-`SlurmProvider` to interface with the Slurm scheduler used by Comet and the `SrunLauncher` to launch workers.
+`parsl.providers.SlurmProvider` to interface with the Slurm scheduler used by Comet and the `parsl.launchers.SrunLauncher` to launch workers.
 
 .. literalinclude:: ../../parsl/configs/comet.py
 
@@ -419,8 +475,8 @@ Cooley (ALCF)
 
 The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's
 **Cooley** analysis and visualization system.
-The example uses the `HighThroughputExecutor` and connects to Cooley's Cobalt scheduler
-using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
+The example uses the `parsl.executors.HighThroughputExecutor` and connects to Cooley's Cobalt scheduler
+using the `parsl.providers.CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
 
 .. literalinclude:: ../../parsl/configs/cooley.py
 
@@ -432,7 +488,7 @@ Cori (NERSC)
 
 .. image:: https://6lli539m39y3hpkelqsm3c2fg-wpengine.netdna-ssl.com/wp-content/uploads/2017/08/Cori-NERSC.png
 
-The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer. This example uses the `HighThroughputExecutor` and connects to Cori's Slurm scheduler.
+The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer. This example uses the `parsl.executors.HighThroughputExecutor` and connects to Cori's Slurm scheduler.
 It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
 
 .. literalinclude:: ../../parsl/configs/cori.py
@@ -445,7 +501,7 @@ Frontera (TACC)
 
 Deployed in June 2019, Frontera is the 5th most powerful supercomputer in the world. Frontera replaces the NSF Blue Waters system at NCSA
 and is the first deployment in the National Science Foundation's petascale computing program. The configuration below assumes that the user is
-running on a login node and uses the `SlurmProvider` to interface with the scheduler, and uses the `SrunLauncher` to launch workers.
+running on a login node and uses the `parsl.providers.SlurmProvider` to interface with the scheduler, and uses the `parsl.launchers.SrunLauncher` to launch workers.
 
 .. literalinclude:: ../../parsl/configs/frontera.py
 
@@ -469,8 +525,8 @@ Midway (RCC, UChicago)
 
 This Midway cluster is a campus cluster hosted by the Research Computing Center at the University of Chicago.
 The snippet below shows an example configuration for executing remotely on Midway.
-The configuration assumes the user is running on a login node and uses the `SlurmProvider` to interface
-with the scheduler, and uses the `SrunLauncher` to launch workers.
+The configuration assumes the user is running on a login node and uses the `parsl.providers.SlurmProvider` to interface
+with the scheduler, and uses the `parsl.launchers.SrunLauncher` to launch workers.
 
 .. literalinclude:: ../../parsl/configs/midway.py
 
@@ -482,7 +538,7 @@ Open Science Grid
 
 The Open Science Grid (OSG) is a national, distributed computing Grid spanning over 100 individual sites to provide tens of thousands of CPU cores.
 The snippet below shows an example configuration for executing remotely on OSG. You will need to have a valid project name on the OSG.
-The configuration uses the `CondorProvider` to interface with the scheduler.
+The configuration uses the `parsl.providers.CondorProvider` to interface with the scheduler.
 
 .. literalinclude:: ../../parsl/configs/osg.py
 
@@ -503,7 +559,7 @@ Summit (ORNL)
 .. image:: https://www.olcf.ornl.gov/wp-content/uploads/2018/06/Summit_Exaop-1500x844.jpg
 
 The following snippet shows an example configuration for executing from the login node on Summit, the leadership class supercomputer hosted at the Oak Ridge National Laboratory.
-The example uses the `LSFProvider` to provision compute nodes from the LSF cluster scheduler and the `JsrunLauncher` to launch workers across the compute nodes.
+The example uses the `parsl.providers.LSFProvider` to provision compute nodes from the LSF cluster scheduler and the `parsl.launchers.JsrunLauncher` to launch workers across the compute nodes.
 
 .. literalinclude:: ../../parsl/configs/summit.py
 
@@ -514,16 +570,31 @@ Theta (ALCF)
 .. image:: https://www.alcf.anl.gov/files/ALCF-Theta_111016-1000px.jpg
 
 The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's
-**Theta** supercomputer. This example uses the `HighThroughputExecutor` and connects to Theta's Cobalt scheduler
-using the `CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
+**Theta** supercomputer. This example uses the `parsl.executors.HighThroughputExecutor` and connects to Theta's Cobalt scheduler
+using the `parsl.providers.CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
 
 .. literalinclude:: ../../parsl/configs/theta.py
+
+
+TOSS3 (LLNL)
+------------
+
+.. image:: https://hpc.llnl.gov/sites/default/files/Magma--2020-LLNL.jpg
+
+The following snippet shows an example configuration for executing on one of LLNL's **TOSS3**
+machines, such as Quartz, Ruby, Topaz, Jade, or Magma. This example uses the `parsl.executors.FluxExecutor`
+and connects to Slurm using the `parsl.providers.SlurmProvider`. This configuration assumes that the script
+is being executed on the login nodes of one of the machines.
+
+.. literalinclude:: ../../parsl/configs/toss3_llnl.py
 
 
 Further help
 ------------
 
-For help constructing a configuration, you can click on class names such as :class:`~parsl.config.Config` or :class:`~parsl.executors.HighThroughputExecutor` to see the associated class documentation. The same documentation can be accessed interactively at the python command line via, for example::
+For help constructing a configuration, you can click on class names such as :class:`~parsl.config.Config` or :class:`~parsl.executors.HighThroughputExecutor` to see the associated class documentation. The same documentation can be accessed interactively at the python command line via, for example:
 
-    >>> from parsl.config import Config
-    >>> help(Config)
+.. code-block:: python
+
+    from parsl.config import Config
+    help(Config)

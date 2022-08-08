@@ -35,7 +35,6 @@ def make_rundir(path: str) -> str:
         logger.debug("Parsl run initializing in rundir: {0}".format(current_rundir))
         return os.path.abspath(current_rundir)
 
-    except Exception as e:
-        logger.error("Failed to create a run directory")
-        logger.error("Error: {0}".format(e))
+    except Exception:
+        logger.exception("Failed to create run directory")
         raise

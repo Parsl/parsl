@@ -1,6 +1,6 @@
 """Exceptions raised by Apps."""
 from functools import wraps
-from typing import Callable, List, Union, Any, TypeVar
+from typing import Callable, List, Union, Any, TypeVar, Optional
 from types import TracebackType
 
 import dill
@@ -44,13 +44,16 @@ class BashExitFailure(AppException):
     """A non-zero exit code returned from a @bash_app
 
     Contains:
-    reason(str)
-    exitcode(int)
+    app name (str)
+    exitcode (int)
     """
 
-    def __init__(self, reason: str, exitcode: int) -> None:
-        self.reason = reason
+    def __init__(self, app_name: str, exitcode: int) -> None:
+        self.app_name = app_name
         self.exitcode = exitcode
+
+    def __str__(self) -> str:
+        return f"bash_app {self.app_name} failed with unix exit code {self.exitcode}"
 
 
 class AppTimeout(AppException):
@@ -109,11 +112,16 @@ class BadStdStreamFile(ParslError):
 
 
 class RemoteExceptionWrapper:
-    def __init__(self, e_type: type, e_value: Exception, traceback: TracebackType) -> None:
+    def __init__(self, e_type: type, e_value: BaseException, traceback: Optional[TracebackType]) -> None:
 
         self.e_type = dill.dumps(e_type)
         self.e_value = dill.dumps(e_value)
-        self.e_traceback = Traceback(traceback)
+        self.e_traceback = None if traceback is None else Traceback(traceback)
+        if e_value.__cause__ is None:
+            self.cause = None
+        else:
+            cause = e_value.__cause__
+            self.cause = self.__class__(type(cause), cause, cause.__traceback__)
 
     def reraise(self) -> None:
 
@@ -125,15 +133,24 @@ class RemoteExceptionWrapper:
         # specific exception type.
         logger.debug("Reraising exception of type {}".format(t))
 
-        v = dill.loads(self.e_value)
-        tb = self.e_traceback.as_traceback()
+        v = self.get_exception()
 
-        reraise(t, v, tb)
+        reraise(t, v, v.__traceback__)
+
+    def get_exception(self) -> Exception:
+        v = dill.loads(self.e_value)
+        if self.cause is not None:
+            v.__cause__ = self.cause.get_exception()
+        if self.e_traceback is not None:
+            tb = self.e_traceback.as_traceback()
+            return v.with_traceback(tb)
+        else:
+            return v
 
 
 R = TypeVar('R')
 
-# There appears to be no solutio to typing this without a mypy plugin.
+# There appears to be no solution to typing this without a mypy plugin.
 # The reason is because wrap_error maps a Callable[[X...], R] to a Callable[[X...], Union[R, R2]].
 # However, there is no provision in Python typing for pattern matching all possible types of
 # callable arguments. This is because Callable[] is, in the infinite wisdom of the typing module,
