@@ -128,7 +128,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.kube_client = client.CoreV1Api()
 
         # Dictionary that keeps track of jobs, keyed on job_id
-        self.resources = {}  # type: Dict[str, Dict[str, Any]]
+        self.resources = {}  # type: Dict[object, Dict[str, Any]]
 
     def submit(self, cmd_string, tasks_per_node, job_name="parsl"):
         """ Submit a job
