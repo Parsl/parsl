@@ -103,4 +103,4 @@ class DataFuture(Future):
             done = "done"
         else:
             done = "not done"
-        return f"<{module}.{qualname} object at {hex(id(self))} representing file {repr(self.file_obj)} {done}>"
+        return f"<{module}.{qualname} object at {hex(id(self))} representing {repr(self.file_obj)} {done}>"
