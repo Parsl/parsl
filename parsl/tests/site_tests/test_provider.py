@@ -18,6 +18,7 @@ def platform(sleep=10, stdout=None):
 
 
 @pytest.mark.local
+@pytest.mark.skip("This test cannot run on sites which cannot be identified by site_config_selector")
 def test_provider():
     """ Provider scaling
     """

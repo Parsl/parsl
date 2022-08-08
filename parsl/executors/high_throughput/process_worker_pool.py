@@ -235,7 +235,7 @@ class Manager(object):
         kill_event : threading.Event
               Event to let the thread know when it is time to die.
         """
-        logger.info("[TASK PULL THREAD] starting")
+        logger.info("starting")
         poller = zmq.Poller()
         poller.register(self.task_incoming, zmq.POLLIN)
 
@@ -253,15 +253,15 @@ class Manager(object):
             ready_worker_count = self.ready_worker_queue.qsize()
             pending_task_count = self.pending_task_queue.qsize()
 
-            logger.debug("[TASK_PULL_THREAD] ready workers: {}, pending tasks: {}".format(ready_worker_count,
-                                                                                          pending_task_count))
+            logger.debug("ready workers: {}, pending tasks: {}".format(ready_worker_count,
+                                                                       pending_task_count))
 
             if time.time() > last_beat + self.heartbeat_period:
                 self.heartbeat_to_incoming()
                 last_beat = time.time()
 
             if pending_task_count < self.max_queue_size and ready_worker_count > 0:
-                logger.debug("[TASK_PULL_THREAD] Requesting tasks: {}".format(ready_worker_count))
+                logger.debug("Requesting tasks: {}".format(ready_worker_count))
                 msg = ((ready_worker_count).to_bytes(4, "little"))
                 self.task_incoming.send(msg)
 
@@ -274,7 +274,7 @@ class Manager(object):
                 last_interchange_contact = time.time()
 
                 if tasks == 'STOP':
-                    logger.critical("[TASK_PULL_THREAD] Received stop request")
+                    logger.critical("Received stop request")
                     kill_event.set()
                     break
 
@@ -283,16 +283,15 @@ class Manager(object):
 
                 else:
                     task_recv_counter += len(tasks)
-                    logger.debug("[TASK_PULL_THREAD] Got tasks: {} of {}".format([t['task_id'] for t in tasks],
-                                                                                 task_recv_counter))
+                    logger.debug("Got tasks: {}, cumulative count of tasks: {}".format([t['task_id'] for t in tasks], task_recv_counter))
 
                     for task in tasks:
                         self.pending_task_queue.put(task)
-                        # logger.debug("[TASK_PULL_THREAD] Ready tasks: {}".format(
+                        # logger.debug("Ready tasks: {}".format(
                         #    [i['task_id'] for i in self.pending_task_queue]))
 
             else:
-                logger.debug("[TASK_PULL_THREAD] No incoming tasks")
+                logger.debug("No incoming tasks")
                 # Limit poll duration to heartbeat_period
                 # heartbeat_period is in s vs poll_timer in ms
                 if not poll_timer:
@@ -301,9 +300,9 @@ class Manager(object):
 
                 # Only check if no messages were received.
                 if time.time() > last_interchange_contact + self.heartbeat_threshold:
-                    logger.critical("[TASK_PULL_THREAD] Missing contact with interchange beyond heartbeat_threshold")
+                    logger.critical("Missing contact with interchange beyond heartbeat_threshold")
                     kill_event.set()
-                    logger.critical("[TASK_PULL_THREAD] Exiting")
+                    logger.critical("Exiting")
                     break
 
     @wrap_with_logs
@@ -316,37 +315,44 @@ class Manager(object):
               Event to let the thread know when it is time to die.
         """
 
-        logger.debug("[RESULT_PUSH_THREAD] Starting thread")
+        logger.debug("Starting result push thread")
 
         push_poll_period = max(10, self.poll_period) / 1000    # push_poll_period must be atleast 10 ms
-        logger.debug("[RESULT_PUSH_THREAD] push poll period: {}".format(push_poll_period))
+        logger.debug("push poll period: {}".format(push_poll_period))
 
         last_beat = time.time()
         last_result_beat = time.time()
         items = []
 
         while not kill_event.is_set():
-
             try:
+                logger.debug("Starting pending_result_queue get")
                 r = self.pending_result_queue.get(block=True, timeout=push_poll_period)
+                logger.debug("Got a result item")
                 items.append(r)
             except queue.Empty:
-                pass
+                logger.debug("pending_result_queue get timeout without result item")
             except Exception as e:
-                logger.exception("[RESULT_PUSH_THREAD] Got an exception: {}".format(e))
+                logger.exception("Got an exception: {}".format(e))
 
             if time.time() > last_result_beat + self.heartbeat_period:
+                logger.info(f"Sending heartbeat via results connection: last_result_beat={last_result_beat} heartbeat_period={self.heartbeat_period} seconds")
                 last_result_beat = time.time()
                 items.append(pickle.dumps({'type': 'heartbeat'}))
 
-            # If we have reached poll_period duration or timer has expired, we send results
             if len(items) >= self.max_queue_size or time.time() > last_beat + push_poll_period:
                 last_beat = time.time()
                 if items:
+                    logger.debug(f"Result send: Pushing {len(items)} items")
                     self.result_outgoing.send_multipart(items)
+                    logger.debug("Result send: Pushed")
                     items = []
+                else:
+                    logger.debug("Result send: No items to push")
+            else:
+                logger.debug(f"Result send: check condition not met - deferring {len(items)} result items")
 
-        logger.critical("[RESULT_PUSH_THREAD] Exiting")
+        logger.critical("Exiting")
 
     @wrap_with_logs
     def worker_watchdog(self, kill_event):
@@ -358,24 +364,24 @@ class Manager(object):
               Event to let the thread know when it is time to die.
         """
 
-        logger.debug("[WORKER_WATCHDOG_THREAD] Starting thread")
+        logger.debug("Starting worker watchdog")
 
         while not kill_event.is_set():
             for worker_id, p in self.procs.items():
                 if not p.is_alive():
-                    logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has died".format(worker_id))
+                    logger.info("Worker {} has died".format(worker_id))
                     try:
                         task = self._tasks_in_progress.pop(worker_id)
-                        logger.info("[WORKER_WATCHDOG_THREAD] Worker {} was busy when it died".format(worker_id))
+                        logger.info("Worker {} was busy when it died".format(worker_id))
                         try:
                             raise WorkerLost(worker_id, platform.node())
                         except Exception:
-                            logger.info("[WORKER_WATCHDOG_THREAD] Putting exception for task {} in the pending result queue".format(task['task_id']))
+                            logger.info("Putting exception for task {} in the pending result queue".format(task['task_id']))
                             result_package = {'type': 'result', 'task_id': task['task_id'], 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
                             pkl_package = pickle.dumps(result_package)
                             self.pending_result_queue.put(pkl_package)
                     except KeyError:
-                        logger.info("[WORKER_WATCHDOG_THREAD] Worker {} was not busy when it died".format(worker_id))
+                        logger.info("Worker {} was not busy when it died".format(worker_id))
 
                     p = mpProcess(target=worker, args=(worker_id,
                                                        self.uid,
@@ -387,10 +393,10 @@ class Manager(object):
                                                        self.cpu_affinity
                                                  ), name="HTEX-Worker-{}".format(worker_id))
                     self.procs[worker_id] = p
-                    logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has been restarted".format(worker_id))
+                    logger.info("Worker {} has been restarted".format(worker_id))
                 time.sleep(self.poll_period)
 
-        logger.critical("[WORKER_WATCHDOG_THREAD] Exiting")
+        logger.critical("Exiting")
 
     def start(self):
         """ Start the worker processes.
@@ -436,7 +442,7 @@ class Manager(object):
         # TODO : Add mechanism in this loop to stop the worker pool
         # This might need a multiprocessing event to signal back.
         self._kill_event.wait()
-        logger.critical("[MAIN] Received kill event, terminating worker processes")
+        logger.critical("Received kill event, terminating worker processes")
 
         self._task_puller_thread.join()
         self._result_pusher_thread.join()
@@ -580,6 +586,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
 
         result_queue.put(pkl_package)
         tasks_in_progress.pop(worker_id)
+        logger.info("All processing finished for task {}".format(tid))
 
 
 def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
@@ -595,7 +602,9 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
        -  None
     """
     if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(rank)
+        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d " \
+                        "%(process)d %(threadName)s " \
+                        "[%(levelname)s]  %(message)s"
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)

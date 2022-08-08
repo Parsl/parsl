@@ -9,10 +9,11 @@ config = Config(
         HighThroughputExecutor(
             label='theta_local_htex_multinode',
             max_workers=4,
+            cpu_affinity='block',  # Ensures that workers use cores on the same tile
             provider=CobaltProvider(
                 queue='YOUR_QUEUE',
                 account='YOUR_ACCOUNT',
-                launcher=AprunLauncher(overrides="-d 64"),
+                launcher=AprunLauncher(overrides="-d 64 --cc depth"),
                 walltime='00:30:00',
                 nodes_per_block=2,
                 init_blocks=1,
