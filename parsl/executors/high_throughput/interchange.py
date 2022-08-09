@@ -328,7 +328,7 @@ class Interchange(object):
                 elif command_req.startswith("HOLD_WORKER"):
                     cmd, s_manager = command_req.split(';')
                     manager_id = s_manager.encode('utf-8')
-                    logger.info("Received HOLD_WORKER for {r}".format(manager_id))
+                    logger.info("Received HOLD_WORKER for {}".format(manager_id))
                     if manager_id in self._ready_managers:
                         m = self._ready_managers[manager_id]
                         m['active'] = False
