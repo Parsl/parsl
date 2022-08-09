@@ -4,9 +4,12 @@ FAQ
 How can I debug a Parsl script?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Parsl interfaces with the Python logger. To enable logging of Parsl's
-progress to stdout, turn on the logger as follows. Alternatively, you
-can configure the file logger to write to an output file.
+Parsl interfaces with the Python logger and automatically logs Parsl-related messages a ``runinfo`` directory.
+The ``runinfo`` directory will be created in the folder from which you run the Parsl script
+and it will contain a series of subfolders for each time you run the code.
+Your latest run will be the largest number.
+
+Alternatively, you can configure the file logger to write to an output file.
 
 .. code-block:: python
 
