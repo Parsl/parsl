@@ -13,12 +13,15 @@ import queue
 import threading
 import json
 
+from typing import cast, Any, Dict, Set
+
 from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.serialize import ParslSerializer
 serialize_object = ParslSerializer().serialize
 
 from parsl.app.errors import RemoteExceptionWrapper
+from parsl.executors.high_throughput.manager_record import ManagerRecord
 from parsl.monitoring.message_type import MessageType
 from parsl.process_loggers import wrap_with_logs
 
@@ -81,7 +84,7 @@ class Interchange(object):
                  logdir=".",
                  logging_level=logging.INFO,
                  poll_period=10,
-             ):
+             ) -> None:
         """
         Parameters
         ----------
@@ -152,7 +155,7 @@ class Interchange(object):
         self.hub_address = hub_address
         self.hub_port = hub_port
 
-        self.pending_task_queue = queue.Queue(maxsize=10 ** 6)
+        self.pending_task_queue: queue.Queue[Any] = queue.Queue(maxsize=10 ** 6)
 
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
@@ -180,7 +183,7 @@ class Interchange(object):
         logger.info("Bound to ports {},{} for incoming worker connections".format(
             self.worker_task_port, self.worker_result_port))
 
-        self._ready_managers = {}
+        self._ready_managers: Dict[bytes, ManagerRecord] = {}
 
         self.heartbeat_threshold = heartbeat_threshold
 
@@ -266,7 +269,7 @@ class Interchange(object):
         if hub_channel:
             logger.info("Sending message {} to hub".format(self._ready_managers[manager]))
 
-            d = self._ready_managers[manager].copy()
+            d: Dict = cast(Dict, self._ready_managers[manager].copy())
             d['timestamp'] = datetime.datetime.now()
             d['last_heartbeat'] = datetime.datetime.fromtimestamp(d['last_heartbeat'])
 
@@ -280,6 +283,8 @@ class Interchange(object):
 
         # Need to create a new ZMQ socket for command server thread
         hub_channel = self._create_monitoring_channel()
+
+        reply: Any  # the type of reply depends on the command_req received (aka this needs dependent types...)
 
         while not kill_event.is_set():
             try:
@@ -299,16 +304,18 @@ class Interchange(object):
 
                 elif command_req == "MANAGERS":
                     reply = []
-                    for manager in self._ready_managers:
-                        idle_duration = 0
-                        if self._ready_managers[manager]['idle_since'] is not None:
-                            idle_duration = time.time() - self._ready_managers[manager]['idle_since']
-                        resp = {'manager': manager.decode('utf-8'),
-                                'block_id': self._ready_managers[manager]['block_id'],
-                                'worker_count': self._ready_managers[manager]['worker_count'],
-                                'tasks': len(self._ready_managers[manager]['tasks']),
+                    for manager_id in self._ready_managers:
+                        idle_since = self._ready_managers[manager_id]['idle_since']
+                        if idle_since is not None:
+                            idle_duration = time.time() - idle_since
+                        else:
+                            idle_duration = 0.0
+                        resp = {'manager': manager_id.decode('utf-8'),
+                                'block_id': self._ready_managers[manager_id]['block_id'],
+                                'worker_count': self._ready_managers[manager_id]['worker_count'],
+                                'tasks': len(self._ready_managers[manager_id]['tasks']),
                                 'idle_duration': idle_duration,
-                                'active': self._ready_managers[manager]['active']}
+                                'active': self._ready_managers[manager_id]['active']}
                         reply.append(resp)
 
                 elif command_req.startswith("HOLD_WORKER"):
@@ -369,7 +376,7 @@ class Interchange(object):
         # for scheduling a job (or maybe any other attention?).
         # Anything altering the state of the manager should add it
         # onto this list.
-        interesting_managers = set()
+        interesting_managers: Set[bytes] = set()
 
         while not self._kill_event.is_set():
             self.socks = dict(poller.poll(timeout=poll_period))
@@ -492,16 +499,16 @@ class Interchange(object):
 
                     b_messages = []
 
-                    for message in all_messages:
-                        r = pickle.loads(message)
+                    for p_message in all_messages:
+                        r = pickle.loads(p_message)
                         if r['type'] == 'result':
                             # process this for task ID and forward to executor
-                            b_messages.append((message, r))
+                            b_messages.append((p_message, r))
                         elif r['type'] == 'monitoring':
                             hub_channel.send_pyobj(r['payload'])
                         elif r['type'] == 'heartbeat':
                             logger.debug("Manager {} sent heartbeat via results connection".format(manager))
-                            b_messages.append((message, r))
+                            b_messages.append((p_message, r))
                         else:
                             logger.error("Interchange discarding result_queue message of unknown type: {}".format(r['type']))
 
