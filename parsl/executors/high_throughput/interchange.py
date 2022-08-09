@@ -427,7 +427,7 @@ class Interchange(object):
                                                                                              msg['python_v'].rsplit(".", 1)[0]))
                     else:
                         # Registration has failed.
-                        logger.debug("Suppressing bad registration from manager:{}".format(
+                        logger.debug("Suppressing bad registration from manager: {}".format(
                             manager))
 
                 else:
