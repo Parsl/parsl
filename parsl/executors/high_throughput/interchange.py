@@ -25,6 +25,7 @@ from parsl.executors.high_throughput.manager_record import ManagerRecord
 from parsl.monitoring.message_type import MessageType
 from parsl.process_loggers import wrap_with_logs
 
+
 HEARTBEAT_CODE = (2 ** 32) - 1
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
 
@@ -238,8 +239,6 @@ class Interchange(object):
         """
         logger.info("Starting")
         task_counter = 0
-        poller = zmq.Poller()
-        poller.register(self.task_incoming, zmq.POLLIN)
 
         while not kill_event.is_set():
             logger.debug("launching recv_pyobj")
@@ -313,10 +312,11 @@ class Interchange(object):
                     reply = []
                     for manager_id in self._ready_managers:
                         m = self._ready_managers[manager_id]
-                        idle_duration = 0.0
                         idle_since = m['idle_since']
                         if idle_since is not None:
                             idle_duration = time.time() - idle_since
+                        else:
+                            idle_duration = 0.0
                         resp = {'manager': manager_id.decode('utf-8'),
                                 'block_id': m['block_id'],
                                 'worker_count': m['worker_count'],
@@ -328,7 +328,7 @@ class Interchange(object):
                 elif command_req.startswith("HOLD_WORKER"):
                     cmd, s_manager = command_req.split(';')
                     manager_id = s_manager.encode('utf-8')
-                    logger.info("Received HOLD_WORKER for {!r}".format(manager_id))
+                    logger.info("Received HOLD_WORKER for {r}".format(manager_id))
                     if manager_id in self._ready_managers:
                         m = self._ready_managers[manager_id]
                         m['active'] = False
@@ -359,6 +359,8 @@ class Interchange(object):
         logger.info("Incoming ports bound")
 
         hub_channel = self._create_monitoring_channel()
+
+        # poll_period = self.poll_period
 
         # poll period is never specified as a start() parameter, so removing the defaulting here as noise.
         # poll_period = self.poll_period
@@ -424,7 +426,7 @@ class Interchange(object):
                         self._ready_managers[manager_id] = {'last_heartbeat': time.time(),
                                                             'idle_since': time.time(),
                                                             'free_capacity': 0,
-                                                            'block_id': None,  # don't assign a badly typed value
+                                                            'block_id': None,
                                                             'max_capacity': 0,
                                                             'worker_count': 0,
                                                             'active': True,
@@ -528,19 +530,19 @@ class Interchange(object):
 
                     b_messages = []
 
-                    for message in all_messages:
-                        r = pickle.loads(message)
+                    for p_message in all_messages:
+                        r = pickle.loads(p_message)
                         if r['type'] == 'result':
                             logger.debug(f"Result item is result for task {r['task_id']}")
                             # process this for task ID and forward to executor
-                            b_messages.append((message, r))
+                            b_messages.append((p_message, r))
                         elif r['type'] == 'monitoring':
                             logger.debug("Result item is monitoring message - sending on hub_channel")
                             hub_channel.send_pyobj(r['payload'])
                             logger.debug("Sent monitoring message on hub_channel")
                         elif r['type'] == 'heartbeat':
                             logger.debug("Result item is a heartbeat on results connection")
-                            b_messages.append((message, r))
+                            b_messages.append((p_message, r))
                         else:
                             logger.error("Result item is of unknown type: {}".format(r['type']))
 

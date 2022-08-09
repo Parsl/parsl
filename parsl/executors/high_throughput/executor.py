@@ -8,7 +8,6 @@ import pickle
 from multiprocessing import Queue
 from typing import Dict, Sequence  # noqa F401 (used in type annotation)
 from typing import List, Optional, Tuple, Union
-from typing import Dict  # noqa F401 (used in type annotation)
 import math
 
 from parsl.serialize import pack_apply_message, deserialize
@@ -185,7 +184,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     poll_period : int
         Timeout period to be used by the executor components in milliseconds. Increasing poll_periods
-        trades performance for cpu efficiency. Default: 10ms
+        trades performance for cpu efficiency. Default: 10 "units"
         This period controls both an interchange poll period and a worker pool poll period, with different effects in both.
 
 

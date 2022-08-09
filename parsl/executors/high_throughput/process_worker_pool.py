@@ -417,7 +417,7 @@ class Manager(object):
                     logger.info("Worker {} has been restarted".format(worker_id))
                 else:
                     logger.info("Worker {} is alive".format(worker_id))
-                # time.sleep(self.poll_period) # is this seconds (like sleep) or ms (like self.poll_period)
+                # time.sleep(self.poll_period / 1000.0)
                 time.sleep(30)  # LSST specific timing
 
         logger.critical("Exiting")
