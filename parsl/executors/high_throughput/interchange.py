@@ -180,7 +180,7 @@ class Interchange(object):
         logger.info("Bound to ports {},{} for incoming worker connections".format(
             self.worker_task_port, self.worker_result_port))
 
-        self._ready_manager_queue = {}
+        self._ready_managers = {}
 
         self.heartbeat_threshold = heartbeat_threshold
 
@@ -230,8 +230,6 @@ class Interchange(object):
         """
         logger.info("Starting")
         task_counter = 0
-        poller = zmq.Poller()
-        poller.register(self.task_incoming, zmq.POLLIN)
 
         while not kill_event.is_set():
             logger.debug("launching recv_pyobj")
@@ -266,9 +264,9 @@ class Interchange(object):
 
     def _send_monitoring_info(self, hub_channel, manager):
         if hub_channel:
-            logger.info("Sending message {} to hub".format(self._ready_manager_queue[manager]))
+            logger.info("Sending message {} to hub".format(self._ready_managers[manager]))
 
-            d = self._ready_manager_queue[manager].copy()
+            d = self._ready_managers[manager].copy()
             d['timestamp'] = datetime.datetime.now()
             d['last_heartbeat'] = datetime.datetime.fromtimestamp(d['last_heartbeat'])
 
@@ -289,36 +287,36 @@ class Interchange(object):
                 logger.debug("Received command request: {}".format(command_req))
                 if command_req == "OUTSTANDING_C":
                     outstanding = self.pending_task_queue.qsize()
-                    for manager in self._ready_manager_queue:
-                        outstanding += len(self._ready_manager_queue[manager]['tasks'])
+                    for manager in self._ready_managers:
+                        outstanding += len(self._ready_managers[manager]['tasks'])
                     reply = outstanding
 
                 elif command_req == "WORKERS":
                     num_workers = 0
-                    for manager in self._ready_manager_queue:
-                        num_workers += self._ready_manager_queue[manager]['worker_count']
+                    for manager in self._ready_managers:
+                        num_workers += self._ready_managers[manager]['worker_count']
                     reply = num_workers
 
                 elif command_req == "MANAGERS":
                     reply = []
-                    for manager in self._ready_manager_queue:
+                    for manager in self._ready_managers:
                         idle_duration = 0
-                        if self._ready_manager_queue[manager]['idle_since'] is not None:
-                            idle_duration = time.time() - self._ready_manager_queue[manager]['idle_since']
+                        if self._ready_managers[manager]['idle_since'] is not None:
+                            idle_duration = time.time() - self._ready_managers[manager]['idle_since']
                         resp = {'manager': manager.decode('utf-8'),
-                                'block_id': self._ready_manager_queue[manager]['block_id'],
-                                'worker_count': self._ready_manager_queue[manager]['worker_count'],
-                                'tasks': len(self._ready_manager_queue[manager]['tasks']),
+                                'block_id': self._ready_managers[manager]['block_id'],
+                                'worker_count': self._ready_managers[manager]['worker_count'],
+                                'tasks': len(self._ready_managers[manager]['tasks']),
                                 'idle_duration': idle_duration,
-                                'active': self._ready_manager_queue[manager]['active']}
+                                'active': self._ready_managers[manager]['active']}
                         reply.append(resp)
 
                 elif command_req.startswith("HOLD_WORKER"):
                     cmd, s_manager = command_req.split(';')
                     manager = s_manager.encode('utf-8')
                     logger.info("Received HOLD_WORKER for {}".format(manager))
-                    if manager in self._ready_manager_queue:
-                        self._ready_manager_queue[manager]['active'] = False
+                    if manager in self._ready_managers:
+                        self._ready_managers[manager]['active'] = False
                         reply = True
                         self._send_monitoring_info(hub_channel, manager)
                     else:
@@ -382,7 +380,7 @@ class Interchange(object):
                 message = self.task_outgoing.recv_multipart()
                 manager = message[0]
 
-                if manager not in self._ready_manager_queue:
+                if manager not in self._ready_managers:
                     reg_flag = False
 
                     try:
@@ -394,18 +392,18 @@ class Interchange(object):
                         logger.debug("Message: \n{}\n".format(message[1]))
                     else:
                         # We set up an entry only if registration works correctly
-                        self._ready_manager_queue[manager] = {'last_heartbeat': time.time(),
-                                                              'idle_since': time.time(),
-                                                              'free_capacity': 0,
-                                                              'block_id': None,
-                                                              'max_capacity': 0,
-                                                              'worker_count': 0,
-                                                              'active': True,
-                                                              'tasks': []}
+                        self._ready_managers[manager] = {'last_heartbeat': time.time(),
+                                                         'idle_since': time.time(),
+                                                         'free_capacity': 0,
+                                                         'block_id': None,
+                                                         'max_capacity': 0,
+                                                         'worker_count': 0,
+                                                         'active': True,
+                                                         'tasks': []}
                     if reg_flag is True:
                         interesting_managers.add(manager)
                         logger.info("Adding manager: {} to ready queue".format(manager))
-                        self._ready_manager_queue[manager].update(msg)
+                        self._ready_managers[manager].update(msg)
                         logger.info("Registration info for manager {}: {}".format(manager, msg))
                         self._send_monitoring_info(hub_channel, manager)
 
@@ -434,20 +432,20 @@ class Interchange(object):
 
                 else:
                     tasks_requested = int.from_bytes(message[1], "little")
-                    self._ready_manager_queue[manager]['last_heartbeat'] = time.time()
+                    self._ready_managers[manager]['last_heartbeat'] = time.time()
                     if tasks_requested == HEARTBEAT_CODE:
                         logger.debug("Manager {} sent heartbeat via tasks connection".format(manager))
                         self.task_outgoing.send_multipart([manager, b'', PKL_HEARTBEAT_CODE])
                     else:
                         logger.debug("Manager {} requested {} tasks".format(manager, tasks_requested))
-                        self._ready_manager_queue[manager]['free_capacity'] = tasks_requested
+                        self._ready_managers[manager]['free_capacity'] = tasks_requested
                         interesting_managers.add(manager)
                 logger.debug("leaving task_outgoing section")
 
             # If we had received any requests, check if there are tasks that could be passed
 
             logger.debug("Managers count (interesting/total): {interesting}/{total}".format(
-                total=len(self._ready_manager_queue),
+                total=len(self._ready_managers),
                 interesting=len(interesting_managers)))
 
             if interesting_managers and not self.pending_task_queue.empty():
@@ -456,23 +454,23 @@ class Interchange(object):
 
                 while shuffled_managers and not self.pending_task_queue.empty():  # cf. the if statement above...
                     manager = shuffled_managers.pop()
-                    tasks_inflight = len(self._ready_manager_queue[manager]['tasks'])
-                    real_capacity = min(self._ready_manager_queue[manager]['free_capacity'],
-                                        self._ready_manager_queue[manager]['max_capacity'] - tasks_inflight)
+                    tasks_inflight = len(self._ready_managers[manager]['tasks'])
+                    real_capacity = min(self._ready_managers[manager]['free_capacity'],
+                                        self._ready_managers[manager]['max_capacity'] - tasks_inflight)
 
-                    if (real_capacity and self._ready_manager_queue[manager]['active']):
+                    if (real_capacity and self._ready_managers[manager]['active']):
                         tasks = self.get_tasks(real_capacity)
                         if tasks:
                             self.task_outgoing.send_multipart([manager, b'', pickle.dumps(tasks)])
                             task_count = len(tasks)
                             count += task_count
                             tids = [t['task_id'] for t in tasks]
-                            self._ready_manager_queue[manager]['free_capacity'] -= task_count
-                            self._ready_manager_queue[manager]['tasks'].extend(tids)
-                            self._ready_manager_queue[manager]['idle_since'] = None
+                            self._ready_managers[manager]['free_capacity'] -= task_count
+                            self._ready_managers[manager]['tasks'].extend(tids)
+                            self._ready_managers[manager]['idle_since'] = None
                             logger.debug("Sent tasks: {} to manager {}".format(tids, manager))
-                            if self._ready_manager_queue[manager]['free_capacity'] > 0:
-                                logger.debug("Manager {} has free_capacity {}".format(manager, self._ready_manager_queue[manager]['free_capacity']))
+                            if self._ready_managers[manager]['free_capacity'] > 0:
+                                logger.debug("Manager {} has free_capacity {}".format(manager, self._ready_managers[manager]['free_capacity']))
                                 # ... so keep it in the interesting_managers list
                             else:
                                 logger.debug("Manager {} is now saturated".format(manager))
@@ -480,14 +478,14 @@ class Interchange(object):
                     else:
                         interesting_managers.remove(manager)
                         # logger.debug("Nothing to send to manager {}".format(manager))
-                logger.debug("leaving _ready_manager_queue section, with {} managers still interesting".format(len(interesting_managers)))
+                logger.debug("leaving _ready_managers section, with {} managers still interesting".format(len(interesting_managers)))
             else:
                 logger.debug("either no interesting managers or no tasks, so skipping manager pass")
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
                 logger.debug("entering results_incoming section")
                 manager, *all_messages = self.results_incoming.recv_multipart()
-                if manager not in self._ready_manager_queue:
+                if manager not in self._ready_managers:
                     logger.warning("Received a result from a un-registered manager: {}".format(manager))
                 else:
                     logger.debug("Got {} result items in batch".format(len(all_messages)))
@@ -511,13 +509,13 @@ class Interchange(object):
                         assert 'type' in r, f"Message is missing type entry: {r}"
                         if r['type'] == 'result':
                             try:
-                                self._ready_manager_queue[manager]['tasks'].remove(r['task_id'])
+                                self._ready_managers[manager]['tasks'].remove(r['task_id'])
                             except Exception:
                                 # If we reach here, there's something very wrong.
                                 logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(
                                     r['task_id'],
                                     manager,
-                                    self._ready_manager_queue[manager]['tasks']))
+                                    self._ready_managers[manager]['tasks']))
 
                     b_messages_to_send = []
                     for (b_message, _) in b_messages:
@@ -526,29 +524,29 @@ class Interchange(object):
                     if b_messages_to_send:
                         self.results_outgoing.send_multipart(b_messages_to_send)
 
-                    logger.debug("Current tasks: {}".format(self._ready_manager_queue[manager]['tasks']))
-                    if len(self._ready_manager_queue[manager]['tasks']) == 0 and self._ready_manager_queue[manager]['idle_since'] is None:
-                        self._ready_manager_queue[manager]['idle_since'] = time.time()
+                    logger.debug("Current tasks: {}".format(self._ready_managers[manager]['tasks']))
+                    if len(self._ready_managers[manager]['tasks']) == 0 and self._ready_managers[manager]['idle_since'] is None:
+                        self._ready_managers[manager]['idle_since'] = time.time()
                 logger.debug("leaving results_incoming section")
 
-            bad_managers = [manager for manager in self._ready_manager_queue if
-                            time.time() - self._ready_manager_queue[manager]['last_heartbeat'] > self.heartbeat_threshold]
+            bad_managers = [manager for manager in self._ready_managers if
+                            time.time() - self._ready_managers[manager]['last_heartbeat'] > self.heartbeat_threshold]
             for manager in bad_managers:
-                logger.debug("Last: {} Current: {}".format(self._ready_manager_queue[manager]['last_heartbeat'], time.time()))
+                logger.debug("Last: {} Current: {}".format(self._ready_managers[manager]['last_heartbeat'], time.time()))
                 logger.warning("Too many heartbeats missed for manager {}".format(manager))
-                if self._ready_manager_queue[manager]['active']:
-                    self._ready_manager_queue[manager]['active'] = False
+                if self._ready_managers[manager]['active']:
+                    self._ready_managers[manager]['active'] = False
                     self._send_monitoring_info(hub_channel, manager)
 
-                for tid in self._ready_manager_queue[manager]['tasks']:
+                for tid in self._ready_managers[manager]['tasks']:
                     try:
-                        raise ManagerLost(manager, self._ready_manager_queue[manager]['hostname'])
+                        raise ManagerLost(manager, self._ready_managers[manager]['hostname'])
                     except Exception:
                         result_package = {'type': 'result', 'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
                         pkl_package = pickle.dumps(result_package)
                         self.results_outgoing.send(pkl_package)
                 logger.warning("Sent failure reports, unregistering manager")
-                self._ready_manager_queue.pop(manager, 'None')
+                self._ready_managers.pop(manager, 'None')
                 if manager in interesting_managers:
                     interesting_managers.remove(manager)
 
