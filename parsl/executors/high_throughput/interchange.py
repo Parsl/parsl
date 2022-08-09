@@ -338,15 +338,14 @@ class Interchange(object):
                 continue
 
     @wrap_with_logs
-    def start(self, poll_period=None):
+    def start(self):
         """ Start the interchange
         """
         logger.info("Incoming ports bound")
 
         hub_channel = self._create_monitoring_channel()
 
-        if poll_period is None:
-            poll_period = self.poll_period
+        poll_period = self.poll_period
 
         start = time.time()
         count = 0
