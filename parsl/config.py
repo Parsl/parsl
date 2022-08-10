@@ -1,7 +1,7 @@
 import logging
 import typeguard
 
-from typing import Callable, List, Optional, Sequence
+from typing import Callable, List, Literal, Optional, Sequence, Union
 
 from parsl.utils import RepresentationMixin
 from parsl.executors.base import ParslExecutor
@@ -72,7 +72,10 @@ class Config(RepresentationMixin):
                  executors: Optional[List[ParslExecutor]] = None,
                  app_cache: bool = True,
                  checkpoint_files: Optional[Sequence[str]] = None,
-                 checkpoint_mode: Optional[str] = None,
+                 checkpoint_mode: Union[None,
+                                        Literal['task_exit'],
+                                        Literal['periodic'],
+                                        Literal['dfk_exit']] = None,
                  checkpoint_period: Optional[str] = None,
                  garbage_collect: bool = True,
                  internal_tasks_max_threads: int = 10,
