@@ -499,12 +499,20 @@ class DataFlowKernel(object):
 
         self.memoizer.update_memo(task_record, future)
 
+        # Cover all checkpointing cases here:
+        # Do we need to checkpoint now, or queue for later,
+        # or do nothing?
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint(tasks=[task_record])
-
-        if self.checkpoint_mode is not None:
+        elif self.checkpoint_mode == 'manual' or \
+                self.checkpoint_mode == 'periodic' or \
+                self.checkpoint_mode == 'dfk_exit':
             with self.checkpoint_lock:
                 self.checkpointable_tasks.append(task_record)
+        elif self.checkpoint_mode is None:
+            pass
+        else:
+            raise RuntimeError(f"Invalid checkpoint mode {self.checkpoint_mode}")
 
         self.wipe_task(task_id)
         return

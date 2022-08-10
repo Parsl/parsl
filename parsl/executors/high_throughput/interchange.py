@@ -401,9 +401,7 @@ class Interchange(object):
         interesting_managers: Set[bytes] = set()
 
         while not self._kill_event.is_set():
-            logger.debug(f"Starting poll with timeout {poll_period} ms")
             self.socks = dict(poller.poll(timeout=poll_period))
-            logger.debug(f"Ending poll, with {len(self.socks)} sockets active")
 
             # Listen for requests for work
             if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
@@ -544,14 +542,14 @@ class Interchange(object):
                             logger.debug("Result item is a heartbeat on results connection")
                             b_messages.append((p_message, r))
                         else:
-                            logger.error("Result item is of unknown type: {}".format(r['type']))
+                            logger.error(f"Result item is of unknown type: {r['type']} - discarding")
 
                     m = self._ready_managers[manager_id]
                     for (b_message, r) in b_messages:
                         assert 'type' in r, f"Message is missing type entry: {r}"
                         if r['type'] == 'result':
                             try:
-                                logger.debug(f"Removing task {r['task_id']} from manager {manager_id} record")
+                                logger.debug(f"Removing task {r['task_id']} from manager record {manager_id}")
                                 m['tasks'].remove(r['task_id'])
                             except Exception:
                                 # If we reach here, there's something very wrong.
@@ -574,13 +572,11 @@ class Interchange(object):
                         m['idle_since'] = time.time()
                 logger.debug("leaving results_incoming section")
 
-            bad_managers = [manager_id for manager_id in self._ready_managers if
-                            time.time() - self._ready_managers[manager_id]['last_heartbeat'] > self.heartbeat_threshold]
-            for manager_id in bad_managers:
-                m = self._ready_managers[manager_id]
+            bad_managers = [(manager_id, m) for (manager_id, m) in self._ready_managers.items() if
+                            time.time() - m['last_heartbeat'] > self.heartbeat_threshold]
+            for (manager_id, m) in bad_managers:
                 logger.debug("Last: {} Current: {}".format(m['last_heartbeat'], time.time()))
-                logger.warning(f"Too many heartbeats missed for manager {manager_id}")
-                logger.warning(f"Removing this manager and cancelled htex tasks {m['tasks']}")
+                logger.warning(f"Too many heartbeats missed for manager {manager_id} - removing manager")
                 if m['active']:
                     m['active'] = False
                     self._send_monitoring_info(hub_channel, m)
