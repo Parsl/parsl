@@ -529,7 +529,9 @@ class Interchange(object):
                         b_messages_to_send.append(b_message)
 
                     if b_messages_to_send:
+                        logger.debug("Sending messages on results_outgoing")
                         self.results_outgoing.send_multipart(b_messages_to_send)
+                        logger.debug("Sent messages on results_outgoing")
 
                     logger.debug("Current tasks: {}".format(self._ready_managers[manager]['tasks']))
                     if len(self._ready_managers[manager]['tasks']) == 0 and self._ready_managers[manager]['idle_since'] is None:
