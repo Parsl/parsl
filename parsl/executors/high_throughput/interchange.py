@@ -542,11 +542,12 @@ class Interchange(object):
                             time.time() - self._ready_managers[manager]['last_heartbeat'] > self.heartbeat_threshold]
             for manager in bad_managers:
                 logger.debug("Last: {} Current: {}".format(self._ready_managers[manager]['last_heartbeat'], time.time()))
-                logger.warning("Too many heartbeats missed for manager {}".format(manager))
+                logger.warning(f"Too many heartbeats missed for manager {manager} - removing manager")
                 if self._ready_managers[manager]['active']:
                     self._ready_managers[manager]['active'] = False
                     self._send_monitoring_info(hub_channel, manager)
 
+                logger.warning(f"Raising ManagerLost for htex tasks {self._ready_managers[manager]['tasks']} on missing manager")
                 for tid in self._ready_managers[manager]['tasks']:
                     try:
                         raise ManagerLost(manager, self._ready_managers[manager]['hostname'])
