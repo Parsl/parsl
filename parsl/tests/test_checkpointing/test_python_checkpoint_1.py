@@ -4,7 +4,7 @@ import pytest
 
 import parsl
 from parsl import python_app
-from parsl.tests.configs.local_threads import config
+from parsl.tests.configs.local_threads import fresh_config
 
 
 @python_app(cache=True)
@@ -28,6 +28,8 @@ def launch_n_random(n=2):
 def test_initial_checkpoint_write(n=2):
     """1. Launch a few apps and write the checkpoint once a few have completed
     """
+    config = fresh_config()
+    config.checkpoint_mode = 'manual'
     parsl.load(config)
     results = launch_n_random(n)
 

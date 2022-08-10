@@ -433,13 +433,21 @@ class DataFlowKernel(object):
 
         self.memoizer.update_memo(task_record, future)
 
+        # Cover all checkpointing cases here:
+        # Do we need to checkpoint the task now,
+        # keep it around for one of the other checkpoint
+        # methods, or can we wipe it immediately?
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint(tasks=[task_record])
-
-        # If checkpointing is turned on, wiping app_fu is left to the checkpointing code
-        # else we wipe it here.
-        if self.checkpoint_mode is None:
+        elif self.checkpoint_mode == 'manual' or \
+                self.checkpoint_mode == 'periodic' or \
+                self.checkpoint_mode == 'dfk_exit':
+            pass
+        elif self.checkpoint_mode is None:
             self.wipe_task(task_id)
+        else:
+            raise RuntimeError(f"Invalid checkpoint mode {self.checkpoint_mode}")
+
         return
 
     def _complete_task(self, task_record: TaskRecord, new_state: States, result: Any) -> None:
