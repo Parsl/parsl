@@ -1,7 +1,8 @@
 import logging
 import typeguard
 
-from typing import Callable, List, Literal, Optional, Sequence, Union
+from typing import Callable, List, Optional, Sequence, Union
+from typing_extensions import Literal
 
 from parsl.utils import RepresentationMixin
 from parsl.executors.base import ParslExecutor
