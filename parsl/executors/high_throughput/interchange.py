@@ -516,6 +516,7 @@ class Interchange(object):
                         assert 'type' in r, f"Message is missing type entry: {r}"
                         if r['type'] == 'result':
                             try:
+                                logger.debug(f"Removing task {r['task_id']} from manager record {manager}")
                                 self._ready_managers[manager]['tasks'].remove(r['task_id'])
                             except Exception:
                                 # If we reach here, there's something very wrong.
