@@ -269,7 +269,7 @@ class Memoizer(object):
         if not self.memoize or not task['memoize'] or 'hashsum' not in task:
             return
 
-        if 'hashsum' not in task:
+        if 'hashsum' not in task or task['hashsum'] is None:
             logger.error("Attempt to update memo for task {} with no hashsum".format(task_id))
             return
 
