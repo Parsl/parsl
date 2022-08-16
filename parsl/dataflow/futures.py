@@ -9,6 +9,10 @@ We have two basic types of futures:
 from concurrent.futures import Future
 import logging
 import threading
+from typing import Sequence
+
+from parsl.app.futures import DataFuture
+from parsl.dataflow.taskrecord import TaskRecord
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +59,7 @@ class AppFuture(Future):
 
     """
 
-    def __init__(self, task_def):
+    def __init__(self, task_def: TaskRecord) -> None:
         """Initialize the AppFuture.
 
         Args:
@@ -66,6 +70,7 @@ class AppFuture(Future):
         """
         super().__init__()
         self._update_lock = threading.Lock()
+        self._outputs: Sequence[DataFuture]
         self._outputs = []
         self.task_def = task_def
 

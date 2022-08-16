@@ -12,7 +12,7 @@ import threading
 import sys
 import datetime
 from getpass import getuser
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 from uuid import uuid4
 from socket import gethostname
 from concurrent.futures import Future
@@ -30,6 +30,7 @@ from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
+from parsl.dataflow.taskrecord import TaskRecord
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.process_loggers import wrap_with_logs
@@ -187,12 +188,12 @@ class DataFlowKernel(object):
                 self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60), name="Checkpoint")
 
         self.task_count = 0
-        self.tasks = {}
+        self.tasks: Dict[int, TaskRecord] = {}
         self.submitter_lock = threading.Lock()
 
         atexit.register(self.atexit_cleanup)
 
-    def _send_task_log_info(self, task_record):
+    def _send_task_log_info(self, task_record: TaskRecord) -> None:
         if self.monitoring:
             task_log_info = self._create_task_log_info(task_record)
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
@@ -263,7 +264,7 @@ class DataFlowKernel(object):
         """
         return self._config
 
-    def handle_exec_update(self, task_record, future):
+    def handle_exec_update(self, task_record: TaskRecord, future: Future) -> None:
         """This function is called only as a callback from an execution
         attempt reaching a final state (either successfully or failing).
 
@@ -377,7 +378,7 @@ class DataFlowKernel(object):
         if task_record['status'] == States.pending:
             self.launch_if_ready(task_record)
 
-    def handle_join_update(self, task_record, inner_app_future):
+    def handle_join_update(self, task_record: TaskRecord, inner_app_future: AppFuture) -> None:
         # Use the result of the inner_app_future as the final result of
         # the outer app future.
 
@@ -410,7 +411,7 @@ class DataFlowKernel(object):
 
         self._send_task_log_info(task_record)
 
-    def handle_app_update(self, task_record, future):
+    def handle_app_update(self, task_record: TaskRecord, future: AppFuture) -> None:
         """This function is called as a callback when an AppFuture
         is in its final state.
 
@@ -441,7 +442,7 @@ class DataFlowKernel(object):
             self.wipe_task(task_id)
         return
 
-    def _complete_task(self, task_record, new_state, result):
+    def _complete_task(self, task_record: TaskRecord, new_state: States, result: Any) -> None:
         """Set a task into a completed state
         """
         assert new_state in FINAL_STATES
@@ -456,7 +457,7 @@ class DataFlowKernel(object):
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_result(result)
 
-    def update_task_state(self, task_record, new_state):
+    def update_task_state(self, task_record: TaskRecord, new_state: States) -> None:
         """Updates a task record state, and recording an appropriate change
         to task state counters.
         """
@@ -484,7 +485,7 @@ class DataFlowKernel(object):
     def check_staging_inhibited(kwargs):
         return kwargs.get('_parsl_staging_inhibit', False)
 
-    def launch_if_ready(self, task_record):
+    def launch_if_ready(self, task_record: TaskRecord) -> None:
         """
         launch_if_ready will launch the specified task, if it is ready
         to run (for example, without dependencies, and in pending state).
@@ -566,7 +567,7 @@ class DataFlowKernel(object):
 
             task_record['exec_fu'] = exec_fu
 
-    def launch_task(self, task_record, executable, *args, **kwargs):
+    def launch_task(self, task_record: TaskRecord, executable: Callable, *args: Tuple[Any, ...], **kwargs: Dict[str, Any]) -> Future:
         """Handle the actual submission of the task to the executor layer.
 
         If the app task has the executors attributes not set (default=='all')
@@ -861,6 +862,7 @@ class DataFlowKernel(object):
 
         resource_specification = app_kwargs.get('parsl_resource_specification', {})
 
+        task_def: TaskRecord
         task_def = {'depends': None,
                     'executor': executor,
                     'func_name': func.__name__,
@@ -1133,7 +1135,7 @@ class DataFlowKernel(object):
 
         logger.info("DFK cleanup complete")
 
-    def checkpoint(self, tasks=None):
+    def checkpoint(self, tasks: Optional[Sequence[TaskRecord]] = None) -> str:
         """Checkpoint the dfk incrementally to a checkpoint file.
 
         When called, every task that has been completed yet not
@@ -1284,7 +1286,7 @@ class DataFlowKernel(object):
         return self._load_checkpoints(checkpointDirs)
 
     @staticmethod
-    def _log_std_streams(task_record):
+    def _log_std_streams(task_record: TaskRecord) -> None:
         if task_record['app_fu'].stdout is not None:
             logger.info("Standard output for task {} available at {}".format(task_record['id'], task_record['app_fu'].stdout))
         if task_record['app_fu'].stderr is not None:
