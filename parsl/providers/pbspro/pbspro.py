@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+import json
 
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
@@ -107,7 +108,9 @@ class PBSProProvider(TorqueProvider):
 
         retcode, stdout, stderr = self.execute_wait("qstat -f -F json {0}".format(job_id_list))
 
-        for job_id, job in retcode['Jobs'].items():
+        job_statuses = json.loads(stdout)
+
+        for job_id, job in job_statuses['Jobs'].items():
             for long_job_id in job_ids:
                 if long_job_id.startswith(job_id):
                     logger.debug('coerced job_id %s -> %s', job_id, long_job_id)
