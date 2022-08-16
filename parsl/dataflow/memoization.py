@@ -1,16 +1,24 @@
+from __future__ import annotations
 import hashlib
 from functools import lru_cache, singledispatch
 from inspect import getsource
 import logging
+
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from parsl import DataFlowKernel  # import loop at runtime - needed for typechecking - TODO turn into "if typing:"
+
+from concurrent.futures import Future
+
 from parsl.serialize import serialize
 import types
-from concurrent.futures import Future
 
 logger = logging.getLogger(__name__)
 
 
 @singledispatch
-def id_for_memo(obj, output_ref=False):
+def id_for_memo(obj: object, output_ref: bool = False) -> bytes:
     """This should return a byte sequence which identifies the supplied
     value for memoization purposes: for any two calls of id_for_memo,
     the byte sequence should be the same when the "same" value is supplied,
@@ -46,12 +54,12 @@ def id_for_memo(obj, output_ref=False):
 @id_for_memo.register(int)
 @id_for_memo.register(float)
 @id_for_memo.register(type(None))
-def id_for_memo_serialize(obj, output_ref=False):
+def id_for_memo_serialize(obj: object, output_ref: bool = False) -> bytes:
     return serialize(obj)
 
 
 @id_for_memo.register(list)
-def id_for_memo_list(denormalized_list, output_ref=False):
+def id_for_memo_list(denormalized_list: list, output_ref: bool = False) -> bytes:
     if type(denormalized_list) != list:
         raise ValueError("id_for_memo_list cannot work on subclasses of list")
 
@@ -64,7 +72,7 @@ def id_for_memo_list(denormalized_list, output_ref=False):
 
 
 @id_for_memo.register(tuple)
-def id_for_memo_tuple(denormalized_tuple, output_ref=False):
+def id_for_memo_tuple(denormalized_tuple: tuple, output_ref: bool = False) -> bytes:
     if type(denormalized_tuple) != tuple:
         raise ValueError("id_for_memo_tuple cannot work on subclasses of tuple")
 
@@ -77,7 +85,7 @@ def id_for_memo_tuple(denormalized_tuple, output_ref=False):
 
 
 @id_for_memo.register(dict)
-def id_for_memo_dict(denormalized_dict, output_ref=False):
+def id_for_memo_dict(denormalized_dict: dict, output_ref: bool = False) -> bytes:
     """This normalises the keys and values of the supplied dictionary.
 
     When output_ref=True, the values are normalised as output refs, but
@@ -99,7 +107,7 @@ def id_for_memo_dict(denormalized_dict, output_ref=False):
 # that the .register() call, so that the cache-decorated version is registered.
 @id_for_memo.register(types.FunctionType)
 @lru_cache()
-def id_for_memo_function(function, output_ref=False):
+def id_for_memo_function(function: types.FunctionType, output_ref: bool = False) -> bytes:
     """This produces function hash material using the source definition of the
        function.
 
@@ -145,9 +153,10 @@ class Memoizer(object):
 
     When a task is ready for launch, i.e., all of its arguments
     have resolved, we add its hash to the task datastructure.
+
     """
 
-    def __init__(self, dfk, memoize=True, checkpoint={}):
+    def __init__(self, dfk: DataFlowKernel, memoize: bool = True, checkpoint: Dict[str, Future[Any]] = {}):
         """Initialize the memoizer.
 
         Args:
@@ -167,7 +176,7 @@ class Memoizer(object):
             logger.info("App caching disabled for all apps")
             self.memo_lookup_table = {}
 
-    def make_hash(self, task):
+    def make_hash(self, task: Dict) -> str:
         """Create a hash of the task inputs.
 
         Args:
@@ -178,7 +187,7 @@ class Memoizer(object):
         """
         # Function name TODO: Add fn body later
 
-        t = []
+        t = []  # type: List[bytes]
 
         # if kwargs contains an outputs parameter, that parameter is removed
         # and normalised differently - with output_ref set to True.
@@ -206,18 +215,16 @@ class Memoizer(object):
         hashedsum = hashlib.md5(x).hexdigest()
         return hashedsum
 
-    def check_memo(self, task):
+    def check_memo(self, task: Dict) -> Optional[Future[Any]]:
         """Create a hash of the task and its inputs and check the lookup table for this hash.
 
-        If present, the results are returned. The result is a tuple indicating whether a memo
-        exists and the result, since a None result is possible and could be confusing.
-        This seems like a reasonable option without relying on a cache_miss exception.
+        If present, the results are returned.
 
         Args:
             - task(task) : task from the dfk.tasks table
 
         Returns:
-            - Result (Future): A completed future containing the memoized result
+            - Result of the function if present in table, wrapped in a Future
 
         This call will also set task['hashsum'] to the unique hashsum for the func+inputs.
         """
@@ -243,7 +250,7 @@ class Memoizer(object):
         assert isinstance(result, Future) or result is None
         return result
 
-    def hash_lookup(self, hashsum):
+    def hash_lookup(self, hashsum: str) -> Future[Any]:
         """Lookup a hash in the memoization table.
 
         Args:
@@ -257,15 +264,12 @@ class Memoizer(object):
         """
         return self.memo_lookup_table[hashsum]
 
-    def update_memo(self, task, r):
+    def update_memo(self, task: Dict, r: Future[Any]) -> None:
         """Updates the memoization lookup table with the result from a task.
 
         Args:
              - task (dict) : A task dict from dfk.tasks
              - r (Result future): Result future
-
-        A warning is issued when a hash collision occurs during the update.
-        This is not likely.
         """
         # TODO: could use typeguard
         assert isinstance(r, Future)
@@ -275,9 +279,12 @@ class Memoizer(object):
         if not self.memoize or not task['memoize'] or 'hashsum' not in task:
             return
 
+        if not isinstance(task['hashsum'], str):
+            logger.error("Attempting to update app cache entry but hashsum is not a string key")
+            return
+
         if task['hashsum'] in self.memo_lookup_table:
-            logger.info('Updating app cache entry with latest %s:%s call' %
-                        (task['func_name'], task_id))
-            self.memo_lookup_table[task['hashsum']] = r
+            logger.info(f"Replacing app cache entry {task['hashsum']} with result from task {task_id}")
         else:
-            self.memo_lookup_table[task['hashsum']] = r
+            logger.debug(f"Storing app cache entry {task['hashsum']} with result from task {task_id}")
+        self.memo_lookup_table[task['hashsum']] = r
