@@ -90,7 +90,6 @@ class PBSProProvider(TorqueProvider):
         self.cpus_per_node = cpus_per_node
         self.select_options = select_options
 
-
     def _status(self):
         ''' Internal: Do not call. Returns the status list for a list of job_ids
 
@@ -110,23 +109,23 @@ class PBSProProvider(TorqueProvider):
 
         job_statuses = json.loads(stdout)
 
-        for job_id, job in job_statuses['Jobs'].items():
-            for long_job_id in job_ids:
-                if long_job_id.startswith(job_id):
-                    logger.debug('coerced job_id %s -> %s', job_id, long_job_id)
-                    job_id = long_job_id
-                    break
+        if 'Jobs' in job_statuses:
+            for job_id, job in job_statuses['Jobs'].items():
+                for long_job_id in job_ids:
+                    if long_job_id.startswith(job_id):
+                        logger.debug('coerced job_id %s -> %s', job_id, long_job_id)
+                        job_id = long_job_id
+                        break
 
-            job_state = job.get('job_state', JobState.UNKNOWN)
-            state = translate_table.get(job_state, JobState.UNKNOWN)
-            self.resources[job_id]['status'] = JobStatus(state)
-            jobs_missing.remove(job_id)
+                job_state = job.get('job_state', JobState.UNKNOWN)
+                state = translate_table.get(job_state, JobState.UNKNOWN)
+                self.resources[job_id]['status'] = JobStatus(state)
+                jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
             self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
-
 
     def submit(self, command, tasks_per_node, job_name="parsl"):
         """Submits the command job.
