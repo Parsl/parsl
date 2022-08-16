@@ -1,5 +1,21 @@
 import time
 t_start = time.time()
+import sys
+metas = []
+
+
+class MetaPathLogger:
+
+    def find_spec(*args, **kwargs):
+        metas.append(f"{time.time()} META_PATH {args[0]}")
+        return None
+
+
+if __name__ == "__main__":
+    mpl = [MetaPathLogger]
+    sys.meta_path = mpl + sys.meta_path
+
+t_postmeta = time.time()
 
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.files import File
@@ -7,7 +23,6 @@ from parsl.utils import get_std_fname_mode
 import traceback
 import sys
 import pickle
-from typing import List, Any
 
 t_postimport = time.time()
 # This scripts executes a parsl function which is pickled in a file:
@@ -183,13 +198,6 @@ def execute_function(namespace, function_code, result_name):
     return result
 
 
-class MetaPathLogger:
-
-    def find_spec(*args, **kwargs):
-        print(f"{time.time()} META_PATH {args[0]}", file=logfile)
-        return None
-
-
 if __name__ == "__main__":
     t_mainstart = time.time()
     try:
@@ -207,13 +215,9 @@ if __name__ == "__main__":
 
         logfile = open(log_file, "w")
         print(f"{t_start} START", file=logfile)
+        print(f"{t_postmeta} POSTMETA", file=logfile)
         print(f"{t_postimport} POSTIMPORT", file=logfile)
         print(f"{t_mainstart} MAINSTART", file=logfile)
-
-        mpl: List[Any]
-        mpl = [MetaPathLogger]
-
-        sys.meta_path = mpl + sys.meta_path
 
         t_loadfunction = time.time()
         print(f"{t_loadfunction} LOADFUNCTION", file=logfile)
@@ -243,6 +247,11 @@ if __name__ == "__main__":
         print("Could not write to result file.")
         traceback.print_exc()
         sys.exit(1)
+    t_printmetas = time.time()
+    print(f"{t_printmetas} PRINTMETAS", file=logfile)
+    for m in metas:
+        print(m, file=logfile)
     t_done = time.time()
     print(f"{t_done} DONE", file=logfile)
+
     logfile.close()
