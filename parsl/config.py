@@ -7,6 +7,7 @@ from parsl.utils import RepresentationMixin
 from parsl.executors.base import ParslExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.dataflow.error import ConfigurationError
+from parsl.dataflow.taskrecord import TaskRecord
 from parsl.monitoring import MonitoringHub
 
 logger = logging.getLogger(__name__)
@@ -77,7 +78,7 @@ class Config(RepresentationMixin):
                  garbage_collect: bool = True,
                  internal_tasks_max_threads: int = 10,
                  retries: int = 0,
-                 retry_handler: Optional[Callable] = None,
+                 retry_handler: Optional[Callable[[Exception, TaskRecord], float]] = None,
                  run_dir: str = 'runinfo',
                  strategy: Optional[str] = 'simple',
                  max_idletime: float = 120.0,
