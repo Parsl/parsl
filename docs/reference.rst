@@ -183,3 +183,4 @@ Internal
     parsl.dataflow.states.States
     parsl.dataflow.strategy.Strategy
     parsl.dataflow.flow_control.Timer
+    parsl.dataflow.taskrecord.TaskRecord
