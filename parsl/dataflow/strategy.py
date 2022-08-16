@@ -163,7 +163,7 @@ class Strategy(object):
 
     @wrap_with_logs
     def _general_strategy(self, status_list, tasks, *, strategy_type):
-        logger.debug(f"general strategy starting with strategy_type {strategy_type}")
+        logger.debug(f"general strategy starting with strategy_type {strategy_type} for {len(status_list)} executors")
 
         for exec_status in status_list:
             executor = exec_status.executor
