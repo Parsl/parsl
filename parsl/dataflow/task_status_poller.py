@@ -41,9 +41,17 @@ class PollItem(ExecutorStatus):
 
     def poll(self, now: float):
         if self._should_poll(now):
+            previous_status = self._status
             self._status = self._executor.status()
             self._last_poll_time = now
-            self.send_monitoring_info(self._status)
+            delta_status = {}
+            for block_id in self._status:
+                if block_id not in previous_status \
+                   or previous_status[block_id].state != self._status[block_id].state:
+                    delta_status[block_id] = self._status[block_id]
+
+            if delta_status:
+                self.send_monitoring_info(delta_status)
 
     def send_monitoring_info(self, status=None):
         # Send monitoring info for HTEX when monitoring enabled
