@@ -109,7 +109,8 @@ class Manager(object):
              assumes that the interchange is lost and the manager shuts down. Default:120
 
         heartbeat_period : int
-             Number of seconds after which a heartbeat message is sent to the interchange
+             Number of seconds after which a heartbeat message is sent to the interchange, and workers
+             are checked for liveness.
 
         poll_period : int
              Timeout period used by the manager in milliseconds. Default: 10ms
@@ -394,7 +395,7 @@ class Manager(object):
                                                  ), name="HTEX-Worker-{}".format(worker_id))
                     self.procs[worker_id] = p
                     logger.info("Worker {} has been restarted".format(worker_id))
-                time.sleep(self.poll_period / 1000.0)
+                time.sleep(self.heartbeat_period)
 
         logger.critical("Exiting")
 
