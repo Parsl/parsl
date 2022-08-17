@@ -39,10 +39,16 @@ class BlockProviderExecutor(ParslExecutor):
     invoking scale_out, but it will not initialize the blocks requested by
     any init_blocks parameter. Subclasses must implement that behaviour
     themselves.
+
+    BENC: TODO: block error handling: maybe I want this more user pluggable?
+    I'm not sure of use cases for switchability at the moment beyond "yes or no"
     """
-    def __init__(self, provider: ExecutionProvider):
+    def __init__(self, *,
+                 provider: ExecutionProvider,
+                 block_error_handler: bool):
         super().__init__()
         self._provider = provider
+        self.block_error_handler = block_error_handler
         # errors can happen during the submit call to the provider; this is used
         # to keep track of such errors so that they can be handled in one place
         # together with errors reported by status()
@@ -127,10 +133,12 @@ class BlockProviderExecutor(ParslExecutor):
 
     @property
     def error_management_enabled(self):
-        return True
+        return self.block_error_handler
 
     def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
                       status: Dict[str, JobStatus]) -> None:
+        if not self.block_error_handler:
+            return
         init_blocks = 3
         if hasattr(self.provider, 'init_blocks'):
             init_blocks = self.provider.init_blocks  # type: ignore
