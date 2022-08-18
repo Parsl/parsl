@@ -147,7 +147,6 @@ class Interchange(object):
         self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
 
         self.command_channel = self.context.socket(zmq.REP)
-        self.command_channel.RCVTIMEO = 1000  # in milliseconds
         self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
         logger.info("Connected to client")
 
