@@ -251,7 +251,7 @@ class Interchange(object):
                 logger.debug("putting message onto pending_task_queue")
                 self.pending_task_queue.put(msg)
                 task_counter += 1
-                logger.debug("Fetched task:{}".format(task_counter))
+                logger.debug(f"Fetched {task_counter} tasks so far")
         logger.info("reached end of task_puller loop")
 
     def _create_monitoring_channel(self):
