@@ -419,7 +419,7 @@ class Interchange(object):
 
                         if (msg['python_v'].rsplit(".", 1)[0] != self.current_platform['python_v'].rsplit(".", 1)[0] or
                             msg['parsl_v'] != self.current_platform['parsl_v']):
-                            logger.warning("Manager {} has incompatible version info with the interchange".format(manager_id))
+                            logger.error("Manager {} has incompatible version info with the interchange".format(manager_id))
                             logger.debug("Setting kill event")
                             self._kill_event.set()
                             e = VersionMismatch("py.v={} parsl.v={}".format(self.current_platform['python_v'].rsplit(".", 1)[0],
@@ -430,7 +430,7 @@ class Interchange(object):
                             result_package = {'type': 'result', 'task_id': -1, 'exception': serialize_object(e)}
                             pkl_package = pickle.dumps(result_package)
                             self.results_outgoing.send(pkl_package)
-                            logger.warning("Sent failure reports, unregistering manager")
+                            logger.error("Sent failure reports, shutting down interchange")
                         else:
                             logger.info("Manager {} has compatible Parsl version {}".format(manager_id, msg['parsl_v']))
                             logger.info("Manager {} has compatible Python version {}".format(manager_id,
