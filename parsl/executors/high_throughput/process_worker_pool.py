@@ -109,17 +109,11 @@ class Manager(object):
              assumes that the interchange is lost and the manager shuts down. Default:120
 
         heartbeat_period : int
-             Number of seconds after which a heartbeat message is sent to the interchange
+             Number of seconds after which a heartbeat message is sent to the interchange, and workers
+             are checked for liveness.
 
-        poll_period : int  - either s or ms depending on who is reading it (!)
+        poll_period : int
              Timeout period used by the manager in milliseconds. Default: 10ms
-             This will affect:
-
-               * worker watchdog restart - if a worker fails, we may wait a
-                 poll period before that worker is restarted. 10ms is crazy
-                 low for LSST purposes. A minute would be fine. That loop
-                 doesn't seem to generate log load though in normal use.
-                 But time.sleep is used, which means it defaults to 1000x slower than the other periods. That seems like a bug that should be fixed/clarified
 
         cpu_affinity : str
              Whether each worker should force its affinity to different CPUs
@@ -256,7 +250,6 @@ class Manager(object):
         last_interchange_contact = time.time()
         task_recv_counter = 0
 
-        # what units is poll_timer? according to this assignment, it should be ms. ZMQ poller also wants poll_timer to be ms.
         poll_timer = self.poll_period
 
         while not kill_event.is_set():
@@ -415,10 +408,7 @@ class Manager(object):
                                                  ), name="HTEX-Worker-{}".format(worker_id))
                     self.procs[worker_id] = p
                     logger.info("Worker {} has been restarted".format(worker_id))
-                else:
-                    logger.info("Worker {} is alive".format(worker_id))
-                # time.sleep(self.poll_period / 1000.0)
-                time.sleep(30)  # LSST specific timing
+                time.sleep(self.heartbeat_period)
 
         logger.critical("Exiting")
 

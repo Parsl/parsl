@@ -249,7 +249,7 @@ class DataFlowKernel(object):
 
         return task_log_info
 
-    def _count_deps(self, depends):
+    def _count_deps(self, depends: Sequence[Future]) -> int:
         """Count the number of unresolved futures in the list depends.
         """
         count = 0
@@ -261,11 +261,11 @@ class DataFlowKernel(object):
         return count
 
     @property
-    def config(self):
+    def config(self) -> Config:
         """Returns the fully initialized config that the DFK is actively using.
 
         Returns:
-             - config (dict)
+             - Config object
         """
         return self._config
 
@@ -551,14 +551,14 @@ class DataFlowKernel(object):
             result.reraise()
         return result
 
-    def wipe_task(self, task_id):
+    def wipe_task(self, task_id: int) -> None:
         """ Remove task with task_id from the internal tasks table
         """
         if self.config.garbage_collect:
             del self.tasks[task_id]
 
     @staticmethod
-    def check_staging_inhibited(kwargs):
+    def check_staging_inhibited(kwargs: Dict[str, Any]) -> bool:
         return kwargs.get('_parsl_staging_inhibit', False)
 
     def launch_if_ready(self, task_record: TaskRecord) -> None:
@@ -710,7 +710,7 @@ class DataFlowKernel(object):
 
         return exec_fu
 
-    def _add_input_deps(self, executor, args, kwargs, func):
+    def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable) -> Tuple[Sequence[Any], Dict[str, Any], Callable]:
         """Look for inputs of the app that are files. Give the data manager
         the opportunity to replace a file with a data future for that file,
         for example wrapping the result of a staging action.
@@ -740,7 +740,7 @@ class DataFlowKernel(object):
 
         return tuple(newargs), kwargs, func
 
-    def _add_output_deps(self, executor, args, kwargs, app_fut, func):
+    def _add_output_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], app_fut: AppFuture, func: Callable) -> Callable:
         logger.debug("Adding output dependencies")
         outputs = kwargs.get('outputs', [])
         app_fut._outputs = []
@@ -788,7 +788,7 @@ class DataFlowKernel(object):
         """
         depends: List[Future] = []
 
-        def check_dep(d):
+        def check_dep(d: Any) -> None:
             if isinstance(d, Future):
                 depends.extend([d])
 
@@ -1021,7 +1021,7 @@ class DataFlowKernel(object):
 
         for d in depends:
 
-            def callback_adapter(dep_fut):
+            def callback_adapter(dep_fut: Future) -> None:
                 self.launch_if_ready(task_def)
 
             try:
@@ -1040,7 +1040,7 @@ class DataFlowKernel(object):
     # and a drain function might look like this.
     # If tasks have their states changed, this won't work properly
     # but we can validate that...
-    def log_task_states(self):
+    def log_task_states(self) -> None:
         logger.info("Summary of tasks in DFK:")
 
         with self.task_state_counts_lock:
@@ -1288,7 +1288,7 @@ class DataFlowKernel(object):
 
             return checkpoint_dir
 
-    def _load_checkpoints(self, checkpointDirs):
+    def _load_checkpoints(self, checkpointDirs: Sequence[str]) -> Dict[str, Future[Any]]:
         """Load a checkpoint file into a lookup table.
 
         The data being loaded from the pickle file mostly contains input
@@ -1315,7 +1315,7 @@ class DataFlowKernel(object):
                         try:
                             data = pickle.load(f)
                             # Copy and hash only the input attributes
-                            memo_fu = Future()
+                            memo_fu: Future = Future()
                             assert data['exception'] is None
                             memo_fu.set_result(data['result'])
                             memo_lookup_table[data['hash']] = memo_fu

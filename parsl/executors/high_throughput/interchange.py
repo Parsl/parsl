@@ -142,11 +142,6 @@ class Interchange(object):
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.set_hwm(0)
 
-        # this controls the speed at which the task incoming queue loop runs. The only thing
-        # that loop does aside from task_incoming is check for kill event. The default of
-        # 10ms is pretty high - for this project, I'm fine with this taking a second or so to
-        # detect a kill event.
-        self.task_incoming.RCVTIMEO = 5000  # in milliseconds
         self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
 
         self.results_outgoing = self.context.socket(zmq.DEALER)
@@ -154,7 +149,6 @@ class Interchange(object):
         self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
 
         self.command_channel = self.context.socket(zmq.REP)
-        self.command_channel.RCVTIMEO = 1000  # in milliseconds
         self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
         logger.info("Connected to client")
 
@@ -228,19 +222,14 @@ class Interchange(object):
         return tasks
 
     @wrap_with_logs(target="interchange")
-    def task_puller(self, kill_event):
+    def task_puller(self):
         """Pull tasks from the incoming tasks zmq pipe onto the internal
         pending task queue
-
-        Parameters:
-        -----------
-        kill_event : threading.Event
-              Event to let the thread know when it is time to die.
         """
         logger.info("Starting")
         task_counter = 0
 
-        while not kill_event.is_set():
+        while True:
             logger.debug("launching recv_pyobj")
             try:
                 msg = self.task_incoming.recv_pyobj()
@@ -249,16 +238,10 @@ class Interchange(object):
                 logger.debug("zmq.Again with {} tasks in internal queue".format(self.pending_task_queue.qsize()))
                 continue
 
-            if msg == 'STOP':
-                logger.info("received STOP message, setting kill_event")
-                kill_event.set()
-                break
-            else:
-                logger.debug("putting message onto pending_task_queue")
-                self.pending_task_queue.put(msg)
-                task_counter += 1
-                logger.debug("Fetched task:{}".format(task_counter))
-        logger.info("reached end of task_puller loop")
+            logger.debug("putting message onto pending_task_queue")
+            self.pending_task_queue.put(msg)
+            task_counter += 1
+            logger.debug(f"Fetched {task_counter} tasks so far")
 
     def _create_monitoring_channel(self):
         if self.hub_address and self.hub_port:
@@ -282,7 +265,7 @@ class Interchange(object):
             hub_channel.send_pyobj((MessageType.NODE_INFO, d))
 
     @wrap_with_logs(target="interchange")
-    def _command_server(self, kill_event):
+    def _command_server(self):
         """ Command server to run async command to the interchange
         """
         logger.debug("Command Server Starting")
@@ -292,7 +275,7 @@ class Interchange(object):
 
         reply: Any  # the type of reply depends on the command_req received (aka this needs dependent types...)
 
-        while not kill_event.is_set():
+        while True:
             try:
                 command_req = self.command_channel.recv_pyobj()
                 logger.debug("Received command request: {}".format(command_req))
@@ -337,11 +320,6 @@ class Interchange(object):
                     else:
                         reply = False
 
-                elif command_req == "SHUTDOWN":
-                    logger.info("Received SHUTDOWN command")
-                    kill_event.set()
-                    reply = True
-
                 else:
                     reply = None
 
@@ -360,11 +338,9 @@ class Interchange(object):
 
         hub_channel = self._create_monitoring_channel()
 
-        # poll_period = self.poll_period
+        poll_period = self.poll_period
 
-        # poll period is never specified as a start() parameter, so removing the defaulting here as noise.
-        # poll_period = self.poll_period
-        # however for my hacking:
+        # for my hacking:
         poll_period = 1000
         # because the executor level poll period also changes the worker pool poll period setting, which I want to experiment with separately.
         # This setting reduces the speed at which the interchange main loop
@@ -379,16 +355,15 @@ class Interchange(object):
         start = time.time()
         count = 0
 
-        self._kill_event = threading.Event()
         self._task_puller_thread = threading.Thread(target=self.task_puller,
-                                                    args=(self._kill_event,),
                                                     name="Interchange-Task-Puller")
         self._task_puller_thread.start()
 
         self._command_thread = threading.Thread(target=self._command_server,
-                                                args=(self._kill_event,),
                                                 name="Interchange-Command")
         self._command_thread.start()
+
+        kill_event = threading.Event()
 
         poller = zmq.Poller()
         poller.register(self.task_outgoing, zmq.POLLIN)
@@ -400,7 +375,7 @@ class Interchange(object):
         # onto this list.
         interesting_managers: Set[bytes] = set()
 
-        while not self._kill_event.is_set():
+        while not kill_event.is_set():
             self.socks = dict(poller.poll(timeout=poll_period))
 
             # Listen for requests for work
@@ -439,9 +414,9 @@ class Interchange(object):
 
                         if (msg['python_v'].rsplit(".", 1)[0] != self.current_platform['python_v'].rsplit(".", 1)[0] or
                             msg['parsl_v'] != self.current_platform['parsl_v']):
-                            logger.warning("Manager {} has incompatible version info with the interchange".format(manager_id))
+                            logger.error("Manager {} has incompatible version info with the interchange".format(manager_id))
                             logger.debug("Setting kill event")
-                            self._kill_event.set()
+                            kill_event.set()
                             e = VersionMismatch("py.v={} parsl.v={}".format(self.current_platform['python_v'].rsplit(".", 1)[0],
                                                                             self.current_platform['parsl_v']),
                                                 "py.v={} parsl.v={}".format(msg['python_v'].rsplit(".", 1)[0],
@@ -450,7 +425,7 @@ class Interchange(object):
                             result_package = {'type': 'result', 'task_id': -1, 'exception': serialize_object(e)}
                             pkl_package = pickle.dumps(result_package)
                             self.results_outgoing.send(pkl_package)
-                            logger.warning("Sent failure reports, unregistering manager")
+                            logger.error("Sent failure reports, shutting down interchange")
                         else:
                             logger.info("Manager {} has compatible Parsl version {}".format(manager_id, msg['parsl_v']))
                             logger.info("Manager {} has compatible Python version {}".format(manager_id,

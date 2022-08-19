@@ -1,12 +1,15 @@
 import logging
 import os
 import time
+import json
 
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.pbspro.template import template_string
 from parsl.providers import TorqueProvider
 from parsl.providers.provider_base import JobState, JobStatus
+
+from parsl.providers.torque.torque import translate_table
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +89,43 @@ class PBSProProvider(TorqueProvider):
         self._label = 'pbspro'
         self.cpus_per_node = cpus_per_node
         self.select_options = select_options
+
+    def _status(self):
+        ''' Internal: Do not call. Returns the status list for a list of job_ids
+
+        Args:
+              self
+
+        Returns:
+              [status...] : Status list of all jobs
+        '''
+
+        job_ids = list(self.resources.keys())
+        job_id_list = ' '.join(self.resources.keys())
+
+        jobs_missing = list(self.resources.keys())
+
+        retcode, stdout, stderr = self.execute_wait("qstat -f -F json {0}".format(job_id_list))
+
+        job_statuses = json.loads(stdout)
+
+        if 'Jobs' in job_statuses:
+            for job_id, job in job_statuses['Jobs'].items():
+                for long_job_id in job_ids:
+                    if long_job_id.startswith(job_id):
+                        logger.debug('coerced job_id %s -> %s', job_id, long_job_id)
+                        job_id = long_job_id
+                        break
+
+                job_state = job.get('job_state', JobState.UNKNOWN)
+                state = translate_table.get(job_state, JobState.UNKNOWN)
+                self.resources[job_id]['status'] = JobStatus(state)
+                jobs_missing.remove(job_id)
+
+        # squeue does not report on jobs that are not running. So we are filling in the
+        # blanks for missing jobs, we might lose some information about why the jobs failed.
+        for missing_job in jobs_missing:
+            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
     def submit(self, command, tasks_per_node, job_name="parsl"):
         """Submits the command job.

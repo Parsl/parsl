@@ -9,7 +9,7 @@ We have two basic types of futures:
 from concurrent.futures import Future
 import logging
 import threading
-from typing import Sequence
+from typing import Optional, Sequence
 
 from parsl.app.futures import DataFuture
 from parsl.dataflow.taskrecord import TaskRecord
@@ -75,24 +75,24 @@ class AppFuture(Future):
         self.task_def = task_def
 
     @property
-    def stdout(self):
+    def stdout(self) -> Optional[str]:
         return self.task_def['kwargs'].get('stdout')
 
     @property
-    def stderr(self):
+    def stderr(self) -> Optional[str]:
         return self.task_def['kwargs'].get('stderr')
 
     @property
-    def tid(self):
+    def tid(self) -> int:
         return self.task_def['id']
 
-    def cancel(self):
+    def cancel(self) -> bool:
         raise NotImplementedError("Cancel not implemented")
 
-    def cancelled(self):
+    def cancelled(self) -> bool:
         return False
 
-    def task_status(self):
+    def task_status(self) -> str:
         """Returns the status of the task that will provide the value
            for this future.  This may not be in-sync with the result state
            of this future - for example, task_status might return 'done' but
@@ -116,5 +116,5 @@ class AppFuture(Future):
         return self.task_def['status'].name
 
     @property
-    def outputs(self):
+    def outputs(self) -> Sequence[DataFuture]:
         return self._outputs

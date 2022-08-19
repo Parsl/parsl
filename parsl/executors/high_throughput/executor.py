@@ -184,9 +184,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     poll_period : int
         Timeout period to be used by the executor components in milliseconds. Increasing poll_periods
-        trades performance for cpu efficiency. Default: 10 "units"
-        This period controls both an interchange poll period and a worker pool poll period, with different effects in both.
-
+        trades performance for cpu efficiency. Default: 10ms
 
     worker_logdir_root : string
         In case of a remote file system, specify the path to where logs will be kept.
@@ -221,7 +219,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         logger.debug("Initializing HighThroughputExecutor")
 
         BlockProviderExecutor.__init__(self, provider=provider, block_error_handler=block_error_handler)
-
         self.label = label
         self.launch_cmd = launch_cmd
         self.worker_debug = worker_debug
