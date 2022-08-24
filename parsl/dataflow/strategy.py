@@ -1,13 +1,17 @@
+from __future__ import annotations
 import logging
 import time
 import math
 from typing import List
 
-from parsl.dataflow.task_status_poller import PollItem
 from parsl.executors import HighThroughputExecutor
 from parsl.providers.provider_base import JobState
 from parsl.process_loggers import wrap_with_logs
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from parsl.dataflow.task_status_poller import PollItem
 
 logger = logging.getLogger(__name__)
 
