@@ -209,13 +209,13 @@ class UsageTracker (object):
 
         return x
 
-    def send_message(self):
+    def send_message(self) -> float:
         """Send message over UDP.
 
         If tracking is disables, the bytes_sent will always be set to -1
 
         Returns:
-            (bytes_sent, time_taken)
+            time_taken
         """
         start = time.time()
         message = None
