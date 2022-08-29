@@ -182,8 +182,9 @@ Parsl provides four checkpointing modes:
    from parsl.configs.local_threads import config
    config.checkpoint_mode = 'dfk_exit'
 
-4. Manual: in addition to these automated checkpointing modes, it is also possible to manually initiate a checkpoint
-   by calling ``DataFlowKernel.checkpoint()`` in the Parsl program code.
+4. ``manual``: in addition to these automated checkpointing modes, it is also possible
+   to manually initiate a checkpoint by calling ``DataFlowKernel.checkpoint()`` in the
+   Parsl program code.
 
 
    import parsl
