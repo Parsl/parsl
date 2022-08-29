@@ -260,7 +260,7 @@ class DataFlowKernel(object):
         """Returns the fully initialized config that the DFK is actively using.
 
         Returns:
-             - config (dict)
+             - Config object
         """
         return self._config
 
