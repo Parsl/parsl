@@ -165,12 +165,6 @@ class HTEXRadio(MonitoringRadio):
 
         import parsl.executors.high_throughput.monitoring_info
 
-        try:
-            buffer = message
-        except Exception:
-            logging.exception("Exception during pickling", exc_info=True)
-            return
-
         result_queue = parsl.executors.high_throughput.monitoring_info.result_queue
 
         # this message needs to go in the result queue tagged so that it is treated
@@ -182,7 +176,7 @@ class HTEXRadio(MonitoringRadio):
 
         interchange_msg = {
             'type': 'monitoring',
-            'payload': buffer
+            'payload': message
         }
 
         if result_queue:
