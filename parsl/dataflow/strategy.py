@@ -1,17 +1,13 @@
-from __future__ import annotations
 import logging
 import time
 import math
 from typing import List
 
+from parsl.dataflow.executor_status import ExecutorStatus
 from parsl.executors import HighThroughputExecutor
 from parsl.providers.provider_base import JobState
 from parsl.process_loggers import wrap_with_logs
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from parsl.dataflow.task_status_poller import PollItem
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +130,7 @@ class Strategy(object):
         for executor in executors:
             self.executors[executor.label] = {'idle_since': None, 'config': executor.label}
 
-    def _strategy_noop(self, status: List[PollItem], tasks: List[int]) -> None:
+    def _strategy_noop(self, status: List[ExecutorStatus], tasks: List[int]) -> None:
         """Do nothing.
 
         Args:
@@ -142,10 +138,10 @@ class Strategy(object):
         """
         logger.debug("strategy_noop: doing nothing")
 
-    def _strategy_simple(self, status_list: List[PollItem], tasks: List[int]) -> None:
+    def _strategy_simple(self, status_list, tasks: List[int]) -> None:
         self._general_strategy(status_list, tasks, strategy_type='simple')
 
-    def _strategy_htex_auto_scale(self, status_list: List[PollItem], tasks: List[int]) -> None:
+    def _strategy_htex_auto_scale(self, status_list, tasks: List[int]) -> None:
         """HTEX specific auto scaling strategy
 
         This strategy works only for HTEX. This strategy will scale out by
