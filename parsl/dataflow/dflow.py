@@ -1114,19 +1114,21 @@ class DataFlowKernel(object):
         """
 
         logger.info("Waiting for all remaining tasks to complete")
-        for task_id in list(self.tasks):
+
+        # make a concrete copy because the dictionary size can change
+        # as tasks complete. Even making this copy, there is probably
+        # still a chance of an error happening as the list is
+        # constructed.
+        items = list(self.tasks.items())
+        for task_id, task_record in items:
             # .exception() is a less exception throwing way of
             # waiting for completion than .result()
-            if task_id not in self.tasks:
-                logger.debug("Task {} no longer in task list".format(task_id))
-            else:
-                task_record = self.tasks[task_id]  # still a race condition with the above self.tasks if-statement
-                fut = task_record['app_fu']
-                if not fut.done():
-                    fut.exception()
-                # now app future is done, poll until DFK state is final: a DFK state being final and the app future being done do not imply each other.
-                while task_record['status'] not in FINAL_STATES:
-                    time.sleep(0.1)
+            fut = task_record['app_fu']
+            if not fut.done():
+                fut.exception()
+            # now app future is done, poll until DFK state is final: a DFK state being final and the app future being done do not imply each other.
+            while task_record['status'] not in FINAL_STATES:
+                time.sleep(0.1)
 
         logger.info("All remaining tasks completed")
 
