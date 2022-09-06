@@ -36,10 +36,10 @@ class PollItem(ExecutorStatus):
             self.hub_channel.connect("tcp://{}:{}".format(hub_address, hub_port))
             logger.info("Monitoring enabled on task status poller")
 
-    def _should_poll(self, now: float):
+    def _should_poll(self, now: float) -> bool:
         return now >= self._last_poll_time + self._interval
 
-    def poll(self, now: float):
+    def poll(self, now: float) -> None:
         if self._should_poll(now):
             previous_status = self._status
             self._status = self._executor.status()
@@ -53,7 +53,7 @@ class PollItem(ExecutorStatus):
             if delta_status:
                 self.send_monitoring_info(delta_status)
 
-    def send_monitoring_info(self, status=None):
+    def send_monitoring_info(self, status: Dict):
         # Send monitoring info for HTEX when monitoring enabled
         if self.monitoring_enabled:
             msg = self._executor.create_monitoring_info(status)
@@ -95,7 +95,7 @@ class PollItem(ExecutorStatus):
             self._status.update(new_status)
         return block_ids
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self._status.__repr__()
 
 
@@ -111,12 +111,12 @@ class TaskStatusPoller(object):
         self._error_handler.run(self._poll_items)
         self._strategy.strategize(self._poll_items, tasks)
 
-    def _update_state(self):
+    def _update_state(self) -> None:
         now = time.time()
         for item in self._poll_items:
             item.poll(now)
 
-    def add_executors(self, executors: Sequence[ParslExecutor]):
+    def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         for executor in executors:
             if executor.status_polling_interval > 0:
                 logger.debug("Adding executor {}".format(executor.label))

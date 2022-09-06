@@ -2,6 +2,9 @@ import logging
 import threading
 import time
 
+from typing import Sequence
+
+from parsl.executors.base import ParslExecutor
 from parsl.dataflow.task_status_poller import TaskStatusPoller
 
 logger = logging.getLogger(__name__)
@@ -67,7 +70,7 @@ class FlowControl(object):
         self._thread.daemon = True
         self._thread.start()
 
-    def _wake_up_timer(self, kill_event):
+    def _wake_up_timer(self, kill_event: threading.Event) -> None:
         """Internal. This is the function that the thread will execute.
         waits on an event so that the thread can make a quick exit when close() is called
 
@@ -87,7 +90,7 @@ class FlowControl(object):
 
             self.make_callback()
 
-    def make_callback(self):
+    def make_callback(self) -> None:
         """Makes the callback and resets the timer.
         """
         self._wake_up_time = time.time() + self.interval
@@ -97,10 +100,10 @@ class FlowControl(object):
             logger.error("Flow control callback threw an exception - logging and proceeding anyway", exc_info=True)
         self._event_buffer = []
 
-    def add_executors(self, executors):
+    def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         self.task_status_poller.add_executors(executors)
 
-    def close(self):
+    def close(self) -> None:
         """Merge the threads and terminate."""
         self._kill_event.set()
         self._thread.join()
@@ -153,7 +156,7 @@ class Timer(object):
         self._thread.daemon = True
         self._thread.start()
 
-    def _wake_up_timer(self, kill_event):
+    def _wake_up_timer(self, kill_event: threading.Event) -> None:
         """Internal. This is the function that the thread will execute.
         waits on an event so that the thread can make a quick exit when close() is called
 
@@ -177,13 +180,13 @@ class Timer(object):
             else:
                 print("Sleeping a bit more")
 
-    def make_callback(self):
+    def make_callback(self) -> None:
         """Makes the callback and resets the timer.
         """
         self._wake_up_time = time.time() + self.interval
         self.callback(*self.cb_args)
 
-    def close(self):
+    def close(self) -> None:
         """Merge the threads and terminate.
         """
         self._kill_event.set()
