@@ -130,7 +130,7 @@ class Strategy(object):
         for executor in executors:
             self.executors[executor.label] = {'idle_since': None, 'config': executor.label}
 
-    def _strategy_noop(self, status: List[ExecutorStatus], tasks):
+    def _strategy_noop(self, status: List[ExecutorStatus], tasks: List[int]) -> None:
         """Do nothing.
 
         Args:
@@ -138,10 +138,10 @@ class Strategy(object):
         """
         logger.debug("strategy_noop: doing nothing")
 
-    def _strategy_simple(self, status_list, tasks):
+    def _strategy_simple(self, status_list, tasks: List[int]) -> None:
         self._general_strategy(status_list, tasks, strategy_type='simple')
 
-    def _strategy_htex_auto_scale(self, status_list, tasks):
+    def _strategy_htex_auto_scale(self, status_list, tasks: List[int]) -> None:
         """HTEX specific auto scaling strategy
 
         This strategy works only for HTEX. This strategy will scale out by
