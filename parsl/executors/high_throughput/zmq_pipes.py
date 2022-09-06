@@ -123,7 +123,7 @@ class TasksOutgoing(object):
         This issue can be magnified if each the serialized buffer itself is larger.
         """
         logger.debug("Putting task to outgoing_q")
-        timeout_ms = 0
+        timeout_ms = 1
         with self._lock:
             while True:
                 socks = dict(self.poller.poll(timeout=timeout_ms))
@@ -134,7 +134,6 @@ class TasksOutgoing(object):
                 else:
                     timeout_ms = max(timeout_ms, 1)
                     timeout_ms *= 2
-                    timeout_ms = min(10000, timeout_ms)  # TODO: arbitrary hard coded time bad
                     logger.debug("Not sending due to non-ready zmq pipe, timeout: {} ms".format(timeout_ms))
                     if timeout_ms == 10000:
                         raise RuntimeError("BENC: hit big timeout for pipe put - failing rather than trying forever")
