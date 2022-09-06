@@ -320,11 +320,6 @@ class Interchange(object):
                     else:
                         reply = False
 
-                elif command_req == "SHUTDOWN":
-                    logger.info("Received SHUTDOWN command")
-                    kill_event.set()
-                    reply = True
-
                 else:
                     reply = None
 
