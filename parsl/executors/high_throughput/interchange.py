@@ -222,19 +222,14 @@ class Interchange(object):
         return tasks
 
     @wrap_with_logs(target="interchange")
-    def task_puller(self, kill_event):
+    def task_puller(self):
         """Pull tasks from the incoming tasks zmq pipe onto the internal
         pending task queue
-
-        Parameters:
-        -----------
-        kill_event : threading.Event
-              Event to let the thread know when it is time to die.
         """
         logger.info("Starting")
         task_counter = 0
 
-        while not kill_event.is_set():
+        while True:
             logger.debug("launching recv_pyobj")
             try:
                 msg = self.task_incoming.recv_pyobj()
@@ -243,16 +238,10 @@ class Interchange(object):
                 logger.debug("zmq.Again with {} tasks in internal queue".format(self.pending_task_queue.qsize()))
                 continue
 
-            if msg == 'STOP':
-                logger.info("received STOP message, setting kill_event")
-                kill_event.set()
-                break
-            else:
-                logger.debug("putting message onto pending_task_queue")
-                self.pending_task_queue.put(msg)
-                task_counter += 1
-                logger.debug(f"Fetched {task_counter} tasks so far")
-        logger.info("reached end of task_puller loop")
+            logger.debug("putting message onto pending_task_queue")
+            self.pending_task_queue.put(msg)
+            task_counter += 1
+            logger.debug(f"Fetched {task_counter} tasks so far")
 
     def _create_monitoring_channel(self):
         if self.hub_address and self.hub_port:
@@ -361,7 +350,6 @@ class Interchange(object):
 
         self._kill_event = threading.Event()
         self._task_puller_thread = threading.Thread(target=self.task_puller,
-                                                    args=(self._kill_event,),
                                                     name="Interchange-Task-Puller")
         self._task_puller_thread.start()
 
