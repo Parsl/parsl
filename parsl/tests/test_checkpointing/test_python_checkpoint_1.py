@@ -6,12 +6,6 @@ import parsl
 from parsl import python_app
 from parsl.tests.configs.local_threads import fresh_config
 
-import time
-
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 @python_app(cache=True)
 def random_app(i):
@@ -27,8 +21,6 @@ def launch_n_random(n=2):
     print("Done launching")
 
     # Block till done
-    [i.result() for i in d]
-
     return [i.result() for i in d]
 
 
@@ -40,10 +32,6 @@ def test_initial_checkpoint_write(n=2):
     config.checkpoint_mode = 'manual'
     parsl.load(config)
     results = launch_n_random(n)
-
-    logger.debug("sleeping")
-    time.sleep(1)
-    logger.debug("done sleeping")
 
     cpt_dir = parsl.dfk().checkpoint()
 

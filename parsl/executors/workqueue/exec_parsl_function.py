@@ -1,6 +1,7 @@
 import time
 t_start = time.time()
 import sys
+from typing import Any, List
 metas = []
 
 
@@ -12,6 +13,7 @@ class MetaPathLogger:
 
 
 if __name__ == "__main__":
+    mpl: List[Any]  # failure in CI... doesn't happen on my laptop. I haven't dug into why
     mpl = [MetaPathLogger]
     sys.meta_path = mpl + sys.meta_path
 
