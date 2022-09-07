@@ -62,11 +62,16 @@ class CommandClient(object):
         # otherwise, _my_thread and current_thread match, which is ok and no need to log
 
         reply = '__PARSL_ZMQ_PIPES_MAGIC__'
+        logger.debug("acquiring command lock")
         with self._lock:
+            logger.debug("acquired command lock")
             for i in range(max_retries):
+                logger.debug(f"try {i} for command {message}")
                 try:
                     self.zmq_socket.send_pyobj(message, copy=True)
+                    logger.debug(f"waiting for response from command {message}")
                     reply = self.zmq_socket.recv_pyobj()
+                    logger.debug(f"got response from command {message}")
                 except zmq.ZMQError:
                     logger.exception("Potential ZMQ REQ-REP deadlock caught")
                     logger.info("Trying to reestablish context after ZMQError")

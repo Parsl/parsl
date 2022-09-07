@@ -276,6 +276,7 @@ class Interchange(object):
 
         while True:
             try:
+                logger.debug("Waiting for command request")
                 command_req = self.command_channel.recv_pyobj()
                 logger.debug("Received command request: {}".format(command_req))
                 if command_req == "OUTSTANDING_C":
