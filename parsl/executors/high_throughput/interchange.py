@@ -119,7 +119,7 @@ class Interchange(object):
              Parsl log directory paths. Logs and temp files go here. Default: '.'
 
         logging_level : int
-             Logging level as defined in the logging module. Default: logging.INFO (20)
+             Logging level as defined in the logging module. Default: logging.INFO
 
         poll_period : int
              The main thread polling period, in milliseconds. Default: 10ms
@@ -276,6 +276,7 @@ class Interchange(object):
 
         while True:
             try:
+                logger.debug("Waiting for command request")
                 command_req = self.command_channel.recv_pyobj()
                 logger.debug("Received command request: {}".format(command_req))
                 if command_req == "OUTSTANDING_C":
