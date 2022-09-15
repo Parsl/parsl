@@ -141,7 +141,6 @@ class Interchange(object):
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.set_hwm(0)
-        self.task_incoming.RCVTIMEO = 10  # in milliseconds
         self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
         self.results_outgoing = self.context.socket(zmq.DEALER)
         self.results_outgoing.set_hwm(0)
@@ -265,7 +264,7 @@ class Interchange(object):
             hub_channel.send_pyobj((MessageType.NODE_INFO, d))
 
     @wrap_with_logs(target="interchange")
-    def _command_server(self, kill_event):
+    def _command_server(self):
         """ Command server to run async command to the interchange
         """
         logger.debug("Command Server Starting")
@@ -275,7 +274,7 @@ class Interchange(object):
 
         reply: Any  # the type of reply depends on the command_req received (aka this needs dependent types...)
 
-        while not kill_event.is_set():
+        while True:
             try:
                 command_req = self.command_channel.recv_pyobj()
                 logger.debug("Received command request: {}".format(command_req))
@@ -349,7 +348,6 @@ class Interchange(object):
         self._task_puller_thread.start()
 
         self._command_thread = threading.Thread(target=self._command_server,
-                                                args=(self._kill_event,),
                                                 name="Interchange-Command")
         self._command_thread.start()
 
