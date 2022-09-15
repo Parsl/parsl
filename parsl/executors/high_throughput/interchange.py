@@ -141,7 +141,6 @@ class Interchange(object):
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.set_hwm(0)
-        self.task_incoming.RCVTIMEO = 10  # in milliseconds
         self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
         self.results_outgoing = self.context.socket(zmq.DEALER)
         self.results_outgoing.set_hwm(0)
@@ -222,19 +221,14 @@ class Interchange(object):
         return tasks
 
     @wrap_with_logs(target="interchange")
-    def task_puller(self, kill_event):
+    def task_puller(self):
         """Pull tasks from the incoming tasks zmq pipe onto the internal
         pending task queue
-
-        Parameters:
-        -----------
-        kill_event : threading.Event
-              Event to let the thread know when it is time to die.
         """
         logger.info("Starting")
         task_counter = 0
 
-        while not kill_event.is_set():
+        while True:
             logger.debug("launching recv_pyobj")
             try:
                 msg = self.task_incoming.recv_pyobj()
@@ -243,16 +237,10 @@ class Interchange(object):
                 logger.debug("zmq.Again with {} tasks in internal queue".format(self.pending_task_queue.qsize()))
                 continue
 
-            if msg == 'STOP':
-                logger.info("received STOP message, setting kill_event")
-                kill_event.set()
-                break
-            else:
-                logger.debug("putting message onto pending_task_queue")
-                self.pending_task_queue.put(msg)
-                task_counter += 1
-                logger.debug(f"Fetched {task_counter} tasks so far")
-        logger.info("reached end of task_puller loop")
+            logger.debug("putting message onto pending_task_queue")
+            self.pending_task_queue.put(msg)
+            task_counter += 1
+            logger.debug(f"Fetched {task_counter} tasks so far")
 
     def _create_monitoring_channel(self):
         if self.hub_address and self.hub_port:
@@ -276,7 +264,7 @@ class Interchange(object):
             hub_channel.send_pyobj((MessageType.NODE_INFO, d))
 
     @wrap_with_logs(target="interchange")
-    def _command_server(self, kill_event):
+    def _command_server(self):
         """ Command server to run async command to the interchange
         """
         logger.debug("Command Server Starting")
@@ -286,7 +274,7 @@ class Interchange(object):
 
         reply: Any  # the type of reply depends on the command_req received (aka this needs dependent types...)
 
-        while not kill_event.is_set():
+        while True:
             try:
                 command_req = self.command_channel.recv_pyobj()
                 logger.debug("Received command request: {}".format(command_req))
@@ -331,11 +319,6 @@ class Interchange(object):
                     else:
                         reply = False
 
-                elif command_req == "SHUTDOWN":
-                    logger.info("Received SHUTDOWN command")
-                    kill_event.set()
-                    reply = True
-
                 else:
                     reply = None
 
@@ -361,12 +344,10 @@ class Interchange(object):
 
         self._kill_event = threading.Event()
         self._task_puller_thread = threading.Thread(target=self.task_puller,
-                                                    args=(self._kill_event,),
                                                     name="Interchange-Task-Puller")
         self._task_puller_thread.start()
 
         self._command_thread = threading.Thread(target=self._command_server,
-                                                args=(self._kill_event,),
                                                 name="Interchange-Command")
         self._command_thread.start()
 
@@ -592,7 +573,7 @@ def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_
         None.
     """
     if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d %(processName)s(%(process)d) %(threadName)s [%(levelname)s]  %(message)s"
+        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d %(processName)s(%(process)d) %(threadName)s %(funcName)s [%(levelname)s]  %(message)s"
 
     global logger
     logger = logging.getLogger(name)
