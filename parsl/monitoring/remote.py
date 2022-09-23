@@ -10,80 +10,105 @@ from parsl.process_loggers import wrap_with_logs
 
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios import MonitoringRadio, UDPRadio, HTEXRadio, FilesystemRadio
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
+monitoring_wrapper_cache: Dict
+monitoring_wrapper_cache = {}
 
-def monitor_wrapper(f: Any,
-                    try_id: int,
-                    task_id: int,
-                    monitoring_hub_url: str,
-                    run_id: str,
-                    logging_level: int,
-                    sleep_dur: float,
-                    radio_mode: str,
-                    monitor_resources: bool,
-                    run_dir: str) -> Callable:
+
+def monitor_wrapper(f: Any,           # per app
+                    args: List,       # per invocation
+                    kwargs: Dict,     # per invocation
+                    x_try_id: int,    # per invocation
+                    x_task_id: int,   # per invocation
+                    monitoring_hub_url: str,   # per workflow
+                    run_id: str,      # per workflow
+                    logging_level: int,  # per workflow
+                    sleep_dur: float,  # per workflow
+                    radio_mode: str,   # per executor
+                    monitor_resources: bool,  # per workflow
+                    run_dir: str) -> Tuple[Callable, List, Dict]:
     """Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
     """
-    @wraps(f)
-    def wrapped(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
-        terminate_event = Event()
-        # Send first message to monitoring router
-        send_first_message(try_id,
-                           task_id,
-                           monitoring_hub_url,
-                           run_id,
-                           radio_mode,
-                           run_dir)
 
-        p: Optional[Process]
-        if monitor_resources:
-            # create the monitor process and start
-            pp = ForkProcess(target=monitor,
-                             args=(os.getpid(),
-                                   try_id,
-                                   task_id,
-                                   monitoring_hub_url,
-                                   run_id,
-                                   radio_mode,
-                                   logging_level,
-                                   sleep_dur,
-                                   run_dir,
-                                   terminate_event),
-                             name="Monitor-Wrapper-{}".format(task_id))
-            pp.start()
-            p = pp
-            #  TODO: awkwardness because ForkProcess is not directly a constructor
-            # and type-checking is expecting p to be optional and cannot
-            # narrow down the type of p in this block.
+    # this makes assumptions that when subsequently executed with the same
+    # cache key, then the relevant parameters will not have changed from the
+    # first invocation with that cache key (otherwise, the resulting cached
+    # closure will be incorrectly cached)
+    cache_key = (run_id, f, radio_mode)
 
-        else:
-            p = None
+    if cache_key in monitoring_wrapper_cache:
+        wrapped = monitoring_wrapper_cache[cache_key]
 
-        try:
-            return f(*args, **kwargs)
-        finally:
-            # There's a chance of zombification if the workers are killed by some signals (?)
-            if p:
-                terminate_event.set()
-                p.join(30)  # 30 second delay for this -- this timeout will be hit in the case of an unusually long end-of-loop
-                if p.exitcode is None:
-                    logger.warn("Event-based termination of monitoring helper took too long. Using process-based termination.")
-                    p.terminate()
-                    # DANGER: this can corrupt shared queues according to docs.
-                    # So, better that the above termination event worked.
-                    # This is why this log message is a warning
-                    p.join()
+    else:
 
-            send_last_message(try_id,
-                              task_id,
-                              monitoring_hub_url,
-                              run_id,
-                              radio_mode, run_dir)
+        @wraps(f)
+        def wrapped(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
+            task_id = kwargs.pop('_parsl_monitoring_task_id')
+            try_id = kwargs.pop('_parsl_monitoring_try_id')
+            terminate_event = Event()
+            # Send first message to monitoring router
+            send_first_message(try_id,
+                               task_id,
+                               monitoring_hub_url,
+                               run_id,
+                               radio_mode,
+                               run_dir)
 
-    return wrapped
+            p: Optional[Process]
+            if monitor_resources:
+                # create the monitor process and start
+                pp = ForkProcess(target=monitor,
+                                 args=(os.getpid(),
+                                       try_id,
+                                       task_id,
+                                       monitoring_hub_url,
+                                       run_id,
+                                       radio_mode,
+                                       logging_level,
+                                       sleep_dur,
+                                       run_dir,
+                                       terminate_event),
+                                 name="Monitor-Wrapper-{}".format(task_id))
+                pp.start()
+                p = pp
+                #  TODO: awkwardness because ForkProcess is not directly a constructor
+                # and type-checking is expecting p to be optional and cannot
+                # narrow down the type of p in this block.
+
+            else:
+                p = None
+
+            try:
+                return f(*args, **kwargs)
+            finally:
+                # There's a chance of zombification if the workers are killed by some signals (?)
+                if p:
+                    terminate_event.set()
+                    p.join(30)  # 30 second delay for this -- this timeout will be hit in the case of an unusually long end-of-loop
+                    if p.exitcode is None:
+                        logger.warn("Event-based termination of monitoring helper took too long. Using process-based termination.")
+                        p.terminate()
+                        # DANGER: this can corrupt shared queues according to docs.
+                        # So, better that the above termination event worked.
+                        # This is why this log message is a warning
+                        p.join()
+
+                send_last_message(try_id,
+                                  task_id,
+                                  monitoring_hub_url,
+                                  run_id,
+                                  radio_mode, run_dir)
+
+        monitoring_wrapper_cache[cache_key] = wrapped
+
+    new_kwargs = kwargs.copy()
+    new_kwargs['_parsl_monitoring_task_id'] = x_task_id
+    new_kwargs['_parsl_monitoring_try_id'] = x_try_id
+
+    return (wrapped, args, new_kwargs)
 
 
 @wrap_with_logs
