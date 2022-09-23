@@ -34,6 +34,9 @@ class ParslSerializer(object):
         for key in METHODS_MAP_DATA:
             self.methods_for_data[key] = METHODS_MAP_DATA[key]()
 
+    def __reduce__(self):
+        raise RuntimeError("ParslSerializer singleton cannot be serialized")
+
     def _list_methods(self):
         return self.methods_for_code, self.methods_for_data
 
