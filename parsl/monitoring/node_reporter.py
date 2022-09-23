@@ -20,7 +20,7 @@ import uuid
 
 from datetime import datetime
 from parsl.log_utils import set_stream_logger
-from parsl.monitoring.monitoring import FilesystemRadio
+from parsl.monitoring.radios import FilesystemRadio
 
 logger = logging.getLogger("parsl.monitoring.node_reporter")
 
