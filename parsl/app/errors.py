@@ -93,7 +93,6 @@ class BadStdStreamFile(ParslError):
 
     Contains:
        reason(string)
-       outputs(List of strings/files..)
        exception object
     """
 

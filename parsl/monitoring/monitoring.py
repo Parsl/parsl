@@ -465,8 +465,7 @@ class MonitoringHub(RepresentationMixin):
                         radio_mode: str,
                         monitor_resources: bool,
                         run_dir: str) -> Callable:
-        """ Internal
-        Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
+        """Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
         """
         @wraps(f)
         def wrapped(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
@@ -809,8 +808,7 @@ def monitor(pid: int,
             # removed all defaults because unused and there's no meaningful default for terminate_event.
             # these probably should become named arguments, with a *, and named at invocation.
             terminate_event: Any) -> None:  # cannot be Event because of multiprocessing type weirdness.
-    """Internal
-    Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
+    """Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
 
     This process makes calls to logging, but deliberately does not attach
     any log handlers. Previously, there was a handler which logged to a

@@ -603,8 +603,7 @@ class DataFlowKernel(object):
             if not exceptions_tids:
                 # There are no dependency errors
                 try:
-                    exec_fu = self.launch_task(
-                        task_record, task_record['func'], *new_args, **kwargs)
+                    exec_fu = self.launch_task(task_record)
                     assert isinstance(exec_fu, Future)
                 except Exception as e:
                     # task launched failed somehow. the execution might
@@ -643,7 +642,7 @@ class DataFlowKernel(object):
 
             task_record['exec_fu'] = exec_fu
 
-    def launch_task(self, task_record: TaskRecord, executable: Callable, *args: Tuple[Any, ...], **kwargs: Dict[str, Any]) -> Future:
+    def launch_task(self, task_record: TaskRecord) -> Future:
         """Handle the actual submission of the task to the executor layer.
 
         If the app task has the executors attributes not set (default=='all')
@@ -656,15 +655,15 @@ class DataFlowKernel(object):
 
         Args:
             task_record : The task record
-            executable (callable) : A callable object
-            args (list of positional args)
-            kwargs (arbitrary keyword arguments)
-
 
         Returns:
             Future that tracks the execution of the submitted executable
         """
         task_id = task_record['id']
+        executable = task_record['func']
+        args = task_record['args']
+        kwargs = task_record['kwargs']
+
         task_record['try_time_launched'] = datetime.datetime.now()
 
         memo_fu = self.memoizer.check_memo(task_record)
