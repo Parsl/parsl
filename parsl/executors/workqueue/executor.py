@@ -228,7 +228,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  init_command: str = "",
                  worker_options: str = "",
                  full_debug: bool = True,
-                 worker_executable: str = 'work_queue_worker'):
+                 worker_executable: str = 'work_queue_worker',
+                 function_dir = None):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
         self._scaling_enabled = True
@@ -265,6 +266,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.cached_envs = {}  # type: Dict[int, str]
         self.worker_options = worker_options
         self.worker_executable = worker_executable
+        self.function_dir = function_dir
 
         if not self.address:
             self.address = socket.gethostname()
@@ -294,7 +296,13 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.tasks_lock = threading.Lock()
 
         # Create directories for data and results
-        self.function_data_dir = os.path.join(self.run_dir, "function_data")
+        if not self.function_dir:
+            self.function_data_dir = os.path.join(self.run_dir, "function_data")
+        else:
+            tp = str(time.time())
+            tx = os.path.join(self.function_dir, tp)
+            os.mkdir(tx)
+            self.function_data_dir = os.path.join(self.function_dir, tp, "function_data")
         self.package_dir = os.path.join(self.run_dir, "package_data")
         self.wq_log_dir = os.path.join(self.run_dir, self.label)
         logger.debug("function data directory: {}\nlog directory: {}".format(self.function_data_dir, self.wq_log_dir))
