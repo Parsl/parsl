@@ -22,6 +22,7 @@ import inspect
 import shutil
 import itertools
 
+from parsl.trace import event
 from parsl.serialize import pack_apply_message
 import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
@@ -366,6 +367,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         kwargs : dict
             Keyword arguments to the Parsl app
         """
+        event("WQEX_SUBMIT_START")
         cores = None
         memory = None
         disk = None
@@ -373,6 +375,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         priority = None
         category = None
         running_time_min = None
+        event("WQEX_SUBMIT_PROCESS_RESOURCE_SPEC_START")
         if resource_specification and isinstance(resource_specification, dict):
             logger.debug("Got resource specification: {}".format(resource_specification))
 
@@ -415,11 +418,14 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 elif k == 'running_time_min':
                     running_time_min = resource_specification[k]
 
+        event("WQEX_SUBMIT_PROCESS_RESOURCE_SPEC_END")
         self.task_counter += 1
         task_id = self.task_counter
 
         # Create a per task directory for the function, result, map, and result files
+        event("WQEX_SUBMIT_MKDIR_START")
         os.mkdir(self._path_in_task(task_id))
+        event("WQEX_SUBMIT_MKDIR_END")
 
         input_files = []
         output_files = []
@@ -444,7 +450,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         fu = Future()
         fu.parsl_executor_task_id = task_id
         logger.debug("Getting tasks_lock to set WQ-level task entry")
+        event("WQEX_SUBMIT_ACQUIRE_TASKS_LOCK_START")
         with self.tasks_lock:
+            event("WQEX_SUBMIT_ACQUIRE_TASKS_LOCK_END")
             logger.debug("Got tasks_lock to set WQ-level task entry")
             self.tasks[str(task_id)] = fu
 
@@ -460,7 +468,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Creating Task {} with result to be found at: {}".format(task_id, result_file))
         logger.debug("Creating Task {} with log to be found at: {}".format(task_id, log_file))
 
+        event("WQEX_SUBMIT_SERIALIZE_START")
         self._serialize_function(function_file, func, args, kwargs)
+        event("WQEX_SUBMIT_SERIALIZE_END")
 
         if self.pack:
             env_pkg = self._prepare_package(func, self.extra_pkgs)
@@ -468,7 +478,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             env_pkg = None
 
         logger.debug("Constructing map for local filenames at worker for task {}".format(task_id))
+        event("WQEX_SUBMIT_MAPFILE_START")
         self._construct_map_file(map_file, input_files, output_files)
+        event("WQEX_SUBMIT_MAPFILE_END")
 
         if not self.submit_process.is_alive():
             raise ExecutorError(self, "Workqueue Submit Process is not alive")
@@ -477,7 +489,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Placing task {} on message queue".format(task_id))
         if category is None:
             category = func.__name__ if self.autocategory else 'parsl-default'
-        self.task_queue.put_nowait(ParslTaskToWq(task_id,
+        event("WQEX_SUBMIT_PTWQ_START")
+        ptwq =                     ParslTaskToWq(task_id,
                                                  category,
                                                  cores,
                                                  memory,
@@ -491,8 +504,12 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                                  result_file,
                                                  log_file,
                                                  input_files,
-                                                 output_files))
+                                                 output_files)
 
+        event("WQEX_SUBMIT_ENQUEUE_START")
+        self.task_queue.put_nowait(ptwq)
+        event("WQEX_SUBMIT_ENQUEUE_END")
+        event("WQEX_SUBMIT_END")
         return fu
 
     def _construct_worker_command(self):
@@ -531,11 +548,16 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                              "args": parsl_fn_args,
                              "kwargs": parsl_fn_kwargs}
         else:
+            event("WQEX_SUBMIT_SERIALIZE_PACK_APPLY")
             function_info = {"byte code": pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
                                                              buffer_threshold=1024 * 1024)}
 
+        event("WQEX_SUBMIT_SERIALIZE_OPEN")
         with open(fn_path, "wb") as f_out:
+            event("WQEX_SUBMIT_SERIALIZE_PICKLEDUMP")
             pickle.dump(function_info, f_out)
+            event("WQEX_SUBMIT_SERIALIZE_CLOSING")
+        event("WQEX_SUBMIT_SERIALIZE_CLOSED")
 
     def _construct_map_file(self, map_file, input_files, output_files):
         """ Map local filepath of parsl files to the filenames at the execution worker.
@@ -550,8 +572,12 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             else:
                 remote_name = local_name
             file_translation_map[local_name] = remote_name
+        event("WQEX_SUBMIT_MAPFILE_OPEN")
         with open(map_file, "wb") as f_out:
+            event("WQEX_SUBMIT_MAPFILE_PICKLEDUMP")
             pickle.dump(file_translation_map, f_out)
+            event("WQEX_SUBMIT_MAPFILE_CLOSING")
+        event("WQEX_SUBMIT_MAPFILE_CLOSED")
 
     def _register_file(self, parsl_file):
         """Generates a tuple (parsl_file.filepath, stage, cache) to give to

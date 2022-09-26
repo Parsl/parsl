@@ -20,6 +20,7 @@ from concurrent.futures import Future
 from functools import partial
 
 import parsl
+from parsl.trace import event
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.app.futures import DataFuture
 from parsl.config import Config
@@ -580,6 +581,7 @@ class DataFlowKernel(object):
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
         """
+        event("DFK_LAUNCH_IF_READY_START")
         exec_fu = None
 
         task_id = task_record['id']
@@ -641,6 +643,7 @@ class DataFlowKernel(object):
                 logger.error("add_done_callback got an exception which will be ignored", exc_info=True)
 
             task_record['exec_fu'] = exec_fu
+        event("DFK_LAUNCH_IF_READY_END")
 
     def launch_task(self, task_record: TaskRecord) -> Future:
         """Handle the actual submission of the task to the executor layer.
@@ -659,6 +662,7 @@ class DataFlowKernel(object):
         Returns:
             Future that tracks the execution of the submitted executable
         """
+        event("DFK_LAUNCH_TASK_START")
         task_id = task_record['id']
         executable = task_record['func']
         args = task_record['args']
@@ -671,6 +675,7 @@ class DataFlowKernel(object):
             logger.info("Reusing cached result for task {}".format(task_id))
             task_record['from_memo'] = True
             assert isinstance(memo_fu, Future)
+            event("DFK_LAUNCH_TASK_END_MEMO")
             return memo_fu
 
         task_record['from_memo'] = False
@@ -684,6 +689,7 @@ class DataFlowKernel(object):
         try_id = task_record['fail_count']
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
+            event("DFK_LAUNCH_TASK_MONITORING_WRAP_START")
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
             (executable, args, kwargs) = self.monitoring.monitor_wrapper(executable, args, kwargs, try_id, task_id,
                                                                          self.monitoring.monitoring_hub_url,
@@ -693,10 +699,15 @@ class DataFlowKernel(object):
                                                                          executor.radio_mode,
                                                                          executor.monitor_resources(),
                                                                          self.run_dir)
+            event("DFK_LAUNCH_TASK_MONITORING_WRAP_END")
 
+        event("DFK_LAUNCH_TASK_GET_SUBMITTER_LOCK_START")
         with self.submitter_lock:
+            event("DFK_LAUNCH_TASK_GET_SUBMITTER_LOCK_END")
             exec_fu = executor.submit(executable, task_record['resource_specification'], *args, **kwargs)
+        event("DFK_LAUNCH_TASK_UPDATE_TASK_STATE_START")
         self.update_task_state(task_record, States.launched)
+        event("DFK_LAUNCH_TASK_UPDATE_TASK_STATE_END")
 
         self._send_task_log_info(task_record)
 
@@ -707,6 +718,7 @@ class DataFlowKernel(object):
 
         self._log_std_streams(task_record)
 
+        event("DFK_LAUNCH_TASK_END_LAUNCHED")
         return exec_fu
 
     def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable) -> Tuple[Sequence[Any], Dict[str, Any], Callable]:
@@ -898,7 +910,7 @@ class DataFlowKernel(object):
                (AppFuture) [DataFutures,]
 
         """
-
+        event("DFK_SUBMIT_START")
         if ignore_for_cache is None:
             ignore_for_cache = []
 
@@ -1004,7 +1016,9 @@ class DataFlowKernel(object):
         self.update_task_state(task_def, States.pending)
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
 
+        event("DFK_SUBMIT_MONITORING_PENDING_START")
         self._send_task_log_info(task_def)
+        event("DFK_SUBMIT_MONITORING_PENDING_END")
 
         # at this point add callbacks to all dependencies to do a launch_if_ready
         # call whenever a dependency completes.
@@ -1030,6 +1044,7 @@ class DataFlowKernel(object):
 
         self.launch_if_ready(task_def)
 
+        event("DFK_SUBMIT_END")
         return app_fu
 
     # it might also be interesting to assert that all DFK
