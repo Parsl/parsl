@@ -32,6 +32,8 @@ from parsl.providers import LocalProvider
 
 logger = logging.getLogger(__name__)
 
+_start_methods = ['fork', 'spawn', 'thread']
+
 
 class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     """Executor designed for cluster-scale
@@ -150,9 +152,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     start_method: str
         What method to use to start new worker processes.
-        HTEx supports either "spawn" or "fork", which are described in the
-        `Python's multiprocessing documentation.
+        HTEx supports "spawn," "fork," and "thread" workers.
+        "Spawn" and "fork" workers are launched in separate processes using different mechanisms,
+         which are described in `Python's multiprocessing documentation.
         <https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods>`_.
+        "Thread" workers are separate threads of the ``process_worker_pool``, which saves on memory but is
+        only recommended for workloads that involving launching other processes (e.g., ``bash_app``s).
         Default: fork
 
     prefetch_capacity : int
@@ -161,7 +166,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         be set to 0 for better load balancing. Default is 0.
 
     address_probe_timeout : int | None
-        Managers attempt connecting over many different addesses to determine a viable address.
+        Managers attempt connecting over many different addresses to determine a viable address.
         This option sets a time limit in seconds on the connection attempt.
         Default of None implies 30s timeout set on worker.
 
@@ -245,6 +250,14 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             # If the user provide an integer, create some names for them
             available_accelerators = list(map(str, range(available_accelerators)))
         self.available_accelerators = list(available_accelerators)
+
+        # Raise errors for incompatible settings
+        if start_method not in _start_methods:
+            raise ValueError(f'Start method "{start_method}" not recognized. Expected one of: {", ".join(_start_methods)}')
+        if start_method == "thread" and cpu_affinity != "none":
+            raise ValueError('Thread affinity is not available with start method: "thread"')
+        if start_method == "thread" and len(available_accelerators) > 0:
+            raise ValueError('Accelerator pinning not available with start method: "thread"')
 
         # Determine the number of workers per node
         self._workers_per_node = min(max_workers, mem_slots, cpu_slots)

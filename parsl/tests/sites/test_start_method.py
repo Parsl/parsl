@@ -1,6 +1,7 @@
 import os
+from contextlib import contextmanager
 
-from pytest import mark
+from pytest import mark, raises
 
 import parsl
 from parsl.providers import LocalProvider
@@ -15,9 +16,9 @@ def test_function():
     return os.getpid()
 
 
-@mark.local
-def test_spawn_method():
-    local_config = Config(
+@contextmanager
+def config(start_method: str, **kwargs):
+    config = Config(
         executors=[
             HighThroughputExecutor(
                 label="fork",
@@ -33,10 +34,34 @@ def test_spawn_method():
         ],
         strategy=None,
     )
+    dfk = parsl.load(config)
+    try:
+        yield dfk
+    finally:
+        dfk.cleanup()
+        parsl.clear()
 
-    parsl.load(local_config)
 
-    # Get the PID for the child function as a way of making sure it launches
-    future = test_function()
-    remote_pid = future.result()
-    assert remote_pid != os.getpid()
+@mark.local
+@mark.parametrize("start_method", ["spawn", "fork", "thread"])
+def test_spawn_method(start_method: str):
+    with config(start_method):
+        # Get the PID for the child function as a way of making sure it launches
+        future = test_function()
+        remote_pid = future.result()
+        assert remote_pid != os.getpid()
+
+
+@mark.local
+def test_htex_config_failures():
+    with raises(ValueError) as exc:
+        HighThroughputExecutor(start_method='thread', available_accelerators=1)
+    assert 'Accelerator' in str(exc)
+
+    with raises(ValueError) as exc:
+        HighThroughputExecutor(start_method='thread', cpu_affinity='block')
+    assert 'Thread affinity' in str(exc)
+
+    with raises(ValueError) as exc:
+        HighThroughputExecutor(start_method='not real', cpu_affinity='block')
+    assert 'Start method "not real" not recognized' in str(exc)

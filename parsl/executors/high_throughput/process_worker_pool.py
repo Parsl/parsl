@@ -10,6 +10,7 @@ import pickle
 import time
 import queue
 import uuid
+from threading import Thread
 from typing import Sequence, Optional
 
 import zmq
@@ -124,10 +125,7 @@ class Manager(object):
             List of accelerators available to the workers. Default: Empty list
 
         start_method: str
-            What method to use to start new worker processes.
-            HTEx supports either "spawn" or "fork", which are described in the
-            `Python's multiprocessing documentation.
-            <https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods>`_.
+            What method to use to start new worker processes. Choices are fork, spawn, and thread.
             Default: fork
 
         """
@@ -194,6 +192,8 @@ class Manager(object):
             self.mpProcess = mpForkProcess
         elif start_method == "spawn":
             self.mpProcess = mpSpawnProcess
+        elif start_method == "thread":
+            self.mpProcess = Thread
         else:
             raise ValueError(f'HTEx does not support start method: "{start_method}"')
 
@@ -674,7 +674,7 @@ if __name__ == "__main__":
                         help="Whether/how workers should control CPU affinity.")
     parser.add_argument("--available-accelerators", type=str, nargs="*",
                         help="Names of available accelerators")
-    parser.add_argument("--start-method", type=str, choices=["fork", "spawn"], default="fork",
+    parser.add_argument("--start-method", type=str, choices=["fork", "spawn", "thread"], default="fork",
                         help="Method used to start new worker processes")
 
     args = parser.parse_args()
