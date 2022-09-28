@@ -229,7 +229,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  worker_options: str = "",
                  full_debug: bool = True,
                  worker_executable: str = 'work_queue_worker',
-                 function_dir = None):
+                 function_dir: str = None):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
         self._scaling_enabled = True

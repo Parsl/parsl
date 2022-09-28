@@ -3,6 +3,8 @@ import pickle
 import statistics
 import time
 
+from typing import Dict, List, Tuple
+
 logger = logging.getLogger(__name__)
 
 # TODO: last_event should be a thread local
@@ -11,6 +13,9 @@ last_event = None
 trace_by_logger = False
 trace_by_dict = False
 
+event_stats: Dict[Tuple[str, str],
+                  Tuple[float, float, List[Tuple[float, float]]]
+                 ]
 event_stats = {}
 
 
