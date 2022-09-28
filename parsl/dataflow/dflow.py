@@ -709,14 +709,18 @@ class DataFlowKernel(object):
         self.update_task_state(task_record, States.launched)
         event("DFK_LAUNCH_TASK_UPDATE_TASK_STATE_END")
 
+        event("DFK_LAUNCH_TASK_SEND_TASK_LOG_INFO_START")
         self._send_task_log_info(task_record)
+        event("DFK_LAUNCH_TASK_SEND_TASK_LOG_INFO_END")
 
         if hasattr(exec_fu, "parsl_executor_task_id"):
             logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label} with executor id {exec_fu.parsl_executor_task_id}")
         else:
             logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}")
 
+        event("DFK_LAUNCH_TASK_LOG_STD_STREAMS_START")
         self._log_std_streams(task_record)
+        event("DFK_LAUNCH_TASK_LOG_STD_STREAMS_END")
 
         event("DFK_LAUNCH_TASK_END_LAUNCHED")
         return exec_fu
@@ -918,6 +922,7 @@ class DataFlowKernel(object):
             raise RuntimeError("Cannot submit to a DFK that has been cleaned up")
 
         task_id = self.task_count
+        event("DFK_SUBMIT_CHOOSE_EXECUTOR_START")
         self.task_count += 1
         if isinstance(executors, str) and executors.lower() == 'all':
             choices = list(e for e in self.executors if e != '_parsl_internal')
@@ -926,10 +931,12 @@ class DataFlowKernel(object):
         else:
             raise ValueError("Task {} supplied invalid type for executors: {}".format(task_id, type(executors)))
         executor = random.choice(choices)
+        event("DFK_SUBMIT_CHOOSE_EXECUTOR_END")
         logger.debug("Task {} will be sent to executor {}".format(task_id, executor))
 
         # The below uses func.__name__ before it has been wrapped by any staging code.
 
+        event("DFK_SUBMIT_MUNGE_ARGS_START")
         label = app_kwargs.get('label')
         for kw in ['stdout', 'stderr']:
             if kw in app_kwargs:
@@ -948,6 +955,7 @@ class DataFlowKernel(object):
                     )
 
         resource_specification = app_kwargs.get('parsl_resource_specification', {})
+        event("DFK_SUBMIT_MUNGE_ARGS_END")
 
         task_def: TaskRecord
         task_def = {'depends': None,
@@ -971,26 +979,33 @@ class DataFlowKernel(object):
                     'try_time_returned': None,
                     'resource_specification': resource_specification}
 
+        event("DFK_SUBMIT_UPDATE_UNSCHED_STATE_START")
         self.update_task_state(task_def, States.unsched)
+        event("DFK_SUBMIT_UPDATE_UNSCHED_STATE_END")
 
         app_fu = AppFuture(task_def)
 
         # Transform remote input files to data futures
+        event("DFK_SUBMIT_ADD_DEPS_START")
         app_args, app_kwargs, func = self._add_input_deps(executor, app_args, app_kwargs, func)
 
         func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func)
+        event("DFK_SUBMIT_ADD_DEPS_END")
 
+        event("DFK_SUBMIT_UPDATE_KWARGS_START")
         task_def.update({
                     'args': app_args,
                     'func': func,
                     'kwargs': app_kwargs,
                     'app_fu': app_fu})
+        event("DFK_SUBMIT_UPDATE_KWARGS_END")
 
         assert task_id not in self.tasks
 
         self.tasks[task_id] = task_def
 
         # Get the list of dependencies for the task
+        event("DFK_SUBMIT_EXAMINE_DEPS_START")
         depends = self._gather_all_deps(app_args, app_kwargs)
         task_def['depends'] = depends
 
@@ -1005,6 +1020,7 @@ class DataFlowKernel(object):
             waiting_message = "waiting on {}".format(", ".join(depend_descs))
         else:
             waiting_message = "not waiting on any dependency"
+        event("DFK_SUBMIT_EXAMINE_DEPS_END")
 
         logger.info("Task {} submitted for App {}, {}".format(task_id,
                                                               task_def['func_name'],
@@ -1012,8 +1028,11 @@ class DataFlowKernel(object):
 
         task_def['task_launch_lock'] = threading.Lock()
 
+        event("DFK_SUBMIT_ADD_CALLBACK_START")
         app_fu.add_done_callback(partial(self.handle_app_update, task_def))
+        event("DFK_SUBMIT_UPDATE_PENDING_STATE_START")
         self.update_task_state(task_def, States.pending)
+        event("DFK_SUBMIT_UPDATE_PENDING_STATE_END")
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
 
         event("DFK_SUBMIT_MONITORING_PENDING_START")
