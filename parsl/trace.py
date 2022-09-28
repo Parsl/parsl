@@ -13,6 +13,7 @@ trace_by_dict = False
 
 event_stats = {}
 
+
 def event(name: str):
     global last_event
     t = time.time()
@@ -34,28 +35,30 @@ def event(name: str):
 
     last_event = (name, t)
 
+
 def output_event_stats():
     print("Event stats")
     print("===========")
-    l = []
+    flats = []
     all_tasks_t = 0
     for ((from_k, to_k), (total, count, raw)) in event_stats.items():
-      mean = total/count
-      dts = [t - last_t for (last_t, t) in raw]
-      t_median = statistics.median(dts)
-      t_max = max(dts)
-      t_min = min(dts)
-      l.append( (mean, t_median, t_max, t_min, from_k, to_k, total, count) )
+        mean = total / count
+        dts = [t - last_t for (last_t, t) in raw]
+        t_median = statistics.median(dts)
+        t_max = max(dts)
+        t_min = min(dts)
 
-      all_tasks_t += total
-       
-    l.sort()
+        flat = (mean, t_median, t_max, t_min, from_k, to_k, total, count)
+        flats.append(flat)
 
-    for (t_mean, t_median, t_max, t_min, from_k, to_k, total, count) in l:
-      print(f"{from_k} -> {to_k} ({count} iters): min {t_min} / median {t_median} / mean {t_mean} / max {t_max}")
+        all_tasks_t += total
+
+    flats.sort()
+
+    for (t_mean, t_median, t_max, t_min, from_k, to_k, total, count) in flats:
+        print(f"{from_k} -> {to_k} ({count} iters): min {t_min} / median {t_median} / mean {t_mean} / max {t_max}")
 
     print("===========")
     print(f"Total real time accounted for here: {all_tasks_t} sec")
-    with open("parslstats.pickle","wb") as f:
+    with open("parslstats.pickle", "wb") as f:
         pickle.dump(event_stats, f)
-

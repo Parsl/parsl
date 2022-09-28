@@ -498,21 +498,21 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if category is None:
             category = func.__name__ if self.autocategory else 'parsl-default'
         event("WQEX_SUBMIT_PTWQ_START")
-        ptwq =                     ParslTaskToWq(task_id,
-                                                 category,
-                                                 cores,
-                                                 memory,
-                                                 disk,
-                                                 gpus,
-                                                 priority,
-                                                 running_time_min,
-                                                 env_pkg,
-                                                 map_file,
-                                                 function_file,
-                                                 result_file,
-                                                 log_file,
-                                                 input_files,
-                                                 output_files)
+        ptwq = ParslTaskToWq(task_id,
+                             category,
+                             cores,
+                             memory,
+                             disk,
+                             gpus,
+                             priority,
+                             running_time_min,
+                             env_pkg,
+                             map_file,
+                             function_file,
+                             result_file,
+                             log_file,
+                             input_files,
+                             output_files)
 
         event("WQEX_SUBMIT_ENQUEUE_START")
         self.task_queue.put_nowait(ptwq)
