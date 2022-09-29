@@ -105,7 +105,7 @@ deploy: ## deploy the distribution
 # THIS IS MEANT TO BE INVOKED BY GITHUB ACTIONS **ONLY**
 .PHONY: update_version
 update_version: ## Update version
-    ./tag_and_release.sh update_version
+	./tag_and_release.sh update_version
 
 .PHONY: release
 release: deps tag package deploy   ## create a release. To run, do a 'make VERSION="version string"  release'
