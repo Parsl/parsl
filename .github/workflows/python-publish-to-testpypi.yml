@@ -16,7 +16,6 @@ on:
     inputs:
       suffix:
         description: 'Release Suffix to append to version info. UNUSED'
-        type: environment
         required: false
         default: ''
 
@@ -40,9 +39,10 @@ jobs:
         pip install build
     - name: Build package
       run: |
-        # ./tag_and_release.sh update_version
+        ./tag_and_release.sh update_version
         ./tag_and_release.sh package
-        # python -m build
+      env:
+        SUFFIX: ${{ inputs.suffix }}
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
       with:
