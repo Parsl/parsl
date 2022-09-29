@@ -9,8 +9,10 @@
 name: Upload Python Package
 
 on:
-  release:
-    types: [published]
+  schedule:
+    - cron: '42 9 * * SAT'
+  workflow_dispatch
+
 
 permissions:
   contents: read
