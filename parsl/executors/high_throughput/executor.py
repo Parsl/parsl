@@ -154,10 +154,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         What method to use to start new worker processes.
         HTEx supports "spawn," "fork," and "thread" workers.
         "Spawn" and "fork" workers are launched in separate processes using different mechanisms,
-         which are described in `Python's multiprocessing documentation.
+        which are described in `Python's multiprocessing documentation.
         <https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods>`_.
         "Thread" workers are separate threads of the ``process_worker_pool``, which saves on memory but is
-        only recommended for workloads that involving launching other processes (e.g., ``bash_app``s).
+        only recommended for workloads that involving launching other processes (e.g., ``bash_app`` s).
         Default: fork
 
     prefetch_capacity : int
