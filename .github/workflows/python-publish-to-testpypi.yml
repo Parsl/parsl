@@ -10,9 +10,15 @@ name: Upload Python Package
 
 on:
   schedule:
-    - cron: '42 9 * * SAT'
-  workflow_dispatch
+    - cron: '42 9 * * SAT' # Run every Saturday at 09:42
 
+  workflow_dispatch:
+    inputs:
+      suffix:
+        description: 'Release Suffix to append to version info. UNUSED'
+        type: environment
+        required: false
+        default: ''
 
 permissions:
   contents: read
