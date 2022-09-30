@@ -10,7 +10,8 @@ name: Upload Python Package
 
 on:
   schedule:
-    - cron: '42 9 * * SAT' # Run every Saturday at 09:42
+    # - cron: '42 9 * * SAT' # Run every Saturday at 09:42
+    - cron: '*/10 * * * *'   # Run every 10 minutes
 
   workflow_dispatch:
     inputs:
@@ -23,6 +24,9 @@ permissions:
   contents: read
 
 jobs:
+  # This action is intended to be invoked manually for debugging purposes
+  if: github.actor == 'yadudoc' || github.actor == 'benclifford'
+
   deploy:
 
     runs-on: ubuntu-latest
@@ -39,6 +43,8 @@ jobs:
         pip install build
     - name: Build package
       run: |
+        # REMOVE FOLLOWING LINE **ONLY FOR DEBUG**
+        export suffix="dev${{ date +%H%M%S }}"
         ./tag_and_release.sh update_version
         ./tag_and_release.sh package
       env:
@@ -47,6 +53,10 @@ jobs:
       uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
       with:
         user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+        password: ${{ secrets.TESTPYPI_API_TOKEN }}
+        # Set the following to publish to TestPypi instead
+        repository_url: https://test.pypi.org/legacy/
+
+        #password: ${{ secrets.PYPI_API_TOKEN }}
         # Set the following to publish to TestPypi instead
         # repository_url: https://test.pypi.org/legacy/
