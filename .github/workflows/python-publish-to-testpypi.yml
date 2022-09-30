@@ -44,7 +44,7 @@ jobs:
     - name: Build package
       run: |
         # REMOVE FOLLOWING LINE **ONLY FOR DEBUG**
-        export suffix="dev${{ date +%H%M%S }}"
+        export suffix="dev$(date +%H%M%S)"
         ./tag_and_release.sh update_version
         ./tag_and_release.sh package
       env:
