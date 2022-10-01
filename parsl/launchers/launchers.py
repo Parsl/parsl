@@ -203,8 +203,21 @@ class MpiExecLauncher(Launcher):
     - mpiexec is installed and can be located in $PATH
     - The provider makes available the $PBS_NODEFILE environment variable
     """
-    def __init__(self, debug: bool = True):
+    def __init__(self, debug: bool = True, bind_cmd: str = '--bind-to', overrides: str = ''):
+        """
+
+        Parameters
+        ----------
+        bind_cmd: str
+            Name of the argument for binding ranks to CPUs
+
+        overrides: str
+            Additional arguments to add to the invocation
+
+        """
         super().__init__(debug=debug)
+        self.bind_cmd = bind_cmd
+        self.overrides = overrides
 
     def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int) -> str:
         """
@@ -234,12 +247,14 @@ cat << MPIEXEC_EOF > cmd_$JOBNAME.sh
 MPIEXEC_EOF
 chmod u+x cmd_$JOBNAME.sh
 
-mpiexec --bind-to none -n $WORKERCOUNT --hostfile $HOSTFILE /usr/bin/sh cmd_$JOBNAME.sh
+mpiexec {bind_cmd} none {overrides} -n $WORKERCOUNT --hostfile $HOSTFILE /usr/bin/sh cmd_$JOBNAME.sh
 
 [[ "{debug}" == "1" ]] && echo "All workers done"
 '''.format(command=command,
            task_blocks=task_blocks,
-           debug=debug_num)
+           debug=debug_num,
+           overrides=self.overrides,
+           bind_cmd=self.bind_cmd)
         return x
 
 
