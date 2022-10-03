@@ -1,4 +1,5 @@
 flake8==3.8.0
+importlib-metadata<5  # due to flake8 incompatibility with importlib 5.0.0
 ipyparallel
 pandas
 pytest>=6.2.5,<7
@@ -8,7 +9,7 @@ pytest-random-order
 mock>=1.0.0
 nbsphinx
 sphinx_rtd_theme
-mypy==0.961
+mypy==0.981
 types-python-dateutil
 types-requests
 types-six
