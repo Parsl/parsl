@@ -10,8 +10,7 @@ name: Upload Python Package
 
 on:
   schedule:
-    # - cron: '42 9 * * SAT' # Run every Saturday at 09:42
-    - cron: '*/10 * * * *'   # Run every 10 minutes
+    - cron: '42 9 * * WED' # Run every Wednesday at 09:42
 
   workflow_dispatch:
     inputs:
