@@ -51,4 +51,26 @@ release () {
     twine upload dist/*
 }
 
+update_version () {
+    latest=$(pip index versions parsl | grep LATEST | awk '{print $2}')
+    echo "Latest version = $latest"
+    target_version=$(date +%Y.%m.%d)
+    echo "Target version = $target_version"
+    if [[ $latest == $target_version ]]
+    then
+       echo "Conflict detected. Target version already is uploaded on Pypi"
+       exit -1
+    else
+        cat << EOF > parsl/version.py
+"""Set module version.
+
+<Major>.<Minor>.<maintenance>[alpha/beta/..]
+Alphas will be numbered like this -> 0.4.0a0
+"""
+VERSION = '$target_version'
+EOF
+    fi
+
+}
+
 "$@"
