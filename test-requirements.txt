@@ -1,4 +1,4 @@
-flake8==3.8.0
+flake8==5.0.4
 ipyparallel
 pandas
 pytest>=6.2.5,<7
