@@ -10,8 +10,7 @@ name: Upload Python Package
 
 on:
   schedule:
-    # - cron: '42 9 * * SAT' # Run every Saturday at 09:42
-    - cron: '*/10 * * * *'   # Run every 10 minutes
+    - cron: '42 22 * * MON' # Run every Monday at 22:42
 
   workflow_dispatch:
     inputs:
@@ -43,8 +42,6 @@ jobs:
         pip install build
     - name: Build package
       run: |
-        # REMOVE FOLLOWING LINE **ONLY FOR DEBUG**
-        export SUFFIX="dev$(date +%H%M%S)"
         ./tag_and_release.sh update_version
         ./tag_and_release.sh package
       env:
@@ -53,10 +50,8 @@ jobs:
       uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
       with:
         user: __token__
-        password: ${{ secrets.TESTPYPI_API_TOKEN }}
         # Set the following to publish to TestPypi instead
-        repository_url: https://test.pypi.org/legacy/
-
-        #password: ${{ secrets.PYPI_API_TOKEN }}
-        # Set the following to publish to TestPypi instead
+        # password: ${{ secrets.TESTPYPI_API_TOKEN }}
         # repository_url: https://test.pypi.org/legacy/
+
+        password: ${{ secrets.PYPI_API_TOKEN }}
