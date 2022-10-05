@@ -341,7 +341,6 @@ class Interchange(object):
         start = time.time()
         count = 0
 
-        self._kill_event = threading.Event()
         self._task_puller_thread = threading.Thread(target=self.task_puller,
                                                     name="Interchange-Task-Puller")
         self._task_puller_thread.start()
@@ -349,6 +348,8 @@ class Interchange(object):
         self._command_thread = threading.Thread(target=self._command_server,
                                                 name="Interchange-Command")
         self._command_thread.start()
+
+        kill_event = threading.Event()
 
         poller = zmq.Poller()
         poller.register(self.task_outgoing, zmq.POLLIN)
@@ -360,7 +361,7 @@ class Interchange(object):
         # onto this list.
         interesting_managers: Set[bytes] = set()
 
-        while not self._kill_event.is_set():
+        while not kill_event.is_set():
             self.socks = dict(poller.poll(timeout=poll_period))
 
             # Listen for requests for work
@@ -401,7 +402,7 @@ class Interchange(object):
                             msg['parsl_v'] != self.current_platform['parsl_v']):
                             logger.error("Manager {} has incompatible version info with the interchange".format(manager_id))
                             logger.debug("Setting kill event")
-                            self._kill_event.set()
+                            kill_event.set()
                             e = VersionMismatch("py.v={} parsl.v={}".format(self.current_platform['python_v'].rsplit(".", 1)[0],
                                                                             self.current_platform['parsl_v']),
                                                 "py.v={} parsl.v={}".format(msg['python_v'].rsplit(".", 1)[0],
