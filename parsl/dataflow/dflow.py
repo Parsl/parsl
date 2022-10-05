@@ -535,8 +535,7 @@ class DataFlowKernel(object):
             if not exceptions_tids:
                 # There are no dependency errors
                 try:
-                    exec_fu = self.launch_task(
-                        task_record, task_record['func'], *new_args, **kwargs)
+                    exec_fu = self.launch_task(task_record)
                     assert isinstance(exec_fu, Future)
                 except Exception as e:
                     # task launched failed somehow. the execution might
@@ -575,7 +574,7 @@ class DataFlowKernel(object):
 
             task_record['exec_fu'] = exec_fu
 
-    def launch_task(self, task_record: TaskRecord, executable: Callable, *args: Tuple[Any, ...], **kwargs: Dict[str, Any]) -> Future:
+    def launch_task(self, task_record: TaskRecord) -> Future:
         """Handle the actual submission of the task to the executor layer.
 
         If the app task has the executors attributes not set (default=='all')
@@ -588,15 +587,15 @@ class DataFlowKernel(object):
 
         Args:
             task_record : The task record
-            executable (callable) : A callable object
-            args (list of positional args)
-            kwargs (arbitrary keyword arguments)
-
 
         Returns:
             Future that tracks the execution of the submitted executable
         """
         task_id = task_record['id']
+        executable = task_record['func']
+        args = task_record['args']
+        kwargs = task_record['kwargs']
+
         task_record['try_time_launched'] = datetime.datetime.now()
 
         memo_fu = self.memoizer.check_memo(task_record)
@@ -1047,19 +1046,17 @@ class DataFlowKernel(object):
         """
 
         logger.info("Waiting for all remaining tasks to complete")
-        for task_id in list(self.tasks):
+
+        items = list(self.tasks.items())
+        for task_id, task_record in items:
             # .exception() is a less exception throwing way of
             # waiting for completion than .result()
-            if task_id not in self.tasks:
-                logger.debug("Task {} no longer in task list".format(task_id))
-            else:
-                task_record = self.tasks[task_id]  # still a race condition with the above self.tasks if-statement
-                fut = task_record['app_fu']
-                if not fut.done():
-                    fut.exception()
-                # now app future is done, poll until DFK state is final: a DFK state being final and the app future being done do not imply each other.
-                while task_record['status'] not in FINAL_STATES:
-                    time.sleep(0.1)
+            fut = task_record['app_fu']
+            if not fut.done():
+                fut.exception()
+            # now app future is done, poll until DFK state is final: a DFK state being final and the app future being done do not imply each other.
+            while task_record['status'] not in FINAL_STATES:
+                time.sleep(0.1)
 
         logger.info("All remaining tasks completed")
 
