@@ -10,6 +10,7 @@ import pickle
 import time
 import queue
 import uuid
+from threading import Thread
 from typing import Sequence, Optional
 
 import zmq
@@ -24,7 +25,8 @@ from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.probe import probe_addresses
-from parsl.multiprocessing import ForkProcess as mpProcess
+from parsl.multiprocessing import ForkProcess as mpForkProcess
+from parsl.multiprocessing import SpawnProcess as mpSpawnProcess
 
 from parsl.multiprocessing import SizedQueue as mpQueue
 
@@ -64,7 +66,8 @@ class Manager(object):
                  heartbeat_period=30,
                  poll_period=10,
                  cpu_affinity=False,
-                 available_accelerators: Sequence[str] = ()):
+                 available_accelerators: Sequence[str] = (),
+                 start_method: str = 'fork'):
         """
         Parameters
         ----------
@@ -120,6 +123,11 @@ class Manager(object):
 
         available_accelerators: list of str
             List of accelerators available to the workers. Default: Empty list
+
+        start_method: str
+            What method to use to start new worker processes. Choices are fork, spawn, and thread.
+            Default: fork
+
         """
 
         logger.info("Manager started")
@@ -177,6 +185,17 @@ class Manager(object):
         self.worker_count = min(max_workers,
                                 mem_slots,
                                 math.floor(cores_on_node / cores_per_worker))
+
+        # Determine which start method to use
+        start_method = start_method.lower()
+        if start_method == "fork":
+            self.mpProcess = mpForkProcess
+        elif start_method == "spawn":
+            self.mpProcess = mpSpawnProcess
+        elif start_method == "thread":
+            self.mpProcess = Thread
+        else:
+            raise ValueError(f'HTEx does not support start method: "{start_method}"')
 
         self.pending_task_queue = mpQueue()
         self.pending_result_queue = mpQueue()
@@ -384,15 +403,15 @@ class Manager(object):
                     except KeyError:
                         logger.info("Worker {} was not busy when it died".format(worker_id))
 
-                    p = mpProcess(target=worker, args=(worker_id,
-                                                       self.uid,
-                                                       self.worker_count,
-                                                       self.pending_task_queue,
-                                                       self.pending_result_queue,
-                                                       self.ready_worker_queue,
-                                                       self._tasks_in_progress,
-                                                       self.cpu_affinity
-                                                 ), name="HTEX-Worker-{}".format(worker_id))
+                    p = self.mpProcess(target=worker, args=(worker_id,
+                                                            self.uid,
+                                                            self.worker_count,
+                                                            self.pending_task_queue,
+                                                            self.pending_result_queue,
+                                                            self.ready_worker_queue,
+                                                            self._tasks_in_progress,
+                                                            self.cpu_affinity),
+                                       name="HTEX-Worker-{}".format(worker_id))
                     self.procs[worker_id] = p
                     logger.info("Worker {} has been restarted".format(worker_id))
                 time.sleep(self.heartbeat_period)
@@ -410,16 +429,17 @@ class Manager(object):
 
         self.procs = {}
         for worker_id in range(self.worker_count):
-            p = mpProcess(target=worker, args=(worker_id,
-                                               self.uid,
-                                               self.worker_count,
-                                               self.pending_task_queue,
-                                               self.pending_result_queue,
-                                               self.ready_worker_queue,
-                                               self._tasks_in_progress,
-                                               self.cpu_affinity,
-                                               self.available_accelerators[worker_id] if self.accelerators_available else None),
-                          name="HTEX-Worker-{}".format(worker_id))
+            p = self.mpProcess(target=worker,
+                               args=(worker_id,
+                                     self.uid,
+                                     self.worker_count,
+                                     self.pending_task_queue,
+                                     self.pending_result_queue,
+                                     self.ready_worker_queue,
+                                     self._tasks_in_progress,
+                                     self.cpu_affinity,
+                                     self.available_accelerators[worker_id] if self.accelerators_available else None),
+                               name="HTEX-Worker-{}".format(worker_id))
             p.start()
             self.procs[worker_id] = p
 
@@ -654,6 +674,8 @@ if __name__ == "__main__":
                         help="Whether/how workers should control CPU affinity.")
     parser.add_argument("--available-accelerators", type=str, nargs="*",
                         help="Names of available accelerators")
+    parser.add_argument("--start-method", type=str, choices=["fork", "spawn", "thread"], default="fork",
+                        help="Method used to start new worker processes")
 
     args = parser.parse_args()
 
@@ -682,6 +704,7 @@ if __name__ == "__main__":
         logger.info("Heartbeat period: {}".format(args.hb_period))
         logger.info("CPU affinity: {}".format(args.cpu_affinity))
         logger.info("Accelerators: {}".format(" ".join(args.available_accelerators)))
+        logger.info("Start method: {}".format(args.start_method))
 
         manager = Manager(task_port=args.task_port,
                           result_port=args.result_port,
