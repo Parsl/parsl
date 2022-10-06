@@ -1,6 +1,6 @@
 """Exceptions raised by Apps."""
 from functools import wraps
-from typing import Callable, List, Union, Any, TypeVar
+from typing import Callable, List, Union, Any, TypeVar, Optional
 from types import TracebackType
 
 import dill
@@ -95,7 +95,6 @@ class BadStdStreamFile(ParslError):
 
     Contains:
        reason(string)
-       outputs(List of strings/files..)
        exception object
     """
 
@@ -112,11 +111,16 @@ class BadStdStreamFile(ParslError):
 
 
 class RemoteExceptionWrapper:
-    def __init__(self, e_type: type, e_value: Exception, traceback: TracebackType) -> None:
+    def __init__(self, e_type: type, e_value: BaseException, traceback: Optional[TracebackType]) -> None:
 
         self.e_type = dill.dumps(e_type)
         self.e_value = dill.dumps(e_value)
-        self.e_traceback = Traceback(traceback)
+        self.e_traceback = None if traceback is None else Traceback(traceback)
+        if e_value.__cause__ is None:
+            self.cause = None
+        else:
+            cause = e_value.__cause__
+            self.cause = self.__class__(type(cause), cause, cause.__traceback__)
 
     def reraise(self) -> None:
 
@@ -128,10 +132,19 @@ class RemoteExceptionWrapper:
         # specific exception type.
         logger.debug("Reraising exception of type {}".format(t))
 
-        v = dill.loads(self.e_value)
-        tb = self.e_traceback.as_traceback()
+        v = self.get_exception()
 
-        reraise(t, v, tb)
+        reraise(t, v, v.__traceback__)
+
+    def get_exception(self) -> Exception:
+        v = dill.loads(self.e_value)
+        if self.cause is not None:
+            v.__cause__ = self.cause.get_exception()
+        if self.e_traceback is not None:
+            tb = self.e_traceback.as_traceback()
+            return v.with_traceback(tb)
+        else:
+            return v
 
 
 R = TypeVar('R')

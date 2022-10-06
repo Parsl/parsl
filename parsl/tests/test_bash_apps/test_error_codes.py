@@ -8,6 +8,8 @@ from parsl.app.app import bash_app
 import parsl.app.errors as pe
 
 
+from parsl.app.errors import BashExitFailure
+
 from parsl.tests.configs.local_threads import config
 
 
@@ -33,12 +35,6 @@ def div_0(stderr='std.err', stdout='std.out'):
 
 
 @bash_app
-def invalid_exit(stderr='std.err', stdout='std.out'):
-    cmd_line = 'exit 3.141'
-    return cmd_line
-
-
-@bash_app
 def not_executable(stderr='std.err', stdout='std.out'):
     cmd_line = '/dev/null'
     return cmd_line
@@ -60,9 +56,6 @@ test_matrix = {
     command_not_found: {
         'exit_code': 127
     },
-    invalid_exit: {
-        'exit_code': 128
-    },
     not_executable: {
         'exit_code': 126
     }
@@ -76,7 +69,7 @@ def test_div_0(test_fn=div_0):
     f = test_fn()
     try:
         f.result()
-    except Exception as e:
+    except BashExitFailure as e:
         print("Caught exception", e)
         assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
                                                                                       err_code,
@@ -119,29 +112,13 @@ def test_command_not_found(test_fn=command_not_found):
     return True
 
 
-@pytest.mark.skip('broken')
-def test_invalid_exit(test_fn=invalid_exit):
-    err_code = test_matrix[test_fn]['exit_code']
-    f = test_fn()
-    try:
-        f.result()
-    except Exception as e:
-        print("Caught exception", e)
-        assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
-                                                                                      err_code,
-                                                                                      e.exitcode)
-    os.remove('std.err')
-    os.remove('std.out')
-    return True
-
-
 @pytest.mark.issue363
 def test_not_executable(test_fn=not_executable):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
     try:
         f.result()
-    except Exception as e:
+    except BashExitFailure as e:
         print("Caught exception", e)
         assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
                                                                                       err_code,
@@ -156,7 +133,7 @@ def run_app(test_fn, err_code):
     print(f)
     try:
         f.result()
-    except Exception as e:
+    except BashExitFailure as e:
         print("Caught exception", e)
         assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
                                                                                       err_code,

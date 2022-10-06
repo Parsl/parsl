@@ -147,7 +147,6 @@ Exceptions
     parsl.executors.errors.BadMessage
     parsl.dataflow.error.DataFlowException
     parsl.dataflow.error.ConfigurationError
-    parsl.dataflow.error.DuplicateTaskError
     parsl.dataflow.error.BadCheckpoint
     parsl.dataflow.error.DependencyError
     parsl.launchers.error.BadLauncher
@@ -184,3 +183,4 @@ Internal
     parsl.dataflow.states.States
     parsl.dataflow.strategy.Strategy
     parsl.dataflow.flow_control.Timer
+    parsl.dataflow.taskrecord.TaskRecord

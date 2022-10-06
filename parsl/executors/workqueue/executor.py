@@ -14,6 +14,7 @@ import hashlib
 import subprocess
 import os
 import socket
+import time
 import pickle
 import queue
 import inspect
@@ -29,6 +30,8 @@ from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
 from parsl.executors.workqueue import exec_parsl_function
+from parsl.process_loggers import wrap_with_logs
+from parsl.utils import setproctitle
 
 import typeguard
 from typing import Dict, List, Optional, Set, Union
@@ -194,7 +197,15 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             when the worker needs to be wrapped inside some other command
             (for example, to run the worker inside a container). Default is
             'work_queue_worker'.
+
+        function_dir: str
+            The directory where serialized function invocations are placed
+            to be sent to workers. If undefined, this defaults to a directory
+            under runinfo/. If shared_filesystem=True, then this directory
+            must be visible from both the submitting side and workers.
     """
+
+    radio_mode = "filesystem"
 
     @typeguard.typechecked
     def __init__(self,
@@ -220,8 +231,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  init_command: str = "",
                  worker_options: str = "",
                  full_debug: bool = True,
-                 worker_executable: str = 'work_queue_worker'):
-        BlockProviderExecutor.__init__(self, provider)
+                 worker_executable: str = 'work_queue_worker',
+                 function_dir: Optional[str] = None):
+        BlockProviderExecutor.__init__(self, provider=provider,
+                                       block_error_handler=True)
         self._scaling_enabled = True
 
         if not _work_queue_enabled:
@@ -256,6 +269,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.cached_envs = {}  # type: Dict[int, str]
         self.worker_options = worker_options
         self.worker_executable = worker_executable
+        self.function_dir = function_dir
 
         if not self.address:
             self.address = socket.gethostname()
@@ -276,7 +290,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     def _get_launch_command(self, block_id):
         # this executor uses different terminology for worker/launch
         # commands than in htex
-        return self.worker_command
+        return f"PARSL_WORKER_BLOCK_ID={block_id} {self.worker_command}"
 
     def start(self):
         """Create submit process and collector thread to create, send, and
@@ -285,7 +299,13 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.tasks_lock = threading.Lock()
 
         # Create directories for data and results
-        self.function_data_dir = os.path.join(self.run_dir, "function_data")
+        if not self.function_dir:
+            self.function_data_dir = os.path.join(self.run_dir, "function_data")
+        else:
+            tp = str(time.time())
+            tx = os.path.join(self.function_dir, tp)
+            os.mkdir(tx)
+            self.function_data_dir = os.path.join(self.function_dir, tp, "function_data")
         self.package_dir = os.path.join(self.run_dir, "package_data")
         self.wq_log_dir = os.path.join(self.run_dir, self.label)
         logger.debug("function data directory: {}\nlog directory: {}".format(self.function_data_dir, self.wq_log_dir))
@@ -293,7 +313,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         os.mkdir(self.package_dir)
         os.mkdir(self.wq_log_dir)
 
-        logger.debug("Starting WorkQueueExectutor")
+        logger.debug("Starting WorkQueueExecutor")
 
         # Create a Process to perform WorkQueue submissions
         submit_process_kwargs = {"task_queue": self.task_queue,
@@ -312,11 +332,11 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                  "project_password_file": self.project_password_file,
                                  "project_name": self.project_name}
         self.submit_process = multiprocessing.Process(target=_work_queue_submit_wait,
-                                                      name="submit_thread",
+                                                      name="WorkQueue-Submit-Process",
                                                       kwargs=submit_process_kwargs)
 
         self.collector_thread = threading.Thread(target=self._collect_work_queue_results,
-                                                 name="wait_thread")
+                                                 name="WorkQueue-collector-thread")
         self.collector_thread.daemon = True
 
         # Begin both processes
@@ -430,7 +450,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Create a Future object and have it be mapped from the task ID in the tasks dictionary
         fu = Future()
+        fu.parsl_executor_task_id = task_id
+        logger.debug("Getting tasks_lock to set WQ-level task entry")
         with self.tasks_lock:
+            logger.debug("Got tasks_lock to set WQ-level task entry")
             self.tasks[str(task_id)] = fu
 
         logger.debug("Creating task {} for function {} with args {}".format(task_id, func, args))
@@ -614,7 +637,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             try:
                 self.scale_out(blocks=self.provider.init_blocks)
             except Exception as e:
-                logger.debug("Scaling out failed: {}".format(e))
+                logger.error("Initial block scaling out failed: {}".format(e))
                 raise e
 
     @property
@@ -651,16 +674,21 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the Work Queue system submission.
         """
+        logger.debug("Work Queue shutdown started")
         self.should_stop.value = True
 
         # Remove the workers that are still going
         kill_ids = [self.blocks[block] for block in self.blocks.keys()]
         if self.provider:
+            logger.debug("Cancelling blocks")
             self.provider.cancel(kill_ids)
 
+        logger.debug("Joining on submit process")
         self.submit_process.join()
+        logger.debug("Joining on collector thread")
         self.collector_thread.join()
 
+        logger.debug("Work Queue shutdown completed")
         return True
 
     def scaling_enabled(self):
@@ -675,6 +703,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             self._run_dir = value
         return self._run_dir
 
+    @wrap_with_logs
     def _collect_work_queue_results(self):
         """Sets the values of tasks' futures of tasks completed by work queue.
         """
@@ -702,7 +731,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     # work queue modes, such as resource exhaustion.
                     future.set_exception(WorkQueueTaskFailure(task_report.reason, task_report.result))
         finally:
+            logger.debug("Marking all outstanding tasks as failed")
+            logger.debug("Acquiring tasks_lock")
             with self.tasks_lock:
+                logger.debug("Acquired tasks_lock")
                 # set exception for tasks waiting for results that work queue did not execute
                 for fu in self.tasks.values():
                     if not fu.done():
@@ -710,6 +742,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Exiting Collector Thread")
 
 
+@wrap_with_logs
 def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                             launch_cmd=None,
                             env=None,
@@ -738,6 +771,7 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
     module capabilities, rather than shared memory.
     """
     logger.debug("Starting WorkQueue Submit/Wait Process")
+    setproctitle("parsl: Work Queue submit/wait")
 
     # Enable debugging flags and create logging file
     wq_debug_log = None
@@ -887,7 +921,7 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                                                          reason="task could not be submited to work queue",
                                                          status=-1))
                 continue
-            logger.debug("Task {} submitted to WorkQueue with id {}".format(task.id, wq_id))
+            logger.info("Task {} submitted to WorkQueue with id {}".format(task.id, wq_id))
 
         # If the queue is not empty wait on the WorkQueue queue for a task
         task_found = True

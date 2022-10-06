@@ -139,31 +139,34 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
               [status...] : Status list of all jobs
         '''
         job_id_list = ','.join(
-            [jid for jid, job in self.resources.keys() if not job['status'].terminal]
+            [jid for jid, job in self.resources.items() if not job['status'].terminal]
         )
         if not job_id_list:
             logger.debug('No active jobs, skipping status update')
             return
 
-        cmd = "squeue --job {0}".format(job_id_list)
+        cmd = "squeue --noheader --format='%i %t' --job '{0}'".format(job_id_list)
         logger.debug("Executing %s", cmd)
         retcode, stdout, stderr = self.execute_wait(cmd)
-        logger.debug("sqeueue returned %s %s", stdout, stderr)
+        logger.debug("squeue returned %s %s", stdout, stderr)
 
         # Execute_wait failed. Do no update
         if retcode != 0:
             logger.warning("squeue failed with non-zero exit code {}".format(retcode))
             return
 
-        jobs_missing = list(self.resources.keys())
+        jobs_missing = set(self.resources.keys())
         for line in stdout.split('\n'):
-            parts = line.split()
-            if parts and parts[0] != 'JOBID':
-                job_id = parts[0]
-                status = translate_table.get(parts[4], JobState.UNKNOWN)
-                logger.debug("Updating job {} with slurm status {} to parsl status {}".format(job_id, parts[4], status))
-                self.resources[job_id]['status'] = JobStatus(status)
-                jobs_missing.remove(job_id)
+            if not line:
+                # Blank line
+                continue
+            job_id, slurm_state = line.split()
+            if slurm_state not in translate_table:
+                logger.warning(f"Slurm status {slurm_state} is not recognized")
+            status = translate_table.get(slurm_state, JobState.UNKNOWN)
+            logger.debug("Updating job {} with slurm status {} to parsl state {!s}".format(job_id, slurm_state, status))
+            self.resources[job_id]['status'] = JobStatus(status)
+            jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
@@ -238,7 +241,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                     job_id = line.split("Submitted batch job")[1].strip()
                     self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
-            print("Submission of command to scale_out failed")
+            logger.error("Submit command failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
         return job_id
 

@@ -8,10 +8,9 @@ with open('requirements.txt') as f:
 
 extras_require = {
     'monitoring' : [
-        'sqlalchemy>=1.3.0,!=1.3.4,<1.4',
-        'sqlalchemy_utils',
+        'sqlalchemy>=1.3.0',
         'pydot',
-        'networkx',
+        'networkx>=2.5,<2.6',
         'Flask>=1.0.2',
         'flask_sqlalchemy',
         'pandas<1.4',
@@ -28,6 +27,8 @@ extras_require = {
     'azure' : ['azure<=4', 'msrestazure'],
     'workqueue': ['work_queue'],
     'flux': ['pyyaml', 'cffi', 'jsonschema'],
+    # Disabling psi-j since github direct links are not allowed by pypi
+    # 'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
 }
 extras_require['all'] = sum(extras_require.values(), [])
 

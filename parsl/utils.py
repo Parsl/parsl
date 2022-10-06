@@ -12,6 +12,15 @@ from typing import List, Tuple, Union, Generator, IO, AnyStr, Dict
 import parsl
 from parsl.version import VERSION
 
+
+try:
+    import setproctitle as setproctitle_module
+except ImportError:
+    _setproctitle_enabled = False
+else:
+    _setproctitle_enabled = True
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -255,3 +264,10 @@ class AtomicIDCounter:
             new_id = self.count
             self.count += 1
             return new_id
+
+
+def setproctitle(title: str) -> None:
+    if _setproctitle_enabled:
+        setproctitle_module.setproctitle(title)
+    else:
+        logger.warn(f"setproctitle not enabled for process {title}")

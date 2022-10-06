@@ -23,6 +23,11 @@ class ParslExecutor(metaclass=ABCMeta):
        label: str - a human readable label for the executor, unique
               with respect to other executors.
 
+    Per-executor monitoring behaviour can be influenced by exposing:
+
+       radio_mode: str - a string describing which radio mode should be used to
+              send task resource data back to the submit side.
+
     An executor may optionally expose:
 
        storage_access: List[parsl.data_provider.staging.Staging] - a list of staging
@@ -39,6 +44,7 @@ class ParslExecutor(metaclass=ABCMeta):
     """
 
     label: str = "undefined"
+    radio_mode: str = "udp"
 
     def __enter__(self):
         return self
@@ -58,6 +64,11 @@ class ParslExecutor(metaclass=ABCMeta):
     @abstractmethod
     def submit(self, func: Callable, resource_specification: Dict[str, Any], *args: Any, **kwargs: Any) -> Future:
         """Submit.
+
+        The executor can optionally set a parsl_executor_task_id attribute on
+        the Future that it returns, and in that case, parsl will log a
+        relationship between the executor's task ID and parsl level try/task
+        IDs.
         """
         pass
 
@@ -169,7 +180,7 @@ class ParslExecutor(metaclass=ABCMeta):
 
     @abstractmethod
     def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
-                      status: Dict[str, JobStatus]) -> bool:
+                      status: Dict[str, JobStatus]) -> None:
         """This method is called by the error management infrastructure after a status poll. The
         executor implementing this method is then responsible for detecting abnormal conditions
         based on the status of submitted jobs. If the executor does not implement any special
@@ -177,7 +188,6 @@ class ParslExecutor(metaclass=ABCMeta):
         scheme will be used.
         :param error_handler: a reference to the generic error handler calling this method
         :param status: status of all jobs launched by this executor
-        :return: True if this executor implements custom error handling, or False otherwise
         """
         pass
 

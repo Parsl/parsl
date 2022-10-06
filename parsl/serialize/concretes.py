@@ -9,9 +9,9 @@ from parsl.serialize.base import SerializerBase
 class PickleSerializer(SerializerBase):
     """ Pickle serialization covers most python objects, with some notable exceptions:
 
-    * functions defined in a interpretor/notebook
+    * functions defined in a interpreter/notebook
     * classes defined in local context and not importable using a fully qualified name
-    * clojures, generators and coroutines
+    * closures, generators and coroutines
     * [sometimes] issues with wrapped/decorated functions
     """
 
@@ -35,10 +35,10 @@ class DillSerializer(SerializerBase):
     of dill can be amortized with an lru_cache. Here's items that dill handles that pickle
     doesn't:
 
-    * functions defined in a interpretor/notebook
+    * functions defined in a interpreter/notebook
     * classes defined in local context and not importable using a fully qualified name
     * functions that are wrapped/decorated by other functions/classes
-    * clojures
+    * closures
     """
 
     _identifier = b'02\n'

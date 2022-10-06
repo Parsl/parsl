@@ -1,12 +1,16 @@
 import os
 from abc import ABCMeta, abstractmethod, abstractproperty
 from enum import Enum
-from typing import Any, List, Optional
+import logging
+from typing import Any, Dict, List, Optional
+
+from parsl.channels.base import Channel
+
+logger = logging.getLogger(__name__)
 
 
 class JobState(bytes, Enum):
     """Defines a set of states that a job can be in"""
-
     def __new__(cls, value: int, terminal: bool, status_name: str) -> "JobState":
         obj = bytes.__new__(cls, [value])
         obj._value_ = value
@@ -58,6 +62,13 @@ class JobStatus(object):
 
     def __repr__(self) -> str:
         if self.message is not None:
+            extra = f"state={self.state} message={self.message}".format(self.state, self.message)
+        else:
+            extra = f"state={self.state}".format(self.state)
+        return f"<{type(self).__module__}.{type(self).__qualname__} object at {hex(id(self))}, {extra}>"
+
+    def __str__(self) -> str:
+        if self.message is not None:
             return "{} ({})".format(self.state, self.message)
         else:
             return "{}".format(self.state)
@@ -77,6 +88,7 @@ class JobStatus(object):
             with open(path, 'r') as f:
                 return f.read()
         except Exception:
+            logger.exception("Converting exception to None")
             return None
 
     @property
@@ -138,11 +150,22 @@ class ExecutionProvider(metaclass=ABCMeta):
                                 |
                                 +-------------------
      """
-    _cores_per_node = None  # type: Optional[int]
-    _mem_per_node = None  # type: Optional[float]
 
     @abstractmethod
-    def submit(self, command: str, tasks_per_node: int, job_name: str = "parsl.auto") -> Any:
+    def __init__(self) -> None:
+        self.min_blocks: int
+        self.max_blocks: int
+        self.init_blocks: int
+        self.nodes_per_block: int
+        self.script_dir: Optional[str]
+        self.parallelism: float
+        self.resources: Dict[object, Any]
+        self._cores_per_node: Optional[int] = None
+        self._mem_per_node: Optional[float] = None
+        pass
+
+    @abstractmethod
+    def submit(self, command: str, tasks_per_node: int, job_name: str = "parsl.auto") -> object:
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as for
         HighThroughputExecutor or WorkQueueExecutor).
@@ -166,7 +189,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def status(self, job_ids: List[Any]) -> List[JobStatus]:
+    def status(self, job_ids: List[object]) -> List[JobStatus]:
         ''' Get the status of a list of jobs identified by the job identifiers
         returned from the submit request.
 
@@ -184,7 +207,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def cancel(self, job_ids: List[Any]) -> List[bool]:
+    def cancel(self, job_ids: List[object]) -> List[bool]:
         ''' Cancels the resources identified by the job_ids provided by the user.
 
         Args:
@@ -213,8 +236,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         variable PARSL_MEMORY_GB before executing submitted commands.
 
         If this property is set, executors may use it to calculate how many tasks can
-        run concurrently per node. This information is used by dataflow.Strategy to estimate
-        the resources required to run all outstanding tasks.
+        run concurrently per node.
         """
         return self._mem_per_node
 
@@ -231,8 +253,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         variable PARSL_CORES before executing submitted commands.
 
         If this property is set, executors may use it to calculate how many tasks can
-        run concurrently per node. This information is used by dataflow.Strategy to estimate
-        the resources required to run all outstanding tasks.
+        run concurrently per node.
         """
         return self._cores_per_node
 
@@ -247,4 +268,19 @@ class ExecutionProvider(metaclass=ABCMeta):
 
         :return: the number of seconds to wait between calls to status()
         """
+        pass
+
+
+class Channeled():
+    """A marker type to indicate that parsl should manage a Channel for this provider"""
+    def __init__(self) -> None:
+        self.channel: Channel
+        pass
+
+
+class MultiChanneled():
+    """A marker type to indicate that parsl should manage multiple Channels for this provider"""
+
+    def __init__(self) -> None:
+        self.channels: List[Channel]
         pass

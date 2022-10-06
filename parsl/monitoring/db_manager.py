@@ -11,7 +11,9 @@ from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
 from parsl.errors import OptionalModuleMissing
 from parsl.monitoring.message_type import MessageType
+from parsl.monitoring.types import MonitoringMessage, TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
+from parsl.utils import setproctitle
 
 logger = logging.getLogger("database_manager")
 
@@ -20,6 +22,8 @@ X = TypeVar('X')
 try:
     import sqlalchemy as sa
     from sqlalchemy import Column, Text, Float, Boolean, Integer, DateTime, PrimaryKeyConstraint, Table
+    from sqlalchemy.orm import Mapper
+    from sqlalchemy.orm import mapperlib
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.ext.declarative import declarative_base
 except ImportError:
@@ -27,12 +31,6 @@ except ImportError:
 else:
     _sqlalchemy_enabled = True
 
-try:
-    from sqlalchemy_utils import get_mapper
-except ImportError:
-    _sqlalchemy_utils_enabled = False
-else:
-    _sqlalchemy_utils_enabled = True
 
 WORKFLOW = 'workflow'    # Workflow table includes workflow metadata
 TASK = 'task'            # Task table includes task metadata
@@ -49,11 +47,6 @@ class Database:
         raise OptionalModuleMissing(['sqlalchemy'],
                                     ("Default database logging requires the sqlalchemy library."
                                      " Enable monitoring support with: pip install 'parsl[monitoring]'"))
-    if not _sqlalchemy_utils_enabled:
-        raise OptionalModuleMissing(['sqlalchemy_utils'],
-                                    ("Default database logging requires the sqlalchemy_utils library."
-                                     " Enable monitoring support with: pip install 'parsl[monitoring]'"))
-
     Base = declarative_base()
 
     def __init__(self,
@@ -74,25 +67,46 @@ class Database:
         Session = sessionmaker(bind=self.eng)
         self.session = Session()
 
-    def update(self, *, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
+    def _get_mapper(self, table_obj: Table) -> Mapper:
+        if hasattr(mapperlib, '_all_registries'):
+            all_mappers = set()
+            for mapper_registry in mapperlib._all_registries():  # type: ignore
+                all_mappers.update(mapper_registry.mappers)
+        else:  # SQLAlchemy <1.4
+            all_mappers = mapperlib._mapper_registry  # type: ignore
+        mapper_gen = (
+            mapper for mapper in all_mappers
+            if table_obj in mapper.tables
+        )
+        try:
+            mapper = next(mapper_gen)
+            second_mapper = next(mapper_gen, False)
+        except StopIteration:
+            raise ValueError(f"Could not get mapper for table {table_obj}")
+
+        if second_mapper:
+            raise ValueError(f"Multiple mappers for table {table_obj}")
+        return mapper
+
+    def update(self, *, table: str, columns: List[str], messages: List[MonitoringMessage]) -> None:
         table_obj = self.meta.tables[table]
         mappings = self._generate_mappings(table_obj, columns=columns,
                                            messages=messages)
-        mapper = get_mapper(table_obj)
+        mapper = self._get_mapper(table_obj)
         self.session.bulk_update_mappings(mapper, mappings)
         self.session.commit()
 
-    def insert(self, *, table: str, messages: List[Dict[str, Any]]) -> None:
+    def insert(self, *, table: str, messages: List[MonitoringMessage]) -> None:
         table_obj = self.meta.tables[table]
         mappings = self._generate_mappings(table_obj, messages=messages)
-        mapper = get_mapper(table_obj)
+        mapper = self._get_mapper(table_obj)
         self.session.bulk_insert_mappings(mapper, mappings)
         self.session.commit()
 
     def rollback(self) -> None:
         self.session.rollback()
 
-    def _generate_mappings(self, table: Table, columns: Optional[List[str]] = None, messages: List[Dict[str, Any]] = []) -> List[Dict[str, Any]]:
+    def _generate_mappings(self, table: Table, columns: Optional[List[str]] = None, messages: List[MonitoringMessage] = []) -> List[Dict[str, Any]]:
         mappings = []
         for msg in messages:
             m = {}
@@ -257,9 +271,11 @@ class DatabaseManager:
                  ):
 
         self.workflow_end = False
-        self.workflow_start_message = None  # type: Optional[Dict[str, Any]]
+        self.workflow_start_message = None  # type: Optional[MonitoringMessage]
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
+
+        logger.propagate = False
 
         set_file_logger("{}/database_manager.log".format(self.logdir), level=logging_level,
                         format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s",
@@ -271,16 +287,16 @@ class DatabaseManager:
         self.batching_interval = batching_interval
         self.batching_threshold = batching_threshold
 
-        self.pending_priority_queue = queue.Queue()  # type: queue.Queue[Tuple[MessageType, Dict[str, Any]]]
-        self.pending_node_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
-        self.pending_block_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
-        self.pending_resource_queue = queue.Queue()  # type: queue.Queue[Dict[str, Any]]
+        self.pending_priority_queue = queue.Queue()  # type: queue.Queue[TaggedMonitoringMessage]
+        self.pending_node_queue = queue.Queue()  # type: queue.Queue[MonitoringMessage]
+        self.pending_block_queue = queue.Queue()  # type: queue.Queue[MonitoringMessage]
+        self.pending_resource_queue = queue.Queue()  # type: queue.Queue[MonitoringMessage]
 
     def start(self,
-              priority_queue: "queue.Queue[Tuple[MessageType, Dict[str, Any]]]",
-              node_queue: "queue.Queue[Dict[str, Any]]",
-              block_queue: "queue.Queue[Dict[str, Any]]",
-              resource_queue: "queue.Queue[Dict[str, Any]]") -> None:
+              priority_queue: "queue.Queue[TaggedMonitoringMessage]",
+              node_queue: "queue.Queue[MonitoringMessage]",
+              block_queue: "queue.Queue[MonitoringMessage]",
+              resource_queue: "queue.Queue[MonitoringMessage]") -> None:
 
         self._kill_event = threading.Event()
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
@@ -334,7 +350,7 @@ class DatabaseManager:
         # assumed-to-be-unique first message (with first message flag set).
         # The code prior to this patch will discard previous message in
         # the case of multiple messages to defer.
-        deferred_resource_messages = {}  # type: Dict[str, Any]
+        deferred_resource_messages = {}  # type: MonitoringMessage
 
         exception_happened = False
 
@@ -360,6 +376,13 @@ class DatabaseManager:
                 # had just arrived because the corresponding first task message has been
                 # processed (corresponding by task id)
                 reprocessable_first_resource_messages = []
+
+                # end-of-task-run status messages - handled in similar way as
+                # for last resource messages to try to have symmetry... this
+                # needs a type annotation though reprocessable_first_resource_messages
+                # doesn't... not sure why. Too lazy right now to figure out what,
+                # if any, more specific type than Any the messages have.
+                reprocessable_last_resource_messages: List[Any] = []
 
                 # Get a batch of priority messages
                 priority_messages = self._get_messages_in_batch(self.pending_priority_queue)
@@ -482,7 +505,11 @@ class DatabaseManager:
 
                 if resource_messages:
                     logger.debug(
-                        "Got {} messages from resource queue, {} reprocessable".format(len(resource_messages), len(reprocessable_first_resource_messages)))
+                        "Got {} messages from resource queue, "
+                        "{} reprocessable as first messages, "
+                        "{} reprocessable as last messages".format(len(resource_messages),
+                                                                   len(reprocessable_first_resource_messages),
+                                                                   len(reprocessable_last_resource_messages)))
 
                     insert_resource_messages = []
                     for msg in resource_messages:
@@ -498,8 +525,14 @@ class DatabaseManager:
                                 if task_try_id in deferred_resource_messages:
                                     logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
                                 deferred_resource_messages[task_try_id] = msg
+                        elif msg['last_msg']:
+                            # This assumes that the primary key has been added
+                            # to the try table already, so doesn't use the same
+                            # deferral logic as the first_msg case.
+                            msg['task_status_name'] = States.running_ended.name
+                            reprocessable_last_resource_messages.append(msg)
                         else:
-                            # Insert to resource table if not first message
+                            # Insert to resource table if not first/last (start/stop) message message
                             insert_resource_messages.append(msg)
 
                     if insert_resource_messages:
@@ -512,6 +545,9 @@ class DatabaseManager:
                                           'run_id', 'task_id', 'try_id',
                                           'block_id', 'hostname'],
                                  messages=reprocessable_first_resource_messages)
+
+                if reprocessable_last_resource_messages:
+                    self._insert(table=STATUS, messages=reprocessable_last_resource_messages)
             except Exception:
                 logger.exception("Exception in db loop: this might have been a malformed message, or some other error. monitoring data may have been lost")
                 exception_happened = True
@@ -539,7 +575,9 @@ class DatabaseManager:
                         "_migrate_logs_to_internal can only migrate WORKFLOW_,TASK_INFO message from priority queue, got x[0] == {}".format(x[0])
                     self._dispatch_to_internal(x)
                 elif queue_tag == 'resource':
-                    assert x[0] == MessageType.RESOURCE_INFO, "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue"
+                    assert isinstance(x, tuple), "_migrate_logs_to_internal was expecting a tuple, got {}".format(x)
+                    assert x[0] == MessageType.RESOURCE_INFO, \
+                        "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue, got tag {}, message {}".format(x[0], x)
                     self._dispatch_to_internal(x)
                 elif queue_tag == 'node':
                     assert len(x) == 2, "expected message tuple to have exactly two elements"
@@ -556,8 +594,7 @@ class DatabaseManager:
             self.pending_priority_queue.put(cast(Any, x))
         elif x[0] == MessageType.RESOURCE_INFO:
             body = x[1]
-            assert len(body) == 3
-            self.pending_resource_queue.put(body[-1])
+            self.pending_resource_queue.put(body)
         elif x[0] == MessageType.NODE_INFO:
             assert len(x) == 2, "expected NODE_INFO tuple to have exactly two elements"
 
@@ -569,7 +606,7 @@ class DatabaseManager:
         else:
             logger.error("Discarding message of unknown type {}".format(x[0]))
 
-    def _update(self, table: str, columns: List[str], messages: List[Dict[str, Any]]) -> None:
+    def _update(self, table: str, columns: List[str], messages: List[MonitoringMessage]) -> None:
         try:
             done = False
             while not done:
@@ -599,7 +636,7 @@ class DatabaseManager:
             except Exception:
                 logger.exception("Rollback failed")
 
-    def _insert(self, table: str, messages: List[Dict[str, Any]]) -> None:
+    def _insert(self, table: str, messages: List[MonitoringMessage]) -> None:
         try:
             done = False
             while not done:
@@ -660,10 +697,10 @@ class DatabaseManager:
 
 @wrap_with_logs(target="database_manager")
 def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
-                priority_msgs: "queue.Queue[Tuple[MessageType, Dict[str, Any]]]",
-                node_msgs: "queue.Queue[Dict[str, Any]]",
-                block_msgs: "queue.Queue[Dict[str, Any]]",
-                resource_msgs: "queue.Queue[Dict[str, Any]]",
+                priority_msgs: "queue.Queue[TaggedMonitoringMessage]",
+                node_msgs: "queue.Queue[MonitoringMessage]",
+                block_msgs: "queue.Queue[MonitoringMessage]",
+                resource_msgs: "queue.Queue[MonitoringMessage]",
                 db_url: str,
                 logdir: str,
                 logging_level: int) -> None:
@@ -672,6 +709,8 @@ def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
     The DFK should start this function. The args, kwargs match that of the monitoring config
 
     """
+    setproctitle("parsl: monitoring database")
+
     try:
         dbm = DatabaseManager(db_url=db_url,
                               logdir=logdir,

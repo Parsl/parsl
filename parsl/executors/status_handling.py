@@ -39,10 +39,16 @@ class BlockProviderExecutor(ParslExecutor):
     invoking scale_out, but it will not initialize the blocks requested by
     any init_blocks parameter. Subclasses must implement that behaviour
     themselves.
+
+    BENC: TODO: block error handling: maybe I want this more user pluggable?
+    I'm not sure of use cases for switchability at the moment beyond "yes or no"
     """
-    def __init__(self, provider: ExecutionProvider):
+    def __init__(self, *,
+                 provider: ExecutionProvider,
+                 block_error_handler: bool):
         super().__init__()
         self._provider = provider
+        self.block_error_handler = block_error_handler
         # errors can happen during the submit call to the provider; this is used
         # to keep track of such errors so that they can be handled in one place
         # together with errors reported by status()
@@ -127,17 +133,18 @@ class BlockProviderExecutor(ParslExecutor):
 
     @property
     def error_management_enabled(self):
-        return True
+        return self.block_error_handler
 
     def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
-                      status: Dict[str, JobStatus]) -> bool:
+                      status: Dict[str, JobStatus]) -> None:
+        if not self.block_error_handler:
+            return
         init_blocks = 3
         if hasattr(self.provider, 'init_blocks'):
             init_blocks = self.provider.init_blocks  # type: ignore
         if init_blocks < 1:
             init_blocks = 1
         error_handler.simple_error_handler(self, status, init_blocks)
-        return True
 
     @property
     def tasks(self) -> Dict[object, Future]:
@@ -177,8 +184,9 @@ class BlockProviderExecutor(ParslExecutor):
     def _launch_block(self, block_id: str) -> Any:
         launch_cmd = self._get_launch_command(block_id)
         job_id = self.provider.submit(launch_cmd, 1)
-        logger.debug("Launched block {}->{}".format(block_id, job_id))
-        if not job_id:
+        if job_id:
+            logger.debug(f"Launched block {block_id} on executor {self.label} with job ID {job_id}")
+        else:
             raise ScalingFailed(self,
                                 "Attempt to provision nodes did not return a job ID")
         return job_id
@@ -230,8 +238,8 @@ class NoStatusHandlingExecutor(ParslExecutor):
         return {}
 
     def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
-                      status: Dict[str, JobStatus]) -> bool:
-        return False
+                      status: Dict[str, JobStatus]) -> None:
+        pass
 
     @property
     def tasks(self) -> Dict[object, Future]:

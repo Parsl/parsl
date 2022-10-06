@@ -10,6 +10,7 @@ import pickle
 import time
 import queue
 import uuid
+from threading import Thread
 from typing import Sequence, Optional
 
 import zmq
@@ -25,7 +26,8 @@ from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.probe import probe_addresses
 from parsl.executors.high_throughput.zmq_pipes import SignalReceiver, SignalSender
-from parsl.multiprocessing import ForkProcess as mpProcess
+from parsl.multiprocessing import ForkProcess as mpForkProcess
+from parsl.multiprocessing import SpawnProcess as mpSpawnProcess
 
 from parsl.multiprocessing import SizedQueue as mpQueue
 
@@ -37,7 +39,7 @@ HEARTBEAT_CODE = (2 ** 32) - 1
 class Manager(object):
     """ Manager manages task execution by the workers
 
-                |         0mq              |    Manager         |   Worker Processes
+                |         zmq              |    Manager         |   Worker Processes
                 |                          |                    |
                 | <-----Request N task-----+--Count task reqs   |      Request task<--+
     Interchange | -------------------------+->Receive task batch|          |          |
@@ -65,7 +67,8 @@ class Manager(object):
                  heartbeat_period=30,
                  poll_period=10,
                  cpu_affinity=False,
-                 available_accelerators: Sequence[str] = ()):
+                 available_accelerators: Sequence[str] = (),
+                 start_method: str = 'fork'):
         """
         Parameters
         ----------
@@ -110,7 +113,8 @@ class Manager(object):
              assumes that the interchange is lost and the manager shuts down. Default:120
 
         heartbeat_period : int
-             Number of seconds after which a heartbeat message is sent to the interchange
+             Number of seconds after which a heartbeat message is sent to the interchange, and workers
+             are checked for liveness.
 
         poll_period : int
              Timeout period used by the manager in milliseconds. Default: 10ms
@@ -120,6 +124,11 @@ class Manager(object):
 
         available_accelerators: list of str
             List of accelerators available to the workers. Default: Empty list
+
+        start_method: str
+            What method to use to start new worker processes. Choices are fork, spawn, and thread.
+            Default: fork
+
         """
 
         logger.info("Manager started")
@@ -181,6 +190,17 @@ class Manager(object):
                                 mem_slots,
                                 math.floor(cores_on_node / cores_per_worker))
 
+        # Determine which start method to use
+        start_method = start_method.lower()
+        if start_method == "fork":
+            self.mpProcess = mpForkProcess
+        elif start_method == "spawn":
+            self.mpProcess = mpSpawnProcess
+        elif start_method == "thread":
+            self.mpProcess = Thread
+        else:
+            raise ValueError(f'HTEx does not support start method: "{start_method}"')
+
         self.pending_task_queue = mpQueue()
         self.pending_result_queue = mpQueue()
         self.ready_worker_queue = mpQueue()
@@ -226,12 +246,12 @@ class Manager(object):
         """ Send heartbeat to the incoming task queue
         """
         heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
-        r = self.task_incoming.send(heartbeat)
-        logger.debug("Return from heartbeat: {}".format(r))
+        self.task_incoming.send(heartbeat)
+        logger.debug("Sent heartbeat")
 
     @wrap_with_logs
     def pull_tasks(self, kill_event):
-        """ Pull tasks from the incoming tasks 0mq pipe onto the internal
+        """ Pull tasks from the incoming tasks zmq pipe onto the internal
         pending task queue
 
         Parameters:
@@ -239,7 +259,7 @@ class Manager(object):
         kill_event : threading.Event
               Event to let the thread know when it is time to die.
         """
-        logger.info("[TASK PULL THREAD] starting")
+        logger.info("starting")
         poller = zmq.Poller()
         poller.register(self.task_incoming, zmq.POLLIN)
         signal_receiver_socket = self.signal_receiver.socket
@@ -259,15 +279,15 @@ class Manager(object):
             ready_worker_count = self.ready_worker_queue.qsize()
             pending_task_count = self.pending_task_queue.qsize()
 
-            logger.debug("[TASK_PULL_THREAD] ready workers:{}, pending tasks:{}".format(ready_worker_count,
-                                                                                        pending_task_count))
+            logger.debug("ready workers: {}, pending tasks: {}".format(ready_worker_count,
+                                                                       pending_task_count))
 
             if time.time() > last_beat + self.heartbeat_period:
                 self.heartbeat_to_incoming()
                 last_beat = time.time()
 
             if pending_task_count < self.max_queue_size and ready_worker_count > 0:
-                logger.debug("[TASK_PULL_THREAD] Requesting tasks: {}".format(ready_worker_count))
+                logger.debug("Requesting tasks: {}".format(ready_worker_count))
                 msg = ((ready_worker_count).to_bytes(4, "little"))
                 self.task_incoming.send(msg)
 
@@ -280,7 +300,7 @@ class Manager(object):
                 last_interchange_contact = time.time()
 
                 if tasks == 'STOP':
-                    logger.critical("[TASK_PULL_THREAD] Received stop request")
+                    logger.critical("Received stop request")
                     kill_event.set()
                     break
 
@@ -289,12 +309,11 @@ class Manager(object):
 
                 else:
                     task_recv_counter += len(tasks)
-                    logger.debug("[TASK_PULL_THREAD] Got tasks: {} of {}".format([t['task_id'] for t in tasks],
-                                                                                 task_recv_counter))
+                    logger.debug("Got tasks: {}, cumulative count of tasks: {}".format([t['task_id'] for t in tasks], task_recv_counter))
 
                     for task in tasks:
                         self.pending_task_queue.put(task)
-                        # logger.debug("[TASK_PULL_THREAD] Ready tasks: {}".format(
+                        # logger.debug("Ready tasks: {}".format(
                         #    [i['task_id'] for i in self.pending_task_queue]))
 
             elif signal_receiver_socket in socks and socks[signal_receiver_socket] == zmq.POLLIN:
@@ -304,7 +323,7 @@ class Manager(object):
                 # Reset poll period
                 poll_timer = self.poll_period
             else:
-                logger.debug("[TASK_PULL_THREAD] No incoming tasks")
+                logger.debug("No incoming tasks")
                 # Limit poll duration to heartbeat_period
                 # heartbeat_period is in s vs poll_timer in ms
                 if not poll_timer:
@@ -313,14 +332,14 @@ class Manager(object):
 
                 # Only check if no messages were received.
                 if time.time() > last_interchange_contact + self.heartbeat_threshold:
-                    logger.critical("[TASK_PULL_THREAD] Missing contact with interchange beyond heartbeat_threshold")
+                    logger.critical("Missing contact with interchange beyond heartbeat_threshold")
                     kill_event.set()
-                    logger.critical("[TASK_PULL_THREAD] Exiting")
+                    logger.critical("Exiting")
                     break
 
     @wrap_with_logs
     def push_results(self, kill_event):
-        """ Listens on the pending_result_queue and sends out results via 0mq
+        """ Listens on the pending_result_queue and sends out results via zmq
 
         Parameters:
         -----------
@@ -328,45 +347,51 @@ class Manager(object):
               Event to let the thread know when it is time to die.
         """
 
-        logger.debug("[RESULT_PUSH_THREAD] Starting thread")
+        logger.debug("Starting result push thread")
 
         push_poll_period = max(10, self.poll_period) / 1000    # push_poll_period must be atleast 10 ms
-        logger.debug("[RESULT_PUSH_THREAD] push poll period: {}".format(push_poll_period))
+        logger.debug("push poll period: {}".format(push_poll_period))
 
         last_beat = time.time()
         last_result_beat = time.time()
         items = []
 
         while not kill_event.is_set():
-
             try:
+                logger.debug("Starting pending_result_queue get")
                 r = self.pending_result_queue.get(block=True, timeout=push_poll_period)
+                logger.debug("Got a result item")
                 items.append(r)
             except queue.Empty:
-                pass
+                logger.debug("pending_result_queue get timeout without result item")
             except Exception as e:
-                logger.exception("[RESULT_PUSH_THREAD] Got an exception: {}".format(e))
+                logger.exception("Got an exception: {}".format(e))
 
             if time.time() > last_result_beat + self.heartbeat_period:
+                logger.info(f"Sending heartbeat via results connection: last_result_beat={last_result_beat} heartbeat_period={self.heartbeat_period} seconds")
                 last_result_beat = time.time()
-                items.append(pickle.dumps({'task_id': -1, 'heartbeat': True}))
+                items.append(pickle.dumps({'type': 'heartbeat'}))
 
-            # If we have reached poll_period duration or timer has expired, we send results
             if len(items) >= self.max_queue_size or time.time() > last_beat + push_poll_period:
                 last_beat = time.time()
                 if items:
+                    logger.debug(f"Result send: Pushing {len(items)} items")
                     self.result_outgoing.send_multipart(items)
                     logger.info("[RESULT_PUSH_THREAD] Sent result")
                     # Wake up the task_puller from long-poll to re-advertize capacity
                     logger.info("[RESULT_PUSH_THREAD] Sending wake up signal")
                     self.signal_sender.send(b'WAKE UP')
                     items = []
+                else:
+                    logger.debug("Result send: No items to push")
+            else:
+                logger.debug(f"Result send: check condition not met - deferring {len(items)} result items")
 
-        logger.critical("[RESULT_PUSH_THREAD] Exiting")
+        logger.critical("Exiting")
 
     @wrap_with_logs
     def worker_watchdog(self, kill_event):
-        """ Listens on the pending_result_queue and sends out results via 0mq
+        """Keeps workers alive.
 
         Parameters:
         -----------
@@ -374,39 +399,39 @@ class Manager(object):
               Event to let the thread know when it is time to die.
         """
 
-        logger.debug("[WORKER_WATCHDOG_THREAD] Starting thread")
+        logger.debug("Starting worker watchdog")
 
         while not kill_event.is_set():
             for worker_id, p in self.procs.items():
                 if not p.is_alive():
-                    logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has died".format(worker_id))
+                    logger.info("Worker {} has died".format(worker_id))
                     try:
                         task = self._tasks_in_progress.pop(worker_id)
-                        logger.info("[WORKER_WATCHDOG_THREAD] Worker {} was busy when it died".format(worker_id))
+                        logger.info("Worker {} was busy when it died".format(worker_id))
                         try:
                             raise WorkerLost(worker_id, platform.node())
                         except Exception:
-                            logger.info("[WORKER_WATCHDOG_THREAD] Putting exception for task {} in the pending result queue".format(task['task_id']))
-                            result_package = {'task_id': task['task_id'], 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
+                            logger.info("Putting exception for task {} in the pending result queue".format(task['task_id']))
+                            result_package = {'type': 'result', 'task_id': task['task_id'], 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
                             pkl_package = pickle.dumps(result_package)
                             self.pending_result_queue.put(pkl_package)
                     except KeyError:
-                        logger.info("[WORKER_WATCHDOG_THREAD] Worker {} was not busy when it died".format(worker_id))
+                        logger.info("Worker {} was not busy when it died".format(worker_id))
 
-                    p = mpProcess(target=worker, args=(worker_id,
-                                                       self.uid,
-                                                       self.worker_count,
-                                                       self.pending_task_queue,
-                                                       self.pending_result_queue,
-                                                       self.ready_worker_queue,
-                                                       self._tasks_in_progress,
-                                                       self.cpu_affinity
-                                                 ), name="HTEX-Worker-{}".format(worker_id))
+                    p = self.mpProcess(target=worker, args=(worker_id,
+                                                            self.uid,
+                                                            self.worker_count,
+                                                            self.pending_task_queue,
+                                                            self.pending_result_queue,
+                                                            self.ready_worker_queue,
+                                                            self._tasks_in_progress,
+                                                            self.cpu_affinity),
+                                       name="HTEX-Worker-{}".format(worker_id))
                     self.procs[worker_id] = p
-                    logger.info("[WORKER_WATCHDOG_THREAD] Worker {} has been restarted".format(worker_id))
-                time.sleep(self.poll_period)
+                    logger.info("Worker {} has been restarted".format(worker_id))
+                time.sleep(self.heartbeat_period)
 
-        logger.critical("[WORKER_WATCHDOG_THREAD] Exiting")
+        logger.critical("Exiting")
 
     def start(self):
         """ Start the worker processes.
@@ -419,20 +444,21 @@ class Manager(object):
 
         self.procs = {}
         for worker_id in range(self.worker_count):
-            p = mpProcess(target=worker, args=(worker_id,
-                                               self.uid,
-                                               self.worker_count,
-                                               self.pending_task_queue,
-                                               self.pending_result_queue,
-                                               self.ready_worker_queue,
-                                               self._tasks_in_progress,
-                                               self.cpu_affinity,
-                                               self.available_accelerators[worker_id] if self.accelerators_available else None),
-                          name="HTEX-Worker-{}".format(worker_id))
+            p = self.mpProcess(target=worker,
+                               args=(worker_id,
+                                     self.uid,
+                                     self.worker_count,
+                                     self.pending_task_queue,
+                                     self.pending_result_queue,
+                                     self.ready_worker_queue,
+                                     self._tasks_in_progress,
+                                     self.cpu_affinity,
+                                     self.available_accelerators[worker_id] if self.accelerators_available else None),
+                               name="HTEX-Worker-{}".format(worker_id))
             p.start()
             self.procs[worker_id] = p
 
-        logger.debug("Manager synced with workers")
+        logger.debug("Workers started")
 
         self._task_puller_thread = threading.Thread(target=self.pull_tasks,
                                                     args=(self._kill_event,),
@@ -452,7 +478,7 @@ class Manager(object):
         # TODO : Add mechanism in this loop to stop the worker pool
         # This might need a multiprocessing event to signal back.
         self._kill_event.wait()
-        logger.critical("[MAIN] Received kill event, terminating worker processes")
+        logger.critical("Received kill event, terminating worker processes")
 
         self._task_puller_thread.join()
         self._result_pusher_thread.join()
@@ -525,6 +551,10 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
     os.environ['PARSL_WORKER_POOL_ID'] = str(pool_id)
     os.environ['PARSL_WORKER_BLOCK_ID'] = str(args.block_id)
 
+    # share the result queue with monitoring code so it too can send results down that channel
+    import parsl.executors.high_throughput.monitoring_info as mi
+    mi.result_queue = result_queue
+
     # Sync worker with master
     logger.info('Worker {} started'.format(worker_id))
     if args.debug:
@@ -576,9 +606,9 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
             serialized_result = serialize(result, buffer_threshold=1e6)
         except Exception as e:
             logger.info('Caught an exception: {}'.format(e))
-            result_package = {'task_id': tid, 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
+            result_package = {'type': 'result', 'task_id': tid, 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
         else:
-            result_package = {'task_id': tid, 'result': serialized_result}
+            result_package = {'type': 'result', 'task_id': tid, 'result': serialized_result}
             # logger.debug("Result: {}".format(result))
 
         logger.info("Completed task {}".format(tid))
@@ -586,12 +616,13 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
             pkl_package = pickle.dumps(result_package)
         except Exception:
             logger.exception("Caught exception while trying to pickle the result package")
-            pkl_package = pickle.dumps({'task_id': tid,
+            pkl_package = pickle.dumps({'type': 'result', 'task_id': tid,
                                         'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))
             })
 
         result_queue.put(pkl_package)
         tasks_in_progress.pop(worker_id)
+        logger.info("All processing finished for task {}".format(tid))
 
 
 def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
@@ -607,7 +638,9 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
        -  None
     """
     if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(rank)
+        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d " \
+                        "%(process)d %(threadName)s " \
+                        "[%(levelname)s]  %(message)s"
 
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
@@ -656,6 +689,8 @@ if __name__ == "__main__":
                         help="Whether/how workers should control CPU affinity.")
     parser.add_argument("--available-accelerators", type=str, nargs="*",
                         help="Names of available accelerators")
+    parser.add_argument("--start-method", type=str, choices=["fork", "spawn", "thread"], default="fork",
+                        help="Method used to start new worker processes")
 
     args = parser.parse_args()
 
@@ -684,6 +719,7 @@ if __name__ == "__main__":
         logger.info("Heartbeat period: {}".format(args.hb_period))
         logger.info("CPU affinity: {}".format(args.cpu_affinity))
         logger.info("Accelerators: {}".format(" ".join(args.available_accelerators)))
+        logger.info("Start method: {}".format(args.start_method))
 
         manager = Manager(task_port=args.task_port,
                           result_port=args.result_port,

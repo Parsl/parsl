@@ -10,7 +10,7 @@ class States(IntEnum):
     In a single successful task execution, tasks will progress in this
     sequence:
 
-    pending -> launched -> running -> exec_done
+    pending -> launched -> running -> running_ended -> exec_done
 
     Other states represent deviations from this path, either due to
     failures, or to deliberate changes to how tasks are executed (for
@@ -56,6 +56,12 @@ class States(IntEnum):
     """Task is a join_app, joining on internal tasks. The task has run its
     own Python code, and is now waiting on other tasks before it can make
     further progress (to a done/failed state)."""
+
+    running_ended = 11
+    """Like States.running, this state is also not observed by the DFK,
+    but instead only by monitoring. This state does not record
+    anything about task success or failure, merely that the wrapper
+    ran long enough to record it as finished."""
 
 
 FINAL_STATES = [States.exec_done, States.memo_done, States.failed, States.dep_fail]
