@@ -30,10 +30,10 @@ from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
-from parsl.dataflow.memoization import Memoizer
+import parsl.dataflow.memoization as memoization
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
-from parsl.dataflow.taskrecord import TaskRecord
+import parsl.dataflow.taskrecord as taskrecord
 from parsl.errors import ConfigurationError, InternalConsistencyError, NoDataFlowKernelError
 from parsl.jobs.job_status_poller import JobStatusPoller
 from parsl.jobs.states import JobStatus, JobState
@@ -171,11 +171,11 @@ class DataFlowKernel:
         else:
             checkpoints = {}
 
-        self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint=checkpoints)
+        self.memoizer = memoization.Memoizer(self, memoize=config.app_cache, checkpoint=checkpoints)
         self.checkpointed_tasks = 0
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
-        self.checkpointable_tasks: List[TaskRecord] = []
+        self.checkpointable_tasks: List[taskrecord.TaskRecord] = []
 
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.
@@ -200,12 +200,12 @@ class DataFlowKernel:
                 self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period, name="Checkpoint")
 
         self.task_count = 0
-        self.tasks: Dict[int, TaskRecord] = {}
+        self.tasks: Dict[int, taskrecord.TaskRecord] = {}
         self.submitter_lock = threading.Lock()
 
         atexit.register(self.atexit_cleanup)
 
-    def _send_task_log_info(self, task_record: TaskRecord) -> None:
+    def _send_task_log_info(self, task_record: taskrecord.TaskRecord) -> None:
         if self.monitoring:
             task_log_info = self._create_task_log_info(task_record)
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
@@ -279,7 +279,7 @@ class DataFlowKernel:
         """
         return self._config
 
-    def handle_exec_update(self, task_record: TaskRecord, future: Future) -> None:
+    def handle_exec_update(self, task_record: taskrecord.TaskRecord, future: Future) -> None:
         """This function is called only as a callback from an execution
         attempt reaching a final state (either successfully or failing).
 
@@ -415,7 +415,7 @@ class DataFlowKernel:
         if task_record['status'] == States.pending:
             self.launch_if_ready(task_record)
 
-    def handle_join_update(self, task_record: TaskRecord, inner_app_future: Optional[AppFuture]) -> None:
+    def handle_join_update(self, task_record: taskrecord.TaskRecord, inner_app_future: Optional[AppFuture]) -> None:
         with task_record['join_lock']:
             # inner_app_future has completed, which is one (potentially of many)
             # futures the outer task is joining on.
@@ -505,7 +505,7 @@ class DataFlowKernel:
 
             self._send_task_log_info(task_record)
 
-    def handle_app_update(self, task_record: TaskRecord, future: AppFuture) -> None:
+    def handle_app_update(self, task_record: taskrecord.TaskRecord, future: AppFuture) -> None:
         """This function is called as a callback when an AppFuture
         is in its final state.
 
@@ -545,7 +545,7 @@ class DataFlowKernel:
         self.wipe_task(task_id)
         return
 
-    def _complete_task(self, task_record: TaskRecord, new_state: States, result: Any) -> None:
+    def _complete_task(self, task_record: taskrecord.TaskRecord, new_state: States, result: Any) -> None:
         """Set a task into a completed state
         """
         assert new_state in FINAL_STATES
@@ -560,7 +560,7 @@ class DataFlowKernel:
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_result(result)
 
-    def update_task_state(self, task_record: TaskRecord, new_state: States) -> None:
+    def update_task_state(self, task_record: taskrecord.TaskRecord, new_state: States) -> None:
         """Updates a task record state, and recording an appropriate change
         to task state counters.
         """
@@ -588,7 +588,7 @@ class DataFlowKernel:
     def check_staging_inhibited(kwargs: Dict[str, Any]) -> bool:
         return kwargs.get('_parsl_staging_inhibit', False)
 
-    def launch_if_ready(self, task_record: TaskRecord) -> None:
+    def launch_if_ready(self, task_record: taskrecord.TaskRecord) -> None:
         """
         launch_if_ready will launch the specified task, if it is ready
         to run (for example, without dependencies, and in pending state).
@@ -676,7 +676,7 @@ class DataFlowKernel:
             task_record['exec_fu'] = exec_fu
         event("DFK_LAUNCH_IF_READY_END", task_record['span'])
 
-    def launch_task(self, task_record: TaskRecord) -> Future:
+    def launch_task(self, task_record: taskrecord.TaskRecord) -> Future:
         """Handle the actual submission of the task to the executor layer.
 
         If the app task has the executors attributes not set (default=='all')
@@ -1004,7 +1004,7 @@ class DataFlowKernel:
         resource_specification = app_kwargs.get('parsl_resource_specification', {})
         event("DFK_SUBMIT_MUNGE_ARGS_END", task_span)
 
-        task_record: TaskRecord
+        task_record: taskrecord.TaskRecord
         task_record = {'depends': [],
                        'dfk': self,
                        'executor': executor,
@@ -1306,7 +1306,7 @@ class DataFlowKernel:
 
         logger.info("DFK cleanup complete")
 
-    def checkpoint(self, tasks: Optional[Sequence[TaskRecord]] = None) -> str:
+    def checkpoint(self, tasks: Optional[Sequence[taskrecord.TaskRecord]] = None) -> str:
         """Checkpoint the dfk incrementally to a checkpoint file.
 
         When called, every task that has been completed yet not
@@ -1451,7 +1451,7 @@ class DataFlowKernel:
             return {}
 
     @staticmethod
-    def _log_std_streams(task_record: TaskRecord) -> None:
+    def _log_std_streams(task_record: taskrecord.TaskRecord) -> None:
         if task_record['app_fu'].stdout is not None:
             logger.info("Standard output for task {} available at {}".format(task_record['id'], task_record['app_fu'].stdout))
         if task_record['app_fu'].stderr is not None:

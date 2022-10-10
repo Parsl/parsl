@@ -104,6 +104,12 @@ class JobStatusPoller(Timer):
     def __init__(self, dfk: "parsl.dataflow.dflow.DataFlowKernel") -> None:
         self._poll_items = []  # type: List[PollItem]
         self.dfk = dfk
+
+        # with conditional imports, Config does not get type annotated properly...
+        # which means the types of dfk.config.* are not known here... perhaps
+        # becuase of a mypy bug, perhaps deliberately. but as this feature, lazy-imports,
+        # is likely to go away, I'm not going to investigate too hard.
+
         self._strategy = Strategy(strategy=dfk.config.strategy,
                                   max_idletime=dfk.config.max_idletime)
         super().__init__(self.poll, interval=5, name="JobStatusPoller")
