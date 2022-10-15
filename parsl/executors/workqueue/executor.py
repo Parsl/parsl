@@ -300,18 +300,18 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Create directories for data and results
         if not self.function_dir:
-            self.function_data_dir = os.path.join(self.run_dir, "function_data")
+            self.function_data_dir = os.path.join(self.run_dir, self.label, "function_data")
         else:
             tp = str(time.time())
             tx = os.path.join(self.function_dir, tp)
             os.mkdir(tx)
-            self.function_data_dir = os.path.join(self.function_dir, tp, "function_data")
-        self.package_dir = os.path.join(self.run_dir, "package_data")
+            self.function_data_dir = os.path.join(self.function_dir, tp, self.label, "function_data")
+        self.package_dir = os.path.join(self.run_dir, self.label, "package_data")
         self.wq_log_dir = os.path.join(self.run_dir, self.label)
         logger.debug("function data directory: {}\nlog directory: {}".format(self.function_data_dir, self.wq_log_dir))
+        os.mkdir(self.wq_log_dir)
         os.mkdir(self.function_data_dir)
         os.mkdir(self.package_dir)
-        os.mkdir(self.wq_log_dir)
 
         logger.debug("Starting WorkQueueExecutor")
 
