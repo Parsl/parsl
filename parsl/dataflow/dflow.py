@@ -1149,10 +1149,6 @@ class DataFlowKernel(object):
 
         logger.info("Waiting for all remaining tasks to complete")
 
-        # make a concrete copy because the dictionary size can change
-        # as tasks complete. Even making this copy, there is probably
-        # still a chance of an error happening as the list is
-        # constructed.
         items = list(self.tasks.items())
         for task_id, task_record in items:
             # .exception() is a less exception throwing way of

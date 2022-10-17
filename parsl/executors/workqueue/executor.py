@@ -15,9 +15,9 @@ import hashlib
 import subprocess
 import os
 import socket
+import time
 import pickle
 import queue
-import time
 import inspect
 import shutil
 import itertools
@@ -200,6 +200,12 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             when the worker needs to be wrapped inside some other command
             (for example, to run the worker inside a container). Default is
             'work_queue_worker'.
+
+        function_dir: str
+            The directory where serialized function invocations are placed
+            to be sent to workers. If undefined, this defaults to a directory
+            under runinfo/. If shared_filesystem=True, then this directory
+            must be visible from both the submitting side and workers.
     """
 
     radio_mode = "filesystem"
@@ -229,7 +235,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  worker_options: str = "",
                  full_debug: bool = True,
                  worker_executable: str = 'work_queue_worker',
-                 function_dir: str = None):
+                 function_dir: Optional[str] = None):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
         self._scaling_enabled = True
@@ -297,18 +303,18 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Create directories for data and results
         if not self.function_dir:
-            self.function_data_dir = os.path.join(self.run_dir, "function_data")
+            self.function_data_dir = os.path.join(self.run_dir, self.label, "function_data")
         else:
             tp = str(time.time())
             tx = os.path.join(self.function_dir, tp)
             os.mkdir(tx)
-            self.function_data_dir = os.path.join(self.function_dir, tp, "function_data")
-        self.package_dir = os.path.join(self.run_dir, "package_data")
+            self.function_data_dir = os.path.join(self.function_dir, tp, self.label, "function_data")
+        self.package_dir = os.path.join(self.run_dir, self.label, "package_data")
         self.wq_log_dir = os.path.join(self.run_dir, self.label)
         logger.debug("function data directory: {}\nlog directory: {}".format(self.function_data_dir, self.wq_log_dir))
+        os.mkdir(self.wq_log_dir)
         os.mkdir(self.function_data_dir)
         os.mkdir(self.package_dir)
-        os.mkdir(self.wq_log_dir)
 
         logger.debug("Starting WorkQueueExecutor")
 
