@@ -238,6 +238,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  autolabel: bool = False,
                  autolabel_window: int = 1,
                  autocategory: bool = True,
+                 enable_monitoring: bool = False,
                  max_retries: int = 1,
                  init_command: str = "",
                  worker_options: str = "",
@@ -273,6 +274,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.autolabel = autolabel
         self.autolabel_window = autolabel_window
         self.autocategory = autocategory
+        self.enable_monitoring = enable_monitoring
         self.max_retries = max_retries
         self.should_stop = multiprocessing.Value(c_bool, False)
         self.cached_envs = {}  # type: Dict[int, str]
@@ -340,6 +342,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                  "shared_fs": self.shared_fs,
                                  "autolabel": self.autolabel,
                                  "autolabel_window": self.autolabel_window,
+                                 "enable_monitoring": self.enable_monitoring,
                                  "autocategory": self.autocategory,
                                  "max_retries": self.max_retries,
                                  "should_stop": self.should_stop,
@@ -851,6 +854,7 @@ def _work_queue_submit_wait(*,
                             shared_fs: bool,
                             autolabel: bool,
                             autolabel_window: int,
+                            enable_monitoring: bool,
                             autocategory: bool,
                             max_retries: Optional[int],
                             should_stop,  # multiprocessing.Value is an awkward type alias from inside multiprocessing
@@ -897,6 +901,10 @@ def _work_queue_submit_wait(*,
 
     if project_password_file:
         q.specify_password_file(project_password_file)
+
+    if enable_monitoring:
+        logger.info("BENC: enabling WQ monitoring")
+        q.enable_monitoring()
 
     if autolabel:
         q.enable_monitoring()
