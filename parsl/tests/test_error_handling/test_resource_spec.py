@@ -1,8 +1,5 @@
 import parsl
 from parsl.app.app import python_app
-# from parsl.tests.configs.local_threads import config
-from parsl.tests.configs.htex_local import config
-# from parsl.tests.configs.workqueue_ex import config
 from parsl.executors.errors import UnsupportedFeatureError, ExecutorError
 from parsl.executors import WorkQueueExecutor
 
@@ -40,9 +37,3 @@ def test_resource(n=2):
         assert not isinstance(executor, WorkQueueExecutor)
     except Exception as e:
         assert isinstance(e, ExecutorError)
-
-
-if __name__ == '__main__':
-    local_config = config
-    parsl.load(local_config)
-    x = test_resource(2)
