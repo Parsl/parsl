@@ -230,6 +230,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  autolabel: bool = False,
                  autolabel_window: int = 1,
                  autocategory: bool = True,
+                 enable_monitoring: bool = False,
                  max_retries: Optional[int] = 1,
                  init_command: str = "",
                  worker_options: str = "",
@@ -267,6 +268,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.autolabel = autolabel
         self.autolabel_window = autolabel_window
         self.autocategory = autocategory
+        self.enable_monitoring = enable_monitoring
         self.max_retries = max_retries
         self.should_stop = multiprocessing.Value(c_bool, False)
         self.cached_envs = {}  # type: Dict[int, str]
@@ -307,14 +309,14 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         else:
             tp = str(time.time())
             tx = os.path.join(self.function_dir, tp)
-            os.mkdir(tx)
+            os.makedirs(tx)
             self.function_data_dir = os.path.join(self.function_dir, tp, self.label, "function_data")
         self.package_dir = os.path.join(self.run_dir, self.label, "package_data")
         self.wq_log_dir = os.path.join(self.run_dir, self.label)
         logger.debug("function data directory: {}\nlog directory: {}".format(self.function_data_dir, self.wq_log_dir))
-        os.mkdir(self.wq_log_dir)
-        os.mkdir(self.function_data_dir)
-        os.mkdir(self.package_dir)
+        os.makedirs(self.wq_log_dir)
+        os.makedirs(self.function_data_dir)
+        os.makedirs(self.package_dir)
 
         logger.debug("Starting WorkQueueExecutor")
 
@@ -331,6 +333,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                  "shared_fs": self.shared_fs,
                                  "autolabel": self.autolabel,
                                  "autolabel_window": self.autolabel_window,
+                                 "enable_monitoring": self.enable_monitoring,
                                  "autocategory": self.autocategory,
                                  "max_retries": self.max_retries,
                                  "should_stop": self.should_stop,
@@ -798,7 +801,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
 
 @wrap_with_logs
-def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
+def _work_queue_submit_wait(*,
+                            task_queue=multiprocessing.Queue(),
                             launch_cmd=None,
                             env=None,
                             collector_queue=multiprocessing.Queue(),
@@ -807,6 +811,7 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                             shared_fs=False,
                             autolabel=False,
                             autolabel_window=None,
+                            enable_monitoring,
                             autocategory=False,
                             max_retries=0,
                             should_stop=None,
@@ -849,6 +854,10 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
 
     if project_password_file:
         q.specify_password_file(project_password_file)
+
+    if enable_monitoring:
+        logger.info("BENC: enabling WQ monitoring")
+        q.enable_monitoring()
 
     if autolabel:
         q.enable_monitoring()
