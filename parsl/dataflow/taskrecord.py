@@ -4,6 +4,7 @@ import threading
 import datetime
 from typing_extensions import TypedDict
 from concurrent.futures import Future
+from parsl.monitoring import FileMonitor
 
 # only for type checking:
 from typing import Any, Callable, Dict, Optional, List, Sequence, TYPE_CHECKING
@@ -87,3 +88,5 @@ class TaskRecord(TypedDict, total=False):
     joins: Optional[Future]
     """If this is a join app and the python body has executed, then this
     contains the Future that the join app will join."""
+
+    file_monitor: Optional[FileMonitor]

@@ -595,6 +595,7 @@ class DataFlowKernel(object):
         executable = task_record['func']
         args = task_record['args']
         kwargs = task_record['kwargs']
+        file_monitor = task_record['file_monitor']
 
         task_record['try_time_launched'] = datetime.datetime.now()
 
@@ -625,7 +626,8 @@ class DataFlowKernel(object):
                                                          executor.radio_mode,
                                                          executor.monitor_resources(),
                                                          self.run_dir)
-
+        elif file_monitor is not None:
+            executable = file_monitor.file_monitor(executable, task_id)
         with self.submitter_lock:
             exec_fu = executor.submit(executable, task_record['resource_specification'], *args, **kwargs)
         self.update_task_state(task_record, States.launched)
@@ -807,7 +809,8 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, app_args, executors='all', cache=False, ignore_for_cache=None, app_kwargs={}, join=False):
+    def submit(self, func, app_args, executors='all', cache=False, ignore_for_cache=None, app_kwargs={},
+               join=False, file_monitor=None):
         """Add task to the dataflow system.
 
         If the app task has the executors attributes not set (default=='all')
@@ -889,7 +892,8 @@ class DataFlowKernel(object):
                     'time_returned': None,
                     'try_time_launched': None,
                     'try_time_returned': None,
-                    'resource_specification': resource_specification}
+                    'resource_specification': resource_specification,
+                    'file_monitor': file_monitor}
 
         self.update_task_state(task_def, States.unsched)
 

@@ -10,7 +10,7 @@ from typing import List, Optional, Union
 from typing_extensions import Literal
 
 from parsl.dataflow.dflow import DataFlowKernel
-
+from parsl.monitoring import FileMonitor
 logger = logging.getLogger(__name__)
 
 
@@ -22,7 +22,8 @@ class AppBase(metaclass=ABCMeta):
 
     """
 
-    def __init__(self, func, data_flow_kernel=None, executors='all', cache=False, ignore_for_cache=None):
+    def __init__(self, func, data_flow_kernel=None, executors='all', cache=False, ignore_for_cache=None,
+                 file_monitor=None):
         """Construct the App object.
 
         Args:
@@ -45,6 +46,7 @@ class AppBase(metaclass=ABCMeta):
         self.executors = executors
         self.cache = cache
         self.ignore_for_cache = ignore_for_cache
+        self.file_monitor = file_monitor
         if not (isinstance(executors, list) or isinstance(executors, str)):
             logger.error("App {} specifies invalid executor option, expects string or list".format(
                 func.__name__))
@@ -74,7 +76,8 @@ def python_app(function=None,
                cache: bool = False,
                executors: Union[List[str], Literal['all']] = 'all',
                ignore_for_cache: Optional[List[str]] = None,
-               join: bool = False):
+               join: bool = False,
+               file_monitor: Optional[FileMonitor] = None):
     """Decorator function for making python apps.
 
     Parameters
@@ -105,7 +108,8 @@ def python_app(function=None,
                              cache=cache,
                              executors=executors,
                              ignore_for_cache=ignore_for_cache,
-                             join=join)
+                             join=join,
+                             file_monitor=file_monitor)
         return wrapper(func)
     if function is not None:
         return decorator(function)
