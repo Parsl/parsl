@@ -134,7 +134,8 @@ def bash_app(function=None,
              data_flow_kernel: Optional[DataFlowKernel] = None,
              cache: bool = False,
              executors: Union[List[str], Literal['all']] = 'all',
-             ignore_for_cache: Optional[List[str]] = None):
+             ignore_for_cache: Optional[List[str]] = None,
+             file_monitor: Optional[FileMonitor] = None):
     """Decorator function for making bash apps.
 
     Parameters
@@ -162,7 +163,8 @@ def bash_app(function=None,
                            data_flow_kernel=data_flow_kernel,
                            cache=cache,
                            executors=executors,
-                           ignore_for_cache=ignore_for_cache)
+                           ignore_for_cache=ignore_for_cache,
+                           file_monitor=file_monitor)
         return wrapper(func)
     if function is not None:
         return decorator(function)
