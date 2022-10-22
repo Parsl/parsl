@@ -304,14 +304,14 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         else:
             tp = str(time.time())
             tx = os.path.join(self.function_dir, tp)
-            os.mkdir(tx)
+            os.makedirs(tx)
             self.function_data_dir = os.path.join(self.function_dir, tp, self.label, "function_data")
         self.package_dir = os.path.join(self.run_dir, self.label, "package_data")
         self.wq_log_dir = os.path.join(self.run_dir, self.label)
         logger.debug("function data directory: {}\nlog directory: {}".format(self.function_data_dir, self.wq_log_dir))
-        os.mkdir(self.wq_log_dir)
-        os.mkdir(self.function_data_dir)
-        os.mkdir(self.package_dir)
+        os.makedirs(self.wq_log_dir)
+        os.makedirs(self.function_data_dir)
+        os.makedirs(self.package_dir)
 
         logger.debug("Starting WorkQueueExecutor")
 
