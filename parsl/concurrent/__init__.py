@@ -1,7 +1,8 @@
 """Interfaces modeled after Python's `concurrent library <https://docs.python.org/3/library/concurrent.html>`_"""
+from typing import Callable, Dict, Optional, Iterator, Iterable
 from concurrent.futures import Executor
 from warnings import warn
-from typing import Callable, Dict
+import time
 
 from parsl import Config, DataFlowKernel
 from parsl.app.python import PythonApp
@@ -42,6 +43,29 @@ class ParslPoolExecutor(Executor):
     def submit(self, fn, *args, **kwargs):
         app = self._get_app(fn)
         return app(*args, **kwargs)
+
+    # TODO (wardlt): This override can go away when Parsl supports cancel
+    def map(self, fn: Callable, *iterables: Iterable, timeout: Optional[float] = None, chunksize: int = 1) -> Iterator:
+        # This is a version of the CPython 3.9 `.map` implementation modified to not use `cancel`
+        if timeout is not None:
+            end_time = timeout + time.monotonic()
+
+        # Submit the applications
+        app = self._get_app(fn)
+        fs = [app(*args) for args in zip(*iterables)]
+
+        # Yield the futures as completed
+        def result_iterator():
+            # reverse to keep finishing order
+            fs.reverse()
+            while fs:
+                # Careful not to keep a reference to the popped future
+                if timeout is None:
+                    yield fs.pop().result()
+                else:
+                    yield fs.pop().result(end_time - time.monotonic())
+
+        return result_iterator()
 
     def shutdown(self, wait: bool = True, *, cancel_futures: bool = False) -> None:
         if cancel_futures:
