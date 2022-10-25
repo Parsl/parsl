@@ -1047,6 +1047,7 @@ class DataFlowKernel(object):
 
         logger.info("Waiting for all remaining tasks to complete")
 
+        # TODO (wardlt): Can this be replaced with conccurent.futures.wait?
         items = list(self.tasks.items())
         for task_id, task_record in items:
             # .exception() is a less exception throwing way of
