@@ -9,7 +9,16 @@ from parsl.app.python import PythonApp
 
 
 class ParslPoolExecutor(Executor):
-    """An executor that uses a pool of workers managed by Parsl"""
+    """An executor that uses a pool of workers managed by Parsl
+
+    Works just like a :class:`~concurrent.futures.ProcessPoolExecutor` except that tasks
+    are distributed across workers that can be on different machines.
+    Create a new executor by supplying a Parsl :class:`~parsl.Config` object to define
+    how to create new workers, Parsl will set up and tear down workers on your behalf.
+
+    Note: Parsl does not support canceling tasks, so the :meth:`map` method does not cancel work
+    when one member of the run fails and :meth:`shutdown` does not cancel work on completion.
+    """
 
     def __init__(self, config: Config):
         """Create the executor

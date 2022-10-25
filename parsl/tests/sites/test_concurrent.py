@@ -37,6 +37,10 @@ def test_executor(tmpdir):
         results = list(exc.map(f, [1, 2, 3]))
         assert results == [2, 3, 4]
 
+        # Make sure map works with a timeout
+        results = list(exc.map(f, [1, 2, 3], timeout=5))
+        assert results == [2, 3, 4]
+
         # Make sure only one function was registered
         assert exc.app_count == 1
 
