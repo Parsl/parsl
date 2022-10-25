@@ -1,6 +1,6 @@
 """Tests of the interfaces to Python's concurrent library"""
 
-from pytest import mark
+from pytest import mark, warns
 
 from parsl import Config, HighThroughputExecutor
 from parsl.concurrent import ParslPoolExecutor
@@ -39,3 +39,6 @@ def test_executor(tmpdir):
 
         # Make sure only one function was registered
         assert exc.app_count == 1
+
+    with warns(UserWarning):
+        ParslPoolExecutor(make_config(tmpdir)).shutdown(False, cancel_futures=True)

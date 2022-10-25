@@ -1,5 +1,6 @@
 """Interfaces modeled after Python's `concurrent library <https://docs.python.org/3/library/concurrent.html>`_"""
 from concurrent.futures import Executor
+from warnings import warn
 from typing import Callable
 
 from parsl import Config, DataFlowKernel
@@ -42,7 +43,9 @@ class ParslPoolExecutor(Executor):
         app = self._get_app(fn)
         return app(*args, **kwargs)
 
-    def shutdown(self, wait: bool = ..., *, cancel_futures: bool = ...) -> None:
+    def shutdown(self, wait: bool = True, *, cancel_futures: bool = False) -> None:
+        if cancel_futures:
+            warn(message="Canceling on-going tasks is not supported in Parsl")
         if wait:
             self.dfk.wait_for_current_tasks()
         self.dfk.cleanup()
