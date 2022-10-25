@@ -1,7 +1,7 @@
 """Interfaces modeled after Python's `concurrent library <https://docs.python.org/3/library/concurrent.html>`_"""
 from concurrent.futures import Executor
 from warnings import warn
-from typing import Callable
+from typing import Callable, Dict
 
 from parsl import Config, DataFlowKernel
 from parsl.app.python import PythonApp
@@ -18,7 +18,7 @@ class ParslPoolExecutor(Executor):
         """
         self._config = config
         self.dfk = DataFlowKernel(self._config)
-        self._app_cache = {}  # Cache specific to this instance: https://stackoverflow.com/questions/33672412
+        self._app_cache: Dict[Callable, PythonApp] = {}  # Cache specific to this instance: https://stackoverflow.com/questions/33672412
 
     @property
     def app_count(self):
