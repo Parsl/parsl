@@ -16,8 +16,9 @@ class ParslPoolExecutor(Executor):
     Create a new executor by supplying a Parsl :class:`~parsl.Config` object to define
     how to create new workers, Parsl will set up and tear down workers on your behalf.
 
-    Note: Parsl does not support canceling tasks, so the :meth:`map` method does not cancel work
-    when one member of the run fails and :meth:`shutdown` does not cancel work on completion.
+    Note: Parsl does not support canceling tasks. The :meth:`map` method does not cancel work
+    when one member of the run fails or a timeout is reached
+    and :meth:`shutdown` does not cancel work on completion.
     """
 
     def __init__(self, config: Config):
