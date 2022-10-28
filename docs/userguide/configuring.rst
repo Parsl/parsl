@@ -543,6 +543,20 @@ The configuration uses the `parsl.providers.CondorProvider` to interface with th
 .. literalinclude:: ../../parsl/configs/osg.py
 
 
+Polaris (ALCF)
+--------------
+
+.. image:: https://www.alcf.anl.gov/sites/default/files/styles/965x543/public/2022-07/33181D_086_ALCF%20Polaris%20Crop.jpg?itok=HVAHsZtt
+    :width: 75%
+
+`Polaris <https://www.alcf.anl.gov/support/user-guides/polaris/getting-started/index.html>`_
+is a HPE Apollo supercomputer that uses PBSPro to manage 560 nodes each with 4 Nvidia GPUs.
+Follow ALCF's guide to `clone the base Anaconda environment <https://www.alcf.anl.gov/support/user-guides/polaris/data-science-workflows/python/index.html#cloning-the-base-anaconda-environment>`_
+and install Parsl using pip.
+The following configuration places a four workers on each node and pins each to a single GPU.
+
+.. literalinclude:: ../../parsl/configs/polaris.py
+
 Stampede2 (TACC)
 ----------------
 
