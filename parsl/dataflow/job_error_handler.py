@@ -31,18 +31,21 @@ class JobErrorHandler:
 
     def get_error(self, status: Dict[str, JobStatus]) -> Exception:
         """Concatenate all errors."""
-        err = ""
+        err = "Block errors:\n"
         count = 1
         for js in status.values():
+            err += f"Error {count}: \n"
+            count += 1
             if js.message is not None:
-                err = err + "{}. {}\n".format(count, js.message)
-                count += 1
+                err = err + f"{js.message}\n"
+            if js.exit_code is not None:
+                err = err + f"\tEXIT CODE: {js.exit_code}\n"
             stdout = js.stdout_summary
             if stdout:
-                err = err + "\tSTDOUT: {}\n".format(stdout)
+                err = err + f"\tSTDOUT: {stdout}\n"
             stderr = js.stderr_summary
             if stderr:
-                err = err + "\tSTDERR: {}\n".format(stderr)
+                err = err + f"\tSTDERR: {stderr}\n"
 
         if len(err) == 0:
             err = "No error message received"
