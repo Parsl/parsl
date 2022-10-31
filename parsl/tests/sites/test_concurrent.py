@@ -10,12 +10,10 @@ def f(x):
     return x + 1
 
 
-# TODO (wardlt): For reasons I don't understand, re-using a configuration is a problem. This creates a fresh one
 def make_config(run_dir):
     return Config(
         executors=[
             HighThroughputExecutor(
-                label="fork",
                 max_workers=2,
             )
         ],
