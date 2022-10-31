@@ -21,8 +21,10 @@ import platform
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from parsl.executors import ThreadPoolExecutor
+    from parsl.data_provider.files import File
     from parsl.dataflow.dflow import DataFlowKernel
-    from parsl.app.app import python_app
+    from parsl.app.app import bash_app, join_app, python_app
+    from parsl.log_utils import set_file_logger, set_stream_logger
 
 lazys = {
         'python_app': 'parsl.app.app',
