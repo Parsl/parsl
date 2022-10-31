@@ -23,7 +23,7 @@ lazys = {
         'GridEngineProvider': 'parsl.providers.grid_engine.grid_engine',
         'SlurmProvider': 'parsl.providers.slurm.slurm',
         'TorqueProvider': 'parsl.providers.torque.torque',
-        'PBSProProvider': 'parsl.provicers.pbspro.pbspro',
+        'PBSProProvider': 'parsl.providers.pbspro.pbspro',
         'LSFProvider': 'parsl.providers.lsf.lsf',
         'AdHocProvider': 'parsl.providers.ad_hoc.ad_hoc',
 
