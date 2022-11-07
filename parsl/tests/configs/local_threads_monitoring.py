@@ -6,7 +6,9 @@ from parsl.monitoring import MonitoringHub
 # BENC: temp class for dev purposes. should test both UDP and filesystem
 # radiomodes with local executor.
 class TestExecutor(ThreadPoolExecutor):
-    radio_mode = "filesystem"
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.radio_mode = "filesystem"
 
 
 def fresh_config():

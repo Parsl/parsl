@@ -504,6 +504,7 @@ class DatabaseManager:
                         "{} reprocessable as last messages".format(len(resource_messages),
                                                                    len(reprocessable_first_resource_messages),
                                                                    len(reprocessable_last_resource_messages)))
+                    logger.debug(f"BENC: resource messages are: {resource_messages}")
 
                     insert_resource_messages = []
                     for msg in resource_messages:

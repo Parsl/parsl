@@ -217,7 +217,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             Default is False.
     """
 
-    radio_mode = "filesystem"
+    # TODO: this should be configurable: there's no definite preference for
+    # results radio vs filesystem mode.
+    # radio_mode = "results"
 
     @typeguard.typechecked
     def __init__(self,
@@ -245,7 +247,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  full_debug: bool = True,
                  worker_executable: str = 'work_queue_worker',
                  function_dir: Optional[str] = None,
-                 coprocess: bool = False):
+                 coprocess: bool = False,
+                 radio_mode: str = "filesystem"):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
         if not _work_queue_enabled:
@@ -282,6 +285,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.worker_executable = worker_executable
         self.function_dir = function_dir
         self.coprocess = coprocess
+        self.radio_mode = radio_mode
 
         if not self.address:
             self.address = socket.gethostname()
