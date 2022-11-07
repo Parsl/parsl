@@ -299,7 +299,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         if not launch_cmd:
             self.launch_cmd = DEFAULT_LAUNCH_CMD
-    radio_mode = "htex"
+        self.radio_mode = "htex"
 
     def initialize_scaling(self):
         """ Compose the launch command and call the scale_out
