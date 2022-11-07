@@ -291,7 +291,7 @@ class DataFlowKernel(object):
             raise RuntimeError("done callback called, despite future not reporting itself as done")
 
         try:
-            res = self._unwrap_remote_exception_wrapper(future)
+            res = self._unwrap_remote_exception_wrapper(future, task_record)
 
         except Exception as e:
             logger.debug("Task {} try {} failed".format(task_id, task_record['try_id']))
@@ -545,9 +545,23 @@ class DataFlowKernel(object):
             self.task_state_counts[new_state] += 1
             task_record['status'] = new_state
 
-    @staticmethod
-    def _unwrap_remote_exception_wrapper(future: Future) -> Any:
+    # this is a horrible place to put results radio mode decoding.
+    # @staticmethod
+    def _unwrap_remote_exception_wrapper(self, future: Future, task_record) -> Any:
         result = future.result()
+        executor = self.executors[task_record['executor']]
+        radio_mode = executor.radio_mode
+        # raise RuntimeError(f"BENC: with radio_mode {radio_mode}, result potentially with monitoring: {result}")
+        if radio_mode == "results" and not task_record['from_memo']:
+            try:
+                (messages, result) = result
+            except Exception as e:
+                raise RuntimeError(f"BENC: Got exception {e} with result = {result}")
+            # raise RuntimeError(f"BENC: discarding {len(messages)} monitoring messages: {messages}")
+            if self.monitoring:
+                for (t, v) in messages:
+                    self.monitoring.send(t, v)
+
         if isinstance(result, RemoteExceptionWrapper):
             result.reraise()
         return result

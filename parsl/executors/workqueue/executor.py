@@ -208,7 +208,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             must be visible from both the submitting side and workers.
     """
 
-    radio_mode = "filesystem"
+    # TODO: this should be configurable: there's no definite preference for
+    # results radio vs filesystem mode.
+    # radio_mode = "results"
 
     @typeguard.typechecked
     def __init__(self,
@@ -236,7 +238,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  worker_options: str = "",
                  full_debug: bool = True,
                  worker_executable: str = 'work_queue_worker',
-                 function_dir: Optional[str] = None):
+                 function_dir: Optional[str] = None,
+                 radio_mode: str = "filesystem"):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
         self._scaling_enabled = True
@@ -275,6 +278,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.worker_options = worker_options
         self.worker_executable = worker_executable
         self.function_dir = function_dir
+        self.radio_mode = radio_mode
 
         if not self.address:
             self.address = socket.gethostname()

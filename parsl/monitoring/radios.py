@@ -14,6 +14,16 @@ _db_manager_excepts: Optional[Exception]
 
 logger = logging.getLogger(__name__)
 
+# need to be careful about thread-safety here:
+# there will be multiple radio instances writing
+# to this, along with (eg in thread local case)
+# potentially many result deliverers.
+# in that latter case, should there be per-task-id
+# segregation of who sends which results back? or
+# do we just care about *anyone* can send the results
+# back, first come first serve?
+result_radio_queue = []
+
 
 class MonitoringRadio(metaclass=ABCMeta):
     @abstractmethod
@@ -127,6 +137,16 @@ class HTEXRadio(MonitoringRadio):
             logger.error("result_queue is uninitialized - cannot put monitoring message")
 
         return
+
+
+class ResultsRadio(MonitoringRadio):
+    def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
+        pass
+
+    def send(self, message: object) -> None:
+        global result_radio_queue
+        result_radio_queue.append(message)
+        # raise RuntimeError(f"BENC: appended {message} to {result_radio_queue}")
 
 
 class UDPRadio(MonitoringRadio):

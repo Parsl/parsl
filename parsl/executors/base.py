@@ -44,7 +44,7 @@ class ParslExecutor(metaclass=ABCMeta):
     """
 
     label: str = "undefined"
-    radio_mode: str = "udp"
+    radio_mode: str = "not-configured"
 
     def __enter__(self):
         return self
