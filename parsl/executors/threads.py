@@ -45,6 +45,8 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.working_dir = working_dir
         self.managed = managed
 
+        self.radio_mode = "udp"
+
     def start(self):
         self.executor = cf.ThreadPoolExecutor(max_workers=self.max_threads,
                                               thread_name_prefix=self.thread_name_prefix)
