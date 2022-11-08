@@ -477,7 +477,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             logger.debug("Got tasks_lock to set WQ-level task entry")
             self.tasks[str(task_id)] = fu
 
-        logger.debug("Creating task {} for function {} with args {}".format(task_id, func, args))
+        logger.debug("Creating executor task {} for function {} with args {}".format(task_id, func, args))
 
         # Pickle the result into object to pass into message buffer
         function_file = self._path_in_task(task_id, "function")
@@ -485,9 +485,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         map_file = self._path_in_task(task_id, "map")
         log_file = self._path_in_task(task_id, "log")
 
-        logger.debug("Creating Task {} with function at: {}".format(task_id, function_file))
-        logger.debug("Creating Task {} with result to be found at: {}".format(task_id, result_file))
-        logger.debug("Creating Task {} with log to be found at: {}".format(task_id, log_file))
+        logger.debug("Creating executor task {} with function at: {}".format(task_id, function_file))
+        logger.debug("Creating executor task {} with result to be found at: {}".format(task_id, result_file))
+        logger.debug("Creating executor task {} with log to be found at: {}".format(task_id, log_file))
 
         event("WQEX_SUBMIT_SERIALIZE_START")
         self._serialize_function(function_file, func, args, kwargs)
@@ -498,7 +498,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         else:
             env_pkg = None
 
-        logger.debug("Constructing map for local filenames at worker for task {}".format(task_id))
+        logger.debug("Constructing map for local filenames at worker for executor task {}".format(task_id))
         event("WQEX_SUBMIT_MAPFILE_START")
         self._construct_map_file(map_file, input_files, output_files)
         event("WQEX_SUBMIT_MAPFILE_END")
@@ -507,7 +507,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             raise ExecutorError(self, "Workqueue Submit Process is not alive")
 
         # Create message to put into the message queue
-        logger.debug("Placing task {} on message queue".format(task_id))
+        logger.debug("Placing executor task {} on message queue".format(task_id))
         if category is None:
             category = func.__name__ if self.autocategory else 'parsl-default'
         event("WQEX_SUBMIT_PTWQ_START")
@@ -785,7 +785,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 with self.tasks_lock:
                     future = self.tasks[task_report.id]
 
-                logger.debug("Updating Future for Parsl Task {}".format(task_report.id))
+                logger.debug("Updating Future for executor task {}".format(task_report.id))
                 if task_report.result_received:
                     future.set_result(task_report.result)
                 else:
@@ -913,7 +913,7 @@ def _work_queue_submit_wait(*,
             logger.debug(command_str)
 
             # Create WorkQueue task for the command
-            logger.debug("Sending task {} with command: {}".format(task.id, command_str))
+            logger.debug("Sending executor task {} with command: {}".format(task.id, command_str))
             try:
                 t = Task(command_str)
             except Exception as e:
@@ -966,7 +966,7 @@ def _work_queue_submit_wait(*,
             t.specify_tag(str(task.id))
             result_file_of_task_id[str(task.id)] = task.result_file
 
-            logger.debug("Parsl ID: {}".format(task.id))
+            logger.debug("Executor task ID: {}".format(task.id))
 
             # Specify input/output files that need to be staged.
             # Absolute paths are assumed to be in shared filesystem, and thus
@@ -980,7 +980,7 @@ def _work_queue_submit_wait(*,
                         t.specify_output_file(spec.parsl_name, spec.parsl_name, cache=spec.cache)
 
             # Submit the task to the WorkQueue object
-            logger.debug("Submitting task {} to WorkQueue".format(task.id))
+            logger.debug("Submitting executor task {} to WorkQueue".format(task.id))
             try:
                 wq_id = q.submit(t)
             except Exception as e:
@@ -991,7 +991,7 @@ def _work_queue_submit_wait(*,
                                                          reason="task could not be submited to work queue",
                                                          status=-1))
                 continue
-            logger.info("Task {} submitted to WorkQueue with id {}".format(task.id, wq_id))
+            logger.info("Executor task {} submitted to Work Queue with Work Queue task id {}".format(task.id, wq_id))
 
         # If the queue is not empty wait on the WorkQueue queue for a task
         task_found = True
@@ -1004,7 +1004,7 @@ def _work_queue_submit_wait(*,
                     continue
                 # When a task is found:
                 parsl_id = t.tag
-                logger.debug("Completed WorkQueue task {}, parsl task {}".format(t.id, t.tag))
+                logger.debug("Completed WorkQueue task {}, parsl executor task {}".format(t.id, t.tag))
                 result_file = result_file_of_task_id.pop(t.tag)
 
                 # A tasks completes 'succesfully' if it has result file,
@@ -1029,7 +1029,7 @@ def _work_queue_submit_wait(*,
                     logger.debug("Did not find result in {}".format(result_file))
                     logger.debug("Wrapper Script status: {}\nWorkQueue Status: {}"
                                  .format(t.return_status, t.result))
-                    logger.debug("Task with id parsl {} / wq {} failed because:\n{}"
+                    logger.debug("Task with executor id {} / work queue id {} failed because:\n{}"
                                  .format(parsl_id, t.id, reason))
                     collector_queue.put_nowait(WqTaskToParsl(id=parsl_id,
                                                              result_received=False,
