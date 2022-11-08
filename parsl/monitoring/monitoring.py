@@ -241,8 +241,10 @@ class MonitoringHub(RepresentationMixin):
     def send(self, mtype: MessageType, message: Any) -> None:
         self.logger.debug("Sending message type {}".format(mtype))
         try:
+            t_before = time.time()
             self._dfk_channel.send_pyobj((mtype, message))
-            self.logger.debug("Sent message")
+            t_after = time.time()
+            self.logger.debug(f"Sent message in {t_after - t_before) seconds")
         except zmq.Again:
             self.logger.exception(
                 "The monitoring message sent from DFK to router timed-out after {}ms".format(self.dfk_channel_timeout))
