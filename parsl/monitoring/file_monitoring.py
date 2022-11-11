@@ -1,3 +1,6 @@
+"""
+This module defines the file monitoring infrastructure.
+"""
 import datetime
 import logging
 import glob
@@ -244,6 +247,45 @@ def monitor(task_id: int,
             sleep_dur: float,
             work_dir: str = None,
             email: Optional[str] = None):
+    """Function to monitor the file system for specific types of files and call a function when they are found.
+
+    This function runs in a periodic loop unitl it is told to stop. The time between loops is goverened by `sleep_dur`
+    seconds. Multiprocessing.Event objects are used to signal when this function should terminate. The general
+    workflow is as follows::
+                                        ------>callack (async)
+                                        |
+                     -----(found)-------+-------
+                     |                         |
+    Start----->scan for files---(none found)---+-->sleep --
+                    ^                                     |
+                    |                                     |
+                    ---------------------------------------
+
+    Any files that match any given pattern are tracked and only submitted to the callbacks once.
+
+    Parameters
+    ----------
+    task_id: int
+        The Parsl task id to be monitored.
+    stop_event: multiprocessing.Event
+        Signal for when to stop running the loop
+    done_event: nultiprocessing.Event
+        Signal used to indicate when this is actually completed, alowing for currently running callbacks to
+        complete nicely.
+    patterns: list
+        List of tuples containing a regex or glob type statement and a bool indicating whther it is regex (True) or not,
+        for finding the files.
+    callbacks: list
+        List of functions to call when files are found. This list must have either a single entry for all
+        `patterns` or have the same length as `patterns` (one callback for each pattern).
+    sleep_dur: float
+        The length of time to sleep between loops in seconds.
+    work_dir: str
+        The working directory for this process to run in. Default is ``None``, meaning the working directory is
+        inherited from the calling process.
+    email: str, optional
+        Email address to send callback results to
+    """
     Emailer.create(email, task_id)
     if work_dir is not None:
         os.chdir(work_dir)
@@ -320,6 +362,34 @@ def monitor(task_id: int,
 
 @typeguard.typechecked
 class FileMonitor:
+    """The FileMonitor calss is an interface for defining any intermediate files that need to be processed mid-run.
+    See :ref:`file-monitor-label` for a more detailed description of this system.
+
+    Parameters
+    ----------
+    callback: Callable or List[Callable]
+        A function or list of functions to call when files are found that match the given patterns. If a
+        single function is given then it will be called for all pattern matchs; if a list of functions are
+        given then there must be one for each pattern given, in the order they match the patterns(e.g. pattern 1
+        matches will be sent to callback 1). Callback functions should either return None or something
+        that can be cast to a string.
+    pattern: str, List[str], optional
+        A single regex style pattern or a list of regex style patterns for finding files. At least one ``pattern`` or
+        ``filetype`` must be given.
+    filetype: str, List[str], optional
+        A single filetype or a list of filetypes to watch for. Can be with or without an asterisk and period
+        (e.g. ``pdf``, ``.pdf``, and ``*.pdf`` all are valid and mean the same thing). At least one ``pattern``
+        or ``filetype`` must be given.
+    path: str, optional
+        The base path where the files are expected to be, default is current working directory (``None``).
+    working_dir: str, optional
+        The working directory for the file monitoring, default (``None``) is the current working directory
+        inherited when the monitor process is started.
+    email: str, optional
+        Email address to which outputs from the callbacks are sent. Default is None
+    sleep_dur: float
+        The time to wait between scans of the file system to look for matching files. Default is 3 seconds.
+    """
     def __init__(self,
                  callback: Union[Callable, List[Callable]],
                  pattern: Optional[Union[str, List[str]]] = None,
@@ -374,6 +444,21 @@ class FileMonitor:
     def file_monitor(self,
                      f: Any,
                      task_id: int) -> Callable:
+        """Function wrapper for launching the monitoring
+
+        Parameters
+        ----------
+        f: Callable
+            The function to wrap
+        task_id: int
+            The Parsl task id to be monitored.
+
+        Returns
+        -------
+        Callable
+            The given function wrapped by the monitoring code.
+
+        """
         logger.info(f"file_monitor called  {len(self.patterns)}")
 
         @wraps(f)
