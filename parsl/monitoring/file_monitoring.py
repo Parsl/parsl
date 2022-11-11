@@ -10,19 +10,187 @@ import multiprocessing as mp
 import re
 from typing import List, Callable, Any, Dict, Union, Optional
 from parsl.multiprocessing import ForkProcess
+import smtplib
+from email.message import EmailMessage
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.NOTSET)
 
 
-def proc_callback(res):
-    if isinstance(res, list):
-        for i in res:
-            logger.info(i)
-    elif isinstance(res, str):
+def validate_email(addr: str) -> bool:
+    """Simple email syntactical validator
+
+    Parameters
+    ----------
+    addr : str
+        The string to test for a valid email address.
+
+    Returns
+    -------
+    bool
+        True if addr is a syntactically valid email address.
+    """
+    regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+    return re.fullmatch(regex, addr) is not None
+
+
+class Emailer:
+    """The Emailer is a static class used to hold information about emailing notifications.
+
+    It holds data regarding the email address to send to and whether to use SSL or not.
+
+    """
+    _useSSL = False  # use SSL or not
+    _task_id = None  # task id of the current Parsl task
+    _email = None    # email address to use
+
+    def __new__(cls):
+        raise TypeError('Static classes cannot be instantiated')
+
+    @staticmethod
+    def create(addr: str, tid: int) -> None:
+        """ Initialize the class with an email address and task_id
+
+        Email validation is performed.
+
+        Parameters
+        ----------
+        addr : str
+            The recipient's email address
+        tid : int
+            The current Parsl task id
+
+        """
+        if not validate_email(addr):
+            Emailer._email = None
+            return
+        Emailer._email = addr
+        Emailer._task_id = tid
+
+    @staticmethod
+    def invalidate() -> None:
+        """Force the email address to be invalid
+
+        """
+        Emailer._email = None
+
+    @staticmethod
+    def is_valid() -> bool:
+        """Return whether the email address is valid or not.
+
+        Returns
+        -------
+        bool
+            True if the email address is currently valid (not None)
+        """
+        return Emailer._email is not None
+
+    @staticmethod
+    def set_ssl(value: bool = True) -> None:
+        """Set the value of the SSL flag, indicating whether SSL should eb used or not.
+
+        Paramters
+        ---------
+        value : bool
+            The value to set the SSL flag to (True, default, indicates that SSL should be used)
+        """
+        Emailer._useSSL = value
+
+    @staticmethod
+    def get_ssl() -> bool:
+        """Return whether the SSL flag is set
+
+        Returns
+        -------
+        bool
+            True if the SSL flag is set
+        """
+        return Emailer._useSSL
+
+    @staticmethod
+    def get_task_id() -> int:
+        """Returns the current Parsl task id
+
+        Returns
+        -------
+        int
+            The current Parsl task id.
+        """
+        return Emailer._task_id
+
+
+def proc_callback(res: Union[str, bytes, bytearray]) -> None:
+    """Callback function for the results of running a function in the Pool.
+
+       Sends an email giving the results of the monitoring run. If an error is thrown
+       when trying to create a smtp connection then it tries a smtp_ssl connection. If
+       this throws an error then no email is sent and future calls to this function will
+       just log and return.
+
+       Parameters
+       ----------
+       res: Union[str, bytes, bytearray]
+           The message to send as the body of the email. Can really be anything that can be
+           cast directly to a string.
+    """
+    # if there is no message
+    if not res:
+        return
+    # type check the input and cast as appropriate
+    if not isinstance(res, str):
+        if isinstance(res, (bytes, bytearray)):
+            try:
+                res = res.decode()
+            except Exception as ex:
+                logger.error(f"Could not decode bytes like object: {str(ex)}")
+                return
+        else:
+            try:
+                res = str(res)
+            except Exception as ex:
+                logger.error(f"Could not turn data into string: {str(ex)}")
+                return
+    # if there is no valid email or it has been disabled just log and return
+    if not Emailer.is_valid():
+        logging.info(res)
+        return
+
+    # if a ssl connection is needed
+    if Emailer.get_ssl():
+        try:
+            smtp = smtplib.SMTP_SSL('localhost')
+        except Exception as ex:
+            logger.warning(f"Could not establish an SMTP_SSL connection: {str(ex)}")
+            Emailer.invalidate()
+            return
+    else:
+        # try generic connection
+        try:
+            smtp = smtplib.SMTP('localhost')
+        except Exception as _:
+            # try an ssl connection
+            try:
+                smtp = smtplib.SMTP_SSL('localhost')
+                Emailer.set_ssl(True)
+            except Exception as ex:
+                # cannot may a valid connection so disable future attempts
+                logger.warning(f"Could not establish an SMTP_SSL connection: {str(ex)}")
+                Emailer.invalidate()
+                return
+    # construct the message and send
+    try:
+        email = EmailMessage()
+        email.set_content(res)
+        email['Subject'] = f"Processed files from Parsl task {Emailer.get_task_id()} running on {socket.gethostname()}"
+        email['From'] = email
+        email['To'] = email
+        smtp.send_message(email)
+        smtp.quit()
+    except Exception as ex:
+        # issue with email, so just log it
+        logger.warning(f"Could not send email: {str(ex)}")
         logger.info(res)
-    elif isinstance(res, Exception):
-        logger.error(str(res))
 
 
 @typeguard.typechecked
