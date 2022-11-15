@@ -129,9 +129,10 @@ The workflow summary also presents three different views of the workflow:
 File Monitoring
 ---------------
 
-The idea behind this is that some long-running jobs (days, weeks, or longer), output files during processing,
-but well before the task is complete. These are referred to as intermediate files. In many instances these
-intermediate files can give insight into the status of a running job, that is otherwise not available.
+The idea behind File Monitoring is to have a mechanism to provide the status of a job, beyond the typical waiting/running/done
+status. Specifically, this is best suited for long running jobs (days, weeks, etc.) that output files periodically, such
+as at the end of a timestep. The user specifies what files to look for and a function(s) to call when these files are found.
+The `parsl.monitoring.FileMonitor` class provides the interface for specifying the patterns and callbacks.
 
 .. note:: The file monitoring system only works on single machine configurations or on systems where both the Parsl Executor and the worker node use a shared file system.
 
@@ -154,6 +155,12 @@ The callback functions have only a few restrictions on them
 
     #. The function should take a single argument that is a list of the detected files (string, including full path)
     #. The function should return either ``None``, a string like value, or something that can be cast to a string with ``str()``
+    #. Any files produced by the function need to be handled by the user (transfer, etc.)
+
+If an email address is provided to the `parsl.monitoring.FileMonitor` instance then the return value of the each callback
+function is sent as the body of an email to that address. Currenty, attachments are not supported.
+
+.. note:: Not all systems are capable of sending emails (e.g. those behind high security). These instances will not causes an error with the file monitoring system, but it will log the issue in the Parsl logs.
 
 Either a single callback function can be given that will handle any files found or a list of callback functions, one for
 each given pattern. For example::
@@ -165,8 +172,6 @@ each given pattern. For example::
 If any pdf files are found then they are sent to callback1, any gif files are sent to callback2, and any jpg files
 are sent to callback3. In the case that both regex and file types being given the regex expressions will be processed
 first, and thus their callbacks should be specified first.
-
-The `parsl.monitoring.FileMonitor` class provides an interface for specifying the patterns and callbacks.
 
 Examples
 ^^^^^^^^
