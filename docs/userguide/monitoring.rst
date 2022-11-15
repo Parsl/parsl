@@ -171,7 +171,9 @@ each given pattern. For example::
 
 If any pdf files are found then they are sent to callback1, any gif files are sent to callback2, and any jpg files
 are sent to callback3. In the case that both regex and file types being given the regex expressions will be processed
-first, and thus their callbacks should be specified first.
+first, and thus their callbacks should be specified first. When called, the callbacks are launched asynchronously in a
+multiprocessing.Pool. The number of concurrently running callbacks can be controlled by the `parsl.monitoring.FileMonitor`
+being used.
 
 Examples
 ^^^^^^^^
