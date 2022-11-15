@@ -36,6 +36,8 @@ def validate_email(addr: str) -> bool:
     bool
         True if addr is a syntactically valid email address.
     """
+    if not isinstance(addr, str):
+        return False
     regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
     return re.fullmatch(regex, addr) is not None
 
@@ -195,6 +197,7 @@ def proc_callback(res: Union[str, bytes, bytearray]) -> None:
     except Exception as ex:
         # issue with email, so just log it
         logger.warning(f"Could not send email: {str(ex)}")
+    finally:
         logger.info(res)
 
 
@@ -289,45 +292,45 @@ def monitor(task_id: int,
     Emailer.create(email, task_id)
     if work_dir is not None:
         os.chdir(work_dir)
-    fh = open("/g/g20/friedel2/isolator/smoke_test/mon.log", 'w')
-    fh.write("starting monitor\n")
-    fh.flush()
+    #fh = open("/g/g20/friedel2/isolator/smoke_test/mon.log", 'w')
+    #fh.write("starting monitor\n")
+    #fh.flush()
     monitor_pool = mp.Pool(len(patterns))
 
     logger.info(f"Monitor host {socket.gethostname()} started for task {task_id}  {type(patterns)}  {len(patterns)}")
-    fh.write(f"Monitor host {socket.gethostname()} started for task {task_id}  {type(patterns)}  {len(patterns)}\n")
-    fh.flush()
+    #fh.write(f"Monitor host {socket.gethostname()} started for task {task_id}  {type(patterns)}  {len(patterns)}\n")
+    #fh.flush()
     found = []
     keep_running = True
     logger.info(f"Monitor host running")
     running_procs = []  # keep track of all callback runs
-    fh.write(f"DIR {os.getcwd()}\n")
+    #fh.write(f"DIR {os.getcwd()}\n")
     while keep_running:
         logger.info(f"Monitor host running 1")
-        fh.write(f"Monitor host running 1\n")
-        fh.flush()
+        #fh.write(f"Monitor host running 1\n")
+        #fh.flush()
         # see if the function has been told to stop
         keep_running = not stop_event.is_set()
         if not keep_running:
             logger.info(f"  {stop_event.is_set()} received {str(datetime.datetime.now())}  {len(patterns)}")
-            fh.write(f"  {stop_event.is_set()} received {str(datetime.datetime.now())}  {len(patterns)}\n")
-            fh.flush()
+            #fh.write(f"  {stop_event.is_set()} received {str(datetime.datetime.now())}  {len(patterns)}\n")
+            #fh.flush()
             sleep_dur = 0
         # loop over all the patterns looking for new matches
         for i in range(len(patterns)):
             logger.info(f" {i} {patterns[i]}")
-            fh.write(f" {i} {patterns[i]}\n")
-            fh.flush()
+            #fh.write(f" {i} {patterns[i]}\n")
+            #fh.flush()
             xfer = []
             current_time = time.time()
             # look for any matching files
             if patterns[i][1]:
-                fh.write("REGEX\n")
+                #fh.write("REGEX\n")
                 temp = [f for f in os.listdir(os.getcwd()) if patterns[i][0].search(f)]
             else:
-                fh.write("NOT REGEX\n")
+                #fh.write("NOT REGEX\n")
                 temp = glob.glob(patterns[i][0])
-            fh.flush()
+            #fh.flush()
             # weed out those that have been found before and any that are too new
             for t in temp:
                 if t in found:
@@ -338,12 +341,12 @@ def monitor(task_id: int,
                     xfer.append(t)
             if not xfer:
                 logger.info(f"No files found for processing task {task_id}, pattern {i}.")
-                fh.write(f"No files found for processing task {task_id}, pattern {i}.\n")
-                fh.flush()
+                #fh.write(f"No files found for processing task {task_id}, pattern {i}.\n")
+                #fh.flush()
                 continue
             # matches were found, sending them to callback
-            fh.write(f"\n\nCalling async {xfer}\n\n")
-            fh.flush()
+            #fh.write(f"\n\nCalling async {xfer}\n\n")
+            #fh.flush()
             running_procs.append(apply_async(monitor_pool, callbacks[i], (xfer,)))
             found += xfer
         if not keep_running:
@@ -354,8 +357,8 @@ def monitor(task_id: int,
         else:
             time.sleep(sleep_dur)
     logger.info(f"HALT called for task {task_id}")
-    fh.write(f"HALT called for task {task_id}\n")
-    fh.close()
+    #fh.write(f"HALT called for task {task_id}\n")
+    #fh.close()
     # signal the function is complete
     done_event.set()
 
@@ -388,7 +391,7 @@ class FileMonitor:
     email: str, optional
         Email address to which outputs from the callbacks are sent. Default is None
     sleep_dur: float
-        The time to wait between scans of the file system to look for matching files. Default is 3 seconds.
+        The time to wait between scans of the file system to look for matching files. Default is 60 seconds.
     """
     def __init__(self,
                  callback: Union[Callable, List[Callable]],
@@ -397,7 +400,7 @@ class FileMonitor:
                  path: Optional[str] = None,
                  working_dir: Optional[str] = None,
                  email: Optional[str] = None,
-                 sleep_dur: float = 3.):
+                 sleep_dur: float = 60.):
         logger.info(f"file_monitor initialized  {type(pattern)}  {type(filetype)}")
         self.email = email
         # generate the master pattern list
