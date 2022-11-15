@@ -8,7 +8,6 @@ import dill
 from threading import Thread
 import re
 import os
-import glob
 
 from parsl.monitoring.file_monitoring import validate_email, Emailer, proc_callback, \
                                              apply_async, run_dill_encoded, monitor, \
@@ -30,6 +29,7 @@ def test_validate_email():
 
 
 def test_Emailer():
+    Emailer.reset()
     assert Emailer.get_ssl() is False
     assert Emailer.is_valid() is False
     assert Emailer.get_task_id() is None
@@ -56,9 +56,9 @@ def test_proc_callback(caplog):
     class StrErr:
         def __str__(self):
             raise Exception()
-    Emailer.invalidate()
+    Emailer.reset()
     caplog.set_level(logging.INFO)
-    test_msg= "Hello this is a test"
+    test_msg = "Hello this is a test"
     proc_callback(test_msg)
     assert test_msg in caplog.text
 
@@ -68,7 +68,7 @@ def test_proc_callback(caplog):
     proc_callback(btest_msg)
     assert btest_msg.decode() in caplog.text
 
-    ltest_msg = [1,2,3,4,5]
+    ltest_msg = [1, 2, 3, 4, 5]
     proc_callback(ltest_msg)
     assert str(ltest_msg) in caplog.text
 
@@ -203,7 +203,7 @@ def test_monitor():
             with open(fn, 'w') as fh:
                 fh.write("\n")
         event1.set()
-        assert event2.wait((sleep_time*2) + 1) is True
+        assert event2.wait((sleep_time * 2) + 1) is True
         for f in pngs:
             assert os.path.exists(f.replace(".png", ".done")) is True
             assert os.path.exists(f) is False
@@ -226,4 +226,3 @@ def test_wrapper():
                      filetype="gif", path="mypath")
     res = fm.file_monitor(_tfunc, 1234)
     assert res() == 7
-

@@ -9,11 +9,10 @@ import typeguard
 import socket
 import os
 import time
-import multiprocessing as mp
-from multiprocessing import pool
+from multiprocessing import pool, Event, Pool
 import dill
 import re
-from typing import List, Callable, Any, Dict, Union, Optional
+from typing import List, Callable, Any, Dict, Union, Optional, Tuple
 from parsl.multiprocessing import ForkProcess
 import smtplib
 from email.message import EmailMessage
@@ -21,7 +20,7 @@ from email.message import EmailMessage
 logger = logging.getLogger(__name__)
 
 
-def validate_email(addr: str) -> bool:
+def validate_email(addr: Union[str, None]) -> bool:
     """Simple email syntactical validator
 
     Parameters
@@ -50,11 +49,11 @@ class Emailer:
     _task_id = None  # task id of the current Parsl task
     _email = None    # email address to use
 
-    def __new__(cls):
+    def __new__(cls) -> Any:
         raise TypeError('Static classes cannot be instantiated')
 
     @staticmethod
-    def create(addr: str, tid: int) -> None:
+    def create(addr: Union[str, None], tid: int) -> None:
         """ Initialize the class with an email address and task_id
 
         Email validation is performed.
@@ -114,7 +113,7 @@ class Emailer:
         return Emailer._useSSL
 
     @staticmethod
-    def get_task_id() -> int:
+    def get_task_id() -> Optional[int]:
         """Returns the current Parsl task id
 
         Returns
@@ -124,8 +123,16 @@ class Emailer:
         """
         return Emailer._task_id
 
+    @staticmethod
+    def reset() -> None:
+        """Resets class to base state, used only in testing
+        """
+        Emailer._task_id = None
+        Emailer._email = None
+        Emailer._useSSL = False
 
-def proc_callback(res: Union[str, bytes, bytearray]) -> None:
+
+def proc_callback(res: Any) -> None:
     """Callback function for the results of running a function in the Pool.
 
        Sends an email giving the results of the monitoring run. If an error is thrown
@@ -135,7 +142,7 @@ def proc_callback(res: Union[str, bytes, bytearray]) -> None:
 
        Parameters
        ----------
-       res: Union[str, bytes, bytearray]
+       res: Any
            The message to send as the body of the email. Can really be anything that can be
            cast directly to a string.
     """
@@ -161,6 +168,7 @@ def proc_callback(res: Union[str, bytes, bytearray]) -> None:
         logging.info(res)
         return
 
+    smtp: Any = None
     # if a ssl connection is needed
     if Emailer.get_ssl():
         try:
@@ -173,7 +181,7 @@ def proc_callback(res: Union[str, bytes, bytearray]) -> None:
         # try generic connection
         try:
             smtp = smtplib.SMTP('localhost')
-        except Exception as _:
+        except Exception:
             # try an ssl connection
             try:
                 smtp = smtplib.SMTP_SSL('localhost')
@@ -216,7 +224,8 @@ def run_dill_encoded(payload: str) -> Any:
     return fun(*args)
 
 
-def apply_async(monitor_pool: mp.Pool, fun: Callable, args: Any) -> pool.AsyncResult:
+def apply_async(monitor_pool: Any,  # cannot be Pool because of multiprocessing type weirdness.
+                fun: Callable, args: Any) -> pool.AsyncResult:
     """Encode the given function and run it asynchronously.
 
     This is used to get around the pickl issue of not being able to encode functions that
@@ -241,14 +250,14 @@ def apply_async(monitor_pool: mp.Pool, fun: Callable, args: Any) -> pool.AsyncRe
 
 @typeguard.typechecked
 def monitor(task_id: int,
-            stop_event: mp.Event,
-            done_event: mp.Event,
+            stop_event: Any,  # cannot be Event because of multiprocessing type weirdness.
+            done_event: Any,  # cannot be Event because of multiprocessing type weirdness.
             patterns: List[Any],
             callbacks: List[Callable],
             sleep_dur: float,
-            work_dir: str = None,
+            work_dir: Optional[str] = None,
             email: Optional[str] = None,
-            max_proc: int = 4):
+            max_proc: int = 4) -> None:
     """Function to monitor the file system for specific types of files and call a function when they are found.
 
     This function runs in a periodic loop unitl it is told to stop. The time between loops is goverened by `sleep_dur`
@@ -296,7 +305,7 @@ def monitor(task_id: int,
         Emailer.create(email, task_id)
         if work_dir is not None:
             os.chdir(work_dir)
-        monitor_pool = mp.Pool(min(max_proc, len(patterns)))
+        monitor_pool = Pool(min(max_proc, len(patterns)))
 
         logger.info(f"Monitor host {socket.gethostname()} started for task {task_id}")
         found = []
@@ -394,7 +403,7 @@ class FileMonitor:
         logger.info(f"File_monitor initialized: {path}, {working_dir}, {email}, {sleep_dur}")
         self.email = email
         # generate the master pattern list
-        self.patterns = []
+        self.patterns: List[Tuple[Any, bool]] = []
         if pattern is not None:
             if isinstance(pattern, list):
                 for p in pattern:
@@ -455,8 +464,8 @@ class FileMonitor:
         """
         @wraps(f)
         def wrapped(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
-            ev = mp.Event()
-            done = mp.Event()
+            ev = Event()
+            done = Event()
             pp = ForkProcess(target=monitor,
                              args=(task_id,
                                    ev,

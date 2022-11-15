@@ -9,6 +9,7 @@ from parsl.dataflow.dflow import DataFlowKernelLoader
 
 logger = logging.getLogger(__name__)
 
+
 def remote_side_bash_executor(func, *args, **kwargs):
     """Executes the supplied function with *args and **kwargs to get a
     command-line to run, and then run that command-line using bash.
