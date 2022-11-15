@@ -3,6 +3,8 @@ import logging
 import tblib.pickling_support
 tblib.pickling_support.install()
 
+from functools import wraps
+
 from parsl.app.app import AppBase
 from parsl.app.errors import wrap_error
 from parsl.dataflow.dflow import DataFlowKernelLoader
@@ -12,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def timeout(f, seconds):
+    @wraps(f)
     def wrapper(*args, **kwargs):
         import threading
         import ctypes

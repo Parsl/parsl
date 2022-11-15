@@ -18,7 +18,7 @@ def test_function():
 
 @contextmanager
 def config(start_method: str, **kwargs):
-    config = Config(
+    my_config = Config(
         executors=[
             HighThroughputExecutor(
                 label="fork",
@@ -29,12 +29,12 @@ def config(start_method: str, **kwargs):
                     init_blocks=1,
                     max_blocks=1,
                 ),
-                start_method="spawn"
+                start_method=start_method
             )
         ],
         strategy=None,
     )
-    dfk = parsl.load(config)
+    dfk = parsl.load(my_config)
     try:
         yield dfk
     finally:
