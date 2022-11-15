@@ -22,6 +22,13 @@ logger = logging.getLogger(__name__)
 # segregation of who sends which results back? or
 # do we just care about *anyone* can send the results
 # back, first come first serve?
+
+# There are potentials for duplicates here when the
+# queue is split into two queues at fork time when
+# it already has results, and then those two copies
+# of the results are merged again at result send
+# time. To fix that, probably de-duplication should
+# happen at return time?
 result_radio_queue = []
 
 

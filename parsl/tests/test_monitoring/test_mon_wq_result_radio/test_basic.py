@@ -61,6 +61,22 @@ def test_row_counts():
         (c, ) = result.first()
         assert c == 1
 
+        # Check running event appears in both places that it should.
+        # When developing the results radio, I saw a case where the
+        # value was only appearing in the try table, not the status
+        # table.
+        result = connection.execute("SELECT COUNT(*) FROM try WHERE task_try_time_running IS NOT NULL")
+        (c, ) = result.first()
+        assert c == 1
+
+        result = connection.execute("SELECT COUNT(*) FROM status WHERE task_status_name = 'running'")
+        (c, ) = result.first()
+        assert c == 1
+
+        result = connection.execute("SELECT COUNT(*) FROM status WHERE task_status_name = 'running_ended'")
+        (c, ) = result.first()
+        assert c == 1
+
         result = connection.execute("SELECT COUNT(*) FROM status, try "
                                     "WHERE status.task_id = try.task_id "
                                     "AND status.task_status_name='exec_done' "

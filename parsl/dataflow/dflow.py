@@ -549,6 +549,14 @@ class DataFlowKernel(object):
     # @staticmethod
     def _unwrap_remote_exception_wrapper(self, future: Future, task_record) -> Any:
         result = future.result()
+
+        # this instance check is made twice - once before unwrapping radio results
+        # and once afterwards. This is a bit ugly, but executors can send back an
+        # unannotated RemoteExceptionWrapper, in addition to the monitoring wrapper
+        # sending back an annotated RemoteExceptionWrapper
+        if isinstance(result, RemoteExceptionWrapper):
+            result.reraise()
+
         executor = self.executors[task_record['executor']]
         radio_mode = executor.radio_mode
         # raise RuntimeError(f"BENC: with radio_mode {radio_mode}, result potentially with monitoring: {result}")

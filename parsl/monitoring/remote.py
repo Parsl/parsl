@@ -140,7 +140,20 @@ def monitor_wrapper(f: Any,           # per app
                 from parsl.monitoring.radios import result_radio_queue
                 assert isinstance(result_radio_queue, list)
                 assert isinstance(more_monitoring_messages, list)
+
                 full = result_radio_queue + more_monitoring_messages
+
+                # due to fork/join when there are already results in the
+                # queue, messages may appear in `full` via two routes:
+                # once in process, and once via forking and joining.
+                # At present that seems to happen only with first_msg messages,
+                # so here check that full only has one.
+                first_msg = [m for m in full if m[1]['first_msg']]  # type: ignore
+                not_first_msg = [m for m in full if not m[1]['first_msg']]  # type: ignore
+
+                # now assume there will be at least one first_msg
+                full = [first_msg[0]] + not_first_msg
+
                 return (full, ret_v)
             else:
                 return ret_v
