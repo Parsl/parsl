@@ -27,9 +27,10 @@ The following convention should be followed: ClassName, ExceptionName, GLOBAL_CO
 Version increments
 ==================
 
-Parsl follows the ``major.minor[.maintenance[.build]]`` numbering scheme for versions. Once major features 
-for a specific milestone (minor version) are met, the minor version is incremented and released via PyPI and Conda. 
-Fixes to minor releases are made via maintenance releases. Packaging instructions are included in the 
+Parsl follows the `calendar versioning scheme <https://calver.org/#scheme>`_ with ``YYYY.MM.DD`` numbering scheme for versions.
+This scheme was chosen following a switch from semantic versioning and manual release processes to an automated weekly process.
+Releases are pushed from github actions to PyPI and will be picked up automatically by Conda.
+Manual packaging instructions are included in the
 `packaging docs <http://parsl.readthedocs.io/en/latest/devguide/packaging.html>`_
 
 Documentation
@@ -67,15 +68,15 @@ above categories:
 
 A pytest marker of ``cleannet`` (for clean network) can be used to select
 or deselect tests which need a very clean network (for example, for tests
-making FTP transfers). Travis does not provide a sufficiently clean
-network and so .travis.yml runs all tests with ``-k "not cleannet"`` to
+making FTP transfers). When the test environment (github actions) does not
+provide a sufficiently clean network, run all tests with ``-k "not cleannet"`` to
 disable those tests.
 
 A pytest marker of ``issue363`` can be used to select or deselect tests
 that will fail because of issue 363 when running without a shared file
 system.
 
-Some other markers are available but unused in Travis testing; 
+Some other markers are available but unused in testing;
 see ``pytest --markers parsl/tests/`` for more details.
 
 A specific test in a specific file can be run like this:::
@@ -100,7 +101,7 @@ coverage won't produce a CI failure.
 
 It is possible to produce a more detailed coverage report on your
 development machine: make sure you have no `.coverage` file, run the
-test commands as shown in `.travis.yml`, and then run
+test commands as shown in `.github/workflows/ci.yaml`, and then run
 `coverage report` to produce the summary as seen in CI, or run
 `coverage html` to produce annotated source code in the `htmlcov/`
 subdirectory. This will show, line by line, if each line of parsl
