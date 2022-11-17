@@ -250,8 +250,7 @@ class MonitoringHub(RepresentationMixin):
                 "The monitoring message sent from DFK to router timed-out after {}ms".format(self.dfk_channel_timeout))
 
     def close(self) -> None:
-        if self.logger:
-            self.logger.info("Terminating Monitoring Hub")
+        self.logger.info("Terminating Monitoring Hub")
         exception_msgs = []
         while True:
             try:
@@ -261,6 +260,15 @@ class MonitoringHub(RepresentationMixin):
                 break
         if self._dfk_channel and self.monitoring_hub_active:
             self.monitoring_hub_active = False
+
+            # some kind of filesystem_proc drain should happen here...
+            # which might take 10s of minutes based on my experience on cori (!)
+            # should this be message based? it probably doesn't need to be if
+            # we believe we've received all messages
+            # ... which we don't
+            self.logger.info("Terminating filesystem radio receiver process")
+            self.filesystem_proc.terminate()
+            self.filesystem_proc.join()
             self._dfk_channel.close()
             if exception_msgs:
                 for exception_msg in exception_msgs:
@@ -281,11 +289,6 @@ class MonitoringHub(RepresentationMixin):
             self.dbm_proc.join()
             self.logger.debug("Finished waiting for DBM termination")
 
-            # should this be message based? it probably doesn't need to be if
-            # we believe we've received all messages
-            self.logger.info("Terminating filesystem radio receiver process")
-            self.filesystem_proc.terminate()
-            self.filesystem_proc.join()
 
     @staticmethod
     def monitor_wrapper(f: Any,
