@@ -14,137 +14,19 @@ import dill
 import re
 from typing import List, Callable, Any, Dict, Union, Optional, Tuple
 from parsl.multiprocessing import ForkProcess
-import smtplib
-from email.message import EmailMessage
 
 logger = logging.getLogger(__name__)
-
-
-def validate_email(addr: Union[str, None]) -> bool:
-    """Simple email syntactical validator
-
-    Parameters
-    ----------
-    addr : str
-        The string to test for a valid email address.
-
-    Returns
-    -------
-    bool
-        True if addr is a syntactically valid email address.
-    """
-    if not isinstance(addr, str):
-        return False
-    regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-    return re.fullmatch(regex, addr) is not None
-
-
-class Emailer:
-    """The Emailer is a static class used to hold information about emailing notifications.
-
-    It holds data regarding the email address to send to and whether to use SSL or not.
-
-    """
-    _useSSL = False  # use SSL or not
-    _task_id = None  # task id of the current Parsl task
-    _email = None    # email address to use
-
-    def __new__(cls) -> Any:
-        raise TypeError('Static classes cannot be instantiated')
-
-    @staticmethod
-    def create(addr: Union[str, None], tid: int) -> None:
-        """ Initialize the class with an email address and task_id
-
-        Email validation is performed.
-
-        Parameters
-        ----------
-        addr : str
-            The recipient's email address
-        tid : int
-            The current Parsl task id
-
-        """
-        if not validate_email(addr):
-            Emailer._email = None
-            return
-        Emailer._email = addr
-        Emailer._task_id = tid
-
-    @staticmethod
-    def invalidate() -> None:
-        """Force the email address to be invalid
-
-        """
-        Emailer._email = None
-
-    @staticmethod
-    def is_valid() -> bool:
-        """Return whether the email address is valid or not.
-
-        Returns
-        -------
-        bool
-            True if the email address is currently valid (not None)
-        """
-        return Emailer._email is not None
-
-    @staticmethod
-    def set_ssl(value: bool = True) -> None:
-        """Set the value of the SSL flag, indicating whether SSL should eb used or not.
-
-        Paramters
-        ---------
-        value : bool
-            The value to set the SSL flag to (True, default, indicates that SSL should be used)
-        """
-        Emailer._useSSL = value
-
-    @staticmethod
-    def get_ssl() -> bool:
-        """Return whether the SSL flag is set
-
-        Returns
-        -------
-        bool
-            True if the SSL flag is set
-        """
-        return Emailer._useSSL
-
-    @staticmethod
-    def get_task_id() -> Optional[int]:
-        """Returns the current Parsl task id
-
-        Returns
-        -------
-        int
-            The current Parsl task id.
-        """
-        return Emailer._task_id
-
-    @staticmethod
-    def reset() -> None:
-        """Resets class to base state, used only in testing
-        """
-        Emailer._task_id = None
-        Emailer._email = None
-        Emailer._useSSL = False
 
 
 def proc_callback(res: Any) -> None:
     """Callback function for the results of running a function in the Pool.
 
-       Sends an email giving the results of the monitoring run. If an error is thrown
-       when trying to create a smtp connection then it tries a smtp_ssl connection. If
-       this throws an error then no email is sent and future calls to this function will
-       just log and return.
+       Writes result of the monitoring run to the log
 
        Parameters
        ----------
        res: Any
-           The message to send as the body of the email. Can really be anything that can be
-           cast directly to a string.
+           Can really be anything that can be cast directly to a string.
     """
     # if there is no message
     if not res:
@@ -163,48 +45,7 @@ def proc_callback(res: Any) -> None:
             except Exception as ex:
                 logger.error(f"Could not turn data into string: {str(ex)}")
                 return
-    # if there is no valid email or it has been disabled, just log and return
-    if not Emailer.is_valid():
-        logging.info(res)
-        return
-
-    smtp: Any = None
-    # if a ssl connection is needed
-    if Emailer.get_ssl():
-        try:
-            smtp = smtplib.SMTP_SSL('localhost')
-        except Exception as ex:
-            logger.warning(f"Could not establish an SMTP_SSL connection: {str(ex)} Disabling emailing.")
-            Emailer.invalidate()
-            return
-    else:
-        # try generic connection
-        try:
-            smtp = smtplib.SMTP('localhost')
-        except Exception:
-            # try an ssl connection
-            try:
-                smtp = smtplib.SMTP_SSL('localhost')
-                Emailer.set_ssl(True)
-            except Exception as ex:
-                # cannot may a valid connection so disable future attempts
-                logger.warning(f"Could not establish an SMTP_SSL connection: {str(ex)} Disabling emailing.")
-                Emailer.invalidate()
-                return
-    # construct the message and send
-    try:
-        email = EmailMessage()
-        email.set_content(res)
-        email['Subject'] = f"Processed files from Parsl task {Emailer.get_task_id()} running on {socket.gethostname()}"
-        email['From'] = email
-        email['To'] = email
-        smtp.send_message(email)
-        smtp.quit()
-    except Exception as ex:
-        # issue with email, so just log it
-        logger.warning(f"Could not send email: {str(ex)}")
-    finally:
-        logger.info(res)
+    logging.info(res)
 
 
 def run_dill_encoded(payload: str) -> Any:
@@ -256,8 +97,7 @@ def monitor(task_id: int,
             callbacks: List[Callable],
             sleep_dur: float,
             work_dir: Optional[str] = None,
-            email: Optional[str] = None,
-            max_proc: int = 4) -> None:
+            max_proc: int = 2) -> None:
     """Function to monitor the file system for specific types of files and call a function when they are found.
 
     This function runs in a periodic loop unitl it is told to stop. The time between loops is goverened by `sleep_dur`
@@ -294,15 +134,12 @@ def monitor(task_id: int,
     work_dir: str
         The working directory for this process to run in. Default is ``None``, meaning the working directory is
         inherited from the calling process.
-    email: str, optional
-        Email address to send callback results to
     max_proc: int, optional
-        The maximum size of the multiprocessing Pool for the file processing. Default is 4, but the
+        The maximum size of the multiprocessing Pool for the file processing. Default is 2, but the
         value is adjusted to be ``min(max_proc, len(patterns))`` so as to not make the pool larger than
         needed.
     """
     try:
-        Emailer.create(email, task_id)
         if work_dir is not None:
             os.chdir(work_dir)
         monitor_pool = Pool(min(max_proc, len(patterns)))
@@ -382,8 +219,6 @@ class FileMonitor:
     working_dir: str, optional
         The working directory for the file monitoring, default (``None``) is the current working directory
         inherited when the monitor process is started.
-    email: str, optional
-        Email address to which outputs from the callbacks are sent. Default is None
     sleep_dur: float
         The time to wait between scans of the file system to look for matching files. Default is 60 seconds.
     max_proc: int, optional
@@ -397,11 +232,9 @@ class FileMonitor:
                  filetype: Optional[Union[str, List[str]]] = None,
                  path: Optional[str] = None,
                  working_dir: Optional[str] = None,
-                 email: Optional[str] = None,
                  sleep_dur: float = 60.,
-                 max_proc: int = 4):
-        logger.info(f"File_monitor initialized: {path}, {working_dir}, {email}, {sleep_dur}")
-        self.email = email
+                 max_proc: int = 2):
+        logger.info(f"File_monitor initialized: {path}, {working_dir}, {sleep_dur}")
         # generate the master pattern list
         self.patterns: List[Tuple[Any, bool]] = []
         if pattern is not None:
@@ -474,14 +307,13 @@ class FileMonitor:
                                    self.callbacks,
                                    self.sleep_dur,
                                    self.cwd,
-                                   self.email,
                                    self.max_proc))
             pp.start()
             try:
                 return f(*args, **kwargs)
             finally:
                 ev.set()
-                pp.join(30)
+                pp.join(self.sleep_dur)
                 if pp.exitcode is None:
                     pp.terminate()
                     pp.join()

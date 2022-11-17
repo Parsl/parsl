@@ -134,8 +134,6 @@ status. Specifically, this is best suited for long running jobs (days, weeks, et
 as at the end of a timestep. The user specifies what files to look for and a function(s) to call when these files are found.
 The `parsl.monitoring.FileMonitor` class provides the interface for specifying the patterns and callbacks.
 
-.. note:: The file monitoring system only works on single machine configurations or on systems where both the Parsl Executor and the worker node use a shared file system.
-
 The file monitoring system will periodically scan the file system (within the given root directory) for any file(s)
 of the given file type(s) or regex pattern(s). If any are found they are sent to the user specified callback function(s).
 The infrastructure tracks files that have been found previously and only sends newly found files to the callback. The
@@ -154,13 +152,9 @@ to them.
 The callback functions have only a few restrictions on them
 
     #. The function should take a single argument that is a list of the detected files (string, including full path)
-    #. The function should return either ``None``, a string like value, or something that can be cast to a string with ``str()``
+    #. Anything the function returns will be written to the Parsl log; if running ``str()`` on the return value throws an error then nothing is written
     #. Any files produced by the function need to be handled by the user (transfer, etc.)
-
-If an email address is provided to the `parsl.monitoring.FileMonitor` instance then the return value of the each callback
-function is sent as the body of an email to that address. Currenty, attachments are not supported.
-
-.. note:: Not all systems are capable of sending emails (e.g. those behind high security). These instances will not causes an error with the file monitoring system, but it will log the issue in the Parsl logs.
+    #. The function will run on the worker side, so it should be light weight or risk slowing the worker.
 
 Either a single callback function can be given that will handle any files found or a list of callback functions, one for
 each given pattern. For example::
