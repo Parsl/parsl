@@ -120,13 +120,15 @@ def python_app(function=None,
 def join_app(function=None,
              data_flow_kernel: Optional[DataFlowKernel] = None,
              cache: bool = False,
-             ignore_for_cache: Optional[List[str]] = None):
+             ignore_for_cache: Optional[List[str]] = None,
+             file_monitor: Optional[FileMonitor] = None):
     return python_app(function=function,
                       data_flow_kernel=data_flow_kernel,
                       cache=cache,
                       ignore_for_cache=ignore_for_cache,
                       join=True,
-                      executors=["_parsl_internal"])
+                      executors=["_parsl_internal"],
+                      file_monitor=file_monitor)
 
 
 @typeguard.typechecked
