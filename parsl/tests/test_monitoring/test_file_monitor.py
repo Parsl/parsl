@@ -16,7 +16,6 @@ from parsl.monitoring.file_monitoring import proc_callback, \
 logger = logging.getLogger(__name__)
 
 
-
 def test_proc_callback(caplog):
     class StrErr:
         def __str__(self):
@@ -43,7 +42,7 @@ def test_proc_callback(caplog):
 
     proc_callback(StrErr())
     assert "Could not turn" in caplog.text
-    testmock = mock.Mock(side_effect=Exception)
+
 
 def test_dill_functions():
     def add_two(a):
@@ -81,29 +80,20 @@ def _test_gif(files):
 
 
 def test_FileMonitor_init():
-    with pytest.raises(Exception):
-        fm = FileMonitor([_test_png])
+    fm = FileMonitor([(_test_jpg, "jpg")])
+    assert len(fm.patterns) == 1
 
-    with pytest.raises(Exception):
-        fm = FileMonitor([_test_png, _test_gif], filetype="png")
-
-    fm = FileMonitor(_test_jpg, filetype=["jpg", "jpeg"])
+    fm = FileMonitor([(_test_png, "png"), (_test_gif, "gif")])
     assert len(fm.patterns) == 2
 
-    fm = FileMonitor([_test_png, _test_gif], filetype=["png", "gif"])
-    assert len(fm.patterns) == 2
-
-    fm = FileMonitor([_test_png, _test_pdf, _test_gif], pattern=r'results-(\S+)\.png', filetype=["*.pdf", ".gif"],
+    fm = FileMonitor([(_test_png, re.compile(r'results-(\S+)\.png')), (_test_pdf, "*.pdf"), (_test_gif, ".gif")],
                      path="mypath")
-    assert len(fm.patterns) == 3
-
-    fm = FileMonitor([_test_png, _test_pdf, _test_gif], pattern=[r'results-(\S+)\.png', r'results-(\S+)\.pdf'],
-                     filetype="gif", path="mypath")
     assert len(fm.patterns) == 3
 
 
 @pytest.mark.issue363
-def test_monitor():
+def test_monitor(caplog):
+    caplog.set_level(logging.INFO)
     event1 = mp.Event()
     event2 = mp.Event()
     pngs = ["/tmp/results-parsl.png", "/tmp/results-par.png"]
@@ -125,9 +115,9 @@ def test_monitor():
         _cleanup()
         sleep_time = 3.0
 
-        mthread = Thread(target=monitor, args=(1234, event1, event2, [(re.compile(r'results-(\S+)\.png'), True),
-                                                                      ("*.testme", False)],
-                                               [_test_png, _test_pdf], sleep_time, "/tmp/"))
+        mthread = Thread(target=monitor, args=(1234, event1, event2, [(_test_png, re.compile(r'results-(\S+)\.png')),
+                                                                      (_test_pdf, "*.testme")],
+                                               sleep_time, "/tmp/"))
         mthread.daemon = True
         mthread.start()
         time.sleep(sleep_time + 1)
@@ -158,7 +148,7 @@ def test_monitor():
 def test_wrapper():
     def _tfunc():
         return 3 + 4
-    fm = FileMonitor([_test_png, _test_pdf, _test_gif], pattern=[r'results-(\S+)\.png', r'results-(\S+)\.pdf'],
-                     filetype="gif", path="mypath")
+    fm = FileMonitor([(_test_png, re.compile(r'results-(\S+)\.png')), (_test_gif, "gif"), (_test_pdf, re.compile(r'results-(\S+)\.pdf'))],
+                     path="mypath")
     res = fm.file_monitor(_tfunc, 1234)
     assert res() == 7

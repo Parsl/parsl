@@ -11,8 +11,8 @@ import os
 import time
 from multiprocessing import pool, Event, Pool
 import dill
-import re
-from typing import List, Callable, Any, Dict, Union, Optional, Tuple
+
+from typing import List, Callable, Any, Dict, Union, Optional, Tuple, Pattern
 from parsl.multiprocessing import ForkProcess
 
 logger = logging.getLogger(__name__)
@@ -93,8 +93,7 @@ def apply_async(monitor_pool: Any,  # cannot be Pool because of multiprocessing 
 def monitor(task_id: int,
             stop_event: Any,  # cannot be Event because of multiprocessing type weirdness.
             done_event: Any,  # cannot be Event because of multiprocessing type weirdness.
-            patterns: List[Any],
-            callbacks: List[Callable],
+            patterns: List[Tuple[Callable, Union[str, Pattern]]],
             sleep_dur: float,
             work_dir: Optional[str] = None,
             max_proc: int = 2) -> None:
@@ -124,11 +123,7 @@ def monitor(task_id: int,
         Signal used to indicate when this is actually completed, alowing for currently running callbacks to
         complete nicely.
     patterns: list
-        List of tuples containing a regex or glob type statement and a bool indicating whther it is regex (True) or not,
-        for finding the files.
-    callbacks: list
-        List of functions to call when files are found. This list must have either a single entry for all
-        `patterns` or have the same length as `patterns` (one callback for each pattern).
+        List of tuples containing a callback and a regex or glob type statement for finding the files.
     sleep_dur: float
         The length of time to sleep between loops in seconds.
     work_dir: str
@@ -155,15 +150,15 @@ def monitor(task_id: int,
                 logger.info(f"  {stop_event.is_set()} received {str(datetime.datetime.now())}")
                 sleep_dur = 0
             # loop over all the patterns looking for new matches
-            for i in range(len(patterns)):
-                logger.debug(f" {i} {patterns[i]}")
+            for i, (callback, pattern) in enumerate(patterns):
+                logger.debug(f" {i} {pattern}")
                 xfer = []
                 current_time = time.time()
                 # look for any matching files
-                if patterns[i][1]:
-                    temp = [f for f in os.listdir(os.getcwd()) if patterns[i][0].search(f)]
+                if isinstance(pattern, Pattern):
+                    temp = [f for f in os.listdir(os.getcwd()) if pattern.search(f)]
                 else:
-                    temp = glob.glob(patterns[i][0])
+                    temp = glob.glob(pattern)
                 # weed out those that have been found before and any that are too new
                 for t in temp:
                     if t in found:
@@ -177,7 +172,7 @@ def monitor(task_id: int,
                     continue
                 logger.debug(f"Found {len(xfer)} files for processing")
                 # matches were found, sending them to callback
-                running_procs.append(apply_async(monitor_pool, callbacks[i], (xfer,)))
+                running_procs.append(apply_async(monitor_pool, callback, (xfer,)))
                 found += xfer
             if not keep_running:
                 # the loop is terminating, wait for callbacks to finish
@@ -201,25 +196,16 @@ class FileMonitor:
 
     Parameters
     ----------
-    callback: Callable or List[Callable]
-        A function or list of functions to call when files are found that match the given patterns. If a
-        single function is given then it will be called for all pattern matchs; if a list of functions are
-        given then there must be one for each pattern given, in the order they match the patterns(e.g. pattern 1
-        matches will be sent to callback 1). Callback functions should either return None or something
-        that can be cast to a string.
-    pattern: str, List[str], optional
-        A single regex style pattern or a list of regex style patterns for finding files. At least one ``pattern`` or
-        ``filetype`` must be given.
-    filetype: str, List[str], optional
-        A single filetype or a list of filetypes to watch for. Can be with or without an asterisk and period
-        (e.g. ``pdf``, ``.pdf``, and ``*.pdf`` all are valid and mean the same thing). At least one ``pattern``
-        or ``filetype`` must be given.
+    pattern: List, List[Tuple[Callable, Union[str, Pattern]]]
+        A list of tuples containing the callback to use and a regex pattern (pre-compiled) or filetype. The callback
+        is called whenever any files matching the given pattern are found. If the pattern is a filetypeit can be with
+        or without an asterisk and period (e.g. ``pdf``, ``.pdf``, and ``*.pdf`` all are valid and mean the same thing).
     path: str, optional
         The base path where the files are expected to be, default is current working directory (``None``).
     working_dir: str, optional
         The working directory for the file monitoring, default (``None``) is the current working directory
         inherited when the monitor process is started.
-    sleep_dur: float
+    sleep_dur: float, optional
         The time to wait between scans of the file system to look for matching files. Default is 60 seconds.
     max_proc: int, optional
         The maximum size of the multiprocessing Pool for the file processing. Default is 4, but the
@@ -227,52 +213,23 @@ class FileMonitor:
         needed.
     """
     def __init__(self,
-                 callback: Union[Callable, List[Callable]],
-                 pattern: Optional[Union[str, List[str]]] = None,
-                 filetype: Optional[Union[str, List[str]]] = None,
+                 pattern: List[Tuple[Callable, Union[str, Pattern]]],
                  path: Optional[str] = None,
                  working_dir: Optional[str] = None,
                  sleep_dur: float = 60.,
                  max_proc: int = 2):
         logger.info(f"File_monitor initialized: {path}, {working_dir}, {sleep_dur}")
         # generate the master pattern list
-        self.patterns: List[Tuple[Any, bool]] = []
-        if pattern is not None:
-            if isinstance(pattern, list):
-                for p in pattern:
-                    self.patterns.append((re.compile(p), True))
-            else:
-                self.patterns = [(re.compile(pattern), True)]
-        if filetype is not None:
-            temppat = []
-            if isinstance(filetype, list):
-                temppat = filetype
-            else:
-                temppat.append(filetype)
-            if path is not None:
-                for i, pat in enumerate(temppat):
-                    if '*' not in pat:
-                        if not pat.startswith('.'):
-                            pat = '.' + pat
-                        pat = '*' + pat
-                    temppat[i] = os.path.join(path, pat)
-            else:
-                for i, pat in enumerate(temppat):
-                    if '*' not in pat:
-                        if not pat.startswith('.'):
-                            pat = '.' + pat
-                        pat = '*' + pat
-                    temppat[i] = pat
-            for ft in temppat:
-                self.patterns.append((ft, False))
-        if not self.patterns:
-            raise Exception("Either pattern or filetype must be given")
-        if isinstance(callback, list):
-            if len(self.patterns) != len(callback):
-                raise Exception("Pattern list is not the same size as function list")
-            self.callbacks = callback
-        else:
-            self.callbacks = [callback] * len(self.patterns)
+        self.patterns: List[Tuple[Callable, Union[str, Pattern]]] = []
+        for (func, pat) in pattern:
+            if isinstance(pat, str):
+                if '*' not in pat:
+                    if not pat.startswith('.'):
+                        pat = '.' + pat
+                    pat = '*' + pat
+                if path is not None:
+                    pat = os.path.join(path, pat)
+            self.patterns.append((func, pat))
         self.sleep_dur = sleep_dur
         self.cwd = working_dir
         self.max_proc = max_proc
@@ -304,7 +261,6 @@ class FileMonitor:
                                    ev,
                                    done,
                                    self.patterns,
-                                   self.callbacks,
                                    self.sleep_dur,
                                    self.cwd,
                                    self.max_proc))

@@ -142,9 +142,8 @@ mechanism to do this, so it works under the assumption that any file with a modi
 a specified (by user) seconds old will be considered. If a process is expected to periodically write to a file then
 the ``sleep_dur`` parameter of the FileMonitor class should be set to a larger value.
 
-The file monitoring system is given a list of regex style patterns and/or a list of file types to use for searching for
-files. For regex style patters they should be strings preceeded by **r** as they are compiled into regex objects by the
-file monitoring system (see the `re <https://docs.python.org/3/library/re.html>`_ Python module documentation for
+The file monitoring system is given a list of regex ``Patterns`` and/or file types to use for searching for
+files. For regex patterns they should be precompiled (using ``re.compile()`` (see the `re <https://docs.python.org/3/library/re.html>`_ Python module documentation for
 regex specifics). For file type patterns a list of file suffixes should be given. Suffixes with and without an asterisk
 are acceptable (e.g. ``pdf``, ``.pdf``, and ``*.pdf`` are all equivalent). File types will have the given ``path`` prepended
 to them.
@@ -156,18 +155,8 @@ The callback functions have only a few restrictions on them
     #. Any files produced by the function need to be handled by the user (transfer, etc.)
     #. The function will run on the worker side, so it should be light weight or risk slowing the worker.
 
-Either a single callback function can be given that will handle any files found or a list of callback functions, one for
-each given pattern. For example::
-
-    filetype = ["pdf", "gif", "jpg"]
-
-    callback = [callback1, callback2, callback3]
-
-If any pdf files are found then they are sent to callback1, any gif files are sent to callback2, and any jpg files
-are sent to callback3. In the case that both regex and file types being given the regex expressions will be processed
-first, and thus their callbacks should be specified first. When called, the callbacks are launched asynchronously in a
-multiprocessing.Pool. The number of concurrently running callbacks can be controlled by the `parsl.monitoring.FileMonitor`
-being used.
+When called, the callbacks are launched asynchronously in a multiprocessing.Pool. The number of concurrently running
+callbacks can be controlled by the `parsl.monitoring.FileMonitor` being used.
 
 Examples
 ^^^^^^^^
@@ -178,12 +167,13 @@ With the following given by the user (the callback functions are not defined her
 
     from parsl.monitoring import FileMonitor
 
-    fm = FileMonitor(callback = [c1, c2, c3 ,c4],
-                     pattern = [r'(?<=-)\d{2}info\.dat', r'results-(\S+)\.txt'],
-                     filetype = ["*.gif", "*.jpg"],
+    fm = FileMonitor(callback = [(c1, re.compile(r'(?<=-)\d{2}info\.dat')),
+                                 (c2, re.compile(r'results-(\S+)\.txt')),
+                                 (c3, "*.gif"),
+                                 (c4, "*.jpg")],
                      path = 'images')
 
-and with these files in the system (working directory is ``/scr/run1``
+and with these files in the system (working directory is ``/scr/run1``)::
 
     images/composite.gif
     images/rgb.png
