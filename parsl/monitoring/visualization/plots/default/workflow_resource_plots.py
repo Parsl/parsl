@@ -5,8 +5,9 @@ import plotly.graph_objs as go
 from plotly.offline import plot
 
 
-def resource_distribution_plot(df_resources, df_task, type='psutil_process_time_user', label='CPU Time Distribution', option='avg', columns=20,):
-    # E.g., psutil_process_time_user or psutil_process_memory_percent
+def resource_distribution_plot(df_resources, df_task, type, label, option, columns=20,):
+    assert type == "psutil_process_time_user" or type == "psutil_process_memory_resident"
+    assert option == "avg" or option == "max"
 
     min_range = min(df_resources[type].astype('float'))
     max_range = max(df_resources[type].astype('float'))
@@ -19,20 +20,22 @@ def resource_distribution_plot(df_resources, df_task, type='psutil_process_time_
         for i in np.arange(min_range, max_range + time_step, time_step):
             x_axis.append(i)
 
-    apps_dict = dict()
+    tasks_dict = dict()
     for i in range(len(df_task)):
         row = df_task.iloc[i]
-        apps_dict[row['task_id']] = []
+        tasks_dict[row['task_id']] = []
 
     def y_axis_setup():
         items = [0] * len(x_axis)
 
-        for app, tasks in apps_dict.items():
+        for task_id, tasks in tasks_dict.items():
             if option == 'avg':
                 task = df_resources[df_resources['task_id'] ==
-                                    app][type].astype('float').mean()
+                                    task_id][type].astype('float').mean()
             elif option == 'max':
-                task = df_resources[df_resources['task_id'] == app][type].astype('float').max()
+                task = df_resources[df_resources['task_id'] == task_id][type].astype('float').max()
+            else:
+                raise ValueError(f"Cannot plot unknown aggregation option {option}")
 
             for i in range(len(x_axis) - 1):
                 a = task >= x_axis[i]
@@ -44,12 +47,15 @@ def resource_distribution_plot(df_resources, df_task, type='psutil_process_time_
                 items[-1] += 1
         return items
 
-    if "memory" not in type:
+    if type == "psutil_process_time_user":
         xaxis = dict(autorange=True,
                      title='CPU user time (seconds)')
-    else:
+    elif type == "psutil_process_memory_resident":
         xaxis = dict(autorange=True,
                      title='Memory usage (bytes)')
+    else:
+        raise ValueError(f"Cannot plot unknown type {type}")
+
     fig = go.Figure(
         data=[go.Bar(x=x_axis,
                      y=y_axis_setup(),
