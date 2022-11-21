@@ -134,6 +134,7 @@ def monitor(task_id: int,
         value is adjusted to be ``min(max_proc, len(patterns))`` so as to not make the pool larger than
         needed.
     """
+    cwd = os.getcwd()
     try:
         if work_dir is not None:
             os.chdir(work_dir)
@@ -186,6 +187,7 @@ def monitor(task_id: int,
     except Exception as ex:
         logger.error(f"File monitor failed: {str(ex)}")
     finally:
+        os.chdir(cwd)
         done_event.set()
 
 

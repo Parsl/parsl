@@ -153,7 +153,7 @@ The callback functions have only a few restrictions on them
     #. The function should take a single argument that is a list of the detected files (string, including full path)
     #. Anything the function returns will be written to the Parsl log; if running ``str()`` on the return value throws an error then nothing is written
     #. Any files produced by the function need to be handled by the user (transfer, etc.)
-    #. The function will run on the worker side, so it should be light weight or risk slowing the worker.
+    #. The function will run on the worker side, so it should be light weight or risk slowing the worker, and has no way to communicate with processes on the submit side.
 
 When called, the callbacks are launched asynchronously in a multiprocessing.Pool. The number of concurrently running
 callbacks can be controlled by the `parsl.monitoring.FileMonitor` being used.
