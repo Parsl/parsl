@@ -105,8 +105,10 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                     stdout_path = self._job_file_path(script_path, '.out')
                     stderr_path = self._job_file_path(script_path, '.err')
                     if ec == 0:
+                        logger.info("BENC: local provider exited with exit code 0, marking as COMPLETED")
                         state = JobState.COMPLETED
                     else:
+                        logger.info(f"BENC: local provider exited with exit code {ec}, marking as FAILED")
                         state = JobState.FAILED
                     status = JobStatus(state, exit_code=ec,
                                        stdout_path=stdout_path, stderr_path=stderr_path)
