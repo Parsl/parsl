@@ -197,9 +197,10 @@ class FileMonitor:
     Parameters
     ----------
     pattern: List, List[Tuple[Callable, Union[str, Pattern]]]
-        A list of tuples containing the callback to use and a regex pattern (pre-compiled) or filetype. The callback
-        is called whenever any files matching the given pattern are found. If the pattern is a filetypeit can be with
-        or without an asterisk and period (e.g. ``pdf``, ``.pdf``, and ``*.pdf`` all are valid and mean the same thing).
+        A list of tuples containing the callback to use and a regex pattern (pre-compiled) or filetype. If the pattern
+        is a filetype it can be with or without an asterisk and period (e.g. ``pdf``, ``.pdf``, and ``*.pdf`` all are
+        valid and mean the same thing). The callback is called whenever any files matching the given pattern are found.
+        The callback is run on the worker node does not have access to submit side processes.
     path: str, optional
         The base path where the files are expected to be, default is current working directory (``None``).
     working_dir: str, optional
@@ -208,9 +209,9 @@ class FileMonitor:
     sleep_dur: float, optional
         The time to wait between scans of the file system to look for matching files. Default is 60 seconds.
     max_proc: int, optional
-        The maximum size of the multiprocessing Pool for the file processing. Default is 4, but the
+        The maximum size of the multiprocessing Pool for the file processing. Default is 2, but the
         value is adjusted to be ``min(max_proc, len(patterns))`` so as to not make the pool larger than
-        needed.
+        needed, or overload the worker node.
     """
     def __init__(self,
                  pattern: List[Tuple[Callable, Union[str, Pattern]]],
