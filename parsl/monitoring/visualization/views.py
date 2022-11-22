@@ -127,9 +127,10 @@ def task(workflow_id, task_id):
                            )
 
 
-@app.route('/workflow/<workflow_id>/dag_<path:path>')
-@app.route('/workflow/<workflow_id>/dag_<path:path>')
-def workflow_dag_details(workflow_id, path='group_by_apps'):
+@app.route('/workflow/<workflow_id>/dag_<path>')
+def workflow_dag_details(workflow_id, path):
+    assert path == "group_by_apps" or path == "group_by_states"
+
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
     query = """SELECT task.task_id, task.task_func_name, task.task_depends, status.task_status_name
                FROM task LEFT JOIN status
