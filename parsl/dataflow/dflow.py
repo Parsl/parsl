@@ -613,8 +613,13 @@ class DataFlowKernel:
                 logger.debug(f"Task {task_id} is not pending, so launch_if_ready skipping")
                 return
 
-            if self._count_deps(task_record['depends']) != 0:
-                logger.debug(f"Task {task_id} has outstanding dependencies, so launch_if_ready skipping")
+            counted_deps = self._count_deps(task_record['depends'])
+
+            logger.debug(f"METRIC COUNTED_DEPS {task_id} "
+                         f"total={len(task_record['depends'])} outstanding={counted_deps}")
+
+            if counted_deps != 0:
+                logger.debug(f"Task {task_id} has {counted_deps} outstanding dependencies, so launch_if_ready skipping")
                 return
 
             # We can now launch the task or handle any dependency failures
@@ -1059,6 +1064,10 @@ class DataFlowKernel:
             waiting_message = "waiting on {}".format(", ".join(depend_descs))
         else:
             waiting_message = "not waiting on any dependency"
+
+        logger.debug(f"METRIC GATHERED_DEPS {task_id} "
+                     f"depends={len(depends)}")
+
         event("DFK_SUBMIT_EXAMINE_DEPS_END", task_span)
 
         logger.info("Task {} submitted for App {}, {}".format(task_id,

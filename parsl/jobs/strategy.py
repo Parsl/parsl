@@ -218,6 +218,11 @@ class Strategy:
             if active_tasks > 0 and self.executors[executor.label]['idle_since']:
                 self.executors[executor.label]['idle_since'] = None
 
+            logger.debug(f"METRIC STRATEGY {executor.label} "
+                         f"active_tasks={active_tasks} "
+                         f"running_blocks={running} pending_blocks={pending} "
+                         f"active_blocks={active_blocks} active_slots={active_slots}")
+
             # Case 1
             # No tasks.
             if active_tasks == 0:
