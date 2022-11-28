@@ -103,16 +103,18 @@ def resource_time_series(tasks, type='psutil_process_time_user', label='CPU user
 def worker_efficiency(task, node):
     try:
         node['epoch_time'] = (pd.to_datetime(
-            node['timestamp']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+            node['timestamp']) - pd.Timestamp("1970-01-01")) / pd.Timedelta('1s')
         task['epoch_time_start'] = (pd.to_datetime(
-            task['task_try_time_launched']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+            task['task_try_time_launched']) - pd.Timestamp("1970-01-01")) / pd.Timedelta('1s')
         task['epoch_time_running'] = (pd.to_datetime(
-            task['task_try_time_running']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+            task['task_try_time_running']) - pd.Timestamp("1970-01-01")) / pd.Timedelta('1s')
         task['epoch_time_returned'] = (pd.to_datetime(
-            task['task_try_time_returned']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
+            task['task_try_time_returned']) - pd.Timestamp("1970-01-01")) / pd.Timedelta('1s')
         start = int(min(task['epoch_time_start'].min(), node['epoch_time'].min()))
         end = int(task['epoch_time_returned'].max())
 
+        # worker_plot will be used to make a histogram of worker usage, one bucket per
+        # second
         worker_plot = [0] * (end - start + 1)
         total_workers = node['worker_count'].sum()
 
@@ -124,9 +126,35 @@ def worker_efficiency(task, node):
                 # there is no end time for this, so we should assume the "end" time
                 etr = end
             else:
-                etr = int(row['epoch_time_returned'])
-            for j in range(int(row['epoch_time_running']), etr + 1):
-                worker_plot[j - start] += 1
+                etr = row['epoch_time_returned']
+
+            # there's a two cases here:
+            # The task starts and ends in same one-second bucket:
+            #   populate one bucket with the fraction of second between
+            #   the start and end
+            #
+            # or
+            #
+            # The task starts in one bucket and ends in another:
+            #   populate middle buckets with 1, and start/end buckets with fraction
+
+            start_bucket = int(row['epoch_time_running']) - start
+            end_bucket = int(etr) - start
+
+            if start_bucket == end_bucket:
+                fraction = etr - row['epoch_time_running']
+                worker_plot[start_bucket] += fraction
+
+            else:
+                fraction_before = row['epoch_time_running'] - int(row['epoch_time_running'])
+                worker_plot[start_bucket] += (1 - fraction_before)
+
+                for j in range(start_bucket + 1, end_bucket):
+                    worker_plot[j] += 1
+
+                fraction_after = etr - int(etr)
+                worker_plot[end_bucket] += fraction_after
+
         fig = go.Figure(
             data=[go.Scatter(x=list(range(0, end - start + 1)),
                              y=worker_plot,
@@ -134,7 +162,7 @@ def worker_efficiency(task, node):
                              ),
                   go.Scatter(x=list(range(0, end - start + 1)),
                              y=[total_workers] * (end - start + 1),
-                             name='Total online workers',
+                             name='Total of workers in whole run',
                              )
                  ],
             layout=go.Layout(xaxis=dict(autorange=True,
@@ -147,7 +175,7 @@ def worker_efficiency(task, node):
         return "The worker efficiency plot cannot be generated due to missing data."
 
 
-def resource_efficiency(resource, node, label='CPU'):
+def resource_efficiency(resource, node, label):
     try:
         resource['epoch_time'] = (pd.to_datetime(
             resource['timestamp']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
@@ -158,6 +186,7 @@ def resource_efficiency(resource, node, label='CPU'):
         end = resource['epoch_time'].max()
         resource['relative_time'] = resource['epoch_time'] - start
         node['relative_time'] = node['epoch_time'] - start
+        resource['key'] = resource['task_id'].astype(str) + "-" + resource['try_id'].astype(str)
 
         task_plot = [0] * (end - start + 1)
         if label == 'CPU':
@@ -166,8 +195,8 @@ def resource_efficiency(resource, node, label='CPU'):
             total = node['total_memory'].sum() / 1024 / 1024 / 1024
 
         resource['total_cpu_time'] = resource['psutil_process_time_user'] + resource['psutil_process_time_system']
-        for task_id in resource['task_id'].unique():
-            tmp = resource[resource['task_id'] == task_id]
+        for key in resource['key'].unique():
+            tmp = resource[resource['key'] == key]
             tmp['last_timestamp'] = tmp['relative_time'].shift(1)
             if label == 'CPU':
                 tmp['last_cputime'] = tmp['total_cpu_time'].shift(1)
