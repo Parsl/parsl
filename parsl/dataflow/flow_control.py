@@ -5,7 +5,7 @@ import time
 from typing import Sequence
 
 from parsl.executors.base import ParslExecutor
-from parsl.dataflow.task_status_poller import TaskStatusPoller
+from parsl.dataflow.job_status_poller import JobStatusPoller
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class FlowControl(object):
         self.threshold = threshold
         self.interval = interval
         self.cb_args = args
-        self.task_status_poller = TaskStatusPoller(dfk)
+        self.task_status_poller = JobStatusPoller(dfk)
         self.callback = self.task_status_poller.poll
         self._handle = None
         self._event_count = 0
