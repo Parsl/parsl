@@ -55,7 +55,7 @@ def test_scale_out():
     assert dfk.executors['htex_local'].outstanding == 0, "Expected 0 tasks at start"
 
     logger.info("launching tasks")
-    fus = [sleeper(i) for i in [15 for x in range(0,10)]]
+    fus = [sleeper(i) for i in [15 for x in range(0, 10)]]
 
     logger.info("waiting for warm up")
     time.sleep(15)
