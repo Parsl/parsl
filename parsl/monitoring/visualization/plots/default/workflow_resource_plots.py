@@ -152,6 +152,7 @@ def resource_efficiency(resource, node, label='CPU'):
         end = resource['epoch_time'].max()
         resource['relative_time'] = resource['epoch_time'] - start
         node['relative_time'] = node['epoch_time'] - start
+        resource['key'] = resource['task_id'].astype(str) + "-" + resource['try_id'].astype(str)
 
         task_plot = [0] * (end - start + 1)
         if label == 'CPU':
@@ -160,8 +161,8 @@ def resource_efficiency(resource, node, label='CPU'):
             total = node['total_memory'].sum() / 1024 / 1024 / 1024
 
         resource['total_cpu_time'] = resource['psutil_process_time_user'] + resource['psutil_process_time_system']
-        for task_id in resource['task_id'].unique():
-            tmp = resource[resource['task_id'] == task_id]
+        for key in resource['key'].unique():
+            tmp = resource[resource['key'] == key]
             tmp['last_timestamp'] = tmp['relative_time'].shift(1)
             if label == 'CPU':
                 tmp['last_cputime'] = tmp['total_cpu_time'].shift(1)
