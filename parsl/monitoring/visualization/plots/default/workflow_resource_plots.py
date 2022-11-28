@@ -156,7 +156,7 @@ def worker_efficiency(task, node):
                              ),
                   go.Scatter(x=list(range(0, end - start + 1)),
                              y=[total_workers] * (end - start + 1),
-                             name='Total online workers',
+                             name='Total of workers in whole run',
                              )
                  ],
             layout=go.Layout(xaxis=dict(autorange=True,
