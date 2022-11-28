@@ -169,7 +169,7 @@ def worker_efficiency(task, node):
         return "The worker efficiency plot cannot be generated due to missing data."
 
 
-def resource_efficiency(resource, node, label='CPU'):
+def resource_efficiency(resource, node, label):
     try:
         resource['epoch_time'] = (pd.to_datetime(
             resource['timestamp']) - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
