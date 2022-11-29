@@ -1,3 +1,4 @@
+import logging
 import parsl
 import pytest
 import time
@@ -11,6 +12,8 @@ from parsl.launchers import SingleNodeLauncher
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 
+logger = logging.getLogger(__name__)
+
 local_config = Config(
     executors=[
         HighThroughputExecutor(
@@ -18,14 +21,12 @@ local_config = Config(
             heartbeat_threshold=6,
             poll_period=1,
             label="htex_local",
-            # worker_debug=True,
             max_workers=1,
             provider=LocalProvider(
                 channel=LocalChannel(),
                 init_blocks=0,
                 max_blocks=5,
                 min_blocks=2,
-                # tasks_per_node=1,  # For HighThroughputExecutor, this option should in most cases be 1
                 launcher=SingleNodeLauncher(),
             ),
         )
@@ -37,10 +38,8 @@ local_config = Config(
 
 @python_app
 def sleeper(t):
-    import random
     import time
     time.sleep(t)
-    return random.randint(0, 10000)
 
 
 # see issue #1885 for details of failures of this test.
@@ -48,56 +47,32 @@ def sleeper(t):
 # in CI.
 @pytest.mark.local
 def test_scale_out():
+    logger.info("start")
     dfk = parsl.dfk()
 
-    # Since we have init_blocks = 0, at this point we should have 0 managers
-    print("Executor : ", dfk.executors['htex_local'])
-    print("Before")
-    print("Managers   : ", dfk.executors['htex_local'].connected_managers)
-    print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
+    logger.info("initial asserts")
     assert len(dfk.executors['htex_local'].connected_managers) == 0, "Expected 0 managers at start"
+    assert dfk.executors['htex_local'].outstanding == 0, "Expected 0 tasks at start"
 
-    fus = [sleeper(i) for i in [3, 3, 25, 25, 50]]
+    logger.info("launching tasks")
+    fus = [sleeper(i) for i in [15 for x in range(0, 10)]]
 
-    for i in range(2):
-        fus[i].result()
+    logger.info("waiting for warm up")
+    time.sleep(15)
 
-    # At this point, since we have 1 task already processed we should have atleast 1 manager
-    print("Between")
-    print("Managers   : ", dfk.executors['htex_local'].connected_managers)
-    print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
-    assert len(dfk.executors['htex_local'].connected_managers) == 5, "Expected 5 managers once tasks are running"
+    logger.info("asserting 5 managers")
+    assert len(dfk.executors['htex_local'].connected_managers) == 5, "Expected 5 managers after some time"
 
-    time.sleep(1)
-    print("running")
-    print("Managers   : ", dfk.executors['htex_local'].connected_managers)
-    print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
-    assert len(dfk.executors['htex_local'].connected_managers) == 5, "Expected 5 managers 3 seconds after 2 tasks finished"
-
-    time.sleep(21)
-    print("Middle")
-    print("Managers   : ", dfk.executors['htex_local'].connected_managers)
-    print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
-    assert len(dfk.executors['htex_local'].connected_managers) == 3, "Expected 3 managers before cleaning up"
-
-    for i in range(2, 4):
-        fus[i].result()
-    time.sleep(21)
-    print("Finalizing result")
-    print("Managers   : ", dfk.executors['htex_local'].connected_managers)
-    print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
-    assert len(dfk.executors['htex_local'].connected_managers) == 2, "Expected 2 managers before finishing, lower bound by min_blocks"
-
+    logger.info("waiting for all futures to complete")
     [x.result() for x in fus]
-    print("Cleaning")
-    print("Managers   : ", dfk.executors['htex_local'].connected_managers)
-    print("Outstanding: \n", dfk.executors['htex_local'].outstanding)
-    time.sleep(21)
+
+    logger.info("asserting 0 outstanding tasks after completion")
+    assert dfk.executors['htex_local'].outstanding == 0, "Expected 0 outstanding tasks after future completion"
+
+    logger.info("waiting a while for scale down")
+    time.sleep(20)
+
+    logger.info("asserting 2 managers remain")
     assert len(dfk.executors['htex_local'].connected_managers) == 2, "Expected 2 managers when no tasks, lower bound by min_blocks"
 
-
-if __name__ == '__main__':
-    # parsl.set_stream_logger()
-    parsl.load(local_config)
-
-    test_scale_out()
+    logger.info("test passed")
