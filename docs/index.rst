@@ -44,9 +44,13 @@ Parsl lets you chain functions together and will launch each function as soon as
     assert future.result() == 4
 
 
+Parsl is an open-source code, and available on GitHub: https://github.com/parsl/parsl/
 
+Table of Contents
++++++++++++++++++
 
 .. toctree::
+   :maxdepth: 2
 
    quickstart
    1-parsl-introduction.ipynb
