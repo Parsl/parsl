@@ -172,8 +172,6 @@ def workflow_resources(workflow_id):
         "SELECT * FROM node WHERE run_id='%s'" % (workflow_id), db.engine)
 
     return render_template('resource_usage.html', workflow_details=workflow_details,
-                           user_time_distribution_avg_plot=resource_distribution_plot(
-                               df_resources, df_task, type='psutil_process_time_user', label='CPU Time Distribution', option='avg'),
                            user_time_distribution_max_plot=resource_distribution_plot(
                                df_resources, df_task, type='psutil_process_time_user', label='CPU Time Distribution', option='max'),
                            memory_usage_distribution_avg_plot=resource_distribution_plot(
