@@ -65,8 +65,8 @@ def workflow(workflow_id):
                                       task_try_time_running, task_try_time_returned from task, try
                                       WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'"""
                                       % (workflow_id, workflow_id), db.engine)
-    task_summary = db.engine.execute(
-        "SELECT task_func_name, count(*) as 'frequency' from task WHERE run_id='%s' group by task_func_name;" % workflow_id)
+    task_summary = pd.read_sql_query(
+        "SELECT task_func_name, count(*) as 'frequency' from task WHERE run_id='%s' group by task_func_name;" % (workflow_id), db.engine)
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
