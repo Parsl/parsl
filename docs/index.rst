@@ -3,7 +3,7 @@ Parsl - Parallel Scripting Library
 
 Parsl is parallel programming library for Python for parallelism beyond a single computer.
 
-At the easiest level, you can use Parsl to run functions just like Python's executors but across *multiple computers*:
+At the easiest level, you can use Parsl to run functions just like Python's executors but across *multiple cores and nodes*:
 
 .. code-block:: python
 
@@ -17,7 +17,7 @@ Start with the `configuration quickstart <quickstart.html#getting-started>`_ to 
 Parsl can run on most supercomputers and with major cloud providers.
 
 The real power of Parsl comes is expressing multi-step workflows of functions.
-Parsl lets you chain functions together and will launch each function as soon as possible.
+Parsl lets you chain functions together and will launch each function as inputs and computing resources are available.
 
 .. code-block:: python
 

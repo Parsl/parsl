@@ -68,7 +68,7 @@ Application Types
 
 Parsl enables concurrent execution of Python functions (``python_app``)
 or external applications (``bash_app``).
-The logic for both are described by Python functions marked with with Parsl decorators.
+The logic for both are described by Python functions marked with Parsl decorators.
 When decorated functions are invoked, they run asynchronously on other resources.
 The result of a call to a Parsl app is an :class:`~parsl.app.futures.AppFuture`,
 which behaves like a Python Future.
@@ -108,8 +108,8 @@ Executors
 Executors define how Parsl deploys work on a computer.
 Many types are available, each with different advantages.
 
-The :class:`~parsl.executors.high_throughput.executor.HighThroughputExecutor` is most familiar to most people.
-Like Python's ``ProcessPoolExecutor``, the workers it creates are separate Python processes.
+The :class:`~parsl.executors.high_throughput.executor.HighThroughputExecutor`,
+like Python's ``ProcessPoolExecutor``, creates workers that are separate Python processes.
 However, you have much more control over how the work is deployed.
 You can dynamically set the number of workers based on available memory and
 pin each worker to specific GPUs or CPU cores
@@ -122,20 +122,19 @@ Execution Providers
 
 Resource providers allow Parsl to gain access to computing power.
 For supercomputers, gaining resources often requires requesting them from a scheduler (e.g., Slurm).
-Parsl Providers write the requests to requisition **"Blocks"** of computers (e.g., supercomputer nodes) on your behalf.
+Parsl Providers write the requests to requisition **"Blocks"** (e.g., supercomputer nodes) on your behalf.
 Parsl comes pre-packaged with Providers compatible with most supercomputers and some cloud computing services.
 
 Another key role of Providers is defining how to start an Executor on a remote computer.
 Often, this simply involves specifying the correct Python environment and
 (described below) how to launch the Executor on each acquired computers.
 
-Learn more about Providers `here <userguide/execution.html#execution-providers>`_ and
-find examples for common supercomputers `here <userguide/configuring.html>`_.
+Learn more about Providers `here <userguide/execution.html#execution-providers>`_.
 
 Launchers
 ^^^^^^^^^
 
-The Launcher defines how to spread workers across all computers available in a Block.
+The Launcher defines how to spread workers across all nodes available in a Block.
 A common example is an :class:`~parsl.launchers.launchers.MPILauncher`, which uses MPI's mechanism
 for starting a single program on multiple computing nodes.
 Like Providers, Parsl comes packaged with Launchers for most supercomputers and clouds.
@@ -154,7 +153,54 @@ The flexibility and performance of the DFK enables applications with
 intricate dependencies between tasks to execute on thousands of parallel workers.
 
 Start with the Tutorial or the `parallel patterns <userguide/workflow.html>`_
-to see the complex types of workflows you can make with Parsl,
+to see the complex types of workflows you can make with Parsl.
+
+Starting Parsl
+^^^^^^^^^^^^^^
+
+A Parsl script must contain the function definitions, resource configuration, and a call to ``parsl.load``
+before launching tasks.
+
+The :class:`~parsl.config.Config` object holds definitions of Executors and the Providers and Launchers they rely on.
+An example which launches 512 workers on 128 nodes of the Polaris supercomputer looks like
+
+.. code-block:: python
+
+    config = Config(
+        retires=1,  # Restart task if they fail once
+        executors=[
+            HighThroughputExecutor(
+                available_accelerators=4,  # Maps one worker per GPU
+                address=address_by_hostname(),
+                cpu_affinity="alternating",  # Prevents thread contention
+                start_method="spawn",  # Needed to avoid interactions between MPI and os.fork
+                provider=PBSProProvider(
+                    account="example",
+                    worker_init="module load conda; conda activate parsl",
+                    walltime="1:00:00",
+                    queue="prod",
+                    scheduler_options="#PBS -l filesystems=home:eagle",  # Change if data on other filesystem
+                    launcher=MpiExecLauncher(
+                        bind_cmd="--cpu-bind", overrides="--depth=64 --ppn 1"
+                    ),  # Ensures 1 manger per node and allows it to divide work to all 64 cores
+                    select_options="ngpus=4",
+                    nodes_per_block=128,
+                    cpus_per_node=64,
+                ),
+            ),
+        ]
+    )
+
+
+The documentation has examples for other supercomputers `here <userguide/configuring.html>`_.
+
+The next step is to load the configuration
+
+.. code-block:: python
+
+    parsl.load(config)
+
+You are then ready to use 10 PFLOPS of computing power through Python!
 
 Tutorial
 --------
