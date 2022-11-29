@@ -315,9 +315,9 @@ Addressing SerializationError
 As of v1.0.0, Parsl will raise a `SerializationError` when it encounters an object that Parsl cannot serialize.
 This applies to objects passed as arguments to an app, as well as objects returned from the app.
 
-Parsl uses `cloudpickle <https://github.com/cloudpipe/cloudpickle>`_ and pickle to serialize Python objects
+Parsl uses dill and pickle to serialize Python objects
 to/from functions. Therefore, Python apps can only use input and output objects that can be serialized by
-cloudpickle or pickle. For example the following data types are known to have issues with serializability :
+dill or pickle. For example the following data types are known to have issues with serializability :
 
 * Closures
 * Objects of complex classes with no ``__dict__`` or ``__getstate__`` methods defined
