@@ -13,7 +13,7 @@ At the easiest level, you can use Parsl to run functions just like Python's exec
     with ParslPoolExecutor(config) as exec:
         results = pool.map(function, [...])
 
-Start with the `configuration quickstart <TBD>`_ to learn how to tell Parsl how to use your computing resource.
+Start with the `configuration quickstart <quickstart>`_ to learn how to tell Parsl how to use your computing resource.
 Parsl can run on most supercomputers and with major cloud providers.
 
 The real power of Parsl comes is expressing multi-step workflows of functions.

@@ -61,8 +61,7 @@ Remote resources available to Parsl are acquired by a `"Provider" <#resource-pro
 which places the executor on a system with a `"Launcher" <#launchers>`_.
 Task execution is brokered by a `"Data Flow Kernel" <#benefits-of-a-data-flow-kernel>`_ that runs on your local system.
 
-We describe these components briefly here, and link to the parts of the `User Guide <userguide/index.html>`_
-where you learn more.
+We describe these components briefly here, and link to more details in the `User Guide <userguide/index.html>`_.
 
 Application Types
 ^^^^^^^^^^^^^^^^^
@@ -118,8 +117,8 @@ among other powerful features.
 
 Learn more about Executors `here <userguide/execution.html#executors>`_.
 
-Resource Providers
-^^^^^^^^^^^^^^^^^^
+Execution Providers
+^^^^^^^^^^^^^^^^^^^
 
 Resource providers allow Parsl to gain access to computing power.
 For supercomputers, gaining resources often requires requesting them from a scheduler (e.g., Slurm).
@@ -130,8 +129,8 @@ Another key role of Providers is defining how to start an Executor on a remote c
 Often, this simply involves specifying the correct Python environment and
 (described below) how to launch the Executor on each acquired computers.
 
-Learn more about Providers `here <userguide/execution.html#resource-providers>`_ and
-find examples for common supercomputers `here <userguide/configuration.html>`_.
+Learn more about Providers `here <userguide/execution.html#execution-providers>`_ and
+find examples for common supercomputers `here <userguide/configuring.html>`_.
 
 Launchers
 ^^^^^^^^^
@@ -154,7 +153,8 @@ and performs the many other functions needed to execute complex workflows.
 The flexibility and performance of the DFK enables applications with
 intricate dependencies between tasks to execute on thousands of parallel workers.
 
-Start with the Tutorial to see the complex types of workflows you can make with Parsl.
+Start with the Tutorial or the `parallel patterns <userguide/workflow.html>`_
+to see the complex types of workflows you can make with Parsl,
 
 Tutorial
 --------
