@@ -10,7 +10,7 @@ Installation
 
 Parsl is available on `PyPI <https://pypi.org/project/parsl/>`_ and `conda-forge <https://anaconda.org/conda-forge/parsl>`_. 
 
-Parsl requires Python3.5+ and has been tested on Linux and macOS.
+Parsl requires Python3.7+ and has been tested on Linux and macOS.
 
 
 Installation using Pip
@@ -49,11 +49,30 @@ The conda documentation provides `instructions <https://docs.conda.io/projects/c
 Getting started
 ---------------
 
-Parsl enables concurrent execution of Python functions (`python_app`) 
-or external applications (`bash_app`). Developers must first annotate
-functions with Parsl decorators. When these functions are invoked, Parsl will
-manage the asynchronous execution of the function on specified resources. 
-The result of a call to a Parsl app is an `AppFuture`.  
+Parsl has much in common with Python's native concurrency library,
+but unlocking Parsl's potential requires understanding a few major concepts.
+
+A Parsl program submits tasks to run on Workers distributed across remote computers.
+The instructions for these tasks are contained within `"apps" <#application-types>`_
+that users define using Python functions.
+Each remote computer (e.g., a node on a supercomputer) has a single `"Executor" <#executors>`_
+which manages the workers.
+Remote resources available to Parsl are acquired by a `"Provider" <#resource-providers>`_,
+which places the executor on a system with a `"Launcher" <#launchers>`_.
+Task execution is brokered by a `"Data Flow Kernel" <#benefits-of-a-data-flow-kernel>`_ that runs on your local system.
+
+We describe these components briefly here, and link to the parts of the `User Guide <userguide/index.html>`_
+where you learn more.
+
+Application Types
+^^^^^^^^^^^^^^^^^
+
+Parsl enables concurrent execution of Python functions (``python_app``)
+or external applications (``bash_app``).
+The logic for both are described by Python functions marked with with Parsl decorators.
+When decorated functions are invoked, they run asynchronously on other resources.
+The result of a call to a Parsl app is an :class:`~parsl.app.futures.AppFuture`,
+which behaves like a Python Future.
 
 The following example shows how to write a simple Parsl program
 with hello world Python and Bash apps.
@@ -78,10 +97,64 @@ with hello world Python and Bash apps.
 
     # invoke the Bash app and read the result from a file
     hello_bash('World (Bash)').result()
-		
+
     with open('hello-stdout', 'r') as f:
         print(f.read())
 
+Learn more about the types of Apps and their options `here <userguide/apps.html>`_.
+
+Executors
+^^^^^^^^^
+
+Executors define how Parsl deploys work on a computer.
+Many types are available, each with different advantages.
+
+The :class:`~parsl.executors.high_throughput.executor.HighThroughputExecutor` is most familiar to most people.
+Like Python's ``ProcessPoolExecutor``, the workers it creates are separate Python processes.
+However, you have much more control over how the work is deployed.
+You can dynamically set the number of workers based on available memory and
+pin each worker to specific GPUs or CPU cores
+among other powerful features.
+
+Learn more about Executors `here <userguide/execution.html#executors>`_.
+
+Resource Providers
+^^^^^^^^^^^^^^^^^^
+
+Resource providers allow Parsl to gain access to computing power.
+For supercomputers, gaining resources often requires requesting them from a scheduler (e.g., Slurm).
+Parsl Providers write the requests to requisition **"Blocks"** of computers (e.g., supercomputer nodes) on your behalf.
+Parsl comes pre-packaged with Providers compatible with most supercomputers and some cloud computing services.
+
+Another key role of Providers is defining how to start an Executor on a remote computer.
+Often, this simply involves specifying the correct Python environment and
+(described below) how to launch the Executor on each acquired computers.
+
+Learn more about Providers `here <userguide/execution.html#resource-providers>`_ and
+find examples for common supercomputers `here <userguide/configuration.html>`_.
+
+Launchers
+^^^^^^^^^
+
+The Launcher defines how to spread workers across all computers available in a Block.
+A common example is an :class:`~parsl.launchers.launchers.MPILauncher`, which uses MPI's mechanism
+for starting a single program on multiple computing nodes.
+Like Providers, Parsl comes packaged with Launchers for most supercomputers and clouds.
+
+Learn more about Launchers `here <userguide/execution.html#launchers>`_
+
+
+Benefits of a Data-Flow Kernel
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The Data-Flow Kernel (DFK) is the behind-the-scenes engine behind Parsl.
+The DFK determines when tasks can be started and sends them to open resources,
+receives results, restarts failed tasks, propagates errors to dependent tasks,
+and performs the many other functions needed to execute complex workflows.
+The flexibility and performance of the DFK enables applications with
+intricate dependencies between tasks to execute on thousands of parallel workers.
+
+Start with the Tutorial to see the complex types of workflows you can make with Parsl.
 
 Tutorial
 --------
