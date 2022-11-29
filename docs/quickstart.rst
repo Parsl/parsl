@@ -160,6 +160,8 @@ Starting Parsl
 
 A Parsl script must contain the function definitions, resource configuration, and a call to ``parsl.load``
 before launching tasks.
+This script runs on a system that must stay on-line until all of your tasks complete but need not have
+much computing power, such as the login node for a supercomputer.
 
 The :class:`~parsl.config.Config` object holds definitions of Executors and the Providers and Launchers they rely on.
 An example which launches 512 workers on 128 nodes of the Polaris supercomputer looks like
