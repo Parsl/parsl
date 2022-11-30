@@ -1,6 +1,7 @@
 import logging
 import time
 import math
+import warnings
 from typing import List
 
 from parsl.dataflow.executor_status import ExecutorStatus
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class Strategy(object):
-    """FlowControl strategy.
+    """Scaling strategy.
 
     As a workflow dag is processed by Parsl, new tasks are added and completed
     asynchronously. Parsl interfaces executors with execution providers to construct
@@ -119,8 +120,13 @@ class Strategy(object):
             self.executors[e.label] = {'idle_since': None, 'config': e.label}
 
         self.strategies = {None: self._strategy_noop,
+                           'none': self._strategy_noop,
                            'simple': self._strategy_simple,
                            'htex_auto_scale': self._strategy_htex_auto_scale}
+
+        if self.config.strategy is None:
+            warnings.warn("literal None for strategy choice is deprecated. Use string 'none' instead.",
+                          DeprecationWarning)
 
         self.strategize = self.strategies[self.config.strategy]
 
@@ -208,6 +214,11 @@ class Strategy(object):
             if active_tasks > 0 and self.executors[executor.label]['idle_since']:
                 self.executors[executor.label]['idle_since'] = None
 
+            logger.debug(f"METRIC STRATEGY {executor.label} "
+                         f"active_tasks={active_tasks} "
+                         f"running_blocks={running} pending_blocks={pending} "
+                         f"active_blocks={active_blocks} active_slots={active_slots}")
+
             # Case 1
             # No tasks.
             if active_tasks == 0:
@@ -237,7 +248,7 @@ class Strategy(object):
                         exec_status.scale_in(active_blocks - min_blocks)
 
                     else:
-                        logger.debug(f"Idle time {idle_duration} is less than max_idletime {self.max_idletime}s for executor {label}; not scaling in")
+                        logger.debug(f"Idle time {idle_duration}s is less than max_idletime {self.max_idletime}s for executor {label}; not scaling in")
 
             # Case 2
             # More tasks than the available slots.

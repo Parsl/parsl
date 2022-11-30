@@ -390,29 +390,29 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         The `None` message is a die request.
         """
-        logger.debug("[MTHREAD] queue management worker starting")
+        logger.debug("queue management worker starting")
 
         while not self.bad_state_is_set:
             try:
                 msgs = self.incoming_q.get(timeout=1)
 
             except queue.Empty:
-                logger.debug("[MTHREAD] queue empty")
+                logger.debug("queue empty")
                 # Timed out.
                 pass
 
             except IOError as e:
-                logger.exception("[MTHREAD] Caught broken queue with exception code {}: {}".format(e.errno, e))
+                logger.exception("Caught broken queue with exception code {}: {}".format(e.errno, e))
                 return
 
             except Exception as e:
-                logger.exception("[MTHREAD] Caught unknown exception: {}".format(e))
+                logger.exception("Caught unknown exception: {}".format(e))
                 return
 
             else:
 
                 if msgs is None:
-                    logger.debug("[MTHREAD] Got None, exiting")
+                    logger.debug("Got None, exiting")
                     return
 
                 else:
@@ -466,7 +466,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
             if not self.is_alive:
                 break
-        logger.info("[MTHREAD] queue management worker finished")
+        logger.info("queue management worker finished")
 
     def _start_local_interchange_process(self):
         """ Starts the interchange process locally
@@ -559,7 +559,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         for manager in managers:
             if manager['block_id'] == block_id:
-                logger.debug("[HOLD_BLOCK]: Sending hold to manager: {}".format(manager['manager']))
+                logger.debug("Sending hold to manager: {}".format(manager['manager']))
                 self.hold_worker(manager['manager'])
 
     def submit(self, func, resource_specification, *args, **kwargs):

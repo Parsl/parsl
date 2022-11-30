@@ -1,8 +1,12 @@
+import logging
+
 from typing import List, Dict
 
 from parsl.dataflow.job_status_poller import ExecutorStatus
 from parsl.executors.base import ParslExecutor
 from parsl.providers.provider_base import JobStatus, JobState
+
+logger = logging.getLogger(__name__)
 
 
 class JobErrorHandler:
@@ -16,6 +20,7 @@ class JobErrorHandler:
         es.executor.handle_errors(self, es.status)
 
     def simple_error_handler(self, executor: ParslExecutor, status: Dict[str, JobStatus], threshold: int):
+        logger.info("BENC: in simple_error_handler")
         (total_jobs, failed_jobs) = self.count_jobs(status)
         if total_jobs >= threshold and failed_jobs == total_jobs:
             executor.set_bad_state_and_fail_all(self.get_error(status))
@@ -27,6 +32,7 @@ class JobErrorHandler:
             total += 1
             if js.state == JobState.FAILED:
                 failed += 1
+        logger.info(f"BENC: count_jobs {failed}/{total} failed/total")
         return total, failed
 
     def get_error(self, status: Dict[str, JobStatus]) -> Exception:

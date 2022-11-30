@@ -30,7 +30,7 @@ lazys = {
         'python_app': 'parsl.app.app',
         'bash_app': 'parsl.app.app',
         'join_app': 'parsl.app.app',
-        'config': 'parsl.config',
+        'Config': 'parsl.config',
         'ThreadPoolExecutor': 'parsl.executors',
         'HighThroughputExecutor': 'parsl.executors',
         'ExtremeScaleExecutor': 'parsl.executors',

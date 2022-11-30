@@ -121,7 +121,12 @@ class BlockProviderExecutor(ParslExecutor):
         # We set all current tasks to this exception to make sure that
         # this is raised in the main context.
         for task in self._tasks:
+            logger.error(f"BENC: trying to set task {task}")
             self._tasks[task].set_exception(BadStateException(self, self._executor_exception))
+            # try:
+            #    self._tasks[task].set_exception(BadStateException(self, self._executor_exception))
+            # except Exception as e:
+            #   logger.error(f"BENC: could not set_exception on task {task}, with exception {e}")
 
     @property
     def bad_state_is_set(self):

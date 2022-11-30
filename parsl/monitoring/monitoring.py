@@ -289,7 +289,6 @@ class MonitoringHub(RepresentationMixin):
             self.dbm_proc.join()
             self.logger.debug("Finished waiting for DBM termination")
 
-
     @staticmethod
     def monitor_wrapper(f: Any,
                         args: List,
