@@ -1,6 +1,6 @@
 from typing import List, Dict
 
-from parsl.dataflow.task_status_poller import ExecutorStatus
+from parsl.dataflow.job_status_poller import ExecutorStatus
 from parsl.executors.base import ParslExecutor
 from parsl.providers.provider_base import JobStatus, JobState
 
