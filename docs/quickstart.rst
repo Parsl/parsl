@@ -49,6 +49,11 @@ The conda documentation provides `instructions <https://docs.conda.io/projects/c
 Getting started
 ---------------
 
+.. image:: images/high-level.png
+    :alt: Relationship between Parsl's main components
+    :align: center
+
+
 Parsl has much in common with Python's native concurrency library,
 but unlocking Parsl's potential requires understanding a few major concepts.
 
