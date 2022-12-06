@@ -21,7 +21,7 @@ def fresh_config():
                 ),
             )
         ],
-        strategy=None,
+        strategy='none',
     )
 
 

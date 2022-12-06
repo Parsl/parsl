@@ -36,7 +36,7 @@ def test_simple(mem_per_worker):
                 ),
             )
         ],
-        strategy=None,
+        strategy='none',
     )
     parsl.load(config)
 

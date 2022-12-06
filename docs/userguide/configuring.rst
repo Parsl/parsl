@@ -311,7 +311,7 @@ Provide either the number of executors (Parsl will assume they are named in inte
                 ),
             )
         ],
-        strategy=None,
+        strategy='none',
     )
 
 
@@ -340,7 +340,7 @@ Select the best blocking strategy for processor's cache hierarchy (choose 'alter
                 ),
             )
         ],
-        strategy=None,
+        strategy='none',
     )
 
 Ad-Hoc Clusters
