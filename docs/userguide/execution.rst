@@ -199,18 +199,15 @@ tasks with a thin workload.
 To address dynamic workload requirements, 
 Parsl implements a cloud-like elasticity model in which resource
 blocks are provisioned/deprovisioned in response to workload pressure. 
-Parsl provides an extensible strategy interface by which users
-can implement their own elasticity logic. 
 Given the general nature of the implementation, 
 Parsl can provide elastic execution on clouds, clusters,
 and supercomputers. Of course, in an HPC setting, elasticity may
 be complicated by queue delays.
 
-Parsl's elasticity model includes an extensible flow control system
+Parsl's elasticity model includes a flow control system
 that monitors outstanding tasks and available compute capacity.
-This flow control monitor, which can be extended or implemented by users,
-determines when to trigger scaling (in or out) events to match
-workload needs.
+This flow control monitor determines when to trigger scaling (in or out)
+events to match workload needs.
 
 The animated diagram below shows how blocks are elastically
 managed within an executor. The Parsl configuration for an executor
