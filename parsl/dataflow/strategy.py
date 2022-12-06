@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class Strategy(object):
-    """FlowControl strategy.
+    """Scaling strategy.
 
     As a workflow dag is processed by Parsl, new tasks are added and completed
     asynchronously. Parsl interfaces executors with execution providers to construct
