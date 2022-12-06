@@ -71,8 +71,6 @@ def serialize(obj, buffer_threshold=1e6):
         for method in methods_for_code.values():
             try:
                 serialized = method.serialize(obj)
-                # We attempt a deserialization to make sure both work.
-                method.deserialize(serialized)
             except Exception as e:
                 last_exception = e
                 continue
