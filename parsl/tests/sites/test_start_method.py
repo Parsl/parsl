@@ -32,7 +32,7 @@ def config(start_method: str, **kwargs):
                 start_method=start_method
             )
         ],
-        strategy=None,
+        strategy='none',
     )
     dfk = parsl.load(my_config)
     try:

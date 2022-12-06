@@ -65,8 +65,8 @@ def workflow(workflow_id):
                                       task_try_time_running, task_try_time_returned from task, try
                                       WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'"""
                                       % (workflow_id, workflow_id), db.engine)
-    task_summary = db.engine.execute(
-        "SELECT task_func_name, count(*) as 'frequency' from task WHERE run_id='%s' group by task_func_name;" % workflow_id)
+    task_summary = pd.read_sql_query(
+        "SELECT task_func_name, count(*) as 'frequency' from task WHERE run_id='%s' group by task_func_name;" % (workflow_id), db.engine)
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
@@ -127,9 +127,10 @@ def task(workflow_id, task_id):
                            )
 
 
-@app.route('/workflow/<workflow_id>/dag_<path:path>')
-@app.route('/workflow/<workflow_id>/dag_<path:path>')
-def workflow_dag_details(workflow_id, path='group_by_apps'):
+@app.route('/workflow/<workflow_id>/dag_<path>')
+def workflow_dag_details(workflow_id, path):
+    assert path == "group_by_apps" or path == "group_by_states"
+
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
     query = """SELECT task.task_id, task.task_func_name, task.task_depends, status.task_status_name
                FROM task LEFT JOIN status
@@ -172,8 +173,6 @@ def workflow_resources(workflow_id):
         "SELECT * FROM node WHERE run_id='%s'" % (workflow_id), db.engine)
 
     return render_template('resource_usage.html', workflow_details=workflow_details,
-                           user_time_distribution_avg_plot=resource_distribution_plot(
-                               df_resources, df_task, type='psutil_process_time_user', label='CPU Time Distribution', option='avg'),
                            user_time_distribution_max_plot=resource_distribution_plot(
                                df_resources, df_task, type='psutil_process_time_user', label='CPU Time Distribution', option='max'),
                            memory_usage_distribution_avg_plot=resource_distribution_plot(
