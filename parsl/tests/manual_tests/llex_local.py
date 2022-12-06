@@ -20,5 +20,5 @@ config = Config(
             ),
         )
     ],
-    strategy=None,
+    strategy='none',
 )

@@ -16,7 +16,7 @@ can be passed to, and returned from, a Parsl app.
     r = example('bob')
     print(r.result())
 
-Parsl uses the cloudpickle and pickle libraries to serialize Python objects 
+Parsl uses the dill and pickle libraries to serialize Python objects 
 into a sequence of bytes that can be passed over a network from the submitting
 machine to executing workers.
 
