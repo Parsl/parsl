@@ -1,6 +1,7 @@
 import logging
 import time
 import math
+import warnings
 from typing import List
 
 from parsl.dataflow.executor_status import ExecutorStatus
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class Strategy(object):
-    """FlowControl strategy.
+    """Scaling strategy.
 
     As a workflow dag is processed by Parsl, new tasks are added and completed
     asynchronously. Parsl interfaces executors with execution providers to construct
@@ -119,8 +120,13 @@ class Strategy(object):
             self.executors[e.label] = {'idle_since': None, 'config': e.label}
 
         self.strategies = {None: self._strategy_noop,
+                           'none': self._strategy_noop,
                            'simple': self._strategy_simple,
                            'htex_auto_scale': self._strategy_htex_auto_scale}
+
+        if self.config.strategy is None:
+            warnings.warn("literal None for strategy choice is deprecated. Use string 'none' instead.",
+                          DeprecationWarning)
 
         self.strategize = self.strategies[self.config.strategy]
 
