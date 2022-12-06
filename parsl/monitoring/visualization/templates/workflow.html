@@ -33,9 +33,9 @@
               </tr>
             </thead>
             <tbody>
-              {% for t in task_summary %}
+              {% for (_, t) in task_summary.iterrows() %}
                   <tr>
-                <td><a href="app/{{ t['task_func_name'] }}">{{ t.task_func_name }}</a></td>
+                <td><a href="app/{{ t['task_func_name'] }}">{{ t['task_func_name'] }}</a></td>
                 <td>{{ t.frequency }}</td>
               </tr>
             {% endfor %}
