@@ -51,8 +51,10 @@ class Config(RepresentationMixin):
     run_dir : str, optional
         Path to run directory. Default is 'runinfo'.
     strategy : str, optional
-        Strategy to use for scaling blocks according to workflow needs. Can be 'simple', 'htex_auto_scale' or `None`.
-        If `None`, dynamic scaling will be disabled. Default is 'simple'.
+        Strategy to use for scaling blocks according to workflow needs. Can be 'simple', 'htex_auto_scale', 'none'
+        or `None`.
+        If 'none' or `None`, dynamic scaling will be disabled. Default is 'simple'. The literal value `None` is
+        deprecated.
     max_idletime : float, optional
         The maximum idle time allowed for an executor before strategy could shut down unused blocks. Default is 120.0 seconds.
     usage_tracking : bool, optional

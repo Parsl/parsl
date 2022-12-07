@@ -30,5 +30,5 @@ config = Config(
         )
     ],
     #  AdHoc Clusters should not be setup with scaling strategy.
-    strategy=None,
+    strategy='none',
 )
