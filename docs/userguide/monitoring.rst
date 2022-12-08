@@ -50,7 +50,7 @@ configuration. Here the `parsl.monitoring.MonitoringHub` is specified to use por
           monitoring_debug=False,
           resource_monitoring_interval=10,
       ),
-      strategy=None
+      strategy='none'
    )
 
 
