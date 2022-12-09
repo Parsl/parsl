@@ -244,8 +244,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
 
         security_context = None
         if self.user_id and self.group_id:
-            security_context = client.V1SecurityContext(run_as_group=self.group_id,
-                                                        run_as_user=self.user_id,
+            security_context = client.V1SecurityContext(run_as_group=int(self.group_id),
+                                                        run_as_user=int(self.user_id),
                                                         run_as_non_root=self.run_as_non_root)
 
         # Create the enviornment variables and command to initiate IPP
