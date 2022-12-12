@@ -4,10 +4,7 @@ import pytest
 
 import parsl
 from parsl.app.app import python_app
-from parsl.tests.configs.local_threads_no_cache import config
-
-local_config = config
-
+from parsl.tests.configs.local_threads_no_cache import fresh_config as local_config
 
 @python_app
 def random_uuid(x):

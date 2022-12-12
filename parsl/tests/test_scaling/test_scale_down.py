@@ -14,26 +14,27 @@ from parsl.executors import HighThroughputExecutor
 
 logger = logging.getLogger(__name__)
 
-local_config = Config(
-    executors=[
-        HighThroughputExecutor(
-            heartbeat_period=2,
-            heartbeat_threshold=6,
-            poll_period=1,
-            label="htex_local",
-            max_workers=1,
-            provider=LocalProvider(
-                channel=LocalChannel(),
-                init_blocks=0,
-                max_blocks=5,
-                min_blocks=2,
-                launcher=SingleNodeLauncher(),
-            ),
-        )
-    ],
-    max_idletime=5,
-    strategy='htex_auto_scale',
-)
+def local_config():
+    return Config(
+        executors=[
+            HighThroughputExecutor(
+                heartbeat_period=2,
+                heartbeat_threshold=6,
+                poll_period=1,
+                label="htex_local",
+                max_workers=1,
+                provider=LocalProvider(
+                    channel=LocalChannel(),
+                    init_blocks=0,
+                    max_blocks=5,
+                    min_blocks=2,
+                    launcher=SingleNodeLauncher(),
+                ),
+            )
+        ],
+        max_idletime=5,
+        strategy='htex_auto_scale',
+    )
 
 
 @python_app

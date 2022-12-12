@@ -4,8 +4,10 @@ from parsl import python_app
 from parsl.tests.configs.htex_local import fresh_config
 from parsl.executors.errors import SerializationError
 
-local_config = fresh_config()
-local_config.retries = 2
+def local_config():
+    config = fresh_config()
+    config.retries = 2
+    return config
 
 
 @python_app
@@ -26,9 +28,5 @@ def test_serialization_error():
     gen = generator()
     x = fail_pickling(gen)
 
-    try:
-        x.result()
-    except Exception as e:
-        assert isinstance(e, SerializationError)
-    else:
-        raise ValueError
+    assert x.exception() is not None, "Should have got an exception, actually got: " + repr(x.result())
+    assert isinstance(x.exception(), SerializationError)
