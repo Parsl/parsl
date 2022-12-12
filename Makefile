@@ -78,9 +78,14 @@ workqueue_ex_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex conf
 .PHONY: config_local_test
 config_local_test: ## run all tests with workqueue_ex config
 	echo "$(MPI)"
+	sudo apt-get install -y strace
 	parsl/executors/extreme_scale/install-mpi.sh $(MPI)
 	pip3 install ".[extreme_scale,monitoring]"
-	PYTHONPATH=. pytest parsl/tests/ -k "not cleannet" --config local --random-order
+	echo "List of currently running processes"
+	ps -ax
+	uptime
+	echo starting strace:
+	PYTHONPATH=. strace pytest parsl/tests/ -k "not cleannet" --config local --random-order
 
 .PHONY: site_test
 site_test:
