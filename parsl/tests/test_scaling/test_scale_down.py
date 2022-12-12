@@ -14,6 +14,7 @@ from parsl.executors import HighThroughputExecutor
 
 logger = logging.getLogger(__name__)
 
+
 def local_config():
     return Config(
         executors=[

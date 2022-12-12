@@ -3,6 +3,7 @@ from parsl.channels import LocalChannel
 from parsl.executors import HighThroughputExecutor
 from parsl.providers import AdHocProvider
 
+
 def fresh_config():
     return Config(
         executors=[

@@ -4,6 +4,7 @@ from parsl import python_app
 from parsl.tests.configs.htex_local import fresh_config
 from parsl.executors.errors import SerializationError
 
+
 def local_config():
     config = fresh_config()
     config.retries = 2

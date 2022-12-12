@@ -3,6 +3,7 @@ from parsl.data_provider.file_noop import NoOpFileStaging
 from parsl.data_provider.http import HTTPInTaskStaging
 from parsl.executors.threads import ThreadPoolExecutor
 
+
 def fresh_config():
     return Config(
         executors=[

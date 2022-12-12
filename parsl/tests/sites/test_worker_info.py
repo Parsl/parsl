@@ -7,6 +7,7 @@ from parsl.executors import HighThroughputExecutor
 from parsl import python_app
 import pytest
 
+
 def local_config():
     return Config(
         executors=[

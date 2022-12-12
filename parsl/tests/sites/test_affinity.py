@@ -8,6 +8,7 @@ from parsl import python_app
 import pytest
 import os
 
+
 def local_config():
     return Config(
         executors=[
@@ -25,7 +26,7 @@ def local_config():
             )
         ],
         strategy='none',
-      )
+    )
 
 
 @python_app

@@ -5,6 +5,7 @@ from parsl.launchers import SimpleLauncher
 from parsl.config import Config
 from parsl.executors import ExtremeScaleExecutor
 
+
 def fresh_config():
     return Config(
         executors=[
