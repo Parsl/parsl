@@ -721,7 +721,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
                 # Obtain the future from the tasks dictionary
                 with self.tasks_lock:
-                    future = self.tasks[task_report.id]
+                    future = self.tasks.pop(task_report.id)
 
                 logger.debug("Updating Future for Parsl Task {}".format(task_report.id))
                 if task_report.result_received:

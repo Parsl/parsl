@@ -17,7 +17,7 @@ def make_config(run_dir):
                 max_workers=2,
             )
         ],
-        strategy=None,
+        strategy='none',
         run_dir=str(run_dir)
     )
 

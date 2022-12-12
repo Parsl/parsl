@@ -20,7 +20,7 @@ from parsl.serialize import deserialize
 
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import AddressedMonitoringMessage, TaggedMonitoringMessage
-from typing import cast, Any, Callable, Optional, Union
+from typing import cast, Any, Callable, Dict, List, Optional, Union
 
 _db_manager_excepts: Optional[Exception]
 
@@ -286,6 +286,8 @@ class MonitoringHub(RepresentationMixin):
 
     @staticmethod
     def monitor_wrapper(f: Any,
+                        args: List,
+                        kwargs: Dict,
                         try_id: int,
                         task_id: int,
                         monitoring_hub_url: str,
@@ -294,8 +296,8 @@ class MonitoringHub(RepresentationMixin):
                         sleep_dur: float,
                         radio_mode: str,
                         monitor_resources: bool,
-                        run_dir: str) -> Callable:
-        return parsl.monitoring.remote.monitor_wrapper(f, try_id, task_id, monitoring_hub_url,
+                        run_dir: str) -> Tuple[Callable, List, Dict]:
+        return parsl.monitoring.remote.monitor_wrapper(f, args, kwargs, try_id, task_id, monitoring_hub_url,
                                                        run_id, logging_level, sleep_dur, radio_mode,
                                                        monitor_resources, run_dir)
 
