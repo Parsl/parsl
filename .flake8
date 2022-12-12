@@ -19,4 +19,9 @@ per-file-ignores = parsl/monitoring/visualization/*:E741,
   # needed because this deliberately has undefined names in it
   parsl/tests/test_swift.py:F821,
   # test_ssh_errors.py really is broken
-  parsl/tests/integration/test_channels/test_ssh_errors.py:F821
+  parsl/tests/integration/test_channels/test_ssh_errors.py:F821,
+
+  # tests often import fresh_config into their namespace as local_config
+  # but then do not use it directly, because tests/conftests.py
+  # looks for it instead.
+  parsl/tests/**:F401
