@@ -570,7 +570,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         os.environ["ROCR_VISIBLE_DEVICES"] = accelerator
         os.environ["ZE_AFFINITY_MASK"] = accelerator
         os.environ["ZE_ENABLE_PCI_ID_DEVICE_ORDER"] = '1'
-        
+
         logger.info(f'Pinned worker to accelerator: {accelerator}')
 
     while True:
