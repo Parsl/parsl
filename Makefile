@@ -80,9 +80,6 @@ config_local_test: ## run all tests with workqueue_ex config
 	echo "$(MPI)"
 	parsl/executors/extreme_scale/install-mpi.sh $(MPI)
 	pip3 install ".[extreme_scale,monitoring]"
-	echo "List of currently running processes"
-	ps -ax
-	uptime
 	PYTHONPATH=. pytest parsl/tests/ -k "not cleannet" --config local --random-order
 
 .PHONY: site_test
