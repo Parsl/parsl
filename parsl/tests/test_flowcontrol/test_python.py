@@ -7,6 +7,7 @@ from parsl.tests.configs.htex_local import fresh_config
 def local_config():
     c = fresh_config()
     c.executors[0].init_blocks = 0
+    return c
 
 
 @python_app
