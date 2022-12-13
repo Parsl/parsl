@@ -23,6 +23,3 @@ def fresh_config():
         ],
         strategy='none',
     )
-
-
-config = fresh_config()
