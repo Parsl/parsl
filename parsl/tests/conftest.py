@@ -148,9 +148,8 @@ def load_dfk_local_module(request, pytestconfig):
         local_teardown = getattr(request.module, "local_teardown", None)
         local_config = getattr(request.module, "local_config", None)
 
-        if local_config and not callable(local_config):
-            raise RuntimeError("local_config must now be callable")
-        elif local_config and callable(local_config):
+        if local_config:
+            assert callable(local_config)
             c = local_config()
             assert isinstance(c, parsl.Config)
             dfk = parsl.load(c)
