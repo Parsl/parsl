@@ -1,9 +1,7 @@
 import pytest
 
 from parsl.app.app import python_app
-from parsl.tests.configs.htex_local import config
-
-local_config = config
+from parsl.tests.configs.htex_local import fresh_config as local_config
 
 
 @python_app

@@ -7,8 +7,10 @@ from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import fresh_config
 
 
-local_config = fresh_config()
-local_config.retries = 2
+def local_config():
+    c = fresh_config()
+    c.retries = 2
+    return c
 
 
 @python_app

@@ -1,12 +1,10 @@
 import pytest
 
 from parsl import python_app
-from parsl.tests.configs.local_adhoc import config
+from parsl.tests.configs.local_adhoc import fresh_config as local_config
 
 import logging
 logger = logging.getLogger(__name__)
-
-local_config = config
 
 
 @python_app
