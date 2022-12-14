@@ -2,12 +2,10 @@ import pytest
 
 import parsl
 from parsl.app.app import python_app
-from parsl.tests.configs.exex_local import config
+from parsl.tests.configs.exex_local import fresh_config as local_config
 
 import logging
 logger = logging.getLogger(__name__)
-
-local_config = config
 
 
 @python_app(executors=['Extreme_Local'])

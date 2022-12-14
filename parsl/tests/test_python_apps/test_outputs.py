@@ -6,10 +6,7 @@ import shutil
 from concurrent.futures import wait
 
 from parsl import File, python_app
-from parsl.tests.configs.local_threads import config
-
-
-local_config = config
+from parsl.tests.configs.local_threads import fresh_config as local_config
 
 
 @python_app

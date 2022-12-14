@@ -8,23 +8,25 @@ from parsl import python_app
 import pytest
 import os
 
-local_config = Config(
-    executors=[
-        HighThroughputExecutor(
-            label="htex_Local",
-            worker_debug=True,
-            max_workers=2,
-            cpu_affinity='block',
-            available_accelerators=2,
-            provider=LocalProvider(
-                channel=LocalChannel(),
-                init_blocks=1,
-                max_blocks=1,
-            ),
-        )
-    ],
-    strategy=None,
-)
+
+def local_config():
+    return Config(
+        executors=[
+            HighThroughputExecutor(
+                label="htex_Local",
+                worker_debug=True,
+                max_workers=2,
+                cpu_affinity='block',
+                available_accelerators=2,
+                provider=LocalProvider(
+                    channel=LocalChannel(),
+                    init_blocks=1,
+                    max_blocks=1,
+                ),
+            )
+        ],
+        strategy='none',
+    )
 
 
 @python_app

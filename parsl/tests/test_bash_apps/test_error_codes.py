@@ -10,10 +10,7 @@ import parsl.app.errors as pe
 
 from parsl.app.errors import BashExitFailure
 
-from parsl.tests.configs.local_threads import config
-
-
-local_config = config
+from parsl.tests.configs.local_threads import fresh_config as local_config
 
 
 @bash_app

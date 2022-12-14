@@ -25,5 +25,5 @@ config = Config(
             storage_access=[HTTPInTaskStaging(), FTPInTaskStaging(), RSyncStaging("fitzroy.cqx.ltd.uk")]
         )
     ],
-    strategy=None,
+    strategy='none',
 )
