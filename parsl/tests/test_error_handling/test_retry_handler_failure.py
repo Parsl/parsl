@@ -11,7 +11,8 @@ def retry_handler_raises(exc, task_record):
     raise RuntimeError("retry_handler_raises deliberate exception")
 
 
-local_config = parsl.config.Config(retry_handler=retry_handler_raises)
+def local_config():
+    return parsl.config.Config(retry_handler=retry_handler_raises)
 
 
 @pytest.mark.local

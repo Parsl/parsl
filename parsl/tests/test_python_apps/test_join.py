@@ -3,9 +3,7 @@ import time
 
 from parsl import join_app, python_app
 
-from parsl.tests.configs.local_threads import fresh_config
-
-local_config = fresh_config()
+from parsl.tests.configs.local_threads import fresh_config as local_config
 
 RESULT_CONSTANT = 3
 

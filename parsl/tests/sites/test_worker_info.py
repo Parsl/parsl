@@ -7,21 +7,23 @@ from parsl.executors import HighThroughputExecutor
 from parsl import python_app
 import pytest
 
-local_config = Config(
-    executors=[
-        HighThroughputExecutor(
-            label="htex_Local",
-            worker_debug=True,
-            max_workers=4,
-            provider=LocalProvider(
-                channel=LocalChannel(),
-                init_blocks=1,
-                max_blocks=1,
-            ),
-        )
-    ],
-    strategy='none',
-)
+
+def local_config():
+    return Config(
+        executors=[
+            HighThroughputExecutor(
+                label="htex_Local",
+                worker_debug=True,
+                max_workers=4,
+                provider=LocalProvider(
+                    channel=LocalChannel(),
+                    init_blocks=1,
+                    max_blocks=1,
+                ),
+            )
+        ],
+        strategy='none',
+    )
 
 
 @python_app

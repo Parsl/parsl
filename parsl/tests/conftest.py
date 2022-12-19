@@ -133,7 +133,7 @@ def load_dfk_local_module(request, pytestconfig):
     """Load the dfk around test modules, in local mode.
 
     If local_config is specified in the test module, it will be loaded using
-    parsl.load. It should be a parsl Config() object.
+    parsl.load. It should be a Callable that returns a parsl Config object.
 
     If local_setup and/or local_teardown are callables (such as functions) in
     the test module, they they will be invoked before/after the tests. This
@@ -148,8 +148,11 @@ def load_dfk_local_module(request, pytestconfig):
         local_teardown = getattr(request.module, "local_teardown", None)
         local_config = getattr(request.module, "local_config", None)
 
-        if(local_config):
-            dfk = parsl.load(local_config)
+        if local_config:
+            assert callable(local_config)
+            c = local_config()
+            assert isinstance(c, parsl.Config)
+            dfk = parsl.load(c)
 
         if(callable(local_setup)):
             local_setup()
