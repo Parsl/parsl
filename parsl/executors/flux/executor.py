@@ -352,7 +352,7 @@ def _submit_flux_jobs(
 
     Pull ``_FluxJobInfo`` job packages from a queue and submit them to Flux.
     """
-    provider.script_dir = working_dir  # type: ignore
+    provider.script_dir = working_dir
     job_id = provider.submit(
         launch_cmd.format(
             port=socket.bind_to_random_port("tcp://*"),
@@ -371,7 +371,7 @@ def _submit_flux_jobs(
     # wait for the flux package path to be sent
     _check_provider_job(socket, provider, job_id)
     # receive path to the ``flux`` package from the ZMQ socket
-    flux_pkg_path = socket.recv().decode()  # type: ignore
+    flux_pkg_path = socket.recv().decode()
     # load the package. Unfortunately the only good way to do this is to
     # modify sys.path
     if flux_pkg_path not in sys.path:

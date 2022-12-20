@@ -70,7 +70,7 @@ class Database:
     def _get_mapper(self, table_obj: Table) -> Mapper:
         if hasattr(mapperlib, '_all_registries'):
             all_mappers = set()
-            for mapper_registry in mapperlib._all_registries():  # type: ignore
+            for mapper_registry in mapperlib._all_registries():
                 all_mappers.update(mapper_registry.mappers)
         else:  # SQLAlchemy <1.4
             all_mappers = mapperlib._mapper_registry  # type: ignore

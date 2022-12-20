@@ -613,8 +613,13 @@ class DataFlowKernel(object):
                 logger.debug(f"Task {task_id} is not pending, so launch_if_ready skipping")
                 return
 
-            if self._count_deps(task_record['depends']) != 0:
-                logger.debug(f"Task {task_id} has outstanding dependencies, so launch_if_ready skipping")
+            counted_deps = self._count_deps(task_record['depends'])
+
+            logger.debug(f"METRIC COUNTED_DEPS {task_id} "
+                         f"total={len(task_record['depends'])} outstanding={counted_deps}")
+
+            if counted_deps != 0:
+                logger.debug(f"Task {task_id} has {counted_deps} outstanding dependencies, so launch_if_ready skipping")
                 return
 
             # We can now launch the task or handle any dependency failures
@@ -804,9 +809,7 @@ class DataFlowKernel(object):
                 # this is a hook for post-task stageout
                 # note that nothing depends on the output - which is maybe a bug
                 # in the not-very-tested stageout system?
-                newfunc = self.data_manager.replace_task_stage_out(f_copy, func, executor)
-                if newfunc:
-                    func = newfunc
+                func = self.data_manager.replace_task_stage_out(f_copy, func, executor)
             else:
                 logger.debug("Not performing output staging for: {}".format(repr(f)))
                 app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
@@ -1042,6 +1045,10 @@ class DataFlowKernel(object):
             waiting_message = "waiting on {}".format(", ".join(depend_descs))
         else:
             waiting_message = "not waiting on any dependency"
+
+        logger.debug(f"METRIC GATHERED_DEPS {task_id} "
+                     f"depends={len(depends)}")
+
         event("DFK_SUBMIT_EXAMINE_DEPS_END")
 
         logger.info("Task {} submitted for App {}, {}".format(task_id,
@@ -1110,7 +1117,7 @@ class DataFlowKernel(object):
         Parameters
         ----------
         provider: Provider obj
-           Provider for which scritps dirs are being created
+           Provider for which scripts dirs are being created
         channel: Channel obj
            Channel over which the remote dirs are to be created
         """

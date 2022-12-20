@@ -19,13 +19,6 @@ class ParslError(Exception):
     """
 
 
-class NotFutureError(ParslError):
-    """A non future item was passed to a function that expected a future.
-
-    This is basically a type error.
-    """
-
-
 class AppException(ParslError):
     """An error raised during execution of an app.
 
@@ -165,12 +158,12 @@ R = TypeVar('R')
 
 
 def wrap_error(func: Callable[..., R]) -> Callable[..., Union[R, RemoteExceptionWrapper]]:
-    @wraps(func)  # type: ignore
+    @wraps(func)
     def wrapper(*args: object, **kwargs: object) -> Any:
         import sys
         from parsl.app.errors import RemoteExceptionWrapper
         try:
-            return func(*args, **kwargs)  # type: ignore
+            return func(*args, **kwargs)
         except Exception:
             return RemoteExceptionWrapper(*sys.exc_info())
-    return wrapper  # type: ignore
+    return wrapper
