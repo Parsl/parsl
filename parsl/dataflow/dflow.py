@@ -698,9 +698,7 @@ class DataFlowKernel(object):
                 # this is a hook for post-task stageout
                 # note that nothing depends on the output - which is maybe a bug
                 # in the not-very-tested stageout system?
-                newfunc = self.data_manager.replace_task_stage_out(f_copy, func, executor)
-                if newfunc:
-                    func = newfunc
+                func = self.data_manager.replace_task_stage_out(f_copy, func, executor)
             else:
                 logger.debug("Not performing output staging for: {}".format(repr(f)))
                 app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
