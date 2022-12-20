@@ -199,12 +199,12 @@ def apply_masks(request, pytestconfig):
     if m is not None:  # is marked as local
         if config != 'local':
             if len(m.args) == 0:
-                pytest.skip('skipping non-local config')
+                pytest.skip('intended for local config')
             else:
                 pytest.skip(m.args[0])
     else:  # is not marked as local
         if config == 'local':
-            pytest.skip('skipping local config')
+            pytest.skip('intended for explicit config')
 
 
 @pytest.fixture()
