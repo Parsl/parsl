@@ -19,13 +19,6 @@ class ParslError(Exception):
     """
 
 
-class NotFutureError(ParslError):
-    """A non future item was passed to a function that expected a future.
-
-    This is basically a type error.
-    """
-
-
 class AppException(ParslError):
     """An error raised during execution of an app.
 
