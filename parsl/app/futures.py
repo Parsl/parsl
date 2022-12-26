@@ -1,10 +1,12 @@
 """This module implements DataFutures.
 """
 import logging
+import typeguard
 from concurrent.futures import Future
 
-from parsl.app.errors import NotFutureError
 from parsl.data_provider.files import File
+
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,8 @@ class DataFuture(Future):
         else:
             self.set_result(self.file_obj)
 
-    def __init__(self, fut, file_obj, tid=None):
+    @typeguard.typechecked
+    def __init__(self, fut: Future, file_obj: File, tid: Optional[int] = None) -> None:
         """Construct the DataFuture object.
 
         If the file_obj is a string convert to a File.
@@ -50,21 +53,13 @@ class DataFuture(Future):
         """
         super().__init__()
         self._tid = tid
-        if isinstance(file_obj, str):
-            raise ValueError("DataFuture constructed with a string, not a File. This is no longer supported.")
-        elif isinstance(file_obj, File):
+        if isinstance(file_obj, File):
             self.file_obj = file_obj
         else:
-            raise ValueError("DataFuture must be initialized with a File")
+            raise ValueError("DataFuture must be initialized with a File, not {}".format(type(file_obj)))
         self.parent = fut
 
-        if fut is None:
-            logger.debug("Setting result to filepath immediately since no parent future was passed")
-            self.set_result(self.file_obj)
-        elif isinstance(fut, Future):
-            self.parent.add_done_callback(self.parent_callback)
-        else:
-            raise NotFutureError("DataFuture parent must be either another Future or None")
+        self.parent.add_done_callback(self.parent_callback)
 
         logger.debug("Creating DataFuture with parent: %s and file: %s", self.parent, repr(self.file_obj))
 
