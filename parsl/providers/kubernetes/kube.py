@@ -248,7 +248,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                                                         run_as_user=int(self.user_id),
                                                         run_as_non_root=self.run_as_non_root)
 
-        # Create the enviornment variables and command to initiate IPP
+        # Create the environment variables and command to initiate IPP
         environment_vars = client.V1EnvVar(name="TEST", value="SOME DATA")
 
         launch_args = ["-c", "{0};".format(cmd_string)]
