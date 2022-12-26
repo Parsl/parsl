@@ -2,8 +2,9 @@ import logging
 import typeguard
 import concurrent.futures as cf
 
-from typing import Any, List, Optional
+from typing import List, Optional
 
+from parsl.data_provider.staging import Staging
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.utils import RepresentationMixin
 from parsl.executors.errors import UnsupportedFeatureError
@@ -30,7 +31,7 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self, label: str = 'threads', max_threads: int = 2,
-                 thread_name_prefix: str = '', storage_access: List[Any] = None,
+                 thread_name_prefix: str = '', storage_access: Optional[List[Staging]] = None,
                  working_dir: Optional[str] = None, managed: bool = True):
         NoStatusHandlingExecutor.__init__(self)
         self.label = label
