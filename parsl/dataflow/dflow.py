@@ -167,6 +167,7 @@ class DataFlowKernel(object):
         self.checkpointed_tasks = 0
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
+        self.checkpointable_tasks = []
 
         # the flow control keeps track of executors and provider task states;
         # must be set before executors are added since add_executors calls
@@ -434,20 +435,21 @@ class DataFlowKernel(object):
         self.memoizer.update_memo(task_record, future)
 
         # Cover all checkpointing cases here:
-        # Do we need to checkpoint the task now,
-        # keep it around for one of the other checkpoint
-        # methods, or can we wipe it immediately?
+        # Do we need to checkpoint now, or queue for later,
+        # or do nothing?
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint(tasks=[task_record])
         elif self.checkpoint_mode == 'manual' or \
                 self.checkpoint_mode == 'periodic' or \
                 self.checkpoint_mode == 'dfk_exit':
-            pass
+            with self.checkpoint_lock:
+                self.checkpointable_tasks.append(task_record)
         elif self.checkpoint_mode is None:
-            self.wipe_task(task_id)
+            pass
         else:
             raise RuntimeError(f"Invalid checkpoint mode {self.checkpoint_mode}")
 
+        self.wipe_task(task_id)
         return
 
     def _complete_task(self, task_record: TaskRecord, new_state: States, result: Any) -> None:
@@ -1159,11 +1161,11 @@ class DataFlowKernel(object):
             run under RUNDIR/checkpoints/{tasks.pkl, dfk.pkl}
         """
         with self.checkpoint_lock:
-            checkpoint_queue = None
             if tasks:
                 checkpoint_queue = tasks
             else:
-                checkpoint_queue = list(self.tasks.values())
+                checkpoint_queue = self.checkpointable_tasks
+                self.checkpointable_tasks = []
 
             checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
             checkpoint_dfk = checkpoint_dir + '/dfk.pkl'
@@ -1191,7 +1193,6 @@ class DataFlowKernel(object):
 
                     if app_fu.done() and app_fu.exception() is None:
                         hashsum = task_record['hashsum']
-                        self.wipe_task(task_id)
                         if not hashsum:
                             continue
                         t = {'hash': hashsum,
