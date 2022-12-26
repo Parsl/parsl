@@ -137,7 +137,6 @@ Exceptions
     parsl.app.errors.BashAppNoReturn
     parsl.app.errors.BashExitFailure
     parsl.app.errors.MissingOutputs
-    parsl.app.errors.NotFutureError
     parsl.app.errors.ParslError
     parsl.errors.OptionalModuleMissing
     parsl.executors.errors.ExecutorError
