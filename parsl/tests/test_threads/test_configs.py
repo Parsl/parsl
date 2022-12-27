@@ -1,10 +1,8 @@
 import pytest
 
+import parsl
 from parsl.app.app import python_app
-from parsl.tests.configs.local_threads import config
-
-
-local_config = config
+from parsl.tests.configs.local_threads import fresh_config
 
 
 @python_app
@@ -19,6 +17,8 @@ def worker_identify(x, sleep_dur=0.2):
 
 @pytest.mark.local
 def test_parallel_for():
+    config = fresh_config()
+    dfk = parsl.load(config)
     d = []
     for i in range(0, config.executors[0].max_threads):
         d.extend([worker_identify(i)])
@@ -29,6 +29,8 @@ def test_parallel_for():
     process_count = len(set([item.result()['pid'] for item in d]))
     assert thread_count <= config.executors[0].max_threads, "More threads than allowed"
     assert process_count == 1, "More processes than allowed"
+    dfk.cleanup()
+    parsl.clear()
     return d
 
 
