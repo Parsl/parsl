@@ -619,7 +619,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         logger.info("All processing finished for task {}".format(tid))
 
 
-def start_file_logger(filename,urank, name='parsl', level=logging.DEBUG, format_string=None):
+def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
     """Add a stream log handler.
 
     Args:
