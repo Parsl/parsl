@@ -349,7 +349,7 @@ which may not be available on all operating systems.
 It then sets environment variables to control 
 `OpenMP thread affinity <https://hpc-tutorials.llnl.gov/openmp/ProcessThreadAffinity.pdf>`_
 so that any subprocesses launched by a worker which use OpenMP know which processors are valid.
-These include `OMP_NUM_THREADS`, `GOMP_COMP_AFFINITY`, and `KMP_THREAD_AFFINITY`.
+These include ``OMP_NUM_THREADS``, ``GOMP_COMP_AFFINITY``, and ``KMP_THREAD_AFFINITY``.
 
 Ad-Hoc Clusters
 ---------------
