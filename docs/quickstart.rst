@@ -105,7 +105,7 @@ with hello world Python and Bash apps.
     with open('hello-stdout', 'r') as f:
         print(f.read())
 
-Learn more about the types of Apps and their options `here <userguide/apps.html>`_.
+Learn more about the types of Apps and their options `here <userguide/apps.html>`__.
 
 Executors
 ^^^^^^^^^
@@ -120,7 +120,7 @@ You can dynamically set the number of workers based on available memory and
 pin each worker to specific GPUs or CPU cores
 among other powerful features.
 
-Learn more about Executors `here <userguide/execution.html#executors>`_.
+Learn more about Executors `here <userguide/execution.html#executors>`__.
 
 Execution Providers
 ^^^^^^^^^^^^^^^^^^^
@@ -134,7 +134,7 @@ Another key role of Providers is defining how to start an Executor on a remote c
 Often, this simply involves specifying the correct Python environment and
 (described below) how to launch the Executor on each acquired computers.
 
-Learn more about Providers `here <userguide/execution.html#execution-providers>`_.
+Learn more about Providers `here <userguide/execution.html#execution-providers>`__.
 
 Launchers
 ^^^^^^^^^
@@ -144,7 +144,7 @@ A common example is an :class:`~parsl.launchers.launchers.MPILauncher`, which us
 for starting a single program on multiple computing nodes.
 Like Providers, Parsl comes packaged with Launchers for most supercomputers and clouds.
 
-Learn more about Launchers `here <userguide/execution.html#launchers>`_
+Learn more about Launchers `here <userguide/execution.html#launchers>`__.
 
 
 Benefits of a Data-Flow Kernel
@@ -199,7 +199,7 @@ An example which launches 512 workers on 128 nodes of the Polaris supercomputer 
     )
 
 
-The documentation has examples for other supercomputers `here <userguide/configuring.html>`_.
+The documentation has examples for other supercomputers `here <userguide/configuring.html>`__.
 
 The next step is to load the configuration
 
