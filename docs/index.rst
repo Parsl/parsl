@@ -47,7 +47,7 @@ Parsl lets you chain functions together and will launch each function as inputs 
 Parsl is an open-source code, and available on GitHub: https://github.com/parsl/parsl/
 
 Why use Parsl?
-++++++++++++++
+==============
 
 Parsl is Python
 ---------------
