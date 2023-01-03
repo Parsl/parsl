@@ -247,8 +247,7 @@ class MonitoringHub(RepresentationMixin):
                 "The monitoring message sent from DFK to router timed-out after {}ms".format(self.dfk_channel_timeout))
 
     def close(self) -> None:
-        if self.logger:
-            self.logger.info("Terminating Monitoring Hub")
+        self.logger.info("Terminating Monitoring Hub")
         exception_msgs = []
         while True:
             try:
