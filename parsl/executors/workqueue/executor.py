@@ -307,6 +307,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         logger.debug("Starting WorkQueueExecutor")
 
+        self._port_mailbox = multiprocessing.Manager().Namespace()
+        self._port_mailbox.port = None
+
         # Create a Process to perform WorkQueue submissions
         submit_process_kwargs = {"task_queue": self.task_queue,
                                  "launch_cmd": self.launch_cmd,
@@ -322,7 +325,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                  "port": self.port,
                                  "wq_log_dir": self.wq_log_dir,
                                  "project_password_file": self.project_password_file,
-                                 "project_name": self.project_name}
+                                 "project_name": self.project_name,
+                                 "port_mailbox": self._port_mailbox
+                                 }
         self.submit_process = multiprocessing.Process(target=_work_queue_submit_wait,
                                                       name="WorkQueue-Submit-Process",
                                                       kwargs=submit_process_kwargs)
@@ -334,6 +339,12 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Begin both processes
         self.submit_process.start()
         self.collector_thread.start()
+
+        # wait for submit process to report the actual WQ port
+        while self._port_mailbox.port is None:  # TODO: check for submit_process not being ended
+            time.sleep(0.1)  # surely a better way to do this that also copes with submit_process dying and never returning a value?
+
+        logger.debug(f"Actual listening port is {self._port_mailbox.port}")
 
         # Initialize scaling for the provider
         self.initialize_scaling()
@@ -501,7 +512,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if self.project_name:
             worker_command += ' -M {}'.format(self.project_name)
         else:
-            worker_command += ' {} {}'.format(self.address, self.port)
+            worker_command += ' {} {}'.format(self.address, self._port_mailbox.port)
 
         logger.debug("Using worker command: {}".format(worker_command))
         return worker_command
@@ -723,7 +734,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
 
 @wrap_with_logs
-def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
+def _work_queue_submit_wait(port_mailbox=None,
+                            task_queue=multiprocessing.Queue(),
                             launch_cmd=None,
                             env=None,
                             collector_queue=multiprocessing.Queue(),
@@ -762,8 +774,10 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
     # Create WorkQueue queue object
     logger.debug("Creating WorkQueue Object")
     try:
-        logger.debug("Listening on port {}".format(port))
+        logger.debug("Requested port {}".format(port))
         q = WorkQueue(port, debug_log=wq_debug_log)
+        port_mailbox.port = q.port
+        logger.debug("Listening on port {}".format(q.port))
     except Exception as e:
         logger.error("Unable to create WorkQueue object: {}".format(e))
         raise e
