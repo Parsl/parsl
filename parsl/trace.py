@@ -3,7 +3,7 @@ import pickle
 import statistics
 import time
 
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,10 @@ event_stats: Dict[Tuple[str, str],
 event_stats = {}
 
 
-def event(name: str):
+# using Any for spanid means anything that we can write out in format string
+# most concretely a string or an int, but I'm not sure it should be
+# concretely tied to only those two types.
+def event(name: str, spantype: str, spanid: Any):
     global last_event
     t = time.time()
 
@@ -27,8 +30,7 @@ def event(name: str):
         (last_name, last_t) = last_event
         d_t = t - last_t
         if trace_by_logger:
-            logger.info(f"{last_name} took {d_t} seconds; beginning new event {name}")
-            # logger.info("%s took %s seconds; beginning new event %s", last_name, d_t, name)
+            logger.info(f"{last_name} took {d_t} seconds; beginning new event {name} for {spantype} {spanid}")
         if trace_by_dict:
             k = (last_name, name)
             if k in event_stats:

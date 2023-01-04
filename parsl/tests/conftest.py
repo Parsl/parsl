@@ -12,6 +12,7 @@ import pytest
 import _pytest.runner as runner
 
 import parsl
+import parsl.trace as pt
 from parsl.dataflow.dflow import DataFlowKernelLoader
 
 logger = logging.getLogger(__name__)
@@ -90,6 +91,14 @@ def pytest_configure(config):
         'markers',
         'staging_required: Marks tests that require a staging provider, when there is no sharedFS)'
     )
+
+
+@pytest.fixture(autouse=True, scope='session')
+def handle_microtracing():
+    pt.trace_by_logger = True
+    pt.trace_by_dict = True
+    yield
+    pt.output_event_stats()
 
 
 @pytest.fixture(autouse=True, scope='session')

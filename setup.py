@@ -58,7 +58,7 @@ setup(
     extras_require=extras_require,
     classifiers=[
         # Maturity
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 5 - Production/Stable',
         # Intended audience
         'Intended Audience :: Developers',
         # Licence, must match with licence above

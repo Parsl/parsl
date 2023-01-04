@@ -170,7 +170,7 @@ class MonitoringHub(RepresentationMixin):
         self.logger.debug("Initializing ZMQ Pipes to client")
         self.monitoring_hub_active = True
 
-        comm_q = SizedQueue(maxsize=10)  # type: Queue[Union[Tuple[int, int], str]]
+        comm_q = SizedQueue(maxsize=10)  # type: Queue[Union[Tuple[int, int], Exception]]
         self.exception_q = SizedQueue(maxsize=10)  # type: Queue[Tuple[str, str]]
         self.priority_msgs = SizedQueue()  # type: Queue[Tuple[Any, int]]
         self.resource_msgs = SizedQueue()  # type: Queue[AddressedMonitoringMessage]
@@ -217,9 +217,12 @@ class MonitoringHub(RepresentationMixin):
             self.logger.error("Hub has not completed initialization in 120s. Aborting")
             raise Exception("Hub failed to start")
 
-        if isinstance(comm_q_result, str):
+        if isinstance(comm_q_result, Exception):
             self.logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
-            raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
+            re = RuntimeError("Monitoring router failed to start")
+            re.__cause__ = comm_q_result
+            re.__suppress_context__ = False
+            raise re
 
         udp_port, ic_port = comm_q_result
 
@@ -399,7 +402,10 @@ class MonitoringRouter:
             self.hub_port = self.sock.getsockname()[1]
         else:
             self.hub_port = hub_port
-            self.sock.bind(('0.0.0.0', self.hub_port))
+            try:
+                self.sock.bind(('0.0.0.0', self.hub_port))
+            except Exception as e:
+                raise RuntimeError(f"Could not bind to hub_port {hub_port} because: {e}")
         self.sock.settimeout(self.loop_freq / 1000)
         self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.hub_port))
 
@@ -485,7 +491,7 @@ class MonitoringRouter:
 
 
 @wrap_with_logs
-def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
+def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], Exception]]",
                    exception_q: "queue.Queue[Tuple[str, str]]",
                    priority_msgs: "queue.Queue[AddressedMonitoringMessage]",
                    node_msgs: "queue.Queue[AddressedMonitoringMessage]",
@@ -509,15 +515,13 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                                   run_id=run_id)
     except Exception as e:
         logger.error("MonitoringRouter construction failed.", exc_info=True)
-        comm_q.put(f"Monitoring router construction failed: {e}")
+        comm_q.put(e)
     else:
         comm_q.put((router.hub_port, router.ic_port))
 
-    router.logger.info("Starting MonitoringRouter in router_starter")
-    try:
-        router.start(priority_msgs, node_msgs, block_msgs, resource_msgs)
-    except Exception as e:
-        router.logger.exception("router.start exception")
-        exception_q.put(('Hub', str(e)))
-
-    router.logger.info("End of router_starter")
+        router.logger.info("Starting MonitoringRouter in router_starter")
+        try:
+            router.start(priority_msgs, node_msgs, block_msgs, resource_msgs)
+        except Exception as e:
+            router.logger.exception("router.start exception")
+            exception_q.put(('Hub', str(e)))
