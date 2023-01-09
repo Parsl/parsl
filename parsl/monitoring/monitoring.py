@@ -393,7 +393,10 @@ class MonitoringRouter:
             self.hub_port = self.sock.getsockname()[1]
         else:
             self.hub_port = hub_port
-            self.sock.bind(('0.0.0.0', self.hub_port))
+            try:
+                self.sock.bind(('0.0.0.0', self.hub_port))
+            except Exception as e:
+                raise RuntimeError(f"Could not bind to hub_port {hub_port} because: {e}")
         self.sock.settimeout(self.loop_freq / 1000)
         self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.hub_port))
 
