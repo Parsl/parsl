@@ -32,6 +32,7 @@ from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.taskrecord import TaskRecord
 from parsl.dataflow.usage_tracking.usage import UsageTracker
+from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers.provider_base import JobStatus, JobState
@@ -1100,7 +1101,7 @@ class DataFlowKernel(object):
 
         for executor in self.executors.values():
             if not executor.bad_state_is_set:
-                if executor.scaling_enabled:
+                if isinstance(executor, BlockProviderExecutor):
                     logger.info(f"Scaling in executor {executor.label}")
                     job_ids = executor.provider.resources.keys()
                     block_ids = executor.scale_in(len(job_ids))

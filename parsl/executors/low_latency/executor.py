@@ -88,7 +88,6 @@ class LowLatencyExecutor(BlockProviderExecutor, RepresentationMixin):
             self.launch_cmd = l_cmd
             logger.debug("Launch command: {}".format(self.launch_cmd))
 
-            self._scaling_enabled = True
             logger.debug(
                 "Starting LowLatencyExecutor with provider:\n%s", self.provider)
             if hasattr(self.provider, 'init_blocks'):
@@ -106,7 +105,6 @@ class LowLatencyExecutor(BlockProviderExecutor, RepresentationMixin):
                     logger.error("Scaling out failed: {}".format(e))
                     raise e
         else:
-            self._scaling_enabled = False
             logger.debug("Starting LowLatencyExecutor with no provider")
 
     def _start_local_queue_process(self):
@@ -212,10 +210,6 @@ class LowLatencyExecutor(BlockProviderExecutor, RepresentationMixin):
 
         # Return the future
         return self.tasks[task_id]
-
-    @property
-    def scaling_enabled(self):
-        return self._scaling_enabled
 
     def scale_out(self, blocks=1):
         """Scales out the number of active workers by the number of blocks specified.
