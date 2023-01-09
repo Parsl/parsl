@@ -6,7 +6,7 @@ high-throughput system for delegating Parsl tasks to thousands of remote machine
 import threading
 import multiprocessing
 import logging
-from concurrent.futures import Future
+from parsl.executors.base import FutureWithTaskID
 from ctypes import c_bool
 
 import tempfile
@@ -34,7 +34,7 @@ from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
 import typeguard
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Sequence, Set, Union
 from parsl.data_provider.staging import Staging
 
 from .errors import WorkQueueTaskFailure
@@ -228,7 +228,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  port: int = WORK_QUEUE_DEFAULT_PORT,
                  env: Optional[Dict] = None,
                  shared_fs: bool = False,
-                 storage_access: Optional[List[Staging]] = None,
+                 storage_access: Optional[Sequence[Staging]] = None,
                  use_cache: bool = False,
                  source: bool = False,
                  pack: bool = False,
@@ -469,8 +469,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 input_files.append(self._register_file(maybe_file))
 
         # Create a Future object and have it be mapped from the task ID in the tasks dictionary
-        fu = Future()
-        fu.parsl_executor_task_id = executor_task_id
+        fu = FutureWithTaskID(str(executor_task_id))
         logger.debug("Getting tasks_lock to set WQ-level task entry")
         with self.tasks_lock:
             logger.debug("Got tasks_lock to set WQ-level task entry")
@@ -656,12 +655,20 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Starting WorkQueueExecutor with provider: %s", self.provider)
         self._patch_providers()
 
-        if hasattr(self.provider, 'init_blocks'):
+        # self.provider always has init_blocks - this check only needs to
+        # check that there is actually a provider specified.
+        if self.provider is not None:
             try:
                 self.scale_out(blocks=self.provider.init_blocks)
             except Exception as e:
                 logger.error("Initial block scaling out failed: {}".format(e))
                 raise e
+        # if hasattr(self.provider, 'init_blocks'):
+        #    try:
+        #        self.scale_out(blocks=self.provider.init_blocks)
+        #    except Exception as e:
+        #        logger.error("Initial block scaling out failed: {}".format(e))
+        #        raise e
 
     @property
     def outstanding(self) -> int:
@@ -698,7 +705,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         collector thread, which shuts down the Work Queue system submission.
         """
         logger.debug("Work Queue shutdown started")
-        self.should_stop.value = True
+        self.should_stop.value = True  # type: ignore[attr-defined]
+        # issue https://github.com/python/typeshed/issues/8799
+        # from mypy 0.981 onwards
 
         # Remove the workers that are still going
         kill_ids = [self.blocks[block] for block in self.blocks.keys()]
@@ -719,7 +728,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """
         logger.debug("Starting Collector Thread")
         try:
-            while not self.should_stop.value:
+            while not self.should_stop.value:  # type: ignore[attr-defined]
+                # issue https://github.com/python/typeshed/issues/8799
+                # from mypy 0.981 onwards
                 if not self.submit_process.is_alive():
                     raise ExecutorError(self, "Workqueue Submit Process is not alive")
 

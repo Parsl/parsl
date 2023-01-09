@@ -2,15 +2,19 @@ import logging
 from abc import abstractmethod
 from string import Template
 
+from parsl.jobs.states import JobStatus
 from parsl.providers.errors import SchedulerMissingArgs, ScriptPathError
 from parsl.launchers.base import Launcher
 from parsl.launchers.errors import BadLauncher
-from parsl.providers.base import ExecutionProvider
+from parsl.providers.base import ExecutionProvider, Channeled
 
 logger = logging.getLogger(__name__)
 
+from typing import Any, Dict, List, Tuple
+from parsl.channels.base import Channel
 
-class ClusterProvider(ExecutionProvider):
+
+class ClusterProvider(ExecutionProvider, Channeled):
     """ This class defines behavior common to all cluster/supercompute-style scheduler systems.
 
     Parameters
@@ -46,16 +50,16 @@ class ClusterProvider(ExecutionProvider):
     """
 
     def __init__(self,
-                 label,
-                 channel,
-                 nodes_per_block,
-                 init_blocks,
-                 min_blocks,
-                 max_blocks,
-                 parallelism,
-                 walltime,
-                 launcher,
-                 cmd_timeout=10):
+                 label: str,
+                 channel: Channel,
+                 nodes_per_block: int,
+                 init_blocks: int,
+                 min_blocks: int,
+                 max_blocks: int,
+                 parallelism: float,  # nb. the member field for this is used by strategy, so maybe this should be exposed at the layer above as a property?
+                 walltime: str,
+                 launcher: Launcher,
+                 cmd_timeout: int = 10) -> None:
 
         self._label = label
         self.channel = channel
@@ -73,9 +77,18 @@ class ClusterProvider(ExecutionProvider):
         self.script_dir = None
 
         # Dictionary that keeps track of jobs, keyed on job_id
+        self.resources: Dict[Any, Any]
         self.resources = {}
 
-    def execute_wait(self, cmd, timeout=None):
+    # This annotation breaks slurm:
+    # parsl/providers/slurm/slurm.py:201: error: Item "None" of "Optional[str]" has no attribute "split"
+    # parsl/providers/slurm/slurm.py:207: error: Item "None" of "Optional[str]" has no attribute "strip"
+    # Theres a dependent type at work here which I can't describe in the type system:
+    # the optional strs are None when int != 0, for some providers.
+    # and when int == 0, the optional strs are strs
+
+    def execute_wait(self, cmd, timeout=None) -> Tuple[int, str, str]:
+
         t = self.cmd_timeout
         if timeout is not None:
             t = timeout
@@ -123,7 +136,7 @@ class ClusterProvider(ExecutionProvider):
     def _status(self):
         pass
 
-    def status(self, job_ids):
+    def status(self, job_ids: List[Any]) -> List[JobStatus]:
         """ Get the status of a list of jobs identified by the job identifiers
         returned from the submit request.
 

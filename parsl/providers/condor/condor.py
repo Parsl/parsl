@@ -15,7 +15,7 @@ from parsl.providers.errors import ScaleOutFailed
 
 logger = logging.getLogger(__name__)
 
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from parsl.channels.base import Channel
 
 # See http://pages.cs.wisc.edu/~adesmet/status.html
@@ -155,7 +155,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
                 if job_id in self.resources:
                     self.resources[job_id]['status'] = JobStatus(state)
 
-    def status(self, job_ids):
+    def status(self, job_ids: List[Any]) -> List[JobStatus]:
         """Get the status of a list of jobs identified by their ids.
 
         Parameters
@@ -261,7 +261,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         except Exception as e:
             raise ScaleOutFailed(self.label, str(e))
 
-        job_id = []
+        job_id = []  # type: List[str]
 
         if retcode == 0:
             for line in stdout.split('\n'):

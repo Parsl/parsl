@@ -5,14 +5,16 @@ import time
 from parsl.channels import LocalChannel
 from parsl.jobs.states import JobStatus, JobState
 from parsl.launchers import SimpleLauncher
-from parsl.providers.base import ExecutionProvider
+from parsl.providers.base import ExecutionProvider, MultiChanneled
 from parsl.providers.errors import ScriptPathError
 from parsl.utils import RepresentationMixin
+
+from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
 
-class AdHocProvider(ExecutionProvider, RepresentationMixin):
+class AdHocProvider(ExecutionProvider, MultiChanneled, RepresentationMixin):
     """ Ad-hoc execution provider
 
     This provider is used to provision execution resources over one or more ad hoc nodes
@@ -62,6 +64,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         self.nodes_per_block = 1
 
         # Dictionary that keeps track of jobs, keyed on job_id
+        self.resources: Dict[Any, Dict[str, Any]]
         self.resources = {}
 
         self.least_loaded = self._least_loaded()
@@ -184,15 +187,17 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         if job_id is None:
             logger.warning("Channel failed to start remote command/retrieve PID")
 
-        self.resources[job_id] = {'job_id': job_id,
-                                  'status': JobStatus(JobState.RUNNING),
-                                  'cmd': final_cmd,
-                                  'channel': channel,
-                                  'remote_pid': remote_pid}
+        d = {'job_id': job_id,
+             'status': JobStatus(JobState.RUNNING),
+             'cmd': final_cmd,
+             'channel': channel,
+             'remote_pid': remote_pid}  # type: Dict[str, Any]
+
+        self.resources[job_id] = d
 
         return job_id
 
-    def status(self, job_ids):
+    def status(self, job_ids: List[Any]) -> List[JobStatus]:
         """ Get status of the list of jobs with job_ids
 
         Parameters

@@ -5,8 +5,6 @@ import datetime
 from typing_extensions import TypedDict
 from concurrent.futures import Future
 
-
-# only for type checking:
 from typing import Any, Callable, Dict, Optional, List, Sequence, TYPE_CHECKING, Union
 
 if TYPE_CHECKING:

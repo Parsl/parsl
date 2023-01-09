@@ -13,11 +13,14 @@ import sys
 import datetime
 from getpass import getuser
 from typeguard import typechecked
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import cast, Any, Callable, Dict, Iterable, Optional, Union, List, Sequence, Tuple
 from uuid import uuid4
 from socket import gethostname
 from concurrent.futures import Future
 from functools import partial
+
+# mostly for type checking
+from parsl.executors.base import ParslExecutor, FutureWithTaskID
 
 import parsl
 from parsl.app.errors import RemoteExceptionWrapper
@@ -36,12 +39,12 @@ from parsl.errors import ConfigurationError, InternalConsistencyError, NoDataFlo
 from parsl.jobs.job_status_poller import JobStatusPoller
 from parsl.jobs.states import JobStatus, JobState
 from parsl.usage_tracking.usage import UsageTracker
-from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.monitoring import MonitoringHub
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers.base import ExecutionProvider
+from parsl.providers.base import Channeled, MultiChanneled
 from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints, Timer
 
 from parsl.monitoring.message_type import MessageType
@@ -210,14 +213,29 @@ class DataFlowKernel:
             task_log_info = self._create_task_log_info(task_record)
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
-    def _create_task_log_info(self, task_record):
+    def _create_task_log_info(self, task_record: TaskRecord) -> Dict[str, Any]:
         """
         Create the dictionary that will be included in the log.
         """
-        info_to_monitor = ['func_name', 'memoize', 'hashsum', 'fail_count', 'fail_cost', 'status',
-                           'id', 'time_invoked', 'try_time_launched', 'time_returned', 'try_time_returned', 'executor']
 
-        task_log_info = {"task_" + k: task_record[k] for k in info_to_monitor}
+        # because self.tasks[task_id] is now a TaskRecord not a Dict[str,...], type checking
+        # can't do enough type checking if just iterating over this list of keys to copy
+        # and the assignments need to be written out explicitly.
+
+        task_log_info = {}  # type: Dict[str, Any]
+
+        task_log_info["task_func_name"] = task_record['func_name']
+        task_log_info["task_memoize"] = task_record['memoize']
+        task_log_info["task_hashsum"] = task_record['hashsum']
+        task_log_info["task_fail_count"] = task_record['fail_count']
+        task_log_info["task_fail_cost"] = task_record['fail_cost']
+        task_log_info["task_status"] = task_record['status']
+        task_log_info["task_id"] = task_record['id']
+        task_log_info["task_time_invoked"] = task_record['time_invoked']
+        task_log_info["task_try_time_launched"] = task_record['try_time_launched']
+        task_log_info["task_time_returned"] = task_record['time_returned']
+        task_log_info["task_try_time_returned"] = task_record['try_time_returned']
+        task_log_info["task_executor"] = task_record['executor']
         task_log_info['run_id'] = self.run_id
         task_log_info['try_id'] = task_record['try_id']
         task_log_info['timestamp'] = datetime.datetime.now()
@@ -245,9 +263,8 @@ class DataFlowKernel:
         task_log_info['task_stderr'] = stderr_name
         task_log_info['task_fail_history'] = ",".join(task_record['fail_history'])
         task_log_info['task_depends'] = None
-        if task_record['depends'] is not None:
-            task_log_info['task_depends'] = ",".join([str(t.tid) for t in task_record['depends']
-                                                      if isinstance(t, AppFuture) or isinstance(t, DataFuture)])
+        task_log_info['task_depends'] = ",".join([str(t.tid) for t in task_record['depends'] if isinstance(t, AppFuture) or isinstance(t, DataFuture)])
+
         task_log_info['task_joins'] = None
 
         if isinstance(task_record['joins'], list):
@@ -560,7 +577,7 @@ class DataFlowKernel:
         """
 
         with self.task_state_counts_lock:
-            if 'status' in task_record:
+            if hasattr(task_record, 'status'):
                 self.task_state_counts[task_record['status']] -= 1
             self.task_state_counts[new_state] += 1
             task_record['status'] = new_state
@@ -721,7 +738,7 @@ class DataFlowKernel:
 
         self._send_task_log_info(task_record)
 
-        if hasattr(exec_fu, "parsl_executor_task_id"):
+        if isinstance(exec_fu, FutureWithTaskID):
             logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label} with executor id {exec_fu.parsl_executor_task_id}")
         else:
             logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}")
@@ -739,6 +756,9 @@ class DataFlowKernel:
             - executor (str) : executor where the app is going to be launched
             - args (List) : Positional args to app function
             - kwargs (Dict) : Kwargs to app function
+            - func : the function that will be invoked
+
+        Returns:   args, kwargs, (replacement, wrapping) function
         """
 
         # Return if the task is a data management task, rather than doing
@@ -825,7 +845,9 @@ class DataFlowKernel:
 
         return depends
 
-    def _unwrap_futures(self, args, kwargs):
+    def _unwrap_futures(self,
+                        args: Sequence[Any],
+                        kwargs: Dict[str, Any]) -> Tuple[Sequence[Any], Dict[str, Any], Sequence[Tuple[Exception, str]]]:
         """This function should be called when all dependencies have completed.
 
         It will rewrite the arguments for that task, replacing each Future
@@ -843,6 +865,10 @@ class DataFlowKernel:
             a rewritten kwargs dict
             pairs of exceptions, task ids from any Futures which stored
             exceptions rather than results.
+
+        TODO: mypy note: we take a *tuple* of args but return a *list* of args.
+        That's an (unintentional?) change of type of arg structure which leads me
+        to try to represent the args in TaskRecord as a Sequence
         """
         dep_failures = []
 
@@ -857,7 +883,9 @@ class DataFlowKernel:
                     # then refer to the task ID.
                     # Otherwise make a repr of the Future object.
                     if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
-                        tid = "task " + repr(dep.task_record['id'])
+                        d_tmp = cast(Any, dep)
+                        tid = d_tmp.task_record['id']
+                        tid = "task " + repr(d_tmp.task_record['id'])
                     else:
                         tid = repr(dep)
                     dep_failures.extend([(e, tid)])
@@ -872,7 +900,9 @@ class DataFlowKernel:
                     kwargs[key] = dep.result()
                 except Exception as e:
                     if hasattr(dep, 'task_record'):
-                        tid = dep.task_record['id']
+                        # see note about protocol
+                        d_tmp = cast(Any, dep)
+                        tid = d_tmp.task_record['id']
                     else:
                         tid = None
                     dep_failures.extend([(e, tid)])
@@ -886,7 +916,8 @@ class DataFlowKernel:
                         new_inputs.extend([dep.result()])
                     except Exception as e:
                         if hasattr(dep, 'task_record'):
-                            tid = dep.task_record['id']
+                            d_tmp = cast(Any, dep)
+                            tid = d_tmp.task_record['id']
                         else:
                             tid = None
                         dep_failures.extend([(e, tid)])
@@ -1110,7 +1141,7 @@ class DataFlowKernel:
 
         channel.makedirs(channel.script_dir, exist_ok=True)
 
-    def add_executors(self, executors):
+    def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         for executor in executors:
             if executor.label in self.executors:
                 raise ConfigurationError("Executor {executor.label} already added")
@@ -1119,17 +1150,21 @@ class DataFlowKernel:
             executor.run_dir = self.run_dir
             executor.hub_address = self.hub_address
             executor.hub_port = self.hub_interchange_port
-            if hasattr(executor, 'provider'):
+            if executor.provider is not None:  # could be a protocol?
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
                     os.makedirs(executor.provider.script_dir, exist_ok=True)
 
-                    if hasattr(executor.provider, 'channels'):
+                    if isinstance(executor.provider, MultiChanneled):
                         logger.debug("Creating script_dir across multiple channels")
                         for channel in executor.provider.channels:
                             self._create_remote_dirs_over_channel(executor.provider, channel)
-                    else:
+                    elif isinstance(executor.provider, Channeled):
                         self._create_remote_dirs_over_channel(executor.provider, executor.provider.channel)
+                    else:
+                        raise ValueError(("Assuming executor.provider has channel(s) based on it "
+                                          "having provider/script_dir, but actually it isn't a "
+                                          "(Multi)Channeled instance. provider = {}").format(executor.provider))
 
             self.executors[executor.label] = executor
             block_ids = executor.start()
@@ -1226,6 +1261,8 @@ class DataFlowKernel:
                             msg = executor.create_monitoring_info(new_status)
                             logger.debug("Sending message {} to hub from DFK".format(msg))
                             self.monitoring.send(MessageType.BLOCK_INFO, msg)
+                    else:
+                        logger.error("There is no provider to perform scaling in")
                 else:  # and bad_state_is_set
                     logger.warning(f"Not shutting down executor {executor.label} because it is in bad state")
             logger.info(f"Shutting down executor {executor.label}")
@@ -1259,7 +1296,7 @@ class DataFlowKernel:
 
         Kwargs:
             - tasks (List of task records) : List of task ids to checkpoint. Default=None
-                                         if set to None, we iterate over all tasks held by the DFK.
+                                         if set to None or [], we iterate over all tasks held by the DFK.
 
         .. note::
             Checkpointing only works if memoization is enabled
@@ -1271,6 +1308,7 @@ class DataFlowKernel:
         """
         with self.checkpoint_lock:
             if tasks:
+                checkpoint_queue: Iterable[TaskRecord]
                 checkpoint_queue = tasks
             else:
                 checkpoint_queue = self.checkpointable_tasks
@@ -1301,7 +1339,7 @@ class DataFlowKernel:
                         hashsum = task_record['hashsum']
                         if not hashsum:
                             continue
-                        t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
+                        t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}  # type: Dict[str, Any]
 
                         # We are using pickle here since pickle dumps to a file in 'ab'
                         # mode behave like a incremental log.

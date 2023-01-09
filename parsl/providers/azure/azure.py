@@ -3,6 +3,7 @@ import logging
 import os
 import time
 from string import Template
+from typing import Any, List
 
 from parsl.errors import ConfigurationError
 from parsl.jobs.states import JobState, JobStatus
@@ -157,6 +158,8 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
         self.launcher = launcher
         self.linger = linger
         self.resources = {}
+
+        self.instances: List[Any]
         self.instances = []
 
         env_specified = os.getenv("AZURE_CLIENT_ID") is not None and os.getenv(
@@ -300,7 +303,7 @@ class AzureProvider(ExecutionProvider, RepresentationMixin):
 
         return vm_info.name
 
-    def status(self, job_ids):
+    def status(self, job_ids) -> List[JobStatus]:
         """Get the status of a list of jobs identified by their ids.
         Parameters
         ----------

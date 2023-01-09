@@ -9,12 +9,10 @@ import typeguard
 import zmq
 
 import queue
-
 import parsl.monitoring.remote
 
-from parsl.multiprocessing import ForkProcess, SizedQueue
-from multiprocessing import Process
-from multiprocessing.queues import Queue
+from parsl.multiprocessing import forkProcess, sizedQueue
+from multiprocessing import Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
@@ -134,7 +132,8 @@ class MonitoringHub(RepresentationMixin):
              Default: 30 seconds
         """
 
-        self.logger = logger
+        # previously this was set in start() but logger exists at import so it can be set here and remove the optionality of self.logger's type
+        self.logger = logger  # type: logging.Logger
 
         # Any is used to disable typechecking on uses of _dfk_channel,
         # because it is used in the code as if it points to a channel, but
@@ -187,24 +186,24 @@ class MonitoringHub(RepresentationMixin):
         else:
             comm_q: Queue
 
-        comm_q = SizedQueue(maxsize=10)
+        comm_q = sizedQueue(maxsize=10)
 
         self.exception_q: Queue[Tuple[str, str]]
-        self.exception_q = SizedQueue(maxsize=10)
+        self.exception_q = sizedQueue(maxsize=10)
 
         self.priority_msgs: Queue[Tuple[Any, int]]
-        self.priority_msgs = SizedQueue()
+        self.priority_msgs = sizedQueue()
 
         self.resource_msgs: Queue[AddressedMonitoringMessage]
-        self.resource_msgs = SizedQueue()
+        self.resource_msgs = sizedQueue()
 
         self.node_msgs: Queue[AddressedMonitoringMessage]
-        self.node_msgs = SizedQueue()
+        self.node_msgs = sizedQueue()
 
         self.block_msgs: Queue[AddressedMonitoringMessage]
-        self.block_msgs = SizedQueue()
+        self.block_msgs = sizedQueue()
 
-        self.router_proc = ForkProcess(target=router_starter,
+        self.router_proc = forkProcess(target=router_starter,
                                        args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),
                                        kwargs={"hub_address": self.hub_address,
                                                "hub_port": self.hub_port,
@@ -218,7 +217,7 @@ class MonitoringHub(RepresentationMixin):
                                        )
         self.router_proc.start()
 
-        self.dbm_proc = ForkProcess(target=dbm_starter,
+        self.dbm_proc = forkProcess(target=dbm_starter,
                                     args=(self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs,),
                                     kwargs={"logdir": self.logdir,
                                             "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
@@ -230,11 +229,11 @@ class MonitoringHub(RepresentationMixin):
         self.dbm_proc.start()
         self.logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
-        self.filesystem_proc = Process(target=filesystem_receiver,
-                                       args=(self.logdir, self.resource_msgs, run_dir),
-                                       name="Monitoring-Filesystem-Process",
-                                       daemon=True
-                                       )
+        self.filesystem_proc = forkProcess(target=filesystem_receiver,
+                                           args=(self.logdir, self.resource_msgs, run_dir),
+                                           name="Monitoring-Filesystem-Process",
+                                           daemon=True
+                                           )
         self.filesystem_proc.start()
         self.logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
 

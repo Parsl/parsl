@@ -10,6 +10,8 @@ from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
+from typing import Dict, Tuple, Optional
+
 
 class LocalChannel(Channel, RepresentationMixin):
     ''' This is not even really a channel, since opening a local shell is not heavy
@@ -32,7 +34,7 @@ class LocalChannel(Channel, RepresentationMixin):
         self._envs.update(envs)
         self.script_dir = script_dir
 
-    def execute_wait(self, cmd, walltime=None, envs={}):
+    def execute_wait(self, cmd: str, walltime: Optional[int] = None, envs: Dict[str, str] = {}) -> Tuple[int, str, str]:
         ''' Synchronously execute a commandline string on the shell.
 
         Args:
@@ -73,7 +75,7 @@ class LocalChannel(Channel, RepresentationMixin):
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
-    def push_file(self, source, dest_dir):
+    def push_file(self, source: str, dest_dir: str) -> str:
         ''' If the source files dirpath is the same as dest_dir, a copy
         is not necessary, and nothing is done. Else a copy is made.
 

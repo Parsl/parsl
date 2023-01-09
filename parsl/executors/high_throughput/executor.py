@@ -8,7 +8,7 @@ import datetime
 import pickle
 from multiprocessing import Queue
 from typing import Dict, Sequence
-from typing import List, Optional, Tuple, Union, Callable
+from typing import Any, List, Optional, Tuple, Union, Callable
 import math
 
 import parsl.launchers
@@ -17,6 +17,7 @@ from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.jobs.states import JobStatus, JobState, TERMINAL_STATES
 from parsl.executors.high_throughput import zmq_pipes
+from parsl.executors.base import HasWorkersPerNode, FutureWithTaskID
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
     BadMessage, ScalingFailed,
@@ -33,7 +34,7 @@ from parsl.data_provider.staging import Staging
 from parsl.addresses import get_all_addresses
 from parsl.process_loggers import wrap_with_logs
 
-from parsl.multiprocessing import ForkProcess
+from parsl.multiprocessing import forkProcess
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
 
@@ -59,7 +60,7 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers} "
                       "--available-accelerators {accelerators}")
 
 
-class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
+class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, HasWorkersPerNode):
     """Executor designed for cluster-scale
 
     The HighThroughputExecutor system has the following components:
@@ -242,6 +243,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
                  encrypted: bool = False):
 
+        self._queue_management_thread: Optional[threading.Thread]
+
         logger.debug("Initializing HighThroughputExecutor")
 
         BlockProviderExecutor.__init__(self, provider=provider, block_error_handler=block_error_handler)
@@ -262,12 +265,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         mem_slots = max_workers
         cpu_slots = max_workers
-        if hasattr(self.provider, 'mem_per_node') and \
+        if isinstance(self.provider, ExecutionProvider) and \
                 self.provider.mem_per_node is not None and \
                 mem_per_worker is not None and \
                 mem_per_worker > 0:
             mem_slots = math.floor(self.provider.mem_per_node / mem_per_worker)
-        if hasattr(self.provider, 'cores_per_node') and \
+        if isinstance(self.provider, ExecutionProvider) and \
                 self.provider.cores_per_node is not None:
             cpu_slots = math.floor(self.provider.cores_per_node / cores_per_worker)
 
@@ -288,6 +291,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.run_id = None  # set to the correct run_id in dfk
         self.hub_address = None  # set to the correct hub address in dfk
         self.hub_port = None  # set to the correct hub port in dfk
+
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
         self.interchange_port_range = interchange_port_range
@@ -304,10 +308,14 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         assert mpi_launcher in VALID_LAUNCHERS, \
             f"mpi_launcher must be set to one of {VALID_LAUNCHERS}"
         if self.enable_mpi_mode:
-            assert isinstance(self.provider.launcher, parsl.launchers.SingleNodeLauncher), \
-                "mpi_mode requires the provider to be configured to use a SingleNodeLauncher"
+            # awkward to typecheck because a provider doesn't have launcher attribute, according to its type,
+            # but this code hopes that it does - ignore attr-defined on parsl.provider
+            assert self.provider is None or isinstance(self.provider.launcher,  # type: ignore[attr-defined]
+                   parsl.launchers.SingleNodeLauncher), "mpi_mode requires the provider to be configured to use a SingleNodeLauncher"
 
         self.mpi_launcher = mpi_launcher
+
+        self._executor_exception = None
 
         if not launch_cmd:
             launch_cmd = DEFAULT_LAUNCH_CMD
@@ -325,7 +333,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             return "{}/{}".format(self.worker_logdir_root, self.label)
         return self.logdir
 
-    def initialize_scaling(self):
+    def initialize_scaling(self) -> Sequence[str]:
         """Compose the launch command and scale out the initial blocks.
         """
         debug_opts = "--debug" if self.worker_debug else ""
@@ -335,6 +343,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         address_probe_timeout_string = ""
         if self.address_probe_timeout:
             address_probe_timeout_string = "--address_probe_timeout={}".format(self.address_probe_timeout)
+
+        assert self.provider is not None
 
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,
@@ -361,7 +371,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
 
         # TODO: why is this a provider property?
-        block_ids = []
+        block_ids = []  # type: List[str]
         if hasattr(self.provider, 'init_blocks'):
             try:
                 block_ids = self.scale_out(blocks=self.provider.init_blocks)
@@ -370,7 +380,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                 raise e
         return block_ids
 
-    def start(self):
+    def start(self) -> Sequence[str]:
         """Create the Interchange process and connect to it.
         """
         if self.encrypted and self.cert_dir is None:
@@ -403,7 +413,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         return block_ids
 
     @wrap_with_logs
-    def _queue_management_worker(self):
+    def _queue_management_worker(self) -> None:
         """Listen to the queue for task status messages and handle them.
 
         Depending on the message, tasks will be updated with results, exceptions,
@@ -505,14 +515,14 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         logger.info("Queue management worker finished")
 
-    def _start_local_interchange_process(self):
+    def _start_local_interchange_process(self) -> None:
         """ Starts the interchange process locally
 
         Starts the interchange process locally and uses an internal command queue to
         get the worker task and result ports that the interchange has bound to.
         """
-        comm_q = Queue(maxsize=10)
-        self.interchange_proc = ForkProcess(target=interchange.starter,
+        comm_q = Queue(maxsize=10)  # type: Queue[Any]
+        self.interchange_proc = forkProcess(target=interchange.starter,
                                             args=(comm_q,),
                                             kwargs={"client_ports": (self.outgoing_q.port,
                                                                      self.incoming_q.port,
@@ -538,7 +548,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             logger.error("Interchange has not completed initialization in 120s. Aborting")
             raise Exception("Interchange failed to start")
 
-    def _start_queue_management_thread(self):
+    def _start_queue_management_thread(self) -> None:
         """Method to start the management thread as a daemon.
 
         Checks if a thread already exists, then starts it.
@@ -586,11 +596,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """
         return self.command_client.run("MANAGERS")
 
-    def connected_blocks(self) -> List[str]:
+    def connected_blocks(self) -> Sequence[str]:
         """List of connected block ids"""
         return self.command_client.run("CONNECTED_BLOCKS")
 
-    def _hold_block(self, block_id):
+    def _hold_block(self, block_id: str) -> None:
         """ Sends hold command to all managers which are in a specific block
 
         Parameters
@@ -606,7 +616,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                 logger.debug("Sending hold to manager: {}".format(manager['manager']))
                 self.hold_worker(manager['manager'])
 
-    def submit(self, func, resource_specification, *args, **kwargs):
+    def submit(self, func, resource_specification, *args, **kwargs) -> "Future[Any]":
         """Submits work to the outgoing_q.
 
         The outgoing_q is an external process listens on this
@@ -627,7 +637,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         validate_resource_spec(resource_specification)
 
         if self.bad_state_is_set:
-            raise self.executor_exception
+            if self.executor_exception is None:
+                raise ValueError("Executor is in bad state, but no exception recorded")
+            else:
+                raise self.executor_exception
 
         self._task_counter += 1
         task_id = self._task_counter
@@ -637,8 +650,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             args_to_print = tuple([ar if len(ar := repr(arg)) < 100 else (ar[:100] + '...') for arg in args])
             logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
 
-        fut = Future()
-        fut.parsl_executor_task_id = task_id
+        fut: Future = FutureWithTaskID(str(task_id))
         self.tasks[task_id] = fut
 
         try:
@@ -662,7 +674,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """
         msg = []
         for bid, s in status.items():
-            d = {}
+            d: Dict[str, Any] = {}
             d['run_id'] = self.run_id
             d['status'] = s.status_name
             d['timestamp'] = datetime.datetime.now()
@@ -676,12 +688,14 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     def workers_per_node(self) -> Union[int, float]:
         return self._workers_per_node
 
-    def scale_in(self, blocks, max_idletime=None):
+    def scale_in(self, blocks: int, max_idletime: Optional[float] = None) -> List[str]:
         """Scale in the number of active blocks by specified amount.
 
         The scale in method here is very rude. It doesn't give the workers
         the opportunity to finish current tasks or cleanup. This is tracked
         in issue #530
+
+        Exactly one of blocks or block_ids must be specified.
 
         Parameters
         ----------
@@ -723,6 +737,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             if b_id not in block_info:
                 block_info[b_id] = {"tasks": 0, "idle": float('inf')}
 
+        block_ids_to_kill: List[str]
         managers = self.connected_managers()
         for manager in managers:
             if not manager['active']:
@@ -765,6 +780,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         # Now kill via provider
         # Potential issue with multiple threads trying to remove the same blocks
         to_kill = [self.blocks[bid] for bid in block_ids_to_kill if bid in self.blocks]
+
+        # who knows if we really have a provider here? provider can be none...
+        # in practice, it looks like it is guarded by a check around each
+        # call but that isn't enforced in the type system.
+        # This assert asserts that the caller has performed the relevant
+        # check for a provider existing before invoking scale_in.
+        assert self.provider is not None
 
         r = self.provider.cancel(to_kill)
         job_ids = self._filter_scale_in_ids(to_kill, r)

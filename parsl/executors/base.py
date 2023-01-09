@@ -1,9 +1,15 @@
-from abc import ABCMeta, abstractmethod
+from __future__ import annotations
+from abc import ABCMeta, abstractmethod, abstractproperty
 from concurrent.futures import Future
-from typing import Any, Callable, Dict, Optional, List
+from typing import Any, Callable, Dict, Optional, List, Sequence, Union
 from typing_extensions import Literal, Self
 
 from parsl.jobs.states import JobStatus
+from parsl.data_provider.staging import Staging
+
+# for type checking:
+from parsl.providers.base import ExecutionProvider
+from typing_extensions import runtime_checkable, Protocol
 
 
 class ParslExecutor(metaclass=ABCMeta):
@@ -43,12 +49,35 @@ class ParslExecutor(metaclass=ABCMeta):
     def __enter__(self) -> Self:
         return self
 
+    # mypy doesn't actually check that the below are defined by
+    # concrete subclasses - see  github.com/python/mypy/issues/4426
+    # and maybe PEP-544 Protocols
+
+    def __init__(self) -> None:
+        self.label: str
+        self.radio_mode: str = "udp"
+
+        self.provider: Optional[ExecutionProvider] = None
+        # this is wrong here. eg thread local executor has no provider.
+        # perhaps its better attached to the block scaling provider?
+        # cross-ref with notes of @property provider() in the
+        # nostatushandlingexecutor.
+
+        # there's an abstraction problem here - what kind of executor should
+        # statically have this? for now I'll implement a protocol and assert
+        # the protocol holds, wherever the code makes that assumption.
+        # self.outstanding: int = None  # what is this? used by strategy
+        self.working_dir: Optional[str] = None
+        self.storage_access: Optional[Sequence[Staging]] = None
+        self.run_id: Optional[str] = None
+
+    # too lazy to figure out what the three Anys here should be
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> Literal[False]:
         self.shutdown()
         return False
 
     @abstractmethod
-    def start(self) -> Optional[List[str]]:
+    def start(self) -> Optional[Sequence[str]]:
         """Start the executor.
 
         Any spin-up operations (for example: starting thread pools) should be performed here.
@@ -56,9 +85,8 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def submit(self, func: Callable, resource_specification: Dict[str, Any], *args: Any, **kwargs: Any) -> Future:
+    def submit(self, func: Callable, resource_specification: Dict[str, Any], *args: Any, **kwargs: Dict[str, Any]) -> Future:
         """Submit.
-
         The executor can optionally set a parsl_executor_task_id attribute on
         the Future that it returns, and in that case, parsl will log a
         relationship between the executor's task ID and parsl level try/task
@@ -76,6 +104,13 @@ class ParslExecutor(metaclass=ABCMeta):
 
     def create_monitoring_info(self, status: Dict[str, JobStatus]) -> List[object]:
         """Create a monitoring message for each block based on the poll status.
+
+        TODO: block_id_type should be an enumerated list of valid strings, rather than all strings
+
+        TODO: there shouldn't be any default values for this - when it is invoked, it should be explicit which is needed?
+        Neither seems more natural to me than the other.
+
+        TODO: internal vs external should be more clearly documented here
 
         :return: a list of dictionaries mapping to the info of each block
         """
@@ -120,3 +155,24 @@ class ParslExecutor(metaclass=ABCMeta):
     @hub_port.setter
     def hub_port(self, value: Optional[int]) -> None:
         self._hub_port = value
+
+
+@runtime_checkable
+class HasWorkersPerNode(Protocol):
+    """A marker type to indicate that the executor has a notion of workers per node. This maybe should merge into the block executor?"""
+    @abstractproperty
+    def workers_per_node(self) -> Union[int, float]:
+        pass
+
+
+class HasOutstanding:
+    """A marker type to indicate that the executor has a count of outstanding tasks. This maybe should merge into the block executor?"""
+    @abstractproperty
+    def outstanding(self) -> int:
+        pass
+
+
+class FutureWithTaskID(Future):
+    def __init__(self, task_id: str) -> None:
+        super().__init__()
+        self.parsl_executor_task_id = task_id

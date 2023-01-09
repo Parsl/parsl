@@ -1,3 +1,4 @@
+from __future__ import annotations
 import uuid
 import time
 import os
@@ -7,10 +8,14 @@ import socket
 import sys
 import platform
 
+from typing import List
+
+from parsl.multiprocessing import forkProcess, ForkProcess
 from parsl.utils import setproctitle
-from parsl.multiprocessing import ForkProcess
 from parsl.dataflow.states import States
 from parsl.version import VERSION as PARSL_VERSION
+
+import parsl.dataflow.dflow  # can't import just the symbol for DataFlowKernel because of mutually-recursive imports
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +25,15 @@ from typing_extensions import ParamSpec
 P = ParamSpec("P")
 
 
-def async_process(fn: Callable[P, None]) -> Callable[P, None]:
+# parsl/usage_tracking/usage.py:36: error:
+# Incompatible return value type (got "Callable[[VarArg(Any), KwArg(Any)], ForkProcess]",
+# expected "Callable[P, None]")  [return-value]
+
+def async_process(fn: Callable[P, None]) -> Callable[P, ForkProcess]:
     """ Decorator function to launch a function as a separate process """
 
-    def run(*args, **kwargs):
-        proc = ForkProcess(target=fn, args=args, kwargs=kwargs, name="Usage-Tracking")
+    def run(*args, **kwargs) -> ForkProcess:
+        proc = forkProcess(target=fn, args=args, kwargs=kwargs, name="Usage-Tracking")
         proc.start()
         return proc
 
@@ -75,8 +84,10 @@ class UsageTracker:
 
     """
 
-    def __init__(self, dfk, port=50077,
-                 domain_name='tracking.parsl-project.org'):
+    def __init__(self,
+                 dfk: parsl.dataflow.dflow.DataFlowKernel,
+                 port: int = 50077,
+                 domain_name: str = 'tracking.parsl-project.org') -> None:
         """Initialize usage tracking unless the user has opted-out.
 
         We will try to resolve the hostname specified in kwarg:domain_name
@@ -99,7 +110,7 @@ class UsageTracker:
         # The sock timeout will only apply to UDP send and not domain resolution
         self.sock_timeout = 5
         self.UDP_PORT = port
-        self.procs = []
+        self.procs: List[ForkProcess] = []
         self.dfk = dfk
         self.config = self.dfk.config
         self.uuid = str(uuid.uuid4())

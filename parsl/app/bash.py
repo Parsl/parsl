@@ -3,20 +3,26 @@ from functools import partial
 from inspect import signature, Parameter
 import logging
 
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+from typing_extensions import Literal
+
+from parsl.dataflow.futures import AppFuture
 from parsl.app.errors import wrap_error
 from parsl.app.app import AppBase
-from parsl.dataflow.dflow import DataFlowKernelLoader
+from parsl.dataflow.dflow import DataFlowKernel, DataFlowKernelLoader
 
 logger = logging.getLogger(__name__)
 
 
-def remote_side_bash_executor(func, *args, **kwargs):
+def remote_side_bash_executor(func: Callable[..., str], *args, **kwargs) -> int:
     """Executes the supplied function with *args and **kwargs to get a
     command-line to run, and then run that command-line using bash.
     """
     import os
     import subprocess
+    from typing import List, cast
     import parsl.app.errors as pe
+    from parsl.data_provider.files import File
     from parsl.utils import get_std_fname_mode
 
     if hasattr(func, '__name__'):
@@ -88,7 +94,8 @@ def remote_side_bash_executor(func, *args, **kwargs):
     # TODO : Add support for globs here
 
     missing = []
-    for outputfile in kwargs.get('outputs', []):
+    outputs = cast(List[File], kwargs.get('outputs', []))
+    for outputfile in outputs:
         fpath = outputfile.filepath
 
         if not os.path.exists(fpath):
@@ -102,7 +109,10 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
 class BashApp(AppBase):
 
-    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None):
+    def __init__(self, func: Callable[..., str], data_flow_kernel: Optional[DataFlowKernel] = None,
+                 cache: bool = False,
+                 executors: Union[List[str], Literal['all']] = 'all',
+                 ignore_for_cache: Optional[Sequence[str]] = None) -> None:
         super().__init__(func, data_flow_kernel=data_flow_kernel, executors=executors, cache=cache, ignore_for_cache=ignore_for_cache)
         self.kwargs = {}
 
@@ -120,10 +130,16 @@ class BashApp(AppBase):
         # this is done to avoid passing a function type in the args which parsl.serializer
         # doesn't support
         remote_fn = partial(update_wrapper(remote_side_bash_executor, self.func), self.func)
-        remote_fn.__name__ = self.func.__name__
+
+        # parsl/app/bash.py:145: error: "partial[Any]" has no attribute "__name__"
+        # but... other parts of the code are relying on getting the __name__
+        # of (?) an arbitrary Callable too (which is why we're setting the __name__
+        # at all)
+        remote_fn.__name__ = self.func.__name__  # type: ignore[attr-defined]
+
         self.wrapped_remote_function = wrap_error(remote_fn)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs) -> AppFuture:
         """Handle the call to a Bash app.
 
         Args:
@@ -136,6 +152,7 @@ class BashApp(AppBase):
                    App_fut
 
         """
+        invocation_kwargs: Dict[str, Any]
         invocation_kwargs = {}
         invocation_kwargs.update(self.kwargs)
         invocation_kwargs.update(kwargs)

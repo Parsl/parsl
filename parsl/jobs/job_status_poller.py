@@ -2,7 +2,7 @@ import logging
 import parsl
 import time
 import zmq
-from typing import Dict, List, Sequence, Optional
+from typing import Any, cast, Dict, List, Sequence, Optional
 
 from parsl.jobs.states import JobStatus, JobState
 from parsl.jobs.strategy import Strategy
@@ -72,13 +72,18 @@ class PollItem:
     def executor(self) -> BlockProviderExecutor:
         return self._executor
 
-    def scale_in(self, n, max_idletime=None):
+    def scale_in(self, n: int, max_idletime: Optional[float] = None) -> List[str]:
 
         # this is a HighThroughputExecutor-specific interface violation
         if max_idletime is None:
             block_ids = self._executor.scale_in(n)
         else:
-            block_ids = self._executor.scale_in(n, max_idletime=max_idletime)
+            # this cast is because ParslExecutor.scale_in doesn't have force or max_idletime parameters
+            # so we just hope that the actual executor happens to have them.
+            # see some notes in ParslExecutor about making the status handling superclass into a
+            # class that holds all the scaling methods, so that everything can be specialised
+            # to work on those.
+            block_ids = cast(Any, self._executor).scale_in(n, max_idletime=max_idletime)
         if block_ids is not None:
             new_status = {}
             for block_id in block_ids:
@@ -87,14 +92,20 @@ class PollItem:
             self.send_monitoring_info(new_status)
         return block_ids
 
-    def scale_out(self, n):
+    def scale_out(self, n: int) -> List[str]:
+        logger.debug("BENC: in task status scale out")
         block_ids = self._executor.scale_out(n)
-        if block_ids is not None:
-            new_status = {}
-            for block_id in block_ids:
-                new_status[block_id] = JobStatus(JobState.PENDING)
-            self.send_monitoring_info(new_status)
-            self._status.update(new_status)
+        logger.debug("BENC: executor scale out has returned")
+
+        # mypy - remove this if statement: block_ids is always a list according to the types.
+        # and so the else clause was failing with unreachable code. And this removed `if`
+        # would always fire, if that type annotation is true.
+        logger.debug(f"BENC: there were some block ids, {block_ids}, which will now be set to pending")
+        new_status = {}
+        for block_id in block_ids:
+            new_status[block_id] = JobStatus(JobState.PENDING)
+        self.send_monitoring_info(new_status)
+        self._status.update(new_status)
         return block_ids
 
     def __repr__(self) -> str:

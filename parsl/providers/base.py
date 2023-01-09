@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from parsl.channels.base import Channel
 from parsl.jobs.states import JobStatus
@@ -49,6 +49,9 @@ class ExecutionProvider(metaclass=ABCMeta):
         self._mem_per_node: Optional[float] = None
         pass
 
+    # TODO: how about make this always return a job ID and must raise an exception on
+    # failure? Potentially it could make failure path handling simpler? because right now, you
+    # should catch an exception or look for None and handle them both the same?
     @abstractmethod
     def submit(self, command: str, tasks_per_node: int, job_name: str = "parsl.auto") -> object:
         ''' The submit method takes the command string to be executed upon
@@ -69,6 +72,7 @@ class ExecutionProvider(metaclass=ABCMeta):
 
         Raises:
              - ExecutionProviderException or its subclasses
+             ^ is this true? I think we can raise anything...
         '''
 
         pass
@@ -92,7 +96,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def cancel(self, job_ids: List[object]) -> List[bool]:
+    def cancel(self, job_ids: Sequence[object]) -> Sequence[bool]:
         ''' Cancels the resources identified by the job_ids provided by the user.
 
         Args:
@@ -122,8 +126,14 @@ class ExecutionProvider(metaclass=ABCMeta):
 
         If this property is set, executors may use it to calculate how many tasks can
         run concurrently per node.
+
+        This property, and cores_per_node, might become a HasCoresMem protocol, on
+        the way to detangling what is optional?
         """
-        return self._mem_per_node
+        if hasattr(self, "_mem_per_node"):
+            return self._mem_per_node
+        else:
+            return None
 
     @mem_per_node.setter
     def mem_per_node(self, value: float) -> None:
@@ -140,7 +150,10 @@ class ExecutionProvider(metaclass=ABCMeta):
         If this property is set, executors may use it to calculate how many tasks can
         run concurrently per node.
         """
-        return self._cores_per_node
+        if hasattr(self, "_cores_per_node"):
+            return self._cores_per_node
+        else:
+            return None
 
     @cores_per_node.setter
     def cores_per_node(self, value: int) -> None:

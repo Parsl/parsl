@@ -7,6 +7,8 @@ import parsl
 from parsl.app.app import python_app
 from parsl.tests.configs.local_threads_checkpoint_periodic import config
 
+dfk: parsl.DataFlowKernel
+
 
 def local_setup():
     global dfk
@@ -36,6 +38,7 @@ def tstamp_to_seconds(line):
 def test_periodic(n=4):
     """Test checkpointing with task_periodic behavior
     """
+    global dfk
 
     d = {}
 

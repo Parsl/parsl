@@ -8,7 +8,7 @@ typeguard>=2.10,!=3.*,<5
 
 
 typing-extensions>=4.6,<5
-globus-sdk
+globus-sdk>=3,<4
 dill
 tblib
 requests

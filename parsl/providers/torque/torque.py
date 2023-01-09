@@ -11,6 +11,10 @@ from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
+from typing import Optional
+from parsl.channels.base import Channel
+from parsl.launchers.base import Launcher
+
 # From the man pages for qstat for PBS/Torque systems
 translate_table = {
     'B': JobState.RUNNING,  # This state is returned for running array jobs
@@ -68,19 +72,19 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
     """
     def __init__(self,
-                 channel=LocalChannel(),
-                 account=None,
-                 queue=None,
-                 scheduler_options='',
-                 worker_init='',
-                 nodes_per_block=1,
-                 init_blocks=1,
-                 min_blocks=0,
-                 max_blocks=1,
-                 parallelism=1,
-                 launcher=AprunLauncher(),
-                 walltime="00:20:00",
-                 cmd_timeout=120):
+                 channel: Channel = LocalChannel(),
+                 account: Optional[str] = None,
+                 queue: Optional[str] = None,
+                 scheduler_options: str = '',
+                 worker_init: str = '',
+                 nodes_per_block: int = 1,
+                 init_blocks: int = 1,
+                 min_blocks: int = 0,
+                 max_blocks: int = 1,
+                 parallelism: float = 1,
+                 launcher: Launcher = AprunLauncher(),
+                 walltime: str = "00:20:00",
+                 cmd_timeout: int = 120) -> None:
         label = 'torque'
         super().__init__(label,
                          channel,

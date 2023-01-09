@@ -2,7 +2,7 @@ import logging
 import typeguard
 import concurrent.futures as cf
 
-from typing import List, Optional
+from typing import Optional, Sequence
 
 from parsl.data_provider.staging import Staging
 from parsl.executors.base import ParslExecutor
@@ -28,7 +28,7 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self, label: str = 'threads', max_threads: Optional[int] = 2,
-                 thread_name_prefix: str = '', storage_access: Optional[List[Staging]] = None,
+                 thread_name_prefix: str = '', storage_access: Optional[Sequence[Staging]] = None,
                  working_dir: Optional[str] = None):
         ParslExecutor.__init__(self)
         self.label = label

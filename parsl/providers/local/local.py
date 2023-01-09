@@ -2,17 +2,21 @@ import logging
 import os
 import time
 
+from parsl.channels.base import Channel
 from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
-from parsl.providers.base import ExecutionProvider
+from parsl.providers.base import Channeled, ExecutionProvider
 from parsl.providers.errors import SchedulerMissingArgs, ScriptPathError, SubmitException
 from parsl.utils import RepresentationMixin
+
+from typing import Any, List
 
 logger = logging.getLogger(__name__)
 
 
-class LocalProvider(ExecutionProvider, RepresentationMixin):
+class LocalProvider(ExecutionProvider, RepresentationMixin, Channeled):
+
     """ Local Execution Provider
 
     This provider is used to provide execution resources from the localhost.
@@ -36,7 +40,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
     """
 
     def __init__(self,
-                 channel=LocalChannel(),
+                 channel: Channel = LocalChannel(),
                  nodes_per_block=1,
                  launcher=SingleNodeLauncher(),
                  init_blocks=1,
@@ -62,7 +66,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         # Dictionary that keeps track of jobs, keyed on job_id
         self.resources = {}
 
-    def status(self, job_ids):
+    def status(self, job_ids: List[Any]) -> List[JobStatus]:
         '''  Get the status of a list of jobs identified by their ids.
 
         Args:
@@ -119,22 +123,32 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         return [self.resources[jid]['status'] for jid in job_ids]
 
-    def _is_alive(self, job_dict):
+    def _is_alive(self, job_dict) -> bool:
         retcode, stdout, stderr = self.channel.execute_wait(
             'ps -p {} > /dev/null 2> /dev/null; echo "STATUS:$?" '.format(
                 job_dict['remote_pid']), self.cmd_timeout)
-        for line in stdout.split('\n'):
-            if line.startswith("STATUS:"):
-                status = line.split("STATUS:")[1].strip()
-                if status == "0":
-                    return True
-                else:
-                    return False
+        if stdout:
+            for line in stdout.split('\n'):
+                if line.startswith("STATUS:"):
+                    status = line.split("STATUS:")[1].strip()
+                    if status == "0":
+                        return True
+                    else:
+                        return False
+            raise RuntimeError("Hit end of stdout scan without finding STATUS. Unclear what the correct default behaviour is here, so raising exception")
+        else:
+            raise RuntimeError("no stdout. Unclear what the correct default behaviour is here, so raising exception.")
 
     def _job_file_path(self, script_path: str, suffix: str) -> str:
         path = '{0}{1}'.format(script_path, suffix)
         if self._should_move_files():
-            path = self.channel.pull_file(path, self.script_dir)
+            if not self.script_dir:
+                raise RuntimeError("want to pull_file but script_dir is not defined - unclear what the correct behaviour is so raising exception")
+            new_path = self.channel.pull_file(path, self.script_dir)
+            if path is None:
+                raise RuntimeError("pull_file returned None - unclear what the correct behaviour is so raising exception")
+            else:
+                path = new_path
         return path
 
     def _read_job_file(self, script_path: str, suffix: str) -> str:
@@ -174,7 +188,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         return True
 
-    def submit(self, command, tasks_per_node, job_name="parsl.localprovider"):
+    def submit(self, command: str, tasks_per_node: int, job_name: str = "parsl.localprovider") -> object:
         ''' Submits the command onto an Local Resource Manager job.
         Submit returns an ID that corresponds to the task that was just submitted.
 
@@ -210,7 +224,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
 
         self._write_submit_script(wrap_command, script_path)
 
-        job_id = None
+        job_id = None  # type: Any
         remote_pid = None
         if self._should_move_files():
             logger.debug("Pushing start script")
@@ -238,10 +252,13 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         if retcode != 0:
             raise SubmitException(job_name, "Launch command exited with code {0}".format(retcode),
                                   stdout, stderr)
-        for line in stdout.split('\n'):
-            if line.startswith("PID:"):
-                remote_pid = line.split("PID:")[1].strip()
-                job_id = remote_pid
+        if stdout:
+            for line in stdout.split('\n'):
+                if line.startswith("PID:"):
+                    remote_pid = line.split("PID:")[1].strip()
+                    job_id = remote_pid
+        else:
+            logger.debug("no stdout, which would caused a runtime type error splitting stdout. Acting as if stdout has no lines.")
         if job_id is None:
             raise SubmitException(job_name, "Channel failed to start remote command/retrieve PID")
 

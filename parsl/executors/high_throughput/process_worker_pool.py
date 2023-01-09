@@ -10,7 +10,7 @@ import pickle
 import time
 import queue
 import uuid
-from typing import Sequence, Optional, Dict, List
+from typing import Any, Sequence, Optional, Dict, List
 
 import zmq
 import math
@@ -21,6 +21,7 @@ from multiprocessing.managers import DictProxy
 from multiprocessing.sharedctypes import Synchronized
 
 from parsl import curvezmq
+
 from parsl.process_loggers import wrap_with_logs
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
@@ -34,6 +35,8 @@ from parsl.executors.high_throughput.mpi_resource_management import (
 )
 
 from parsl.executors.high_throughput.mpi_prefix_composer import compose_all, VALID_LAUNCHERS
+
+logger = logging.getLogger("parsl")
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 
@@ -447,15 +450,26 @@ class Manager:
 
         logger.critical("Exiting")
 
-    def start(self):
+    def start(self) -> None:
         """ Start the worker processes.
 
         TODO: Move task receiving to a thread
         """
         start = time.time()
         self._kill_event = threading.Event()
+
+        # When upgrading from mypy 0.961 to 0.981, this change happens:
+
+        # multiprocessing.Manager().dict() according to mypy, does not
+        # return a Dict, but instead a multiprocessing.managers.DictProxy
+        # parsl/executors/high_throughput/process_worker_pool.py:416: note: Revealed type is "multiprocessing.managers.DictProxy[Any, Any]"
+        #
+        # but this type inference gets figured out, so no need for explicit annotation,
+        # I think
+
         self._tasks_in_progress = self._mp_manager.dict()
 
+        self.procs: Dict[Any, Any]
         self.procs = {}
         for worker_id in range(self.worker_count):
             p = self._start_worker(worker_id)
@@ -598,7 +612,7 @@ def worker(
     logdir: str,
     debug: bool,
     mpi_launcher: str,
-):
+) -> None:
     """
 
     Put request token into queue
