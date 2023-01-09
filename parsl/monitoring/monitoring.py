@@ -510,11 +510,9 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
     else:
         comm_q.put((router.hub_port, router.ic_port))
 
-    router.logger.info("Starting MonitoringRouter in router_starter")
-    try:
-        router.start(priority_msgs, node_msgs, block_msgs, resource_msgs)
-    except Exception as e:
-        router.logger.exception("router.start exception")
-        exception_q.put(('Hub', str(e)))
-
-    router.logger.info("End of router_starter")
+        router.logger.info("Starting MonitoringRouter in router_starter")
+        try:
+            router.start(priority_msgs, node_msgs, block_msgs, resource_msgs)
+        except Exception as e:
+            router.logger.exception("router.start exception")
+            exception_q.put(('Hub', str(e)))
