@@ -393,7 +393,10 @@ class MonitoringRouter:
             self.hub_port = self.sock.getsockname()[1]
         else:
             self.hub_port = hub_port
-            self.sock.bind(('0.0.0.0', self.hub_port))
+            try:
+                self.sock.bind(('0.0.0.0', self.hub_port))
+            except Exception as e:
+                raise RuntimeError(f"Could not bind to hub_port {hub_port} because: {e}")
         self.sock.settimeout(self.loop_freq / 1000)
         self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.hub_port))
 
@@ -507,11 +510,9 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
     else:
         comm_q.put((router.hub_port, router.ic_port))
 
-    router.logger.info("Starting MonitoringRouter in router_starter")
-    try:
-        router.start(priority_msgs, node_msgs, block_msgs, resource_msgs)
-    except Exception as e:
-        router.logger.exception("router.start exception")
-        exception_q.put(('Hub', str(e)))
-
-    router.logger.info("End of router_starter")
+        router.logger.info("Starting MonitoringRouter in router_starter")
+        try:
+            router.start(priority_msgs, node_msgs, block_msgs, resource_msgs)
+        except Exception as e:
+            router.logger.exception("router.start exception")
+            exception_q.put(('Hub', str(e)))

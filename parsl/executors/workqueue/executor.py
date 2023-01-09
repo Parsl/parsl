@@ -100,10 +100,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             Location for Parsl to perform app delegation to the Work
             Queue system. Defaults to current directory.
 
-        managed: bool
-            Whether this executor is managed by the DFK or externally handled.
-            Default is True (managed by DFK).
-
         project_name: str
             If a project_name is given, then Work Queue will periodically
             report its status and performance back to the global WQ catalog,
@@ -212,7 +208,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  label: str = "WorkQueueExecutor",
                  provider: ExecutionProvider = LocalProvider(),
                  working_dir: str = ".",
-                 managed: bool = True,
                  project_name: Optional[str] = None,
                  project_password_file: Optional[str] = None,
                  address: Optional[str] = None,
@@ -241,7 +236,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
 
         self.label = label
-        self.managed = managed
         self.task_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
         self.collector_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
         self.blocks = {}  # type: Dict[str, str]

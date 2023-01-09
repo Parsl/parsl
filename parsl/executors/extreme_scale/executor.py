@@ -103,9 +103,6 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
     worker_debug : Bool
         Enables engine debug logging.
 
-    managed : Bool
-        If this executor is managed by the DFK or externally handled.
-
     ranks_per_node : int
         Specify the ranks to be launched per node.
 
@@ -132,8 +129,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                  worker_debug=False,
                  ranks_per_node=1,
                  heartbeat_threshold=120,
-                 heartbeat_period=30,
-                 managed=True):
+                 heartbeat_period=30):
 
         super().__init__(label=label,
                          provider=provider,
@@ -146,8 +142,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                          working_dir=working_dir,
                          worker_debug=worker_debug,
                          heartbeat_threshold=heartbeat_threshold,
-                         heartbeat_period=heartbeat_period,
-                         managed=managed)
+                         heartbeat_period=heartbeat_period)
 
         self.ranks_per_node = ranks_per_node
 
