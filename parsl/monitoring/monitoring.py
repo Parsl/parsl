@@ -247,8 +247,7 @@ class MonitoringHub(RepresentationMixin):
                 "The monitoring message sent from DFK to router timed-out after {}ms".format(self.dfk_channel_timeout))
 
     def close(self) -> None:
-        if self.logger:
-            self.logger.info("Terminating Monitoring Hub")
+        self.logger.info("Terminating Monitoring Hub")
         exception_msgs = []
         while True:
             try:
@@ -394,7 +393,10 @@ class MonitoringRouter:
             self.hub_port = self.sock.getsockname()[1]
         else:
             self.hub_port = hub_port
-            self.sock.bind(('0.0.0.0', self.hub_port))
+            try:
+                self.sock.bind(('0.0.0.0', self.hub_port))
+            except Exception as e:
+                raise RuntimeError(f"Could not bind to hub_port {hub_port} because: {e}")
         self.sock.settimeout(self.loop_freq / 1000)
         self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.hub_port))
 
