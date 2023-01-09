@@ -36,7 +36,6 @@ class LowLatencyExecutor(BlockProviderExecutor, RepresentationMixin):
                  worker_debug=False,
                  workers_per_node=1,
                  #  cores_per_worker=1.0,
-                 managed=True
                  ):
         logger.debug("Initializing LowLatencyExecutor")
 
@@ -49,7 +48,6 @@ class LowLatencyExecutor(BlockProviderExecutor, RepresentationMixin):
         # if len(self.storage_access) > 1:
         # raise ConfigurationError('Multiple storage access schemes are not supported')
         self.working_dir = working_dir
-        self.managed = managed
         self.blocks = []
         self.workers_per_node = workers_per_node
 
