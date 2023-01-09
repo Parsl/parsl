@@ -72,7 +72,7 @@ def test_scale_out():
     assert dfk.executors['htex_local'].outstanding == 0, "Expected 0 outstanding tasks after future completion"
 
     logger.info("waiting a while for scale down")
-    time.sleep(20)
+    time.sleep(25)
 
     logger.info("asserting 2 managers remain")
     assert len(dfk.executors['htex_local'].connected_managers) == 2, "Expected 2 managers when no tasks, lower bound by min_blocks"

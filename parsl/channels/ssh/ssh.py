@@ -176,7 +176,7 @@ class SSHChannel(Channel, RepresentationMixin):
         try:
             self._valid_sftp_client().put(local_source, remote_dest, confirm=True)
             # Set perm because some systems require the script to be executable
-            self._valid_sftp_client().chmod(remote_dest, 0o777)
+            self._valid_sftp_client().chmod(remote_dest, 0o700)
         except Exception as e:
             logger.exception("File push from local source {} to remote destination {} failed".format(
                 local_source, remote_dest))
@@ -237,7 +237,7 @@ class SSHChannel(Channel, RepresentationMixin):
 
         return result
 
-    def makedirs(self, path, mode=0o777, exist_ok=False):
+    def makedirs(self, path, mode=0o700, exist_ok=False):
         """Create a directory on the remote side.
 
         If intermediate directories do not exist, they will be created.

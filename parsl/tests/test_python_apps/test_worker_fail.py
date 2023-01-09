@@ -7,7 +7,7 @@ from parsl.tests.configs.local_threads import config
 
 
 @python_app
-def import_echo(x, string, sleep=0, stdout=None):
+def import_echo(x, string, sleep=0):
     import time
     time.sleep(sleep)
     print(string)
@@ -46,6 +46,3 @@ if __name__ == '__main__':
 
     x = test_parallel_for()
     # x = test_parallel_for(int(args.count))
-
-    # x = test_stdout()
-    # raise_error(0)
