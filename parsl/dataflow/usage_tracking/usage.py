@@ -180,7 +180,7 @@ class UsageTracker (object):
         """
         app_count = self.dfk.task_count
 
-        site_count = len([x for x in self.dfk.config.executors if x.managed])
+        site_count = len(self.dfk.config.executors)
 
         app_fails = self.dfk.task_state_counts[States.failed] + self.dfk.task_state_counts[States.dep_fail]
 
