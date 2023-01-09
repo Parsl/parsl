@@ -110,7 +110,7 @@ class DataFlowKernel(object):
             self.hub_interchange_port = self.monitoring.start(self.run_id, self.run_dir)
 
         self.time_began = datetime.datetime.now()
-        self.time_completed = None
+        self.time_completed: Optional[datetime.datetime] = None
 
         logger.info("Run id is: " + self.run_id)
 
