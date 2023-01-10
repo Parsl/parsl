@@ -216,13 +216,6 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @property
-    @abstractmethod
-    def tasks(self) -> Dict[object, Future]:
-        """Contains a dictionary mapping task IDs to the corresponding Future objects for all
-        tasks that have been submitted to this executor."""
-        pass
-
-    @property
     def run_dir(self) -> str:
         """Path to the run directory.
         """
