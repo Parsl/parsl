@@ -180,13 +180,15 @@ class DataFlowKernel(object):
         self.add_executors(config.executors + [parsl_internal_executor])
 
         if self.checkpoint_mode == "periodic":
-            try:
-                h, m, s = map(int, config.checkpoint_period.split(':'))
+            if config.checkpoint_period is None:
+                raise ConfigurationError("Checkpoint period must be specified with periodic checkpoint mode")
+            else:
+                try:
+                    h, m, s = map(int, config.checkpoint_period.split(':'))
+                except Exception:
+                    raise ConfigurationError("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(config.checkpoint_period))
                 checkpoint_period = (h * 3600) + (m * 60) + s
                 self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period, name="Checkpoint")
-            except Exception:
-                logger.error("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(config.checkpoint_period))
-                self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60), name="Checkpoint")
 
         self.task_count = 0
         self.tasks: Dict[int, TaskRecord] = {}
