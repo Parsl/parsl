@@ -101,8 +101,8 @@ class DataFlowKernel(object):
 
         self.monitoring = config.monitoring
         # hub address and port for interchange to connect
-        self.hub_address = None
-        self.hub_interchange_port = None
+        self.hub_address = None  # type: Optional[str]
+        self.hub_interchange_port = None  # type: Optional[int]
         if self.monitoring:
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
