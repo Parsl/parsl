@@ -49,7 +49,6 @@ setup(
     install_requires=install_requires,
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
                'parsl/executors/extreme_scale/mpi_worker_pool.py',
-               'parsl/executors/low_latency/lowlatency_worker.py',
                'parsl/executors/workqueue/exec_parsl_function.py',
     ],
 
