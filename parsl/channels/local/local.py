@@ -98,13 +98,13 @@ class LocalChannel(Channel, RepresentationMixin):
         if os.path.dirname(source) != dest_dir:
             try:
                 shutil.copyfile(source, local_dest)
-                os.chmod(local_dest, 0o777)
+                os.chmod(local_dest, 0o700)
 
             except OSError as e:
                 raise FileCopyException(e, self.hostname)
 
         else:
-            os.chmod(local_dest, 0o777)
+            os.chmod(local_dest, 0o700)
 
         return local_dest
 
@@ -130,7 +130,7 @@ class LocalChannel(Channel, RepresentationMixin):
 
         return os.path.isdir(path)
 
-    def makedirs(self, path, mode=0o777, exist_ok=False):
+    def makedirs(self, path, mode=0o700, exist_ok=False):
         """Create a directory.
 
         If intermediate directories do not exist, they will be created.

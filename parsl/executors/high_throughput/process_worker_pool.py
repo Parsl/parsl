@@ -303,7 +303,7 @@ class Manager(object):
 
                 else:
                     task_recv_counter += len(tasks)
-                    logger.debug("Got tasks: {}, cumulative count of tasks: {}".format([t['task_id'] for t in tasks], task_recv_counter))
+                    logger.debug("Got executor tasks: {}, cumulative count of tasks: {}".format([t['task_id'] for t in tasks], task_recv_counter))
 
                     for task in tasks:
                         self.pending_task_queue.put(task)
@@ -396,7 +396,7 @@ class Manager(object):
                         try:
                             raise WorkerLost(worker_id, platform.node())
                         except Exception:
-                            logger.info("Putting exception for task {} in the pending result queue".format(task['task_id']))
+                            logger.info("Putting exception for executor task {} in the pending result queue".format(task['task_id']))
                             result_package = {'type': 'result', 'task_id': task['task_id'], 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
                             pkl_package = pickle.dumps(result_package)
                             self.pending_result_queue.put(pkl_package)
@@ -587,7 +587,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         req = task_queue.get()
         tasks_in_progress[worker_id] = req
         tid = req['task_id']
-        logger.info("Received task {}".format(tid))
+        logger.info("Received executor task {}".format(tid))
 
         try:
             worker_queue.get()
@@ -605,7 +605,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
             result_package = {'type': 'result', 'task_id': tid, 'result': serialized_result}
             # logger.debug("Result: {}".format(result))
 
-        logger.info("Completed task {}".format(tid))
+        logger.info("Completed executor task {}".format(tid))
         try:
             pkl_package = pickle.dumps(result_package)
         except Exception:
@@ -616,7 +616,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
 
         result_queue.put(pkl_package)
         tasks_in_progress.pop(worker_id)
-        logger.info("All processing finished for task {}".format(tid))
+        logger.info("All processing finished for executor task {}".format(tid))
 
 
 def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
