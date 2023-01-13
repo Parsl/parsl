@@ -389,7 +389,7 @@ class Manager(object):
         while not kill_event.is_set():
             for worker_id, p in self.procs.items():
                 if not p.is_alive():
-                    logger.info("Worker {} has died".format(worker_id))
+                    logger.error("Worker {} has died".format(worker_id))
                     try:
                         task = self._tasks_in_progress.pop(worker_id)
                         logger.info("Worker {} was busy when it died".format(worker_id))
