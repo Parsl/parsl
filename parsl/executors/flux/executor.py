@@ -23,7 +23,7 @@ from parsl.executors.flux.execute_parsl_task import __file__ as _WORKER_PATH
 from parsl.executors.flux.flux_instance_manager import __file__ as _MANAGER_PATH
 from parsl.executors.errors import SerializationError, ScalingFailed
 from parsl.providers import LocalProvider
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.base import ExecutionProvider
 from parsl.serialize import pack_apply_message, deserialize
 from parsl.app.errors import AppException
 

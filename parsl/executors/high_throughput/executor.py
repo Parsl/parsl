@@ -21,7 +21,7 @@ from parsl.executors.errors import (
 )
 
 from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.base import ExecutionProvider
 from parsl.data_provider.staging import Staging
 from parsl.addresses import get_all_addresses
 from parsl.process_loggers import wrap_with_logs
@@ -74,7 +74,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     Parameters
     ----------
 
-    provider : :class:`~parsl.providers.provider_base.ExecutionProvider`
+    provider : :class:`~parsl.providers.base.ExecutionProvider`
        Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
         :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
         :class:`~parsl.providers.condor.condor.Condor`,
