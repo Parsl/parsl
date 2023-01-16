@@ -31,7 +31,7 @@ from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.taskrecord import TaskRecord
-from parsl.dataflow.usage_tracking.usage import UsageTracker
+from parsl.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers.provider_base import JobStatus, JobState
@@ -1066,9 +1066,7 @@ class DataFlowKernel(object):
 
         This involves releasing all resources explicitly.
 
-        If the executors are managed by the DFK, then we call scale_in on each of
-        the executors and call executor.shutdown. Otherwise, executor cleanup is left to
-        the user.
+        We call scale_in on each of the executors and call executor.shutdown.
         """
         logger.info("DFK cleanup initiated")
 
@@ -1101,7 +1099,7 @@ class DataFlowKernel(object):
         logger.info("Scaling in and shutting down executors")
 
         for executor in self.executors.values():
-            if executor.managed and not executor.bad_state_is_set:
+            if not executor.bad_state_is_set:
                 if executor.scaling_enabled:
                     logger.info(f"Scaling in executor {executor.label}")
                     job_ids = executor.provider.resources.keys()
@@ -1116,10 +1114,8 @@ class DataFlowKernel(object):
                 logger.info(f"Shutting down executor {executor.label}")
                 executor.shutdown()
                 logger.info(f"Shut down executor {executor.label}")
-            elif executor.managed and executor.bad_state_is_set:  # and bad_state_is_set
+            else:  # and bad_state_is_set
                 logger.warning(f"Not shutting down executor {executor.label} because it is in bad state")
-            else:
-                logger.info(f"Not shutting down executor {executor.label} because it is unmanaged")
 
         logger.info("Terminated executors")
         self.time_completed = datetime.datetime.now()
