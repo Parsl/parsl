@@ -31,7 +31,7 @@ from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.taskrecord import TaskRecord
-from parsl.dataflow.usage_tracking.usage import UsageTracker
+from parsl.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers.provider_base import JobStatus, JobState
