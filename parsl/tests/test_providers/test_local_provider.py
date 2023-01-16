@@ -196,7 +196,7 @@ def _find_free_port(start: int):
 
 
 def _run(p: LocalProvider, command: str, np: int = 1):
-    id = p.submit(command, 1, np)
+    id = p.submit(command, np)
     return _wait(p, id)
 
 

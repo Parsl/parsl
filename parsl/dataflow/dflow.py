@@ -20,7 +20,7 @@ from concurrent.futures import Future
 from functools import partial
 
 import parsl
-from parsl.trace import event
+from parsl.trace import event, span_bind_sub
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.app.futures import DataFuture
 from parsl.config import Config
@@ -33,7 +33,7 @@ from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.taskrecord import TaskRecord
-from parsl.dataflow.usage_tracking.usage import UsageTracker
+from parsl.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers.provider_base import JobStatus, JobState
@@ -575,7 +575,7 @@ class DataFlowKernel(object):
         return result
 
     def wipe_task(self, task_id: int) -> None:
-        """ Remove task with task_id from the internal tasks table
+        """Remove task with task_id from the internal tasks table
         """
         if self.config.garbage_collect:
             del self.tasks[task_id]
@@ -716,7 +716,7 @@ class DataFlowKernel(object):
         try_id = task_record['fail_count']
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
-            event("DFK_LAUNCH_TASK_MONITORING_WRAP_START", "TRY", f"{task_id}.{try_id}")
+            event("DFK_LAUNCH_TASK_MONITORING_WRAP_START", "TRY", (task_id, try_id))
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
             (executable, args, kwargs) = self.monitoring.monitor_wrapper(executable, args, kwargs, try_id, task_id,
                                                                          self.monitoring.monitoring_hub_url,
@@ -726,30 +726,31 @@ class DataFlowKernel(object):
                                                                          executor.radio_mode,
                                                                          executor.monitor_resources(),
                                                                          self.run_dir)
-            event("DFK_LAUNCH_TASK_MONITORING_WRAP_END", "TRY", f"{task_id}.{try_id}")
+            event("DFK_LAUNCH_TASK_MONITORING_WRAP_END", "TRY", (task_id, try_id))
 
-        event("DFK_LAUNCH_TASK_GET_SUBMITTER_LOCK_START", "TRY", f"{task_id}.{try_id}")
+        event("DFK_LAUNCH_TASK_GET_SUBMITTER_LOCK_START", "TRY", (task_id, try_id))
         with self.submitter_lock:
-            event("DFK_LAUNCH_TASK_GET_SUBMITTER_LOCK_END", "TRY", f"{task_id}.{try_id}")
+            event("DFK_LAUNCH_TASK_GET_SUBMITTER_LOCK_END", "TRY", (task_id, try_id))
             exec_fu = executor.submit(executable, task_record['resource_specification'], *args, **kwargs)
-        event("DFK_LAUNCH_TASK_UPDATE_TASK_STATE_START", "TRY", f"{task_id}.{try_id}")
+        event("DFK_LAUNCH_TASK_UPDATE_TASK_STATE_START", "TRY", (task_id, try_id))
         self.update_task_state(task_record, States.launched)
-        event("DFK_LAUNCH_TASK_UPDATE_TASK_STATE_END", "TRY", f"{task_id}.{try_id}")
+        event("DFK_LAUNCH_TASK_UPDATE_TASK_STATE_END", "TRY", (task_id, try_id))
 
-        event("DFK_LAUNCH_TASK_SEND_TASK_LOG_INFO_START", "TRY", f"{task_id}.{try_id}")
+        event("DFK_LAUNCH_TASK_SEND_TASK_LOG_INFO_START", "TRY", (task_id, try_id))
         self._send_task_log_info(task_record)
-        event("DFK_LAUNCH_TASK_SEND_TASK_LOG_INFO_END", "TRY", f"{task_id}.{try_id}")
+        event("DFK_LAUNCH_TASK_SEND_TASK_LOG_INFO_END", "TRY", (task_id, try_id))
 
         if hasattr(exec_fu, "parsl_executor_task_id"):
+            span_bind_sub("TRY", (task_id, try_id), "EXECUTOR_TASK", exec_fu.parsl_executor_task_id)
             logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label} with executor id {exec_fu.parsl_executor_task_id}")
         else:
             logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}")
 
-        event("DFK_LAUNCH_TASK_LOG_STD_STREAMS_START", "TRY", f"{task_id}.{try_id}")
+        event("DFK_LAUNCH_TASK_LOG_STD_STREAMS_START", "TRY", (task_id, try_id))
         self._log_std_streams(task_record)
-        event("DFK_LAUNCH_TASK_LOG_STD_STREAMS_END", "TRY", f"{task_id}.{try_id}")
+        event("DFK_LAUNCH_TASK_LOG_STD_STREAMS_END", "TRY", (task_id, try_id))
 
-        event("DFK_LAUNCH_TASK_END_LAUNCHED", "TRY", f"{task_id}.{try_id}")
+        event("DFK_LAUNCH_TASK_END_LAUNCHED", "TRY", (task_id, try_id))
         return exec_fu
 
     def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable) -> Tuple[Sequence[Any], Dict[str, Any], Callable]:
@@ -1112,7 +1113,7 @@ class DataFlowKernel(object):
         logger.info("End of summary")
 
     def _create_remote_dirs_over_channel(self, provider, channel):
-        """ Create script directories across a channel
+        """Create script directories across a channel
 
         Parameters
         ----------
@@ -1197,9 +1198,7 @@ class DataFlowKernel(object):
 
         This involves releasing all resources explicitly.
 
-        If the executors are managed by the DFK, then we call scale_in on each of
-        the executors and call executor.shutdown. Otherwise, executor cleanup is left to
-        the user.
+        We call scale_in on each of the executors and call executor.shutdown.
         """
         logger.info("DFK cleanup initiated")
 
@@ -1232,7 +1231,7 @@ class DataFlowKernel(object):
         logger.info("Scaling in and shutting down executors")
 
         for executor in self.executors.values():
-            if executor.managed and not executor.bad_state_is_set:
+            if not executor.bad_state_is_set:
                 if executor.scaling_enabled:
                     logger.info(f"Scaling in executor {executor.label}")
                     job_ids = executor.provider.resources.keys()
@@ -1247,10 +1246,8 @@ class DataFlowKernel(object):
                 logger.info(f"Shutting down executor {executor.label}")
                 executor.shutdown()
                 logger.info(f"Shut down executor {executor.label}")
-            elif executor.managed and executor.bad_state_is_set:  # and bad_state_is_set
+            else:  # and bad_state_is_set
                 logger.warning(f"Not shutting down executor {executor.label} because it is in bad state")
-            else:
-                logger.info(f"Not shutting down executor {executor.label} because it is unmanaged")
 
         logger.info("Terminated executors")
         self.time_completed = datetime.datetime.now()

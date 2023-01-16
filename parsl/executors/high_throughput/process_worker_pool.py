@@ -402,7 +402,7 @@ class Manager(object):
             logger.debug("Loop")
             for worker_id, p in self.procs.items():
                 if not p.is_alive():
-                    logger.info("Worker {} has died".format(worker_id))
+                    logger.error("Worker {} has died".format(worker_id))
                     try:
                         task = self._tasks_in_progress.pop(worker_id)
                         logger.info("Worker {} was busy when it died".format(worker_id))
@@ -572,6 +572,13 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
             my_cores = avail_cores[worker_id::pool_size]
         else:
             raise ValueError("Affinity strategy {} is not supported".format(cpu_affinity))
+
+        # Set the affinity for OpenMP
+        #  See: https://hpc-tutorials.llnl.gov/openmp/ProcessThreadAffinity.pdf
+        proc_list = ",".join(map(str, my_cores))
+        os.environ["OMP_NUM_THREADS"] = str(len(my_cores))
+        os.environ["GOMP_CPU_AFFINITY"] = proc_list  # Compatible with GCC OpenMP
+        os.environ["KMP_AFFINITY"] = f"explicit,proclist=[{proc_list}]"  # For Intel OpenMP
 
         # Set the affinity for this worker
         os.sched_setaffinity(0, my_cores)

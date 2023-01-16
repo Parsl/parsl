@@ -136,9 +136,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     worker_debug : Bool
         Enables worker debug logging.
 
-    managed : Bool
-        If this executor is managed by the DFK or externally handled.
-
     cores_per_worker : float
         cores to be assigned to each worker. Oversubscription is possible
         by setting cores_per_worker < 1.0. Default=1
@@ -226,7 +223,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  heartbeat_period: int = 30,
                  poll_period: int = 10,
                  address_probe_timeout: Optional[int] = None,
-                 managed: bool = True,
                  worker_logdir_root: Optional[str] = None,
                  block_error_handler: bool = True):
 
@@ -238,7 +234,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.worker_debug = worker_debug
         self.storage_access = storage_access
         self.working_dir = working_dir
-        self.managed = managed
         self.cores_per_worker = cores_per_worker
         self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers

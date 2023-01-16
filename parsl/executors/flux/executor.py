@@ -152,8 +152,6 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
     Parameters
     ----------
-    managed: bool
-        If this executor is managed by the DFK or externally handled.
     working_dir: str
         Directory in which the executor should place its files, possibly overwriting
         existing files. If ``None``, generate a unique directory.
@@ -181,7 +179,6 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     def __init__(
         self,
         provider: Optional[ExecutionProvider] = None,
-        managed: bool = True,
         working_dir: Optional[str] = None,
         label: str = "FluxExecutor",
         flux_executor_kwargs: Mapping = {},
@@ -196,7 +193,6 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         if working_dir is None:
             working_dir = self.label + "_" + str(uuid.uuid4())
         self.working_dir = os.path.abspath(working_dir)
-        self.managed = managed
         # check that flux_path is an executable, or look for flux in PATH
         if flux_path is None:
             flux_path = shutil.which("flux")

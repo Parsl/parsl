@@ -1,51 +1,50 @@
 import logging
 import pickle
-import statistics
+# import statistics
 import time
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, List, Tuple
 
 logger = logging.getLogger(__name__)
-
-# TODO: last_event should be a thread local
-last_event = None
 
 trace_by_logger = False
 trace_by_dict = False
 
-event_stats: Dict[Tuple[str, str],
-                  Tuple[float, float, List[Tuple[float, float]]]
-                 ]
-event_stats = {}
+events: List[Tuple[float, str, str, Any]] = []
+binds: List[Tuple[str, Any, str, Any]] = []
 
 
-# using Any for spanid means anything that we can write out in format string
-# most concretely a string or an int, but I'm not sure it should be
-# concretely tied to only those two types.
 def event(name: str, spantype: str, spanid: Any):
-    global last_event
+    """Record an event.
+    Using Any for spanid means anything that we can write out in format string
+    most concretely a string or an int, but I'm not sure it should be
+    concretely tied to only those two types.
+    """
     t = time.time()
 
-    if last_event:
-        (last_name, last_t) = last_event
-        d_t = t - last_t
-        if trace_by_logger:
-            logger.info(f"{last_name} took {d_t} seconds; beginning new event {name} for {spantype} {spanid}")
-        if trace_by_dict:
-            k = (last_name, name)
-            if k in event_stats:
-                (total, count, raw) = event_stats[k]
-                raw.append((last_t, t))
-                event_stats[k] = (total + d_t, count + 1, raw)
-            else:
-                event_stats[k] = (d_t, 1, [(last_t, t)])
+    if trace_by_logger:
+        logger.info(f"EVENT {name} {spantype} {spanid}")
 
-    last_event = (name, t)
+    if trace_by_dict:
+        e = (t, name, spantype, spanid)
+        events.append(e)
+
+
+def span_bind_sub(super_spantype: str, super_spanid: Any, sub_spantype: str, sub_spanid: Any):
+    if trace_by_logger:
+        logger.info(f"BIND {super_spantype} {super_spanid} {sub_spantype} {sub_spanid}")
+    if trace_by_dict:
+        b = (super_spantype, super_spanid, sub_spantype, sub_spanid)
+        binds.append(b)
 
 
 def output_event_stats():
     print("Event stats")
     print("===========")
+    print(f"Count of events: {len(events)}")
+    print(f"Count of binds: {len(binds)}")
+
+    """
     flats = []
     all_tasks_t = 0
     for ((from_k, to_k), (total, count, raw)) in event_stats.items():
@@ -67,5 +66,7 @@ def output_event_stats():
 
     print("===========")
     print(f"Total real time accounted for here: {all_tasks_t} sec")
-    with open("parslstats.pickle", "wb") as f:
-        pickle.dump(event_stats, f)
+    """
+    summary = {"events": events, "binds": binds}
+    with open("parsl_tracing.pickle", "wb") as f:
+        pickle.dump(summary, f)
