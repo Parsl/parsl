@@ -239,10 +239,6 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
         return rets
 
     @property
-    def scaling_enabled(self):
-        return True
-
-    @property
     def label(self):
         return self._label
 
