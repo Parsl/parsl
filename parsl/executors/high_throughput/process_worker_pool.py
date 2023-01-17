@@ -560,6 +560,13 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         else:
             raise ValueError("Affinity strategy {} is not supported".format(cpu_affinity))
 
+        # Set the affinity for OpenMP
+        #  See: https://hpc-tutorials.llnl.gov/openmp/ProcessThreadAffinity.pdf
+        proc_list = ",".join(map(str, my_cores))
+        os.environ["OMP_NUM_THREADS"] = str(len(my_cores))
+        os.environ["GOMP_CPU_AFFINITY"] = proc_list  # Compatible with GCC OpenMP
+        os.environ["KMP_AFFINITY"] = f"explicit,proclist=[{proc_list}]"  # For Intel OpenMP
+
         # Set the affinity for this worker
         os.sched_setaffinity(0, my_cores)
         logger.info("Set worker CPU affinity to {}".format(my_cores))
