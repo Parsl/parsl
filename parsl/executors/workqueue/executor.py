@@ -1001,6 +1001,7 @@ def _work_queue_submit_wait(*,
             except Exception as e:
                 logger.error("Unable to submit task to work queue: {}".format(e))
                 collector_queue.put_nowait(WqTaskToParsl(id=task.id,
+                                                         wq_id=-1,
                                                          result_received=False,
                                                          result=None,
                                                          reason="task could not be submited to work queue",
@@ -1048,6 +1049,7 @@ def _work_queue_submit_wait(*,
                     logger.debug("Task with executor id {} / work queue id {} failed because:\n{}"
                                  .format(parsl_id, t.id, reason))
                     collector_queue.put_nowait(WqTaskToParsl(id=parsl_id,
+                                                             wq_id=-1,
                                                              result_received=False,
                                                              result=e,
                                                              reason=reason,
