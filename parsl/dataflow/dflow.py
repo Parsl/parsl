@@ -167,7 +167,7 @@ class DataFlowKernel(object):
         self.checkpointed_tasks = 0
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
-        self.checkpointable_tasks = []
+        self.checkpointable_tasks: List[TaskRecord] = []
 
         # the flow control keeps track of executors and provider task states;
         # must be set before executors are added since add_executors calls
