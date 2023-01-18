@@ -32,7 +32,6 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  working_dir: Optional[str] = None):
         NoStatusHandlingExecutor.__init__(self)
         self.label = label
-        self._scaling_enabled = False
         self.max_threads = max_threads
         self.thread_name_prefix = thread_name_prefix
 
@@ -45,10 +44,6 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     def start(self):
         self.executor = cf.ThreadPoolExecutor(max_workers=self.max_threads,
                                               thread_name_prefix=self.thread_name_prefix)
-
-    @property
-    def scaling_enabled(self):
-        return self._scaling_enabled
 
     def submit(self, func, resource_specification, *args, **kwargs):
         """Submits work to the thread pool.

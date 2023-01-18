@@ -32,11 +32,6 @@ def fresh_config():
         from parsl.tests.configs.cori import fresh_config
         config = fresh_config()
 
-    elif 'stampede2' in hostname:
-        print("Loading Stampede2 config")
-        from parsl.tests.configs.stampede2 import fresh_config
-        config = fresh_config()
-
     elif 'comet' in hostname:
         print("Loading Comet config")
         from parsl.tests.configs.comet import fresh_config

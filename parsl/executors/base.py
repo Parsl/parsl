@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
 from typing import Any, Callable, Dict, Optional, List
 
@@ -103,15 +103,6 @@ class ParslExecutor(metaclass=ABCMeta):
         """Shutdown the executor.
 
         This includes all attached resources such as workers and controllers.
-        """
-        pass
-
-    @abstractproperty
-    def scaling_enabled(self) -> bool:
-        """Specify if scaling is enabled.
-
-        The callers of ParslExecutors need to differentiate between Executors
-        and Executors wrapped in a resource provider
         """
         pass
 
