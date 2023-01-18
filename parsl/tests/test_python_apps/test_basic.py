@@ -17,7 +17,7 @@ def echo(x, string, stdout=None):
 
 
 @python_app
-def import_echo(x, string, stdout=None):
+def import_echo(x, string):
     import time
     time.sleep(0)
     print(string)
