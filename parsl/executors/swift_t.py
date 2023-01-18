@@ -194,7 +194,6 @@ class TurbineExecutor(NoStatusHandlingExecutor):
         self.worker = mp.Process(target=runner, args=(self.outgoing_q, self.incoming_q))
         self.worker.start()
         logger.debug("Created worker : %s", self.worker)
-        self._scaling_enabled = False
 
     def _queue_management_worker(self):
         """Listen to the queue for task status messages and handle them.
@@ -331,10 +330,6 @@ class TurbineExecutor(NoStatusHandlingExecutor):
 
         # Return the future
         return self.tasks[task_id]
-
-    @property
-    def scaling_enabled(self):
-        return self._scaling_enabled
 
     def scale_out(self, blocks=1):
         """Scales out the number of active workers by 1.
