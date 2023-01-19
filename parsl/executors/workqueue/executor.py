@@ -540,6 +540,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if isinstance(self.provider, CondorProvider):
             path_to_worker = shutil.which('work_queue_worker')
             self.worker_command = './' + self.worker_command
+            assert path_to_worker is not None
             self.provider.transfer_input_files.append(path_to_worker)
             if self.project_password_file:
                 self.provider.transfer_input_files.append(self.project_password_file)
@@ -621,6 +622,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         os.makedirs(pkg_dir, exist_ok=True)
         with tempfile.NamedTemporaryFile(suffix='.yaml') as spec:
             logger.info("Analyzing dependencies of %s", fn_name)
+            assert package_analyze_script is not None
             analyze_cmdline = [package_analyze_script, exec_parsl_function.__file__, '-', spec.name]
             for p in extra_pkgs:
                 analyze_cmdline += ["--extra-pkg", p]
@@ -637,6 +639,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             os.close(fd)
             logger.info("Creating dependency package for %s", fn_name)
             logger.debug("Writing deps for %s to %s", fn_name, tarball)
+            assert package_create_script is not None
             subprocess.run([package_create_script, spec.name, tarball], stdout=subprocess.DEVNULL, check=True)
             logger.debug("Done with conda-pack; moving %s to %s", tarball, pkg)
             os.rename(tarball, pkg)
