@@ -87,7 +87,10 @@ class Interchange(object):
             #    last = time.time()
 
 
-def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_string=None):
+def start_file_logger(filename,
+                      name="parsl.executors.interchange",
+                      level=logging.DEBUG,
+                      format_string=None):
     """Add a stream log handler.
 
     Parameters
