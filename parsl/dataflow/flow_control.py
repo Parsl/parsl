@@ -59,8 +59,8 @@ class FlowControl(object):
         self.threshold = threshold
         self.interval = interval
         self.cb_args = args
-        self.task_status_poller = JobStatusPoller(dfk)
-        self.callback = self.task_status_poller.poll
+        self.job_status_poller = JobStatusPoller(dfk)
+        self.callback = self.job_status_poller.poll
         self._handle = None
         self._event_count = 0
         self._event_buffer = []
@@ -101,7 +101,7 @@ class FlowControl(object):
         self._event_buffer = []
 
     def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
-        self.task_status_poller.add_executors(executors)
+        self.job_status_poller.add_executors(executors)
 
     def close(self) -> None:
         """Merge the threads and terminate."""
