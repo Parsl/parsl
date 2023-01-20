@@ -15,7 +15,7 @@ from parsl.monitoring.types import MonitoringMessage, TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
-logger = logging.getLogger("database_manager")
+logger = logging.getLogger(__name__)
 
 X = TypeVar('X')
 
@@ -554,7 +554,7 @@ class DatabaseManager:
         if exception_happened:
             raise RuntimeError("An exception happened sometime during database processing and should have been logged in database_manager.log")
 
-    @wrap_with_logs(target="database_manager")
+    @wrap_with_logs()
     def _migrate_logs_to_internal(self, logs_queue: queue.Queue, queue_tag: str, kill_event: threading.Event) -> None:
         logger.info("Starting processing for queue {}".format(queue_tag))
 
@@ -695,7 +695,7 @@ class DatabaseManager:
         self._kill_event.set()
 
 
-@wrap_with_logs(target="database_manager")
+@wrap_with_logs()
 def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
                 priority_msgs: "queue.Queue[TaggedMonitoringMessage]",
                 node_msgs: "queue.Queue[MonitoringMessage]",

@@ -9,8 +9,10 @@ from multiprocessing import Process
 
 from parsl.serialize import unpack_apply_message, serialize
 from parsl.executors.low_latency import zmq_pipes
+from parsl.log_utils import set_file_logger
 
-logger = logging.getLogger(__name__)
+# __name__ is not reliable, because it could be set to "__main__"
+logger = logging.getLogger("parsl.executors.low_latency.lowlatency_worker")
 
 
 def execute_task(f, args, kwargs, user_ns):
@@ -44,46 +46,23 @@ def execute_task(f, args, kwargs, user_ns):
         return user_ns.get(resultname)
 
 
-def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
-    """Add a stream log handler.
-
-    Args:
-        - filename (string): Name of the file to write logs to
-        - name (string): Logger name
-        - level (logging.LEVEL): Set the logging level.
-        - format_string (string): Set the format string
-
-    Returns:
-       -  None
-    """
-
-    try:
-        os.makedirs(os.path.dirname(filename), 511, True)
-    except Exception as e:
-        print("Caught exception with trying to make log dirs: {}".format(e))
-
-    if format_string is None:
-        format_string = "%(asctime)s %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(
-            rank)
-    global logger
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(filename)
-    handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-
 def worker(worker_id, task_url, debug=True, logdir="workers", uid="1"):
     """ TODO: docstring
 
     TODO : Cleanup debug, logdir and uid to function correctly
     """
 
-    start_file_logger('{}/{}/worker_{}.log'.format(logdir, uid, worker_id),
-                      0,
-                      level=logging.DEBUG if debug is True else logging.INFO)
+    log_filename = '{}/{}/worker_{}.log'.format(logdir, uid, worker_id)
+    try:
+        os.makedirs(os.path.dirname(log_filename), 511, True)
+    except Exception as e:
+        print("Caught exception with trying to make log dirs: {}".format(e))
+    set_file_logger(
+        filename=log_filename,
+        name="parsl.executors.low_latency.lowlatency_worker",
+        level=logging.DEBUG if debug is True else logging.INFO,
+        format_string="%(asctime)s %(name)s:%(lineno)d Rank:0 [%(levelname)s]  %(message)s",
+    )
 
     logger.info("Starting worker {}".format(worker_id))
 

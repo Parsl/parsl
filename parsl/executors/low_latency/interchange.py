@@ -2,7 +2,10 @@
 
 import logging
 import zmq
+from parsl.log_utils import set_file_logger
 # import time
+
+logger = logging.getLogger(__name__)
 
 
 class Interchange(object):
@@ -14,8 +17,11 @@ class Interchange(object):
                  worker_port=None,
                  worker_port_range=(54000, 55000)
                  ):
-        global logger
-        start_file_logger("interchange.log")
+        set_file_logger(
+            logger.name,
+            filename="interchange.log",
+            format_string="%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+        )
         logger.info("Init Interchange")
 
         self.context = zmq.Context()
@@ -85,42 +91,6 @@ class Interchange(object):
             # if not active_flag and last + 1 < time.time():
             #    logger.debug("Nothing in the past 1s round")
             #    last = time.time()
-
-
-def start_file_logger(filename,
-                      name="parsl.executors.interchange",
-                      level=logging.DEBUG,
-                      format_string=None):
-    """Add a stream log handler.
-
-    Parameters
-    ---------
-
-    filename: string
-        Name of the file to write logs to. Required.
-    name: string
-        Logger name. Default="parsl.executors.interchange"
-    level: logging.LEVEL
-        Set the logging level. Default=logging.DEBUG
-        - format_string (string): Set the format string
-    format_string: string
-        Format string to use.
-
-    Returns
-    -------
-        None.
-    """
-    if format_string is None:
-        format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-
-    global logger
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    handler = logging.FileHandler(filename)
-    handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
 
 
 def starter(comm_q, *args, **kwargs):

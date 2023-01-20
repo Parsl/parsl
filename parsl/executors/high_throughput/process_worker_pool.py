@@ -27,12 +27,15 @@ from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.probe import probe_addresses
 from parsl.multiprocessing import ForkProcess as mpForkProcess
 from parsl.multiprocessing import SpawnProcess as mpSpawnProcess
-
+from parsl.log_utils import set_file_logger
 from parsl.multiprocessing import SizedQueue as mpQueue
 
 from parsl.serialize import unpack_apply_message, serialize
 
 HEARTBEAT_CODE = (2 ** 32) - 1
+
+# Note __name__ could be "__main__".
+logger = logging.getLogger("parsl.executors.high_throughput.process_worker_pool")
 
 
 class Manager(object):
@@ -512,7 +515,7 @@ def execute_task(bufs):
     return user_ns.get(resultname)
 
 
-@wrap_with_logs(target="worker_log")
+@wrap_with_logs(target="parsl.executors.high_throughput.process_worker_pool")
 def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue, tasks_in_progress, cpu_affinity, accelerator: Optional[str]):
     """
 
@@ -522,13 +525,16 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
     Put result into result_queue
     """
 
-    # override the global logger inherited from the __main__ process (which
-    # usually logs to manager.log) with one specific to this worker.
-    global logger
-    logger = start_file_logger('{}/block-{}/{}/worker_{}.log'.format(args.logdir, args.block_id, pool_id, worker_id),
-                               worker_id,
-                               name="worker_log",
-                               level=logging.DEBUG if args.debug else logging.INFO)
+    set_file_logger(
+        name=logger.name,
+        filename='{}/block-{}/{}/worker_{}.log'.format(args.logdir, args.block_id, pool_id, worker_id),
+        level=logging.DEBUG if args.debug else logging.INFO,
+        format_string=(
+            "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d "
+            "%(process)d %(threadName)s "
+            "[%(levelname)s]  %(message)s"
+        ),
+    )
 
     # Store worker ID as an environment variable
     os.environ['PARSL_WORKER_RANK'] = str(worker_id)
@@ -619,33 +625,6 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         logger.info("All processing finished for executor task {}".format(tid))
 
 
-def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
-    """Add a stream log handler.
-
-    Args:
-        - filename (string): Name of the file to write logs to
-        - name (string): Logger name
-        - level (logging.LEVEL): Set the logging level.
-        - format_string (string): Set the format string
-
-    Returns:
-       -  None
-    """
-    if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d " \
-                        "%(process)d %(threadName)s " \
-                        "[%(levelname)s]  %(message)s"
-
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(filename)
-    handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
-
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -691,9 +670,16 @@ if __name__ == "__main__":
     os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
 
     try:
-        logger = start_file_logger('{}/block-{}/{}/manager.log'.format(args.logdir, args.block_id, args.uid),
-                                   0,
-                                   level=logging.DEBUG if args.debug is True else logging.INFO)
+        set_file_logger(
+            name=logger.name,
+            filename='{}/block-{}/{}/manager.log'.format(args.logdir, args.block_id, args.uid),
+            level=logging.DEBUG if args.debug is True else logging.INFO,
+            format_string=(
+                "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d "
+                "%(process)d %(threadName)s "
+                "[%(levelname)s]  %(message)s"
+            ),
+        )
 
         logger.info("Python version: {}".format(sys.version))
         logger.info("Debug logging: {}".format(args.debug))

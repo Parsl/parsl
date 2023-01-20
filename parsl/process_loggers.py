@@ -5,7 +5,10 @@ import functools
 from typing import Callable, Optional
 
 
-def wrap_with_logs(fn: Optional[Callable] = None, target: str = __name__) -> Callable:
+def wrap_with_logs(
+        fn: Optional[Callable] = None,
+        target: Optional[str] = None,
+) -> Callable:
     """Calls the supplied function, and logs whether that
     function raised an exception or terminated normally.
 
@@ -21,7 +24,7 @@ def wrap_with_logs(fn: Optional[Callable] = None, target: str = __name__) -> Cal
             assert func is not None
             thread = threading.current_thread()
             name = f"{func.__name__} on thread {thread.name}"
-            logger = logging.getLogger(target)
+            logger = logging.getLogger(func.__module__ if target is None else target)
 
             try:
                 r = func(*args, **kwargs)
