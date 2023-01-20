@@ -66,7 +66,8 @@ def fresh_config():
                         hub_port=55055,
                         monitoring_debug=False,
                         resource_monitoring_interval=1,
-        )
+        ),
+        usage_tracking=True
     )
 
 
