@@ -4,7 +4,7 @@ import pytest
 import parsl
 import time
 from parsl.app.app import python_app  # , bash_app
-from parsl.providers.provider_base import JobState
+from parsl.providers.base import JobState
 from parsl.tests.site_tests.site_config_selector import fresh_config
 
 logger = logging.getLogger(__name__)
