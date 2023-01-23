@@ -2,26 +2,47 @@ Parsl - Parallel Scripting Library
 ==================================
 |licence| |build-status| |docs| |NSF-1550588| |NSF-1550476| |NSF-1550562| |NSF-1550528|
 
-Parsl is a parallel programming library for Python. Parsl augments Python with simple, scalable, and flexible constructs for encoding parallelism. Developers annotate Python functions to specify opportunities for concurrent execution. These annotated functions, called apps, may represent pure Python functions or calls to external applications, whether sequential, multicore (e.g., CPU, GPU, accelerator), or multi-node MPI. Parsl further allows these calls to these apps, called tasks, to be connected by shared input/output data (e.g., Python objects or files) via which Parsl can construct a dynamic dependency graph of tasks.
+Parsl extends parallelism in Python beyond a single computer.
 
-Parsl includes a flexible and scalable runtime that allows it to efficiently execute Python programs in parallel. Parsl scripts are portable and can be easily moved between different execution resources: from laptops to supercomputers to clouds. When executing a Parsl program, developers first define a simple Python-based configuration that outlines where and how to execute tasks. Parsl supports various target resources including clouds (e.g., Amazon Web Services and Google Cloud), clusters (e.g., using Slurm, Torque/PBS, HTCondor, Cobalt), and container orchestration systems (e.g., Kubernetes). Parsl scripts can scale from a single core on a single computer through to hundreds of thousands of cores across many thousands of nodes on a supercomputer.
+You can use Parsl
+`just like Python's parallel executors <https://parsl.readthedocs.io/en/stable/userguide/workflow.html#parallel-workflows-with-loops>`_
+but across *multiple cores and nodes*.
+However, the real power of Parsl is in expressing multi-step workflows of functions.
+Parsl lets you chain functions together and will launch each function as inputs and computing resources are available.
 
-Parsl can be used to implement various parallel computing paradigms:
+.. code-block:: python
 
-* Concurrent execution of a set of tasks in a bag-of-tasks program
-* Procedural workflows in which tasks are executed following control logic
-* Parallel dataflow in which tasks are executed when their data dependencies are met
-* Heterogeneous many-task applications in which many different computing resources are used together to execute different types of computational tasks
-* Dynamic workflows in which the workflow is determined during execution
-* Interactive parallel programming through notebooks or another interactive mechanism
+    import parsl
+    from parsl import python_app
 
-The latest Parsl version available on PyPi is v1.3.0.
+    # Start Parsl on a single computer
+    parsl.load()
+
+    # Make functions parallel by decorating them
+    @python_app
+    def f(x):
+        return x + 1
+
+    @python_app
+    def g(x):
+        return x * 2
+
+    # These functions now return Futures, and can be chained
+    future = f(1)
+    assert future.result() == 2
+
+    future = g(f(1))
+    assert future.result() == 4
+
+
+Start with the `configuration quickstart <https://parsl.readthedocs.io/en/stable/quickstart.html#getting-started>`_ to learn how to tell Parsl how to use your computing resource,
+then explore the `parallel computing patterns <https://parsl.readthedocs.io/en/stable/userguide/workflow.html>`_ to determine how to use parallelism best in your application.
 
 .. |licence| image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
    :target: https://github.com/Parsl/parsl/blob/master/LICENSE
    :alt: Apache Licence V2.0
-.. |build-status| image:: https://travis-ci.com/Parsl/parsl.svg?branch=master
-   :target: https://travis-ci.com/Parsl/parsl
+.. |build-status| image:: https://github.com/Parsl/parsl/actions/workflows/ci.yaml/badge.svg
+   :target: https://github.com/Parsl/parsl/actions/workflows/ci.yaml
    :alt: Build status
 .. |docs| image:: https://readthedocs.org/projects/parsl/badge/?version=stable
    :target: http://parsl.readthedocs.io/en/stable/?badge=stable
@@ -39,7 +60,7 @@ The latest Parsl version available on PyPi is v1.3.0.
    :target: https://nsf.gov/awardsearch/showAward?AWD_ID=1550528
    :alt: NSF award info
    
-QuickStart
+Quickstart
 ==========
 
 Parsl is now available on PyPI, but first make sure you have Python3.7+ ::
