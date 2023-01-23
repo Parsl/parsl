@@ -331,7 +331,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
 
-        self._scaling_enabled = True
         logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
 
         # TODO: why is this a provider property?
@@ -609,10 +608,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         # Return the future
         return fut
-
-    @property
-    def scaling_enabled(self):
-        return self._scaling_enabled
 
     def create_monitoring_info(self, status):
         """ Create a msg for monitoring based on the poll status

@@ -230,8 +230,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  function_dir: Optional[str] = None):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
-        self._scaling_enabled = True
-
         if not _work_queue_enabled:
             raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
 
@@ -684,11 +682,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         logger.debug("Work Queue shutdown completed")
         return True
-
-    def scaling_enabled(self):
-        """Specify if scaling is enabled. Not enabled in Work Queue.
-        """
-        return self._scaling_enabled
 
     def run_dir(self, value=None):
         """Path to the run directory.

@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
 from typing import Any, Callable, Dict, Optional, List
 
@@ -106,15 +106,6 @@ class ParslExecutor(metaclass=ABCMeta):
         """
         pass
 
-    @abstractproperty
-    def scaling_enabled(self) -> bool:
-        """Specify if scaling is enabled.
-
-        The callers of ParslExecutors need to differentiate between Executors
-        and Executors wrapped in a resource provider
-        """
-        pass
-
     def create_monitoring_info(self, status: Dict[str, JobStatus]) -> List[object]:
         """Create a monitoring message for each block based on the poll status.
 
@@ -213,13 +204,6 @@ class ParslExecutor(metaclass=ABCMeta):
     @abstractmethod
     def executor_exception(self) -> Exception:
         """Returns an exception that indicates why this executor is in an irrecoverable state."""
-        pass
-
-    @property
-    @abstractmethod
-    def tasks(self) -> Dict[object, Future]:
-        """Contains a dictionary mapping task IDs to the corresponding Future objects for all
-        tasks that have been submitted to this executor."""
         pass
 
     @property
