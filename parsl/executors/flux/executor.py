@@ -302,9 +302,6 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     def scale_out(self):
         pass
 
-    def scaling_enabled(self):
-        return False
-
 
 def _submit_wrapper(
     submission_queue: queue.Queue, stop_event: threading.Event, *args, **kwargs

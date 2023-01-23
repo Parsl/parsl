@@ -211,10 +211,6 @@ class BlockProviderExecutor(ParslExecutor):
 
 
 class NoStatusHandlingExecutor(ParslExecutor):
-    def __init__(self):
-        super().__init__()
-        self._tasks = {}  # type: Dict[object, Future]
-
     @property
     def status_polling_interval(self):
         return -1
@@ -240,10 +236,6 @@ class NoStatusHandlingExecutor(ParslExecutor):
     def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
                       status: Dict[str, JobStatus]) -> None:
         pass
-
-    @property
-    def tasks(self) -> Dict[object, Future]:
-        return self._tasks
 
     @property
     def provider(self):
