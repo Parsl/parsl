@@ -5,7 +5,7 @@ import time
 import typeguard
 
 from parsl.channels import LocalChannel
-from parsl.providers.provider_base import JobState, JobStatus
+from parsl.providers.base import JobState, JobStatus
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.condor.template import template_string
