@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
 from typing import Any, Callable, Dict, Optional, List
 
-from parsl.providers.provider_base import JobStatus
+from parsl.providers.base import JobStatus
 
 import parsl  # noqa F401
 

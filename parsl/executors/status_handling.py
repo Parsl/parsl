@@ -8,7 +8,7 @@ from typing import List, Any, Dict, Optional, Tuple, Union
 import parsl  # noqa F401
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
-from parsl.providers.provider_base import JobStatus, ExecutionProvider, JobState
+from parsl.providers.base import JobStatus, ExecutionProvider, JobState
 from parsl.utils import AtomicIDCounter
 
 
