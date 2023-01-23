@@ -4,6 +4,7 @@ typing-extensions
 types-paramiko
 types-requests
 types-six
+six
 globus-sdk
 dill
 tblib
