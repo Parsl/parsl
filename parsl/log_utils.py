@@ -25,7 +25,13 @@ DEFAULT_FORMAT = (
 
 
 @typeguard.typechecked
-def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None, stream: Optional[io.TextIOWrapper] = None):
+def set_stream_logger(
+        name: str = "parsl",
+        level: int = logging.DEBUG,
+        format_string: Optional[str] = None,
+        stream: Optional[io.TextIOWrapper] = None,
+        propagate: bool = True,
+) -> logging.Logger:
     """Add a stream log handler.
 
     Args:
@@ -36,7 +42,7 @@ def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_st
             If not specified, the default stream for logging.StreamHandler is used.
 
     Returns:
-         - None
+         - logging.Logger instance
     """
     if format_string is None:
         # format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
@@ -49,16 +55,24 @@ def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_st
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+    logger.propagate = propagate
 
     # Concurrent.futures errors are also of interest, as exceptions
     # which propagate out of the top of a callback are logged this way
     # and then discarded. (see #240)
     futures_logger = logging.getLogger("concurrent.futures")
     futures_logger.addHandler(handler)
+    return logger
 
 
 @typeguard.typechecked
-def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None):
+def set_file_logger(
+        filename: str,
+        name: str = "parsl",
+        level: int = logging.DEBUG,
+        format_string: Optional[str] = None,
+        propagate: bool = True,
+) -> logging.Logger:
     """Add a file log handler.
 
     Args:
@@ -68,7 +82,7 @@ def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEB
         - format_string (string): Set the format string
 
     Returns:
-       -  None
+         - logging.Logger instance
     """
     if format_string is None:
         format_string = DEFAULT_FORMAT
@@ -80,8 +94,10 @@ def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEB
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+    logger.propagate = propagate
 
     # see note in set_stream_logger for notes about logging
     # concurrent.futures
     futures_logger = logging.getLogger("concurrent.futures")
     futures_logger.addHandler(handler)
+    return logger

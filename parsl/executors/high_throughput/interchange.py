@@ -23,10 +23,14 @@ from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.manager_record import ManagerRecord
 from parsl.monitoring.message_type import MessageType
 from parsl.process_loggers import wrap_with_logs
+from parsl.log_utils import set_file_logger, set_stream_logger
 
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
+
+# Note __name__ could be __main__, so we will explicitly write the log namespace
+logger = logging.getLogger("parsl.executors.high_throughput.interchange")
 
 
 class ManagerLost(Exception):
@@ -127,8 +131,13 @@ class Interchange(object):
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
-        start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
-        logger.propagate = False
+        set_file_logger(
+            name=logger.name,
+            filename="{}/interchange.log".format(self.logdir),
+            level=logging_level,
+            format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d %(processName)s(%(process)d) %(threadName)s %(funcName)s [%(levelname)s]  %(message)s",
+            propagate=False,
+        )
         logger.debug("Initializing Interchange process")
 
         self.client_address = client_address
@@ -218,7 +227,7 @@ class Interchange(object):
 
         return tasks
 
-    @wrap_with_logs(target="interchange")
+    @wrap_with_logs(target=logger.name)
     def task_puller(self):
         """Pull tasks from the incoming tasks zmq pipe onto the internal
         pending task queue
@@ -261,7 +270,7 @@ class Interchange(object):
 
             hub_channel.send_pyobj((MessageType.NODE_INFO, d))
 
-    @wrap_with_logs(target="interchange")
+    @wrap_with_logs(target=logger.name)
     def _command_server(self):
         """ Command server to run async command to the interchange
         """
@@ -551,40 +560,7 @@ class Interchange(object):
         logger.warning("Exiting")
 
 
-def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_string=None):
-    """Add a stream log handler.
-
-    Parameters
-    ---------
-
-    filename: string
-        Name of the file to write logs to. Required.
-    name: string
-        Logger name. Default="parsl.executors.interchange"
-    level: logging.LEVEL
-        Set the logging level. Default=logging.DEBUG
-        - format_string (string): Set the format string
-    format_string: string
-        Format string to use.
-
-    Returns
-    -------
-        None.
-    """
-    if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d %(processName)s(%(process)d) %(threadName)s %(funcName)s [%(levelname)s]  %(message)s"
-
-    global logger
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    handler = logging.FileHandler(filename)
-    handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-
-@wrap_with_logs(target="interchange")
+@wrap_with_logs(target=logger.name)
 def starter(comm_q, *args, **kwargs):
     """Start the interchange process
 
@@ -619,16 +595,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Setup logging
-    global logger
-    format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-
-    logger = logging.getLogger("interchange")
-    logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
-    handler.setLevel('DEBUG' if args.debug is True else 'INFO')
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    set_stream_logger(
+        name=logger.name,
+        level=logging.DEBUG if args.debug is True else logging.INFO,
+        format_string="%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s",
+        propagate=False,
+    )
 
     logger.debug("Starting Interchange")
 

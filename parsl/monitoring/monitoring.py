@@ -15,6 +15,7 @@ from multiprocessing import Process, Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
+from parsl.log_utils import set_file_logger
 
 from parsl.serialize import deserialize
 
@@ -35,40 +36,6 @@ else:
     _db_manager_excepts = None
 
 logger = logging.getLogger(__name__)
-
-
-def start_file_logger(filename: str, name: str = 'monitoring', level: int = logging.DEBUG, format_string: Optional[str] = None) -> logging.Logger:
-    """Add a stream log handler.
-
-    Parameters
-    ---------
-
-    filename: string
-        Name of the file to write logs to. Required.
-    name: string
-        Logger name.
-    level: logging.LEVEL
-        Set the logging level. Default=logging.DEBUG
-        - format_string (string): Set the format string
-    format_string: string
-        Format string to use.
-
-    Returns
-    -------
-        None.
-    """
-    if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    logger.propagate = False
-    handler = logging.FileHandler(filename)
-    handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
 
 
 @typeguard.typechecked
@@ -303,9 +270,13 @@ class MonitoringHub(RepresentationMixin):
 
 @wrap_with_logs
 def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]", run_dir: str) -> None:
-    logger = start_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
-                               name="monitoring_filesystem_radio",
-                               level=logging.DEBUG)
+    "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+    logger = set_file_logger(
+        filename="{}/monitoring_filesystem_radio.log".format(logdir),
+        name=__name__ + ".monitoring_filesystem_radio",
+        level=logging.DEBUG,
+        propagate=False,
+    )
 
     logger.info("Starting filesystem radio receiver")
     setproctitle("parsl: monitoring filesystem receiver")
@@ -371,9 +342,13 @@ class MonitoringRouter:
 
         """
         os.makedirs(logdir, exist_ok=True)
-        self.logger = start_file_logger("{}/monitoring_router.log".format(logdir),
-                                        name="monitoring_router",
-                                        level=logging_level)
+        "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
+        self.logger = set_file_logger(
+            filename="{}/monitoring_router.log".format(logdir),
+            name=__name__ + ".monitoring_router",
+            level=logging_level,
+            propagate=False,
+        )
         self.logger.debug("Monitoring router starting")
 
         self.hub_address = hub_address

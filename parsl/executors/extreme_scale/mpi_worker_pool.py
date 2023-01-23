@@ -20,6 +20,7 @@ from mpi4py import MPI
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.serialize import unpack_apply_message, serialize
+from parsl.log_utils import set_file_logger
 
 RESULT_TAG = 10
 TASK_REQUEST_TAG = 11
@@ -27,6 +28,8 @@ TASK_REQUEST_TAG = 11
 LOOP_SLOWDOWN = 0.0  # in seconds
 
 HEARTBEAT_CODE = (2 ** 32) - 1
+
+logger = logging.getLogger(__name__)
 
 
 class Manager(object):
@@ -414,31 +417,6 @@ def worker(comm, rank):
         comm.send(pkl_package, dest=0, tag=RESULT_TAG)
 
 
-def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
-    """Add a stream log handler.
-
-    Args:
-        - filename (string): Name of the file to write logs to
-        - name (string): Logger name
-        - level (logging.LEVEL): Set the logging level.
-        - format_string (string): Set the format string
-
-    Returns:
-       -  None
-    """
-    if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(rank)
-
-    global logger
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-    handler = logging.FileHandler(filename)
-    handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -467,9 +445,13 @@ if __name__ == "__main__":
 
     try:
         if rank == 0:
-            start_file_logger('{}/manager.mpi_rank_{}.log'.format(args.logdir, rank),
-                              rank,
-                              level=logging.DEBUG if args.debug is True else logging.INFO)
+            set_file_logger(
+                filename='{}/manager.mpi_rank_{}.log'.format(args.logdir, rank),
+                name=__name__,
+                level=logging.DEBUG if args.debug is True else logging.INFO,
+                format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(rank),
+                propagate=False,
+            )
 
             logger.info("Python version: {}".format(sys.version))
 
@@ -483,9 +465,13 @@ if __name__ == "__main__":
             logger.debug("Finalizing MPI Comm")
             comm.Abort()
         else:
-            start_file_logger('{}/worker.mpi_rank_{}.log'.format(args.logdir, rank),
-                              rank,
-                              level=logging.DEBUG if args.debug is True else logging.INFO)
+            set_file_logger(
+                filename='{}/worker.mpi_rank_{}.log'.format(args.logdir, rank),
+                name=__name__,
+                level=logging.DEBUG if args.debug is True else logging.INFO,
+                format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d Rank:{0} [%(levelname)s]  %(message)s".format(rank),
+                propagate=False,
+            )
             worker(comm, rank)
     except Exception as e:
         logger.critical("mpi_worker_pool exiting from an exception")
