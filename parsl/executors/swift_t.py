@@ -169,7 +169,7 @@ class TurbineExecutor(NoStatusHandlingExecutor):
 
     """
 
-    def __init__(self, label='turbine', storage_access=None, working_dir=None, managed=True):
+    def __init__(self, label='turbine', storage_access=None, working_dir=None):
         """Initialize the thread pool.
 
         Trying to implement the emews model.
@@ -180,7 +180,6 @@ class TurbineExecutor(NoStatusHandlingExecutor):
         self.label = label
         self.storage_access = storage_access
         self.working_dir = working_dir
-        self.managed = managed
 
     def start(self):
         self.mp_manager = mp.Manager()

@@ -24,15 +24,12 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         Thread name prefix
     storage_access : list of :class:`~parsl.data_provider.staging.Staging`
         Specifications for accessing data this executor remotely.
-    managed : bool
-        If True, parsl will control dynamic scaling of this executor, and be responsible. Otherwise,
-        this is managed by the user.
     """
 
     @typeguard.typechecked
     def __init__(self, label: str = 'threads', max_threads: int = 2,
                  thread_name_prefix: str = '', storage_access: Optional[List[Staging]] = None,
-                 working_dir: Optional[str] = None, managed: bool = True):
+                 working_dir: Optional[str] = None):
         NoStatusHandlingExecutor.__init__(self)
         self.label = label
         self._scaling_enabled = False
@@ -44,7 +41,6 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         # [] is a list with no storage access in it at all
         self.storage_access = storage_access
         self.working_dir = working_dir
-        self.managed = managed
 
     def start(self):
         self.executor = cf.ThreadPoolExecutor(max_workers=self.max_threads,
