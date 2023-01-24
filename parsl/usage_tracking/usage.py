@@ -82,11 +82,11 @@ def udp_messenger(domain_name, UDP_IP, UDP_PORT, sock_timeout, message):
 
 
 class UsageTracker (object):
-    """Anonymized Usage Tracking for Parsl.
+    """Usage Tracking for Parsl.
 
-    Client for this is here : https://github.com/Parsl/parsl_tracking
+    The server for this is here: https://github.com/Parsl/parsl_tracking
     This issue captures the discussion that went into functionality
-    implemented here : https://github.com/Parsl/parsl/issues/34
+    implemented here: https://github.com/Parsl/parsl/issues/34
 
     """
 
@@ -130,14 +130,15 @@ class UsageTracker (object):
         self.initialized = False  # Once first message is sent this will be True
 
     def check_tracking_enabled(self):
-        """By default tracking is enabled.
+        """Check if tracking is enabled.
 
-        Tracking is disabled if :
-            1. config["globals"]["usageTracking"] is set to False (Bool)
+        Tracking will be enabled unless either of these is true:
+
+            1. dfk.config.usage_tracking is set to False
             2. Environment variable PARSL_TRACKING is set to false (case insensitive)
 
         """
-        track = True   # By default we track usage
+        track = True
 
         if not self.config.usage_tracking:
             track = False
@@ -212,10 +213,8 @@ class UsageTracker (object):
     def send_message(self) -> float:
         """Send message over UDP.
 
-        If tracking is disables, the bytes_sent will always be set to -1
-
         Returns:
-            time_taken
+            time taken
         """
         start = time.time()
         message = None
