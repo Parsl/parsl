@@ -44,7 +44,7 @@ class FlowControl(object):
     from a duplicate logger being added by the thread.
     """
 
-    def __init__(self, dfk, *args, threshold=20, interval=5):
+    def __init__(self, dfk, *args, interval=5):
         """Initialize the flowcontrol object.
 
         We start the timer thread here
@@ -53,10 +53,8 @@ class FlowControl(object):
              - dfk (DataFlowKernel) : DFK object to track parsl progress
 
         KWargs:
-             - threshold (int) : Tasks after which the callback is triggered
              - interval (int) : seconds after which timer expires
         """
-        self.threshold = threshold
         self.interval = interval
         self.cb_args = args
         self.job_status_poller = JobStatusPoller(dfk)
@@ -137,7 +135,6 @@ class Timer(object):
              - dfk (DataFlowKernel) : DFK object to track parsl progress
 
         KWargs:
-             - threshold (int) : Tasks after which the callback is triggered
              - interval (int) : seconds after which timer expires
              - name (str) : a base name to use when naming the started thread
         """
