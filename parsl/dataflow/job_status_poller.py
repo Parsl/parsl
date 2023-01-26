@@ -11,7 +11,7 @@ from parsl.dataflow.strategy import Strategy
 from parsl.executors.base import ParslExecutor
 from parsl.monitoring.message_type import MessageType
 
-from parsl.providers.provider_base import JobStatus, JobState
+from parsl.providers.base import JobStatus, JobState
 
 logger = logging.getLogger(__name__)
 
