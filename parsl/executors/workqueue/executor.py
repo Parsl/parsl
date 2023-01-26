@@ -683,13 +683,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Work Queue shutdown completed")
         return True
 
-    def run_dir(self, value=None):
-        """Path to the run directory.
-        """
-        if value is not None:
-            self._run_dir = value
-        return self._run_dir
-
     @wrap_with_logs
     def _collect_work_queue_results(self):
         """Sets the values of tasks' futures of tasks completed by work queue.
