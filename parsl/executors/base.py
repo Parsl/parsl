@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
 from typing import Any, Callable, Dict, Optional, List
 
-from parsl.providers.provider_base import JobStatus
+from parsl.providers.base import JobStatus
 
 import parsl  # noqa F401
 
@@ -204,13 +204,6 @@ class ParslExecutor(metaclass=ABCMeta):
     @abstractmethod
     def executor_exception(self) -> Exception:
         """Returns an exception that indicates why this executor is in an irrecoverable state."""
-        pass
-
-    @property
-    @abstractmethod
-    def tasks(self) -> Dict[object, Future]:
-        """Contains a dictionary mapping task IDs to the corresponding Future objects for all
-        tasks that have been submitted to this executor."""
         pass
 
     @property
