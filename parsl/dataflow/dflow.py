@@ -32,10 +32,12 @@ from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.taskrecord import TaskRecord
 from parsl.usage_tracking.usage import UsageTracker
+from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
+from parsl.monitoring import MonitoringHub
 from parsl.process_loggers import wrap_with_logs
-from parsl.providers.provider_base import JobStatus, JobState
+from parsl.providers.base import JobStatus, JobState
 from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints
 
 from parsl.monitoring.message_type import MessageType
@@ -100,7 +102,9 @@ class DataFlowKernel(object):
         # Monitoring
         self.run_id = str(uuid4())
 
+        self.monitoring: Optional[MonitoringHub]
         self.monitoring = config.monitoring
+
         # hub address and port for interchange to connect
         self.hub_address = None  # type: Optional[str]
         self.hub_interchange_port = None  # type: Optional[int]
@@ -175,10 +179,12 @@ class DataFlowKernel(object):
         # flowcontrol.add_executors.
         self.flowcontrol = FlowControl(self)
 
-        self.executors = {}
+        self.executors: Dict[str, ParslExecutor] = {}
+
         self.data_manager = DataManager(self)
         parsl_internal_executor = ThreadPoolExecutor(max_threads=config.internal_tasks_max_threads, label='_parsl_internal')
-        self.add_executors(config.executors + [parsl_internal_executor])
+        self.add_executors(config.executors)
+        self.add_executors([parsl_internal_executor])
 
         if self.checkpoint_mode == "periodic":
             if config.checkpoint_period is None:

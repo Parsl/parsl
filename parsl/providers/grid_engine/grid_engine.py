@@ -6,7 +6,7 @@ from parsl.channels import LocalChannel
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.grid_engine.template import template_string
 from parsl.launchers import SingleNodeLauncher
-from parsl.providers.provider_base import JobState, JobStatus
+from parsl.providers.base import JobState, JobStatus
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
