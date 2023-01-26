@@ -27,7 +27,7 @@ from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
 from parsl.errors import OptionalModuleMissing
 from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
 from parsl.executors.workqueue import exec_parsl_function
 from parsl.process_loggers import wrap_with_logs
@@ -682,13 +682,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         logger.debug("Work Queue shutdown completed")
         return True
-
-    def run_dir(self, value=None):
-        """Path to the run directory.
-        """
-        if value is not None:
-            self._run_dir = value
-        return self._run_dir
 
     @wrap_with_logs
     def _collect_work_queue_results(self):
