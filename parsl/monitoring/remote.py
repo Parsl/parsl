@@ -10,7 +10,7 @@ from parsl.process_loggers import wrap_with_logs
 
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios import MonitoringRadio, UDPRadio, HTEXRadio, FilesystemRadio
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ monitoring_wrapper_cache = {}
 
 
 def monitor_wrapper(f: Any,           # per app
-                    args: List,       # per invocation
+                    args: Sequence,   # per invocation
                     kwargs: Dict,     # per invocation
                     x_try_id: int,    # per invocation
                     x_task_id: int,   # per invocation
@@ -29,7 +29,7 @@ def monitor_wrapper(f: Any,           # per app
                     sleep_dur: float,  # per workflow
                     radio_mode: str,   # per executor
                     monitor_resources: bool,  # per workflow
-                    run_dir: str) -> Tuple[Callable, List, Dict]:
+                    run_dir: str) -> Tuple[Callable, Sequence, Dict]:
     """Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
     """
 

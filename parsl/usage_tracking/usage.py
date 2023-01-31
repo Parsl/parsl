@@ -229,9 +229,6 @@ class UsageTracker (object):
 
         return end - start
 
-    def __del__(self):
-        return self.close()
-
     def close(self):
         """We terminate (SIGTERM) the processes added to the self.procs list """
         for proc in self.procs:
