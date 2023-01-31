@@ -4,7 +4,6 @@ ipyparallel
 pandas
 pytest>=6.2.5,<7
 pytest-cov
-pytest-xdist==1.26.1
 pytest-random-order
 mock>=1.0.0
 nbsphinx

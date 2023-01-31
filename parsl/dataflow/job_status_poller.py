@@ -34,7 +34,7 @@ class PollItem(ExecutorStatus):
             self.hub_channel = context.socket(zmq.DEALER)
             self.hub_channel.set_hwm(0)
             self.hub_channel.connect("tcp://{}:{}".format(hub_address, hub_port))
-            logger.info("Monitoring enabled on task status poller")
+            logger.info("Monitoring enabled on job status poller")
 
     def _should_poll(self, now: float) -> bool:
         return now >= self._last_poll_time + self._interval
@@ -57,7 +57,7 @@ class PollItem(ExecutorStatus):
         # Send monitoring info for HTEX when monitoring enabled
         if self.monitoring_enabled:
             msg = self._executor.create_monitoring_info(status)
-            logger.debug("Sending message {} to hub from task status poller".format(msg))
+            logger.debug("Sending message {} to hub from job status poller".format(msg))
             self.hub_channel.send_pyobj((MessageType.BLOCK_INFO, msg))
 
     @property
