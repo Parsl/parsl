@@ -36,7 +36,6 @@ class LowLatencyExecutor(BlockProviderExecutor, RepresentationMixin):
                  worker_debug=False,
                  workers_per_node=1,
                  #  cores_per_worker=1.0,
-                 managed=True
                  ):
         logger.debug("Initializing LowLatencyExecutor")
 
@@ -49,7 +48,6 @@ class LowLatencyExecutor(BlockProviderExecutor, RepresentationMixin):
         # if len(self.storage_access) > 1:
         # raise ConfigurationError('Multiple storage access schemes are not supported')
         self.working_dir = working_dir
-        self.managed = managed
         self.blocks = []
         self.workers_per_node = workers_per_node
 
@@ -90,7 +88,6 @@ class LowLatencyExecutor(BlockProviderExecutor, RepresentationMixin):
             self.launch_cmd = l_cmd
             logger.debug("Launch command: {}".format(self.launch_cmd))
 
-            self._scaling_enabled = True
             logger.debug(
                 "Starting LowLatencyExecutor with provider:\n%s", self.provider)
             if hasattr(self.provider, 'init_blocks'):
@@ -108,7 +105,6 @@ class LowLatencyExecutor(BlockProviderExecutor, RepresentationMixin):
                     logger.error("Scaling out failed: {}".format(e))
                     raise e
         else:
-            self._scaling_enabled = False
             logger.debug("Starting LowLatencyExecutor with no provider")
 
     def _start_local_queue_process(self):
@@ -214,10 +210,6 @@ class LowLatencyExecutor(BlockProviderExecutor, RepresentationMixin):
 
         # Return the future
         return self.tasks[task_id]
-
-    @property
-    def scaling_enabled(self):
-        return self._scaling_enabled
 
     def scale_out(self, blocks=1):
         """Scales out the number of active workers by the number of blocks specified.

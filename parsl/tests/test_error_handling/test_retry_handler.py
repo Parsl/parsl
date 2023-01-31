@@ -11,9 +11,11 @@ def half_handler(*args):
     return 0.5
 
 
-local_config = fresh_config()
-local_config.retries = 2
-local_config.retry_handler = half_handler
+def local_config():
+    c = fresh_config()
+    c.retries = 2
+    c.retry_handler = half_handler
+    return c
 
 
 @bash_app

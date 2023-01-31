@@ -17,8 +17,7 @@ from typing import cast, Any, Dict, Set
 
 from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
-from parsl.serialize import ParslSerializer
-serialize_object = ParslSerializer().serialize
+from parsl.serialize import serialize as serialize_object
 
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.manager_record import ManagerRecord

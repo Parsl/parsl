@@ -21,7 +21,7 @@ from parsl.executors.errors import (
 )
 
 from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.base import ExecutionProvider
 from parsl.data_provider.staging import Staging
 from parsl.addresses import get_all_addresses
 from parsl.process_loggers import wrap_with_logs
@@ -74,7 +74,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     Parameters
     ----------
 
-    provider : :class:`~parsl.providers.provider_base.ExecutionProvider`
+    provider : :class:`~parsl.providers.base.ExecutionProvider`
        Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
         :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
         :class:`~parsl.providers.condor.condor.Condor`,
@@ -118,9 +118,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     worker_debug : Bool
         Enables worker debug logging.
-
-    managed : Bool
-        If this executor is managed by the DFK or externally handled.
 
     cores_per_worker : float
         cores to be assigned to each worker. Oversubscription is possible
@@ -209,7 +206,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  heartbeat_period: int = 30,
                  poll_period: int = 10,
                  address_probe_timeout: Optional[int] = None,
-                 managed: bool = True,
                  worker_logdir_root: Optional[str] = None,
                  block_error_handler: bool = True):
 
@@ -221,7 +217,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.worker_debug = worker_debug
         self.storage_access = storage_access
         self.working_dir = working_dir
-        self.managed = managed
         self.cores_per_worker = cores_per_worker
         self.mem_per_worker = mem_per_worker
         self.max_workers = max_workers
@@ -336,7 +331,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
 
-        self._scaling_enabled = True
         logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
 
         # TODO: why is this a provider property?
@@ -389,29 +383,29 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         The `None` message is a die request.
         """
-        logger.debug("[MTHREAD] queue management worker starting")
+        logger.debug("queue management worker starting")
 
         while not self.bad_state_is_set:
             try:
                 msgs = self.incoming_q.get(timeout=1)
 
             except queue.Empty:
-                logger.debug("[MTHREAD] queue empty")
+                logger.debug("queue empty")
                 # Timed out.
                 pass
 
             except IOError as e:
-                logger.exception("[MTHREAD] Caught broken queue with exception code {}: {}".format(e.errno, e))
+                logger.exception("Caught broken queue with exception code {}: {}".format(e.errno, e))
                 return
 
             except Exception as e:
-                logger.exception("[MTHREAD] Caught unknown exception: {}".format(e))
+                logger.exception("Caught unknown exception: {}".format(e))
                 return
 
             else:
 
                 if msgs is None:
-                    logger.debug("[MTHREAD] Got None, exiting")
+                    logger.debug("Got None, exiting")
                     return
 
                 else:
@@ -465,7 +459,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
             if not self.is_alive:
                 break
-        logger.info("[MTHREAD] queue management worker finished")
+        logger.info("queue management worker finished")
 
     def _start_local_interchange_process(self):
         """ Starts the interchange process locally
@@ -558,7 +552,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         for manager in managers:
             if manager['block_id'] == block_id:
-                logger.debug("[HOLD_BLOCK]: Sending hold to manager: {}".format(manager['manager']))
+                logger.debug("Sending hold to manager: {}".format(manager['manager']))
                 self.hold_worker(manager['manager'])
 
     def submit(self, func, resource_specification, *args, **kwargs):
@@ -614,10 +608,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         # Return the future
         return fut
-
-    @property
-    def scaling_enabled(self):
-        return self._scaling_enabled
 
     def create_monitoring_info(self, status):
         """ Create a msg for monitoring based on the poll status

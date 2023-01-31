@@ -309,7 +309,7 @@ class Manager(object):
 
                 else:
                     task_recv_counter += len(tasks)
-                    logger.debug("Got tasks: {}, cumulative count of tasks: {}".format([t['task_id'] for t in tasks], task_recv_counter))
+                    logger.debug("Got executor tasks: {}, cumulative count of tasks: {}".format([t['task_id'] for t in tasks], task_recv_counter))
 
                     for task in tasks:
                         self.pending_task_queue.put(task)
@@ -404,14 +404,14 @@ class Manager(object):
         while not kill_event.is_set():
             for worker_id, p in self.procs.items():
                 if not p.is_alive():
-                    logger.info("Worker {} has died".format(worker_id))
+                    logger.error("Worker {} has died".format(worker_id))
                     try:
                         task = self._tasks_in_progress.pop(worker_id)
                         logger.info("Worker {} was busy when it died".format(worker_id))
                         try:
                             raise WorkerLost(worker_id, platform.node())
                         except Exception:
-                            logger.info("Putting exception for task {} in the pending result queue".format(task['task_id']))
+                            logger.info("Putting exception for executor task {} in the pending result queue".format(task['task_id']))
                             result_package = {'type': 'result', 'task_id': task['task_id'], 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
                             pkl_package = pickle.dumps(result_package)
                             self.pending_result_queue.put(pkl_package)
@@ -575,6 +575,13 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         else:
             raise ValueError("Affinity strategy {} is not supported".format(cpu_affinity))
 
+        # Set the affinity for OpenMP
+        #  See: https://hpc-tutorials.llnl.gov/openmp/ProcessThreadAffinity.pdf
+        proc_list = ",".join(map(str, my_cores))
+        os.environ["OMP_NUM_THREADS"] = str(len(my_cores))
+        os.environ["GOMP_CPU_AFFINITY"] = proc_list  # Compatible with GCC OpenMP
+        os.environ["KMP_AFFINITY"] = f"explicit,proclist=[{proc_list}]"  # For Intel OpenMP
+
         # Set the affinity for this worker
         os.sched_setaffinity(0, my_cores)
         logger.info("Set worker CPU affinity to {}".format(my_cores))
@@ -583,7 +590,9 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
     if accelerator is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = accelerator
         os.environ["ROCR_VISIBLE_DEVICES"] = accelerator
-        os.environ["SYCL_DEVICE_FILTER"] = f"*:*:{accelerator}"
+        os.environ["ZE_AFFINITY_MASK"] = accelerator
+        os.environ["ZE_ENABLE_PCI_ID_DEVICE_ORDER"] = '1'
+
         logger.info(f'Pinned worker to accelerator: {accelerator}')
 
     while True:
@@ -593,7 +602,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         req = task_queue.get()
         tasks_in_progress[worker_id] = req
         tid = req['task_id']
-        logger.info("Received task {}".format(tid))
+        logger.info("Received executor task {}".format(tid))
 
         try:
             worker_queue.get()
@@ -611,7 +620,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
             result_package = {'type': 'result', 'task_id': tid, 'result': serialized_result}
             # logger.debug("Result: {}".format(result))
 
-        logger.info("Completed task {}".format(tid))
+        logger.info("Completed executor task {}".format(tid))
         try:
             pkl_package = pickle.dumps(result_package)
         except Exception:
@@ -622,7 +631,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
 
         result_queue.put(pkl_package)
         tasks_in_progress.pop(worker_id)
-        logger.info("All processing finished for task {}".format(tid))
+        logger.info("All processing finished for executor task {}".format(tid))
 
 
 def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):

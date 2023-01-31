@@ -193,6 +193,6 @@
     },
     "runtimePlatform": "Python 3.7",
     "url": "https://github.com/Parsl/parsl",
-    "developmentStatus": "3 - Alpha",
+    "developmentStatus": "active",
     "programmingLanguage": "Python :: 3.7"
 }

@@ -169,7 +169,7 @@ class TurbineExecutor(NoStatusHandlingExecutor):
 
     """
 
-    def __init__(self, label='turbine', storage_access=None, working_dir=None, managed=True):
+    def __init__(self, label='turbine', storage_access=None, working_dir=None):
         """Initialize the thread pool.
 
         Trying to implement the emews model.
@@ -180,7 +180,6 @@ class TurbineExecutor(NoStatusHandlingExecutor):
         self.label = label
         self.storage_access = storage_access
         self.working_dir = working_dir
-        self.managed = managed
 
     def start(self):
         self.mp_manager = mp.Manager()
@@ -195,7 +194,6 @@ class TurbineExecutor(NoStatusHandlingExecutor):
         self.worker = mp.Process(target=runner, args=(self.outgoing_q, self.incoming_q))
         self.worker.start()
         logger.debug("Created worker : %s", self.worker)
-        self._scaling_enabled = False
 
     def _queue_management_worker(self):
         """Listen to the queue for task status messages and handle them.
@@ -332,10 +330,6 @@ class TurbineExecutor(NoStatusHandlingExecutor):
 
         # Return the future
         return self.tasks[task_id]
-
-    @property
-    def scaling_enabled(self):
-        return self._scaling_enabled
 
     def scale_out(self, blocks=1):
         """Scales out the number of active workers by 1.
