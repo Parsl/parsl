@@ -366,28 +366,7 @@ class Interchange(object):
             self.process_task_outgoing_incoming(interesting_managers, hub_channel, kill_event)
             self.process_tasks_to_send(interesting_managers)
             self.process_results_incoming(hub_channel)
-
-            bad_managers = [(manager_id, m) for (manager_id, m) in self._ready_managers.items() if
-                            time.time() - m['last_heartbeat'] > self.heartbeat_threshold]
-            for (manager_id, m) in bad_managers:
-                logger.debug("Last: {} Current: {}".format(m['last_heartbeat'], time.time()))
-                logger.warning(f"Too many heartbeats missed for manager {manager_id} - removing manager")
-                if m['active']:
-                    m['active'] = False
-                    self._send_monitoring_info(hub_channel, m)
-
-                logger.warning(f"Cancelling htex tasks {m['tasks']} on removed manager")
-                for tid in m['tasks']:
-                    try:
-                        raise ManagerLost(manager_id, m['hostname'])
-                    except Exception:
-                        result_package = {'type': 'result', 'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
-                        pkl_package = pickle.dumps(result_package)
-                        self.results_outgoing.send(pkl_package)
-                logger.warning("Sent failure reports, unregistering manager")
-                self._ready_managers.pop(manager_id, 'None')
-                if manager_id in interesting_managers:
-                    interesting_managers.remove(manager_id)
+            self.expire_bad_managers(interesting_managers, hub_channel)
 
         delta = time.time() - start
         logger.info("Processed {} tasks in {} seconds".format(self.count, delta))
@@ -557,6 +536,29 @@ class Interchange(object):
                 if len(m['tasks']) == 0 and m['idle_since'] is None:
                     m['idle_since'] = time.time()
             logger.debug("leaving results_incoming section")
+
+    def expire_bad_managers(self, interesting_managers, hub_channel):
+        bad_managers = [(manager_id, m) for (manager_id, m) in self._ready_managers.items() if
+                        time.time() - m['last_heartbeat'] > self.heartbeat_threshold]
+        for (manager_id, m) in bad_managers:
+            logger.debug("Last: {} Current: {}".format(m['last_heartbeat'], time.time()))
+            logger.warning(f"Too many heartbeats missed for manager {manager_id} - removing manager")
+            if m['active']:
+                m['active'] = False
+                self._send_monitoring_info(hub_channel, m)
+
+            logger.warning(f"Cancelling htex tasks {m['tasks']} on removed manager")
+            for tid in m['tasks']:
+                try:
+                    raise ManagerLost(manager_id, m['hostname'])
+                except Exception:
+                    result_package = {'type': 'result', 'task_id': tid, 'exception': serialize_object(RemoteExceptionWrapper(*sys.exc_info()))}
+                    pkl_package = pickle.dumps(result_package)
+                    self.results_outgoing.send(pkl_package)
+            logger.warning("Sent failure reports, unregistering manager")
+            self._ready_managers.pop(manager_id, 'None')
+            if manager_id in interesting_managers:
+                interesting_managers.remove(manager_id)
 
 
 def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_string=None):
