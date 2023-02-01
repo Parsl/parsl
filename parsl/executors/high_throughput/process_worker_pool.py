@@ -163,7 +163,7 @@ class Manager(object):
 
         self.signal_sender = SignalSender(self.context)
         self.signal_receiver = SignalReceiver(self.context)
-        logger.info("Manager connected")
+        logger.info("Manager connected to interchange")
 
         self.uid = uid
         self.block_id = block_id
