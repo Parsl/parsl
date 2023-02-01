@@ -319,7 +319,7 @@ class Manager(object):
             elif signal_receiver_socket in socks and socks[signal_receiver_socket] == zmq.POLLIN:
                 # We do nothing with the message because there's no info being transmitted
                 self.signal_receiver.recv()
-                logger.info("[TASK_PULL_THREAD] Received signal from RESULT_PUSH_THREAD")
+                logger.info("Received signal from result push")
                 # Reset poll period
                 poll_timer = self.poll_period
             else:
@@ -377,9 +377,9 @@ class Manager(object):
                 if items:
                     logger.debug(f"Result send: Pushing {len(items)} items")
                     self.result_outgoing.send_multipart(items)
-                    logger.info("[RESULT_PUSH_THREAD] Sent result")
+                    logger.info("Sent result")
                     # Wake up the task_puller from long-poll to re-advertize capacity
-                    logger.info("[RESULT_PUSH_THREAD] Sending wake up signal")
+                    logger.info("Sending wake up signal")
                     self.signal_sender.send(b'WAKE UP')
                     items = []
                 else:
