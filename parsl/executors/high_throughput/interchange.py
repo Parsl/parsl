@@ -365,7 +365,7 @@ class Interchange(object):
 
             self.process_task_outgoing_incoming(interesting_managers, hub_channel, kill_event)
             self.process_tasks_to_send(interesting_managers)
-            self.process_results_incoming(hub_channel)
+            self.process_results_incoming(interesting_managers, hub_channel)
             self.expire_bad_managers(interesting_managers, hub_channel)
 
         delta = time.time() - start
@@ -481,7 +481,7 @@ class Interchange(object):
         else:
             logger.debug("either no interesting managers or no tasks, so skipping manager pass")
 
-    def process_results_incoming(self, hub_channel):
+    def process_results_incoming(self, interesting_managers, hub_channel):
         # Receive any results and forward to client
         if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
             logger.debug("entering results_incoming section")
@@ -532,6 +532,10 @@ class Interchange(object):
                 logger.debug(f"Current tasks on manager {manager_id}: {m['tasks']}")
                 if len(m['tasks']) == 0 and m['idle_since'] is None:
                     m['idle_since'] = time.time()
+
+                # TODO: this should only happen if there are results - not heartbeats or monitoring messages
+                # otherwise the load that interesting_managers is intended to reduce will return.
+                interesting_managers.add(manager_id)
             logger.debug("leaving results_incoming section")
 
     def expire_bad_managers(self, interesting_managers, hub_channel):
