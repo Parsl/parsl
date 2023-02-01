@@ -446,8 +446,7 @@ class Interchange(object):
                     manager_id = shuffled_managers.pop()
                     m = self._ready_managers[manager_id]
                     tasks_inflight = len(m['tasks'])
-                    real_capacity = min(m['free_capacity'],
-                                        m['max_capacity'] - tasks_inflight)
+                    real_capacity = m['max_capacity'] - tasks_inflight
 
                     if (real_capacity and m['active']):
                         tasks = self.get_tasks(real_capacity)
