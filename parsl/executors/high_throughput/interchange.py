@@ -393,7 +393,6 @@ class Interchange(object):
                     # We set up an entry only if registration works correctly
                     self._ready_managers[manager_id] = {'last_heartbeat': time.time(),
                                                         'idle_since': time.time(),
-                                                        'free_capacity': 0,
                                                         'block_id': None,
                                                         'max_capacity': 0,
                                                         'worker_count': 0,
@@ -437,9 +436,7 @@ class Interchange(object):
                     logger.debug("Manager {} sent heartbeat via tasks connection".format(manager_id))
                     self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
                 else:
-                    logger.debug("Manager {} requested {} tasks".format(manager_id, tasks_requested))
-                    self._ready_managers[manager_id]['free_capacity'] = tasks_requested
-                    interesting_managers.add(manager_id)
+                    logger.error("Unexpected non-heartbeat message received from manager {}")
             logger.debug("leaving task_outgoing section")
 
     def process_tasks_to_send(self, interesting_managers):
@@ -457,8 +454,7 @@ class Interchange(object):
                 manager_id = shuffled_managers.pop()
                 m = self._ready_managers[manager_id]
                 tasks_inflight = len(m['tasks'])
-                real_capacity = min(m['free_capacity'],
-                                    m['max_capacity'] - tasks_inflight)
+                real_capacity = m['max_capacity'] - tasks_inflight
 
                 if (real_capacity and m['active']):
                     tasks = self.get_tasks(real_capacity)
@@ -467,12 +463,13 @@ class Interchange(object):
                         task_count = len(tasks)
                         self.count += task_count
                         tids = [t['task_id'] for t in tasks]
-                        m['free_capacity'] -= task_count
                         m['tasks'].extend(tids)
                         m['idle_since'] = None
                         logger.debug("Sent tasks: {} to manager {}".format(tids, manager_id))
-                        if m['free_capacity'] > 0:
-                            logger.debug("Manager {} has free_capacity {}".format(manager_id, m['free_capacity']))
+                        # recompute real_capacity after sending tasks
+                        real_capacity = m['max_capacity'] - tasks_inflight
+                        if real_capacity > 0:
+                            logger.debug("Manager {} has free capacity {}".format(manager_id, real_capacity))
                             # ... so keep it in the interesting_managers list
                         else:
                             logger.debug("Manager {} is now saturated".format(manager_id))
