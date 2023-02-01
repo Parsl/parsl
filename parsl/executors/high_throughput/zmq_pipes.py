@@ -170,8 +170,8 @@ class SignalSender(object):
         self.socket = self.zmq_context.socket(zmq.DEALER)
         self.socket.connect('inproc://manager')
 
-    def send(self, message: bytes = b''):
-        self.socket.send(message)
+    def send(self):
+        self.socket.send(b'')
 
     def close(self):
         self.socket.close()
