@@ -365,58 +365,7 @@ class Interchange(object):
 
             self.process_task_outgoing_incoming(interesting_managers, hub_channel, kill_event)
             self.process_tasks_to_send(interesting_managers)
-
-            # Receive any results and forward to client
-            if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
-                logger.debug("entering results_incoming section")
-                manager_id, *all_messages = self.results_incoming.recv_multipart()
-                if manager_id not in self._ready_managers:
-                    logger.warning("Received a result from a un-registered manager: {}".format(manager_id))
-                else:
-                    logger.debug(f"Got {len(all_messages)} result items in batch from manager {manager_id}")
-
-                    b_messages = []
-
-                    for p_message in all_messages:
-                        r = pickle.loads(p_message)
-                        if r['type'] == 'result':
-                            # process this for task ID and forward to executor
-                            b_messages.append((p_message, r))
-                        elif r['type'] == 'monitoring':
-                            hub_channel.send_pyobj(r['payload'])
-                        elif r['type'] == 'heartbeat':
-                            logger.debug(f"Manager {manager_id} sent heartbeat via results connection")
-                            b_messages.append((p_message, r))
-                        else:
-                            logger.error("Interchange discarding result_queue message of unknown type: {}".format(r['type']))
-
-                    m = self._ready_managers[manager_id]
-                    for (b_message, r) in b_messages:
-                        assert 'type' in r, f"Message is missing type entry: {r}"
-                        if r['type'] == 'result':
-                            try:
-                                logger.debug(f"Removing task {r['task_id']} from manager record {manager_id}")
-                                m['tasks'].remove(r['task_id'])
-                            except Exception:
-                                # If we reach here, there's something very wrong.
-                                logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(
-                                    r['task_id'],
-                                    manager_id,
-                                    m['tasks']))
-
-                    b_messages_to_send = []
-                    for (b_message, _) in b_messages:
-                        b_messages_to_send.append(b_message)
-
-                    if b_messages_to_send:
-                        logger.debug("Sending messages on results_outgoing")
-                        self.results_outgoing.send_multipart(b_messages_to_send)
-                        logger.debug("Sent messages on results_outgoing")
-
-                    logger.debug(f"Current tasks on manager {manager_id}: {m['tasks']}")
-                    if len(m['tasks']) == 0 and m['idle_since'] is None:
-                        m['idle_since'] = time.time()
-                logger.debug("leaving results_incoming section")
+            self.process_results_incoming(hub_channel)
 
             bad_managers = [(manager_id, m) for (manager_id, m) in self._ready_managers.items() if
                             time.time() - m['last_heartbeat'] > self.heartbeat_threshold]
@@ -555,6 +504,59 @@ class Interchange(object):
             logger.debug("leaving _ready_managers section, with {} managers still interesting".format(len(interesting_managers)))
         else:
             logger.debug("either no interesting managers or no tasks, so skipping manager pass")
+
+    def process_results_incoming(self, hub_channel):
+        # Receive any results and forward to client
+        if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
+            logger.debug("entering results_incoming section")
+            manager_id, *all_messages = self.results_incoming.recv_multipart()
+            if manager_id not in self._ready_managers:
+                logger.warning("Received a result from a un-registered manager: {}".format(manager_id))
+            else:
+                logger.debug(f"Got {len(all_messages)} result items in batch from manager {manager_id}")
+
+                b_messages = []
+
+                for p_message in all_messages:
+                    r = pickle.loads(p_message)
+                    if r['type'] == 'result':
+                        # process this for task ID and forward to executor
+                        b_messages.append((p_message, r))
+                    elif r['type'] == 'monitoring':
+                        hub_channel.send_pyobj(r['payload'])
+                    elif r['type'] == 'heartbeat':
+                        logger.debug(f"Manager {manager_id} sent heartbeat via results connection")
+                        b_messages.append((p_message, r))
+                    else:
+                        logger.error("Interchange discarding result_queue message of unknown type: {}".format(r['type']))
+
+                m = self._ready_managers[manager_id]
+                for (b_message, r) in b_messages:
+                    assert 'type' in r, f"Message is missing type entry: {r}"
+                    if r['type'] == 'result':
+                        try:
+                            logger.debug(f"Removing task {r['task_id']} from manager record {manager_id}")
+                            m['tasks'].remove(r['task_id'])
+                        except Exception:
+                            # If we reach here, there's something very wrong.
+                            logger.exception("Ignoring exception removing task_id {} for manager {} with task list {}".format(
+                                r['task_id'],
+                                manager_id,
+                                m['tasks']))
+
+                b_messages_to_send = []
+                for (b_message, _) in b_messages:
+                    b_messages_to_send.append(b_message)
+
+                if b_messages_to_send:
+                    logger.debug("Sending messages on results_outgoing")
+                    self.results_outgoing.send_multipart(b_messages_to_send)
+                    logger.debug("Sent messages on results_outgoing")
+
+                logger.debug(f"Current tasks on manager {manager_id}: {m['tasks']}")
+                if len(m['tasks']) == 0 and m['idle_since'] is None:
+                    m['idle_since'] = time.time()
+            logger.debug("leaving results_incoming section")
 
 
 def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_string=None):
