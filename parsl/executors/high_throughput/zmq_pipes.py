@@ -170,7 +170,7 @@ class SignalSender(object):
         self.socket = self.zmq_context.socket(zmq.DEALER)
         self.socket.connect('inproc://manager')
 
-    def send(self, message: bytes = b'SIGHUP'):
+    def send(self, message: bytes = b''):
         self.socket.send(message)
 
     def close(self):
