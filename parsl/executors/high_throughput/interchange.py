@@ -153,6 +153,7 @@ class Interchange(object):
         self.hub_port = hub_port
 
         self.pending_task_queue: queue.Queue[Any] = queue.Queue(maxsize=10 ** 6)
+        self.count = 0
 
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
@@ -338,7 +339,6 @@ class Interchange(object):
         poll_period = self.poll_period
 
         start = time.time()
-        count = 0
 
         self._task_puller_thread = threading.Thread(target=self.task_puller,
                                                     name="Interchange-Task-Puller")
@@ -364,47 +364,8 @@ class Interchange(object):
             self.socks = dict(poller.poll(timeout=poll_period))
 
             self.process_task_outgoing_incoming(interesting_managers, hub_channel, kill_event)
+            self.process_tasks_to_send(interesting_managers)
 
-            # If we had received any requests, check if there are tasks that could be passed
-
-            logger.debug("Managers count (interesting/total): {interesting}/{total}".format(
-                total=len(self._ready_managers),
-                interesting=len(interesting_managers)))
-
-            if interesting_managers and not self.pending_task_queue.empty():
-                shuffled_managers = list(interesting_managers)
-                random.shuffle(shuffled_managers)
-
-                while shuffled_managers and not self.pending_task_queue.empty():  # cf. the if statement above...
-                    manager_id = shuffled_managers.pop()
-                    m = self._ready_managers[manager_id]
-                    tasks_inflight = len(m['tasks'])
-                    real_capacity = min(m['free_capacity'],
-                                        m['max_capacity'] - tasks_inflight)
-
-                    if (real_capacity and m['active']):
-                        tasks = self.get_tasks(real_capacity)
-                        if tasks:
-                            self.task_outgoing.send_multipart([manager_id, b'', pickle.dumps(tasks)])
-                            task_count = len(tasks)
-                            count += task_count
-                            tids = [t['task_id'] for t in tasks]
-                            m['free_capacity'] -= task_count
-                            m['tasks'].extend(tids)
-                            m['idle_since'] = None
-                            logger.debug("Sent tasks: {} to manager {}".format(tids, manager_id))
-                            if m['free_capacity'] > 0:
-                                logger.debug("Manager {} has free_capacity {}".format(manager_id, m['free_capacity']))
-                                # ... so keep it in the interesting_managers list
-                            else:
-                                logger.debug("Manager {} is now saturated".format(manager_id))
-                                interesting_managers.remove(manager_id)
-                    else:
-                        interesting_managers.remove(manager_id)
-                        # logger.debug("Nothing to send to manager {}".format(manager_id))
-                logger.debug("leaving _ready_managers section, with {} managers still interesting".format(len(interesting_managers)))
-            else:
-                logger.debug("either no interesting managers or no tasks, so skipping manager pass")
             # Receive any results and forward to client
             if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
                 logger.debug("entering results_incoming section")
@@ -480,7 +441,7 @@ class Interchange(object):
                     interesting_managers.remove(manager_id)
 
         delta = time.time() - start
-        logger.info("Processed {} tasks in {} seconds".format(count, delta))
+        logger.info("Processed {} tasks in {} seconds".format(self.count, delta))
         logger.warning("Exiting")
 
     def process_task_outgoing_incoming(self, interesting_managers, hub_channel, kill_event):
@@ -552,6 +513,48 @@ class Interchange(object):
                     self._ready_managers[manager_id]['free_capacity'] = tasks_requested
                     interesting_managers.add(manager_id)
             logger.debug("leaving task_outgoing section")
+
+    def process_tasks_to_send(self, interesting_managers):
+        # If we had received any requests, check if there are tasks that could be passed
+
+        logger.debug("Managers count (interesting/total): {interesting}/{total}".format(
+            total=len(self._ready_managers),
+            interesting=len(interesting_managers)))
+
+        if interesting_managers and not self.pending_task_queue.empty():
+            shuffled_managers = list(interesting_managers)
+            random.shuffle(shuffled_managers)
+
+            while shuffled_managers and not self.pending_task_queue.empty():  # cf. the if statement above...
+                manager_id = shuffled_managers.pop()
+                m = self._ready_managers[manager_id]
+                tasks_inflight = len(m['tasks'])
+                real_capacity = min(m['free_capacity'],
+                                    m['max_capacity'] - tasks_inflight)
+
+                if (real_capacity and m['active']):
+                    tasks = self.get_tasks(real_capacity)
+                    if tasks:
+                        self.task_outgoing.send_multipart([manager_id, b'', pickle.dumps(tasks)])
+                        task_count = len(tasks)
+                        self.count += task_count
+                        tids = [t['task_id'] for t in tasks]
+                        m['free_capacity'] -= task_count
+                        m['tasks'].extend(tids)
+                        m['idle_since'] = None
+                        logger.debug("Sent tasks: {} to manager {}".format(tids, manager_id))
+                        if m['free_capacity'] > 0:
+                            logger.debug("Manager {} has free_capacity {}".format(manager_id, m['free_capacity']))
+                            # ... so keep it in the interesting_managers list
+                        else:
+                            logger.debug("Manager {} is now saturated".format(manager_id))
+                            interesting_managers.remove(manager_id)
+                else:
+                    interesting_managers.remove(manager_id)
+                    # logger.debug("Nothing to send to manager {}".format(manager_id))
+            logger.debug("leaving _ready_managers section, with {} managers still interesting".format(len(interesting_managers)))
+        else:
+            logger.debug("either no interesting managers or no tasks, so skipping manager pass")
 
 
 def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_string=None):
