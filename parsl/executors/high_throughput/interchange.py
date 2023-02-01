@@ -363,74 +363,7 @@ class Interchange(object):
         while not kill_event.is_set():
             self.socks = dict(poller.poll(timeout=poll_period))
 
-            # Listen for requests for work
-            if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
-                logger.debug("starting task_outgoing section")
-                message = self.task_outgoing.recv_multipart()
-                manager_id = message[0]
-
-                if manager_id not in self._ready_managers:
-                    reg_flag = False
-
-                    try:
-                        msg = json.loads(message[1].decode('utf-8'))
-                        reg_flag = True
-                    except Exception:
-                        logger.warning("Got Exception reading registration message from manager: {}".format(
-                            manager_id), exc_info=True)
-                        logger.debug("Message: \n{}\n".format(message[1]))
-                    else:
-                        # We set up an entry only if registration works correctly
-                        self._ready_managers[manager_id] = {'last_heartbeat': time.time(),
-                                                            'idle_since': time.time(),
-                                                            'free_capacity': 0,
-                                                            'block_id': None,
-                                                            'max_capacity': 0,
-                                                            'worker_count': 0,
-                                                            'active': True,
-                                                            'tasks': []}
-                    if reg_flag is True:
-                        interesting_managers.add(manager_id)
-                        logger.info("Adding manager: {} to ready queue".format(manager_id))
-                        m = self._ready_managers[manager_id]
-                        m.update(msg)
-                        logger.info("Registration info for manager {}: {}".format(manager_id, msg))
-                        self._send_monitoring_info(hub_channel, m)
-
-                        if (msg['python_v'].rsplit(".", 1)[0] != self.current_platform['python_v'].rsplit(".", 1)[0] or
-                            msg['parsl_v'] != self.current_platform['parsl_v']):
-                            logger.error("Manager {} has incompatible version info with the interchange".format(manager_id))
-                            logger.debug("Setting kill event")
-                            kill_event.set()
-                            e = VersionMismatch("py.v={} parsl.v={}".format(self.current_platform['python_v'].rsplit(".", 1)[0],
-                                                                            self.current_platform['parsl_v']),
-                                                "py.v={} parsl.v={}".format(msg['python_v'].rsplit(".", 1)[0],
-                                                                            msg['parsl_v'])
-                            )
-                            result_package = {'type': 'result', 'task_id': -1, 'exception': serialize_object(e)}
-                            pkl_package = pickle.dumps(result_package)
-                            self.results_outgoing.send(pkl_package)
-                            logger.error("Sent failure reports, shutting down interchange")
-                        else:
-                            logger.info("Manager {} has compatible Parsl version {}".format(manager_id, msg['parsl_v']))
-                            logger.info("Manager {} has compatible Python version {}".format(manager_id,
-                                                                                             msg['python_v'].rsplit(".", 1)[0]))
-                    else:
-                        # Registration has failed.
-                        logger.debug("Suppressing bad registration from manager: {}".format(
-                            manager_id))
-
-                else:
-                    tasks_requested = int.from_bytes(message[1], "little")
-                    self._ready_managers[manager_id]['last_heartbeat'] = time.time()
-                    if tasks_requested == HEARTBEAT_CODE:
-                        logger.debug("Manager {} sent heartbeat via tasks connection".format(manager_id))
-                        self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
-                    else:
-                        logger.debug("Manager {} requested {} tasks".format(manager_id, tasks_requested))
-                        self._ready_managers[manager_id]['free_capacity'] = tasks_requested
-                        interesting_managers.add(manager_id)
-                logger.debug("leaving task_outgoing section")
+            self.process_task_outgoing_incoming(interesting_managers, hub_channel, kill_event)
 
             # If we had received any requests, check if there are tasks that could be passed
 
@@ -549,6 +482,76 @@ class Interchange(object):
         delta = time.time() - start
         logger.info("Processed {} tasks in {} seconds".format(count, delta))
         logger.warning("Exiting")
+
+    def process_task_outgoing_incoming(self, interesting_managers, hub_channel, kill_event):
+        # Listen for requests for work
+        if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
+            logger.debug("starting task_outgoing section")
+            message = self.task_outgoing.recv_multipart()
+            manager_id = message[0]
+
+            if manager_id not in self._ready_managers:
+                reg_flag = False
+
+                try:
+                    msg = json.loads(message[1].decode('utf-8'))
+                    reg_flag = True
+                except Exception:
+                    logger.warning("Got Exception reading registration message from manager: {}".format(
+                        manager_id), exc_info=True)
+                    logger.debug("Message: \n{}\n".format(message[1]))
+                else:
+                    # We set up an entry only if registration works correctly
+                    self._ready_managers[manager_id] = {'last_heartbeat': time.time(),
+                                                        'idle_since': time.time(),
+                                                        'free_capacity': 0,
+                                                        'block_id': None,
+                                                        'max_capacity': 0,
+                                                        'worker_count': 0,
+                                                        'active': True,
+                                                        'tasks': []}
+                if reg_flag is True:
+                    interesting_managers.add(manager_id)
+                    logger.info("Adding manager: {} to ready queue".format(manager_id))
+                    m = self._ready_managers[manager_id]
+                    m.update(msg)
+                    logger.info("Registration info for manager {}: {}".format(manager_id, msg))
+                    self._send_monitoring_info(hub_channel, m)
+
+                    if (msg['python_v'].rsplit(".", 1)[0] != self.current_platform['python_v'].rsplit(".", 1)[0] or
+                        msg['parsl_v'] != self.current_platform['parsl_v']):
+                        logger.error("Manager {} has incompatible version info with the interchange".format(manager_id))
+                        logger.debug("Setting kill event")
+                        kill_event.set()
+                        e = VersionMismatch("py.v={} parsl.v={}".format(self.current_platform['python_v'].rsplit(".", 1)[0],
+                                                                        self.current_platform['parsl_v']),
+                                            "py.v={} parsl.v={}".format(msg['python_v'].rsplit(".", 1)[0],
+                                                                        msg['parsl_v'])
+                        )
+                        result_package = {'type': 'result', 'task_id': -1, 'exception': serialize_object(e)}
+                        pkl_package = pickle.dumps(result_package)
+                        self.results_outgoing.send(pkl_package)
+                        logger.error("Sent failure reports, shutting down interchange")
+                    else:
+                        logger.info("Manager {} has compatible Parsl version {}".format(manager_id, msg['parsl_v']))
+                        logger.info("Manager {} has compatible Python version {}".format(manager_id,
+                                                                                         msg['python_v'].rsplit(".", 1)[0]))
+                else:
+                    # Registration has failed.
+                    logger.debug("Suppressing bad registration from manager: {}".format(
+                        manager_id))
+
+            else:
+                tasks_requested = int.from_bytes(message[1], "little")
+                self._ready_managers[manager_id]['last_heartbeat'] = time.time()
+                if tasks_requested == HEARTBEAT_CODE:
+                    logger.debug("Manager {} sent heartbeat via tasks connection".format(manager_id))
+                    self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
+                else:
+                    logger.debug("Manager {} requested {} tasks".format(manager_id, tasks_requested))
+                    self._ready_managers[manager_id]['free_capacity'] = tasks_requested
+                    interesting_managers.add(manager_id)
+            logger.debug("leaving task_outgoing section")
 
 
 def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_string=None):
