@@ -380,7 +380,7 @@ class Manager(object):
                     logger.info("Sent result")
                     # Wake up the task_puller from long-poll to re-advertize capacity
                     logger.info("Sending wake up signal")
-                    self.signal_sender.send(b'WAKE UP')
+                    self.signal_sender.send()
                     items = []
                 else:
                     logger.debug("Result send: No items to push")
