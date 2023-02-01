@@ -68,8 +68,6 @@ class Interchange(object):
     2. Allow for workers to join and leave the union
     3. Detect workers that have failed using heartbeats
     4. Service single and batch requests from workers
-
-    TODO: We most likely need a PUB channel to send out global commands, like shutdown
     """
     def __init__(self,
                  client_address="127.0.0.1",
