@@ -383,7 +383,6 @@ class Interchange(object):
                         # We set up an entry only if registration works correctly
                         self._ready_managers[manager_id] = {'last_heartbeat': time.time(),
                                                             'idle_since': time.time(),
-                                                            'free_capacity': 0,
                                                             'block_id': None,
                                                             'max_capacity': 0,
                                                             'worker_count': 0,
@@ -427,9 +426,9 @@ class Interchange(object):
                         logger.debug("Manager {} sent heartbeat via tasks connection".format(manager_id))
                         self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
                     else:
-                        logger.debug("Manager {} requested {} tasks".format(manager_id, tasks_requested))
-                        self._ready_managers[manager_id]['free_capacity'] = tasks_requested
-                        interesting_managers.add(manager_id)
+                        logger.error("NOW IGNORED (THIS IS A PATH THAT SHOULD'T HAPPEN) - Manager {} requested {} tasks".format(manager_id, tasks_requested))
+                        # self._ready_managers[manager_id]['free_capacity'] = tasks_requested
+                        # interesting_managers.add(manager_id)
                 logger.debug("leaving task_outgoing section")
 
             # If we had received any requests, check if there are tasks that could be passed
@@ -455,12 +454,12 @@ class Interchange(object):
                             task_count = len(tasks)
                             count += task_count
                             tids = [t['task_id'] for t in tasks]
-                            m['free_capacity'] -= task_count
                             m['tasks'].extend(tids)
                             m['idle_since'] = None
                             logger.debug("Sent tasks: {} to manager {}".format(tids, manager_id))
-                            if m['free_capacity'] > 0:
-                                logger.debug("Manager {} has free_capacity {}".format(manager_id, m['free_capacity']))
+                            real_capacity = m['max_capacity'] - len(m['tasks'])
+                            if real_capacity > 0:
+                                logger.debug("Manager {} has free capacity {}".format(manager_id, real_capacity))
                                 # ... so keep it in the interesting_managers list
                             else:
                                 logger.debug("Manager {} is now saturated".format(manager_id))
@@ -521,6 +520,9 @@ class Interchange(object):
                     logger.debug(f"Current tasks on manager {manager_id}: {m['tasks']}")
                     if len(m['tasks']) == 0 and m['idle_since'] is None:
                         m['idle_since'] = time.time()
+
+                    interesting_managers.add(manager_id)
+
                 logger.debug("leaving results_incoming section")
 
             bad_managers = [(manager_id, m) for (manager_id, m) in self._ready_managers.items() if

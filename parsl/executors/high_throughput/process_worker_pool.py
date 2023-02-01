@@ -25,7 +25,6 @@ from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.probe import probe_addresses
-from parsl.executors.high_throughput.zmq_pipes import SignalReceiver, SignalSender
 from parsl.multiprocessing import ForkProcess as mpForkProcess
 from parsl.multiprocessing import SpawnProcess as mpSpawnProcess
 
@@ -161,8 +160,6 @@ class Manager(object):
         self.result_outgoing.setsockopt(zmq.LINGER, 0)
         self.result_outgoing.connect(result_q_url)
 
-        self.signal_sender = SignalSender(self.context)
-        self.signal_receiver = SignalReceiver(self.context)
         logger.info("Manager connected to interchange")
 
         self.uid = uid
@@ -262,8 +259,6 @@ class Manager(object):
         logger.info("starting")
         poller = zmq.Poller()
         poller.register(self.task_incoming, zmq.POLLIN)
-        signal_receiver_socket = self.signal_receiver.socket
-        poller.register(signal_receiver_socket, zmq.POLLIN)
 
         # Send a registration message
         msg = self.create_reg_message()
@@ -285,11 +280,6 @@ class Manager(object):
             if time.time() > last_beat + self.heartbeat_period:
                 self.heartbeat_to_incoming()
                 last_beat = time.time()
-
-            if pending_task_count < self.max_queue_size and ready_worker_count > 0:
-                logger.debug("Requesting tasks: {}".format(ready_worker_count))
-                msg = ((ready_worker_count).to_bytes(4, "little"))
-                self.task_incoming.send(msg)
 
             socks = dict(poller.poll(timeout=poll_timer))
 
@@ -316,12 +306,6 @@ class Manager(object):
                         # logger.debug("Ready tasks: {}".format(
                         #    [i['task_id'] for i in self.pending_task_queue]))
 
-            elif signal_receiver_socket in socks and socks[signal_receiver_socket] == zmq.POLLIN:
-                # We do nothing with the message because there's no info being transmitted
-                self.signal_receiver.recv()
-                logger.info("Received signal from result push")
-                # Reset poll period
-                poll_timer = self.poll_period
             else:
                 logger.debug("No incoming tasks")
                 # Limit poll duration to heartbeat_period
@@ -378,9 +362,6 @@ class Manager(object):
                     logger.debug(f"Result send: Pushing {len(items)} items")
                     self.result_outgoing.send_multipart(items)
                     logger.info("Sent result")
-                    # Wake up the task_puller from long-poll to re-advertize capacity
-                    logger.info("Sending wake up signal")
-                    self.signal_sender.send()
                     items = []
                 else:
                     logger.debug("Result send: No items to push")

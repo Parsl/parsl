@@ -161,31 +161,3 @@ class ResultsIncoming(object):
     def close(self):
         self.results_receiver.close()
         self.context.term()
-
-
-class SignalSender(object):
-
-    def __init__(self, zmq_context: zmq.Context):
-        self.zmq_context = zmq_context
-        self.socket = self.zmq_context.socket(zmq.DEALER)
-        self.socket.connect('inproc://manager')
-
-    def send(self):
-        self.socket.send(b'')
-
-    def close(self):
-        self.socket.close()
-
-
-class SignalReceiver(object):
-
-    def __init__(self, zmq_context: zmq.Context):
-        self.zmq_context = zmq_context
-        self.socket = self.zmq_context.socket(zmq.DEALER)
-        self.socket.bind('inproc://manager')
-
-    def recv(self):
-        return self.socket.recv()
-
-    def close(self):
-        self.socket.close()
