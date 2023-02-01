@@ -364,9 +364,9 @@ class Interchange(object):
             self.socks = dict(poller.poll(timeout=poll_period))
 
             self.process_task_outgoing_incoming(interesting_managers, hub_channel, kill_event)
-            self.process_tasks_to_send(interesting_managers)
             self.process_results_incoming(interesting_managers, hub_channel)
             self.expire_bad_managers(interesting_managers, hub_channel)
+            self.process_tasks_to_send(interesting_managers)
 
         delta = time.time() - start
         logger.info("Processed {} tasks in {} seconds".format(self.count, delta))
