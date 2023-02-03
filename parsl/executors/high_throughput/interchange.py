@@ -506,10 +506,12 @@ class Interchange(object):
                     else:
                         logger.error("Interchange discarding result_queue message of unknown type: {}".format(r['type']))
 
+                got_result = False
                 m = self._ready_managers[manager_id]
                 for (b_message, r) in b_messages:
                     assert 'type' in r, f"Message is missing type entry: {r}"
                     if r['type'] == 'result':
+                        got_result = True
                         try:
                             logger.debug(f"Removing task {r['task_id']} from manager record {manager_id}")
                             m['tasks'].remove(r['task_id'])
@@ -533,9 +535,12 @@ class Interchange(object):
                 if len(m['tasks']) == 0 and m['idle_since'] is None:
                     m['idle_since'] = time.time()
 
-                # TODO: this should only happen if there are results - not heartbeats or monitoring messages
-                # otherwise the load that interesting_managers is intended to reduce will return.
-                interesting_managers.add(manager_id)
+                # A manager is only made interesting here if a result was
+                # received, which means there should be capacity for a new
+                # task now. Heartbeats and monitoring messages do not make a
+                # manager become interesting.
+                if got_result:
+                    interesting_managers.add(manager_id)
             logger.debug("leaving results_incoming section")
 
     def expire_bad_managers(self, interesting_managers, hub_channel):
