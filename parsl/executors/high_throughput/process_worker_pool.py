@@ -540,7 +540,6 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
     import parsl.executors.high_throughput.monitoring_info as mi
     mi.result_queue = result_queue
 
-    # Sync worker with master
     logger.info('Worker {} started'.format(worker_id))
     if args.debug:
         logger.debug("Debug logging enabled")
