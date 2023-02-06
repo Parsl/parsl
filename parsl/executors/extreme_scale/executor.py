@@ -60,7 +60,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
     Parameters
     ----------
 
-    provider : :class:`~parsl.providers.provider_base.ExecutionProvider`
+    provider : :class:`~parsl.providers.base.ExecutionProvider`
        Provider to access computation resources. Can be any providers in ``parsl.providers``:
         :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
         :class:`~parsl.providers.condor.condor.Condor`,
@@ -185,7 +185,6 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
 
-        self._scaling_enabled = True
         logger.debug("Starting ExtremeScaleExecutor with provider:\n%s", self.provider)
         if hasattr(self.provider, 'init_blocks'):
             try:

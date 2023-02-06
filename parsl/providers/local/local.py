@@ -4,7 +4,7 @@ import time
 
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
-from parsl.providers.provider_base import ExecutionProvider, JobState, JobStatus
+from parsl.providers.base import ExecutionProvider, JobState, JobStatus
 from parsl.providers.error import SchedulerMissingArgs, ScriptPathError, SubmitException
 from parsl.utils import RepresentationMixin
 
@@ -259,8 +259,9 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         Args:
         job_ids : [<job_id> ...]
 
-        Returns :
-        [True/False...] : If the cancel operation fails the entire list will be False.
+        Returns: [True]  Always returns true for every job_id, regardless of
+                         whether an individual cancel failed (unless an
+                         exception is raised)
         '''
         for job in job_ids:
             job_dict = self.resources[job]

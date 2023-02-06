@@ -74,36 +74,29 @@ Stepping through the following question should help formulate a suitable configu
 +=====================+===============================================+========================================+
 | Laptop/Workstation  | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.LocalProvider`        |
 |                     | * `parsl.executors.ThreadPoolExecutor`        |                                        |
-|                     | * `parsl.executors.WorkQueueExecutor` beta_   |                                        |
+|                     | * `parsl.executors.WorkQueueExecutor`         |                                        |
 +---------------------+-----------------------------------------------+----------------------------------------+
 | Amazon Web Services | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.AWSProvider`          |
 +---------------------+-----------------------------------------------+----------------------------------------+
 | Google Cloud        | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.GoogleCloudProvider`  |
 +---------------------+-----------------------------------------------+----------------------------------------+
-| Slurm based system  | * `parsl.executors.ExtremeScaleExecutor`      | `parsl.providers.SlurmProvider`        |
-|                     | * `parsl.executors.HighThroughputExecutor`    |                                        |
-|                     | * `parsl.executors.WorkQueueExecutor` beta_   |                                        |
+| Slurm based system  | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.SlurmProvider`        |
+|                     | * `parsl.executors.WorkQueueExecutor`         |                                        |
 +---------------------+-----------------------------------------------+----------------------------------------+
-| Torque/PBS based    | * `parsl.executors.ExtremeScaleExecutor`      | `parsl.providers.TorqueProvider`       |
-| system              | * `parsl.executors.HighThroughputExecutor`    |                                        |
-|                     | * `parsl.executors.WorkQueueExecutor` beta_   |                                        |
+| Torque/PBS based    | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.TorqueProvider`       |
+| system              | * `parsl.executors.WorkQueueExecutor`         |                                        |
 +---------------------+-----------------------------------------------+----------------------------------------+
-| Cobalt based system | * `parsl.executors.ExtremeScaleExecutor`      | `parsl.providers.CobaltProvider`       |
-|                     | * `parsl.executors.HighThroughputExecutor`    |                                        |
-|                     | * `parsl.executors.WorkQueueExecutor` beta_   |                                        |
+| Cobalt based system | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.CobaltProvider`       |
+|                     | * `parsl.executors.WorkQueueExecutor`         |                                        |
 +---------------------+-----------------------------------------------+----------------------------------------+
 | GridEngine based    | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.GridEngineProvider`   |
-| system              | * `parsl.executors.WorkQueueExecutor` beta_   |                                        |
+| system              | * `parsl.executors.WorkQueueExecutor`         |                                        |
 +---------------------+-----------------------------------------------+----------------------------------------+
 | Condor based        | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.CondorProvider`       |
-| cluster or grid     | * `parsl.executors.WorkQueueExecutor` beta_   |                                        |
+| cluster or grid     | * `parsl.executors.WorkQueueExecutor`         |                                        |
 +---------------------+-----------------------------------------------+----------------------------------------+
 | Kubernetes cluster  | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.KubernetesProvider`   |
 +---------------------+-----------------------------------------------+----------------------------------------+
-
-.. _beta:
-
-WorkQueueExecutor is available in ``v1.0.0`` in beta status.
 
 
 2.  How many nodes will be used to execute the apps? What task durations are necessary to achieve good performance?
@@ -117,17 +110,12 @@ WorkQueueExecutor is available in ``v1.0.0`` in beta status.
 | `parsl.executors.HighThroughputExecutor` | <=2000               | Task duration(s)/#nodes >= 0.01     |
 |                                          |                      | longer tasks needed at higher scale |
 +------------------------------------------+----------------------+-------------------------------------+
-| `parsl.executors.ExtremeScaleExecutor`   | >1000, <=8000 [*]_   | >minutes                            |
-+------------------------------------------+----------------------+-------------------------------------+
 | `parsl.executors.WorkQueueExecutor`      | <=1000 [*]_          | 10s+                                |
 +------------------------------------------+----------------------+-------------------------------------+
 
 
 .. [*] Assuming 32 workers per node. If there are fewer workers launched
        per node, a larger number of nodes could be supported.
-
-.. [*] 8,000 nodes with 32 workers (256,000 workers) is the maximum scale at which
-       the `parsl.executors.ExtremeScaleExecutor` has been tested.
 
 .. [*] The maximum number of nodes tested for the `parsl.executors.WorkQueueExecutor` is 10,000 GPU cores and
        20,000 CPU cores.

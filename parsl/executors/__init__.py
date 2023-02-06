@@ -11,7 +11,6 @@ lazys = {
     'WorkQueueExecutor': 'parsl.executors.workqueue.executor',
     'HighThroughputExecutor': 'parsl.executors.high_throughput.executor',
     'ExtremeScaleExecutor': 'parsl.executors.extreme_scale.executor',
-    'LowLatencyExecutor': 'parsl.executors.low_latency.executor',
     'FluxExecutor': 'parsl.executors.flux.executor',
 }
 
@@ -34,10 +33,8 @@ def lazy_loader(name):
 # parsl/executors/__init__.py:34: error: Cannot assign to a method
 px.__getattr__ = lazy_loader  # type: ignore
 
-
 __all__ = ['ThreadPoolExecutor',
            'HighThroughputExecutor',
            'ExtremeScaleExecutor',
-           'LowLatencyExecutor',
            'WorkQueueExecutor',
            'FluxExecutor']

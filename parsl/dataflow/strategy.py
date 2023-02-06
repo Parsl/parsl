@@ -6,7 +6,8 @@ from typing import List
 
 from parsl.dataflow.executor_status import ExecutorStatus
 from parsl.executors import HighThroughputExecutor
-from parsl.providers.provider_base import JobState
+from parsl.executors.status_handling import BlockProviderExecutor
+from parsl.providers.base import JobState
 from parsl.process_loggers import wrap_with_logs
 
 
@@ -174,7 +175,7 @@ class Strategy(object):
         for exec_status in status_list:
             executor = exec_status.executor
             label = executor.label
-            if not executor.scaling_enabled:
+            if not isinstance(executor, BlockProviderExecutor):
                 logger.debug(f"Not strategizing for executor {label} because scaling not enabled")
                 continue
             logger.debug(f"Strategizing for executor {label}")

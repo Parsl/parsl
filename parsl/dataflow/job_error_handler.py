@@ -4,7 +4,7 @@ from typing import List, Dict
 
 from parsl.dataflow.executor_status import ExecutorStatus
 from parsl.executors.base import ParslExecutor
-from parsl.providers.provider_base import JobStatus, JobState
+from parsl.providers.base import JobStatus, JobState
 
 logger = logging.getLogger(__name__)
 

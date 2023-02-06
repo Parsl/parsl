@@ -29,7 +29,7 @@ from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
 from parsl.errors import OptionalModuleMissing
 from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
 from parsl.executors.workqueue import exec_parsl_function
 from parsl.process_loggers import wrap_with_logs
@@ -237,8 +237,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  radio_mode: str = "filesystem"):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
-        self._scaling_enabled = True
-
         if not _work_queue_enabled:
             raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
 
@@ -738,11 +736,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Work Queue shutdown completed")
         return True
 
-    def scaling_enabled(self):
-        """Specify if scaling is enabled. Not enabled in Work Queue.
-        """
-        return self._scaling_enabled
-
     # TODO: factor this with htex - perhaps it should exist only in the
     # block provider, and there should be no implementation of this at
     # all in the base executor class (because this is only block
@@ -762,13 +755,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             d['block_id'] = bid
             msg.append(d)
         return msg
-
-    def run_dir(self, value=None):
-        """Path to the run directory.
-        """
-        if value is not None:
-            self._run_dir = value
-        return self._run_dir
 
     @wrap_with_logs
     def _collect_work_queue_results(self):

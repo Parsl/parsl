@@ -13,7 +13,7 @@ import time
 from parsl.channels import LocalChannel, SSHChannel
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers import LocalProvider
-from parsl.providers.provider_base import JobState
+from parsl.providers.base import JobState
 
 logger = logging.getLogger(__name__)
 
