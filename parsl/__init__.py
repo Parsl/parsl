@@ -49,13 +49,13 @@ import parsl
 
 
 def lazy_loader(name):
-    print(f"lazy_loader getattr for {name}")
+    # print(f"lazy_loader getattr for {name}")
     if name in lazys:
         import importlib
         m = lazys[name]
-        print(f"lazy load {name} from module {m}")
+        # print(f"lazy load {name} from module {m}")
         v = importlib.import_module(m)
-        print(f"imported module: {v}")
+        # print(f"imported module: {v}")
         a = v.__getattribute__(name)
         parsl.__setattr__(name, a)
         return a
