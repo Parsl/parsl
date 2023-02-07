@@ -1,11 +1,11 @@
 from parsl.config import Config
-from parsl.executors import VineExecutor
+from parsl.executors import TaskVineExecutor
 
 import uuid
 
 config = Config(
     executors=[
-        VineExecutor(
+        TaskVineExecutor(
             label="parsl-vine-example",
 
             # If a project_name is given, then TaskVine will periodically
