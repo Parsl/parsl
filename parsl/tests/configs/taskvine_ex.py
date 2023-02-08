@@ -8,4 +8,4 @@ from parsl.data_provider.file_noop import NoOpFileStaging
 
 def fresh_config():
     return Config(executors=[TaskVineExecutor(port=9000,
-                                               storage_access=[FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging()])])
+                                              storage_access=[FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging()])])

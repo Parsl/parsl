@@ -34,7 +34,7 @@ from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
 import typeguard
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Union
 from parsl.data_provider.staging import Staging
 
 from .errors import TaskVineTaskFailure
@@ -63,7 +63,7 @@ logger = logging.getLogger(__name__)
 
 # Support structure to communicate parsl tasks to the taskvine submit thread.
 ParslTaskToVine = namedtuple('ParslTaskToVine',
-                           'id category cores memory disk gpus priority running_time_min env_pkg map_file function_file result_file input_files output_files')
+                             'id category cores memory disk gpus priority running_time_min env_pkg map_file function_file result_file input_files output_files')
 
 # Support structure to communicate final status of taskvine tasks to parsl
 # result is only valid if result_received is True
@@ -475,19 +475,19 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if category is None:
             category = func.__name__ if self.autocategory else 'parsl-default'
         self.task_queue.put_nowait(ParslTaskToVine(task_id,
-                                                 category,
-                                                 cores,
-                                                 memory,
-                                                 disk,
-                                                 gpus,
-                                                 priority,
-                                                 running_time_min,
-                                                 env_pkg,
-                                                 map_file,
-                                                 function_file,
-                                                 result_file,
-                                                 input_files,
-                                                 output_files))
+                                                   category,
+                                                   cores,
+                                                   memory,
+                                                   disk,
+                                                   gpus,
+                                                   priority,
+                                                   running_time_min,
+                                                   env_pkg,
+                                                   map_file,
+                                                   function_file,
+                                                   result_file,
+                                                   input_files,
+                                                   output_files))
 
         return fu
 
@@ -723,21 +723,21 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
 @wrap_with_logs
 def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
-                            launch_cmd=None,
-                            env=None,
-                            collector_queue=multiprocessing.Queue(),
-                            data_dir=".",
-                            full=False,
-                            shared_fs=False,
-                            autolabel=False,
-                            autolabel_window=None,
-                            autocategory=False,
-                            max_retries=0,
-                            should_stop=None,
-                            port=VINE_DEFAULT_PORT,
-                            vine_log_dir=None,
-                            project_password_file=None,
-                            project_name=None):
+                          launch_cmd=None,
+                          env=None,
+                          collector_queue=multiprocessing.Queue(),
+                          data_dir=".",
+                          full=False,
+                          shared_fs=False,
+                          autolabel=False,
+                          autolabel_window=None,
+                          autocategory=False,
+                          max_retries=0,
+                          should_stop=None,
+                          port=VINE_DEFAULT_PORT,
+                          vine_log_dir=None,
+                          project_password_file=None,
+                          project_name=None):
     """Thread to handle Parsl app submissions to the TaskVine objects.
     Takes in Parsl functions submitted using submit(), and creates a
     TaskVine task with the appropriate specifications, which is then
@@ -781,12 +781,12 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
 
     # Only write logs when the vine_log_dir is specified, which it most likely will be
     if vine_log_dir is not None:
-        vine_master_log = os.path.join(vine_log_dir, "master_log")
+        vine_perf_log = os.path.join(vine_log_dir, "perf_log")
         vine_trans_log = os.path.join(vine_log_dir, "transaction_log")
         if full and autolabel:
             vine_resource_log = os.path.join(vine_log_dir, "resource_logs")
             q.enable_monitoring_full(dirname=vine_resource_log)
-        q.enable_debug_log(vine_master_log)
+        q.enable_perf_log(vine_perf_log)
         q.enable_transactions_log(vine_trans_log)
 
     orig_ppid = os.getppid()
@@ -829,15 +829,15 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
                 collector_queue.put_nowait(VineTaskToParsl(id=task.id,
-                                                         result_received=False,
-                                                         result=None,
-                                                         reason="task could not be created by taskvine",
-                                                         status=-1))
+                                                           result_received=False,
+                                                           result=None,
+                                                           reason="task could not be created by taskvine",
+                                                           status=-1))
                 continue
 
             t.set_category(task.category)
             if autolabel:
-                q.set_category_mode(task.category, taskvine_ALLOCATION_MODE_MAX_THROUGHPUT)
+                q.set_category_mode(task.category, VINE_ALLOCATION_MODE_MAX_THROUGHPUT)
 
             if task.cores is not None:
                 t.set_cores(task.cores)
@@ -895,10 +895,10 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
             except Exception as e:
                 logger.error("Unable to submit task to taskvine: {}".format(e))
                 collector_queue.put_nowait(VineTaskToParsl(id=task.id,
-                                                         result_received=False,
-                                                         result=None,
-                                                         reason="task could not be submited to taskvine",
-                                                         status=-1))
+                                                           result_received=False,
+                                                           result=None,
+                                                           reason="task could not be submited to taskvine",
+                                                           status=-1))
                 continue
             logger.info("Task {} submitted to TaskVine with id {}".format(task.id, vine_id))
 
@@ -925,10 +925,10 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                         result = pickle.load(f_in)
                     logger.debug("Found result in {}".format(result_file))
                     collector_queue.put_nowait(VineTaskToParsl(id=parsl_id,
-                                                             result_received=True,
-                                                             result=result,
-                                                             reason=None,
-                                                             status=t.exit_code))
+                                                               result_received=True,
+                                                               result=result,
+                                                               reason=None,
+                                                               status=t.exit_code))
                 # If a result file could not be generated, explain the
                 # failure according to taskvine error codes. We generate
                 # an exception and wrap it with RemoteExceptionWrapper, to
@@ -941,10 +941,10 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                     logger.debug("Task with id parsl {} / vine {} failed because:\n{}"
                                  .format(parsl_id, t.id, reason))
                     collector_queue.put_nowait(VineTaskToParsl(id=parsl_id,
-                                                             result_received=False,
-                                                             result=e,
-                                                             reason=reason,
-                                                             status=t.exit_code))
+                                                               result_received=False,
+                                                               result=e,
+                                                               reason=reason,
+                                                               status=t.exit_code))
     logger.debug("Exiting TaskVine Monitoring Process")
     return 0
 

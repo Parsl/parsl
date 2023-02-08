@@ -34,7 +34,7 @@ from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
 import typeguard
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Union
 from parsl.data_provider.staging import Staging
 
 from .errors import WorkQueueTaskFailure
