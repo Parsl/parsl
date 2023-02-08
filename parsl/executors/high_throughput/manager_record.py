@@ -7,7 +7,6 @@ class ManagerRecord(TypedDict, total=False):
     block_id: Optional[str]
     tasks: List[Any]
     worker_count: int
-    free_capacity: int
     max_capacity: int
     active: bool
     hostname: str

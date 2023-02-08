@@ -12,6 +12,7 @@ import threading
 import sys
 import datetime
 from getpass import getuser
+from typeguard import typechecked
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 from uuid import uuid4
 from socket import gethostname
@@ -64,7 +65,8 @@ class DataFlowKernel(object):
 
     """
 
-    def __init__(self, config=Config()):
+    @typechecked
+    def __init__(self, config: Config = Config()) -> None:
         """Initialize the DataFlowKernel.
 
         Parameters
@@ -77,10 +79,6 @@ class DataFlowKernel(object):
         # this will be used to check cleanup only happens once
         self.cleanup_called = False
 
-        if isinstance(config, dict):
-            raise ConfigurationError(
-                    'Expected `Config` class, received dictionary. For help, '
-                    'see http://parsl.readthedocs.io/en/stable/stubs/parsl.config.Config.html')
         self._config = config
         self.run_dir = make_rundir(config.run_dir)
 
