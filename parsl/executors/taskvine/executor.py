@@ -955,34 +955,34 @@ def _explain_taskvine_result(vine_task):
     vine_result = vine_task.result
 
     reason = "taskvine result: "
-    if vine_result == vine.taskvine_RESULT_SUCCESS:
+    if vine_result == vine.VINE_RESULT_SUCCESS:
         reason += "succesful execution with exit code {}".format(vine_task.return_status)
-    elif vine_result == vine.taskvine_RESULT_OUTPUT_MISSING:
+    elif vine_result == vine.VINE_RESULT_OUTPUT_MISSING:
         reason += "The result file was not transfered from the worker.\n"
         reason += "This usually means that there is a problem with the python setup,\n"
         reason += "or the wrapper that executes the function."
         reason += "\nTrace:\n" + str(vine_task.output)
-    elif vine_result == vine.taskvine_RESULT_INPUT_MISSING:
+    elif vine_result == vine.VINE_RESULT_INPUT_MISSING:
         reason += "missing input file"
-    elif vine_result == vine.taskvine_RESULT_STDOUT_MISSING:
+    elif vine_result == vine.VINE_RESULT_STDOUT_MISSING:
         reason += "stdout has been truncated"
-    elif vine_result == vine.taskvine_RESULT_SIGNAL:
+    elif vine_result == vine.VINE_RESULT_SIGNAL:
         reason += "task terminated with a signal"
-    elif vine_result == vine.taskvine_RESULT_RESOURCE_EXHAUSTION:
+    elif vine_result == vine.VINE_RESULT_RESOURCE_EXHAUSTION:
         reason += "task used more resources than requested"
-    elif vine_result == vine.taskvine_RESULT_TASK_TIMEOUT:
+    elif vine_result == vine.VINE_RESULT_TASK_TIMEOUT:
         reason += "task ran past the specified end time"
-    elif vine_result == vine.taskvine_RESULT_UNKNOWN:
+    elif vine_result == vine.VINE_RESULT_UNKNOWN:
         reason += "result could not be classified"
-    elif vine_result == vine.taskvine_RESULT_FORSAKEN:
+    elif vine_result == vine.VINE_RESULT_FORSAKEN:
         reason += "task failed, but not a task error"
-    elif vine_result == vine.taskvine_RESULT_MAX_RETRIES:
+    elif vine_result == vine.VINE_RESULT_MAX_RETRIES:
         reason += "unable to complete after specified number of retries"
-    elif vine_result == vine.taskvine_RESULT_TASK_MAX_RUN_TIME:
+    elif vine_result == vine.VINE_RESULT_TASK_MAX_RUN_TIME:
         reason += "task ran for more than the specified time"
-    elif vine_result == vine.taskvine_RESULT_DISK_ALLOC_FULL:
+    elif vine_result == vine.VINE_RESULT_DISK_ALLOC_FULL:
         reason += "task needed more space to complete task"
-    elif vine_result == vine.taskvine_RESULT_RMONITOR_ERROR:
+    elif vine_result == vine.VINE_RESULT_RMONITOR_ERROR:
         reason += "task failed because the monitor did not produce an output"
     else:
         reason += "unable to process TaskVine system failure"
