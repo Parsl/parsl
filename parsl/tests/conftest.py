@@ -269,5 +269,7 @@ def pytest_ignore_collect(path):
         return True
     elif 'workqueue_tests/test_scale' in path.strpath:
         return True
+    elif 'taskvine_tests/test_scale' in path.strpath:
+        return True
     else:
         return False
