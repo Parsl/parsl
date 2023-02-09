@@ -61,12 +61,16 @@ htex_local_alternate_test: ## run all tests with htex_local config
 	pip3 install ".[monitoring]"
 	PYTHONPATH=.  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --random-order
 
-$(WORKQUEUE_INSTALL):
-	parsl/executors/workqueue/install-workqueue.sh
+$(CCTOOLS_INSTALL):	#CCtools contains both taskvine and workqueue so install only once
+	parsl/executors/taskvine/install-taskvine.sh
 
-.PHONY: workqueue_ex_test
-workqueue_ex_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
-	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --random-order
+.PHONY: vineex_local_test
+vineex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with vineex_local config
+	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/vineex_local.py --random-order
+
+.PHONY: wqex_local_test
+wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with wqex_local config
+	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/wqex_local.py --random-order
 
 .PHONY: config_local_test
 config_local_test:
@@ -83,7 +87,7 @@ perf_test:
 	parsl-perf --time 5 --config parsl/tests/configs/local_threads.py
 
 .PHONY: test ## run all tests with all config types
-test: clean_coverage lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test workqueue_ex_test  config_local_test perf_test ## run all tests
+test: clean_coverage lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test workqueue_ex_test vineex_local_test config_local_test perf_test ## run all tests
 
 .PHONY: tag
 tag: ## create a tag in git. to run, do a 'make VERSION="version string" tag
