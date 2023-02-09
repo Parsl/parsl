@@ -50,7 +50,7 @@ try:
     from taskvine import VINE_ALLOCATION_MODE_MAX_THROUGHPUT
 except ImportError:
     _taskvine_enabled = False
-    taskvine_DEFAULT_PORT = 0
+    VINE_DEFAULT_PORT = 0
 else:
     _taskvine_enabled = True
 
