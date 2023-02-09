@@ -282,11 +282,6 @@ class Manager(object):
                 self.heartbeat_to_incoming()
                 last_beat = time.time()
 
-            if pending_task_count < self.max_queue_size and ready_worker_count > 0:
-                logger.debug("Requesting tasks: {}".format(ready_worker_count))
-                msg = ((ready_worker_count).to_bytes(4, "little"))
-                self.task_incoming.send(msg)
-
             socks = dict(poller.poll(timeout=poll_timer))
 
             if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:

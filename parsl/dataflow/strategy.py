@@ -118,7 +118,7 @@ class Strategy(object):
         self.max_idletime = self.dfk.config.max_idletime
 
         for e in self.dfk.config.executors:
-            self.executors[e.label] = {'idle_since': None, 'config': e.label}
+            self.executors[e.label] = {'idle_since': None}
 
         self.strategies = {None: self._strategy_noop,
                            'none': self._strategy_noop,
@@ -135,7 +135,7 @@ class Strategy(object):
 
     def add_executors(self, executors):
         for executor in executors:
-            self.executors[executor.label] = {'idle_since': None, 'config': executor.label}
+            self.executors[executor.label] = {'idle_since': None}
 
     def _strategy_noop(self, status: List[ExecutorStatus], tasks: List[int]) -> None:
         """Do nothing.
