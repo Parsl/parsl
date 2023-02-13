@@ -40,7 +40,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     The HighThroughputExecutor system has the following components:
       1. The HighThroughputExecutor instance which is run as part of the Parsl script.
-      2. The Interchange which is acts as a load-balancing proxy between workers and Parsl
+      2. The Interchange which acts as a load-balancing proxy between workers and Parsl
       3. The multiprocessing based worker pool which coordinates task execution over several
          cores on a node.
       4. ZeroMQ pipes connect the HighThroughputExecutor, Interchange and the process_worker_pool
