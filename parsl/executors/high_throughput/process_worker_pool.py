@@ -280,11 +280,6 @@ class Manager(object):
                 self.heartbeat_to_incoming()
                 last_beat = time.time()
 
-            if pending_task_count < self.max_queue_size and ready_worker_count > 0:
-                logger.debug("Requesting tasks: {}".format(ready_worker_count))
-                msg = ((ready_worker_count).to_bytes(4, "little"))
-                self.task_incoming.send(msg)
-
             socks = dict(poller.poll(timeout=poll_timer))
 
             if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
@@ -540,7 +535,6 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
     import parsl.executors.high_throughput.monitoring_info as mi
     mi.result_queue = result_queue
 
-    # Sync worker with master
     logger.info('Worker {} started'.format(worker_id))
     if args.debug:
         logger.debug("Debug logging enabled")

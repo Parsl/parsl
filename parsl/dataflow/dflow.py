@@ -493,7 +493,7 @@ class DataFlowKernel(object):
         return result
 
     def wipe_task(self, task_id: int) -> None:
-        """ Remove task with task_id from the internal tasks table
+        """Remove task with task_id from the internal tasks table
         """
         if self.config.garbage_collect:
             del self.tasks[task_id]
@@ -988,7 +988,7 @@ class DataFlowKernel(object):
         logger.info("End of summary")
 
     def _create_remote_dirs_over_channel(self, provider, channel):
-        """ Create script directories across a channel
+        """Create script directories across a channel
 
         Parameters
         ----------
