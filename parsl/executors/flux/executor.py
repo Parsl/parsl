@@ -23,7 +23,7 @@ from parsl.executors.flux.execute_parsl_task import __file__ as _WORKER_PATH
 from parsl.executors.flux.flux_instance_manager import __file__ as _MANAGER_PATH
 from parsl.executors.errors import SerializationError, ScalingFailed
 from parsl.providers import LocalProvider
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.base import ExecutionProvider
 from parsl.serialize import pack_apply_message, deserialize
 from parsl.app.errors import AppException
 
@@ -302,9 +302,6 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     def scale_out(self):
         pass
 
-    def scaling_enabled(self):
-        return False
-
 
 def _submit_wrapper(
     submission_queue: queue.Queue, stop_event: threading.Event, *args, **kwargs
@@ -348,7 +345,7 @@ def _submit_flux_jobs(
 
     Pull ``_FluxJobInfo`` job packages from a queue and submit them to Flux.
     """
-    provider.script_dir = working_dir  # type: ignore
+    provider.script_dir = working_dir
     job_id = provider.submit(
         launch_cmd.format(
             port=socket.bind_to_random_port("tcp://*"),
@@ -367,7 +364,7 @@ def _submit_flux_jobs(
     # wait for the flux package path to be sent
     _check_provider_job(socket, provider, job_id)
     # receive path to the ``flux`` package from the ZMQ socket
-    flux_pkg_path = socket.recv().decode()  # type: ignore
+    flux_pkg_path = socket.recv().decode()
     # load the package. Unfortunately the only good way to do this is to
     # modify sys.path
     if flux_pkg_path not in sys.path:

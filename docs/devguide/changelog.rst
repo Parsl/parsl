@@ -560,7 +560,7 @@ Released on Jan 18th, 2019
 New Functionality
 ^^^^^^^^^^^^^^^^^
 
-* `parsl.executors.LowLatencyExecutor`: a new executor designed to address use-cases with tight latency requirements
+* parsl.executors.LowLatencyExecutor: a new executor designed to address use-cases with tight latency requirements
   such as model serving (Machine Learning), function serving and interactive analyses is now available.
 * New options in `parsl.executors.HighThroughputExecutor`:
      * ``suppress_failure``: Enable suppression of worker rejoin errors.

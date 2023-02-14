@@ -4,7 +4,7 @@ from string import Template
 
 from parsl.providers.error import SchedulerMissingArgs, ScriptPathError
 from parsl.launchers.error import BadLauncher
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
 

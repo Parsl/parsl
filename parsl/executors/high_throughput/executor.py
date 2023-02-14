@@ -21,7 +21,7 @@ from parsl.executors.errors import (
 )
 
 from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.base import ExecutionProvider
 from parsl.data_provider.staging import Staging
 from parsl.addresses import get_all_addresses
 from parsl.process_loggers import wrap_with_logs
@@ -40,7 +40,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     The HighThroughputExecutor system has the following components:
       1. The HighThroughputExecutor instance which is run as part of the Parsl script.
-      2. The Interchange which is acts as a load-balancing proxy between workers and Parsl
+      2. The Interchange which acts as a load-balancing proxy between workers and Parsl
       3. The multiprocessing based worker pool which coordinates task execution over several
          cores on a node.
       4. ZeroMQ pipes connect the HighThroughputExecutor, Interchange and the process_worker_pool
@@ -74,7 +74,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     Parameters
     ----------
 
-    provider : :class:`~parsl.providers.provider_base.ExecutionProvider`
+    provider : :class:`~parsl.providers.base.ExecutionProvider`
        Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
         :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
         :class:`~parsl.providers.condor.condor.Condor`,
@@ -331,7 +331,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
 
-        self._scaling_enabled = True
         logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
 
         # TODO: why is this a provider property?
@@ -609,10 +608,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         # Return the future
         return fut
-
-    @property
-    def scaling_enabled(self):
-        return self._scaling_enabled
 
     def create_monitoring_info(self, status):
         """ Create a msg for monitoring based on the poll status

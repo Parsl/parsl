@@ -12,6 +12,7 @@ import threading
 import sys
 import datetime
 from getpass import getuser
+from typeguard import typechecked
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 from uuid import uuid4
 from socket import gethostname
@@ -31,10 +32,13 @@ from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.taskrecord import TaskRecord
-from parsl.dataflow.usage_tracking.usage import UsageTracker
+from parsl.usage_tracking.usage import UsageTracker
+from parsl.executors.base import ParslExecutor
+from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
+from parsl.monitoring import MonitoringHub
 from parsl.process_loggers import wrap_with_logs
-from parsl.providers.provider_base import JobStatus, JobState
+from parsl.providers.base import JobStatus, JobState
 from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints
 
 from parsl.monitoring.message_type import MessageType
@@ -61,7 +65,8 @@ class DataFlowKernel(object):
 
     """
 
-    def __init__(self, config=Config()):
+    @typechecked
+    def __init__(self, config: Config = Config()) -> None:
         """Initialize the DataFlowKernel.
 
         Parameters
@@ -74,10 +79,6 @@ class DataFlowKernel(object):
         # this will be used to check cleanup only happens once
         self.cleanup_called = False
 
-        if isinstance(config, dict):
-            raise ConfigurationError(
-                    'Expected `Config` class, received dictionary. For help, '
-                    'see http://parsl.readthedocs.io/en/stable/stubs/parsl.config.Config.html')
         self._config = config
         self.run_dir = make_rundir(config.run_dir)
 
@@ -99,10 +100,12 @@ class DataFlowKernel(object):
         # Monitoring
         self.run_id = str(uuid4())
 
+        self.monitoring: Optional[MonitoringHub]
         self.monitoring = config.monitoring
+
         # hub address and port for interchange to connect
-        self.hub_address = None
-        self.hub_interchange_port = None
+        self.hub_address = None  # type: Optional[str]
+        self.hub_interchange_port = None  # type: Optional[int]
         if self.monitoring:
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
@@ -110,7 +113,7 @@ class DataFlowKernel(object):
             self.hub_interchange_port = self.monitoring.start(self.run_id, self.run_dir)
 
         self.time_began = datetime.datetime.now()
-        self.time_completed = None
+        self.time_completed: Optional[datetime.datetime] = None
 
         logger.info("Run id is: " + self.run_id)
 
@@ -167,26 +170,30 @@ class DataFlowKernel(object):
         self.checkpointed_tasks = 0
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
-        self.checkpointable_tasks = []
+        self.checkpointable_tasks: List[TaskRecord] = []
 
         # the flow control keeps track of executors and provider task states;
         # must be set before executors are added since add_executors calls
         # flowcontrol.add_executors.
         self.flowcontrol = FlowControl(self)
 
-        self.executors = {}
+        self.executors: Dict[str, ParslExecutor] = {}
+
         self.data_manager = DataManager(self)
         parsl_internal_executor = ThreadPoolExecutor(max_threads=config.internal_tasks_max_threads, label='_parsl_internal')
-        self.add_executors(config.executors + [parsl_internal_executor])
+        self.add_executors(config.executors)
+        self.add_executors([parsl_internal_executor])
 
         if self.checkpoint_mode == "periodic":
-            try:
-                h, m, s = map(int, config.checkpoint_period.split(':'))
+            if config.checkpoint_period is None:
+                raise ConfigurationError("Checkpoint period must be specified with periodic checkpoint mode")
+            else:
+                try:
+                    h, m, s = map(int, config.checkpoint_period.split(':'))
+                except Exception:
+                    raise ConfigurationError("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(config.checkpoint_period))
                 checkpoint_period = (h * 3600) + (m * 60) + s
                 self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period, name="Checkpoint")
-            except Exception:
-                logger.error("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(config.checkpoint_period))
-                self._checkpoint_timer = Timer(self.checkpoint, interval=(30 * 60), name="Checkpoint")
 
         self.task_count = 0
         self.tasks: Dict[int, TaskRecord] = {}
@@ -486,7 +493,7 @@ class DataFlowKernel(object):
         return result
 
     def wipe_task(self, task_id: int) -> None:
-        """ Remove task with task_id from the internal tasks table
+        """Remove task with task_id from the internal tasks table
         """
         if self.config.garbage_collect:
             del self.tasks[task_id]
@@ -981,7 +988,7 @@ class DataFlowKernel(object):
         logger.info("End of summary")
 
     def _create_remote_dirs_over_channel(self, provider, channel):
-        """ Create script directories across a channel
+        """Create script directories across a channel
 
         Parameters
         ----------
@@ -1100,7 +1107,7 @@ class DataFlowKernel(object):
 
         for executor in self.executors.values():
             if not executor.bad_state_is_set:
-                if executor.scaling_enabled:
+                if isinstance(executor, BlockProviderExecutor):
                     logger.info(f"Scaling in executor {executor.label}")
                     job_ids = executor.provider.resources.keys()
                     block_ids = executor.scale_in(len(job_ids))

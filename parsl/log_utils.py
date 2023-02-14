@@ -25,7 +25,7 @@ DEFAULT_FORMAT = (
 
 
 @typeguard.typechecked
-def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None, stream: Optional[io.TextIOWrapper] = None):
+def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None, stream: Optional[io.TextIOWrapper] = None) -> None:
     """Add a stream log handler.
 
     Args:
@@ -58,7 +58,7 @@ def set_stream_logger(name: str = 'parsl', level: int = logging.DEBUG, format_st
 
 
 @typeguard.typechecked
-def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None):
+def set_file_logger(filename: str, name: str = 'parsl', level: int = logging.DEBUG, format_string: Optional[str] = None) -> None:
     """Add a file log handler.
 
     Args:

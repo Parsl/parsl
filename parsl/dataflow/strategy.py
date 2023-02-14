@@ -6,7 +6,8 @@ from typing import List
 
 from parsl.dataflow.executor_status import ExecutorStatus
 from parsl.executors import HighThroughputExecutor
-from parsl.providers.provider_base import JobState
+from parsl.executors.status_handling import BlockProviderExecutor
+from parsl.providers.base import JobState
 from parsl.process_loggers import wrap_with_logs
 
 
@@ -117,7 +118,7 @@ class Strategy(object):
         self.max_idletime = self.dfk.config.max_idletime
 
         for e in self.dfk.config.executors:
-            self.executors[e.label] = {'idle_since': None, 'config': e.label}
+            self.executors[e.label] = {'idle_since': None}
 
         self.strategies = {None: self._strategy_noop,
                            'none': self._strategy_noop,
@@ -134,7 +135,7 @@ class Strategy(object):
 
     def add_executors(self, executors):
         for executor in executors:
-            self.executors[executor.label] = {'idle_since': None, 'config': executor.label}
+            self.executors[executor.label] = {'idle_since': None}
 
     def _strategy_noop(self, status: List[ExecutorStatus], tasks: List[int]) -> None:
         """Do nothing.
@@ -174,7 +175,7 @@ class Strategy(object):
         for exec_status in status_list:
             executor = exec_status.executor
             label = executor.label
-            if not executor.scaling_enabled:
+            if not isinstance(executor, BlockProviderExecutor):
                 logger.debug(f"Not strategizing for executor {label} because scaling not enabled")
                 continue
             logger.debug(f"Strategizing for executor {label}")
