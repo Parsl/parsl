@@ -9,7 +9,6 @@ from parsl.executors.status_handling import NoStatusHandlingExecutor
 from parsl.utils import RepresentationMixin
 from parsl.executors.errors import UnsupportedFeatureError
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -31,6 +30,7 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  thread_name_prefix: str = '', storage_access: Optional[List[Staging]] = None,
                  working_dir: Optional[str] = None):
         NoStatusHandlingExecutor.__init__(self)
+
         self.label = label
         self.max_threads = max_threads
         self.thread_name_prefix = thread_name_prefix
@@ -52,6 +52,7 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
 
         """
+
         if resource_specification:
             logger.error("Ignoring the resource specification. "
                          "Parsl resource specification is not supported in ThreadPool Executor. "

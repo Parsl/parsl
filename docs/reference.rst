@@ -14,6 +14,7 @@ Core
     parsl.dataflow.futures.AppFuture
     parsl.dataflow.dflow.DataFlowKernelLoader
     parsl.monitoring.MonitoringHub
+    parsl.monitoring.FileMonitor
 
 Configuration
 =============

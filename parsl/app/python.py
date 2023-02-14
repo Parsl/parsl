@@ -38,13 +38,15 @@ def timeout(f, seconds):
 class PythonApp(AppBase):
     """Extends AppBase to cover the Python App."""
 
-    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=[], join=False):
+    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=[], join=False,
+                 file_monitor=None):
         super().__init__(
             wrap_error(func),
             data_flow_kernel=data_flow_kernel,
             executors=executors,
             cache=cache,
-            ignore_for_cache=ignore_for_cache
+            ignore_for_cache=ignore_for_cache,
+            file_monitor=file_monitor
         )
         self.join = join
 
@@ -80,6 +82,7 @@ class PythonApp(AppBase):
                              cache=self.cache,
                              ignore_for_cache=self.ignore_for_cache,
                              app_kwargs=invocation_kwargs,
-                             join=self.join)
+                             join=self.join,
+                             file_monitor=self.file_monitor)
 
         return app_fut

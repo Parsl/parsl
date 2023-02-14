@@ -102,8 +102,10 @@ def remote_side_bash_executor(func, *args, **kwargs):
 
 class BashApp(AppBase):
 
-    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None):
-        super().__init__(func, data_flow_kernel=data_flow_kernel, executors=executors, cache=cache, ignore_for_cache=ignore_for_cache)
+    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None,
+                 file_monitor=None):
+        super().__init__(func, data_flow_kernel=data_flow_kernel, executors=executors, cache=cache, ignore_for_cache=ignore_for_cache,
+                         file_monitor=file_monitor)
         self.kwargs = {}
 
         # We duplicate the extraction of parameter defaults
@@ -150,6 +152,7 @@ class BashApp(AppBase):
                              executors=self.executors,
                              cache=self.cache,
                              ignore_for_cache=self.ignore_for_cache,
-                             app_kwargs=invocation_kwargs)
+                             app_kwargs=invocation_kwargs,
+                             file_monitor=self.file_monitor)
 
         return app_fut

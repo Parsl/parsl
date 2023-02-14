@@ -1,8 +1,13 @@
 Monitoring
 ==========
 
-Parsl includes a monitoring system to capture task state as well as resource
-usage over time. The Parsl monitoring system aims to provide detailed
+Parsl inculdes two distinct monitoring systems. The first(`Parsl Monitoring`_) captures
+task state as well as resource usage over time, while the second (`File Monitoring`_)
+monitors the file system for new files and calls functions when specific files are found.
+
+Parsl Monitoring
+----------------
+The Parsl monitoring system aims to provide detailed
 information and diagnostic capabilities to help track the state of your
 programs, down to the individual apps that are executed on remote machines.
 
@@ -11,11 +16,10 @@ workflow runs. This information can then be visualised in a web dashboard
 using the ``parsl-visualize`` tool, or queried using SQL using regular
 SQLite tools.
 
-
 Monitoring configuration
-------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^
 
-Parsl monitoring is only supported with the `parsl.executors.HighThroughputExecutor`. 
+Parsl monitoring is only supported with the `parsl.executors.HighThroughputExecutor`.
 
 The following example shows how to enable monitoring in the Parsl
 configuration. Here the `parsl.monitoring.MonitoringHub` is specified to use port
@@ -51,7 +55,7 @@ configuration. Here the `parsl.monitoring.MonitoringHub` is specified to use por
 
 
 Visualization
--------------
+^^^^^^^^^^^^^
 
 To run the web dashboard utility ``parsl-visualize`` you first need to install
 its dependencies:
@@ -75,7 +79,7 @@ By default, the visualization web server listens on ``127.0.0.1:8080``. If the w
    $ ssh -L 50000:127.0.0.1:8080 username@cluster_address
 
 This command will bind your local machine's port 50000 to the remote cluster's port 8080.
-The dashboard can then be accessed via the local machine's browser at ``127.0.0.1:50000``. 
+The dashboard can then be accessed via the local machine's browser at ``127.0.0.1:50000``.
 
 .. warning:: Alternatively you can deploy the visualization server on a public interface. However, first check that this is allowed by the cluster's security policy. The following example shows how to deploy the web server on a public port (i.e., open to Internet via ``public_IP:55555``)::
 
@@ -83,7 +87,7 @@ The dashboard can then be accessed via the local machine's browser at ``127.0.0.
 
 
 Workflows Page
-^^^^^^^^^^^^^^
+**************
 
 The workflows page lists all Parsl workflows that have been executed with monitoring enabled
 with the selected database.
@@ -95,11 +99,11 @@ Throughout the dashboard, all blue elements are clickable. For example, clicking
 name from the table takes you to the Workflow Summary page described in the next section.
 
 Workflow Summary
-^^^^^^^^^^^^^^^^
+****************
 
 The workflow summary page captures the run level details of a workflow, including start and end times
 as well as task summary statistics. The workflow summary section is followed by the *App Summary* that lists
-the various apps and invocation count for each. 
+the various apps and invocation count for each.
 
 .. image:: ../images/mon_workflow_summary.png
 
@@ -120,3 +124,75 @@ The workflow summary also presents three different views of the workflow:
 
 .. image:: ../images/mon_resource_summary.png
 
+.. _file-monitor-label:
+
+File Monitoring
+---------------
+
+The idea behind File Monitoring is to have a mechanism to provide the status of a job, beyond the typical waiting/running/done
+status. Specifically, this is best suited for long running jobs (days, weeks, etc.) that output files periodically, such
+as at the end of a timestep. The user specifies what files to look for and a function(s) to call when these files are found.
+The `parsl.monitoring.FileMonitor` class provides the interface for specifying the patterns and callbacks.
+
+The file monitoring system will periodically scan the file system (within the given root directory) for any file(s)
+of the given file type(s) or regex pattern(s). If any are found they are sent to the user specified callback function(s).
+The infrastructure tracks files that have been found previously and only sends newly found files to the callback. The
+system also tries to verify that the file(s) are no longer being written to. On shared file systems, there is no direct
+mechanism to do this, so it works under the assumption that any file with a modification timestamp that is at least
+a specified (by user) seconds old will be considered. If a process is expected to periodically write to a file then
+the ``sleep_dur`` parameter of the FileMonitor class should be set to a larger value.
+
+The file monitoring system is given a list of regex ``Patterns`` and/or file types to use for searching for
+files. For regex patterns they should be precompiled (using ``re.compile()`` (see the `re <https://docs.python.org/3/library/re.html>`_ Python module documentation for
+regex specifics). For file type patterns a list of file suffixes should be given. Suffixes with and without an asterisk
+are acceptable (e.g. ``pdf``, ``.pdf``, and ``*.pdf`` are all equivalent). File types will have the given ``path`` prepended
+to them.
+
+The callback functions have only a few restrictions on them
+
+    #. The function should take a single argument that is a list of the detected files (string, including full path)
+    #. Anything the function returns will be written to the Parsl log; if running ``str()`` on the return value throws an error then nothing is written
+    #. Any files produced by the function need to be handled by the user (transfer, etc.)
+    #. The function will run on the worker side, so it should be light weight or risk slowing the worker, and has no way to communicate with processes on the submit side.
+
+When called, the callbacks are launched asynchronously in a multiprocessing.Pool. The number of concurrently running
+callbacks can be controlled by the `parsl.monitoring.FileMonitor` being used.
+
+Examples
+^^^^^^^^
+
+With the following given by the user (the callback functions are not defined here):
+
+.. code-block:: python
+
+    from parsl.monitoring import FileMonitor
+
+    fm = FileMonitor(callback = [(c1, re.compile(r'(?<=-)\d{2}info\.dat')),
+                                 (c2, re.compile(r'results-(\S+)\.txt')),
+                                 (c3, "*.gif"),
+                                 (c4, "*.jpg")],
+                     path = 'images')
+
+and with these files in the system (working directory is ``/scr/run1``)::
+
+    images/composite.gif
+    images/rgb.png
+    output/results-psi.txt
+    output/results-temperature.txt
+    output/results-psi.gif
+    output/results-info.dat
+
+will result in the following callback calls
+
+    +----------+-------------------------------+--------------------------------------------------+
+    | Callback | Pattern                       | Callback args                                    |
+    +==========+===============================+==================================================+
+    | c1       | ``r'(?<=-)\d{2}info\.dat'``   | ``['/scr/run1/output/results-info.dat']``        |
+    +----------+-------------------------------+--------------------------------------------------+
+    | c2       | ``r'results-(\S+)\.txt'``     | ``['/scr/run1/output/results-psi.txt',``         |
+    |          |                               | ``'/scr/run1/output/results-temperature.txt']``  |
+    +----------+-------------------------------+--------------------------------------------------+
+    | c3       | ``*.gif`` -> ``images/*.gif`` | ``['/scr/run1/images/composite.gif']``           |
+    +----------+-------------------------------+--------------------------------------------------+
+    | c4       | ``*.jpg`` -> ``images/*.jpg`` |                                                  |
+    +----------+-------------------------------+--------------------------------------------------+
