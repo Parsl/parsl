@@ -650,7 +650,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         return 1
 
     def scale_in(self, count):
-        """Scale in method. Not implemented.
+        """Scale in method.
         """
         # Obtain list of blocks to kill
         to_kill = list(self.blocks.keys())[:count]

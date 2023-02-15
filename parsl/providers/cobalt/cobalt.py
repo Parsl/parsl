@@ -88,7 +88,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         self.worker_init = worker_init
 
     def _status(self):
-        """ Internal: Do not call. Returns the status list for a list of job_ids
+        """Returns the status list for a list of job_ids
 
         Args:
               self
