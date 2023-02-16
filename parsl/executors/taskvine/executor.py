@@ -754,13 +754,13 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
 
     # Enable debugging flags and create logging file
     if vine_log_dir is not None:
-        logger.debug("Setting debugging flags and creating logging file")
+        logger.debug("Setting debugging flags and creating logging file at {}".format(vine_log_dir))
 
     # Create TaskVine queue object
     logger.debug("Creating TaskVine Object")
     try:
         logger.debug("Listening on port {}".format(port))
-        q = Manager(port, vine_log_dir)
+        q = Manager(port, run_info_path=vine_log_dir)
     except Exception as e:
         logger.error("Unable to create TaskVine object: {}".format(e))
         raise e
