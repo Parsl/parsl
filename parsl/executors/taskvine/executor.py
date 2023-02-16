@@ -779,13 +779,8 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
 
     # Only write logs when the vine_log_dir is specified, which it most likely will be
     if vine_log_dir is not None:
-        vine_perf_log = os.path.join(vine_log_dir, "perf_log")
-        vine_trans_log = os.path.join(vine_log_dir, "transaction_log")
         if full and autolabel:
-            vine_resource_log = os.path.join(vine_log_dir, "resource_logs")
-            q.enable_monitoring_full(dirname=vine_resource_log)
-        q.enable_perf_log(vine_perf_log)
-        q.enable_transactions_log(vine_trans_log)
+            q.enable_monitoring_full(dirname=vine_log_dir)
 
     orig_ppid = os.getppid()
 
