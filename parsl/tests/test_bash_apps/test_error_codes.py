@@ -8,6 +8,7 @@ import parsl
 from parsl.app.app import bash_app
 import parsl.app.errors as pe
 
+
 from parsl.app.errors import BashExitFailure
 
 from parsl.tests.configs.local_threads import fresh_config as local_config

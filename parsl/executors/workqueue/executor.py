@@ -45,7 +45,6 @@ from collections import namedtuple
 try:
     import work_queue as wq
     from work_queue import WorkQueue
-    from work_queue import Task
     from work_queue import WORK_QUEUE_DEFAULT_PORT
     from work_queue import WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT
 except ImportError:

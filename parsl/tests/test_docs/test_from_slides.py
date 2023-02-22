@@ -15,6 +15,7 @@ def cat(inputs=[]):
     with open(inputs[0].filepath) as f:
         return f.readlines()
 
+
 @pytest.mark.staging_required
 def test_slides():
     """Testing code snippet from slides """
