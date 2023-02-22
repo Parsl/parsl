@@ -1,4 +1,5 @@
 import argparse
+import logging
 import os
 
 import pytest
@@ -7,10 +8,11 @@ import parsl
 from parsl.app.app import bash_app
 import parsl.app.errors as pe
 
-
 from parsl.app.errors import BashExitFailure
 
 from parsl.tests.configs.local_threads import fresh_config as local_config
+
+logger = logging.getLogger(__name__)
 
 
 @bash_app
@@ -61,6 +63,9 @@ test_matrix = {
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
 
 
+# this might be issue 363 or might be something different
+# but something to do with the presence of std.err?
+@pytest.mark.issue363
 def test_div_0(test_fn=div_0):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
@@ -71,7 +76,7 @@ def test_div_0(test_fn=div_0):
         assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
                                                                                       err_code,
                                                                                       e.exitcode)
-    print(os.listdir('.'))
+    logger.info(f"Current directory listing: {os.listdir('.')}")
     os.remove('std.err')
     os.remove('std.out')
     return True

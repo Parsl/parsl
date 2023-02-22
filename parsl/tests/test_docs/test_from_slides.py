@@ -2,6 +2,7 @@ from parsl.app.app import bash_app, python_app
 from parsl.data_provider.files import File
 
 import os
+import pytest
 
 
 @bash_app
@@ -14,7 +15,7 @@ def cat(inputs=[]):
     with open(inputs[0].filepath) as f:
         return f.readlines()
 
-
+@pytest.mark.staging_required
 def test_slides():
     """Testing code snippet from slides """
 
