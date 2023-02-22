@@ -883,11 +883,16 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
             # Specify input/output files that need to be staged.
             # Absolute paths are assumed to be in shared filesystem, and thus
             # not staged by work queue.
+            logger.info("BENC: file staging behaviour")
             if not shared_fs:
+
+                logger.info("BENC: not on shared fs, will stage")
                 for spec in task.input_files:
+                    logger.info(f"BENC: staging for input file spec {spec}")
                     if spec.stage:
                         t.specify_input_file(spec.parsl_name, spec.parsl_name, cache=spec.cache)
                 for spec in task.output_files:
+                    logger.info(f"BENC: staging for output file spec {spec}")
                     if spec.stage:
                         t.specify_output_file(spec.parsl_name, spec.parsl_name, cache=spec.cache)
 

@@ -7,7 +7,7 @@ import pytest
 
 @bash_app
 def echo(message, outputs=[]):
-    return 'echo {m} &> {o}'.format(m=message, o=outputs[0])
+    return 'echo {o} > /tmp/xx2 ; echo {m} &> {o}'.format(m=message, o=outputs[0])
 
 
 @python_app
@@ -27,6 +27,11 @@ def test_slides():
     hello = echo(input_message, outputs=[File('hello1.txt')])
 
     message = cat(inputs=[hello.outputs[0]])
+
+    assert hello.exception() is None
+
+    # this should exist as soon as hello is finished
+    assert os.path.exists('hello1.txt')
 
     assert len(message.result()) == 1
     assert message.result()[0].strip() == input_message
