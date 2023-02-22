@@ -7,7 +7,7 @@ import pytest
 
 @bash_app
 def echo(message, outputs=[]):
-    return 'echo {o} > /tmp/xx2 ; echo {m} &> {o}'.format(m=message, o=outputs[0])
+    return 'pwd > /tmp/xx2; echo {o} >> /tmp/xx2 ; echo {m} &> {o}'.format(m=message, o=outputs[0])
 
 
 @python_app
