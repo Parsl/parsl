@@ -16,17 +16,17 @@ def cat(inputs=[]):
         return f.readlines()
 
 
-@pytest.mark.staging_required
 def test_slides():
     """Testing code snippet from slides """
+
+    input_message = "Hello World!"
 
     if os.path.exists('hello1.txt'):
         os.remove('hello1.txt')
 
-    hello = echo("Hello World!", outputs=[File('hello1.txt')])
+    hello = echo(input_message, outputs=[File('hello1.txt')])
 
     message = cat(inputs=[hello.outputs[0]])
 
-    # Waits. This need not be in the slides.
-    print(hello.result())
-    print(message.result())
+    assert len(message.result()) == 1
+    assert message.result()[0].strip() == input_message
