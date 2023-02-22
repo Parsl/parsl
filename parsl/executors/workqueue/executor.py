@@ -494,6 +494,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
     def _construct_worker_command(self):
         worker_command = self.worker_executable
+        worker_command += " --coprocess parsl_wq_coprocess.py --coprocesses-total 1"
         if self.project_password_file:
             worker_command += ' --password {}'.format(self.project_password_file)
         if self.worker_options:
@@ -826,7 +827,9 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
             # Create WorkQueue task for the command
             logger.debug("Sending task {} with command: {}".format(task.id, command_str))
             try:
-                t = Task(command_str)
+                t = wq.RemoteTask("run_parsl_task", "parsl_coprocess", task.map_file, task.function_file, task.result_file)
+                t.specify_exec_method("thread")
+
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
                 collector_queue.put_nowait(WqTaskToParsl(id=task.id,
