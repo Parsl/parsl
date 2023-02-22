@@ -827,7 +827,7 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
             logger.debug("Sending task {} with command: {}".format(task.id, command_str))
             try:
                 t = wq.RemoteTask("run_parsl_task", "parsl_coprocess", task.map_file, task.function_file, task.result_file)
-                t.specify_exec_method("thread")
+                t.specify_exec_method("direct")
 
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
