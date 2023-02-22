@@ -159,7 +159,7 @@ def run_parsl_task(a, b, c):
     f.write(f"Dumping to result file {result_file}\n")
     try:
         epf.dump_result_to_file(result_file, result)
-    	f.write("Dumped to file\n")
+        f.write("Dumped to file\n")
     except Exception as e:
         f.write(f"Exception: {e}\n")
 
