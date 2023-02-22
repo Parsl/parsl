@@ -199,6 +199,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             to be sent to workers. If undefined, this defaults to a directory
             under runinfo/. If shared_filesystem=True, then this directory
             must be visible from both the submitting side and workers.
+
+        wait_for_workers: int
+            The number of workers to wait for before running any task
     """
 
     radio_mode = "filesystem"
@@ -227,7 +230,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  worker_options: str = "",
                  full_debug: bool = True,
                  worker_executable: str = 'vine_worker',
-                 function_dir: Optional[str] = None):
+                 function_dir: Optional[str] = None,
+                 wait_for_workers: Optional[int] = 0):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
         if not _taskvine_enabled:
@@ -262,6 +266,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.worker_options = worker_options
         self.worker_executable = worker_executable
         self.function_dir = function_dir
+        self.wait_for_workers = wait_for_workers
 
         if not self.address:
             self.address = socket.gethostname()
@@ -322,7 +327,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                  "port": self.port,
                                  "vine_log_dir": self.vine_log_dir,
                                  "project_password_file": self.project_password_file,
-                                 "project_name": self.project_name}
+                                 "project_name": self.project_name,
+                                 "wait_for_workers": self.wait_for_workers}
         self.submit_process = multiprocessing.Process(target=_taskvine_submit_wait,
                                                       name="TaskVine-Submit-Process",
                                                       kwargs=submit_process_kwargs)
@@ -737,7 +743,8 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                           port=VINE_DEFAULT_PORT,
                           vine_log_dir=None,
                           project_password_file=None,
-                          project_name=None):
+                          project_name=None,
+                          wait_for_workers=0):
     """Thread to handle Parsl app submissions to the TaskVine objects.
     Takes in Parsl functions submitted using submit(), and creates a
     TaskVine task with the appropriate specifications, which is then
@@ -777,10 +784,13 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
         if autolabel_window is not None:
             q.tune('category-steady-n-tasks', autolabel_window)
 
+    if wait_for_workers:
+        q.tune("wait-for-workers", wait_for_workers)
+
     # Only write logs when the vine_log_dir is specified, which it most likely will be
-    if vine_log_dir is not None:
-        if full and autolabel:
-            q.enable_monitoring_full(dirname=vine_log_dir)
+    #if vine_log_dir is not None:
+    #    if full and autolabel:
+    #        q.enable_monitoring_full(dirname=vine_log_dir)
 
     orig_ppid = os.getppid()
 
