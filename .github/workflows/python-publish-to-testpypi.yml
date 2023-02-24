@@ -60,3 +60,10 @@ jobs:
         repository_url: https://test.pypi.org/legacy/
 
         # password: ${{ secrets.PYPI_API_TOKEN }}
+
+    - name: Mint a tag
+      uses: actions/checkout@v3
+      uses: rickstaa/action-create-tag@v1
+      with:
+        tag: ${{ steps.date.outputs.date }}${{ inputs.suffix }}
+        message: "Release version: ${{ steps.date.outputs.date }}${{ inputs.suffix }}"
