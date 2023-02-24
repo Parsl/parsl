@@ -19,7 +19,7 @@ on:
         required: false
         default: ''
 
-permissions: write-all
+permissions: read-all|write-all
 
 jobs:
 
