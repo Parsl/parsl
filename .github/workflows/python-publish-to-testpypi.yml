@@ -39,7 +39,7 @@ jobs:
 
     - name: Set version info
       id: version_setter
-      run: echo "VERSION=$(date +'%Y-%m-%d')$SUFFIX" >> $GITHUB_OUTPUT
+      run: echo "VERSION=$(date +'%Y.%m.%d')$SUFFIX" >> $GITHUB_OUTPUT
       env:
         SUFFIX: ${{ inputs.suffix }}
 
