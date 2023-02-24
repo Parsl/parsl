@@ -38,10 +38,10 @@ jobs:
         python-version: '3.x'
 
     - name: Set version info
-        id: version_setter
-        run: echo "VERSION=$(date +'%Y-%m-%d')$SUFFIX" >> $GITHUB_OUTPUT
-        env:
-          SUFFIX: ${{ inputs.suffix }}
+      id: version_setter
+      run: echo "VERSION=$(date +'%Y-%m-%d')$SUFFIX" >> $GITHUB_OUTPUT
+      env:
+        SUFFIX: ${{ inputs.suffix }}
 
     - name: Install dependencies
       run: |
@@ -65,7 +65,6 @@ jobs:
         # password: ${{ secrets.PYPI_API_TOKEN }}
 
     - name: Mint a tag
-      uses: actions/checkout@v3
       uses: rickstaa/action-create-tag@v1
       with:
         tag: ${{ steps.version_setter.outputs.VERSION }}
