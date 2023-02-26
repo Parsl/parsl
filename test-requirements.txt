@@ -1,4 +1,4 @@
-flake8==3.8.0
+flake8==5.0.4
 importlib-metadata<5  # due to flake8 incompatibility with importlib 5.0.0
 ipyparallel
 pandas

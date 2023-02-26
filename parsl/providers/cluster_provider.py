@@ -67,9 +67,9 @@ class ClusterProvider(ExecutionProvider):
         self.walltime = walltime
         self.cmd_timeout = cmd_timeout
         if not callable(self.launcher):
-            raise(BadLauncher(self.launcher,
+            raise BadLauncher(self.launcher,
                               "Launcher for executor: {} is of type: {}. Expects a parsl.launcher.launcher.Launcher or callable".format(
-                                  label, type(self.launcher))))
+                                  label, type(self.launcher)))
 
         self.script_dir = None
 

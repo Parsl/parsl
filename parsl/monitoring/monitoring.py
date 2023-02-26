@@ -139,7 +139,7 @@ class MonitoringHub(RepresentationMixin):
         self._dfk_channel = None  # type: Any
 
         if _db_manager_excepts:
-            raise(_db_manager_excepts)
+            raise _db_manager_excepts
 
         self.client_address = client_address
         self.client_port_range = client_port_range
@@ -328,7 +328,7 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]
                 with open(full_path_filename, "rb") as f:
                     message = deserialize(f.read())
                 logger.info(f"Message received is: {message}")
-                assert(isinstance(message, tuple))
+                assert isinstance(message, tuple)
                 q.put(cast(AddressedMonitoringMessage, message))
                 os.remove(full_path_filename)
             except Exception:

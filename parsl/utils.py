@@ -55,7 +55,7 @@ def get_all_checkpoints(rundir: str = "runinfo") -> List[str]:
 
     """
 
-    if(not os.path.isdir(rundir)):
+    if not os.path.isdir(rundir):
         return []
 
     dirs = sorted(os.listdir(rundir))
@@ -99,7 +99,7 @@ def get_last_checkpoint(rundir: str = "runinfo") -> List[str]:
     last_runid = dirs[-1]
     last_checkpoint = os.path.abspath(f'{rundir}/{last_runid}/checkpoint')
 
-    if(not(os.path.isdir(last_checkpoint))):
+    if not os.path.isdir(last_checkpoint):
         return []
 
     return [last_checkpoint]
