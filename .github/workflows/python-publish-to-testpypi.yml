@@ -20,7 +20,7 @@ on:
         default: ''
 
 permissions:
-  contents: read
+  contents: read-all|write-all
 
 jobs:
 
