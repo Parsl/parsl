@@ -59,10 +59,10 @@ jobs:
       with:
         user: __token__
         # Set the following to publish to TestPypi instead
-        password: ${{ secrets.TESTPYPI_API_TOKEN }}
-        repository_url: https://test.pypi.org/legacy/
+        # password: ${{ secrets.TESTPYPI_API_TOKEN }}
+        # repository_url: https://test.pypi.org/legacy/
 
-        # password: ${{ secrets.PYPI_API_TOKEN }}
+        password: ${{ secrets.PYPI_API_TOKEN }}
 
     - name: Mint a tag
       uses: rickstaa/action-create-tag@v1
