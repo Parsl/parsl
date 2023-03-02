@@ -64,9 +64,6 @@ test_matrix = {
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
 
 
-# this might be issue 363 or might be something different
-# but something to do with the presence of std.err?
-# @pytest.mark.issue363
 def test_div_0(test_fn=div_0):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
