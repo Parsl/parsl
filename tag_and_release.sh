@@ -52,13 +52,13 @@ release () {
 }
 
 update_version () {
-    target_version=$(date +%Y.%m.%d)$SUFFIX
+    target_version=$VERSION
     echo "Target version = $target_version"
     cat << EOF > parsl/version.py
 """Set module version.
 
-<Major>.<Minor>.<maintenance>[alpha/beta/..]
-Alphas will be numbered like this -> 0.4.0a0
+Year.Month.Day[alpha/beta/..]
+Alphas will be numbered like this -> 2024.12.10a0
 """
 VERSION = '$target_version'
 EOF
