@@ -884,7 +884,6 @@ def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
             # Absolute paths are assumed to be in shared filesystem, and thus
             # not staged by work queue.
             if not shared_fs:
-
                 for spec in task.input_files:
                     if spec.stage:
                         t.specify_input_file(spec.parsl_name, spec.parsl_name, cache=spec.cache)
