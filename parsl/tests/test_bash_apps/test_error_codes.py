@@ -138,25 +138,3 @@ def run_app(test_fn, err_code):
     os.remove('std.err')
     os.remove('std.out')
     return True
-
-
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    exit(0)
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    for test in test_matrix:
-        try:
-            run_app(test, test_matrix[test]['exit_code'])
-        except AssertionError as e:
-            print("Test {0:15} [FAILED]".format(test.__name__))
-            print("Caught error : {0}".format(e))
-        else:
-            print("Test {0:15} [SUCCESS]".format(test.__name__))

@@ -117,8 +117,14 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         port: int
             TCP port on Parsl submission machine for Work Queue workers
-            to connect to. Workers will specify this port number when
-            trying to connect to Parsl. Default is 9123.
+            to connect to. Workers will connect to Parsl using this port.
+
+            If 0, Work Queue will allocate a port number automatically.
+            In this case, environment variables can be used to influence the
+            choice of port, documented here:
+            https://ccl.cse.nd.edu/software/manuals/api/html/work__queue_8h.html#a21714a10bcdfcf5c3bd44a96f5dcbda6
+
+            Default: 0.
 
         env: dict{str}
             Dictionary that contains the environmental variables that
@@ -307,8 +313,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         logger.debug("Starting WorkQueueExecutor")
 
-        self._port_mailbox = multiprocessing.Manager().Namespace()
-        self._port_mailbox.port = None
+        self._port_mailbox = multiprocessing.Queue()
 
         # Create a Process to perform WorkQueue submissions
         submit_process_kwargs = {"task_queue": self.task_queue,
@@ -340,11 +345,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.submit_process.start()
         self.collector_thread.start()
 
-        # wait for submit process to report the actual WQ port
-        while self._port_mailbox.port is None:  # TODO: check for submit_process not being ended
-            time.sleep(0.1)  # surely a better way to do this that also copes with submit_process dying and never returning a value?
+        self._chosen_port = self._port_mailbox.get()  # TODO timeout
 
-        logger.debug(f"Actual listening port is {self._port_mailbox.port}")
+        logger.debug(f"Chosen listening port is {self._chosen_port}")
 
         # Initialize scaling for the provider
         self.initialize_scaling()
@@ -398,7 +401,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 raise ExecutorError(self, message)
 
             # this checks that either all of the required resource types are specified, or
-            # that none of them are: the `required_resource_types` are not actually required,
+            # that none of them are: the `required_resource_types` are not alctually required,
             # but if one is specified, then they all must be.
             key_check = required_resource_types.intersection(keys)
             required_keys_ok = len(key_check) == 0 or key_check == required_resource_types
@@ -512,7 +515,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if self.project_name:
             worker_command += ' -M {}'.format(self.project_name)
         else:
-            worker_command += ' {} {}'.format(self.address, self._port_mailbox.port)
+            worker_command += ' {} {}'.format(self.address, self._chosen_port)
 
         logger.debug("Using worker command: {}".format(worker_command))
         return worker_command
@@ -661,7 +664,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         return 1
 
     def scale_in(self, count):
-        """Scale in method. Not implemented.
+        """Scale in method.
         """
         # Obtain list of blocks to kill
         to_kill = list(self.blocks.keys())[:count]
@@ -776,10 +779,11 @@ def _work_queue_submit_wait(port_mailbox=None,
     try:
         logger.debug("Requested port {}".format(port))
         q = WorkQueue(port, debug_log=wq_debug_log)
-        port_mailbox.port = q.port
+        port_mailbox.put(q.port)
         logger.debug("Listening on port {}".format(q.port))
     except Exception as e:
         logger.error("Unable to create WorkQueue object: {}".format(e))
+        port_mailbox.put(None)
         raise e
 
     # Specify WorkQueue queue attributes

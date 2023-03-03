@@ -20,7 +20,7 @@ on:
         default: ''
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
 
@@ -36,6 +36,13 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: '3.x'
+
+    - name: Set version info
+      id: version_setter
+      run: echo "VERSION=$(date +'%Y.%m.%d')$SUFFIX" >> $GITHUB_OUTPUT
+      env:
+        SUFFIX: ${{ inputs.suffix }}
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip wheel
@@ -45,7 +52,8 @@ jobs:
         ./tag_and_release.sh update_version
         ./tag_and_release.sh package
       env:
-        SUFFIX: ${{ inputs.suffix }}
+        VERSION: ${{ steps.version_setter.outputs.VERSION }}
+
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
       with:
@@ -55,3 +63,9 @@ jobs:
         # repository_url: https://test.pypi.org/legacy/
 
         password: ${{ secrets.PYPI_API_TOKEN }}
+
+    - name: Mint a tag
+      uses: rickstaa/action-create-tag@v1
+      with:
+        tag: ${{ steps.version_setter.outputs.VERSION }}
+        message: "Release version: ${{ steps.version_setter.outputs.VERSION }}"
