@@ -430,9 +430,9 @@ class DataFlowKernel(object):
                 logger.debug(f"Join callback for task {outer_task_id} skipping because task is not in joining state")
                 return
 
-            joinable = task_record['joins']  # Future or list of futures
+            joinable = task_record['joins']
 
-            if isinstance(joinable, list):  # TODO more generic type than list?
+            if isinstance(joinable, list):
                 for future in joinable:
                     if not future.done():
                         logger.debug(f"A joinable future {future} is not done for task {outer_task_id} - skipping callback")
