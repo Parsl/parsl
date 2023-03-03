@@ -392,7 +392,7 @@ class DataFlowKernel(object):
                         self.update_task_state(task_record, States.failed)
                         task_record['time_returned'] = datetime.datetime.now()
                         with task_record['app_fu']._update_lock:
-                            task_record['app_fu'].set_exception(TypeError(f"join_app body must return a Future or collection of Futures, got {type(joinable)}"))
+                            task_record['app_fu'].set_exception(TypeError(f"join_app body must return a Future or list of Futures, got {type(joinable)}"))
 
         self._log_std_streams(task_record)
 
@@ -413,8 +413,8 @@ class DataFlowKernel(object):
             # use the result of the inner_app_future as the final result of
             # the outer app future.
 
-            # If the outer task is joining on a collection of futures, then
-            # check if the collection is all done, and if so, return a list
+            # If the outer task is joining on a list of futures, then
+            # check if the list is all done, and if so, return a list
             # of the results. Otherwise, this callback can do nothing and
             # processing will happen in another callback (on the final Future
             # to complete)
@@ -430,7 +430,7 @@ class DataFlowKernel(object):
                 logger.debug(f"Join callback for task {outer_task_id} skipping because task is not in joining state")
                 return
 
-            joinable = task_record['joins']  # Future or collection of futures
+            joinable = task_record['joins']  # Future or list of futures
 
             if isinstance(joinable, list):  # TODO more generic type than list?
                 for future in joinable:
