@@ -2,6 +2,7 @@ import pytest
 import time
 
 from parsl import join_app, python_app
+from parsl.dataflow.error import JoinError
 
 from parsl.tests.configs.local_threads import fresh_config as local_config
 
@@ -80,3 +81,24 @@ def test_multiple_return():
     f = outer_make_a_dag_multi(inner_app())
     res = f.result()
     assert res == [RESULT_CONSTANT] * RESULT_CONSTANT
+
+
+class InnerError(RuntimeError):
+    pass
+
+
+@python_app
+def inner_error():
+    raise InnerError("Error A")
+
+
+@join_app
+def outer_error():
+    return inner_error()
+
+
+def test_error():
+    f = outer_error()
+    e = f.exception()
+    assert isinstance(e, JoinError)
+    assert isinstance(e.dependent_exceptions_tids[0][0], InnerError)

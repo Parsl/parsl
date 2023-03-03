@@ -25,7 +25,7 @@ from parsl.app.futures import DataFuture
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
-from parsl.dataflow.error import BadCheckpoint, ConfigurationError, DependencyError
+from parsl.dataflow.error import BadCheckpoint, ConfigurationError, DependencyError, JoinError
 from parsl.dataflow.flow_control import FlowControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
@@ -440,19 +440,31 @@ class DataFlowKernel(object):
 
             # now we know each joinable Future is done
             # so now look for any exceptions
-            e = None
+            exceptions_tids: List[Tuple[BaseException, Optional[str]]]
+            exceptions_tids = []
             if isinstance(joinable, Future):
-                if joinable.exception():
-                    e = joinable.exception()
+                je = joinable.exception()
+                if je is not None:
+                    if hasattr(joinable, 'task_def'):
+                        tid = joinable.task_def['id']
+                    else:
+                        tid = None
+                    exceptions_tids = [(je, tid)]
             elif isinstance(joinable, list):
                 for future in joinable:
-                    if future.exception():
-                        e = future.exception()
+                    je = future.exception()
+                    if je is not None:
+                        if hasattr(joinable, 'task_def'):
+                            tid = joinable.task_def['id']
+                        else:
+                            tid = None
+                        exceptions_tids.append((je, tid))
             else:
                 raise TypeError(f"Unknown joinable type {type(joinable)}")
 
-            if e:
+            if exceptions_tids:
                 logger.debug("Task {} failed due to failure of an inner join future".format(outer_task_id))
+                e = JoinError(exceptions_tids, outer_task_id)
                 # We keep the history separately, since the future itself could be
                 # tossed.
                 task_record['fail_history'].append(repr(e))
