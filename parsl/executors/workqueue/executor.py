@@ -345,7 +345,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.submit_process.start()
         self.collector_thread.start()
 
-        self._chosen_port = self._port_mailbox.get()  # TODO timeout
+        self._chosen_port = self._port_mailbox.get(timeout=60)
 
         logger.debug(f"Chosen listening port is {self._chosen_port}")
 
