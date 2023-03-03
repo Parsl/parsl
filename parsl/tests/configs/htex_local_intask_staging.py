@@ -24,5 +24,5 @@ config = Config(
             storage_access=[HTTPInTaskStaging(), FTPInTaskStaging(), NoOpFileStaging()]
         )
     ],
-    strategy=None,
+    strategy='none',
 )

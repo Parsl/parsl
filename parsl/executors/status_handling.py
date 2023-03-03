@@ -8,7 +8,7 @@ from typing import List, Any, Dict, Optional, Tuple, Union
 import parsl  # noqa F401
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
-from parsl.providers.provider_base import JobStatus, ExecutionProvider, JobState
+from parsl.providers.base import JobStatus, ExecutionProvider, JobState
 from parsl.utils import AtomicIDCounter
 
 
@@ -39,10 +39,16 @@ class BlockProviderExecutor(ParslExecutor):
     invoking scale_out, but it will not initialize the blocks requested by
     any init_blocks parameter. Subclasses must implement that behaviour
     themselves.
+
+    BENC: TODO: block error handling: maybe I want this more user pluggable?
+    I'm not sure of use cases for switchability at the moment beyond "yes or no"
     """
-    def __init__(self, provider: ExecutionProvider):
+    def __init__(self, *,
+                 provider: ExecutionProvider,
+                 block_error_handler: bool):
         super().__init__()
         self._provider = provider
+        self.block_error_handler = block_error_handler
         # errors can happen during the submit call to the provider; this is used
         # to keep track of such errors so that they can be handled in one place
         # together with errors reported by status()
@@ -127,13 +133,15 @@ class BlockProviderExecutor(ParslExecutor):
 
     @property
     def error_management_enabled(self):
-        return True
+        return self.block_error_handler
 
     def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
                       status: Dict[str, JobStatus]) -> None:
+        if not self.block_error_handler:
+            return
         init_blocks = 3
         if hasattr(self.provider, 'init_blocks'):
-            init_blocks = self.provider.init_blocks  # type: ignore
+            init_blocks = self.provider.init_blocks
         if init_blocks < 1:
             init_blocks = 1
         error_handler.simple_error_handler(self, status, init_blocks)
@@ -203,10 +211,6 @@ class BlockProviderExecutor(ParslExecutor):
 
 
 class NoStatusHandlingExecutor(ParslExecutor):
-    def __init__(self):
-        super().__init__()
-        self._tasks = {}  # type: Dict[object, Future]
-
     @property
     def status_polling_interval(self):
         return -1
@@ -232,10 +236,6 @@ class NoStatusHandlingExecutor(ParslExecutor):
     def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
                       status: Dict[str, JobStatus]) -> None:
         pass
-
-    @property
-    def tasks(self) -> Dict[object, Future]:
-        return self._tasks
 
     @property
     def provider(self):

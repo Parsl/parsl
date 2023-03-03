@@ -1,6 +1,9 @@
 from flask import render_template
 from flask import current_app as app
 import pandas as pd
+
+import parsl.monitoring.queries.pandas as queries
+
 from parsl.monitoring.visualization.models import Workflow, Task, Status, db
 
 from parsl.monitoring.visualization.plots.default.workflow_plots import task_gantt_plot, task_per_app_plot, workflow_dag_plot
@@ -55,18 +58,11 @@ def workflow(workflow_id):
     if workflow_details is None:
         return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
 
-    df_status = pd.read_sql_query(
-        "SELECT run_id, task_id, task_status_name, timestamp FROM status WHERE run_id='%s'" % workflow_id, db.engine)
-    df_task = pd.read_sql_query("""SELECT task_id, task_func_name,
-                                task_time_returned from task
-                                WHERE run_id='%s'"""
-                                % (workflow_id), db.engine)
-    df_task_tries = pd.read_sql_query("""SELECT task.task_id, task_func_name, task_time_returned,
-                                      task_try_time_running, task_try_time_returned from task, try
-                                      WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'"""
-                                      % (workflow_id, workflow_id), db.engine)
-    task_summary = db.engine.execute(
-        "SELECT task_func_name, count(*) as 'frequency' from task WHERE run_id='%s' group by task_func_name;" % workflow_id)
+    df_status = queries.status_for_workflow(workflow_id, db.engine)
+    df_task = queries.completion_times_for_workflow(workflow_id, db.engine)
+    df_task_tries = queries.tries_for_workflow(workflow_id, db.engine)
+    task_summary = queries.app_counts_for_workflow(workflow_id, db.engine)
+
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
@@ -115,8 +111,7 @@ def task(workflow_id, task_id):
     task_status = Status.query.filter_by(
         run_id=workflow_id, task_id=task_id).order_by(Status.timestamp)
 
-    df_resources = pd.read_sql_query(
-        "SELECT * FROM resource WHERE run_id='%s' AND task_id='%s'" % (workflow_id, task_id), db.engine)
+    df_resources = queries.resources_for_task(workflow_id, task_id, db.engine)
 
     return render_template('task.html',
                            workflow_details=workflow_details,
@@ -127,9 +122,10 @@ def task(workflow_id, task_id):
                            )
 
 
-@app.route('/workflow/<workflow_id>/dag_<path:path>')
-@app.route('/workflow/<workflow_id>/dag_<path:path>')
-def workflow_dag_details(workflow_id, path='group_by_apps'):
+@app.route('/workflow/<workflow_id>/dag_<path>')
+def workflow_dag_details(workflow_id, path):
+    assert path == "group_by_apps" or path == "group_by_states"
+
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
     query = """SELECT task.task_id, task.task_func_name, task.task_depends, status.task_status_name
                FROM task LEFT JOIN status
@@ -156,24 +152,19 @@ def workflow_resources(workflow_id):
     if workflow_details is None:
         return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
 
-    df_resources = pd.read_sql_query(
-        "SELECT * FROM resource WHERE run_id='%s'" % (workflow_id), db.engine)
+    df_resources = queries.resources_for_workflow(workflow_id, db.engine)
     if df_resources.empty:
         return render_template('error.html',
                                message="Workflow %s does not have any resource usage records." % workflow_id)
 
-    df_task = pd.read_sql_query(
-        "SELECT * FROM task WHERE run_id='%s'" % (workflow_id), db.engine)
+    df_task = queries.tasks_for_workflow(workflow_id, db.engine)
     df_task_tries = pd.read_sql_query("""SELECT task.task_id, task_func_name,
                                       task_try_time_launched, task_try_time_running, task_try_time_returned from task, try
                                       WHERE task.task_id = try.task_id AND task.run_id='%s' and try.run_id='%s'"""
                                       % (workflow_id, workflow_id), db.engine)
-    df_node = pd.read_sql_query(
-        "SELECT * FROM node WHERE run_id='%s'" % (workflow_id), db.engine)
+    df_node = queries.nodes_for_workflow(workflow_id, db.engine)
 
     return render_template('resource_usage.html', workflow_details=workflow_details,
-                           user_time_distribution_avg_plot=resource_distribution_plot(
-                               df_resources, df_task, type='psutil_process_time_user', label='CPU Time Distribution', option='avg'),
                            user_time_distribution_max_plot=resource_distribution_plot(
                                df_resources, df_task, type='psutil_process_time_user', label='CPU Time Distribution', option='max'),
                            memory_usage_distribution_avg_plot=resource_distribution_plot(

@@ -2,13 +2,16 @@ from parsl.providers import AdHocProvider
 from parsl.channels import SSHChannel
 from parsl.executors import HighThroughputExecutor
 from parsl.config import Config
+from typing import Any, Dict
 
+user_opts: Dict[str, Dict[str, Any]]
 user_opts = {'adhoc':
              {'username': 'YOUR_USERNAME',
               'script_dir': 'YOUR_SCRIPT_DIR',
               'remote_hostnames': ['REMOTE_HOST_URL_1', 'REMOTE_HOST_URL_2']
              }
 }
+
 
 config = Config(
     executors=[
@@ -28,5 +31,5 @@ config = Config(
         )
     ],
     #  AdHoc Clusters should not be setup with scaling strategy.
-    strategy=None,
+    strategy='none',
 )

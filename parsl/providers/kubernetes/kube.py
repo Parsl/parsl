@@ -5,7 +5,7 @@ from parsl.providers.kubernetes.template import template_string
 logger = logging.getLogger(__name__)
 
 from parsl.errors import OptionalModuleMissing
-from parsl.providers.provider_base import ExecutionProvider, JobState, JobStatus
+from parsl.providers.base import ExecutionProvider, JobState, JobStatus
 from parsl.utils import RepresentationMixin
 
 import typeguard
@@ -244,11 +244,11 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
 
         security_context = None
         if self.user_id and self.group_id:
-            security_context = client.V1SecurityContext(run_as_group=self.group_id,
-                                                        run_as_user=self.user_id,
+            security_context = client.V1SecurityContext(run_as_group=int(self.group_id),
+                                                        run_as_user=int(self.user_id),
                                                         run_as_non_root=self.run_as_non_root)
 
-        # Create the enviornment variables and command to initiate IPP
+        # Create the environment variables and command to initiate IPP
         environment_vars = client.V1EnvVar(name="TEST", value="SOME DATA")
 
         launch_args = ["-c", "{0};".format(cmd_string)]

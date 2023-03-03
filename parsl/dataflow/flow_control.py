@@ -2,7 +2,10 @@ import logging
 import threading
 import time
 
-from parsl.dataflow.task_status_poller import TaskStatusPoller
+from typing import Sequence
+
+from parsl.executors.base import ParslExecutor
+from parsl.dataflow.job_status_poller import JobStatusPoller
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +44,7 @@ class FlowControl(object):
     from a duplicate logger being added by the thread.
     """
 
-    def __init__(self, dfk, *args, threshold=20, interval=5):
+    def __init__(self, dfk, *args, interval=5):
         """Initialize the flowcontrol object.
 
         We start the timer thread here
@@ -50,14 +53,12 @@ class FlowControl(object):
              - dfk (DataFlowKernel) : DFK object to track parsl progress
 
         KWargs:
-             - threshold (int) : Tasks after which the callback is triggered
              - interval (int) : seconds after which timer expires
         """
-        self.threshold = threshold
         self.interval = interval
         self.cb_args = args
-        self.task_status_poller = TaskStatusPoller(dfk)
-        self.callback = self.task_status_poller.poll
+        self.job_status_poller = JobStatusPoller(dfk)
+        self.callback = self.job_status_poller.poll
         self._handle = None
         self._event_count = 0
         self._event_buffer = []
@@ -67,7 +68,7 @@ class FlowControl(object):
         self._thread.daemon = True
         self._thread.start()
 
-    def _wake_up_timer(self, kill_event):
+    def _wake_up_timer(self, kill_event: threading.Event) -> None:
         """Internal. This is the function that the thread will execute.
         waits on an event so that the thread can make a quick exit when close() is called
 
@@ -87,15 +88,7 @@ class FlowControl(object):
 
             self.make_callback()
 
-    def notify(self, event_id):
-        """Let the FlowControl system know that there is an event."""
-        self._event_buffer.extend([event_id])
-        self._event_count += 1
-        if self._event_count >= self.threshold:
-            logger.debug("Eventcount >= threshold")
-            self.make_callback()
-
-    def make_callback(self):
+    def make_callback(self) -> None:
         """Makes the callback and resets the timer.
         """
         self._wake_up_time = time.time() + self.interval
@@ -105,10 +98,10 @@ class FlowControl(object):
             logger.error("Flow control callback threw an exception - logging and proceeding anyway", exc_info=True)
         self._event_buffer = []
 
-    def add_executors(self, executors):
-        self.task_status_poller.add_executors(executors)
+    def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
+        self.job_status_poller.add_executors(executors)
 
-    def close(self):
+    def close(self) -> None:
         """Merge the threads and terminate."""
         self._kill_event.set()
         self._thread.join()
@@ -142,7 +135,6 @@ class Timer(object):
              - dfk (DataFlowKernel) : DFK object to track parsl progress
 
         KWargs:
-             - threshold (int) : Tasks after which the callback is triggered
              - interval (int) : seconds after which timer expires
              - name (str) : a base name to use when naming the started thread
         """
@@ -161,7 +153,7 @@ class Timer(object):
         self._thread.daemon = True
         self._thread.start()
 
-    def _wake_up_timer(self, kill_event):
+    def _wake_up_timer(self, kill_event: threading.Event) -> None:
         """Internal. This is the function that the thread will execute.
         waits on an event so that the thread can make a quick exit when close() is called
 
@@ -185,13 +177,13 @@ class Timer(object):
             else:
                 print("Sleeping a bit more")
 
-    def make_callback(self):
+    def make_callback(self) -> None:
         """Makes the callback and resets the timer.
         """
         self._wake_up_time = time.time() + self.interval
         self.callback(*self.cb_args)
 
-    def close(self):
+    def close(self) -> None:
         """Merge the threads and terminate.
         """
         self._kill_event.set()

@@ -10,6 +10,7 @@ import pickle
 import time
 import queue
 import uuid
+from threading import Thread
 from typing import Sequence, Optional
 
 import zmq
@@ -24,7 +25,8 @@ from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.probe import probe_addresses
-from parsl.multiprocessing import ForkProcess as mpProcess
+from parsl.multiprocessing import ForkProcess as mpForkProcess
+from parsl.multiprocessing import SpawnProcess as mpSpawnProcess
 
 from parsl.multiprocessing import SizedQueue as mpQueue
 
@@ -64,7 +66,8 @@ class Manager(object):
                  heartbeat_period=30,
                  poll_period=10,
                  cpu_affinity=False,
-                 available_accelerators: Sequence[str] = ()):
+                 available_accelerators: Sequence[str] = (),
+                 start_method: str = 'fork'):
         """
         Parameters
         ----------
@@ -109,7 +112,8 @@ class Manager(object):
              assumes that the interchange is lost and the manager shuts down. Default:120
 
         heartbeat_period : int
-             Number of seconds after which a heartbeat message is sent to the interchange
+             Number of seconds after which a heartbeat message is sent to the interchange, and workers
+             are checked for liveness.
 
         poll_period : int
              Timeout period used by the manager in milliseconds. Default: 10ms
@@ -119,6 +123,11 @@ class Manager(object):
 
         available_accelerators: list of str
             List of accelerators available to the workers. Default: Empty list
+
+        start_method: str
+            What method to use to start new worker processes. Choices are fork, spawn, and thread.
+            Default: fork
+
         """
 
         logger.info("Manager started")
@@ -176,6 +185,17 @@ class Manager(object):
         self.worker_count = min(max_workers,
                                 mem_slots,
                                 math.floor(cores_on_node / cores_per_worker))
+
+        # Determine which start method to use
+        start_method = start_method.lower()
+        if start_method == "fork":
+            self.mpProcess = mpForkProcess
+        elif start_method == "spawn":
+            self.mpProcess = mpSpawnProcess
+        elif start_method == "thread":
+            self.mpProcess = Thread
+        else:
+            raise ValueError(f'HTEx does not support start method: "{start_method}"')
 
         self.pending_task_queue = mpQueue()
         self.pending_result_queue = mpQueue()
@@ -260,11 +280,6 @@ class Manager(object):
                 self.heartbeat_to_incoming()
                 last_beat = time.time()
 
-            if pending_task_count < self.max_queue_size and ready_worker_count > 0:
-                logger.debug("Requesting tasks: {}".format(ready_worker_count))
-                msg = ((ready_worker_count).to_bytes(4, "little"))
-                self.task_incoming.send(msg)
-
             socks = dict(poller.poll(timeout=poll_timer))
 
             if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
@@ -283,7 +298,7 @@ class Manager(object):
 
                 else:
                     task_recv_counter += len(tasks)
-                    logger.debug("Got tasks: {}, cumulative count of tasks: {}".format([t['task_id'] for t in tasks], task_recv_counter))
+                    logger.debug("Got executor tasks: {}, cumulative count of tasks: {}".format([t['task_id'] for t in tasks], task_recv_counter))
 
                     for task in tasks:
                         self.pending_task_queue.put(task)
@@ -369,32 +384,32 @@ class Manager(object):
         while not kill_event.is_set():
             for worker_id, p in self.procs.items():
                 if not p.is_alive():
-                    logger.info("Worker {} has died".format(worker_id))
+                    logger.error("Worker {} has died".format(worker_id))
                     try:
                         task = self._tasks_in_progress.pop(worker_id)
                         logger.info("Worker {} was busy when it died".format(worker_id))
                         try:
                             raise WorkerLost(worker_id, platform.node())
                         except Exception:
-                            logger.info("Putting exception for task {} in the pending result queue".format(task['task_id']))
+                            logger.info("Putting exception for executor task {} in the pending result queue".format(task['task_id']))
                             result_package = {'type': 'result', 'task_id': task['task_id'], 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
                             pkl_package = pickle.dumps(result_package)
                             self.pending_result_queue.put(pkl_package)
                     except KeyError:
                         logger.info("Worker {} was not busy when it died".format(worker_id))
 
-                    p = mpProcess(target=worker, args=(worker_id,
-                                                       self.uid,
-                                                       self.worker_count,
-                                                       self.pending_task_queue,
-                                                       self.pending_result_queue,
-                                                       self.ready_worker_queue,
-                                                       self._tasks_in_progress,
-                                                       self.cpu_affinity
-                                                 ), name="HTEX-Worker-{}".format(worker_id))
+                    p = self.mpProcess(target=worker, args=(worker_id,
+                                                            self.uid,
+                                                            self.worker_count,
+                                                            self.pending_task_queue,
+                                                            self.pending_result_queue,
+                                                            self.ready_worker_queue,
+                                                            self._tasks_in_progress,
+                                                            self.cpu_affinity),
+                                       name="HTEX-Worker-{}".format(worker_id))
                     self.procs[worker_id] = p
                     logger.info("Worker {} has been restarted".format(worker_id))
-                time.sleep(self.poll_period)
+                time.sleep(self.heartbeat_period)
 
         logger.critical("Exiting")
 
@@ -409,16 +424,17 @@ class Manager(object):
 
         self.procs = {}
         for worker_id in range(self.worker_count):
-            p = mpProcess(target=worker, args=(worker_id,
-                                               self.uid,
-                                               self.worker_count,
-                                               self.pending_task_queue,
-                                               self.pending_result_queue,
-                                               self.ready_worker_queue,
-                                               self._tasks_in_progress,
-                                               self.cpu_affinity,
-                                               self.available_accelerators[worker_id] if self.accelerators_available else None),
-                          name="HTEX-Worker-{}".format(worker_id))
+            p = self.mpProcess(target=worker,
+                               args=(worker_id,
+                                     self.uid,
+                                     self.worker_count,
+                                     self.pending_task_queue,
+                                     self.pending_result_queue,
+                                     self.ready_worker_queue,
+                                     self._tasks_in_progress,
+                                     self.cpu_affinity,
+                                     self.available_accelerators[worker_id] if self.accelerators_available else None),
+                               name="HTEX-Worker-{}".format(worker_id))
             p.start()
             self.procs[worker_id] = p
 
@@ -519,7 +535,6 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
     import parsl.executors.high_throughput.monitoring_info as mi
     mi.result_queue = result_queue
 
-    # Sync worker with master
     logger.info('Worker {} started'.format(worker_id))
     if args.debug:
         logger.debug("Debug logging enabled")
@@ -539,6 +554,13 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         else:
             raise ValueError("Affinity strategy {} is not supported".format(cpu_affinity))
 
+        # Set the affinity for OpenMP
+        #  See: https://hpc-tutorials.llnl.gov/openmp/ProcessThreadAffinity.pdf
+        proc_list = ",".join(map(str, my_cores))
+        os.environ["OMP_NUM_THREADS"] = str(len(my_cores))
+        os.environ["GOMP_CPU_AFFINITY"] = proc_list  # Compatible with GCC OpenMP
+        os.environ["KMP_AFFINITY"] = f"explicit,proclist=[{proc_list}]"  # For Intel OpenMP
+
         # Set the affinity for this worker
         os.sched_setaffinity(0, my_cores)
         logger.info("Set worker CPU affinity to {}".format(my_cores))
@@ -547,7 +569,9 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
     if accelerator is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = accelerator
         os.environ["ROCR_VISIBLE_DEVICES"] = accelerator
-        os.environ["SYCL_DEVICE_FILTER"] = f"*:*:{accelerator}"
+        os.environ["ZE_AFFINITY_MASK"] = accelerator
+        os.environ["ZE_ENABLE_PCI_ID_DEVICE_ORDER"] = '1'
+
         logger.info(f'Pinned worker to accelerator: {accelerator}')
 
     while True:
@@ -557,7 +581,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         req = task_queue.get()
         tasks_in_progress[worker_id] = req
         tid = req['task_id']
-        logger.info("Received task {}".format(tid))
+        logger.info("Received executor task {}".format(tid))
 
         try:
             worker_queue.get()
@@ -575,7 +599,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
             result_package = {'type': 'result', 'task_id': tid, 'result': serialized_result}
             # logger.debug("Result: {}".format(result))
 
-        logger.info("Completed task {}".format(tid))
+        logger.info("Completed executor task {}".format(tid))
         try:
             pkl_package = pickle.dumps(result_package)
         except Exception:
@@ -586,7 +610,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
 
         result_queue.put(pkl_package)
         tasks_in_progress.pop(worker_id)
-        logger.info("All processing finished for task {}".format(tid))
+        logger.info("All processing finished for executor task {}".format(tid))
 
 
 def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_string=None):
@@ -653,6 +677,8 @@ if __name__ == "__main__":
                         help="Whether/how workers should control CPU affinity.")
     parser.add_argument("--available-accelerators", type=str, nargs="*",
                         help="Names of available accelerators")
+    parser.add_argument("--start-method", type=str, choices=["fork", "spawn", "thread"], default="fork",
+                        help="Method used to start new worker processes")
 
     args = parser.parse_args()
 
@@ -681,6 +707,7 @@ if __name__ == "__main__":
         logger.info("Heartbeat period: {}".format(args.hb_period))
         logger.info("CPU affinity: {}".format(args.cpu_affinity))
         logger.info("Accelerators: {}".format(" ".join(args.available_accelerators)))
+        logger.info("Start method: {}".format(args.start_method))
 
         manager = Manager(task_port=args.task_port,
                           result_port=args.result_port,

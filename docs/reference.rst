@@ -77,7 +77,6 @@ Executors
     parsl.executors.HighThroughputExecutor
     parsl.executors.WorkQueueExecutor
     parsl.executors.ExtremeScaleExecutor
-    parsl.executors.LowLatencyExecutor
     parsl.executors.FluxExecutor
     parsl.executors.swift_t.TurbineExecutor
 
@@ -119,7 +118,7 @@ Providers
     parsl.providers.TorqueProvider
     parsl.providers.KubernetesProvider
     parsl.providers.PBSProProvider
-    parsl.providers.provider_base.ExecutionProvider
+    parsl.providers.base.ExecutionProvider
     parsl.providers.cluster_provider.ClusterProvider
 
 
@@ -137,7 +136,6 @@ Exceptions
     parsl.app.errors.BashAppNoReturn
     parsl.app.errors.BashExitFailure
     parsl.app.errors.MissingOutputs
-    parsl.app.errors.NotFutureError
     parsl.app.errors.ParslError
     parsl.errors.OptionalModuleMissing
     parsl.executors.errors.ExecutorError

@@ -13,7 +13,7 @@ import time
 from parsl.channels import LocalChannel, SSHChannel
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers import LocalProvider
-from parsl.providers.provider_base import JobState
+from parsl.providers.base import JobState
 
 logger = logging.getLogger(__name__)
 
@@ -196,7 +196,7 @@ def _find_free_port(start: int):
 
 
 def _run(p: LocalProvider, command: str, np: int = 1):
-    id = p.submit(command, 1, np)
+    id = p.submit(command, np)
     return _wait(p, id)
 
 

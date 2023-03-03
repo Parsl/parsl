@@ -46,14 +46,7 @@ clean_coverage:
 
 .PHONY: mypy
 mypy: ## run mypy checks
-	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/configs/
-	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/test*/
-	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/tests/sites/
-        # only the top level of monitoring is checked here because the visualization code does not type check
-	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/app/ parsl/channels/ parsl/dataflow/ parsl/data_provider/ parsl/launchers parsl/providers/ parsl/monitoring/*py
-        # process worker pool is explicitly listed to check, because it is not
-        # imported from anywhere in core parsl python code.
-	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/executors/high_throughput/process_worker_pool.py parsl/executors/high_throughput/interchange.py
+	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/
 
 .PHONY: local_thread_test
 local_thread_test: ## run all tests with local_thread config
@@ -76,7 +69,7 @@ workqueue_ex_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex conf
 	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --random-order
 
 .PHONY: config_local_test
-config_local_test: ## run all tests with workqueue_ex config
+config_local_test:
 	echo "$(MPI)"
 	parsl/executors/extreme_scale/install-mpi.sh $(MPI)
 	pip3 install ".[extreme_scale,monitoring]"
@@ -101,6 +94,11 @@ package: ## package up a distribution.
 .PHONY: deploy
 deploy: ## deploy the distribution
 	./tag_and_release.sh release
+
+# THIS IS MEANT TO BE INVOKED BY GITHUB ACTIONS **ONLY**
+.PHONY: update_version
+update_version: ## Update version
+	./tag_and_release.sh update_version
 
 .PHONY: release
 release: deps tag package deploy   ## create a release. To run, do a 'make VERSION="version string"  release'

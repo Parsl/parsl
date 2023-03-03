@@ -11,7 +11,7 @@ from parsl.channels.base import Channel
 from parsl.launchers import SingleNodeLauncher
 from parsl.launchers.launchers import Launcher
 from parsl.providers.cluster_provider import ClusterProvider
-from parsl.providers.provider_base import JobState, JobStatus
+from parsl.providers.base import JobState, JobStatus
 from parsl.providers.slurm.template import template_string
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
@@ -130,7 +130,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         self.worker_init = worker_init + '\n'
 
     def _status(self):
-        ''' Internal: Do not call. Returns the status list for a list of job_ids
+        '''Returns the status list for a list of job_ids
 
         Args:
               self

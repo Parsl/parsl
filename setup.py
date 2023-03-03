@@ -8,7 +8,7 @@ with open('requirements.txt') as f:
 
 extras_require = {
     'monitoring' : [
-        'sqlalchemy>=1.3.0',
+        'sqlalchemy>=1.3.0,<2',
         'pydot',
         'networkx>=2.5,<2.6',
         'Flask>=1.0.2',
@@ -21,13 +21,14 @@ extras_require = {
     'kubernetes' : ['kubernetes'],
     'oauth_ssh' : ['oauth-ssh>=0.9'],
     'extreme_scale' : ['mpi4py'],
-    'docs' : ['nbsphinx', 'sphinx_rtd_theme', 'ipython'],
+    'docs' : ['nbsphinx', 'sphinx_rtd_theme', 'ipython<=8.6.0'],
     'google_cloud' : ['google-auth', 'google-api-python-client'],
     'gssapi' : ['python-gssapi'],
     'azure' : ['azure<=4', 'msrestazure'],
     'workqueue': ['work_queue'],
     'flux': ['pyyaml', 'cffi', 'jsonschema'],
-    'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
+    # Disabling psi-j since github direct links are not allowed by pypi
+    # 'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
 }
 extras_require['all'] = sum(extras_require.values(), [])
 
@@ -48,14 +49,13 @@ setup(
     install_requires=install_requires,
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
                'parsl/executors/extreme_scale/mpi_worker_pool.py',
-               'parsl/executors/low_latency/lowlatency_worker.py',
                'parsl/executors/workqueue/exec_parsl_function.py',
     ],
 
     extras_require=extras_require,
     classifiers=[
         # Maturity
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 5 - Production/Stable',
         # Intended audience
         'Intended Audience :: Developers',
         # Licence, must match with licence above

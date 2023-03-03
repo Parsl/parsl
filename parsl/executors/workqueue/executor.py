@@ -14,6 +14,7 @@ import hashlib
 import subprocess
 import os
 import socket
+import time
 import pickle
 import queue
 import inspect
@@ -26,7 +27,7 @@ from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
 from parsl.errors import OptionalModuleMissing
 from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.providers.provider_base import ExecutionProvider
+from parsl.providers.base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
 from parsl.executors.workqueue import exec_parsl_function
 from parsl.process_loggers import wrap_with_logs
@@ -98,10 +99,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         working_dir: str
             Location for Parsl to perform app delegation to the Work
             Queue system. Defaults to current directory.
-
-        managed: bool
-            Whether this executor is managed by the DFK or externally handled.
-            Default is True (managed by DFK).
 
         project_name: str
             If a project_name is given, then Work Queue will periodically
@@ -196,6 +193,12 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             when the worker needs to be wrapped inside some other command
             (for example, to run the worker inside a container). Default is
             'work_queue_worker'.
+
+        function_dir: str
+            The directory where serialized function invocations are placed
+            to be sent to workers. If undefined, this defaults to a directory
+            under runinfo/. If shared_filesystem=True, then this directory
+            must be visible from both the submitting side and workers.
     """
 
     radio_mode = "filesystem"
@@ -205,7 +208,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  label: str = "WorkQueueExecutor",
                  provider: ExecutionProvider = LocalProvider(),
                  working_dir: str = ".",
-                 managed: bool = True,
                  project_name: Optional[str] = None,
                  project_password_file: Optional[str] = None,
                  address: Optional[str] = None,
@@ -224,15 +226,14 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  init_command: str = "",
                  worker_options: str = "",
                  full_debug: bool = True,
-                 worker_executable: str = 'work_queue_worker'):
-        BlockProviderExecutor.__init__(self, provider)
-        self._scaling_enabled = True
-
+                 worker_executable: str = 'work_queue_worker',
+                 function_dir: Optional[str] = None):
+        BlockProviderExecutor.__init__(self, provider=provider,
+                                       block_error_handler=True)
         if not _work_queue_enabled:
             raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
 
         self.label = label
-        self.managed = managed
         self.task_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
         self.collector_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
         self.blocks = {}  # type: Dict[str, str]
@@ -260,6 +261,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.cached_envs = {}  # type: Dict[int, str]
         self.worker_options = worker_options
         self.worker_executable = worker_executable
+        self.function_dir = function_dir
 
         if not self.address:
             self.address = socket.gethostname()
@@ -289,13 +291,19 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.tasks_lock = threading.Lock()
 
         # Create directories for data and results
-        self.function_data_dir = os.path.join(self.run_dir, "function_data")
-        self.package_dir = os.path.join(self.run_dir, "package_data")
+        if not self.function_dir:
+            self.function_data_dir = os.path.join(self.run_dir, self.label, "function_data")
+        else:
+            tp = str(time.time())
+            tx = os.path.join(self.function_dir, tp)
+            os.makedirs(tx)
+            self.function_data_dir = os.path.join(self.function_dir, tp, self.label, "function_data")
+        self.package_dir = os.path.join(self.run_dir, self.label, "package_data")
         self.wq_log_dir = os.path.join(self.run_dir, self.label)
         logger.debug("function data directory: {}\nlog directory: {}".format(self.function_data_dir, self.wq_log_dir))
-        os.mkdir(self.function_data_dir)
-        os.mkdir(self.package_dir)
-        os.mkdir(self.wq_log_dir)
+        os.makedirs(self.wq_log_dir)
+        os.makedirs(self.function_data_dir)
+        os.makedirs(self.package_dir)
 
         logger.debug("Starting WorkQueueExecutor")
 
@@ -642,7 +650,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         return 1
 
     def scale_in(self, count):
-        """Scale in method. Not implemented.
+        """Scale in method.
         """
         # Obtain list of blocks to kill
         to_kill = list(self.blocks.keys())[:count]
@@ -675,18 +683,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Work Queue shutdown completed")
         return True
 
-    def scaling_enabled(self):
-        """Specify if scaling is enabled. Not enabled in Work Queue.
-        """
-        return self._scaling_enabled
-
-    def run_dir(self, value=None):
-        """Path to the run directory.
-        """
-        if value is not None:
-            self._run_dir = value
-        return self._run_dir
-
     @wrap_with_logs
     def _collect_work_queue_results(self):
         """Sets the values of tasks' futures of tasks completed by work queue.
@@ -705,7 +701,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
                 # Obtain the future from the tasks dictionary
                 with self.tasks_lock:
-                    future = self.tasks[task_report.id]
+                    future = self.tasks.pop(task_report.id)
 
                 logger.debug("Updating Future for Parsl Task {}".format(task_report.id))
                 if task_report.result_received:

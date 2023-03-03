@@ -10,7 +10,7 @@
 #       (Raised by flake8 even when it is followed)
 ignore = E124, E126, E402, E129, W504
 max-line-length = 160
-exclude = parsl/executors/serialize/, test_import_fail.py
+exclude = test_import_fail.py
 # E741 disallows ambiguous single letter names which look like numbers
 # We disable it in visualization code because plotly uses 'l' as
 # a keyword arg
@@ -19,4 +19,9 @@ per-file-ignores = parsl/monitoring/visualization/*:E741,
   # needed because this deliberately has undefined names in it
   parsl/tests/test_swift.py:F821,
   # test_ssh_errors.py really is broken
-  parsl/tests/integration/test_channels/test_ssh_errors.py:F821
+  parsl/tests/integration/test_channels/test_ssh_errors.py:F821,
+
+  # tests often import fresh_config into their namespace as local_config
+  # but then do not use it directly, because tests/conftests.py
+  # looks for it instead.
+  parsl/tests/**:F401

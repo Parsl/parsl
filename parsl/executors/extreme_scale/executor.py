@@ -60,7 +60,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
     Parameters
     ----------
 
-    provider : :class:`~parsl.providers.provider_base.ExecutionProvider`
+    provider : :class:`~parsl.providers.base.ExecutionProvider`
        Provider to access computation resources. Can be any providers in ``parsl.providers``:
         :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
         :class:`~parsl.providers.condor.condor.Condor`,
@@ -103,9 +103,6 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
     worker_debug : Bool
         Enables engine debug logging.
 
-    managed : Bool
-        If this executor is managed by the DFK or externally handled.
-
     ranks_per_node : int
         Specify the ranks to be launched per node.
 
@@ -132,8 +129,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                  worker_debug=False,
                  ranks_per_node=1,
                  heartbeat_threshold=120,
-                 heartbeat_period=30,
-                 managed=True):
+                 heartbeat_period=30):
 
         super().__init__(label=label,
                          provider=provider,
@@ -146,8 +142,7 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
                          working_dir=working_dir,
                          worker_debug=worker_debug,
                          heartbeat_threshold=heartbeat_threshold,
-                         heartbeat_period=heartbeat_period,
-                         managed=managed)
+                         heartbeat_period=heartbeat_period)
 
         self.ranks_per_node = ranks_per_node
 
@@ -190,7 +185,6 @@ class ExtremeScaleExecutor(HighThroughputExecutor, RepresentationMixin):
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
 
-        self._scaling_enabled = True
         logger.debug("Starting ExtremeScaleExecutor with provider:\n%s", self.provider)
         if hasattr(self.provider, 'init_blocks'):
             try:

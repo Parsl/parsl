@@ -1,7 +1,8 @@
 import logging
 import typeguard
 
-from typing import Callable, List, Optional, Sequence
+from typing import Callable, List, Optional, Sequence, Union
+from typing_extensions import Literal
 
 from parsl.utils import RepresentationMixin
 from parsl.executors.base import ParslExecutor
@@ -28,8 +29,8 @@ class Config(RepresentationMixin):
         List of paths to checkpoint files. See :func:`parsl.utils.get_all_checkpoints` and
         :func:`parsl.utils.get_last_checkpoint` for helpers. Default is None.
     checkpoint_mode : str, optional
-        Checkpoint mode to use, can be ``'dfk_exit'``, ``'task_exit'``, or ``'periodic'``. If set to
-        `None`, checkpointing will be disabled. Default is None.
+        Checkpoint mode to use, can be ``'dfk_exit'``, ``'task_exit'``, ``'periodic'`` or ``'manual'``.
+        If set to `None`, checkpointing will be disabled. Default is None.
     checkpoint_period : str, optional
         Time interval (in "HH:MM:SS") at which to checkpoint completed tasks. Only has an effect if
         ``checkpoint_mode='periodic'``.
@@ -50,8 +51,10 @@ class Config(RepresentationMixin):
     run_dir : str, optional
         Path to run directory. Default is 'runinfo'.
     strategy : str, optional
-        Strategy to use for scaling blocks according to workflow needs. Can be 'simple', 'htex_auto_scale' or `None`.
-        If `None`, dynamic scaling will be disabled. Default is 'simple'.
+        Strategy to use for scaling blocks according to workflow needs. Can be 'simple', 'htex_auto_scale', 'none'
+        or `None`.
+        If 'none' or `None`, dynamic scaling will be disabled. Default is 'simple'. The literal value `None` is
+        deprecated.
     max_idletime : float, optional
         The maximum idle time allowed for an executor before strategy could shut down unused blocks. Default is 120.0 seconds.
     usage_tracking : bool, optional
@@ -73,7 +76,11 @@ class Config(RepresentationMixin):
                  executors: Optional[List[ParslExecutor]] = None,
                  app_cache: bool = True,
                  checkpoint_files: Optional[Sequence[str]] = None,
-                 checkpoint_mode: Optional[str] = None,
+                 checkpoint_mode: Union[None,
+                                        Literal['task_exit'],
+                                        Literal['periodic'],
+                                        Literal['dfk_exit'],
+                                        Literal['manual']] = None,
                  checkpoint_period: Optional[str] = None,
                  garbage_collect: bool = True,
                  internal_tasks_max_threads: int = 10,

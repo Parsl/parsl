@@ -84,9 +84,7 @@ Parsl currently supports the following executors:
 
 2. `parsl.executors.HighThroughputExecutor`: This executor implements hierarchical scheduling and batching using a pilot job model to deliver high throughput task execution on up to 4000 Nodes.
 
-3. `parsl.executors.WorkQueueExecutor`: [**Beta**] This executor integrates `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ as an execution backend. Work Queue scales to tens of thousands of cores and implements reliable execution of tasks with dynamic resource sizing.
-
-4. `parsl.executors.ExtremeScaleExecutor`: [**Beta**] The ExtremeScaleExecutor uses `mpi4py <https://mpi4py.readthedocs.io/en/stable/>`_ to scale to 4000+ nodes. This executor is typically used for executing on supercomputers.
+3. `parsl.executors.WorkQueueExecutor`: This executor integrates `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ as an execution backend. Work Queue scales to tens of thousands of cores and implements reliable execution of tasks with dynamic resource sizing.
 
 These executors cover a broad range of execution requirements. As with other Parsl components, there is a standard interface (ParslExecutor) that can be implemented to add support for other executors.
 
@@ -199,18 +197,15 @@ tasks with a thin workload.
 To address dynamic workload requirements, 
 Parsl implements a cloud-like elasticity model in which resource
 blocks are provisioned/deprovisioned in response to workload pressure. 
-Parsl provides an extensible strategy interface by which users
-can implement their own elasticity logic. 
 Given the general nature of the implementation, 
 Parsl can provide elastic execution on clouds, clusters,
 and supercomputers. Of course, in an HPC setting, elasticity may
 be complicated by queue delays.
 
-Parsl's elasticity model includes an extensible flow control system
+Parsl's elasticity model includes a flow control system
 that monitors outstanding tasks and available compute capacity.
-This flow control monitor, which can be extended or implemented by users,
-determines when to trigger scaling (in or out) events to match
-workload needs.
+This flow control monitor determines when to trigger scaling (in or out)
+events to match workload needs.
 
 The animated diagram below shows how blocks are elastically
 managed within an executor. The Parsl configuration for an executor

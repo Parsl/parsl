@@ -4,7 +4,7 @@ import time
 
 from parsl.channels import LocalChannel
 from parsl.launchers import SimpleLauncher
-from parsl.providers.provider_base import ExecutionProvider, JobStatus, JobState
+from parsl.providers.base import ExecutionProvider, JobStatus, JobState
 from parsl.providers.error import ScriptPathError
 from parsl.utils import RepresentationMixin
 
@@ -237,10 +237,6 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
                 rets.append(False)
             self.resources[job_id]['status'] = JobStatus(JobState.COMPLETED)
         return rets
-
-    @property
-    def scaling_enabled(self):
-        return True
 
     @property
     def label(self):

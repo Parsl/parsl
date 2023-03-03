@@ -39,6 +39,7 @@ def fresh_config():
     return Config(
         executors=[
             HighThroughputExecutor(
+                address="127.0.0.1",
                 label="htex_Local",
                 working_dir=working_dir,
                 storage_access=[FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging()],
@@ -54,6 +55,7 @@ def fresh_config():
                     max_blocks=5,
                     launcher=SingleNodeLauncher(),
                 ),
+                block_error_handler=False
             )
         ],
         strategy='simple',
@@ -64,7 +66,8 @@ def fresh_config():
                         hub_port=55055,
                         monitoring_debug=False,
                         resource_monitoring_interval=1,
-        )
+        ),
+        usage_tracking=True
     )
 
 

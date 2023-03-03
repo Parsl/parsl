@@ -4,7 +4,7 @@ import time
 
 from parsl.channels import LocalChannel
 from parsl.launchers import AprunLauncher
-from parsl.providers.provider_base import JobState, JobStatus
+from parsl.providers.base import JobState, JobStatus
 from parsl.providers.torque.template import template_string
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.utils import RepresentationMixin
@@ -103,7 +103,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         self.resources = {}
 
     def _status(self):
-        ''' Internal: Do not call. Returns the status list for a list of job_ids
+        '''Returns the status list for a list of job_ids
 
         Args:
               self
