@@ -58,6 +58,13 @@ class JobStatus(object):
 
     def __repr__(self) -> str:
         if self.message is not None:
+            extra = f"state={self.state} message={self.message}".format(self.state, self.message)
+        else:
+            extra = f"state={self.state}".format(self.state)
+        return f"<{type(self).__module__}.{type(self).__qualname__} object at {hex(id(self))}, {extra}>"
+
+    def __str__(self) -> str:
+        if self.message is not None:
             return "{} ({})".format(self.state, self.message)
         else:
             return "{}".format(self.state)
@@ -138,6 +145,7 @@ class ExecutionProvider(metaclass=ABCMeta):
                                 |
                                 +-------------------
      """
+
     _cores_per_node = None  # type: Optional[int]
     _mem_per_node = None  # type: Optional[float]
 
@@ -213,8 +221,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         variable PARSL_MEMORY_GB before executing submitted commands.
 
         If this property is set, executors may use it to calculate how many tasks can
-        run concurrently per node. This information is used by dataflow.Strategy to estimate
-        the resources required to run all outstanding tasks.
+        run concurrently per node.
         """
         return self._mem_per_node
 
@@ -231,8 +238,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         variable PARSL_CORES before executing submitted commands.
 
         If this property is set, executors may use it to calculate how many tasks can
-        run concurrently per node. This information is used by dataflow.Strategy to estimate
-        the resources required to run all outstanding tasks.
+        run concurrently per node.
         """
         return self._cores_per_node
 

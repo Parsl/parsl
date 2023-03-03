@@ -116,7 +116,7 @@ class Manager(object):
         logger.debug("Return from heartbeat : {}".format(r))
 
     def recv_result_from_workers(self):
-        """ Receives a results from the MPI worker pool and send it out via 0mq
+        """ Receives a results from the MPI worker pool and send it out via zmq
 
         Returns:
         --------
@@ -141,7 +141,7 @@ class Manager(object):
         return worker_rank
 
     def pull_tasks(self, kill_event):
-        """ Pulls tasks from the incoming tasks 0mq pipe onto the internal
+        """ Pulls tasks from the incoming tasks zmq pipe onto the internal
         pending task queue
 
         Parameters:
@@ -217,7 +217,7 @@ class Manager(object):
                     break
 
     def push_results(self, kill_event):
-        """ Listens on the pending_result_queue and sends out results via 0mq
+        """ Listens on the pending_result_queue and sends out results via zmq
 
         Parameters:
         -----------
@@ -439,31 +439,6 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
     logger.addHandler(handler)
 
 
-def set_stream_logger(name='parsl', level=logging.DEBUG, format_string=None):
-    """Add a stream log handler.
-
-    Args:
-         - name (string) : Set the logger name.
-         - level (logging.LEVEL) : Set to logging.DEBUG by default.
-         - format_string (sting) : Set to None by default.
-
-    Returns:
-         - None
-    """
-    if format_string is None:
-        format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
-        # format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-
-    global logger
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
-    handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -490,7 +465,6 @@ if __name__ == "__main__":
 
     os.makedirs(args.logdir, exist_ok=True)
 
-    # set_stream_logger()
     try:
         if rank == 0:
             start_file_logger('{}/manager.mpi_rank_{}.log'.format(args.logdir, rank),

@@ -90,13 +90,19 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         raise NotImplementedError
 
-    def shutdown(self, block=False):
-        """Shutdown the ThreadPool.
+    def shutdown(self, block=True):
+        """Shutdown the ThreadPool. The underlying concurrent.futures thread pool
+        implementation will not terminate tasks that are being executed, because it
+        does not provide a mechanism to do that. With block set to false, this will
+        return immediately and it will appear as if the DFK is shut down, but
+        the python process will not be able to exit until the thread pool has
+        emptied out by task completions. In either case, this can be a very long wait.
 
         Kwargs:
             - block (Bool): To block for confirmations or not
 
         """
+        logger.debug("Shutting down executor, which involves waiting for running tasks to complete")
         x = self.executor.shutdown(wait=block)
         logger.debug("Done with executor shutdown")
         return x

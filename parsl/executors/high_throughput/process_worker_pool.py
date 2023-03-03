@@ -36,7 +36,7 @@ HEARTBEAT_CODE = (2 ** 32) - 1
 class Manager(object):
     """ Manager manages task execution by the workers
 
-                |         0mq              |    Manager         |   Worker Processes
+                |         zmq              |    Manager         |   Worker Processes
                 |                          |                    |
                 | <-----Request N task-----+--Count task reqs   |      Request task<--+
     Interchange | -------------------------+->Receive task batch|          |          |
@@ -150,7 +150,7 @@ class Manager(object):
         self.result_outgoing.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         self.result_outgoing.setsockopt(zmq.LINGER, 0)
         self.result_outgoing.connect(result_q_url)
-        logger.info("Manager connected")
+        logger.info("Manager connected to interchange")
 
         self.uid = uid
         self.block_id = block_id
@@ -222,12 +222,12 @@ class Manager(object):
         """ Send heartbeat to the incoming task queue
         """
         heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
-        r = self.task_incoming.send(heartbeat)
-        logger.debug("Return from heartbeat: {}".format(r))
+        self.task_incoming.send(heartbeat)
+        logger.debug("Sent heartbeat")
 
     @wrap_with_logs
     def pull_tasks(self, kill_event):
-        """ Pull tasks from the incoming tasks 0mq pipe onto the internal
+        """ Pull tasks from the incoming tasks zmq pipe onto the internal
         pending task queue
 
         Parameters:
@@ -253,8 +253,8 @@ class Manager(object):
             ready_worker_count = self.ready_worker_queue.qsize()
             pending_task_count = self.pending_task_queue.qsize()
 
-            logger.debug("[TASK_PULL_THREAD] ready workers:{}, pending tasks:{}".format(ready_worker_count,
-                                                                                        pending_task_count))
+            logger.debug("[TASK_PULL_THREAD] ready workers: {}, pending tasks: {}".format(ready_worker_count,
+                                                                                          pending_task_count))
 
             if time.time() > last_beat + self.heartbeat_period:
                 self.heartbeat_to_incoming()
@@ -308,7 +308,7 @@ class Manager(object):
 
     @wrap_with_logs
     def push_results(self, kill_event):
-        """ Listens on the pending_result_queue and sends out results via 0mq
+        """ Listens on the pending_result_queue and sends out results via zmq
 
         Parameters:
         -----------
@@ -350,7 +350,7 @@ class Manager(object):
 
     @wrap_with_logs
     def worker_watchdog(self, kill_event):
-        """ Listens on the pending_result_queue and sends out results via 0mq
+        """Keeps workers alive.
 
         Parameters:
         -----------
@@ -416,7 +416,7 @@ class Manager(object):
             p.start()
             self.procs[worker_id] = p
 
-        logger.debug("Manager synced with workers")
+        logger.debug("Workers started")
 
         self._task_puller_thread = threading.Thread(target=self.pull_tasks,
                                                     args=(self._kill_event,),

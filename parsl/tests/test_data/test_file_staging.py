@@ -1,9 +1,7 @@
 import os
 import pytest
-import parsl
 from parsl.app.app import bash_app
 from parsl.data_provider.files import File
-from parsl.tests.configs.local_threads import config
 
 
 @bash_app
@@ -88,11 +86,3 @@ def test_increment(depth=5):
             data = open(fu.result().filepath, 'r').read().strip()
             assert data == str(
                 key), "[TEST] incr failed for key:{0} got:{1}".format(key, data)
-
-
-if __name__ == '__main__':
-    parsl.clear()
-    parsl.load(config)
-
-    test_files()
-    test_increment()

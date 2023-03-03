@@ -23,7 +23,7 @@ from parsl.app.futures import DataFuture
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
-from parsl.dataflow.error import BadCheckpoint, ConfigurationError, DependencyError, DuplicateTaskError
+from parsl.dataflow.error import BadCheckpoint, ConfigurationError, DependencyError
 from parsl.dataflow.flow_control import FlowControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
@@ -31,6 +31,7 @@ from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.usage_tracking.usage import UsageTracker
 from parsl.executors.threads import ThreadPoolExecutor
+from parsl.process_loggers import wrap_with_logs
 from parsl.providers.provider_base import JobStatus, JobState
 from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints
 
@@ -496,7 +497,7 @@ class DataFlowKernel(object):
         self.memoizer.update_memo(task_record, future)
 
         if self.checkpoint_mode == 'task_exit':
-            self.checkpoint(tasks=[task_id])
+            self.checkpoint(tasks=[task_record])
 
         # If checkpointing is turned on, wiping app_fu is left to the checkpointing code
         # else we wipe it here.
@@ -656,9 +657,10 @@ class DataFlowKernel(object):
             logger.exception("Task {} requested invalid executor {}: config is\n{}".format(task_id, executor_label, self._config))
             raise ValueError("Task {} requested invalid executor {}".format(task_id, executor_label))
 
+        try_id = task_record['fail_count']
+
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
-            try_id = task_record['fail_count']
             executable = self.monitoring.monitor_wrapper(executable, try_id, task_id,
                                                          self.monitoring.monitoring_hub_url,
                                                          self.run_id,
@@ -674,7 +676,10 @@ class DataFlowKernel(object):
 
         self._send_task_log_info(task_record)
 
-        logger.info("Task {} launched on executor {}".format(task_id, executor.label))
+        if hasattr(exec_fu, "parsl_executor_task_id"):
+            logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label} with executor id {exec_fu.parsl_executor_task_id}")
+        else:
+            logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}")
 
         self._log_std_streams(task_record)
 
@@ -944,11 +949,9 @@ class DataFlowKernel(object):
                     'kwargs': app_kwargs,
                     'app_fu': app_fu})
 
-        if task_id in self.tasks:
-            raise DuplicateTaskError(
-                "internal consistency error: Task {0} already exists in task list".format(task_id))
-        else:
-            self.tasks[task_id] = task_def
+        assert task_id not in self.tasks
+
+        self.tasks[task_id] = task_def
 
         # Get the list of dependencies for the task
         depends = self._gather_all_deps(app_args, app_kwargs)
@@ -1074,7 +1077,10 @@ class DataFlowKernel(object):
 
     def atexit_cleanup(self):
         if not self.cleanup_called:
+            logger.info("DFK cleanup because python process is exiting")
             self.cleanup()
+        else:
+            logger.info("python process is exiting, but DFK has already been cleaned up")
 
     def wait_for_current_tasks(self):
         """Waits for all tasks in the task list to be completed, by waiting for their
@@ -1099,6 +1105,7 @@ class DataFlowKernel(object):
 
         logger.info("All remaining tasks completed")
 
+    @wrap_with_logs
     def cleanup(self):
         """DataFlowKernel cleanup.
 
@@ -1134,6 +1141,7 @@ class DataFlowKernel(object):
 
         logger.info("Closing flowcontrol")
         self.flowcontrol.close()
+        logger.info("Terminated flow control")
 
         logger.info("Scaling in and shutting down executors")
 
@@ -1152,14 +1160,17 @@ class DataFlowKernel(object):
                         self.monitoring.send(MessageType.BLOCK_INFO, msg)
                 logger.info(f"Shutting down executor {executor.label}")
                 executor.shutdown()
+                logger.info(f"Shut down executor {executor.label}")
             elif executor.managed and executor.bad_state_is_set:  # and bad_state_is_set
                 logger.warning(f"Not shutting down executor {executor.label} because it is in bad state")
             else:
                 logger.info(f"Not shutting down executor {executor.label} because it is unmanaged")
 
+        logger.info("Terminated executors")
         self.time_completed = datetime.datetime.now()
 
         if self.monitoring:
+            logger.info("Sending final monitoring message")
             self.monitoring.send(MessageType.WORKFLOW_INFO,
                                  {'tasks_failed_count': self.task_state_counts[States.failed],
                                   'tasks_completed_count': self.task_state_counts[States.exec_done],
@@ -1168,7 +1179,9 @@ class DataFlowKernel(object):
                                   'run_id': self.run_id, 'rundir': self.run_dir,
                                   'exit_now': True})
 
+            logger.info("Terminating monitoring")
             self.monitoring.close()
+            logger.info("Terminated monitoring")
 
         logger.info("DFK cleanup complete")
 
@@ -1179,7 +1192,7 @@ class DataFlowKernel(object):
         checkpointed is checkpointed to a file.
 
         Kwargs:
-            - tasks (List of task ids) : List of task ids to checkpoint. Default=None
+            - tasks (List of task records) : List of task ids to checkpoint. Default=None
                                          if set to None, we iterate over all tasks held by the DFK.
 
         .. note::
@@ -1195,7 +1208,7 @@ class DataFlowKernel(object):
             if tasks:
                 checkpoint_queue = tasks
             else:
-                checkpoint_queue = list(self.tasks.keys())
+                checkpoint_queue = list(self.tasks.values())
 
             checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
             checkpoint_dfk = checkpoint_dir + '/dfk.pkl'
@@ -1213,11 +1226,8 @@ class DataFlowKernel(object):
             count = 0
 
             with open(checkpoint_tasks, 'ab') as f:
-                for task_id in checkpoint_queue:
-                    if task_id not in self.tasks:
-                        continue
-
-                    task_record = self.tasks[task_id]
+                for task_record in checkpoint_queue:
+                    task_id = task_record['id']
 
                     if task_record['app_fu'] is None:
                         continue

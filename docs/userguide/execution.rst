@@ -69,7 +69,7 @@ patterns.
 Parsl executors extend the Executor class offered by Python's
 concurrent.futures library, which allows Parsl to use 
 existing solutions in the Python Standard Library (e.g., ThreadPoolExecutor)
-and from other packages such as IPyParallel. Parsl
+and from other packages such as Work Queue. Parsl
 extends the concurrent.futures executor interface to support 
 additional capabilities such as automatic scaling of execution resources,
 monitoring, deferred initialization, and methods to set working

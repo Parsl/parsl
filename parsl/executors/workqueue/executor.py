@@ -29,6 +29,7 @@ from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.provider_base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
 from parsl.executors.workqueue import exec_parsl_function
+from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
 import typeguard
@@ -279,7 +280,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     def _get_launch_command(self, block_id):
         # this executor uses different terminology for worker/launch
         # commands than in htex
-        return self.worker_command
+        return f"PARSL_WORKER_BLOCK_ID={block_id} {self.worker_command}"
 
     def start(self):
         """Create submit process and collector thread to create, send, and
@@ -315,11 +316,11 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                  "project_password_file": self.project_password_file,
                                  "project_name": self.project_name}
         self.submit_process = multiprocessing.Process(target=_work_queue_submit_wait,
-                                                      name="submit_thread",
+                                                      name="WorkQueue-Submit-Process",
                                                       kwargs=submit_process_kwargs)
 
         self.collector_thread = threading.Thread(target=self._collect_work_queue_results,
-                                                 name="wait_thread")
+                                                 name="WorkQueue-collector-thread")
         self.collector_thread.daemon = True
 
         # Begin both processes
@@ -433,7 +434,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Create a Future object and have it be mapped from the task ID in the tasks dictionary
         fu = Future()
+        fu.parsl_executor_task_id = task_id
+        logger.debug("Getting tasks_lock to set WQ-level task entry")
         with self.tasks_lock:
+            logger.debug("Got tasks_lock to set WQ-level task entry")
             self.tasks[str(task_id)] = fu
 
         logger.debug("Creating task {} for function {} with args {}".format(task_id, func, args))
@@ -617,7 +621,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             try:
                 self.scale_out(blocks=self.provider.init_blocks)
             except Exception as e:
-                logger.debug("Scaling out failed: {}".format(e))
+                logger.error("Initial block scaling out failed: {}".format(e))
                 raise e
 
     @property
@@ -654,16 +658,21 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the Work Queue system submission.
         """
+        logger.debug("Work Queue shutdown started")
         self.should_stop.value = True
 
         # Remove the workers that are still going
         kill_ids = [self.blocks[block] for block in self.blocks.keys()]
         if self.provider:
+            logger.debug("Cancelling blocks")
             self.provider.cancel(kill_ids)
 
+        logger.debug("Joining on submit process")
         self.submit_process.join()
+        logger.debug("Joining on collector thread")
         self.collector_thread.join()
 
+        logger.debug("Work Queue shutdown completed")
         return True
 
     def scaling_enabled(self):
@@ -678,6 +687,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             self._run_dir = value
         return self._run_dir
 
+    @wrap_with_logs
     def _collect_work_queue_results(self):
         """Sets the values of tasks' futures of tasks completed by work queue.
         """
@@ -705,7 +715,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     # work queue modes, such as resource exhaustion.
                     future.set_exception(WorkQueueTaskFailure(task_report.reason, task_report.result))
         finally:
+            logger.debug("Marking all outstanding tasks as failed")
+            logger.debug("Acquiring tasks_lock")
             with self.tasks_lock:
+                logger.debug("Acquired tasks_lock")
                 # set exception for tasks waiting for results that work queue did not execute
                 for fu in self.tasks.values():
                     if not fu.done():
@@ -713,6 +726,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Exiting Collector Thread")
 
 
+@wrap_with_logs
 def _work_queue_submit_wait(task_queue=multiprocessing.Queue(),
                             launch_cmd=None,
                             env=None,

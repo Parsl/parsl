@@ -1,8 +1,8 @@
 import os
 import socket
+import time
 import pickle
 import logging
-import time
 import typeguard
 import datetime
 import zmq
@@ -11,7 +11,7 @@ from functools import wraps
 import queue
 from abc import ABCMeta, abstractmethod
 from parsl.multiprocessing import ForkProcess, SizedQueue
-from multiprocessing import Process, Queue
+from multiprocessing import Event, Process, Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
@@ -19,6 +19,7 @@ from parsl.utils import setproctitle
 from parsl.serialize import deserialize
 
 from parsl.monitoring.message_type import MessageType
+from parsl.monitoring.types import AddressedMonitoringMessage, TaggedMonitoringMessage
 from typing import cast, Any, Callable, Dict, List, Optional, Union
 
 from parsl.serialize import serialize
@@ -26,6 +27,7 @@ from parsl.serialize import serialize
 _db_manager_excepts: Optional[Exception]
 
 from typing import Optional, Tuple
+
 
 try:
     from parsl.monitoring.db_manager import dbm_starter
@@ -62,6 +64,7 @@ def start_file_logger(filename: str, name: str = 'monitoring', level: int = logg
 
     logger = logging.getLogger(name)
     logger.setLevel(level)
+    logger.propagate = False
     handler = logging.FileHandler(filename)
     handler.setLevel(level)
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
@@ -120,9 +123,7 @@ class FilesystemRadio(MonitoringRadio):
 
         tmp_filename = f"{self.tmp_path}/{unique_id}"
         new_filename = f"{self.new_path}/{unique_id}"
-        buffer = ((MessageType.RESOURCE_INFO, (self.source_id,   # Identifier for manager
-                   int(time.time()),  # epoch timestamp
-                   message)), "NA")
+        buffer = ((MessageType.RESOURCE_INFO, message), "NA")
 
         # this will write the message out then atomically
         # move it into new/, so that a partially written
@@ -165,9 +166,7 @@ class HTEXRadio(MonitoringRadio):
         import parsl.executors.high_throughput.monitoring_info
 
         try:
-            buffer = (MessageType.RESOURCE_INFO, (self.source_id,   # Identifier for manager
-                      int(time.time()),  # epoch timestamp
-                      message))
+            buffer = (MessageType.RESOURCE_INFO, message)
         except Exception:
             logging.exception("Exception during pickling", exc_info=True)
             return
@@ -235,9 +234,7 @@ class UDPRadio(MonitoringRadio):
             None
         """
         try:
-            buffer = pickle.dumps((self.source_id,   # Identifier for manager
-                                   int(time.time()),  # epoch timestamp
-                                   message))
+            buffer = pickle.dumps(message)
         except Exception:
             logging.exception("Exception during pickling", exc_info=True)
             return
@@ -352,9 +349,9 @@ class MonitoringHub(RepresentationMixin):
         comm_q = SizedQueue(maxsize=10)  # type: Queue[Union[Tuple[int, int], str]]
         self.exception_q = SizedQueue(maxsize=10)  # type: Queue[Tuple[str, str]]
         self.priority_msgs = SizedQueue()  # type: Queue[Tuple[Any, int]]
-        self.resource_msgs = SizedQueue()  # type: Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]
-        self.node_msgs = SizedQueue()  # type: Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]
-        self.block_msgs = SizedQueue()  # type:  Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]
+        self.resource_msgs = SizedQueue()  # type: Queue[AddressedMonitoringMessage]
+        self.node_msgs = SizedQueue()  # type: Queue[AddressedMonitoringMessage]
+        self.block_msgs = SizedQueue()  # type:  Queue[AddressedMonitoringMessage]
 
         self.router_proc = ForkProcess(target=router_starter,
                                        args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),
@@ -418,7 +415,7 @@ class MonitoringHub(RepresentationMixin):
 
     # TODO: tighten the Any message format
     def send(self, mtype: MessageType, message: Any) -> None:
-        self.logger.debug("Sending message {}, {}".format(mtype, message))
+        self.logger.debug("Sending message type {}".format(mtype))
         try:
             self._dfk_channel.send_pyobj((mtype, message))
         except zmq.Again:
@@ -449,7 +446,11 @@ class MonitoringHub(RepresentationMixin):
             self.router_proc.join()
             self.logger.debug("Finished waiting for router termination")
             if len(exception_msgs) == 0:
+                self.logger.debug("Sending STOP to DBM")
                 self.priority_msgs.put(("STOP", 0))
+            else:
+                self.logger.debug("Not sending STOP to DBM, because there were DBM exceptions")
+            self.logger.debug("Waiting for DB termination")
             self.dbm_proc.join()
             self.logger.debug("Finished waiting for DBM termination")
 
@@ -475,6 +476,7 @@ class MonitoringHub(RepresentationMixin):
         """
         @wraps(f)
         def wrapped(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
+            terminate_event = Event()
             # Send first message to monitoring router
             send_first_message(try_id,
                                task_id,
@@ -494,7 +496,9 @@ class MonitoringHub(RepresentationMixin):
                                        run_id,
                                        radio_mode,
                                        logging_level,
-                                       sleep_dur, run_dir),
+                                       sleep_dur,
+                                       run_dir,
+                                       terminate_event),
                                  name="Monitor-Wrapper-{}".format(task_id))
                 pp.start()
                 p = pp
@@ -508,20 +512,29 @@ class MonitoringHub(RepresentationMixin):
             try:
                 return f(*args, **kwargs)
             finally:
+                # There's a chance of zombification if the workers are killed by some signals (?)
+                if p:
+                    terminate_event.set()
+                    p.join(30)  # 30 second delay for this -- this timeout will be hit in the case of an unusually long end-of-loop
+                    if p.exitcode is None:
+                        logger.warn("Event-based termination of monitoring helper took too long. Using process-based termination.")
+                        p.terminate()
+                        # DANGER: this can corrupt shared queues according to docs.
+                        # So, better that the above termination event worked.
+                        # This is why this log message is a warning
+                        p.join()
+
                 send_last_message(try_id,
                                   task_id,
                                   monitoring_hub_url,
                                   run_id,
                                   radio_mode, run_dir)
-                # There's a chance of zombification if the workers are killed by some signals
-                if p:
-                    p.terminate()
-                    p.join()
+
         return wrapped
 
 
 @wrap_with_logs
-def filesystem_receiver(logdir: str, q: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]", run_dir: str) -> None:
+def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]", run_dir: str) -> None:
     logger = start_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
                                name="monitoring_filesystem_radio",
                                level=logging.DEBUG)
@@ -548,7 +561,7 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[Tuple[Tuple[MessageType, Di
                     message = deserialize(f.read())
                 logger.info(f"Message received is: {message}")
                 assert(isinstance(message, tuple))
-                q.put(cast(Any, message))  # the type of message is complicated to assert, so cast to Any
+                q.put(cast(AddressedMonitoringMessage, message))
                 os.remove(full_path_filename)
             except Exception:
                 logger.exception(f"Exception processing {filename} - probably will be retried next iteration")
@@ -627,55 +640,50 @@ class MonitoringRouter:
                                                            max_port=hub_port_range[1])
 
     def start(self,
-              priority_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
-              node_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
-              block_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
-              resource_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], Any]]") -> None:
+              priority_msgs: "queue.Queue[AddressedMonitoringMessage]",
+              node_msgs: "queue.Queue[AddressedMonitoringMessage]",
+              block_msgs: "queue.Queue[AddressedMonitoringMessage]",
+              resource_msgs: "queue.Queue[AddressedMonitoringMessage]") -> None:
         try:
-            while True:
+            router_keep_going = True
+            while router_keep_going:
                 try:
                     data, addr = self.sock.recvfrom(2048)
-                    msg = pickle.loads(data)
-                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
-                    resource_msgs.put(((MessageType.RESOURCE_INFO, msg), addr))
+                    resource_msg = pickle.loads(data)
+                    self.logger.debug("Got UDP Message from {}: {}".format(addr, resource_msg))
+                    resource_msgs.put(((MessageType.RESOURCE_INFO, resource_msg), addr))
                 except socket.timeout:
                     pass
 
                 try:
-                    msg = self.ic_channel.recv_pyobj()
-                    self.logger.debug("Got ZMQ Message: {}".format(msg))
-                    assert isinstance(msg, tuple), "IC Channel expects only tuples, got {}".format(msg)
-                    assert len(msg) >= 1, "IC Channel expects tuples of length at least 1, got {}".format(msg)
-                    if msg[0] == MessageType.NODE_INFO:
-                        assert len(msg) >= 1, "IC Channel expects NODE_INFO tuples of length at least 3, got {}".format(msg)
-                        msg[2]['last_heartbeat'] = datetime.datetime.fromtimestamp(msg[2]['last_heartbeat'])
-                        msg[2]['run_id'] = self.run_id
-                        msg[2]['timestamp'] = msg[1]
+                    dfk_loop_start = time.time()
+                    while time.time() - dfk_loop_start < 1.0:  # TODO make configurable
+                        # note that nothing checks that msg really is of the annotated type
+                        msg: TaggedMonitoringMessage
+                        msg = self.ic_channel.recv_pyobj()
 
-                        # ((tag, dict), addr)
-                        node_msg = ((msg[0], msg[2]), 0)
-                        node_msgs.put(node_msg)
-                    elif msg[0] == MessageType.RESOURCE_INFO:
-                        resource_msgs.put(cast(Any, (msg, 0)))
-                    elif msg[0] == MessageType.BLOCK_INFO:
-                        block_msgs.put(cast(Any, (msg, 0)))
-                    elif msg[0] == MessageType.TASK_INFO:
-                        # priority_msgs has a particular message format
-                        # that msg doesn't necessarily match unless msg[0] == TASK_INFO
-                        # which can't be expressed either as mypy types or
-                        # as assert isinstanceof
-                        # so cast to any here
-                        # it might be better to let msg stay as Any rather than
-                        # messing with type annotations, and instead do the
-                        # message format descriptions as human readable text?
-                        # which is not machine checkable... but this is not machine checkable.
-                        priority_msgs.put((cast(Any, msg), 0))
-                    elif msg[0] == MessageType.WORKFLOW_INFO:
-                        priority_msgs.put((cast(Any, msg), 0))
-                        if 'exit_now' in msg[1] and msg[1]['exit_now']:
-                            break
-                    else:
-                        self.logger.error(f"Discarding message from interchange with unknown type {msg[0].value}")
+                        assert isinstance(msg, tuple), "IC Channel expects only tuples, got {}".format(msg)
+                        assert len(msg) >= 1, "IC Channel expects tuples of length at least 1, got {}".format(msg)
+                        assert len(msg) == 2, "IC Channel expects message tuples of exactly length 2, got {}".format(msg)
+
+                        msg_0: AddressedMonitoringMessage
+                        msg_0 = (msg, 0)
+
+                        if msg[0] == MessageType.NODE_INFO:
+                            msg[1]['run_id'] = self.run_id
+                            node_msgs.put(msg_0)
+                        elif msg[0] == MessageType.RESOURCE_INFO:
+                            resource_msgs.put(msg_0)
+                        elif msg[0] == MessageType.BLOCK_INFO:
+                            block_msgs.put(msg_0)
+                        elif msg[0] == MessageType.TASK_INFO:
+                            priority_msgs.put(msg_0)
+                        elif msg[0] == MessageType.WORKFLOW_INFO:
+                            priority_msgs.put(msg_0)
+                            if 'exit_now' in msg[1] and msg[1]['exit_now']:
+                                router_keep_going = False
+                        else:
+                            self.logger.error(f"Discarding message from interchange with unknown type {msg[0].value}")
                 except zmq.Again:
                     pass
                 except Exception:
@@ -705,10 +713,10 @@ class MonitoringRouter:
 @wrap_with_logs
 def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    exception_q: "queue.Queue[Tuple[str, str]]",
-                   priority_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
-                   node_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
-                   block_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], int]]",
-                   resource_msgs: "queue.Queue[Tuple[Tuple[MessageType, Dict[str, Any]], str]]",
+                   priority_msgs: "queue.Queue[AddressedMonitoringMessage]",
+                   node_msgs: "queue.Queue[AddressedMonitoringMessage]",
+                   block_msgs: "queue.Queue[AddressedMonitoringMessage]",
+                   resource_msgs: "queue.Queue[AddressedMonitoringMessage]",
 
                    hub_address: str,
                    hub_port: Optional[int],
@@ -800,8 +808,12 @@ def monitor(pid: int,
             monitoring_hub_url: str,
             run_id: str,
             radio_mode: str,
-            logging_level: int = logging.INFO,
-            sleep_dur: float = 10, run_dir: str = "./") -> None:
+            logging_level: int,
+            sleep_dur: float,
+            run_dir: str,
+            # removed all defaults because unused and there's no meaningful default for terminate_event.
+            # these probably should become named arguments, with a *, and named at invocation.
+            terminate_event: Any) -> None:  # cannot be Event because of multiprocessing type weirdness.
     """Internal
     Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
 
@@ -814,7 +826,6 @@ def monitor(pid: int,
     import logging
     import platform
     import psutil
-    import time
 
     radio: MonitoringRadio
     if radio_mode == "udp":
@@ -840,10 +851,10 @@ def monitor(pid: int,
 
     children_user_time = {}  # type: Dict[int, float]
     children_system_time = {}  # type: Dict[int, float]
-    total_children_user_time = 0.0
-    total_children_system_time = 0.0
-    while True:
+
+    while not terminate_event.is_set():
         logging.debug("start of monitoring loop")
+
         try:
             d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
             d["run_id"] = run_id
@@ -878,8 +889,6 @@ def monitor(pid: int,
                     d['psutil_process_' + str(k)] += v
                 child_user_time = child.cpu_times().user
                 child_system_time = child.cpu_times().system
-                total_children_user_time += child_user_time - children_user_time.get(child.pid, 0)
-                total_children_system_time += child_system_time - children_system_time.get(child.pid, 0)
                 children_user_time[child.pid] = child_user_time
                 children_system_time[child.pid] = child_system_time
                 d['psutil_process_memory_virtual'] += child.memory_info().vms
@@ -892,6 +901,12 @@ def monitor(pid: int,
                     logging.exception("Exception reading IO counters for child {k}. Recorded IO usage may be incomplete".format(k=k), exc_info=True)
                     d['psutil_process_disk_write'] += 0
                     d['psutil_process_disk_read'] += 0
+            total_children_user_time = 0.0
+            for child_pid in children_user_time:
+                total_children_user_time += children_user_time[child_pid]
+            total_children_system_time = 0.0
+            for child_pid in children_system_time:
+                total_children_system_time += children_system_time[child_pid]
             d['psutil_process_time_user'] += total_children_user_time
             d['psutil_process_time_system'] += total_children_system_time
             logging.debug("sending message")
@@ -900,4 +915,6 @@ def monitor(pid: int,
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
 
         logging.debug("sleeping")
-        time.sleep(sleep_dur)
+        terminate_event.wait(timeout=sleep_dur)
+
+    logging.debug("End of monitoring helper")

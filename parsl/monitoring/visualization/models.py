@@ -58,6 +58,8 @@ class Task(db.Model):
     run_id = db.Column('run_id', db.Text, nullable=False)
     task_func_name = db.Column('task_func_name', db.Text, nullable=False)
     task_depends = db.Column('task_depends', db.Text, nullable=True)
+    task_time_invoked = db.Column(
+        'task_time_invoked', db.DateTime, nullable=True)
     task_time_returned = db.Column(
         'task_time_returned', db.DateTime, nullable=True)
     task_memoize = db.Column('task_memoize', db.Text, nullable=False)
