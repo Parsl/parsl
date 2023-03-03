@@ -558,6 +558,10 @@ class DataFlowKernel(object):
         ready to run - launch_if_ready will not incorrectly launch that
         task.
 
+        It is also not an error to call launch_if_ready on a task that has
+        already been launched - launch_if_ready will not re-launch that
+        task.
+
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
         """
