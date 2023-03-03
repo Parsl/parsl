@@ -88,8 +88,8 @@ class InnerError(RuntimeError):
 
 
 @python_app
-def inner_error():
-    raise InnerError("Error A")
+def inner_error(s="X"):
+    raise InnerError("Error " + s)
 
 
 @join_app
@@ -97,8 +97,27 @@ def outer_error():
     return inner_error()
 
 
+@join_app
+def outer_two_errors():
+    return [inner_error("A"), inner_error("B")]
+
+
 def test_error():
     f = outer_error()
     e = f.exception()
     assert isinstance(e, JoinError)
     assert isinstance(e.dependent_exceptions_tids[0][0], InnerError)
+
+
+def test_two_errors():
+    f = outer_two_errors()
+    e = f.exception()
+    assert isinstance(e, JoinError)
+
+    de0 = e.dependent_exceptions_tids[0][0]
+    assert isinstance(de0, InnerError)
+    assert de0.args[0] == "Error A"
+
+    de1 = e.dependent_exceptions_tids[1][0]
+    assert isinstance(de1, InnerError)
+    assert de1.args[0] == "Error B"
