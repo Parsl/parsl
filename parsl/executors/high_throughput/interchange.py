@@ -495,7 +495,7 @@ class Interchange(object):
                 if manager not in self._ready_managers:
                     logger.warning("Received a result from a un-registered manager: {}".format(manager))
                 else:
-                    logger.debug("Got {} result items in batch".format(len(all_messages)))
+                    logger.debug(f"Got {len(all_messages)} result items in batch from manager {manager}")
 
                     b_messages = []
 
@@ -516,6 +516,7 @@ class Interchange(object):
                         assert 'type' in r, f"Message is missing type entry: {r}"
                         if r['type'] == 'result':
                             try:
+                                logger.debug(f"Removing task {r['task_id']} from manager record {manager}")
                                 self._ready_managers[manager]['tasks'].remove(r['task_id'])
                             except Exception:
                                 # If we reach here, there's something very wrong.
@@ -529,9 +530,11 @@ class Interchange(object):
                         b_messages_to_send.append(b_message)
 
                     if b_messages_to_send:
+                        logger.debug("Sending messages on results_outgoing")
                         self.results_outgoing.send_multipart(b_messages_to_send)
+                        logger.debug("Sent messages on results_outgoing")
 
-                    logger.debug("Current tasks: {}".format(self._ready_managers[manager]['tasks']))
+                    logger.debug(f"Current tasks on manager {manager}: {self._ready_managers[manager]['tasks']}")
                     if len(self._ready_managers[manager]['tasks']) == 0 and self._ready_managers[manager]['idle_since'] is None:
                         self._ready_managers[manager]['idle_since'] = time.time()
                 logger.debug("leaving results_incoming section")
@@ -540,11 +543,12 @@ class Interchange(object):
                             time.time() - self._ready_managers[manager]['last_heartbeat'] > self.heartbeat_threshold]
             for manager in bad_managers:
                 logger.debug("Last: {} Current: {}".format(self._ready_managers[manager]['last_heartbeat'], time.time()))
-                logger.warning("Too many heartbeats missed for manager {}".format(manager))
+                logger.warning(f"Too many heartbeats missed for manager {manager} - removing manager")
                 if self._ready_managers[manager]['active']:
                     self._ready_managers[manager]['active'] = False
                     self._send_monitoring_info(hub_channel, manager)
 
+                logger.warning(f"Raising ManagerLost for htex tasks {self._ready_managers[manager]['tasks']} on missing manager")
                 for tid in self._ready_managers[manager]['tasks']:
                     try:
                         raise ManagerLost(manager, self._ready_managers[manager]['hostname'])
