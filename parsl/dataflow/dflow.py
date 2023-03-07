@@ -721,6 +721,7 @@ class DataFlowKernel(object):
             raise ValueError("Task {} requested invalid executor {}".format(task_id, executor_label))
 
         try_id = task_record['fail_count']
+        span_bind_sub("TASK", task_id, "TRY", (task_id, try_id))
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             event("DFK_LAUNCH_TASK_MONITORING_WRAP_START", "TRY", (task_id, try_id))

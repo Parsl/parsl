@@ -75,7 +75,7 @@ workqueue_mon_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex con
 
 
 .PHONY: config_local_test
-config_local_test: ## run all tests with workqueue_ex config
+config_local_test:
 	echo "$(MPI)"
 	parsl/executors/extreme_scale/install-mpi.sh $(MPI)
 	pip3 install ".[extreme_scale,monitoring]"

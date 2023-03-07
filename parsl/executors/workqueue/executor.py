@@ -120,8 +120,14 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         port: int
             TCP port on Parsl submission machine for Work Queue workers
-            to connect to. Workers will specify this port number when
-            trying to connect to Parsl. Default is 9123.
+            to connect to. Workers will connect to Parsl using this port.
+
+            If 0, Work Queue will allocate a port number automatically.
+            In this case, environment variables can be used to influence the
+            choice of port, documented here:
+            https://ccl.cse.nd.edu/software/manuals/api/html/work__queue_8h.html#a21714a10bcdfcf5c3bd44a96f5dcbda6
+
+            Default: 0.
 
         env: dict{str}
             Dictionary that contains the environmental variables that
@@ -316,12 +322,11 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         logger.debug("Starting WorkQueueExecutor")
 
+        self._port_mailbox = multiprocessing.Queue()
+
         logger.warning("BODGE: delay here for hack around often observed futex race...")
         time.sleep(15)
         logger.warning("BODGE: delay finished")
-
-        self._port_mailbox = multiprocessing.Manager().Namespace()
-        self._port_mailbox.port = None
 
         # Create a Process to perform WorkQueue submissions
         submit_process_kwargs = {"task_queue": self.task_queue,
@@ -354,11 +359,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.submit_process.start()
         self.collector_thread.start()
 
-        # wait for submit process to report the actual WQ port
-        while self._port_mailbox.port is None:  # TODO: check for submit_process not being ended
-            time.sleep(0.1)  # surely a better way to do this that also copes with submit_process dying and never returning a value?
+        self._chosen_port = self._port_mailbox.get(timeout=60)
 
-        logger.debug(f"Actual listening port is {self._port_mailbox.port}")
+        logger.debug(f"Chosen listening port is {self._chosen_port}")
 
         # Initialize scaling for the provider
         self.initialize_scaling()
@@ -545,7 +548,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if self.project_name:
             worker_command += ' -M {}'.format(self.project_name)
         else:
-            worker_command += ' {} {}'.format(self.address, self._port_mailbox.port)
+            worker_command += ' {} {}'.format(self.address, self._chosen_port)
 
         logger.debug("Using worker command: {}".format(worker_command))
         return worker_command
@@ -703,7 +706,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         return 1
 
     def scale_in(self, count):
-        """Scale in method. Not implemented.
+        """Scale in method.
         """
         # Obtain list of blocks to kill
         to_kill = list(self.blocks.keys())[:count]
@@ -776,7 +779,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 # at time of writing, that happens in a different process and
                 # it's not straightforward to get that value back to the main
                 # process where in-memory tracing is stored.
-                span_bind_sub("EXECUTOR_TASK", task_report.id, "WQ_TASK", task_report.wq_id)
+                span_bind_sub("EXECUTOR_TASK", int(task_report.id), "WQ_TASK", task_report.wq_id)
 
                 # Obtain the future from the tasks dictionary
                 with self.tasks_lock:
@@ -846,10 +849,11 @@ def _work_queue_submit_wait(*,
     try:
         logger.debug("Requested port {}".format(port))
         q = WorkQueue(port, debug_log=wq_debug_log)
-        port_mailbox.port = q.port
+        port_mailbox.put(q.port)
         logger.debug("Listening on port {}".format(q.port))
     except Exception as e:
         logger.error("Unable to create WorkQueue object: {}".format(e))
+        port_mailbox.put(None)
         raise e
 
     # Specify WorkQueue queue attributes

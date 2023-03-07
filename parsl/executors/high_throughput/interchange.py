@@ -339,7 +339,7 @@ class Interchange(object):
         poll_period = self.poll_period
 
         # for my hacking:
-        poll_period = 1000
+        # poll_period = 1000
         # because the executor level poll period also changes the worker pool poll period setting, which I want to experiment with separately.
         # This setting reduces the speed at which the interchange main loop
         # iterates. It will iterate once per this tmie, or when two of the
