@@ -32,18 +32,27 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+
+    - name: Check if this commit is already released
+      id: already_released
+      run: |
+        if git tag --contains HEAD | grep -e '^[0-9]\{4\}\.[0-9]\{2\}\.[0-9]\{2\}$' ; then echo ALREADY_RELEASED=Y >> $GITHUB_OUTPUT ; else echo ALREADY_RELEASED=N >> $GITHUB_OUTPUT; fi
+
     - name: Set up Python
+      if: steps.already_released.outputs.ALREADY_RELEASED == "N"
       uses: actions/setup-python@v3
       with:
         python-version: '3.x'
 
     - name: Set version info
       id: version_setter
+      if: steps.already_released.outputs.ALREADY_RELEASED == "N"
       run: echo "VERSION=$(date +'%Y.%m.%d')$SUFFIX" >> $GITHUB_OUTPUT
       env:
         SUFFIX: ${{ inputs.suffix }}
 
     - name: Install dependencies
+      if: steps.already_released.outputs.ALREADY_RELEASED == "N"
       run: |
         python -m pip install --upgrade pip wheel
         pip install build
@@ -55,6 +64,7 @@ jobs:
         VERSION: ${{ steps.version_setter.outputs.VERSION }}
 
     - name: Publish package
+      if: steps.already_released.outputs.ALREADY_RELEASED == "N"
       uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
       with:
         user: __token__
@@ -65,6 +75,7 @@ jobs:
         password: ${{ secrets.PYPI_API_TOKEN }}
 
     - name: Mint a tag
+      if: steps.already_released.outputs.ALREADY_RELEASED == "N"
       uses: rickstaa/action-create-tag@v1
       with:
         tag: ${{ steps.version_setter.outputs.VERSION }}
