@@ -18,7 +18,6 @@ class JobState(bytes, Enum):
         obj.status_name = status_name
         return obj
 
-    value: int
     terminal: bool
     status_name: str
 
