@@ -52,7 +52,43 @@ def linkcode_resolve(domain, info):
         return None
     if not info['module']:
         return None
-    filename = info['module'].replace('.', '/')
+
+    import importlib
+    m = importlib.import_module(info['module'])
+
+    # canonicalize to location of definition (vs original m which might
+    # only be a re-export of this defition)p
+
+    # because fullname can be (eg) DataFuture.filename and we want in that
+    # case to find the source of DataFuture
+    fullname = info['fullname'].split('.')[0]
+
+    try:
+        canonical_name = eval("m."+fullname).__module__
+    except AttributeError:
+        # some module attributes do not have a __module__ attribute, such as
+        # parsl.dataflow.states.FINAL_STATES, a list.
+        canonical_name = info['module']
+    except Exception as e:
+        raise RuntimeError(f"BENC: got exception {e!r} when looking up info {info}")
+
+    m = importlib.import_module(canonical_name)
+
+    # filename = m.__file__.replace('.', '/')
+    filename = m.__file__
+
+    assert filename.endswith(".py")
+    assert os.path.exists(filename)
+
+    filename = filename[:-3]
+
+    parsl_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
+
+    assert isinstance(filename, str), "filename should be a string"
+
+    assert filename.startswith(parsl_root), "filename should start at parsl root"
+    filename = filename[len(parsl_root):]
+
     return "http://github.com/Parsl/parsl/blob/master/{}.py".format(filename)
 
 # Add any paths that contain templates here, relative to this directory.
