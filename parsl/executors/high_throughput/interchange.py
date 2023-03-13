@@ -138,12 +138,14 @@ class Interchange(object):
         self.context = zmq.Context()
         self.task_incoming = self.context.socket(zmq.DEALER)
         self.task_incoming.set_hwm(0)
+        self.task_incoming.RCVTIMEO = 1000
         self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
         self.results_outgoing = self.context.socket(zmq.DEALER)
         self.results_outgoing.set_hwm(0)
         self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
 
         self.command_channel = self.context.socket(zmq.REP)
+        self.command_channel.RCVTIMEO = 1000
         self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
         logger.info("Connected to client")
 
