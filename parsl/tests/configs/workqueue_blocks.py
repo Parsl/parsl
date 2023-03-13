@@ -7,6 +7,6 @@ from parsl.data_provider.file_noop import NoOpFileStaging
 
 from parsl.providers import LocalProvider
 
-config = Config(executors=[WorkQueueExecutor(port=9000,
+config = Config(executors=[WorkQueueExecutor(port=0,
                                              storage_access=[FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging()],
                                              provider=LocalProvider(init_blocks=0, min_blocks=0, max_blocks=1))])
