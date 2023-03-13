@@ -12,6 +12,7 @@ import logging
 import queue
 import threading
 import json
+import signal
 
 from typing import cast, Any, Dict, Set
 
@@ -346,11 +347,15 @@ class Interchange(object):
                                                 name="Interchange-Command")
         self._command_thread.start()
 
-        kill_event = threading.Event()
+        self._kill_event = threading.Event()
 
         poller = zmq.Poller()
         poller.register(self.task_outgoing, zmq.POLLIN)
         poller.register(self.results_incoming, zmq.POLLIN)
+
+        # Placing this below zmq.poller hopefully to ensure that
+        # our signal handler will trigger
+        signal.signal(signal.SIGTERM, self.handle_sigterm)
 
         # These are managers which we should examine in an iteration
         # for scheduling a job (or maybe any other attention?).
@@ -358,10 +363,10 @@ class Interchange(object):
         # onto this list.
         interesting_managers: Set[bytes] = set()
 
-        while not kill_event.is_set():
+        while not self._kill_event.is_set():
             self.socks = dict(poller.poll(timeout=poll_period))
 
-            self.process_task_outgoing_incoming(interesting_managers, hub_channel, kill_event)
+            self.process_task_outgoing_incoming(interesting_managers, hub_channel, self._kill_event)
             self.process_results_incoming(interesting_managers, hub_channel)
             self.expire_bad_managers(interesting_managers, hub_channel)
             self.process_tasks_to_send(interesting_managers)
@@ -369,6 +374,10 @@ class Interchange(object):
         delta = time.time() - start
         logger.info("Processed {} tasks in {} seconds".format(self.count, delta))
         logger.warning("Exiting")
+
+    def handle_sigterm(self, *args, **kwargs):
+        print("YADU: DEAAADD*********************************************")
+        self._kill_event.set()
 
     def process_task_outgoing_incoming(self, interesting_managers, hub_channel, kill_event):
         # Listen for requests for work
