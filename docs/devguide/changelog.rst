@@ -626,7 +626,7 @@ New functionality
 
    More information on configuring is available in the :ref:`configuration-section` section.
 
-* `parsl.executors.ExtremeScaleExecutor` a new executor targeting supercomputer scale (>1000 nodes) workflows is now available.
+* `parsl.executors.extreme_scale.executor.ExtremeScaleExecutor` a new executor targeting supercomputer scale (>1000 nodes) workflows is now available.
 
   Here's a sample configuration for using this executor locally:
 
