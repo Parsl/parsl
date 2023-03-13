@@ -373,26 +373,19 @@ class DataFlowKernel(object):
                         task_record['joins'] = joinable
                         task_record['join_lock'] = threading.Lock()
                         joinable.add_done_callback(partial(self.handle_join_update, task_record))
-                    elif isinstance(joinable, list):  # TODO: should this be list or arbitrary iterable?
+                    elif isinstance(joinable, list) and [j for j in joinable if not isinstance(j, Future)] == []:
                         self.update_task_state(task_record, States.joining)
                         task_record['joins'] = joinable
                         task_record['join_lock'] = threading.Lock()
                         for inner_future in joinable:
-                            # TODO: typechecking and error setting here - perhaps
-                            # should put this and the one-future case inside a
-                            # try and perform the error handling there in an
-                            # except block? (it would be ok to go joining->failed
-                            # which doesn't happen in the type error case but
-                            # does happen in the joined-tasks fail case)
-                            # For now, this assert will cause a DFK hang
-                            assert isinstance(inner_future, Future)
                             inner_future.add_done_callback(partial(self.handle_join_update, task_record))
                     else:
                         task_record['time_returned'] = datetime.datetime.now()
                         self.update_task_state(task_record, States.failed)
                         task_record['time_returned'] = datetime.datetime.now()
                         with task_record['app_fu']._update_lock:
-                            task_record['app_fu'].set_exception(TypeError(f"join_app body must return a Future or list of Futures, got {type(joinable)}"))
+                            task_record['app_fu'].set_exception(
+                                TypeError(f"join_app body must return a Future or list of Futures, got {joinable} of type {type(joinable)}"))
 
         self._log_std_streams(task_record)
 
