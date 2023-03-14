@@ -95,7 +95,7 @@ class AdHocProvider(ExecutionProvider, RepresentationMixin):
 
         except IOError as e:
             logger.error("Failed writing to submit script: %s", script_filename)
-            raise (ScriptPathError(script_filename, e))
+            raise ScriptPathError(script_filename, e)
 
         return None
 
