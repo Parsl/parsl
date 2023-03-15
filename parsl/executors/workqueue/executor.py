@@ -201,7 +201,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         coprocess: bool
             Use Work Queue's coprocess facility to avoid launching a new Python
-            process for each task. Experimental. Default is False.
+            process for each task. Experimental.
+            This requires a version of Work Queue / cctools after commit
+            874df524516441da531b694afc9d591e8b134b73 (release 7.5.0 is too early).
+            Default is False.
     """
 
     radio_mode = "filesystem"
