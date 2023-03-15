@@ -35,7 +35,10 @@ def test_memo_stdout():
 
     # this should be memoized, so not create benc.test.y
     path_y = "test.memo.stdout.y"
-    assert not os.path.exists(path_y)
+
+    if os.path.exists(path_y):
+        os.remove(path_y)
+
     no_checkpoint_stdout_app(stdout=path_y).result()
     assert not os.path.exists(path_y)
 
