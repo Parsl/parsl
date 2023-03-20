@@ -3,7 +3,7 @@ from parsl.channels import LocalChannel
 from parsl.launchers import SimpleLauncher
 
 from parsl.config import Config
-from parsl.executors import ExtremeScaleExecutor
+from parsl.executors.extreme_scale.executor import ExtremeScaleExecutor
 
 
 def fresh_config():
