@@ -1,5 +1,5 @@
 pyzmq>=17.1.2
-typeguard>=2.10
+typeguard>=2.10,<3
 typing-extensions
 types-paramiko
 types-requests
