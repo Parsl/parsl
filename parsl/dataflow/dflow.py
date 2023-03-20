@@ -841,6 +841,9 @@ class DataFlowKernel(object):
 
         if ignore_for_cache is None:
             ignore_for_cache = []
+        else:
+            # duplicate so that it can be modified safely later
+            ignore_for_cache = list(ignore_for_cache)
 
         if self.cleanup_called:
             raise RuntimeError("Cannot submit to a DFK that has been cleaned up")
