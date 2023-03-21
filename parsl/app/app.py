@@ -81,7 +81,7 @@ def python_app(function=None,
     ----------
     function : function
         Do not pass this keyword argument directly. This is needed in order to allow for omitted parenthesis,
-        for example, ``@python_app`` if using all defaults or ``@python_app(walltime=120)``. If the
+        for example, ``@join_app`` if using all defaults or ``@python_app(walltime=120)``. If the
         decorator is used alone, function will be the actual function being decorated, whereas if it
         is called with arguments, function will be None. Default is None.
     data_flow_kernel : DataFlowKernel
@@ -91,10 +91,6 @@ def python_app(function=None,
         Labels of the executors that this app can execute over. Default is 'all'.
     cache : bool
         Enable caching of the app call. Default is False.
-    join : bool
-        If True, this app will be a join app: the decorated python code must return a Future
-        (rather than a regular value), and and the corresponding AppFuture will complete when
-        that inner future completes.
     """
     from parsl.app.python import PythonApp
 
@@ -105,7 +101,7 @@ def python_app(function=None,
                              cache=cache,
                              executors=executors,
                              ignore_for_cache=ignore_for_cache,
-                             join=join)
+                             join=False)
         return wrapper(func)
     if function is not None:
         return decorator(function)
@@ -116,13 +112,37 @@ def python_app(function=None,
 def join_app(function=None,
              data_flow_kernel: Optional[DataFlowKernel] = None,
              cache: bool = False,
+             executors: Union[List[str], Literal['all']] = 'all',
              ignore_for_cache: Optional[List[str]] = None):
-    return python_app(function=function,
-                      data_flow_kernel=data_flow_kernel,
-                      cache=cache,
-                      ignore_for_cache=ignore_for_cache,
-                      join=True,
-                      executors=["_parsl_internal"])
+    """Decorator function for making join apps
+
+    Parameters
+    ----------
+    function : function
+        Do not pass this keyword argument directly. This is needed in order to allow for omitted parenthesis,
+        for example, ``@python_app`` if using all defaults or ``@python_app(walltime=120)``. If the
+        decorator is used alone, function will be the actual function being decorated, whereas if it
+        is called with arguments, function will be None. Default is None.
+    data_flow_kernel : DataFlowKernel
+        The :class:`~parsl.dataflow.dflow.DataFlowKernel` responsible for managing this app. This can
+        be omitted only after calling :meth:`parsl.dataflow.dflow.DataFlowKernelLoader.load`. Default is None.
+    cache : bool
+        Enable caching of the app call. Default is False.
+    """
+    from parsl.app.python import PythonApp
+
+    def decorator(func):
+        def wrapper(f):
+            return PythonApp(f,
+                             data_flow_kernel=data_flow_kernel,
+                             cache=cache,
+                             executors=["_parsl_internal"],
+                             ignore_for_cache=ignore_for_cache,
+                             join=True)
+        return wrapper(func)
+    if function is not None:
+        return decorator(function)
+    return decorator
 
 
 @typeguard.typechecked
