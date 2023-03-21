@@ -201,8 +201,8 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.flux_path = os.path.abspath(flux_path)
         self._task_id_counter = itertools.count()
         self._socket = zmq.Context().socket(zmq.REP)
-        if launch_cmd is None:
-            self.launch_cmd = self.DEFAULT_LAUNCH_CMD
+        # Assumes a launch command cannot be None or empty
+        self.launch_cmd = launch_cmd or self.DEFAULT_LAUNCH_CMD
         self._submission_queue: queue.Queue = queue.Queue()
         self._stop_event = threading.Event()
         # lock to protect self._task_id_counter and also submission/shutdown race
