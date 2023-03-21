@@ -279,6 +279,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.function_dir = function_dir
         self.coprocess = coprocess
 
+        self._port_mailbox: multiprocessing.Queue[int]
+        self._port_mailbox = multiprocessing.Queue()
+
         if not self.address:
             self.address = socket.gethostname()
 
@@ -324,8 +327,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         os.makedirs(self.package_dir)
 
         logger.debug("Starting WorkQueueExecutor")
-
-        self._port_mailbox = multiprocessing.Queue()
 
         # Create a Process to perform WorkQueue submissions
         submit_process_kwargs = {"task_queue": self.task_queue,
