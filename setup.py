@@ -13,14 +13,13 @@ extras_require = {
         'networkx>=2.5,<2.6',
         'Flask>=1.0.2',
         'flask_sqlalchemy',
-        'pandas<1.4',
+        'pandas<2',
         'plotly',
         'python-daemon'
     ],
     'aws' : ['boto3'],
     'kubernetes' : ['kubernetes'],
     'oauth_ssh' : ['oauth-ssh>=0.9'],
-    'extreme_scale' : ['mpi4py'],
     'docs' : ['nbsphinx', 'sphinx_rtd_theme', 'ipython<=8.6.0'],
     'google_cloud' : ['google-auth', 'google-api-python-client'],
     'gssapi' : ['python-gssapi'],
@@ -48,7 +47,6 @@ setup(
     python_requires=">=3.7.0",
     install_requires=install_requires,
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
-               'parsl/executors/extreme_scale/mpi_worker_pool.py',
                'parsl/executors/workqueue/exec_parsl_function.py',
     ],
 
