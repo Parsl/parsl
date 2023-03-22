@@ -626,7 +626,7 @@ New functionality
 
    More information on configuring is available in the :ref:`configuration-section` section.
 
-* `parsl.executors.ExtremeScaleExecutor` a new executor targeting supercomputer scale (>1000 nodes) workflows is now available.
+* ExtremeScaleExecutor - a new executor targeting supercomputer scale (>1000 nodes) workflows is now available.
 
   Here's a sample configuration for using this executor locally:
 
@@ -679,7 +679,7 @@ New functionality
     * ``IPyParallelExecutor`` provides ``workers_per_node``
     * `parsl.executors.HighThroughputExecutor` provides ``cores_per_worker`` to allow for worker launches to be determined based on
       the number of cores on the compute node.
-    * `parsl.executors.ExtremeScaleExecutor` uses ``ranks_per_node`` to specify the ranks to launch per node.
+    * ExtremeScaleExecutor uses ``ranks_per_node`` to specify the ranks to launch per node.
 
     .. warning::
        This is a breaking change from Parsl v0.6.0
