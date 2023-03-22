@@ -23,7 +23,6 @@ from parsl.app.app import bash_app, join_app, python_app
 from parsl.config import Config
 from parsl.executors import ThreadPoolExecutor
 from parsl.executors import HighThroughputExecutor
-from parsl.executors import ExtremeScaleExecutor
 from parsl.executors import WorkQueueExecutor
 from parsl.log_utils import set_stream_logger
 from parsl.log_utils import set_file_logger
@@ -62,7 +61,6 @@ __all__ = [
     # executors
     'ThreadPoolExecutor',
     'HighThroughputExecutor',
-    'ExtremeScaleExecutor',
     'WorkQueueExecutor',
 
     # monitoring
