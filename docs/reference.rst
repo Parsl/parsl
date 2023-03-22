@@ -76,7 +76,6 @@ Executors
     parsl.executors.ThreadPoolExecutor
     parsl.executors.HighThroughputExecutor
     parsl.executors.WorkQueueExecutor
-    parsl.executors.ExtremeScaleExecutor
     parsl.executors.FluxExecutor
     parsl.executors.swift_t.TurbineExecutor
 

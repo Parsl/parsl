@@ -1,6 +1,7 @@
 import os
 import socket
 import pickle
+import uuid
 import logging
 
 from abc import ABCMeta, abstractmethod
@@ -59,8 +60,6 @@ class FilesystemRadio(MonitoringRadio):
     def __init__(self, *, monitoring_url: str, source_id: int, timeout: int = 10, run_dir: str):
         logger.info("filesystem based monitoring channel initializing")
         self.source_id = source_id
-        self.id_counter = 0
-        self.radio_uid = f"host-{socket.gethostname()}-pid-{os.getpid()}-radio-{id(self)}"
         self.base_path = f"{run_dir}/monitor-fs-radio/"
         self.tmp_path = f"{self.base_path}/tmp"
         self.new_path = f"{self.base_path}/new"
@@ -71,14 +70,7 @@ class FilesystemRadio(MonitoringRadio):
     def send(self, message: object) -> None:
         logger.info("Sending a monitoring message via filesystem")
 
-        # this should be randomised by things like worker ID, process ID, whatever
-        # because there will in general be many FilesystemRadio objects sharing the
-        # same space (even from the same process). id(self) used here will
-        # disambiguate in one process at one instant, but not between
-        # other things: eg different hosts, different processes, same process different non-overlapping instantiations
-        unique_id = f"msg-{self.radio_uid}-{self.id_counter}"
-
-        self.id_counter = self.id_counter + 1
+        unique_id = str(uuid.uuid4())
 
         tmp_filename = f"{self.tmp_path}/{unique_id}"
         new_filename = f"{self.new_path}/{unique_id}"

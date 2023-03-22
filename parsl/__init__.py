@@ -35,7 +35,6 @@ lazys = {
         'Config': 'parsl.config',
         'ThreadPoolExecutor': 'parsl.executors',
         'HighThroughputExecutor': 'parsl.executors',
-        'ExtremeScaleExecutor': 'parsl.executors',
         'WorkQueueExecutor': 'parsl.executors',
         'set_stream_logger': 'parsl.log_utils',
         'set_file_logger': 'parsl.log_utils',
@@ -126,7 +125,6 @@ __all__ = [
     # executors
     'ThreadPoolExecutor',
     'HighThroughputExecutor',
-    'ExtremeScaleExecutor',
     'WorkQueueExecutor',
 
     # monitoring

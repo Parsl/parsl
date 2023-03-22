@@ -4,14 +4,12 @@ if TYPE_CHECKING:
     from parsl.executors.workqueue.executor import WorkQueueExecutor
     from parsl.executors.high_throughput.executor import HighThroughputExecutor
     from parsl.executors.threads import ThreadPoolExecutor
-    from parsl.executors.extreme_scale.executor import ExtremeScaleExecutor
     from parsl.executors.flux.executor import FluxExecutor
 
 lazys = {
     'ThreadPoolExecutor': 'parsl.executors.threads',
     'WorkQueueExecutor': 'parsl.executors.workqueue.executor',
     'HighThroughputExecutor': 'parsl.executors.high_throughput.executor',
-    'ExtremeScaleExecutor': 'parsl.executors.extreme_scale.executor',
     'FluxExecutor': 'parsl.executors.flux.executor',
 }
 
@@ -36,6 +34,5 @@ px.__getattr__ = lazy_loader  # type: ignore
 
 __all__ = ['ThreadPoolExecutor',
            'HighThroughputExecutor',
-           'ExtremeScaleExecutor',
            'WorkQueueExecutor',
            'FluxExecutor']

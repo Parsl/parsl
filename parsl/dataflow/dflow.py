@@ -24,6 +24,7 @@ import parsl
 from parsl.trace import event, span_bind_sub
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.app.futures import DataFuture
+from parsl.channels import Channel
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
@@ -40,7 +41,7 @@ from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.monitoring import MonitoringHub
 from parsl.process_loggers import wrap_with_logs
-from parsl.providers.base import JobStatus, JobState
+from parsl.providers.base import ExecutionProvider, JobStatus, JobState
 from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints
 
 from parsl.monitoring.message_type import MessageType
@@ -396,7 +397,8 @@ class DataFlowKernel(object):
                         self.update_task_state(task_record, States.failed)
                         task_record['time_returned'] = datetime.datetime.now()
                         with task_record['app_fu']._update_lock:
-                            task_record['app_fu'].set_exception(TypeError(f"join_app body must return a Future or collection of Futures, got {type(joinable)}"))
+                            task_record['app_fu'].set_exception(
+                                TypeError(f"join_app body must return a Future or collection of Futures, got {type(joinable)}"))
 
         self._log_std_streams(task_record)
 
@@ -953,6 +955,9 @@ class DataFlowKernel(object):
         event("DFK_SUBMIT_START", "TASK", task_id)
         if ignore_for_cache is None:
             ignore_for_cache = []
+        else:
+            # duplicate so that it can be modified safely later
+            ignore_for_cache = list(ignore_for_cache)
 
         if self.cleanup_called:
             raise RuntimeError("Cannot submit to a DFK that has been cleaned up")
@@ -1120,7 +1125,7 @@ class DataFlowKernel(object):
 
         logger.info("End of summary")
 
-    def _create_remote_dirs_over_channel(self, provider, channel):
+    def _create_remote_dirs_over_channel(self, provider: ExecutionProvider, channel: Channel) -> None:
         """Create script directories across a channel
 
         Parameters
