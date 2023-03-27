@@ -1,11 +1,7 @@
 #! /usr/bin/env python3
 
-import socket
-import json
-import os
 import sys
-import threading
-import queue
+from parsl.app.errors import RemoteExceptionWrapper
 import parsl.executors.workqueue.exec_parsl_function as epf
 
 import socket
@@ -126,35 +122,21 @@ def name():
     return 'parsl_coprocess'
 @remote_execute
 def run_parsl_task(a, b, c):
-    with open('/tmp/xx1', 'a') as f:
-        f.write(f'params {a} {b} {c}\n')
-        f.write('trying import\n')
-        import parsl.executors.workqueue.exec_parsl_function as epf
-        f.write('performed import\n')
+    import parsl.executors.workqueue.exec_parsl_function as epf
+    try:
+        map_file, function_file, result_file = (a, b, c)
         try:
-            (map_file, function_file, result_file) = (a, b, c)
-            try:
-                (namespace, function_code, result_name) = epf.load_function(map_file, function_file)
-            except Exception:
-                f.write('There was an error setting up the function for execution.\n')
-                raise
-            try:
-                result = epf.execute_function(namespace, function_code, result_name)
-                f.write('Executed\n')
-            except Exception:
-                f.write('There was an error executing the function.\n')
-                raise
-        except Exception as exc:
-            f.write(f'Exception: {exc}\n')
-            traceback.print_exc()
-            result = RemoteExceptionWrapper(*sys.exc_info())
-        f.write(f'Dumping to result file {result_file}\n')
+            namespace, function_code, result_name = epf.load_function(map_file, function_file)
+        except Exception:
+            raise
         try:
-            epf.dump_result_to_file(result_file, result)
-            f.write('Dumped to file\n')
-        except Exception as e:
-            f.write(f'Exception: {e}\n')
-        return None
+            result = epf.execute_function(namespace, function_code, result_name)
+        except Exception:
+            raise
+    except Exception:
+        result = RemoteExceptionWrapper(*sys.exc_info())
+    epf.dump_result_to_file(result_file, result)
+    return None
 if __name__ == "__main__":
 	main()
 
