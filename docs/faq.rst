@@ -111,7 +111,7 @@ as shown below :
    the system and the pre-compiled bindings used for pyzmq. As a last resort, you can try:
    ``pip install --upgrade --no-binary pyzmq pyzmq``, which forces re-compilation.
 
-For the `parsl.executors.HighThroughputExecutor` as well as the `parsl.executors.ExtremeScaleExecutor`, ``address`` is a keyword argument
+For the `parsl.executors.HighThroughputExecutor`, ``address`` is a keyword argument
 taken at initialization. Here is an example for the `parsl.executors.HighThroughputExecutor`:
 
 .. code-block:: python

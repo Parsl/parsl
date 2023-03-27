@@ -252,7 +252,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.blocks = {}  # type: Dict[str, str]
         self.address = address
         self.port = port
-        self.task_counter = -1
+        self.executor_task_counter = -1
         self.project_name = project_name
         self.project_password_file = project_password_file
         self.env = env
@@ -361,7 +361,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Initialize scaling for the provider
         self.initialize_scaling()
 
-    def _path_in_task(self, task_id, *path_components):
+    def _path_in_task(self, executor_task_id, *path_components):
         """Returns a filename specific to a task.
         It is used for the following filename's:
             (not given): The subdirectory per task that contains function, result, etc.
@@ -369,7 +369,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             'result': Pickled file that (will) contain the result of the function.
             'map': Pickled file with a dict between local parsl names, and remote work queue names.
         """
-        task_dir = "{:04d}".format(task_id)
+        task_dir = "{:04d}".format(executor_task_id)
         return os.path.join(self.function_data_dir, task_dir, *path_components)
 
     def submit(self, func, resource_specification, *args, **kwargs):
@@ -438,11 +438,11 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 elif k == 'running_time_min':
                     running_time_min = resource_specification[k]
 
-        self.task_counter += 1
-        task_id = self.task_counter
+        self.executor_task_counter += 1
+        executor_task_id = self.executor_task_counter
 
         # Create a per task directory for the function, result, map, and result files
-        os.mkdir(self._path_in_task(task_id))
+        os.mkdir(self._path_in_task(executor_task_id))
 
         input_files = []
         output_files = []
@@ -465,21 +465,21 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Create a Future object and have it be mapped from the task ID in the tasks dictionary
         fu = Future()
-        fu.parsl_executor_task_id = task_id
+        fu.parsl_executor_task_id = executor_task_id
         logger.debug("Getting tasks_lock to set WQ-level task entry")
         with self.tasks_lock:
             logger.debug("Got tasks_lock to set WQ-level task entry")
-            self.tasks[str(task_id)] = fu
+            self.tasks[str(executor_task_id)] = fu
 
-        logger.debug("Creating task {} for function {} with args {}".format(task_id, func, args))
+        logger.debug("Creating executor task {} for function {} with args {}".format(executor_task_id, func, args))
 
         # Pickle the result into object to pass into message buffer
-        function_file = self._path_in_task(task_id, "function")
-        result_file = self._path_in_task(task_id, "result")
-        map_file = self._path_in_task(task_id, "map")
+        function_file = self._path_in_task(executor_task_id, "function")
+        result_file = self._path_in_task(executor_task_id, "result")
+        map_file = self._path_in_task(executor_task_id, "map")
 
-        logger.debug("Creating Task {} with function at: {}".format(task_id, function_file))
-        logger.debug("Creating Task {} with result to be found at: {}".format(task_id, result_file))
+        logger.debug("Creating executor task {} with function at: {}".format(executor_task_id, function_file))
+        logger.debug("Creating executor task {} with result to be found at: {}".format(executor_task_id, result_file))
 
         self._serialize_function(function_file, func, args, kwargs)
 
@@ -488,17 +488,17 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         else:
             env_pkg = None
 
-        logger.debug("Constructing map for local filenames at worker for task {}".format(task_id))
+        logger.debug("Constructing map for local filenames at worker for executor task {}".format(executor_task_id))
         self._construct_map_file(map_file, input_files, output_files)
 
         if not self.submit_process.is_alive():
             raise ExecutorError(self, "Workqueue Submit Process is not alive")
 
         # Create message to put into the message queue
-        logger.debug("Placing task {} on message queue".format(task_id))
+        logger.debug("Placing executor task {} on message queue".format(executor_task_id))
         if category is None:
             category = func.__name__ if self.autocategory else 'parsl-default'
-        self.task_queue.put_nowait(ParslTaskToWq(task_id,
+        self.task_queue.put_nowait(ParslTaskToWq(executor_task_id,
                                                  category,
                                                  cores,
                                                  memory,
@@ -727,8 +727,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 # Obtain the future from the tasks dictionary
                 with self.tasks_lock:
                     future = self.tasks.pop(task_report.id)
-
-                logger.debug("Updating Future for Parsl Task {}".format(task_report.id))
+                logger.debug("Updating Future for executor task {}".format(task_report.id))
                 if task_report.result_received:
                     future.set_result(task_report.result)
                 else:
@@ -822,7 +821,7 @@ def _work_queue_submit_wait(port_mailbox=None,
 
     orig_ppid = os.getppid()
 
-    result_file_of_task_id = {}  # Mapping taskid -> result file for active tasks.
+    result_file_of_task_id = {}  # Mapping executor task id -> result file for active tasks.
 
     while not should_stop.value:
         # Monitor the task queue
@@ -856,11 +855,12 @@ def _work_queue_submit_wait(port_mailbox=None,
                     logger.debug(command_str)
 
                     # Create WorkQueue task for the command
-                    logger.debug("Sending task {} with command: {}".format(task.id, command_str))
+                    logger.debug("Sending executor task {} with command: {}".format(task.id, command_str))
                     t = wq.Task(command_str)
                 else:
                     t = wq.RemoteTask("run_parsl_task", "parsl_coprocess", task.map_file, task.function_file, task.result_file)
                     t.specify_exec_method("direct")
+                    logger.debug("Sending executor task {} to coprocess".format(task.id))
 
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
@@ -911,7 +911,7 @@ def _work_queue_submit_wait(port_mailbox=None,
             t.specify_tag(str(task.id))
             result_file_of_task_id[str(task.id)] = task.result_file
 
-            logger.debug("Parsl ID: {}".format(task.id))
+            logger.debug("Executor task id: {}".format(task.id))
 
             # Specify input/output files that need to be staged.
             # Absolute paths are assumed to be in shared filesystem, and thus
@@ -925,7 +925,7 @@ def _work_queue_submit_wait(port_mailbox=None,
                         t.specify_output_file(spec.parsl_name, spec.parsl_name, cache=spec.cache)
 
             # Submit the task to the WorkQueue object
-            logger.debug("Submitting task {} to WorkQueue".format(task.id))
+            logger.debug("Submitting executor task {} to WorkQueue".format(task.id))
             try:
                 wq_id = q.submit(t)
             except Exception as e:
@@ -936,7 +936,7 @@ def _work_queue_submit_wait(port_mailbox=None,
                                                          reason="task could not be submited to work queue",
                                                          status=-1))
                 continue
-            logger.info("Task {} submitted to WorkQueue with id {}".format(task.id, wq_id))
+            logger.info("Executor task {} submitted as Work Queue task {}".format(task.id, wq_id))
 
         # If the queue is not empty wait on the WorkQueue queue for a task
         task_found = True
@@ -948,8 +948,8 @@ def _work_queue_submit_wait(port_mailbox=None,
                     task_found = False
                     continue
                 # When a task is found:
-                parsl_id = t.tag
-                logger.debug("Completed WorkQueue task {}, parsl task {}".format(t.id, t.tag))
+                executor_task_id = t.tag
+                logger.debug("Completed Work Queue task {}, executor task {}".format(t.id, t.tag))
                 result_file = result_file_of_task_id.pop(t.tag)
 
                 # A tasks completes 'succesfully' if it has result file,
@@ -960,7 +960,7 @@ def _work_queue_submit_wait(port_mailbox=None,
                     with open(result_file, "rb") as f_in:
                         result = pickle.load(f_in)
                     logger.debug("Found result in {}".format(result_file))
-                    collector_queue.put_nowait(WqTaskToParsl(id=parsl_id,
+                    collector_queue.put_nowait(WqTaskToParsl(id=executor_task_id,
                                                              result_received=True,
                                                              result=result,
                                                              reason=None,
@@ -974,9 +974,9 @@ def _work_queue_submit_wait(port_mailbox=None,
                     logger.debug("Did not find result in {}".format(result_file))
                     logger.debug("Wrapper Script status: {}\nWorkQueue Status: {}"
                                  .format(t.return_status, t.result))
-                    logger.debug("Task with id parsl {} / wq {} failed because:\n{}"
-                                 .format(parsl_id, t.id, reason))
-                    collector_queue.put_nowait(WqTaskToParsl(id=parsl_id,
+                    logger.debug("Task with executor id {} / Work Queue id {} failed because:\n{}"
+                                 .format(executor_task_id, t.id, reason))
+                    collector_queue.put_nowait(WqTaskToParsl(id=executor_task_id,
                                                              result_received=False,
                                                              result=e,
                                                              reason=reason,
