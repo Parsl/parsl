@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from parsl.app.app import bash_app, join_app, python_app
     from parsl.log_utils import set_file_logger, set_stream_logger
     from parsl.config import Config
+    from parsl.monitoring import MonitoringHub
 
 lazys = {
         'python_app': 'parsl.app.app',
