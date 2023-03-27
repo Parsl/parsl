@@ -47,7 +47,6 @@ from collections import namedtuple
 try:
     import work_queue as wq
     from work_queue import WorkQueue
-    from work_queue import Task
     from work_queue import WORK_QUEUE_DEFAULT_PORT
     from work_queue import WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT
 except ImportError:
@@ -208,6 +207,13 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             to be sent to workers. If undefined, this defaults to a directory
             under runinfo/. If shared_filesystem=True, then this directory
             must be visible from both the submitting side and workers.
+
+        coprocess: bool
+            Use Work Queue's coprocess facility to avoid launching a new Python
+            process for each task. Experimental.
+            This requires a version of Work Queue / cctools after commit
+            874df524516441da531b694afc9d591e8b134b73 (release 7.5.0 is too early).
+            Default is False.
     """
 
     # TODO: this should be configurable: there's no definite preference for
@@ -240,6 +246,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  full_debug: bool = True,
                  worker_executable: str = 'work_queue_worker',
                  function_dir: Optional[str] = None,
+                 coprocess: bool = False,
                  radio_mode: str = "filesystem"):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
@@ -276,6 +283,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.worker_options = worker_options
         self.worker_executable = worker_executable
         self.function_dir = function_dir
+        self.coprocess = coprocess
         self.radio_mode = radio_mode
 
         if not self.address:
@@ -345,7 +353,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                  "wq_log_dir": self.wq_log_dir,
                                  "project_password_file": self.project_password_file,
                                  "project_name": self.project_name,
-                                 "port_mailbox": self._port_mailbox
+                                 "port_mailbox": self._port_mailbox,
+                                 "coprocess": self.coprocess
                                  }
         self.submit_process = multiprocessing.Process(target=_work_queue_submit_wait,
                                                       name="WorkQueue-Submit-Process",
@@ -541,6 +550,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
     def _construct_worker_command(self):
         worker_command = self.worker_executable
+        if self.coprocess:
+            worker_command += " --coprocess parsl_coprocess.py"
         if self.project_password_file:
             worker_command += ' --password {}'.format(self.project_password_file)
         if self.worker_options:
@@ -822,7 +833,8 @@ def _work_queue_submit_wait(*,
                             port=WORK_QUEUE_DEFAULT_PORT,
                             wq_log_dir=None,
                             project_password_file=None,
-                            project_name=None):
+                            project_name=None,
+                            coprocess=False):
     """Thread to handle Parsl app submissions to the Work Queue objects.
     Takes in Parsl functions submitted using submit(), and creates a
     Work Queue task with the appropriate specifications, which is then
@@ -906,19 +918,25 @@ def _work_queue_submit_wait(*,
                 pkg_pfx = "./{} -e {} ".format(os.path.basename(package_run_script),
                                                os.path.basename(task.env_pkg))
 
-            # Create command string
-            logger.debug(launch_cmd)
-            command_str = launch_cmd.format(package_prefix=pkg_pfx,
-                                            mapping=os.path.basename(task.map_file),
-                                            function=os.path.basename(task.function_file),
-                                            result=os.path.basename(task.result_file),
-                                            log=os.path.basename(task.log_file))
-            logger.debug(command_str)
-
-            # Create WorkQueue task for the command
-            logger.debug("Sending executor task {} with command: {}".format(task.id, command_str))
             try:
-                t = Task(command_str)
+                if not coprocess:
+                    # Create command string
+                    logger.debug(launch_cmd)
+                    command_str = launch_cmd.format(package_prefix=pkg_pfx,
+                                                    mapping=os.path.basename(task.map_file),
+                                                    function=os.path.basename(task.function_file),
+                                                    result=os.path.basename(task.result_file),
+                                                    log=os.path.basename(task.log_file))
+                    logger.debug(command_str)
+
+                    # Create WorkQueue task for the command
+                    logger.debug("Sending executor task {} with command: {}".format(task.id, command_str))
+                    t = wq.Task(command_str)
+                else:
+                    t = wq.RemoteTask("run_parsl_task", "parsl_coprocess", task.map_file, task.function_file, task.result_file, task.log_file)
+                    t.specify_exec_method("direct")
+                    logger.debug("Sending executor task {} to coprocess".format(task.id))
+
             except Exception as e:
                 logger.error("Unable to create task: {}".format(e))
                 collector_queue.put_nowait(WqTaskToParsl(id=task.id,

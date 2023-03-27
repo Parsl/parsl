@@ -47,7 +47,7 @@ t_postimport = time.time()
 #
 
 
-def load_pickled_file(filename):
+def load_pickled_file(filename, logfile):
     print(f"{time.time()} LOADPICKLED_OPEN", file=logfile)
     with open(filename, "rb") as f_in:
         print(f"{time.time()} LOADPICKLED_LOAD", file=logfile)
@@ -174,13 +174,13 @@ def load_function(map_file, function_file, logfile):
     user_ns.update({'__builtins__': __builtins__})
 
     print(f"{time.time()} LOADFUNCTION_LOADPICKLED_FUNCTION", file=logfile)
-    function_info = load_pickled_file(function_file)
+    function_info = load_pickled_file(function_file, logfile)
 
     print(f"{time.time()} LOADFUNCTION_UNPACK", file=logfile)
     (fn, fn_name, fn_args, fn_kwargs) = unpack_function(function_info, user_ns)
 
     print(f"{time.time()} LOADFUNCTION_LOAD_PICKLED_MAPPING", file=logfile)
-    mapping = load_pickled_file(map_file)
+    mapping = load_pickled_file(map_file, logfile)
     print(f"{time.time()} LOADFUNCTION_REMAP", file=logfile)
     remap_all_files(mapping, fn_args, fn_kwargs)
 
