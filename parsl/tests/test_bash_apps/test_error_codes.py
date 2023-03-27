@@ -1,5 +1,4 @@
 import argparse
-import logging
 import os
 
 import pytest
@@ -12,8 +11,6 @@ import parsl.app.errors as pe
 from parsl.app.errors import BashExitFailure
 
 from parsl.tests.configs.local_threads import fresh_config as local_config
-
-logger = logging.getLogger(__name__)
 
 
 @bash_app
@@ -74,7 +71,7 @@ def test_div_0(test_fn=div_0):
         assert e.exitcode == err_code, "{0} expected err_code:{1} but got {2}".format(test_fn.__name__,
                                                                                       err_code,
                                                                                       e.exitcode)
-    logger.info(f"Current directory listing: {os.listdir('.')}")
+    print(os.listdir('.'))
     os.remove('std.err')
     os.remove('std.out')
     return True
