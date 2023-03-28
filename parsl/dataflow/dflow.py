@@ -13,7 +13,7 @@ import sys
 import datetime
 from getpass import getuser
 from typeguard import typechecked
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 from uuid import uuid4
 from socket import gethostname
 from concurrent.futures import Future
@@ -815,7 +815,14 @@ class DataFlowKernel(object):
 
         return new_args, kwargs, dep_failures
 
-    def submit(self, func, app_args, executors='all', cache=False, ignore_for_cache=None, app_kwargs={}, join=False):
+    def submit(self,
+               func: Callable,
+               app_args: Sequence[Any],
+               executors: Union[str, Sequence[str]] = 'all',
+               cache: bool = False,
+               ignore_for_cache: Optional[Sequence[str]] = None,
+               app_kwargs: Dict[str, Any] = {},
+               join: bool = False) -> AppFuture:
         """Add task to the dataflow system.
 
         If the app task has the executors attributes not set (default=='all')
@@ -881,7 +888,7 @@ class DataFlowKernel(object):
         resource_specification = app_kwargs.get('parsl_resource_specification', {})
 
         task_def: TaskRecord
-        task_def = {'depends': None,
+        task_def = {'depends': [],
                     'executor': executor,
                     'func_name': func.__name__,
                     'memoize': cache,
