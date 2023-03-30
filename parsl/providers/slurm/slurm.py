@@ -73,8 +73,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     scheduler_options : str
         String to prepend to the #SBATCH blocks in the submit script to the scheduler.
     regex_job_id : str
-        The regular expression used to extract the job ID from the `sbatch` standard output.
-        The default is `r"Submitted batch job (?P<id>\\S*)"`, where `id` is the regular expression
+        The regular expression used to extract the job ID from the ``sbatch`` standard output.
+        The default is ``r"Submitted batch job (?P<id>\\S*)"``, where ``id`` is the regular expression
         symbolic group for the job ID.
     worker_init : str
         Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
