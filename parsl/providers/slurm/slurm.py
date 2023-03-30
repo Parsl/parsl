@@ -2,6 +2,7 @@ import os
 import math
 import time
 import logging
+import re
 import typeguard
 
 from typing import Optional
@@ -71,6 +72,10 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         Walltime requested per block in HH:MM:SS.
     scheduler_options : str
         String to prepend to the #SBATCH blocks in the submit script to the scheduler.
+    regex_job_id : str
+        The regular expression used to extract the job ID from the `sbatch` standard output.
+        The default is `r"Submitted batch job (?P<id>\S*)"`, where `id` is the regular expression
+        symbolic group for the job ID.
     worker_init : str
         Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     exclusive : bool (Default = True)
@@ -97,6 +102,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  parallelism: float = 1,
                  walltime: str = "00:10:00",
                  scheduler_options: str = '',
+                 regex_job_id: str = r"Submitted batch job (?P<id>\S*)",
                  worker_init: str = '',
                  cmd_timeout: int = 10,
                  exclusive: bool = True,
@@ -127,6 +133,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             self.scheduler_options += "#SBATCH --partition={}\n".format(partition)
         if account:
             self.scheduler_options += "#SBATCH --account={}\n".format(account)
+        self.regex_job_id = regex_job_id
         self.worker_init = worker_init + '\n'
 
     def _status(self):
@@ -237,9 +244,14 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         job_id = None
         if retcode == 0:
             for line in stdout.split('\n'):
-                if line.startswith("Submitted batch job"):
-                    job_id = line.split("Submitted batch job")[1].strip()
+                match = re.match(self.regex_job_id, line)
+                if match:
+                    job_id = match.group("id")
                     self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
+                    break
+            else:
+                logger.error("Could not read job ID from sumbit command standard output.")
+                logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
         else:
             logger.error("Submit command failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
