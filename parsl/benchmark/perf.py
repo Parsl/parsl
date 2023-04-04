@@ -70,8 +70,8 @@ if __name__ == "__main__":
         prog="parsl-perf",
         description="Measure performance of Parsl configurations")
 
-    parser.add_argument("--config", required=True)
-    parser.add_argument("--resources")
+    parser.add_argument("--config", required=True, help="path to Python file that defines a configuration")
+    parser.add_argument("--resources", metavar="EXPR", help="parsl_resource_specification dictionary")
 
     args = parser.parse_args()
 
