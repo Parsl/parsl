@@ -1,3 +1,4 @@
+import argparse
 import importlib
 import time
 import concurrent.futures
@@ -66,6 +67,16 @@ def performance():
 
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        prog="parsl-perf",
+        description="Measure performance of Parsl configurations"
+        )
+
+    args = parser.parse_args()
+
+    print(args)
+
     load_dfk_from_config("parsl/tests/configs/local_threads.py")
     performance()
     print("Cleaning up DFK")
