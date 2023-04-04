@@ -5,11 +5,6 @@ import concurrent.futures
 import parsl
 
 
-# TODO: parameterise
-res = None
-# res = {"cores":1, "memory":0, "disk":0}
-
-
 # TODO: factor with conftest.py where this is copy/pasted from?
 def load_dfk_from_config(filename):
     spec = importlib.util.spec_from_file_location('', filename)
@@ -29,7 +24,7 @@ def app(parsl_resource_specification={}):
     return 7
 
 
-def performance():
+def performance(*, resources: dict):
     n = 10
 
     delta_t = 0
@@ -47,7 +42,7 @@ def performance():
         fs = []
         print("Submitting tasks / invoking apps")
         for _ in range(n):
-            fs.append(app(parsl_resource_specification=res))
+            fs.append(app(parsl_resource_specification=resources))
 
         submitted_t = time.time()
         print(f"All {n} tasks submitted ... waiting for completion")
@@ -76,13 +71,17 @@ if __name__ == "__main__":
         description="Measure performance of Parsl configurations")
 
     parser.add_argument("--config", required=True)
+    parser.add_argument("--resources")
 
     args = parser.parse_args()
 
-    print(args)
+    if args.resources:
+        resources = eval(args.resources)
+    else:
+        resources = {}
 
     load_dfk_from_config(args.config)
-    performance()
+    performance(resources = resources)
     print("Cleaning up DFK")
     parsl.dfk().cleanup()
     print("The end")
