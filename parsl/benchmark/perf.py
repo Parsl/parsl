@@ -24,13 +24,12 @@ def app(parsl_resource_specification={}):
     return 7
 
 
-def performance(*, resources: dict):
+def performance(*, resources: dict, target_t: float):
     n = 10
 
     delta_t: float
     delta_t = 0
 
-    target_t = 120  # 2 minutes
     threshold_t = int(0.75 * target_t)
 
     iteration = 1
@@ -76,6 +75,7 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
 
     parser.add_argument("--config", required=True, help="path to Python file that defines a configuration")
     parser.add_argument("--resources", metavar="EXPR", help="parsl_resource_specification dictionary")
+    parser.add_argument("--time", metavar="SECONDS", help="target number of seconds for an iteration", default=120, type=float)
 
     args = parser.parse_args()
 
@@ -85,7 +85,7 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
         resources = {}
 
     load_dfk_from_config(args.config)
-    performance(resources=resources)
+    performance(resources=resources, target_t=args.time)
     print("Cleaning up DFK")
     parsl.dfk().cleanup()
     print("The end")
