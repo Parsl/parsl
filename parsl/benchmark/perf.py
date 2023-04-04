@@ -68,7 +68,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         prog="parsl-perf",
-        description="Measure performance of Parsl configurations")
+        description="Measure performance of Parsl configurations",
+        epilog="Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workqueue_blocks.py  --resources '{\"cores\":1, \"memory\":0, \"disk\":0}'")
 
     parser.add_argument("--config", required=True, help="path to Python file that defines a configuration")
     parser.add_argument("--resources", metavar="EXPR", help="parsl_resource_specification dictionary")
