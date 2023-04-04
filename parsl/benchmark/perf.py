@@ -72,11 +72,13 @@ if __name__ == "__main__":
         prog="parsl-perf",
         description="Measure performance of Parsl configurations")
 
+    parser.add_argument("--config", required=True)
+
     args = parser.parse_args()
 
     print(args)
 
-    load_dfk_from_config("parsl/tests/configs/local_threads.py")
+    load_dfk_from_config(args.config)
     performance()
     print("Cleaning up DFK")
     parsl.dfk().cleanup()
