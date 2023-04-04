@@ -66,8 +66,7 @@ def performance(*, resources: dict):
         iteration += 1
 
 
-if __name__ == "__main__":
-
+def cli_run() -> None:
     parser = argparse.ArgumentParser(
         prog="parsl-perf",
         description="Measure performance of Parsl configurations",
@@ -90,3 +89,7 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
     print("Cleaning up DFK")
     parsl.dfk().cleanup()
     print("The end")
+
+
+if __name__ == "__main__":
+    cli_run()
