@@ -27,6 +27,7 @@ def app(parsl_resource_specification={}):
 def performance(*, resources: dict):
     n = 10
 
+    delta_t: float
     delta_t = 0
 
     target_t = 120  # 2 minutes
