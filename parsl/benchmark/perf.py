@@ -37,8 +37,10 @@ def performance():
     target_t = 120  # 2 minutes
     threshold_t = int(0.75 * target_t)
 
+    iteration = 1
+
     while delta_t < threshold_t:
-        print("=======================================================")
+        print(f"==== Iteration {iteration} ====")
         print(f"Will run {n} tasks to target {target_t} seconds runtime")
         start_t = time.time()
 
@@ -65,6 +67,7 @@ def performance():
 
         n = int(target_t * rate)
 
+        iteration += 1
 
 if __name__ == "__main__":
 
