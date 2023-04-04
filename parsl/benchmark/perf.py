@@ -70,8 +70,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         prog="parsl-perf",
-        description="Measure performance of Parsl configurations"
-        )
+        description="Measure performance of Parsl configurations")
 
     args = parser.parse_args()
 
