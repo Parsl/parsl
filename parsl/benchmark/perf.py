@@ -1,3 +1,4 @@
+import importlib
 import time
 import concurrent.futures
 import parsl
@@ -8,7 +9,7 @@ import parsl
 
 # on login25.perlmutter, Tasks per second: 2727.5157973484197
 # Thu 23 Mar 2023 11:52:25 AM PDT
-from parsl.tests.configs.local_threads import fresh_config
+# from parsl.tests.configs.local_threads import fresh_config
 res=None
 
 # ndcctools-7.5.0 
@@ -41,19 +42,35 @@ res=None
 # def fresh_config():
 #    return config
 
+
+# TODO: factor with conftest.py where this is copy/pasted from?
+def load_dfk_from_config(filename):
+    spec = importlib.util.spec_from_file_location('', filename)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    if hasattr(module, 'config'):
+        dfk = parsl.load(module.config)
+    elif hasattr(module, 'fresh_config'):
+        dfk = parsl.load(module.fresh_config())
+    else:
+        raise RuntimeError("Config module does not define config or fresh_config")
+
+
 @parsl.python_app
 def app(parsl_resource_specification={}):
     return 7
 
-parsl.load(fresh_config())
+load_dfk_from_config("parsl/tests/configs/local_threads.py")
 
 n = 10
 
 delta_t = 0
 
 target_t = 120  # 2 minutes
+threshold_t = int(0.75 * target_t)
 
-while delta_t < 90:
+while delta_t < threshold_t:
     print("=======================================================")
     print(f"Will run {n} tasks to target {target_t} seconds runtime")
     start_t = time.time()
@@ -81,4 +98,6 @@ while delta_t < 90:
 
     n = int(target_t * rate)
 
+print("Cleaning up DFK")
+parsl.dfk().cleanup()
 print("The end")
