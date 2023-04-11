@@ -64,9 +64,10 @@ def remap_all_files(mapping, fn_args, fn_kwargs):
         if kwarg in ["inputs", "outputs"]:
             remap_list_of_files(mapping, maybe_file)
         if kwarg in ["stdout", "stderr"]:
-            (fname, mode) = get_std_fname_mode(kwarg, maybe_file)
-            if fname in mapping:
-                fn_kwargs[kwarg] = (mapping[fname], mode)
+            if maybe_file:
+                (fname, mode) = get_std_fname_mode(kwarg, maybe_file)
+                if fname in mapping:
+                    fn_kwargs[kwarg] = (mapping[fname], mode)
         else:
             # Treat anything else as a possible File to be remapped.
             remap_location(mapping, maybe_file)
