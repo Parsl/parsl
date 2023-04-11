@@ -534,10 +534,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         workers = self.command_client.run("WORKERS")
         return workers
 
-    @property
     def connected_managers(self):
-        workers = self.command_client.run("MANAGERS")
-        return workers
+        managers = self.command_client.run("MANAGERS")
+        return managers
 
     def _hold_block(self, block_id):
         """ Sends hold command to all managers which are in a specific block
@@ -548,7 +547,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
              Block identifier of the block to be put on hold
         """
 
-        managers = self.connected_managers
+        managers = self.connected_managers()
 
         for manager in managers:
             if manager['block_id'] == block_id:
@@ -664,7 +663,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         if block_ids:
             block_ids_to_kill = block_ids
         else:
-            managers = self.connected_managers
+            managers = self.connected_managers()
             block_info = {}  # block id -> list( tasks, idle duration )
             for manager in managers:
                 if not manager['active']:
