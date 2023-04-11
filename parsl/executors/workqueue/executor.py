@@ -816,25 +816,24 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
 @wrap_with_logs
 def _work_queue_submit_wait(*,
-                            port_mailbox=None,
-                            task_queue=multiprocessing.Queue(),
-                            launch_cmd=None,
-                            env=None,
-                            collector_queue=multiprocessing.Queue(),
-                            data_dir=".",
-                            full=False,
-                            shared_fs=False,
-                            autolabel=False,
-                            autolabel_window=None,
-                            enable_monitoring,
-                            autocategory=False,
-                            max_retries=0,
-                            should_stop=None,
-                            port=WORK_QUEUE_DEFAULT_PORT,
-                            wq_log_dir=None,
-                            project_password_file=None,
-                            project_name=None,
-                            coprocess=False):
+                            port_mailbox: multiprocessing.Queue,
+                            task_queue: multiprocessing.Queue,
+                            launch_cmd: str,
+                            collector_queue: multiprocessing.Queue,
+                            data_dir: str,
+                            full: bool,
+                            shared_fs: bool,
+                            autolabel: bool,
+                            autolabel_window: int,
+                            enable_monitoring: bool,
+                            autocategory: bool,
+                            max_retries: Optional[int],
+                            should_stop,  # multiprocessing.Value is an awkward type alias from inside multiprocessing
+                            port: int,
+                            wq_log_dir: str,
+                            project_password_file: Optional[str],
+                            project_name: Optional[str],
+                            coprocess: bool) -> int:
     """Thread to handle Parsl app submissions to the Work Queue objects.
     Takes in Parsl functions submitted using submit(), and creates a
     Work Queue task with the appropriate specifications, which is then
@@ -913,12 +912,14 @@ def _work_queue_submit_wait(*,
             except queue.Empty:
                 continue
 
-            pkg_pfx = ""
-            if task.env_pkg is not None:
-                pkg_pfx = "./{} -e {} ".format(os.path.basename(package_run_script),
-                                               os.path.basename(task.env_pkg))
-
             try:
+                pkg_pfx = ""
+                if task.env_pkg is not None:
+                    if package_run_script is None:
+                        raise ValueError("package_run_script must be specified")
+                    pkg_pfx = "./{} -e {} ".format(os.path.basename(package_run_script),
+                                                   os.path.basename(task.env_pkg))
+
                 if not coprocess:
                     # Create command string
                     logger.debug(launch_cmd)
@@ -969,11 +970,6 @@ def _work_queue_submit_wait(*,
                 t.specify_max_retries(max_retries)
             else:
                 logger.debug("Not specifying max_retries")
-
-            # Specify environment variables for the task
-            if env is not None:
-                for var in env:
-                    t.specify_environment_variable(var, env[var])
 
             if task.env_pkg is not None:
                 t.specify_input_file(package_run_script, cache=True)

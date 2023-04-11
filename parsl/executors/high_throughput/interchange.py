@@ -365,11 +365,13 @@ class Interchange(object):
         start = time.time()
 
         self._task_puller_thread = threading.Thread(target=self.task_puller,
-                                                    name="Interchange-Task-Puller")
+                                                    name="Interchange-Task-Puller",
+                                                    daemon=True)
         self._task_puller_thread.start()
 
         self._command_thread = threading.Thread(target=self._command_server,
-                                                name="Interchange-Command")
+                                                name="Interchange-Command",
+                                                daemon=True)
         self._command_thread.start()
 
         kill_event = threading.Event()

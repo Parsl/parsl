@@ -44,7 +44,7 @@ def pytest_addoption(parser):
         '--config',
         action='store',
         metavar='CONFIG',
-        type='string',
+        type=str,
         nargs=1,
         required=True,
         help="run with parsl CONFIG; use 'local' to run locally-defined config"

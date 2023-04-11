@@ -15,6 +15,7 @@ def this_app(x):
 @pytest.mark.local
 def test_hashsum():
     import sqlalchemy
+    from sqlalchemy import text
     from parsl.tests.configs.htex_local_alternate import fresh_config
 
     if os.path.exists("runinfo/monitoring.db"):
@@ -56,24 +57,24 @@ def test_hashsum():
 
         # we should have three tasks, but with only two tries, because the
         # memo try should be missing
-        result = connection.execute("SELECT COUNT(*) FROM task")
+        result = connection.execute(text("SELECT COUNT(*) FROM task"))
         (task_count, ) = result.first()
         assert task_count == 4
 
         # this will check that the number of task rows for each hashsum matches the above app invocations
-        result = connection.execute(f"SELECT COUNT(task_hashsum) FROM task WHERE task_hashsum='{f1.task_def['hashsum']}'")
+        result = connection.execute(text(f"SELECT COUNT(task_hashsum) FROM task WHERE task_hashsum='{f1.task_def['hashsum']}'"))
         (hashsum_count, ) = result.first()
         assert hashsum_count == 3
 
-        result = connection.execute(f"SELECT COUNT(task_hashsum) FROM task WHERE task_hashsum='{f2.task_def['hashsum']}'")
+        result = connection.execute(text(f"SELECT COUNT(task_hashsum) FROM task WHERE task_hashsum='{f2.task_def['hashsum']}'"))
         (hashsum_count, ) = result.first()
         assert hashsum_count == 1
 
-        result = connection.execute("SELECT COUNT(*) FROM status WHERE task_status_name='exec_done'")
+        result = connection.execute(text("SELECT COUNT(*) FROM status WHERE task_status_name='exec_done'"))
         (memo_count, ) = result.first()
         assert memo_count == 2
 
-        result = connection.execute("SELECT COUNT(*) FROM status WHERE task_status_name='memo_done'")
+        result = connection.execute(text("SELECT COUNT(*) FROM status WHERE task_status_name='memo_done'"))
         (memo_count, ) = result.first()
         assert memo_count == 2
 

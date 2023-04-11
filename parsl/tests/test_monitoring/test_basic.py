@@ -25,6 +25,7 @@ def test_row_counts():
     # would otherwise fail to import and break even a basic test
     # run.
     import sqlalchemy
+    from sqlalchemy import text
     from parsl.tests.configs.htex_local_alternate import fresh_config
 
     if os.path.exists("runinfo/monitoring.db"):
@@ -49,37 +50,37 @@ def test_row_counts():
     engine = sqlalchemy.create_engine("sqlite:///runinfo/monitoring.db")
     with engine.begin() as connection:
 
-        result = connection.execute("SELECT COUNT(*) FROM workflow")
+        result = connection.execute(text("SELECT COUNT(*) FROM workflow"))
         (c, ) = result.first()
         assert c == 1
 
-        result = connection.execute("SELECT COUNT(*) FROM task")
+        result = connection.execute(text("SELECT COUNT(*) FROM task"))
         (c, ) = result.first()
         assert c == 1
 
-        result = connection.execute("SELECT COUNT(*) FROM try")
+        result = connection.execute(text("SELECT COUNT(*) FROM try"))
         (c, ) = result.first()
         assert c == 1
 
-        result = connection.execute("SELECT COUNT(*) FROM status, try "
+        result = connection.execute(text("SELECT COUNT(*) FROM status, try "
                                     "WHERE status.task_id = try.task_id "
                                     "AND status.task_status_name='exec_done' "
-                                    "AND task_try_time_running is NULL")
+                                    "AND task_try_time_running is NULL"))
         (c, ) = result.first()
         assert c == 0
 
         # Two entries: one showing manager active, one inactive
-        result = connection.execute("SELECT COUNT(*) FROM node")
+        result = connection.execute(text("SELECT COUNT(*) FROM node"))
         (c, ) = result.first()
         assert c == 2
 
         # There should be one block polling status
         # local provider has a status_polling_interval of 5s
-        result = connection.execute("SELECT COUNT(*) FROM block")
+        result = connection.execute(text("SELECT COUNT(*) FROM block"))
         (c, ) = result.first()
         assert c >= 2
 
-        result = connection.execute("SELECT COUNT(*) FROM resource")
+        result = connection.execute(text("SELECT COUNT(*) FROM resource"))
         (c, ) = result.first()
         assert c >= 1
 
