@@ -2,7 +2,7 @@ import logging
 from abc import abstractmethod
 from string import Template
 
-from parsl.providers.error import SchedulerMissingArgs, ScriptPathError
+from parsl.providers.errors import SchedulerMissingArgs, ScriptPathError
 from parsl.launchers.error import BadLauncher
 from parsl.providers.base import ExecutionProvider
 
