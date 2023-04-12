@@ -105,11 +105,10 @@ def get_last_checkpoint(rundir: str = "runinfo") -> List[str]:
     return [last_checkpoint]
 
 
+@typeguard.typechecked
 def get_std_fname_mode(fdname: str, stdfspec: Union[str, Tuple[str, str]]) -> Tuple[str, str]:
     import parsl.app.errors as pe
-    if stdfspec is None:
-        return None, None
-    elif isinstance(stdfspec, str):
+    if isinstance(stdfspec, str):
         fname = stdfspec
         mode = 'a+'
     elif isinstance(stdfspec, tuple):
@@ -118,13 +117,6 @@ def get_std_fname_mode(fdname: str, stdfspec: Union[str, Tuple[str, str]]) -> Tu
                    f"{len(stdfspec)}")
             raise pe.BadStdStreamFile(msg, TypeError('Bad Tuple Length'))
         fname, mode = stdfspec
-        if not isinstance(fname, str) or not isinstance(mode, str):
-            msg = (f"std descriptor {fdname} has unexpected type "
-                   f"{type(stdfspec)}")
-            raise pe.BadStdStreamFile(msg, TypeError('Bad Tuple Type'))
-    else:
-        msg = f"std descriptor {fdname} has unexpected type {type(stdfspec)}"
-        raise pe.BadStdStreamFile(msg, TypeError('Bad Tuple Type'))
     return fname, mode
 
 
@@ -255,11 +247,11 @@ class AtomicIDCounter:
     """A class to allocate counter-style IDs, in a thread-safe way.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.count = 0
         self.lock = threading.Lock()
 
-    def get_id(self):
+    def get_id(self) -> int:
         with self.lock:
             new_id = self.count
             self.count += 1

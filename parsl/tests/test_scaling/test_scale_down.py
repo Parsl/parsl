@@ -53,7 +53,7 @@ def test_scale_out():
     dfk = parsl.dfk()
 
     logger.info("initial asserts")
-    assert len(dfk.executors['htex_local'].connected_managers) == 0, "Expected 0 managers at start"
+    assert len(dfk.executors['htex_local'].connected_managers()) == 0, "Expected 0 managers at start"
     assert dfk.executors['htex_local'].outstanding == 0, "Expected 0 tasks at start"
 
     logger.info("launching tasks")
@@ -63,7 +63,7 @@ def test_scale_out():
     time.sleep(15)
 
     logger.info("asserting 5 managers")
-    assert len(dfk.executors['htex_local'].connected_managers) == 5, "Expected 5 managers after some time"
+    assert len(dfk.executors['htex_local'].connected_managers()) == 5, "Expected 5 managers after some time"
 
     logger.info("waiting for all futures to complete")
     [x.result() for x in fus]
@@ -75,6 +75,6 @@ def test_scale_out():
     time.sleep(25)
 
     logger.info("asserting 2 managers remain")
-    assert len(dfk.executors['htex_local'].connected_managers) == 2, "Expected 2 managers when no tasks, lower bound by min_blocks"
+    assert len(dfk.executors['htex_local'].connected_managers()) == 2, "Expected 2 managers when no tasks, lower bound by min_blocks"
 
     logger.info("test passed")

@@ -48,10 +48,9 @@ def test_bad_stdout_specs(spec):
     try:
         fn.result()
     except Exception as e:
-        assert isinstance(
-            e, perror.BadStdStreamFile), "Expected BadStdStreamFile, got: {0}".format(type(e))
+        assert isinstance(e, TypeError) or isinstance(e, perror.BadStdStreamFile), "Exception is wrong type"
     else:
-        assert False, "Did not raise expected exception BadStdStreamFile"
+        assert False, "Did not raise expected exception"
 
     return
 
@@ -68,9 +67,8 @@ def test_bad_stderr_file():
 
     try:
         fn.result()
-    except Exception as e:
-        assert isinstance(
-            e, perror.BadStdStreamFile), "Expected BadStdStreamFile, got: {0}".format(type(e))
+    except perror.BadStdStreamFile:
+        pass
     else:
         assert False, "Did not raise expected exception BadStdStreamFile"
 
