@@ -9,11 +9,6 @@ class DataFlowException(Exception):
     """
 
 
-class ConfigurationError(DataFlowException):
-    """Raised when the DataFlowKernel receives an invalid configuration.
-    """
-
-
 class BadCheckpoint(DataFlowException):
     """Error raised at the end of app execution due to missing output files.
 

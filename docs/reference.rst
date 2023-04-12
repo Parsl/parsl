@@ -136,6 +136,7 @@ Exceptions
     parsl.app.errors.BashExitFailure
     parsl.app.errors.MissingOutputs
     parsl.app.errors.ParslError
+    parsl.errors.ConfigurationError
     parsl.errors.OptionalModuleMissing
     parsl.executors.errors.ExecutorError
     parsl.executors.errors.ScalingFailed
@@ -143,7 +144,6 @@ Exceptions
     parsl.executors.errors.DeserializationError
     parsl.executors.errors.BadMessage
     parsl.dataflow.errors.DataFlowException
-    parsl.dataflow.errors.ConfigurationError
     parsl.dataflow.errors.BadCheckpoint
     parsl.dataflow.errors.DependencyError
     parsl.launchers.error.BadLauncher
