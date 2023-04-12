@@ -1,7 +1,8 @@
+from parsl.errors import ParslError
 from typing import Sequence, Tuple
 
 
-class DataFlowException(Exception):
+class DataFlowException(ParslError):
     """Base class for all exceptions.
 
     Only to be invoked when only a more specific error is not available.
