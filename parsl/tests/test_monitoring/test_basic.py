@@ -63,9 +63,9 @@ def test_row_counts():
         assert c == 1
 
         result = connection.execute(text("SELECT COUNT(*) FROM status, try "
-                                    "WHERE status.task_id = try.task_id "
-                                    "AND status.task_status_name='exec_done' "
-                                    "AND task_try_time_running is NULL"))
+                                         "WHERE status.task_id = try.task_id "
+                                         "AND status.task_status_name='exec_done' "
+                                         "AND task_try_time_running is NULL"))
         (c, ) = result.first()
         assert c == 0
 

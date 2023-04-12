@@ -8,7 +8,7 @@ with open('requirements.txt') as f:
 
 extras_require = {
     'monitoring' : [
-        'sqlalchemy>=1.3.0,<2',
+        'sqlalchemy>=1.4,<3',
         'pydot',
         'networkx>=2.5,<2.6',
         'Flask>=1.0.2',
