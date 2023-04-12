@@ -8,15 +8,9 @@ from tblib import Traceback
 from six import reraise
 
 from parsl.data_provider.files import File
+from parsl.errors import ParslError
 
 logger = logging.getLogger(__name__)
-
-
-class ParslError(Exception):
-    """Base class for all exceptions.
-
-    Only to be invoked when a more specific error is not available.
-    """
 
 
 class AppException(ParslError):
