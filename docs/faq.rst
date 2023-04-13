@@ -142,7 +142,7 @@ taken at initialization. Here is an example for the `parsl.executors.HighThrough
 .. _pyversion:
 
 parsl.dataflow.errors.ConfigurationError
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The Parsl configuration model underwent a major and non-backward compatible change in the transition to v0.6.0.
 Prior to v0.6.0 the configuration object was a python dictionary with nested dictionaries and lists.
