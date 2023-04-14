@@ -154,9 +154,6 @@ class UsageTracker:
               - Message dict dumped as json string, ready for UDP
         """
         message = {'uuid': self.uuid,
-                   'test': False,  # this field previously indicated if parsl
-                                   # was being run in test mode, and is
-                                   # retained for protocol compatibility
                    'parsl_v': self.parsl_version,
                    'python_v': self.python_version,
                    'os': platform.system(),
@@ -181,9 +178,7 @@ class UsageTracker:
                    'end': time.time(),
                    't_apps': app_count,
                    'sites': site_count,
-                   'c_time': None,
-                   'failed': app_fails,
-                   'test': False,  # see comment in construct_start_message
+                   'failed': app_fails
                    }
 
         return json.dumps(message)
