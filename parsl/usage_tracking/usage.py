@@ -7,6 +7,7 @@ import socket
 import sys
 import platform
 
+from parsl.usage_tracking.api import get_parsl_usage
 from parsl.utils import setproctitle
 from parsl.multiprocessing import ForkProcess
 from parsl.dataflow.states import States
@@ -16,6 +17,11 @@ logger = logging.getLogger(__name__)
 
 from typing import Callable
 from typing_extensions import ParamSpec
+
+# protocol version byte: when (for example) compression parameters are changed
+# that cannot be inferred from the compressed message itself, this version
+# ID needs to imply those parameters.
+V = b'\01'
 
 P = ParamSpec("P")
 
@@ -32,7 +38,7 @@ def async_process(fn: Callable[P, None]) -> Callable[P, None]:
 
 
 @async_process
-def udp_messenger(domain_name: str, UDP_PORT: int, sock_timeout: int, message: str) -> None:
+def udp_messenger(domain_name: str, UDP_PORT: int, sock_timeout: int, message: bytes) -> None:
     """Send UDP messages to usage tracker asynchronously
 
     This multiprocessing based messenger was written to overcome the limitations
@@ -46,16 +52,11 @@ def udp_messenger(domain_name: str, UDP_PORT: int, sock_timeout: int, message: s
     setproctitle("parsl: Usage tracking")
 
     try:
-        encoded_message = bytes(message, "utf-8")
-
         UDP_IP = socket.gethostbyname(domain_name)
-
-        if UDP_PORT is None:
-            raise Exception("UDP_PORT is None")
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
         sock.settimeout(sock_timeout)
-        sock.sendto(encoded_message, (UDP_IP, UDP_PORT))
+        sock.sendto(message, (UDP_IP, UDP_PORT))
         sock.close()
 
     except socket.timeout:
@@ -131,7 +132,7 @@ class UsageTracker:
 
         return track
 
-    def construct_start_message(self) -> str:
+    def construct_start_message(self) -> bytes:
         """Collect preliminary run info at the start of the DFK.
 
         Returns :
@@ -140,13 +141,14 @@ class UsageTracker:
         message = {'uuid': self.uuid,
                    'parsl_v': self.parsl_version,
                    'python_v': self.python_version,
-                   'os': platform.system(),
-                   'os_v': platform.release(),
-                   'start': time.time()}
+                   'platform.system': platform.system(),
+                   'start': int(time.time()),  # save around 8 bytes by removing sub-seconds
+                   'components': get_parsl_usage(self.dfk._config)}
+        logger.debug(f"Start message (unencoded): {message}")
 
-        return json.dumps(message)
+        return self.encode_message(message)
 
-    def construct_end_message(self) -> str:
+    def construct_end_message(self) -> bytes:
         """Collect the final run information at the time of DFK cleanup.
 
         Returns:
@@ -161,13 +163,18 @@ class UsageTracker:
         message = {'uuid': self.uuid,
                    'end': time.time(),
                    't_apps': app_count,
+                   # TODO: this is executor count, which we could get in start message as a component decoration on the config?
                    'sites': site_count,
                    'failed': app_fails
                    }
 
-        return json.dumps(message)
+        return self.encode_message(message)
 
-    def send_UDP_message(self, message: str) -> None:
+    def encode_message(self, obj):
+        # TODO: compression here
+        return V + json.dumps(obj).encode('utf-8')
+
+    def send_UDP_message(self, message: bytes) -> None:
         """Send UDP message."""
         if self.tracking_enabled:
             try:
