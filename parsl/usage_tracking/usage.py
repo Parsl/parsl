@@ -7,6 +7,7 @@ import socket
 import sys
 import platform
 
+from parsl.usage_tracking.api import get_parsl_usage
 from parsl.utils import setproctitle
 from parsl.multiprocessing import ForkProcess
 from parsl.dataflow.states import States
@@ -16,6 +17,13 @@ logger = logging.getLogger(__name__)
 
 from typing import Callable
 from typing_extensions import ParamSpec
+
+# protocol version byte: when (for example) compression parameters are changed
+# that cannot be inferred from the compressed message itself, this version
+# ID needs to imply those parameters.
+
+# Earlier protocol versions: b'{' - the original pure-JSON protocol pre-March 2024
+PROTOCOL_VERSION = b'1'
 
 P = ParamSpec("P")
 
@@ -32,7 +40,7 @@ def async_process(fn: Callable[P, None]) -> Callable[P, None]:
 
 
 @async_process
-def udp_messenger(domain_name: str, UDP_PORT: int, sock_timeout: int, message: str) -> None:
+def udp_messenger(domain_name: str, UDP_PORT: int, sock_timeout: int, message: bytes) -> None:
     """Send UDP messages to usage tracker asynchronously
 
     This multiprocessing based messenger was written to overcome the limitations
@@ -46,16 +54,11 @@ def udp_messenger(domain_name: str, UDP_PORT: int, sock_timeout: int, message: s
     setproctitle("parsl: Usage tracking")
 
     try:
-        encoded_message = bytes(message, "utf-8")
-
         UDP_IP = socket.gethostbyname(domain_name)
-
-        if UDP_PORT is None:
-            raise Exception("UDP_PORT is None")
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
         sock.settimeout(sock_timeout)
-        sock.sendto(encoded_message, (UDP_IP, UDP_PORT))
+        sock.sendto(message, (UDP_IP, UDP_PORT))
         sock.close()
 
     except socket.timeout:
@@ -102,7 +105,7 @@ class UsageTracker:
         self.procs = []
         self.dfk = dfk
         self.config = self.dfk.config
-        self.uuid = str(uuid.uuid4())
+        self.correlator_uuid = str(uuid.uuid4())
         self.parsl_version = PARSL_VERSION
         self.python_version = "{}.{}.{}".format(sys.version_info.major,
                                                 sys.version_info.minor,
@@ -131,22 +134,23 @@ class UsageTracker:
 
         return track
 
-    def construct_start_message(self) -> str:
+    def construct_start_message(self) -> bytes:
         """Collect preliminary run info at the start of the DFK.
 
         Returns :
               - Message dict dumped as json string, ready for UDP
         """
-        message = {'uuid': self.uuid,
+        message = {'correlator': self.correlator_uuid,
                    'parsl_v': self.parsl_version,
                    'python_v': self.python_version,
-                   'os': platform.system(),
-                   'os_v': platform.release(),
-                   'start': time.time()}
+                   'platform.system': platform.system(),
+                   'start': int(time.time()),
+                   'components': get_parsl_usage(self.dfk._config)}
+        logger.debug(f"Usage tracking start message: {message}")
 
-        return json.dumps(message)
+        return self.encode_message(message)
 
-    def construct_end_message(self) -> str:
+    def construct_end_message(self) -> bytes:
         """Collect the final run information at the time of DFK cleanup.
 
         Returns:
@@ -158,16 +162,20 @@ class UsageTracker:
 
         app_fails = self.dfk.task_state_counts[States.failed] + self.dfk.task_state_counts[States.dep_fail]
 
-        message = {'uuid': self.uuid,
-                   'end': time.time(),
+        message = {'correlator': self.correlator_uuid,
+                   'end': int(time.time()),
                    't_apps': app_count,
                    'sites': site_count,
-                   'failed': app_fails
-                   }
+                   'failed': app_fails,
+                   'components': get_parsl_usage(self.dfk._config)}
+        logger.debug(f"Usage tracking end message (unencoded): {message}")
 
-        return json.dumps(message)
+        return self.encode_message(message)
 
-    def send_UDP_message(self, message: str) -> None:
+    def encode_message(self, obj):
+        return PROTOCOL_VERSION + json.dumps(obj).encode('utf-8')
+
+    def send_UDP_message(self, message: bytes) -> None:
         """Send UDP message."""
         if self.tracking_enabled:
             try:
