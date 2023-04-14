@@ -132,11 +132,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         Caps the number of workers launched per node. Default: infinity
 
     cpu_affinity: string
-        Whether or how each worker process sets thread affinity. Options are "none" to forgo
+        Whether or how each worker process sets thread affinity. Options include "none" to forgo
         any CPU affinity configuration, "block" to assign adjacent cores to workers
         (ex: assign 0-1 to worker 0, 2-3 to worker 1), and
         "alternating" to assign cores to workers in round-robin
         (ex: assign 0,2 to worker 0, 1,3 to worker 1).
+        The "block-reverse" option assigns adjacent cores to workers, but assigns
+        the CPUs with large indices to low index workers (ex: assign 2-3 to worker 1, 0,1 to worker 2)
 
     available_accelerators: int | list
         Accelerators available for workers to use. Each worker will be pinned to exactly one of the provided

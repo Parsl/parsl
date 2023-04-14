@@ -119,7 +119,7 @@ class Manager(object):
              Timeout period used by the manager in milliseconds. Default: 10ms
 
         cpu_affinity : str
-             Whether each worker should force its affinity to different CPUs
+             Whether or how each worker should force its affinity to different CPUs
 
         available_accelerators: list of str
             List of accelerators available to the workers. Default: Empty list
@@ -549,6 +549,9 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         # Determine this worker's cores
         if cpu_affinity == "block":
             my_cores = avail_cores[cores_per_worker * worker_id:cores_per_worker * (worker_id + 1)]
+        elif cpu_affinity == "block-reverse":
+            cpu_worker_id = pool_size - worker_id - 1  # To assign in reverse order
+            my_cores = avail_cores[cores_per_worker * cpu_worker_id:cores_per_worker * (cpu_worker_id + 1)]
         elif cpu_affinity == "alternating":
             my_cores = avail_cores[worker_id::pool_size]
         else:
