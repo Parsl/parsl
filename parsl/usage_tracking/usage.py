@@ -14,8 +14,13 @@ from parsl.version import VERSION as PARSL_VERSION
 
 logger = logging.getLogger(__name__)
 
+from typing import Callable
+from typing_extensions import ParamSpec
 
-def async_process(fn):
+P = ParamSpec("P")
+
+
+def async_process(fn: Callable[P, None]) -> Callable[P, None]:
     """ Decorator function to launch a function as a separate process """
 
     def run(*args, **kwargs):
@@ -27,31 +32,22 @@ def async_process(fn):
 
 
 @async_process
-def udp_messenger(domain_name, UDP_IP, UDP_PORT, sock_timeout, message):
+def udp_messenger(domain_name: str, UDP_IP: str, UDP_PORT: int, sock_timeout: int, message: str) -> None:
     """Send UDP messages to usage tracker asynchronously
 
     This multiprocessing based messenger was written to overcome the limitations
-    of signalling/terminating a thread that is blocked on a system call. This
-    messenger is created as a separate process, and initialized with 2 queues,
-    to_send to receive messages to be sent to the internet.
+    of signalling/terminating a thread that is blocked on a system call.
 
     Args:
           - domain_name (str) : Domain name string
           - UDP_IP (str) : IP address YYY.YYY.YYY.YYY
           - UDP_PORT (int) : UDP port to send out on
           - sock_timeout (int) : Socket timeout
-          - to_send (multiprocessing.Queue) : Queue of outgoing messages to internet
     """
     setproctitle("parsl: Usage tracking")
 
     try:
-        if message is None:
-            raise ValueError("message was none")
-
         encoded_message = bytes(message, "utf-8")
-
-        if encoded_message is None:
-            raise ValueError("utf-8 encoding of message failed")
 
         if domain_name:
             try:
@@ -94,8 +90,8 @@ class UsageTracker:
 
         We will try to resolve the hostname specified in kwarg:domain_name
         and if that fails attempt to use the kwarg:ip. Determining the
-        IP and sending message is threaded to avoid slowing down DFK
-        initialization.
+        IP and sending message happens in an asynchronous processs to avoid
+        slowing down DFK initialization.
 
         Tracks usage stats by inspecting the internal state of the dfk.
 
@@ -147,7 +143,7 @@ class UsageTracker:
 
         return track
 
-    def construct_start_message(self):
+    def construct_start_message(self) -> str:
         """Collect preliminary run info at the start of the DFK.
 
         Returns :
@@ -165,7 +161,7 @@ class UsageTracker:
 
         return json.dumps(message)
 
-    def construct_end_message(self):
+    def construct_end_message(self) -> str:
         """Collect the final run information at the time of DFK cleanup.
 
         Returns:
@@ -188,28 +184,21 @@ class UsageTracker:
 
         return json.dumps(message)
 
-    def send_UDP_message(self, message):
+    def send_UDP_message(self, message: str) -> None:
         """Send UDP message."""
-        x = 0
         if self.tracking_enabled:
             try:
                 proc = udp_messenger(self.domain_name, self.UDP_IP, self.UDP_PORT, self.sock_timeout, message)
                 self.procs.append(proc)
             except Exception as e:
                 logger.debug("Usage tracking failed: {}".format(e))
-        else:
-            x = -1
 
-        return x
-
-    def send_message(self) -> float:
+    def send_message(self) -> None:
         """Send message over UDP.
 
         Returns:
             time taken
         """
-        start = time.time()
-        message = None
         if not self.initialized:
             message = self.construct_start_message()
             self.initialized = True
@@ -217,11 +206,8 @@ class UsageTracker:
             message = self.construct_end_message()
 
         self.send_UDP_message(message)
-        end = time.time()
 
-        return end - start
-
-    def close(self):
+    def close(self) -> None:
         """We terminate (SIGTERM) the processes added to the self.procs list """
         for proc in self.procs:
             proc.terminate()
