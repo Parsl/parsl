@@ -5,6 +5,7 @@ import threading
 import queue
 import datetime
 import pickle
+import warnings
 from multiprocessing import Queue
 from typing import Dict, Sequence  # noqa F401 (used in type annotation)
 from typing import List, Optional, Tuple, Union
@@ -202,7 +203,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  max_workers: Union[int, float] = float('inf'),
                  cpu_affinity: str = 'none',
                  available_accelerators: Union[int, Sequence[str]] = (),
-                 start_method: str = 'fork',
+                 start_method: str = 'spawn',
                  prefetch_capacity: int = 0,
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
@@ -255,6 +256,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             raise ValueError('Thread affinity is not available with start method: "thread"')
         if start_method == "thread" and len(available_accelerators) > 0:
             raise ValueError('Accelerator pinning not available with start method: "thread"')
+        if start_method == "fork":
+            logger.warning("The 'fork' start method is deprecated")
+            warnings.warn("The 'fork' start method is deprecated")
 
         # Determine the number of workers per node
         self._workers_per_node = min(max_workers, mem_slots, cpu_slots)
