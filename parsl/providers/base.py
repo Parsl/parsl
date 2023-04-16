@@ -20,6 +20,9 @@ class JobState(IntEnum):
     TIMEOUT = 6
     HELD = 7
 
+    def __str__(self) -> str:
+        return self.__class__.__name__ + "." + self.name
+
 
 TERMINAL_STATES = [JobState.CANCELLED, JobState.COMPLETED, JobState.FAILED,
                    JobState.TIMEOUT]
