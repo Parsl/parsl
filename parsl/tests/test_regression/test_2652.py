@@ -1,6 +1,7 @@
 import pytest
 from parsl.providers.base import JobState
 
+
 @pytest.mark.local
 def test_JobStatus_repr():
     # in Python 3.11, the behavior of enums changed a bit, and so repr
