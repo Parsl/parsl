@@ -1,6 +1,6 @@
 import os
 from abc import ABCMeta, abstractmethod, abstractproperty
-from enum import Enum
+from enum import IntEnum
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -9,27 +9,20 @@ from parsl.channels.base import Channel
 logger = logging.getLogger(__name__)
 
 
-class JobState(bytes, Enum):
+class JobState(IntEnum):
     """Defines a set of states that a job can be in"""
-    def __new__(cls, value: int, terminal: bool, status_name: str) -> "JobState":
-        obj = bytes.__new__(cls, [value])
-        obj._value_ = value
-        obj.terminal = terminal
-        obj.status_name = status_name
-        return obj
+    UNKNOWN = 0
+    PENDING = 1
+    RUNNING = 2
+    CANCELLED = 3
+    COMPLETED = 4
+    FAILED = 5
+    TIMEOUT = 6
+    HELD = 7
 
-    value: int
-    terminal: bool
-    status_name: str
 
-    UNKNOWN = (0, False, "UNKNOWN")
-    PENDING = (1, False, "PENDING")
-    RUNNING = (2, False, "RUNNING")
-    CANCELLED = (3, True, "CANCELLED")
-    COMPLETED = (4, True, "COMPLETED")
-    FAILED = (5, True, "FAILED")
-    TIMEOUT = (6, True, "TIMEOUT")
-    HELD = (7, False, "HELD")
+TERMINAL_STATES = [JobState.CANCELLED, JobState.COMPLETED, JobState.FAILED,
+                   JobState.TIMEOUT]
 
 
 class JobStatus(object):
@@ -54,11 +47,11 @@ class JobStatus(object):
 
     @property
     def terminal(self) -> bool:
-        return self.state.terminal
+        return self.state in TERMINAL_STATES
 
     @property
     def status_name(self) -> str:
-        return self.state.status_name
+        return self.state.name
 
     def __repr__(self) -> str:
         if self.message is not None:

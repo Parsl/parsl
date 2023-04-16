@@ -1,5 +1,5 @@
 import pytest
-for parsl.providers.base import JobState
+from parsl.providers.base import JobState
 
 @pytest.mark.local
 def test_JobStatus_repr():
@@ -13,7 +13,7 @@ def test_JobStatus_repr():
     j = JobState.COMPLETED
 
     r = repr(j)
-    assert instanceof(r, str)
+    assert isinstance(r, str)
 
     s = str(j)
-    assert instanceof(r, str)
+    assert isinstance(s, str)
