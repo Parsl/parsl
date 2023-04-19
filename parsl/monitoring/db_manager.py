@@ -21,7 +21,7 @@ X = TypeVar('X')
 
 try:
     import sqlalchemy as sa
-    from sqlalchemy import Column, Text, Float, Boolean, Integer, DateTime, PrimaryKeyConstraint, Table
+    from sqlalchemy import Column, Text, Float, Boolean, BigInteger, Integer, DateTime, PrimaryKeyConstraint, Table
     from sqlalchemy.orm import Mapper
     from sqlalchemy.orm import mapperlib
     from sqlalchemy.orm import sessionmaker
@@ -132,8 +132,7 @@ class Database:
 
     class Status(Base):
         __tablename__ = STATUS
-        task_id = Column(Integer, sa.ForeignKey(
-            'task.task_id'), nullable=False)
+        task_id = Column(Integer, nullable=False)
         task_status_name = Column(Text, nullable=False)
         timestamp = Column(DateTime, nullable=False)
         run_id = Column(Text, sa.ForeignKey('workflow.run_id'), nullable=False)
@@ -206,7 +205,7 @@ class Database:
         uid = Column('uid', Text, nullable=False)
         block_id = Column('block_id', Text, nullable=False)
         cpu_count = Column('cpu_count', Integer, nullable=False)
-        total_memory = Column('total_memory', Integer, nullable=False)
+        total_memory = Column('total_memory', BigInteger, nullable=False)
         active = Column('active', Boolean, nullable=False)
         worker_count = Column('worker_count', Integer, nullable=False)
         python_v = Column('python_v', Text, nullable=False)
@@ -227,10 +226,8 @@ class Database:
 
     class Resource(Base):
         __tablename__ = RESOURCE
-        try_id = Column('try_id', Integer, sa.ForeignKey(
-            'try.try_id'), nullable=False)
-        task_id = Column('task_id', Integer, sa.ForeignKey(
-            'task.task_id'), nullable=False)
+        try_id = Column('try_id', Integer, nullable=False)
+        task_id = Column('task_id', Integer, nullable=False)
         run_id = Column('run_id', Text, sa.ForeignKey(
             'workflow.run_id'), nullable=False)
         timestamp = Column('timestamp', DateTime, nullable=False)
