@@ -2,7 +2,7 @@ import logging
 import os
 import time
 
-from parsl.providers.error import ScaleOutFailed
+from parsl.providers.errors import ScaleOutFailed
 from parsl.channels import LocalChannel
 from parsl.launchers import AprunLauncher
 from parsl.providers.cobalt.template import template_string
