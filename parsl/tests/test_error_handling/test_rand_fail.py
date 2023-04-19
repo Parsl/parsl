@@ -133,7 +133,7 @@ def test_deps(numtasks=10):
 
     try:
         print("Final status : ", fu_final.result())
-    except parsl.dataflow.error.DependencyError as e:
+    except parsl.dataflow.errors.DependencyError as e:
         print("Caught the right exception")
         print("Exception : ", e)
     except Exception as e:

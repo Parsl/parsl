@@ -142,10 +142,10 @@ Exceptions
     parsl.executors.errors.SerializationError
     parsl.executors.errors.DeserializationError
     parsl.executors.errors.BadMessage
-    parsl.dataflow.error.DataFlowException
-    parsl.dataflow.error.ConfigurationError
-    parsl.dataflow.error.BadCheckpoint
-    parsl.dataflow.error.DependencyError
+    parsl.dataflow.errors.DataFlowException
+    parsl.dataflow.errors.ConfigurationError
+    parsl.dataflow.errors.BadCheckpoint
+    parsl.dataflow.errors.DependencyError
     parsl.launchers.error.BadLauncher
     parsl.providers.errors.ExecutionProviderException
     parsl.providers.errors.ScaleOutFailed
