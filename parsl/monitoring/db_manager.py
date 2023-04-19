@@ -45,8 +45,8 @@ class Database:
 
     if not _sqlalchemy_enabled:
         raise OptionalModuleMissing(['sqlalchemy'],
-                                    ("Default database logging requires the sqlalchemy library."
-                                     " Enable monitoring support with: pip install 'parsl[monitoring]'"))
+                                    ("Monitoring requires the sqlalchemy library."
+                                     " Install monitoring dependencies with: pip install 'parsl[monitoring]'"))
     Base = declarative_base()
 
     def __init__(self,
