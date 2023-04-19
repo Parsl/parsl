@@ -1,4 +1,4 @@
-from parsl.providers.error import ExecutionProviderException
+from parsl.providers.errors import ExecutionProviderException
 
 
 class BadLauncher(ExecutionProviderException):

@@ -147,10 +147,10 @@ Exceptions
     parsl.dataflow.errors.BadCheckpoint
     parsl.dataflow.errors.DependencyError
     parsl.launchers.error.BadLauncher
-    parsl.providers.error.ExecutionProviderException
-    parsl.providers.error.ScaleOutFailed
-    parsl.providers.error.SchedulerMissingArgs
-    parsl.providers.error.ScriptPathError
+    parsl.providers.errors.ExecutionProviderException
+    parsl.providers.errors.ScaleOutFailed
+    parsl.providers.errors.SchedulerMissingArgs
+    parsl.providers.errors.ScriptPathError
     parsl.channels.errors.ChannelError
     parsl.channels.errors.BadHostKeyException
     parsl.channels.errors.BadScriptPath
