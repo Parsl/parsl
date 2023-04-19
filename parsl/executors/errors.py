@@ -1,5 +1,5 @@
 """Exceptions raise by Executors."""
-from parsl.app.errors import ParslError
+from parsl.errors import ParslError
 from parsl.executors.base import ParslExecutor
 
 
