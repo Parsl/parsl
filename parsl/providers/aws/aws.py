@@ -4,7 +4,7 @@ import os
 import time
 from string import Template
 
-from parsl.dataflow.error import ConfigurationError
+from parsl.dataflow.errors import ConfigurationError
 from parsl.providers.aws.template import template_string
 from parsl.providers.base import ExecutionProvider, JobState, JobStatus
 from parsl.errors import OptionalModuleMissing

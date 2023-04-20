@@ -1,5 +1,5 @@
 import parsl
-from parsl.dataflow.error import DependencyError
+from parsl.dataflow.errors import DependencyError
 from concurrent.futures import Future
 
 
