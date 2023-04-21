@@ -64,4 +64,4 @@ class JoinError(DataFlowException):
 
     def __str__(self) -> str:
         dep_tids = [tid for (exception, tid) in self.dependent_exceptions_tids]
-        return "Dependency failure for task {} with failed dependencies from tasks {}".format(self.task_id, dep_tids)
+        return "Join failure for task {} with failed join dependencies from tasks {}".format(self.task_id, dep_tids)
