@@ -204,8 +204,6 @@ class DataFlowKernel(object):
 
     def _send_task_log_info(self, task_record: TaskRecord) -> None:
         if self.monitoring:
-            import inspect
-            logger.warn(f"BENC: SEND TASK LOG INFO, task_id {task_record['id']}, at {inspect.stack()}")
             task_log_info = self._create_task_log_info(task_record)
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
@@ -292,7 +290,6 @@ class DataFlowKernel(object):
         """
 
         task_id = task_record['id']
-        logger.info(f"BENC: entering handle_exec_update for task_id {task_id}")
 
         task_record['try_time_returned'] = datetime.datetime.now()
 
@@ -329,6 +326,7 @@ class DataFlowKernel(object):
             if task_record['status'] == States.dep_fail:
                 logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
                 task_record['time_returned'] = datetime.datetime.now()
+                self._send_task_log_info(task_record)
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
 
@@ -343,6 +341,7 @@ class DataFlowKernel(object):
                 task_record['try_time_launched'] = None
                 task_record['try_time_returned'] = None
                 task_record['fail_history'] = []
+                self._send_task_log_info(task_record)
 
                 logger.info("Task {} marked for retry".format(task_id))
 
@@ -352,15 +351,18 @@ class DataFlowKernel(object):
                 task_record['time_returned'] = datetime.datetime.now()
                 self.update_task_state(task_record, States.failed)
                 task_record['time_returned'] = datetime.datetime.now()
+                self._send_task_log_info(task_record)
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
 
         else:
             if task_record['from_memo']:
                 self._complete_task(task_record, States.memo_done, res)
+                self._send_task_log_info(task_record)
             else:
                 if not task_record['join']:
                     self._complete_task(task_record, States.exec_done, res)
+                    self._send_task_log_info(task_record)
                 else:
                     # This is a join task, and the original task's function code has
                     # completed. That means that the future returned by that code
@@ -376,36 +378,30 @@ class DataFlowKernel(object):
                         self.update_task_state(task_record, States.joining)
                         task_record['joins'] = joinable
                         task_record['join_lock'] = threading.Lock()
+                        self._send_task_log_info(task_record)
                         joinable.add_done_callback(partial(self.handle_join_update, task_record))
                     elif isinstance(joinable, list) and [j for j in joinable if not isinstance(j, Future)] == []:
                         self.update_task_state(task_record, States.joining)
                         task_record['joins'] = joinable
                         task_record['join_lock'] = threading.Lock()
+                        self._send_task_log_info(task_record)
                         for inner_future in joinable:
                             inner_future.add_done_callback(partial(self.handle_join_update, task_record))
                     else:
                         task_record['time_returned'] = datetime.datetime.now()
                         self.update_task_state(task_record, States.failed)
-                        # BENC: TODO: why is this time_returned set twice? it should never be the case that time_return is ever updated if it isn't set to begin with?
                         task_record['time_returned'] = datetime.datetime.now()
+                        self._send_task_log_info(task_record)
                         with task_record['app_fu']._update_lock:
                             task_record['app_fu'].set_exception(
                                 TypeError(f"join_app body must return a Future or list of Futures, got {joinable} of type {type(joinable)}"))
 
         self._log_std_streams(task_record)
 
-        # BENC: in the join case, because handle_join_update was added before this point, it may have already fired in the case of fast running tasks, and performed the end-of-task handling - so this will not properly record the task as being in joining state in monitoring, and will instead record a double exec_done.
-        # The _send_task_log_info should happen before the callbacks are added..., eg at update_task_state time. 
-        # rather than here.
-
-        # record current state for this task: maybe a new try, maybe the original try marked as failed, maybe the original try joining
-        self._send_task_log_info(task_record)
-
         # it might be that in the course of the update, we've gone back to being
         # pending - in which case, we should consider ourself for relaunch
         if task_record['status'] == States.pending:
             self.launch_if_ready(task_record)
-        logger.info(f"BENC: leaving handle_exec_update for task_id {task_id}")
 
     def handle_join_update(self, task_record: TaskRecord, inner_app_future: AppFuture) -> None:
         with task_record['join_lock']:

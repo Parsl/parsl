@@ -2,7 +2,7 @@ import pytest
 import time
 
 from parsl import join_app, python_app
-from parsl.dataflow.error import JoinError
+from parsl.dataflow.errors import JoinError
 
 from parsl.tests.configs.local_threads import fresh_config as local_config
 
