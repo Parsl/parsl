@@ -106,10 +106,10 @@ class JobStatusPoller(object):
         self._strategy = Strategy(dfk)
         self._error_handler = JobErrorHandler()
 
-    def poll(self, tasks=None):
+    def poll(self):
         self._update_state()
         self._error_handler.run(self._poll_items)
-        self._strategy.strategize(self._poll_items, tasks)
+        self._strategy.strategize(self._poll_items)
 
     def _update_state(self) -> None:
         now = time.time()

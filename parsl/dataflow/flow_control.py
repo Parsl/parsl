@@ -61,7 +61,6 @@ class FlowControl(object):
         self.callback = self.job_status_poller.poll
         self._handle = None
         self._event_count = 0
-        self._event_buffer = []
         self._wake_up_time = time.time() + 1
         self._kill_event = threading.Event()
         self._thread = threading.Thread(target=self._wake_up_timer, args=(self._kill_event,), name="FlowControl-Thread")
@@ -93,10 +92,9 @@ class FlowControl(object):
         """
         self._wake_up_time = time.time() + self.interval
         try:
-            self.callback(tasks=self._event_buffer)
+            self.callback()
         except Exception:
             logger.error("Flow control callback threw an exception - logging and proceeding anyway", exc_info=True)
-        self._event_buffer = []
 
     def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         self.job_status_poller.add_executors(executors)
