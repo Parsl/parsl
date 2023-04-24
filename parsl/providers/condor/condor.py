@@ -10,7 +10,7 @@ from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.condor.template import template_string
 from parsl.providers.cluster_provider import ClusterProvider
-from parsl.providers.error import ScaleOutFailed
+from parsl.providers.errors import ScaleOutFailed
 
 logger = logging.getLogger(__name__)
 

@@ -8,7 +8,7 @@ with open('requirements.txt') as f:
 
 extras_require = {
     'monitoring' : [
-        'sqlalchemy>=1.3.0,<2',
+        'sqlalchemy>=1.4,<2',
         'pydot',
         'networkx>=2.5,<2.6',
         'Flask>=1.0.2',
@@ -70,5 +70,6 @@ setup(
       [
        'parsl-globus-auth=parsl.data_provider.globus:cli_run',
        'parsl-visualize=parsl.monitoring.visualization.app:cli_run',
+       'parsl-perf=parsl.benchmark.perf:cli_run',
       ]}
 )
