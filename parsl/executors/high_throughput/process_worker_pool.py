@@ -119,7 +119,7 @@ class Manager(object):
              Timeout period used by the manager in milliseconds. Default: 10ms
 
         cpu_affinity : str
-             Whether each worker should force its affinity to different CPUs
+             Whether or how each worker should force its affinity to different CPUs
 
         available_accelerators: list of str
             List of accelerators available to the workers. Default: Empty list
@@ -562,6 +562,9 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         # Determine this worker's cores
         if cpu_affinity == "block":
             my_cores = avail_cores[cores_per_worker * worker_id:cores_per_worker * (worker_id + 1)]
+        elif cpu_affinity == "block-reverse":
+            cpu_worker_id = pool_size - worker_id - 1  # To assign in reverse order
+            my_cores = avail_cores[cores_per_worker * cpu_worker_id:cores_per_worker * (cpu_worker_id + 1)]
         elif cpu_affinity == "alternating":
             my_cores = avail_cores[worker_id::pool_size]
         else:
@@ -686,7 +689,7 @@ if __name__ == "__main__":
                         help="Poll period used in milliseconds")
     parser.add_argument("-r", "--result_port", required=True,
                         help="REQUIRED: Result port for posting results to the interchange")
-    parser.add_argument("--cpu-affinity", type=str, choices=["none", "block", "alternating"],
+    parser.add_argument("--cpu-affinity", type=str, choices=["none", "block", "alternating", "block-reverse"],
                         help="Whether/how workers should control CPU affinity.")
     parser.add_argument("--available-accelerators", type=str, nargs="*",
                         help="Names of available accelerators")

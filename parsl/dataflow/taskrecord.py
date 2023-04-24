@@ -60,11 +60,6 @@ class TaskRecord(TypedDict, total=False):
     prevents.
     """
 
-    join_lock: threading.Lock
-    """This lock is used to ensure that join processing only happens
-    once.
-    """
-
     # these three could be more strongly typed perhaps but I'm not thinking about that now
     func: Callable
     fn_hash: str
@@ -91,4 +86,9 @@ class TaskRecord(TypedDict, total=False):
 
     joins: Union[None, Future, List[Future]]
     """If this is a join app and the python body has executed, then this
-    contains the Futures that the join app will join."""
+    contains the Future or list of Futures that the join app will join."""
+
+    join_lock: threading.Lock
+    """Restricts access to end-of-join behavior to ensure that joins
+    only complete once, even if several joining Futures complete close
+    together in time."""

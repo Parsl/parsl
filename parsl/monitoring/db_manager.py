@@ -26,7 +26,6 @@ try:
     from sqlalchemy.orm import mapperlib
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.orm import declarative_base
-
 except ImportError:
     _sqlalchemy_enabled = False
 else:

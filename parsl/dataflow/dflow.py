@@ -28,7 +28,7 @@ from parsl.channels import Channel
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
-from parsl.dataflow.error import BadCheckpoint, ConfigurationError, DependencyError
+from parsl.dataflow.errors import BadCheckpoint, ConfigurationError, DependencyError, JoinError
 from parsl.dataflow.flow_control import FlowControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
@@ -328,6 +328,7 @@ class DataFlowKernel(object):
             if task_record['status'] == States.dep_fail:
                 logger.info("Task {} failed due to dependency failure so skipping retries".format(task_id))
                 task_record['time_returned'] = datetime.datetime.now()
+                self._send_task_log_info(task_record)
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
 
@@ -342,6 +343,8 @@ class DataFlowKernel(object):
                 task_record['try_time_launched'] = None
                 task_record['try_time_returned'] = None
                 task_record['fail_history'] = []
+                self._send_task_log_info(task_record)
+
                 logger.info("Task {} marked for retry".format(task_id))
 
             else:
@@ -353,15 +356,18 @@ class DataFlowKernel(object):
                 task_record['time_returned'] = datetime.datetime.now()
                 self.update_task_state(task_record, States.failed)
                 task_record['time_returned'] = datetime.datetime.now()
+                self._send_task_log_info(task_record)
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
 
         else:
             if task_record['from_memo']:
                 self._complete_task(task_record, States.memo_done, res)
+                self._send_task_log_info(task_record)
             else:
                 if not task_record['join']:
                     self._complete_task(task_record, States.exec_done, res)
+                    self._send_task_log_info(task_record)
                 else:
                     # This is a join task, and the original task's function code has
                     # completed. That means that the future returned by that code
@@ -377,33 +383,25 @@ class DataFlowKernel(object):
                         self.update_task_state(task_record, States.joining)
                         task_record['joins'] = joinable
                         task_record['join_lock'] = threading.Lock()
+                        self._send_task_log_info(task_record)
                         joinable.add_done_callback(partial(self.handle_join_update, task_record))
-                    elif isinstance(joinable, list):  # TODO: should this be list or arbitrary iterable?
+                    elif isinstance(joinable, list) and [j for j in joinable if not isinstance(j, Future)] == []:
                         self.update_task_state(task_record, States.joining)
                         task_record['joins'] = joinable
                         task_record['join_lock'] = threading.Lock()
+                        self._send_task_log_info(task_record)
                         for inner_future in joinable:
-                            # TODO: typechecking and error setting here - perhaps
-                            # should put this and the one-future case inside a
-                            # try and perform the error handling there in an
-                            # except block? (it would be ok to go joining->failed
-                            # which doesn't happen in the type error case but
-                            # does happen in the joined-tasks fail case)
-                            # For now, this assert will cause a DFK hang
-                            assert isinstance(inner_future, Future)
                             inner_future.add_done_callback(partial(self.handle_join_update, task_record))
                     else:
                         task_record['time_returned'] = datetime.datetime.now()
                         self.update_task_state(task_record, States.failed)
                         task_record['time_returned'] = datetime.datetime.now()
+                        self._send_task_log_info(task_record)
                         with task_record['app_fu']._update_lock:
                             task_record['app_fu'].set_exception(
-                                TypeError(f"join_app body must return a Future or collection of Futures, got {type(joinable)}"))
+                                TypeError(f"join_app body must return a Future or list of Futures, got {joinable} of type {type(joinable)}"))
 
         self._log_std_streams(task_record)
-
-        # record current state for this task: maybe a new try, maybe the original try marked as failed, maybe the original try joining
-        self._send_task_log_info(task_record)
 
         # it might be that in the course of the update, we've gone back to being
         # pending - in which case, we should consider ourself for relaunch
@@ -419,8 +417,8 @@ class DataFlowKernel(object):
             # use the result of the inner_app_future as the final result of
             # the outer app future.
 
-            # If the outer task is joining on a collection of futures, then
-            # check if the collection is all done, and if so, return a list
+            # If the outer task is joining on a list of futures, then
+            # check if the list is all done, and if so, return a list
             # of the results. Otherwise, this callback can do nothing and
             # processing will happen in another callback (on the final Future
             # to complete)
@@ -436,9 +434,9 @@ class DataFlowKernel(object):
                 logger.debug(f"Join callback for task {outer_task_id} skipping because task is not in joining state")
                 return
 
-            joinable = task_record['joins']  # Future or collection of futures
+            joinable = task_record['joins']
 
-            if isinstance(joinable, list):  # TODO more generic type than list?
+            if isinstance(joinable, list):
                 for future in joinable:
                     if not future.done():
                         logger.debug(f"A joinable future {future} is not done for task {outer_task_id} - skipping callback")
@@ -446,19 +444,31 @@ class DataFlowKernel(object):
 
             # now we know each joinable Future is done
             # so now look for any exceptions
-            e = None
+            exceptions_tids: List[Tuple[BaseException, Optional[str]]]
+            exceptions_tids = []
             if isinstance(joinable, Future):
-                if joinable.exception():
-                    e = joinable.exception()
+                je = joinable.exception()
+                if je is not None:
+                    if hasattr(joinable, 'task_def'):
+                        tid = joinable.task_def['id']
+                    else:
+                        tid = None
+                    exceptions_tids = [(je, tid)]
             elif isinstance(joinable, list):
                 for future in joinable:
-                    if future.exception():
-                        e = future.exception()
+                    je = future.exception()
+                    if je is not None:
+                        if hasattr(joinable, 'task_def'):
+                            tid = joinable.task_def['id']
+                        else:
+                            tid = None
+                        exceptions_tids.append((je, tid))
             else:
                 raise TypeError(f"Unknown joinable type {type(joinable)}")
 
-            if e:
+            if exceptions_tids:
                 logger.debug("Task {} failed due to failure of an inner join future".format(outer_task_id))
+                e = JoinError(exceptions_tids, outer_task_id)
                 # We keep the history separately, since the future itself could be
                 # tossed.
                 task_record['fail_history'].append(repr(e))

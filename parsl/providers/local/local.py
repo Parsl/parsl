@@ -5,7 +5,7 @@ import time
 from parsl.channels import LocalChannel
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.base import ExecutionProvider, JobState, JobStatus
-from parsl.providers.error import SchedulerMissingArgs, ScriptPathError, SubmitException
+from parsl.providers.errors import SchedulerMissingArgs, ScriptPathError, SubmitException
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
