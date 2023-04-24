@@ -70,7 +70,7 @@ def udp_messenger(domain_name, UDP_IP, UDP_PORT, sock_timeout, message):
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
         sock.settimeout(sock_timeout)
-        sock.sendto(bytes(message, "utf-8"), (UDP_IP, UDP_PORT))
+        sock.sendto(encoded_message, (UDP_IP, UDP_PORT))
         sock.close()
 
     except socket.timeout:
