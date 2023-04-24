@@ -14,7 +14,7 @@ from parsl.process_loggers import wrap_with_logs
 logger = logging.getLogger(__name__)
 
 
-class Strategy(object):
+class Strategy:
     """Scaling strategy.
 
     As a workflow dag is processed by Parsl, new tasks are added and completed

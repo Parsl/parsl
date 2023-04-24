@@ -35,7 +35,7 @@ from parsl.serialize import unpack_apply_message, serialize
 HEARTBEAT_CODE = (2 ** 32) - 1
 
 
-class Manager(object):
+class Manager:
     """ Manager manages task execution by the workers
 
                 |         zmq              |    Manager         |   Worker Processes

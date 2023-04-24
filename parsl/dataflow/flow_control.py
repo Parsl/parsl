@@ -10,7 +10,7 @@ from parsl.dataflow.job_status_poller import JobStatusPoller
 logger = logging.getLogger(__name__)
 
 
-class FlowControl(object):
+class FlowControl:
     """Implements threshold-interval based flow control.
 
     The overall goal is to trap the flow of apps from the
@@ -107,7 +107,7 @@ class FlowControl(object):
         self._thread.join()
 
 
-class Timer(object):
+class Timer:
     """This timer is a simplified version of the FlowControl timer.
     This timer does not employ notify events.
 

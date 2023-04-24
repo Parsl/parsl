@@ -62,7 +62,7 @@ class VersionMismatch(Exception):
         return self.__repr__()
 
 
-class Interchange(object):
+class Interchange:
     """ Interchange is a task orchestrator for distributed systems.
 
     1. Asynchronously queue large volume of tasks (>100K)
