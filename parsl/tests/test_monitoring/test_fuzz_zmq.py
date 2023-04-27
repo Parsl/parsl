@@ -17,6 +17,7 @@ def this_app():
 def test_row_counts():
     from parsl.tests.configs.htex_local_alternate import fresh_config
     import sqlalchemy
+    from sqlalchemy import text
 
     if os.path.exists("runinfo/monitoring.db"):
         logger.info("Monitoring database already exists - deleting")
@@ -81,15 +82,15 @@ def test_row_counts():
     engine = sqlalchemy.create_engine("sqlite:///runinfo/monitoring.db")
     with engine.begin() as connection:
 
-        result = connection.execute("SELECT COUNT(*) FROM workflow")
+        result = connection.execute(text("SELECT COUNT(*) FROM workflow"))
         (c, ) = result.first()
         assert c == 1
 
-        result = connection.execute("SELECT COUNT(*) FROM task")
+        result = connection.execute(text("SELECT COUNT(*) FROM task"))
         (c, ) = result.first()
         assert c == 4
 
-        result = connection.execute("SELECT COUNT(*) FROM try")
+        result = connection.execute(text("SELECT COUNT(*) FROM try"))
         (c, ) = result.first()
         assert c == 4
 

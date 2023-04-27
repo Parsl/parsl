@@ -6,7 +6,7 @@ from typing_extensions import TypedDict
 from concurrent.futures import Future
 
 # only for type checking:
-from typing import Any, Callable, Dict, Optional, List, Sequence, TYPE_CHECKING
+from typing import Any, Callable, Dict, Optional, List, Sequence, TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
     from parsl.dataflow.futures import AppFuture
@@ -84,6 +84,11 @@ class TaskRecord(TypedDict, total=False):
     join: bool
     """Is this a join_app?"""
 
-    joins: Optional[Future]
+    joins: Union[None, Future, List[Future]]
     """If this is a join app and the python body has executed, then this
-    contains the Future that the join app will join."""
+    contains the Future or list of Futures that the join app will join."""
+
+    join_lock: threading.Lock
+    """Restricts access to end-of-join behavior to ensure that joins
+    only complete once, even if several joining Futures complete close
+    together in time."""
