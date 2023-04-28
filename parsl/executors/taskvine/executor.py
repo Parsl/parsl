@@ -891,6 +891,9 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                 for var in env:
                     t.set_env_var(var, env[var])
 
+            #add helper function that execute parsl functions on remote nodes
+            t.add_input(exec_parsl_function_file, "exec_parsl_function.py")
+
             # Declare and add task-specific function, data, and result files to task
             task_function_file = m.declare_file(task.function_file, cache=False, peer_transfer=False)
             t.add_input(task_function_file, "function")
@@ -947,7 +950,7 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                 logger.debug("Completed TaskVine task {}, parsl task {}".format(t.id, t.tag))
                 result_file = result_file_of_task_id.pop(t.tag)
 
-                logger.debug("completed task info: {t.tag}, {t.category}, {t.command}, {t.std_output}")
+                logger.debug(f"completed task info: {t.tag}, {t.category}, {t.command}, {t.std_output}")
 
                 # A tasks completes 'succesfully' if it has result file,
                 # and it can be loaded. This may mean that the 'success' is
