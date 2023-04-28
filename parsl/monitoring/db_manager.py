@@ -25,7 +25,7 @@ try:
     from sqlalchemy.orm import Mapper
     from sqlalchemy.orm import mapperlib
     from sqlalchemy.orm import sessionmaker
-    from sqlalchemy.ext.declarative import declarative_base
+    from sqlalchemy.orm import declarative_base
 except ImportError:
     _sqlalchemy_enabled = False
 else:
@@ -68,7 +68,7 @@ class Database:
         self.session = Session()
 
     def _get_mapper(self, table_obj: Table) -> Mapper:
-        all_mappers = set()
+        all_mappers: Set[Mapper] = set()
         for mapper_registry in mapperlib._all_registries():  # type: ignore
             all_mappers.update(mapper_registry.mappers)
         mapper_gen = (
