@@ -43,20 +43,21 @@ from .errors import TaskVineFailure
 from collections import namedtuple
 
 try:
-    import taskvine as vine
-    from taskvine import Manager
-    from taskvine import Task
-    from taskvine import VINE_DEFAULT_PORT
-    from taskvine import VINE_ALLOCATION_MODE_MAX_THROUGHPUT
+    import ndcctools.taskvine as vine
+    from ndcctools.taskvine import cvine
+    from ndcctools.taskvine import Manager
+    from ndcctools.taskvine import Task
+    from ndcctools.taskvine.cvine import VINE_DEFAULT_PORT
+    from ndcctools.taskvine.cvine import VINE_ALLOCATION_MODE_MAX_THROUGHPUT
 except ImportError:
     _taskvine_enabled = False
     VINE_DEFAULT_PORT = 0
 else:
     _taskvine_enabled = True
 
-package_analyze_script = shutil.which("python_package_analyze")
-package_create_script = shutil.which("python_package_create")
-package_run_script = shutil.which("python_package_run")
+package_analyze_script = shutil.which("poncho_package_analyze")
+package_create_script = shutil.which("poncho_package_create")
+package_run_script = shutil.which("poncho_package_run")
 
 logger = logging.getLogger(__name__)
 
@@ -142,13 +143,13 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             @python_apps, but the implementation does not include
             functionality for @bash_apps, and thus source=False
             must be used for programs utilizing @bash_apps.)
-            Default is False. Set to True if pack is True
+            Default is False. Set to True if pack is True.
 
         pack: bool
             Use conda-pack to prepare a self-contained Python evironment for
             each task. This greatly increases task latency, but does not
             require a common environment or shared FS on execution nodes.
-            Implies source=True.
+            Implies source=True. Default is False.
 
         extra_pkgs: list
             List of extra pip/conda package names to include when packing
@@ -173,6 +174,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             Place each app in its own category by default. If all
             invocations of an app have similar performance characteristics,
             this will provide a reasonable set of categories automatically.
+            Default is True.
 
         max_retries: Optional[int]
             Set the number of retries that TaskVine will make when a task
@@ -202,9 +204,11 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         wait_for_workers: int
             The number of workers to wait for before running any task.
+            Default is 0.
 
         enable_peer_transfers: bool
             Option to enable transferring files between workers.
+            Default is False.
     """
 
     radio_mode = "filesystem"
@@ -285,7 +289,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 self.project_password_file = None
 
         # Build foundations of the launch command
-        self.launch_cmd = ("{package_prefix}python3 exec_parsl_function.py {mapping} {function} {result}")
+        self.launch_cmd = ("python3 exec_parsl_function.py {mapping} {function} {result}")
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
@@ -435,7 +439,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         input_files = []
         output_files = []
 
-        # Determine the input and output files that will exist at the workes:
+        # Determine the input and output files that will exist at the workers:
         input_files += [self._register_file(f) for f in kwargs.get("inputs", []) if isinstance(f, File)]
         output_files += [self._register_file(f) for f in kwargs.get("outputs", []) if isinstance(f, File)]
 
@@ -774,37 +778,43 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
     logger.debug("Creating TaskVine Object")
     try:
         logger.debug("Listening on port {}".format(port))
-        q = Manager(port, run_info_path=vine_log_dir)
+        m = Manager(port=port,
+                    name=project_name,
+                    run_info_path=vine_log_dir)
     except Exception as e:
         logger.error("Unable to create TaskVine object: {}".format(e))
         raise e
 
     # Specify TaskVine queue attributes
-    if project_name:
-        q.set_name(project_name)
-
+    
     if project_password_file:
-        q.set_password_file(project_password_file)
+        m.set_password_file(project_password_file)
 
     if autolabel:
-        q.enable_monitoring()
+        m.enable_monitoring()
         if autolabel_window is not None:
-            q.tune('category-steady-n-tasks', autolabel_window)
+            m.tune('category-steady-n-tasks', autolabel_window)
 
     if wait_for_workers:
-        q.tune("wait-for-workers", wait_for_workers)
+        m.tune("wait-for-workers", wait_for_workers)
 
     if enable_peer_transfers:
-        q.enable_peer_transfers()
+        m.enable_peer_transfers()
 
     # Only write logs when the vine_log_dir is specified, which it most likely will be
     #if vine_log_dir is not None:
-    #    if full and autolabel:
-    #        q.enable_monitoring_full(dirname=vine_log_dir)
+        if full and autolabel:
+            m.enable_monitoring_full(dirname=vine_log_dir)
 
     orig_ppid = os.getppid()
 
     result_file_of_task_id = {}  # Mapping taskid -> result file for active tasks.
+
+    poncho_env_to_file = {} # Mapping poncho_env file to File object in TaskVine
+
+    # Declare helper scripts as cache-able and peer-transferable
+    package_run_script_file = m.declare_file(package_run_script, cache=True, peer_transfer=True)
+    exec_parsl_function_file = m.declare_file(exec_parsl_function.__file__, cache=True, peer_transfer=True)
 
     while not should_stop.value:
         # Monitor the task queue
@@ -821,20 +831,13 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                 logger.debug("Removing task from queue")
             except queue.Empty:
                 continue
-
-            pkg_pfx = ""
-            if task.env_pkg is not None:
-                pkg_pfx = "./{} -e {} ".format(os.path.basename(package_run_script),
-                                               os.path.basename(task.env_pkg))
-
+            
             # Create command string
             logger.debug(launch_cmd)
-            command_str = launch_cmd.format(package_prefix=pkg_pfx,
-                                            mapping=os.path.basename(task.map_file),
+            command_str = launch_cmd.format(mapping=os.path.basename(task.map_file),
                                             function=os.path.basename(task.function_file),
                                             result=os.path.basename(task.result_file))
-            logger.debug(command_str)
-
+            
             # Create TaskVine task for the command
             logger.debug("Sending task {} with command: {}".format(task.id, command_str))
             try:
@@ -848,9 +851,21 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                                                            status=-1))
                 continue
 
+            poncho_env_file = None
+            if task.env_pkg is not None:
+                if task.env_pkg not in poncho_env_to_file:
+                    poncho_env_file = m.declare_poncho(task.env_pkg, cache=True, peer_transfer=True)
+                    poncho_env_to_file[task.env_pkg] = poncho_env_file
+                else:
+                    poncho_env_file = poncho_env_to_file[task.env_pkg]
+
+            if poncho_env_file is not None:
+                t.add_input(poncho_env_file, task.env_pkg)
+                t.add_input(package_run_script_file)
+
             t.set_category(task.category)
             if autolabel:
-                q.set_category_mode(task.category, VINE_ALLOCATION_MODE_MAX_THROUGHPUT)
+                m.set_category_mode(task.category, VINE_ALLOCATION_MODE_MAX_THROUGHPUT)
 
             if task.cores is not None:
                 t.set_cores(task.cores)
@@ -876,15 +891,16 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                 for var in env:
                     t.set_env_var(var, env[var])
 
-            if task.env_pkg is not None:
-                t.add_input_file(package_run_script, cache=True)
-                t.add_input_file(task.env_pkg, cache=True)
-
-            # Specify script, and data/result files for task
-            t.add_input_file(exec_parsl_function.__file__, cache=True)
-            t.add_input_file(task.function_file, cache=False)
-            t.add_input_file(task.map_file, cache=False)
-            t.add_output_file(task.result_file, cache=False)
+            # Declare and add task-specific function, data, and result files to task
+            task_function_file = m.declare_file(task.function_file, cache=False, peer_transfer=False)
+            t.add_input(task_function_file, "function")
+             
+            task_map_file = m.declare_file(task.map_file, cache=False, peer_transfer=False)
+            t.add_input(task_map_file, "map")
+            
+            task_result_file = m.declare_file(task.result_file, cache=False, peer_transfer=False)
+            t.add_output(task_result_file, "result")
+         
             t.set_tag(str(task.id))
             result_file_of_task_id[str(task.id)] = task.result_file
 
@@ -896,15 +912,17 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
             if not shared_fs:
                 for spec in task.input_files:
                     if spec.stage:
-                        t.add_input_file(spec.parsl_name, spec.parsl_name, cache=spec.cache)
+                        task_in_file = m.declare_file(spec.parsl_name, cache=spec.cache, peer_transfer=False)
+                        t.add_input(task_in_file, spec.parsl_name)
                 for spec in task.output_files:
                     if spec.stage:
-                        t.add_output_file(spec.parsl_name, spec.parsl_name, cache=spec.cache)
+                        task_out_file = m.declare_file(spec.parsl_name, cache=spec.cache, peer_transfer=False)
+                        t.add_output(task_out_file, spec.parsl_name)
 
             # Submit the task to the TaskVine object
             logger.debug("Submitting task {} to TaskVine".format(task.id))
             try:
-                vine_id = q.submit(t)
+                vine_id = m.submit(t)
             except Exception as e:
                 logger.error("Unable to submit task to taskvine: {}".format(e))
                 collector_queue.put_nowait(VineTaskToParsl(id=task.id,
@@ -917,10 +935,10 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
 
         # If the queue is not empty wait on the TaskVine queue for a task
         task_found = True
-        if not q.empty():
+        if not m.empty():
             while task_found and not should_stop.value:
                 # Obtain the task from the queue
-                t = q.wait(1)
+                t = m.wait(1)
                 if t is None:
                     task_found = False
                     continue
@@ -928,6 +946,8 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                 parsl_id = t.tag
                 logger.debug("Completed TaskVine task {}, parsl task {}".format(t.id, t.tag))
                 result_file = result_file_of_task_id.pop(t.tag)
+
+                logger.debug("completed task info: {t.tag}, {t.category}, {t.command}, {t.std_output}")
 
                 # A tasks completes 'succesfully' if it has result file,
                 # and it can be loaded. This may mean that the 'success' is
@@ -958,6 +978,7 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                                                                result=e,
                                                                reason=reason,
                                                                status=t.exit_code))
+
     logger.debug("Exiting TaskVine Monitoring Process")
     return 0
 
@@ -968,35 +989,38 @@ def _explain_taskvine_result(vine_task):
     vine_result = vine_task.result
 
     reason = "taskvine result: "
-    if vine_result == vine.VINE_RESULT_SUCCESS:
+    if vine_result == cvine.VINE_RESULT_SUCCESS:
         reason += "succesful execution with exit code {}".format(vine_task.return_status)
-    elif vine_result == vine.VINE_RESULT_OUTPUT_MISSING:
+    elif vine_result == cvine.VINE_RESULT_OUTPUT_MISSING:
         reason += "The result file was not transfered from the worker.\n"
         reason += "This usually means that there is a problem with the python setup,\n"
         reason += "or the wrapper that executes the function."
         reason += "\nTrace:\n" + str(vine_task.output)
-    elif vine_result == vine.VINE_RESULT_INPUT_MISSING:
+    elif vine_result == cvine.VINE_RESULT_INPUT_MISSING:
         reason += "missing input file"
-    elif vine_result == vine.VINE_RESULT_STDOUT_MISSING:
+    elif vine_result == cvine.VINE_RESULT_STDOUT_MISSING:
         reason += "stdout has been truncated"
-    elif vine_result == vine.VINE_RESULT_SIGNAL:
+    elif vine_result == cvine.VINE_RESULT_SIGNAL:
         reason += "task terminated with a signal"
-    elif vine_result == vine.VINE_RESULT_RESOURCE_EXHAUSTION:
+    elif vine_result == cvine.VINE_RESULT_RESOURCE_EXHAUSTION:
         reason += "task used more resources than requested"
-    elif vine_result == vine.VINE_RESULT_TASK_TIMEOUT:
+    elif vine_result == cvine.VINE_RESULT_MAX_END_TIME:
         reason += "task ran past the specified end time"
-    elif vine_result == vine.VINE_RESULT_UNKNOWN:
+    elif vine_result == cvine.VINE_RESULT_UNKNOWN:
         reason += "result could not be classified"
-    elif vine_result == vine.VINE_RESULT_FORSAKEN:
+    elif vine_result == cvine.VINE_RESULT_FORSAKEN:
         reason += "task failed, but not a task error"
-    elif vine_result == vine.VINE_RESULT_MAX_RETRIES:
+    elif vine_result == cvine.VINE_RESULT_MAX_RETRIES:
         reason += "unable to complete after specified number of retries"
-    elif vine_result == vine.VINE_RESULT_TASK_MAX_RUN_TIME:
+    elif vine_result == cvine.VINE_RESULT_MAX_WALL_TIME:
         reason += "task ran for more than the specified time"
-    elif vine_result == vine.VINE_RESULT_DISK_ALLOC_FULL:
-        reason += "task needed more space to complete task"
-    elif vine_result == vine.VINE_RESULT_RMONITOR_ERROR:
+    elif vine_result == cvine.VINE_RESULT_RMONITOR_ERROR:
         reason += "task failed because the monitor did not produce an output"
+    elif vine_result == cvine.VINE_RESULT_OUTPUT_TRANSFER_ERROR:
+        reason += "task failed because output transfer fails"
+    elif vine_result == cvine.VINE_RESULT_FIXED_LOCATION_MISSING:
+        reason += "task failed because no worker could satisfy the fixed \n"
+        reason += "location input file requirements"
     else:
         reason += "unable to process TaskVine system failure"
     return reason
