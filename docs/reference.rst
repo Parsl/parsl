@@ -146,6 +146,7 @@ Exceptions
     parsl.dataflow.errors.ConfigurationError
     parsl.dataflow.errors.BadCheckpoint
     parsl.dataflow.errors.DependencyError
+    parsl.dataflow.errors.JoinError
     parsl.launchers.error.BadLauncher
     parsl.providers.errors.ExecutionProviderException
     parsl.providers.errors.ScaleOutFailed
