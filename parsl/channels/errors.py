@@ -1,9 +1,10 @@
 ''' Exceptions raise by Apps.
 '''
+from parsl.errors import ParslError
 from typing import Optional
 
 
-class ChannelError(Exception):
+class ChannelError(ParslError):
     """ Base class for all exceptions
 
     Only to be invoked when only a more specific error is not available.
