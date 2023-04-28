@@ -1,5 +1,5 @@
 from parsl.errors import ParslError
-from typing import Sequence, Tuple
+from typing import Optional, Sequence, Tuple
 
 
 class DataFlowException(ParslError):
@@ -52,3 +52,17 @@ class DependencyError(DataFlowException):
     def __str__(self) -> str:
         dep_tids = [tid for (exception, tid) in self.dependent_exceptions_tids]
         return "Dependency failure for task {} with failed dependencies from tasks {}".format(self.task_id, dep_tids)
+
+
+class JoinError(DataFlowException):
+    """Error raised if apps joining into a join_app raise exceptions.
+       There can be several exceptions (one from each joining app),
+       and JoinError collects them all together.
+    """
+    def __init__(self, dependent_exceptions_tids: Sequence[Tuple[BaseException, Optional[str]]], task_id: int) -> None:
+        self.dependent_exceptions_tids = dependent_exceptions_tids
+        self.task_id = task_id
+
+    def __str__(self) -> str:
+        dep_tids = [tid for (exception, tid) in self.dependent_exceptions_tids]
+        return "Join failure for task {} with failed join dependencies from tasks {}".format(self.task_id, dep_tids)
