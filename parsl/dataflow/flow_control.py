@@ -11,37 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 class FlowControl:
-    """Implements threshold-interval based flow control.
-
-    The overall goal is to trap the flow of apps from the
-    workflow, measure it and redirect it the appropriate executors for
-    processing.
-
-    This is based on the following logic:
-
-    .. code-block:: none
-
-        BEGIN (INTERVAL, THRESHOLD, callback) :
-            start = current_time()
-
-            while (current_time()-start < INTERVAL) :
-                 count = get_events_since(start)
-                 if count >= THRESHOLD :
-                     break
-
-            callback()
-
-    This logic ensures that the callbacks are activated with a maximum delay
-    of ``interval`` for systems with infrequent events as well as systems which would
-    generate large bursts of events.
-
-    Once a callback is triggered, the callback generally runs a strategy
-    method on the sites available as well asqeuque
-
-    TODO: When the debug logs are enabled this module emits duplicate messages.
-    This issue needs more debugging. What I've learnt so far is that the duplicate
-    messages are present only when the timer thread is started, so this could be
-    from a duplicate logger being added by the thread.
+    """This class periodically makes a callback to the JobStatusPoller
+    to give the block scaling strategy a chance to execute.
     """
 
     def __init__(self, dfk, *args, interval=5):
@@ -61,7 +32,6 @@ class FlowControl:
         self.callback = self.job_status_poller.poll
         self._handle = None
         self._event_count = 0
-        self._event_buffer = []
         self._wake_up_time = time.time() + 1
         self._kill_event = threading.Event()
         self._thread = threading.Thread(target=self._wake_up_timer, args=(self._kill_event,), name="FlowControl-Thread")
@@ -93,10 +63,9 @@ class FlowControl:
         """
         self._wake_up_time = time.time() + self.interval
         try:
-            self.callback(tasks=self._event_buffer)
+            self.callback()
         except Exception:
             logger.error("Flow control callback threw an exception - logging and proceeding anyway", exc_info=True)
-        self._event_buffer = []
 
     def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         self.job_status_poller.add_executors(executors)
@@ -109,7 +78,6 @@ class FlowControl:
 
 class Timer:
     """This timer is a simplified version of the FlowControl timer.
-    This timer does not employ notify events.
 
     This is based on the following logic :
 
@@ -128,14 +96,11 @@ class Timer:
     """
 
     def __init__(self, callback, *args, interval=5, name=None):
-        """Initialize the flowcontrol object
+        """Initialize the Timer object
         We start the timer thread here
 
-        Args:
-             - dfk (DataFlowKernel) : DFK object to track parsl progress
-
         KWargs:
-             - interval (int) : seconds after which timer expires
+             - interval (int) : number of seconds between callback events
              - name (str) : a base name to use when naming the started thread
         """
 
@@ -181,7 +146,11 @@ class Timer:
         """Makes the callback and resets the timer.
         """
         self._wake_up_time = time.time() + self.interval
-        self.callback(*self.cb_args)
+
+        try:
+            self.callback(*self.cb_args)
+        except Exception:
+            logger.error("Callback threw an exception - logging and proceeding anyway", exc_info=True)
 
     def close(self) -> None:
         """Merge the threads and terminate.

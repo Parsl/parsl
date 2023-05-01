@@ -137,18 +137,15 @@ class Strategy:
         for executor in executors:
             self.executors[executor.label] = {'idle_since': None}
 
-    def _strategy_noop(self, status: List[ExecutorStatus], tasks: List[int]) -> None:
+    def _strategy_noop(self, status: List[ExecutorStatus]) -> None:
         """Do nothing.
-
-        Args:
-            - tasks (task_ids): Not used here.
         """
         logger.debug("strategy_noop: doing nothing")
 
-    def _strategy_simple(self, status_list, tasks: List[int]) -> None:
-        self._general_strategy(status_list, tasks, strategy_type='simple')
+    def _strategy_simple(self, status_list) -> None:
+        self._general_strategy(status_list, strategy_type='simple')
 
-    def _strategy_htex_auto_scale(self, status_list, tasks: List[int]) -> None:
+    def _strategy_htex_auto_scale(self, status_list) -> None:
         """HTEX specific auto scaling strategy
 
         This strategy works only for HTEX. This strategy will scale out by
@@ -162,14 +159,11 @@ class Strategy:
         some blocks will reach 0% utilization. Consequently, this strategy can be
         expected to scale in effectively only when # of workers, or tasks executing
         per block is close to 1.
-
-        Args:
-            - tasks (task_ids): Not used here.
         """
-        self._general_strategy(status_list, tasks, strategy_type='htex')
+        self._general_strategy(status_list, strategy_type='htex')
 
     @wrap_with_logs
-    def _general_strategy(self, status_list, tasks, *, strategy_type):
+    def _general_strategy(self, status_list, *, strategy_type):
         logger.debug(f"general strategy starting with strategy_type {strategy_type} for {len(status_list)} executors")
 
         for exec_status in status_list:

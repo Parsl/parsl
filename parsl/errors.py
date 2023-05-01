@@ -8,6 +8,11 @@ class ParslError(Exception):
     """
 
 
+class ConfigurationError(ParslError):
+    """Raised when a component receives an invalid configuration.
+    """
+
+
 class OptionalModuleMissing(ParslError):
     ''' Error raised when a required module is missing for a optional/extra component
     '''
