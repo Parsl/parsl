@@ -1,8 +1,6 @@
 import uuid
 import time
-import hashlib
 import os
-import getpass
 import json
 import logging
 import socket
@@ -155,13 +153,7 @@ class UsageTracker:
         Returns :
               - Message dict dumped as json string, ready for UDP
         """
-        uname = getpass.getuser().encode('latin1')
-        hashed_username = hashlib.sha256(uname).hexdigest()[0:10]
-        hname = socket.gethostname().encode('latin1')
-        hashed_hostname = hashlib.sha256(hname).hexdigest()[0:10]
         message = {'uuid': self.uuid,
-                   'uname': hashed_username,
-                   'hname': hashed_hostname,
                    'test': False,  # this field previously indicated if parsl
                                    # was being run in test mode, and is
                                    # retained for protocol compatibility
