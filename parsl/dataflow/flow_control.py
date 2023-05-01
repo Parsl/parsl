@@ -181,7 +181,11 @@ class Timer(object):
         """Makes the callback and resets the timer.
         """
         self._wake_up_time = time.time() + self.interval
-        self.callback(*self.cb_args)
+
+        try:
+            self.callback(*self.cb_args)
+        except Exception:
+            logger.error("Callback threw an exception - logging and proceeding anyway", exc_info=True)
 
     def close(self) -> None:
         """Merge the threads and terminate.
