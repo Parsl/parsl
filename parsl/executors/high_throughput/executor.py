@@ -428,6 +428,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         while not self.bad_state_is_set:
             try:
+                logger.debug("Waiting for an incoming_q message")
                 msgs = self.incoming_q.get()
 
             except IOError as e:
@@ -469,7 +470,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
                             if 'result' in msg:
                                 result = deserialize(msg['result'])
+                                # ^ if this raises an exception, queue management worker fails and
+                                # parsl hangs. this is more relevant now allowing user-pluggable
+                                # serialization and so user code exceptions can be raised here.
+                                logger.debug("Setting result in future")
                                 task_fut.set_result(result)
+                                logger.debug("Done setting result in future")
 
                             elif 'exception' in msg:
                                 try:
@@ -479,9 +485,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                         try:
                                             s.reraise()
                                         except Exception as e:
+                                            logger.debug("Setting exception in future")
                                             task_fut.set_exception(e)
+                                            logger.debug("Done setting exception in future")
                                     elif isinstance(s, Exception):
+                                        logger.debug("Setting exception in future")
                                         task_fut.set_exception(s)
+                                        logger.debug("Done setting exception in future")
                                     else:
                                         raise ValueError("Unknown exception-like type received: {}".format(type(s)))
                                 except Exception as e:
@@ -794,4 +804,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         logger.info("Attempting HighThroughputExecutor shutdown")
         self.interchange_proc.terminate()
+
+        # this join isn't going to work because the queue management thread
+        # blocks on zmq read and doesn't discover is_alive is false...
+        # self._queue_management_thread.join()
         logger.info("Finished HighThroughputExecutor shutdown attempt")
