@@ -141,8 +141,8 @@ taken at initialization. Here is an example for the `parsl.executors.HighThrough
 
 .. _pyversion:
 
-parsl.dataflow.errors.ConfigurationError
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+parsl.errors.ConfigurationError
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The Parsl configuration model underwent a major and non-backward compatible change in the transition to v0.6.0.
 Prior to v0.6.0 the configuration object was a python dictionary with nested dictionaries and lists.
@@ -154,7 +154,7 @@ style configuration was passed to Parsl v0.6.0+ and requires an upgrade to the c
 
    File "/home/yadu/src/parsl/parsl/dataflow/dflow.py", line 70, in __init__
        'Expected `Config` class, received dictionary. For help, '
-   parsl.dataflow.errors.ConfigurationError: Expected `Config` class, received dictionary. For help,
+   parsl.errors.ConfigurationError: Expected `Config` class, received dictionary. For help,
    see http://parsl.readthedocs.io/en/stable/stubs/parsl.config.Config.html
 
 For more information on how to update your configuration script, please refer to:

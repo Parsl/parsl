@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 default_staging = [NoOpFileStaging(), FTPSeparateTaskStaging(), HTTPSeparateTaskStaging()]  # type: List[Staging]
 
 
-class DataManager(object):
+class DataManager:
     """The DataManager is responsible for transferring input and output data.
 
     """

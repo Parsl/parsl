@@ -115,7 +115,7 @@ def id_for_memo_function(f: types.FunctionType, output_ref: bool = False) -> byt
     return serialize(["types.FunctionType", f.__name__, f.__module__])
 
 
-class Memoizer(object):
+class Memoizer:
     """Memoizer is responsible for ensuring that identical work is not repeated.
 
     When a task is repeated, i.e., the same function is called with the same exact arguments, the
