@@ -150,7 +150,7 @@ class ResultsIncoming:
                                                               min_port=port_range[0],
                                                               max_port=port_range[1])
 
-    def get(self, block=True, timeout=None):
+    def get(self):
         return self.results_receiver.recv_multipart()
 
     def request_close(self):

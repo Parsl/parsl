@@ -393,12 +393,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         while not self.bad_state_is_set:
             try:
-                msgs = self.incoming_q.get(timeout=1)
-
-            except queue.Empty:
-                logger.debug("queue empty")
-                # Timed out.
-                pass
+                msgs = self.incoming_q.get()
 
             except IOError as e:
                 logger.exception("Caught broken queue with exception code {}: {}".format(e.errno, e))
