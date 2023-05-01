@@ -159,7 +159,7 @@ def wtime_to_minutes(time_string: str) -> int:
     return total_mins
 
 
-class RepresentationMixin(object):
+class RepresentationMixin:
     """A mixin class for adding a __repr__ method.
 
     The __repr__ method will return a string equivalent to the code used to instantiate

@@ -28,7 +28,7 @@ TERMINAL_STATES = [JobState.CANCELLED, JobState.COMPLETED, JobState.FAILED,
                    JobState.TIMEOUT]
 
 
-class JobStatus(object):
+class JobStatus:
     """Encapsulates a job state together with other details:
 
     Args:

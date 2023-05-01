@@ -9,7 +9,7 @@ import threading
 logger = logging.getLogger(__name__)
 
 
-class CommandClient(object):
+class CommandClient:
     """ CommandClient
     """
     def __init__(self, ip_address, port_range):
@@ -80,7 +80,7 @@ class CommandClient(object):
         self.context.term()
 
 
-class TasksOutgoing(object):
+class TasksOutgoing:
     """ Outgoing task queue from the executor to the Interchange
     """
     def __init__(self, ip_address, port_range):
@@ -128,7 +128,7 @@ class TasksOutgoing(object):
         self.context.term()
 
 
-class ResultsIncoming(object):
+class ResultsIncoming:
     """ Incoming results queue from the Interchange to the executor
     """
 
