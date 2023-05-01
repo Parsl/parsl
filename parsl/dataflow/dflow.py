@@ -48,7 +48,7 @@ from parsl.monitoring.message_type import MessageType
 logger = logging.getLogger(__name__)
 
 
-class DataFlowKernel(object):
+class DataFlowKernel:
     """The DataFlowKernel adds dependency awareness to an existing executor.
 
     It is responsible for managing futures, such that when dependencies are resolved,
@@ -1385,7 +1385,7 @@ class DataFlowKernel(object):
             logger.info("Standard error for task {} available at {}".format(task_record['id'], task_record['app_fu'].stderr))
 
 
-class DataFlowKernelLoader(object):
+class DataFlowKernelLoader:
     """Manage which DataFlowKernel is active.
 
     This is a singleton class containing only class methods. You should not

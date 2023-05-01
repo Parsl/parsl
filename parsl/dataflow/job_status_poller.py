@@ -99,7 +99,7 @@ class PollItem(ExecutorStatus):
         return self._status.__repr__()
 
 
-class JobStatusPoller(object):
+class JobStatusPoller:
     def __init__(self, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
         self._poll_items = []  # type: List[PollItem]
         self.dfk = dfk

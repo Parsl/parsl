@@ -48,7 +48,7 @@ def get_globus():
     return Globus()
 
 
-class Globus(object):
+class Globus:
     """
     All communication with the Globus Auth and Globus Transfer services is enclosed
     in the Globus class. In particular, the Globus class is responsible for:
