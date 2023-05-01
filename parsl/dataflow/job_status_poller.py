@@ -99,17 +99,17 @@ class PollItem(ExecutorStatus):
         return self._status.__repr__()
 
 
-class JobStatusPoller(object):
+class JobStatusPoller:
     def __init__(self, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
         self._poll_items = []  # type: List[PollItem]
         self.dfk = dfk
         self._strategy = Strategy(dfk)
         self._error_handler = JobErrorHandler()
 
-    def poll(self, tasks=None):
+    def poll(self):
         self._update_state()
         self._error_handler.run(self._poll_items)
-        self._strategy.strategize(self._poll_items, tasks)
+        self._strategy.strategize(self._poll_items)
 
     def _update_state(self) -> None:
         now = time.time()

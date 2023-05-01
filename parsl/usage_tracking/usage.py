@@ -81,7 +81,7 @@ def udp_messenger(domain_name, UDP_IP, UDP_PORT, sock_timeout, message):
         logger.debug("Failed to send usage tracking data: Exception: {}".format(e))
 
 
-class UsageTracker (object):
+class UsageTracker:
     """Usage Tracking for Parsl.
 
     The server for this is here: https://github.com/Parsl/parsl_tracking

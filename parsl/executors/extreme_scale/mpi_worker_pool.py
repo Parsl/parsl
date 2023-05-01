@@ -29,7 +29,7 @@ LOOP_SLOWDOWN = 0.0  # in seconds
 HEARTBEAT_CODE = (2 ** 32) - 1
 
 
-class Manager(object):
+class Manager:
     """ Orchestrates the flow of tasks and results to and from the workers
 
     1. Queue up task requests from workers

@@ -56,7 +56,7 @@ def probe_addresses(addresses, task_port, timeout=120):
     return first_connected
 
 
-class TestWorker(object):
+class TestWorker:
 
     def __init__(self, addresses, port):
         uid = str(uuid.uuid4())
