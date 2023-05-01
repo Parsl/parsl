@@ -26,13 +26,14 @@ from parsl.channels import Channel
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
-from parsl.dataflow.errors import BadCheckpoint, ConfigurationError, DependencyError, JoinError
+from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
 from parsl.dataflow.flow_control import FlowControl, Timer
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.taskrecord import TaskRecord
+from parsl.errors import ConfigurationError
 from parsl.usage_tracking.usage import UsageTracker
 from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
