@@ -356,8 +356,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.incoming_q = zmq_pipes.ResultsIncoming("127.0.0.1", self.interchange_port_range)
         self.command_client = zmq_pipes.CommandClient("127.0.0.1", self.interchange_port_range)
 
-        self.is_alive = True
-
         self._queue_management_thread = None
         self._start_queue_management_thread()
         self._start_local_interchange_process()
@@ -463,8 +461,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                         else:
                             raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
-            if not self.is_alive:
-                break
         logger.info("queue management worker finished")
 
     def _start_local_interchange_process(self):
