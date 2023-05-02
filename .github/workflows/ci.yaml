@@ -10,7 +10,7 @@ jobs:
   main-test-suite:
     strategy:
       matrix:
-        python-version: ["3.12"]
+        python-version: ["3.12-dev"]
     runs-on: ubuntu-20.04
     timeout-minutes: 120
 
