@@ -113,23 +113,3 @@ def test_parallel_for(n=3):
                                                                          n, outdir)
     print("[TEST STATUS] test_parallel_for [SUCCESS]")
     return d
-
-
-if __name__ == '__main__':
-    parsl.clear()
-    dfk = parsl.load(config)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10",
-                        help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    x = test_parallel_for(int(args.count))
-    y = test_command_format_1()
-    z = test_auto_log_filename_format()
-    # raise_error(0)

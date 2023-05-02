@@ -58,9 +58,3 @@ def test_mac_safe_queue_size():
     assert result_q.empty() is False, "Result queue should not be empty"
     qlen = result_q.qsize()
     assert qlen == x + 1, "Result queue should be {}; instead got {}".format(x + 1, qlen)
-
-
-if __name__ == "__main__":
-
-    test_mac_safe_queue()
-    test_mac_safe_queue_size()
