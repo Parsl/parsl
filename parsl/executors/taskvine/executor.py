@@ -97,10 +97,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             with respect to other TaskVine master programs.
             Default is "TaskVineExecutor".
 
-        working_dir: str
-            Location for Parsl to perform app delegation to the TaskVine
-            system. Defaults to current directory.
-
         project_name: str
             If a project_name is given, then TaskVine will periodically
             report its status and performance back to the global TaskVine catalog,
@@ -121,10 +117,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             to connect to. Workers will specify this port number when
             trying to connect to Parsl. Default is 9123.
 
-        env: dict{str}
-            Dictionary that contains the environmental variables that
-            need to be set on the TaskVine worker machine.
-
         shared_fs: bool
             Define if working in a shared file system or not. If Parsl
             and the TaskVine workers are on a shared file system, TaskVine
@@ -133,9 +125,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         use_cache: bool
             Whether workers should cache files that are common to tasks.
-            Warning: Two files are considered the same if they have the same
-            filepath name. Use with care when reusing the executor instance
-            across multiple parsl workflows. Default is False.
+            Default is True.
 
         source: bool
             Choose whether to transfer parsl app information as
@@ -204,11 +194,19 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         wait_for_workers: int
             The number of workers to wait for before running any task.
-            Default is 0.
+            Default is 0, so the manager won't wait for workers to connect.
 
         enable_peer_transfers: bool
             Option to enable transferring files between workers.
+            Default is True.
+
+        full_debug: bool
+            Whether to enable full debug mode for monitoring in TaskVine.
             Default is False.
+
+        provider: ExecutionProvider
+            The Parsl provider that will spawn worker processes.
+            Default to spawning one local vine worker process.
     """
 
     radio_mode = "filesystem"
@@ -216,16 +214,12 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     @typeguard.typechecked
     def __init__(self,
                  label: str = "TaskVineExecutor",
-                 provider: ExecutionProvider = LocalProvider(),
-                 working_dir: str = ".",
                  project_name: Optional[str] = None,
                  project_password_file: Optional[str] = None,
                  address: Optional[str] = None,
                  port: int = VINE_DEFAULT_PORT,
-                 env: Optional[Dict] = None,
                  shared_fs: bool = False,
-                 storage_access: Optional[List[Staging]] = None,
-                 use_cache: bool = False,
+                 use_cache: bool = True,
                  source: bool = False,
                  pack: bool = False,
                  extra_pkgs: Optional[List[str]] = None,
@@ -235,33 +229,24 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  max_retries: Optional[int] = 1,
                  init_command: str = "",
                  worker_options: str = "",
-                 full_debug: bool = True,
                  worker_executable: str = 'vine_worker',
                  function_dir: Optional[str] = None,
                  wait_for_workers: Optional[int] = 0,
-                 enable_peer_transfers: Optional[bool] = False):
+                 enable_peer_transfers: Optional[bool] = True,
+                 full_debug: bool = False,
+                 provider: ExecutionProvider = LocalProvider()):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
         if not _taskvine_enabled:
             raise OptionalModuleMissing(['taskvine'], "TaskVineExecutor requires the taskvine module.")
 
         self.label = label
-        self.task_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
-        self.collector_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
-        self.blocks = {}  # type: Dict[str, str]
-        self.address = address
-        self.port = port
-        self.task_counter = -1
         self.project_name = project_name
         self.project_password_file = project_password_file
-        self.env = env
-        self.init_command = init_command
+        self.address = address
+        self.port = port
         self.shared_fs = shared_fs
-        self.storage_access = storage_access
         self.use_cache = use_cache
-        self.working_dir = working_dir
-        self.registered_files = set()  # type: Set[str]
-        self.full_debug = full_debug
         self.source = True if pack else source
         self.pack = pack
         self.extra_pkgs = extra_pkgs or []
@@ -269,19 +254,24 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.autolabel_window = autolabel_window
         self.autocategory = autocategory
         self.max_retries = max_retries
-        self.should_stop = multiprocessing.Value(c_bool, False)
-        self.cached_envs = {}  # type: Dict[int, str]
+        self.init_command = init_command
         self.worker_options = worker_options
         self.worker_executable = worker_executable
         self.function_dir = function_dir
         self.wait_for_workers = wait_for_workers
         self.enable_peer_transfers = enable_peer_transfers
+        self.full_debug = full_debug
+
+        self.task_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
+        self.collector_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
+        self.blocks = {}  # type: Dict[str, str]
+        self.task_counter = -1
+        self.registered_files = set()  # type: Set[str]
+        self.should_stop = multiprocessing.Value(c_bool, False)
+        self.cached_envs = {}  # type: Dict[int, str]
 
         if not self.address:
             self.address = socket.gethostname()
-
-        if self.project_password_file is not None and not os.path.exists(self.project_password_file):
-            raise TaskVineFailure('Could not find password file: {}'.format(self.project_password_file))
 
         if self.project_password_file is not None:
             if os.path.exists(self.project_password_file) is False:
