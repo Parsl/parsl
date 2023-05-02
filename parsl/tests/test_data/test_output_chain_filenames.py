@@ -4,16 +4,15 @@ import os
 import pytest
 
 import parsl
+
+from concurrent.futures import Future
+from parsl import File
 from parsl.app.app import bash_app
-from parsl.tests.configs.local_threads import config
-
-
-local_config = config
 
 
 @bash_app
 def app1(inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
-    cmd_line = """echo 'test' > {outputs[0]}"""
+    cmd_line = f"""echo 'test' > {outputs[0]}"""
     return cmd_line
 
 
@@ -22,25 +21,21 @@ def app2(inputs=[], outputs=[], stdout=None, stderr=None, mock=False):
 
     with open('somefile.txt', 'w') as f:
         f.write("%s\n" % inputs[0])
-    cmd_line = """echo '{inputs[0]}' > {outputs[0]}"""
+    cmd_line = f"""echo '{inputs[0]}' > {outputs[0]}"""
     return cmd_line
 
 
-whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
-
-
-# @pytest.mark.whitelist(whitelist, reason='broken in IPP')
-@pytest.mark.skip("Broke somewhere between PR #525 and PR #652")
 def test_behavior():
     app1_future = app1(inputs=[],
-                       outputs=["simple-out.txt"])
-    # app1_future.result()
+                       outputs=[File("simple-out.txt")])
 
-    app2_future = app2(inputs=[app1_future.outputs[0]],
-                       outputs=["simple-out2.txt"])
+    o = app1_future.outputs[0]
+    assert isinstance(o, Future)
+
+    app2_future = app2(inputs=[o],
+                       outputs=[File("simple-out2.txt")])
     app2_future.result()
 
-    name = 'a'
     expected_name = 'b'
     with open('somefile.txt', 'r') as f:
         name = f.read()
