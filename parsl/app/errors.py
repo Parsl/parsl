@@ -1,6 +1,7 @@
 """Exceptions raised by Apps."""
 from functools import wraps
-from typing import Callable, List, Optional, ParamSpec, TypeVar, Union
+from typing import Callable, List, Optional, TypeVar, Union
+from typing_extensions import ParamSpec
 from types import TracebackType
 import logging
 from tblib import Traceback
