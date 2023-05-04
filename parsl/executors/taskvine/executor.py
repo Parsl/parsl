@@ -959,6 +959,7 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                 parsl_id = vine_id_to_parsl_id[str(t.id)]
                 logger.debug("Completed TaskVine task {}, parsl task {}".format(t.id, parsl_id))
                 result_file = result_file_of_task_id.pop(parsl_id)
+                vine_id_to_parsl_id.pop(str(t.id))
 
                 logger.debug(f"completed task info: {parsl_id}, {t.category}, {t.command}, {t.std_output}")
                 
