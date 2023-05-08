@@ -15,7 +15,7 @@ class FlowControl:
     to give the block scaling strategy a chance to execute.
     """
 
-    def __init__(self, dfk, *args, interval=5):
+    def __init__(self, dfk):
         """Initialize the flowcontrol object.
 
         We start the timer thread here
@@ -23,15 +23,11 @@ class FlowControl:
         Args:
              - dfk (DataFlowKernel) : DFK object to track parsl progress
 
-        KWargs:
-             - interval (int) : seconds after which timer expires
         """
-        self.interval = interval
-        self.cb_args = args
+        self.interval = 5
+        self.cb_args = ()
         self.job_status_poller = JobStatusPoller(dfk)
         self.callback = self.job_status_poller.poll
-        self._handle = None
-        self._event_count = 0
         self._wake_up_time = time.time() + 1
         self._kill_event = threading.Event()
         self._thread = threading.Thread(target=self._wake_up_timer, args=(self._kill_event,), name="FlowControl-Thread")
