@@ -10,7 +10,7 @@ from parsl.dataflow.job_status_poller import JobStatusPoller
 logger = logging.getLogger(__name__)
 
 
-class FlowControl(object):
+class FlowControl:
     """This class periodically makes a callback to the JobStatusPoller
     to give the block scaling strategy a chance to execute.
     """
@@ -72,7 +72,7 @@ class FlowControl(object):
         self._thread.join()
 
 
-class Timer(object):
+class Timer:
     """This timer is a simplified version of the FlowControl timer.
 
     This is based on the following logic :

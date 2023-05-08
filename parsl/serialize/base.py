@@ -9,7 +9,7 @@ METHODS_MAP_CODE = {}
 METHODS_MAP_DATA = {}
 
 
-class SerializerBase(object):
+class SerializerBase:
     """ Adds shared functionality for all serializer implementations
     """
 

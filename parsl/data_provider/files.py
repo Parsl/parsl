@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 logger = logging.getLogger(__name__)
 
 
-class File(object):
+class File:
     """The Parsl File Class.
 
     This represents the global, and sometimes local, URI/path to a file.
