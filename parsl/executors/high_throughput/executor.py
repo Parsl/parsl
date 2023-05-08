@@ -714,7 +714,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         return launch_cmd
 
     def shutdown(self):
-        """Shutdown the executor, including all workers and controllers.
+        """Shutdown the executor, including the interchange. This does not
+        shut down any workers directly - workers should be terminated by the
+        scaling mechanism or by heartbeat timeout.
         """
 
         logger.info("Attempting HighThroughputExecutor shutdown")
