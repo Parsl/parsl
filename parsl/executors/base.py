@@ -11,8 +11,8 @@ class ParslExecutor(metaclass=ABCMeta):
     """Executors are abstractions that represent available compute resources
     to which you could submit arbitrary App tasks.
 
-    This is a metaclass that only enforces concrete implementations of
-    functionality by the child classes.
+    This is an abstract base class that only enforces concrete implementations
+    of functionality by the child classes.
 
     Can be used as a context manager. On exit, calls ``self.shutdown()`` with
     no arguments and re-raises any thrown exception.
