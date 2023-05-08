@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 import zmq
-import time
-import pickle
 import logging
 import threading
 
@@ -152,11 +150,6 @@ class ResultsIncoming:
 
     def get(self, block=True, timeout=None):
         return self.results_receiver.recv_multipart()
-
-    def request_close(self):
-        status = self.results_receiver.send(pickle.dumps(None))
-        time.sleep(0.1)
-        return status
 
     def close(self):
         self.results_receiver.close()
