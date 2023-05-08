@@ -27,7 +27,7 @@ from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
-from parsl.dataflow.flow_control import FlowControl, Timer
+from parsl.dataflow.flow_control import FlowControl
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
@@ -41,7 +41,7 @@ from parsl.executors.threads import ThreadPoolExecutor
 from parsl.monitoring import MonitoringHub
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers.base import ExecutionProvider, JobStatus, JobState
-from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints
+from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints, Timer
 
 from parsl.monitoring.message_type import MessageType
 
