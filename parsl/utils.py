@@ -7,7 +7,7 @@ import threading
 import time
 import typeguard
 from contextlib import contextmanager
-from typing import List, Tuple, Union, Generator, IO, AnyStr, Dict
+from typing import Any, Callable, List, Tuple, Union, Generator, IO, AnyStr, Dict, Optional
 
 import parsl
 from parsl.version import VERSION
@@ -263,3 +263,87 @@ def setproctitle(title: str) -> None:
         setproctitle_module.setproctitle(title)
     else:
         logger.warn(f"setproctitle not enabled for process {title}")
+
+
+class Timer:
+    """This class will make a callback periodically, with a period
+    specified by the interval parameter.
+
+    This is based on the following logic :
+
+    .. code-block:: none
+
+
+        BEGIN (INTERVAL, THRESHOLD, callback) :
+            start = current_time()
+
+            while (current_time()-start < INTERVAL) :
+                 wait()
+                 break
+
+            callback()
+
+    """
+
+    def __init__(self, callback: Callable, *args: Any, interval: int = 5, name: Optional[str] = None) -> None:
+        """Initialize the Timer object.
+        We start the timer thread here
+
+        KWargs:
+             - interval (int) : number of seconds between callback events
+             - name (str) : a base name to use when naming the started thread
+        """
+
+        self.interval = interval
+        self.cb_args = args
+        self.callback = callback
+        self._wake_up_time = time.time() + 1
+
+        self._kill_event = threading.Event()
+        if name is None:
+            name = "Timer-Thread-{}".format(id(self))
+        else:
+            name = "{}-Timer-Thread-{}".format(name, id(self))
+        self._thread = threading.Thread(target=self._wake_up_timer, args=(self._kill_event,), name=name)
+        self._thread.daemon = True
+        self._thread.start()
+
+    def _wake_up_timer(self, kill_event: threading.Event) -> None:
+        """Internal. This is the function that the thread will execute.
+        waits on an event so that the thread can make a quick exit when close() is called
+
+        Args:
+            - kill_event (threading.Event) : Event to wait on
+        """
+
+        # Sleep till time to wake up
+        while True:
+            prev = self._wake_up_time
+
+            # Waiting for the event returns True only when the event
+            # is set, usually by the parent thread
+            time_to_die = kill_event.wait(float(max(prev - time.time(), 0)))
+
+            if time_to_die:
+                return
+
+            if prev == self._wake_up_time:
+                self.make_callback()
+            else:
+                print("Sleeping a bit more")
+
+    def make_callback(self) -> None:
+        """Makes the callback and resets the timer.
+        """
+        self._wake_up_time = time.time() + self.interval
+
+        try:
+            self.callback(*self.cb_args)
+        except Exception:
+            logger.error("Callback threw an exception - logging and proceeding anyway", exc_info=True)
+
+    def close(self) -> None:
+        """Merge the threads and terminate.
+        """
+        self._kill_event.set()
+        self._thread.join()
