@@ -5,6 +5,8 @@ import logging
 logger = logging.getLogger(__name__)
 from parsl.serialize.base import SerializerBase
 
+from typing import Any
+
 
 class PickleSerializer(SerializerBase):
     """ Pickle serialization covers most python objects, with some notable exceptions:
@@ -19,11 +21,11 @@ class PickleSerializer(SerializerBase):
     _for_code = True
     _for_data = True
 
-    def serialize(self, data):
+    def serialize(self, data: Any) -> bytes:
         x = pickle.dumps(data)
         return self.identifier + x
 
-    def deserialize(self, payload):
+    def deserialize(self, payload: bytes) -> Any:
         chomped = self.chomp(payload)
         data = pickle.loads(chomped)
         return data
@@ -45,11 +47,11 @@ class DillSerializer(SerializerBase):
     _for_code = True
     _for_data = True
 
-    def serialize(self, data):
+    def serialize(self, data: Any) -> bytes:
         x = dill.dumps(data)
         return self.identifier + x
 
-    def deserialize(self, payload):
+    def deserialize(self, payload: bytes) -> Any:
         chomped = self.chomp(payload)
         data = dill.loads(chomped)
         return data
