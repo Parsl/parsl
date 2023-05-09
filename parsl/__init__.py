@@ -63,6 +63,7 @@ __all__ = [
     'ThreadPoolExecutor',
     'HighThroughputExecutor',
     'WorkQueueExecutor',
+    'TaskVineExecutor',
 
     # monitoring
     'MonitoringHub',

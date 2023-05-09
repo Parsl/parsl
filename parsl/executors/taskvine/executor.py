@@ -34,8 +34,7 @@ from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
 import typeguard
-from typing import Dict, List, Optional, Set, Union
-from parsl.data_provider.staging import Staging
+from typing import Dict, List, Optional, Union
 
 from .errors import TaskVineTaskFailure
 from .errors import TaskVineFailure
@@ -43,7 +42,6 @@ from .errors import TaskVineFailure
 from collections import namedtuple
 
 try:
-    import ndcctools.taskvine as vine
     from ndcctools.taskvine import cvine
     from ndcctools.taskvine import Manager
     from ndcctools.taskvine import Task
@@ -64,7 +62,8 @@ logger = logging.getLogger(__name__)
 
 # Support structure to communicate parsl tasks to the taskvine submit thread.
 ParslTaskToVine = namedtuple('ParslTaskToVine',
-                             'id category cores memory disk gpus priority running_time_min env_pkg map_file function_file result_file input_files output_files')
+                             'id category cores memory disk gpus priority running_time_min \
+                              env_pkg map_file function_file result_file input_files output_files')
 
 # Support structure to communicate final status of taskvine tasks to parsl
 # result is only valid if result_received is True
@@ -144,6 +143,11 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             each task. This greatly increases task latency, but does not
             require a common environment or shared FS on execution nodes.
             Implies source=True. Default is False.
+
+        pack_env: str
+            An already prepared environment tarball using poncho_package_create
+            to attach to each task.
+            Default is "".
 
         extra_pkgs: list
             List of extra pip/conda package names to include when packing
@@ -227,6 +231,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  use_cache: bool = True,
                  source: bool = False,
                  pack: bool = False,
+                 pack_env: str = "",
                  extra_pkgs: Optional[List[str]] = None,
                  autolabel: bool = False,
                  autolabel_window: int = 1,
@@ -255,6 +260,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.use_cache = use_cache
         self.source = True if pack else source
         self.pack = pack
+        self.pack_env = pack_env
         self.extra_pkgs = extra_pkgs or []
         self.autolabel = autolabel
         self.autolabel_window = autolabel_window
@@ -270,14 +276,14 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Queue to send tasks from TaskVine executor process to TaskVine manager process
         # type: multiprocessing.Queue
-        self.task_queue = multiprocessing.Queue()  
+        self.task_queue = multiprocessing.Queue()
 
         # Queue to send tasks from TaskVine manager process to TaskVine executor process
         # type: multiprocessing.Queue
-        self.collector_queue = multiprocessing.Queue()  
-        
+        self.collector_queue = multiprocessing.Queue()
+
         self.blocks = {}  # type: Dict[str, str], track Parsl blocks
-        self.task_counter = -1 # task id starts from 0
+        self.task_counter = -1  # task id starts from 0
         self.should_stop = multiprocessing.Value(c_bool, False)
 
         # mapping of function's unique memory address to its solved environment
@@ -481,6 +487,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             env_pkg = self._prepare_package(func, self.extra_pkgs)
         else:
             env_pkg = None
+
+        if self.pack_env:
+            env_pkg = self.pack_env
 
         logger.debug("Constructing map for local filenames at worker for task {}".format(task_id))
         self._construct_map_file(map_file, input_files, output_files)
@@ -779,7 +788,6 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
         raise e
 
     # Specify TaskVine queue attributes
-    
     if project_password_file:
         m.set_password_file(project_password_file)
 
@@ -795,7 +803,7 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
         m.enable_peer_transfers()
 
     # Only write logs when the vine_log_dir is specified, which it most likely will be
-    #if vine_log_dir is not None:
+    # if vine_log_dir is not None:
     if full and autolabel:
         m.enable_monitoring_full(dirname=vine_log_dir)
 
@@ -803,11 +811,11 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
 
     result_file_of_task_id = {}  # Mapping taskid -> result file for active tasks.
 
-    poncho_env_to_file = {} # Mapping poncho_env file to File object in TaskVine
-    
+    poncho_env_to_file = {}  # Mapping poncho_env file to File object in TaskVine
+
     # Mapping of parsl local file name to TaskVine File object
     # dict[str] -> vine File object
-    parsl_file_name_to_vine_file = {}   
+    parsl_file_name_to_vine_file = {}
 
     # Declare helper scripts as cache-able and peer-transferable
     package_run_script_file = m.declare_file(package_run_script, cache=True, peer_transfer=True)
@@ -832,12 +840,12 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                 logger.debug("Removing task from queue")
             except queue.Empty:
                 continue
-            
+
             # Create command string
             command_str = launch_cmd.format(mapping=os.path.basename(task.map_file),
                                             function=os.path.basename(task.function_file),
                                             result=os.path.basename(task.result_file))
-            
+
             # Create TaskVine task for the command
             logger.debug("Sending task {} with command: {}".format(task.id, command_str))
             try:
@@ -860,8 +868,8 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                     poncho_env_file = poncho_env_to_file[task.env_pkg]
 
             if poncho_env_file is not None:
-                t.add_input(poncho_env_file, task.env_pkg)
-                t.add_input(package_run_script_file)
+                t.add_environment(poncho_env_file)
+                t.add_input(package_run_script_file, "poncho_package_run")
 
             t.set_category(task.category)
             if autolabel:
@@ -889,25 +897,25 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
             # Specify environment variables for the task
             if env is not None:
                 for var in env:
-                    t.set_env_var(var, env[var])
+                    t.set_env_var(str(var), str(env[var]))
 
-            #add helper function that execute parsl functions on remote nodes
+            # Add helper function that execute parsl functions on remote nodes
             t.add_input(exec_parsl_function_file, "exec_parsl_function.py")
 
             # Declare and add task-specific function, data, and result files to task
             task_function_file = m.declare_file(task.function_file, cache=False, peer_transfer=False)
             t.add_input(task_function_file, "function")
-             
+
             task_map_file = m.declare_file(task.map_file, cache=False, peer_transfer=False)
             t.add_input(task_map_file, "map")
-            
+
             task_result_file = m.declare_file(task.result_file, cache=False, peer_transfer=False)
             t.add_output(task_result_file, "result")
-        
+
             result_file_of_task_id[str(task.id)] = task.result_file
 
             logger.debug("Parsl ID: {}".format(task.id))
-            
+
             # Specify input/output files that need to be staged.
             # Absolute paths are assumed to be in shared filesystem, and thus
             # not staged by taskvine.
@@ -920,9 +928,9 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                             task_in_file = parsl_file_name_to_vine_file[spec.parsl_name]
                         else:
                             task_in_file = m.declare_file(spec.parsl_name, cache=spec.cache, peer_transfer=True)
-                            parsl_file_name_to_vine_file[spec.parsl_name] = task_in_file 
+                            parsl_file_name_to_vine_file[spec.parsl_name] = task_in_file
                         t.add_input(task_in_file, spec.parsl_name)
-                
+
                 for spec in task.output_files:
                     if spec.stage:
                         if spec.parsl_name in parsl_file_name_to_vine_file:
@@ -962,7 +970,7 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                 vine_id_to_parsl_id.pop(str(t.id))
 
                 logger.debug(f"completed task info: {parsl_id}, {t.category}, {t.command}, {t.std_output}")
-                
+
                 # A tasks completes 'succesfully' if it has result file,
                 # and it can be loaded. This may mean that the 'success' is
                 # an exception.

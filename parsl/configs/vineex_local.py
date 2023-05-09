@@ -15,8 +15,9 @@ config = Config(
             # To disable status reporting, comment out the project_name.
             project_name="parsl-vine-" + str(uuid.uuid4()),
 
-            # The port number that TaskVine will listen on for connecting workers.
-            port=9123,
+            # The port number that TaskVine will listen on for connecting workers
+            # 0 means a random port.
+            port=0,
 
             # A shared filesystem is not needed when using TaskVine.
             shared_fs=False
