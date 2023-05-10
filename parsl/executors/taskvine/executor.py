@@ -282,7 +282,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # type: multiprocessing.Queue
         self.collector_queue = multiprocessing.Queue()
 
-        self.blocks = {}  # type: Dict[str, str], track Parsl blocks
+        self.blocks: Dict[str, str] = {}  # track Parsl blocks
         self.task_counter = -1  # task id starts from 0
         self.should_stop = multiprocessing.Value(c_bool, False)
 
