@@ -1,7 +1,7 @@
 import logging
 import typeguard
 
-from typing import Callable, List, Optional, Sequence, Union
+from typing import Callable, Optional, Sequence, Union
 from typing_extensions import Literal
 
 from parsl.utils import RepresentationMixin
@@ -20,8 +20,8 @@ class Config(RepresentationMixin):
 
     Parameters
     ----------
-    executors : list of ParslExecutor, optional
-        List of `ParslExecutor` instances to use for executing tasks.
+    executors : sequence of ParslExecutor, optional
+        List (or other sequence) of `ParslExecutor` instances to use for executing tasks.
         Default is [:class:`~parsl.executors.threads.ThreadPoolExecutor()`].
     app_cache : bool, optional
         Enable app caching. Default is True.
@@ -73,7 +73,7 @@ class Config(RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self,
-                 executors: Optional[List[ParslExecutor]] = None,
+                 executors: Optional[Sequence[ParslExecutor]] = None,
                  app_cache: bool = True,
                  checkpoint_files: Optional[Sequence[str]] = None,
                  checkpoint_mode: Union[None,
@@ -92,9 +92,12 @@ class Config(RepresentationMixin):
                  monitoring: Optional[MonitoringHub] = None,
                  usage_tracking: bool = False,
                  initialize_logging: bool = True) -> None:
+        self._executors: Sequence[ParslExecutor]
         if executors is None:
-            executors = [ThreadPoolExecutor()]
-        self.executors = executors
+            self._executors = [ThreadPoolExecutor()]
+        else:
+            self._validate_executors(executors)
+            self._executors = executors
         self.app_cache = app_cache
         self.checkpoint_files = checkpoint_files
         self.checkpoint_mode = checkpoint_mode
@@ -125,11 +128,9 @@ class Config(RepresentationMixin):
     def executors(self) -> Sequence[ParslExecutor]:
         return self._executors
 
-    @executors.setter
-    def executors(self, executors: Sequence[ParslExecutor]):
+    def _validate_executors(self, executors: Sequence[ParslExecutor]) -> None:
         labels = [e.label for e in executors]
         duplicates = [e for n, e in enumerate(labels) if e in labels[:n]]
         if len(duplicates) > 0:
             raise ConfigurationError('Executors must have unique labels ({})'.format(
                 ', '.join(['label={}'.format(repr(d)) for d in duplicates])))
-        self._executors = executors
