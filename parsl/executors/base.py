@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
-from typing import Any, Callable, Dict, Optional, List
+from typing import Any, Callable, Dict, Optional, List, Literal
+from typing_extensions import Self
 
 from parsl.providers.base import JobStatus
 
@@ -46,10 +47,10 @@ class ParslExecutor(metaclass=ABCMeta):
     label: str = "undefined"
     radio_mode: str = "udp"
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> Literal[False]:
         self.shutdown()
         return False
 
@@ -179,7 +180,7 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def set_bad_state_and_fail_all(self, exception: Exception):
+    def set_bad_state_and_fail_all(self, exception: Exception) -> None:
         """Allows external error handlers to mark this executor as irrecoverably bad and cause
         all tasks submitted to it now and in the future to fail. The executor is responsible
         for checking  :method:bad_state_is_set() in the :method:submit() method and raising the
