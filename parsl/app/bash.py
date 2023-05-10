@@ -77,10 +77,10 @@ def remote_side_bash_executor(func, *args, **kwargs):
         returncode = proc.returncode
 
     except subprocess.TimeoutExpired:
-        raise pe.AppTimeout("[{}] App exceeded walltime: {} seconds".format(func_name, timeout))
+        raise pe.AppTimeout("App {} exceeded walltime: {} seconds".format(func_name, timeout))
 
     except Exception as e:
-        raise pe.AppException("[{}] App caught exception with returncode: {}".format(func_name, returncode), e)
+        raise pe.AppException("App {} caught exception with returncode: {}".format(func_name, returncode), e)
 
     if returncode != 0:
         raise pe.BashExitFailure(func_name, proc.returncode)
@@ -95,7 +95,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
             missing.extend([outputfile])
 
     if missing:
-        raise pe.MissingOutputs("[{}] Missing outputs".format(func_name), missing)
+        raise pe.MissingOutputs(f"Missing outputs from app {func_name}", missing)
 
     return returncode
 
