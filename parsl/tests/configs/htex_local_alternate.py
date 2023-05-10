@@ -35,7 +35,7 @@ from parsl.data_provider.file_noop import NoOpFileStaging
 working_dir = os.getcwd() + "/" + "test_htex_alternate"
 
 
-def fresh_config():
+def fresh_config() -> Config:
     return Config(
         executors=[
             HighThroughputExecutor(
