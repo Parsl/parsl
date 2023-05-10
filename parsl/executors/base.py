@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
-from typing import Any, Callable, Dict, Optional, List, Literal
-from typing_extensions import Self
+from typing import Any, Callable, Dict, Optional, List
+from typing_extensions import Literal, Self
 
 from parsl.providers.base import JobStatus
 
