@@ -1,7 +1,8 @@
-import parsl.app.errors as perror
+from parsl.errors import ParslError
+from parsl.app.errors import AppException
 
 
-class TaskVineTaskFailure(perror.AppException):
+class TaskVineTaskFailure(AppException):
     """A failure executing a task in taskvine
 
     Contains:
@@ -14,7 +15,7 @@ class TaskVineTaskFailure(perror.AppException):
         self.status = status
 
 
-class TaskVineFailure(perror.ParslError):
+class TaskVineFailure(ParslError):
     """A failure in the taskvine executor that prevented the task to be
     executed.""
     """

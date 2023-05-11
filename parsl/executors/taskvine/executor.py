@@ -35,6 +35,7 @@ from parsl.utils import setproctitle
 
 import typeguard
 from typing import Dict, List, Optional, Union
+from parsl.data_provider.staging import Staging
 
 from .errors import TaskVineTaskFailure
 from .errors import TaskVineFailure
@@ -215,6 +216,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         provider: ExecutionProvider
             The Parsl provider that will spawn worker processes.
             Default to spawning one local vine worker process.
+
+        storage_access: Redundant argument to comply with other executors.
+            Default is None. Not used.
     """
 
     radio_mode = "filesystem"
@@ -244,7 +248,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  wait_for_workers: Optional[int] = 0,
                  enable_peer_transfers: Optional[bool] = True,
                  full_debug: bool = False,
-                 provider: ExecutionProvider = LocalProvider()):
+                 provider: ExecutionProvider = LocalProvider(),
+                 storage_access: Optional[List[Staging]] = None):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
         if not _taskvine_enabled:
@@ -273,22 +278,20 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.wait_for_workers = wait_for_workers
         self.enable_peer_transfers = enable_peer_transfers
         self.full_debug = full_debug
+        self.storage_access = storage_access
 
         # Queue to send tasks from TaskVine executor process to TaskVine manager process
-        # type: multiprocessing.Queue
-        self.task_queue = multiprocessing.Queue()
+        self.task_queue: multiprocessing.Queue = multiprocessing.Queue()
 
         # Queue to send tasks from TaskVine manager process to TaskVine executor process
-        # type: multiprocessing.Queue
-        self.collector_queue = multiprocessing.Queue()
+        self.collector_queue: multiprocessing.Queue = multiprocessing.Queue()
 
         self.blocks: Dict[str, str] = {}  # track Parsl blocks
         self.task_counter = -1  # task id starts from 0
         self.should_stop = multiprocessing.Value(c_bool, False)
 
         # mapping of function's unique memory address to its solved environment
-        # type: Dict[int, str]
-        self.cached_envs = {}
+        self.cached_envs: Dict[int, str] = {}
 
         if not self.address:
             self.address = socket.gethostname()
