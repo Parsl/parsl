@@ -3,12 +3,12 @@ SHELL := $(shell which bash) # Use bash instead of bin/sh as shell
 GIT := $(shell which git || echo ".git_is_missing")
 CWD := $(shell pwd)
 DEPS := .deps
-WORKQUEUE_INSTALL := /tmp/cctools
+CCTOOLS_INSTALL := /tmp/cctools
 MPICH=mpich
 OPENMPI=openmpi
 EXECUTORS_PATH := $(shell ls -d parsl/executors/*/ | tr '\n' ':')
-export PATH := $(EXECUTORS_PATH):$(WORKQUEUE_INSTALL)/bin/:$(PATH)
-export CCTOOLS_VERSION=7.4.16
+export PATH := $(EXECUTORS_PATH):$(CCTOOLS_INSTALL)/bin/:$(PATH)
+export CCTOOLS_VERSION=7.5.4
 export HYDRA_LAUNCHER=fork
 export OMPI_MCA_rmaps_base_oversubscribe=yes
 MPI=$(MPICH)
@@ -87,7 +87,7 @@ perf_test:
 	parsl-perf --time 5 --config parsl/tests/configs/local_threads.py
 
 .PHONY: test ## run all tests with all config types
-test: clean_coverage lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test workqueue_ex_test vineex_local_test config_local_test perf_test ## run all tests
+test: clean_coverage lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test wqex_local_test vineex_local_test config_local_test perf_test ## run all tests
 
 .PHONY: tag
 tag: ## create a tag in git. to run, do a 'make VERSION="version string" tag
