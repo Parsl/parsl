@@ -204,14 +204,20 @@ class DataFlowKernel:
         atexit.register(self.atexit_cleanup)
 
     def _send_task_log_info(self, task_record: TaskRecord) -> None:
+        logger.info(f"BENC: in _send_task_log_info for task {task_record['id']}.")
         if self.monitoring:
+            logger.info(f"BENC: invoking _create_task_log_info for task {task_record['id']}.")
             task_log_info = self._create_task_log_info(task_record)
+            logger.info(f"BENC: invoking monitoring.send for task {task_record['id']}.")
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
+            logger.info(f"BENC: returned from monitoring.send for task {task_record['id']}.")
+        logger.info(f"BENC: ending _send_task_log_info for task {task_record['id']}.")
 
     def _create_task_log_info(self, task_record):
         """
         Create the dictionary that will be included in the log.
         """
+        logger.info(f"BENC: inside create task log info task {task_record['id']}.")
         info_to_monitor = ['func_name', 'memoize', 'hashsum', 'fail_count', 'fail_cost', 'status',
                            'id', 'time_invoked', 'try_time_launched', 'time_returned', 'try_time_returned', 'executor']
 
@@ -244,8 +250,10 @@ class DataFlowKernel:
         task_log_info['task_fail_history'] = ",".join(task_record['fail_history'])
         task_log_info['task_depends'] = None
         if task_record['depends'] is not None:
+            logger.info(f"BENC: starting depends list comprehension for task {task_record['id']}.")
             task_log_info['task_depends'] = ",".join([str(t.tid) for t in task_record['depends']
                                                       if isinstance(t, AppFuture) or isinstance(t, DataFuture)])
+            logger.info(f"BENC: ending depends list comprehension for task {task_record['id']}.")
         task_log_info['task_joins'] = None
 
         if isinstance(task_record['joins'], list):
@@ -255,6 +263,7 @@ class DataFlowKernel:
             task_log_info['task_joins'] = ",".join([str(t.tid) for t in [task_record['joins']]
                                                     if isinstance(t, AppFuture) or isinstance(t, DataFuture)])
 
+        logger.info(f"BENC: ending create task log info task {task_record['id']}.")
         return task_log_info
 
     def _count_deps(self, depends: Sequence[Future]) -> int:
@@ -362,8 +371,11 @@ class DataFlowKernel:
                 self._send_task_log_info(task_record)
             else:
                 if not task_record['join']:
+                    logger.info(f"BENC: invoking _complete_task for task {task_record['id']}.")
                     self._complete_task(task_record, States.exec_done, res)
+                    logger.info(f"BENC: returning from  _complete_task for task {task_record['id']}. Invoking _send_task_log_info.")
                     self._send_task_log_info(task_record)
+                    logger.info(f"BENC: returned from _send_task_log_info for task {task_record['id']}.")
                 else:
                     # This is a join task, and the original task's function code has
                     # completed. That means that the future returned by that code
@@ -546,8 +558,12 @@ class DataFlowKernel:
         logger.info(f"Task {task_record['id']} completed ({old_state.name} -> {new_state.name})")
         task_record['time_returned'] = datetime.datetime.now()
 
+        logger.info(f"BENC: taking _update_lock for task {task_record['id']}.")
         with task_record['app_fu']._update_lock:
+            logger.info(f"BENC: got _update_lock for task {task_record['id']}. Setting result.")
             task_record['app_fu'].set_result(result)
+            logger.info(f"BENC: Set result for task {task_record['id']}.")
+        logger.info(f"BENC: _complete_task ending for task {task_record['id']}.")
 
     def update_task_state(self, task_record: TaskRecord, new_state: States) -> None:
         """Updates a task record state, and recording an appropriate change
@@ -1045,6 +1061,10 @@ class DataFlowKernel:
         for d in depends:
 
             def callback_adapter(dep_fut: Future) -> None:
+                if hasattr(dep_fut, 'task_def'):
+                    logger.info(f"BENC: in launch_if_ready callback adapter for subsequent task {task_def['id']}, preceeding task {dep_fut.task_def['id']}.")
+                else:
+                    logger.info(f"BENC: in launch_if_ready callback adapter for subsequent task {task_def['id']}, preceeding future has no task ID.")
                 self.launch_if_ready(task_def)
 
             try:
