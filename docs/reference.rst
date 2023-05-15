@@ -180,5 +180,5 @@ Internal
     parsl.dataflow.states.FINAL_STATES
     parsl.dataflow.states.States
     parsl.dataflow.strategy.Strategy
-    parsl.dataflow.flow_control.Timer
     parsl.dataflow.taskrecord.TaskRecord
+    parsl.utils.Timer

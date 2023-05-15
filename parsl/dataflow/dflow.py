@@ -27,7 +27,7 @@ from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
-from parsl.dataflow.flow_control import FlowControl, Timer
+from parsl.dataflow.flow_control import FlowControl
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
@@ -41,7 +41,7 @@ from parsl.executors.threads import ThreadPoolExecutor
 from parsl.monitoring import MonitoringHub
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers.base import ExecutionProvider, JobStatus, JobState
-from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints
+from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints, Timer
 
 from parsl.monitoring.message_type import MessageType
 
@@ -1355,7 +1355,8 @@ class DataFlowKernel:
                                                                                   len(memo_lookup_table.keys())))
         return memo_lookup_table
 
-    def load_checkpoints(self, checkpointDirs):
+    @typeguard.typechecked
+    def load_checkpoints(self, checkpointDirs: Optional[Sequence[str]]) -> Dict[str, Future]:
         """Load checkpoints from the checkpoint files into a dictionary.
 
         The results are used to pre-populate the memoizer's lookup_table
@@ -1369,13 +1370,10 @@ class DataFlowKernel:
         """
         self.memo_lookup_table = None
 
-        if not checkpointDirs:
+        if checkpointDirs:
+            return self._load_checkpoints(checkpointDirs)
+        else:
             return {}
-
-        if type(checkpointDirs) is not list:
-            raise BadCheckpoint("checkpointDirs expects a list of checkpoints")
-
-        return self._load_checkpoints(checkpointDirs)
 
     @staticmethod
     def _log_std_streams(task_record: TaskRecord) -> None:
