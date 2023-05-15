@@ -66,11 +66,11 @@ $(CCTOOLS_INSTALL):	#CCtools contains both taskvine and workqueue so install onl
 
 .PHONY: vineex_local_test
 vineex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with vineex_local config
-	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/vineex_local.py --random-order
+	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/taskvine_blocks.py --random-order
 
 .PHONY: wqex_local_test
 wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with wqex_local config
-	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/wqex_local.py --random-order
+	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_blocks.py --random-order
 
 .PHONY: config_local_test
 config_local_test:
