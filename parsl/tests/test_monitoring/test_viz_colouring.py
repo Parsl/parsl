@@ -1,6 +1,7 @@
 import pytest
 from parsl.dataflow.states import States
 
+
 @pytest.mark.local
 def test_all_states_colored() -> None:
     """This checks that the coloring tables in parsl-visualize contain
