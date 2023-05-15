@@ -7,7 +7,6 @@ import typeguard
 from abc import ABCMeta, abstractmethod
 from inspect import signature
 from typing import List, Optional, Union
-from typing_extensions import Literal
 
 from parsl.dataflow.dflow import DataFlowKernel
 
@@ -72,7 +71,7 @@ class AppBase(metaclass=ABCMeta):
 def python_app(function=None,
                data_flow_kernel: Optional[DataFlowKernel] = None,
                cache: bool = False,
-               executors: Union[List[str], Literal['all']] = 'all',
+               executors: Union[List[str], str] = 'all',
                ignore_for_cache: Optional[List[str]] = None,
                join: bool = False):
     """Decorator function for making python apps.
@@ -112,7 +111,7 @@ def python_app(function=None,
 def join_app(function=None,
              data_flow_kernel: Optional[DataFlowKernel] = None,
              cache: bool = False,
-             executors: Union[List[str], Literal['all']] = 'all',
+             executors: Union[List[str], str] = 'all',
              ignore_for_cache: Optional[List[str]] = None):
     """Decorator function for making join apps
 
@@ -136,7 +135,7 @@ def join_app(function=None,
             return PythonApp(f,
                              data_flow_kernel=data_flow_kernel,
                              cache=cache,
-                             executors=["_parsl_internal"],
+                             executors="_parsl_internal",
                              ignore_for_cache=ignore_for_cache,
                              join=True)
         return wrapper(func)
@@ -149,7 +148,7 @@ def join_app(function=None,
 def bash_app(function=None,
              data_flow_kernel: Optional[DataFlowKernel] = None,
              cache: bool = False,
-             executors: Union[List[str], Literal['all']] = 'all',
+             executors: Union[List[str], str] = 'all',
              ignore_for_cache: Optional[List[str]] = None):
     """Decorator function for making bash apps.
 

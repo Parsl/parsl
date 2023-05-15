@@ -933,6 +933,8 @@ class DataFlowKernel:
         self.task_count += 1
         if isinstance(executors, str) and executors.lower() == 'all':
             choices = list(e for e in self.executors if e != '_parsl_internal')
+        elif isinstance(executors, str):  # and not 'all'
+            choices = [executors]
         elif isinstance(executors, list):
             choices = executors
         else:
