@@ -105,7 +105,8 @@ class JobStatusPoller(Timer):
     def __init__(self, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
         self._poll_items = []  # type: List[PollItem]
         self.dfk = dfk
-        self._strategy = Strategy(dfk)
+        self._strategy = Strategy(strategy=dfk.config.strategy,
+                                  max_idletime=dfk.config.max_idletime)
         self._error_handler = JobErrorHandler()
         super().__init__(self.poll, interval=5, name="JobStatusPoller")
 
