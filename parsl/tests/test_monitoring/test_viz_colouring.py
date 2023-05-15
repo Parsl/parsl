@@ -4,6 +4,7 @@ import parsl.monitoring.visualization.plots.default.workflow_plots as workflow_p
 
 from parsl.dataflow.states import States
 
+
 @pytest.mark.local
 def test_all_states_colored() -> None:
     """This checks that the coloring tables in parsl-visualize contain
