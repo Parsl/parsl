@@ -76,10 +76,6 @@ class ParslExecutor(metaclass=ABCMeta):
     def scale_out(self, blocks: int) -> List[str]:
         """Scale out method.
 
-        We should have the scale out method simply take resource object
-        which will have the scaling methods, scale_out itself should be a coroutine, since
-        scaling tasks can be slow.
-
         :return: A list of block ids corresponding to the blocks that were added.
         """
         pass
