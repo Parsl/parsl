@@ -1,9 +1,4 @@
-Design and Rationale
-
-
-
-Swift vs Parsl
---------------
+Historical: Swift vs Parsl
 
 The following text is not well structured, and is mostly a brain dump that needs to be organized.
 Moving from Swift to an established language (python) came with its own tradeoffs. We get the backing
