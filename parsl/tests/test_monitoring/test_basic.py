@@ -32,10 +32,8 @@ def test_row_counts():
         logger.info("Monitoring database already exists - deleting")
         os.remove("runinfo/monitoring.db")
 
-    logger.info("Generating fresh config")
-    c = fresh_config()
-    logger.info("Loading parsl")
-    parsl.load(c)
+    logger.info("loading parsl")
+    parsl.load(fresh_config())
 
     logger.info("invoking and waiting for result")
     assert this_app().result() == 5

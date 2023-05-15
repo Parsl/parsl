@@ -28,13 +28,14 @@ from parsl.channels import Channel
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
-from parsl.dataflow.errors import BadCheckpoint, ConfigurationError, DependencyError, JoinError
-from parsl.dataflow.flow_control import FlowControl, Timer
+from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
+from parsl.dataflow.flow_control import FlowControl
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.taskrecord import TaskRecord
+from parsl.errors import ConfigurationError
 from parsl.usage_tracking.usage import UsageTracker
 from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
@@ -42,14 +43,14 @@ from parsl.executors.threads import ThreadPoolExecutor
 from parsl.monitoring import MonitoringHub
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers.base import ExecutionProvider, JobStatus, JobState
-from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints
+from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints, Timer
 
 from parsl.monitoring.message_type import MessageType
 
 logger = logging.getLogger(__name__)
 
 
-class DataFlowKernel(object):
+class DataFlowKernel:
     """The DataFlowKernel adds dependency awareness to an existing executor.
 
     It is responsible for managing futures, such that when dependencies are resolved,
@@ -1425,7 +1426,8 @@ class DataFlowKernel(object):
                                                                                   len(memo_lookup_table.keys())))
         return memo_lookup_table
 
-    def load_checkpoints(self, checkpointDirs):
+    @typeguard.typechecked
+    def load_checkpoints(self, checkpointDirs: Optional[Sequence[str]]) -> Dict[str, Future]:
         """Load checkpoints from the checkpoint files into a dictionary.
 
         The results are used to pre-populate the memoizer's lookup_table
@@ -1439,13 +1441,10 @@ class DataFlowKernel(object):
         """
         self.memo_lookup_table = None
 
-        if not checkpointDirs:
+        if checkpointDirs:
+            return self._load_checkpoints(checkpointDirs)
+        else:
             return {}
-
-        if type(checkpointDirs) is not list:
-            raise BadCheckpoint("checkpointDirs expects a list of checkpoints")
-
-        return self._load_checkpoints(checkpointDirs)
 
     @staticmethod
     def _log_std_streams(task_record: TaskRecord) -> None:
@@ -1455,7 +1454,7 @@ class DataFlowKernel(object):
             logger.info("Standard error for task {} available at {}".format(task_record['id'], task_record['app_fu'].stderr))
 
 
-class DataFlowKernelLoader(object):
+class DataFlowKernelLoader:
     """Manage which DataFlowKernel is active.
 
     This is a singleton class containing only class methods. You should not

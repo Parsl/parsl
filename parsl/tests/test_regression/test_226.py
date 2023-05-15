@@ -12,7 +12,7 @@ from parsl.tests.configs.local_threads import config
 local_config = config
 
 
-class Foo(object):
+class Foo:
     def __init__(self, x):
         self.x = x
 

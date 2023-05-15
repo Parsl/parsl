@@ -108,14 +108,14 @@ def id_for_memo_dict(denormalized_dict: dict, output_ref: bool = False) -> bytes
 @id_for_memo.register(types.FunctionType)
 @lru_cache()
 def id_for_memo_function(f: types.FunctionType, output_ref: bool = False) -> bytes:
-    """This will extract some, but deliberately not all, details from the function.
-    The intention is to allow the function to be modified in source file without
-    causing memoization invalidation.
+    """This will checkpoint a function based only on its name and module name.
+    This means that changing source code (other than the function name) will
+    not cause a checkpoint invalidation.
     """
     return serialize(["types.FunctionType", f.__name__, f.__module__])
 
 
-class Memoizer(object):
+class Memoizer:
     """Memoizer is responsible for ensuring that identical work is not repeated.
 
     When a task is repeated, i.e., the same function is called with the same exact arguments, the

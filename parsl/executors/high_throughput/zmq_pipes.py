@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 
 import zmq
-import time
-import pickle
 import logging
 import threading
 
 logger = logging.getLogger(__name__)
 
 
-class CommandClient(object):
+class CommandClient:
     """ CommandClient
     """
     def __init__(self, ip_address, port_range):
@@ -94,7 +92,7 @@ class CommandClient(object):
         self.context.term()
 
 
-class TasksOutgoing(object):
+class TasksOutgoing:
     """ Outgoing task queue from the executor to the Interchange
     """
     def __init__(self, ip_address, port_range):
@@ -149,7 +147,7 @@ class TasksOutgoing(object):
             self.context.term()
 
 
-class ResultsIncoming(object):
+class ResultsIncoming:
     """ Incoming results queue from the Interchange to the executor
     """
 
@@ -172,15 +170,9 @@ class ResultsIncoming(object):
                                                               max_port=port_range[1])
         self._lock = threading.Lock()
 
-    def get(self, block=True, timeout=None):
+    def get(self):
         with self._lock:
             return self.results_receiver.recv_multipart()
-
-    def request_close(self):
-        with self._lock:
-            status = self.results_receiver.send(pickle.dumps(None))
-            time.sleep(0.1)
-            return status
 
     def close(self):
         with self._lock:

@@ -68,9 +68,8 @@ class Database:
         self.session = Session()
 
     def _get_mapper(self, table_obj: Table) -> Mapper:
-        all_mappers: Set[Mapper]
-        all_mappers = set()
-        for mapper_registry in mapperlib._all_registries():
+        all_mappers: Set[Mapper] = set()
+        for mapper_registry in mapperlib._all_registries():  # type: ignore
             all_mappers.update(mapper_registry.mappers)
         mapper_gen = (
             mapper for mapper in all_mappers

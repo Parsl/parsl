@@ -1,6 +1,8 @@
 from parsl.serialize.concretes import *  # noqa: F403,F401
-from parsl.serialize.base import METHODS_MAP_DATA, METHODS_MAP_CODE
+from parsl.serialize.base import METHODS_MAP_DATA, METHODS_MAP_CODE, SerializerBase
 import logging
+
+from typing import Any, Dict, List, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +23,11 @@ for key in METHODS_MAP_CODE:
         methods_for_data[key] = METHODS_MAP_DATA[key]()
 
 
-def _list_methods():
+def _list_methods() -> Tuple[Dict[bytes, SerializerBase], Dict[bytes, SerializerBase]]:
     return methods_for_code, methods_for_data
 
 
-def pack_apply_message(func, args, kwargs, buffer_threshold=128 * 1e6):
+def pack_apply_message(func: Any, args: Any, kwargs: Any, buffer_threshold: int = int(128 * 1e6)) -> bytes:
     """Serialize and pack function and parameters
 
     Parameters
@@ -40,7 +42,7 @@ def pack_apply_message(func, args, kwargs, buffer_threshold=128 * 1e6):
     kwargs: Dict
         Dict containing named parameters
 
-    buffer_threshold: Ignored
+    buffer_threshold: int
         Limits buffer to specified size in bytes. Exceeding this limit would give you
         a warning in the log. Default is 128MB.
     """
@@ -51,53 +53,48 @@ def pack_apply_message(func, args, kwargs, buffer_threshold=128 * 1e6):
     return packed_buffer
 
 
-def unpack_apply_message(packed_buffer, user_ns=None, copy=False):
+def unpack_apply_message(packed_buffer: bytes, user_ns: Any = None, copy: Any = False) -> List[Any]:
     """ Unpack and deserialize function and parameters
 
     """
     return [deserialize(buf) for buf in unpack_buffers(packed_buffer)]
 
 
-def serialize(obj, buffer_threshold=1e6):
+def serialize(obj: Any, buffer_threshold: int = int(1e6)) -> bytes:
     """ Try available serialization methods one at a time
 
     Individual serialization methods might raise a TypeError (eg. if objects are non serializable)
     This method will raise the exception from the last method that was tried, if all methods fail.
     """
-    serialized = None
-    serialized_flag = False
-    last_exception = None
+    result: Union[bytes, Exception]
     if callable(obj):
         for method in methods_for_code.values():
             try:
-                serialized = method.serialize(obj)
+                result = method.serialize(obj)
             except Exception as e:
-                last_exception = e
+                result = e
                 continue
             else:
-                serialized_flag = True
                 break
     else:
         for method in methods_for_data.values():
             try:
-                serialized = method.serialize(obj)
+                result = method.serialize(obj)
             except Exception as e:
-                last_exception = e
+                result = e
                 continue
             else:
-                serialized_flag = True
                 break
 
-    if serialized_flag is False:
-        # TODO : Replace with a SerializationError
-        raise last_exception
+    if isinstance(result, BaseException):
+        raise result
+    else:
+        if len(result) > buffer_threshold:
+            logger.warning(f"Serialized object exceeds buffer threshold of {buffer_threshold} bytes, this could cause overflows")
+        return result
 
-    if len(serialized) > buffer_threshold:
-        logger.warning(f"Serialized object exceeds buffer threshold of {buffer_threshold} bytes, this could cause overflows")
-    return serialized
 
-
-def deserialize(payload):
+def deserialize(payload: bytes) -> Any:
     """
     Parameters
     ----------
@@ -111,16 +108,16 @@ def deserialize(payload):
     elif header in methods_for_data:
         result = methods_for_data[header].deserialize(payload)
     else:
-        raise TypeError("Invalid header: {} in data payload. Buffer is either corrupt or not created by ParslSerializer".format(header))
+        raise TypeError("Invalid header: {!r} in data payload. Buffer is either corrupt or not created by ParslSerializer".format(header))
 
     return result
 
 
-def pack_buffers(buffers):
+def pack_buffers(buffers: List[bytes]) -> bytes:
     """
     Parameters
     ----------
-    buffers : list of \n terminated strings
+    buffers: list of byte strings
     """
     packed = b''
     for buf in buffers:
@@ -130,11 +127,11 @@ def pack_buffers(buffers):
     return packed
 
 
-def unpack_buffers(packed_buffer):
+def unpack_buffers(packed_buffer: bytes) -> List[bytes]:
     """
     Parameters
     ----------
-    packed_buffers : packed buffer as string
+    packed_buffers : packed buffer as byte sequence
     """
     unpacked = []
     while packed_buffer:
@@ -146,11 +143,12 @@ def unpack_buffers(packed_buffer):
     return unpacked
 
 
-def unpack_and_deserialize(packed_buffer):
-    """ Unpacks a packed buffer and returns the deserialized contents
+def unpack_and_deserialize(packed_buffer: bytes) -> Any:
+    """ Unpacks a packed buffer of 3 byte sequences and returns the
+    deserialized contents for use in function application.
     Parameters
     ----------
-    packed_buffers : packed buffer as string
+    packed_buffers : packed buffer of 3 byte sequences
     """
     unpacked = []
     while packed_buffer:

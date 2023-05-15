@@ -35,7 +35,7 @@ from parsl.serialize import unpack_apply_message, serialize
 HEARTBEAT_CODE = (2 ** 32) - 1
 
 
-class Manager(object):
+class Manager:
     """ Manager manages task execution by the workers
 
                 |         zmq              |    Manager         |   Worker Processes
@@ -607,7 +607,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
 
         try:
             result = execute_task(req['buffer'])
-            serialized_result = serialize(result, buffer_threshold=1e6)
+            serialized_result = serialize(result, buffer_threshold=1000000)
         except Exception as e:
             logger.info('Caught an exception: {}'.format(e))
             result_package = {'type': 'result', 'task_id': tid, 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
