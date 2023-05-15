@@ -983,6 +983,8 @@ class DataFlowKernel:
         event("DFK_SUBMIT_CHOOSE_EXECUTOR_START", "TASK", task_id)
         if isinstance(executors, str) and executors.lower() == 'all':
             choices = list(e for e in self.executors if e != '_parsl_internal')
+        elif isinstance(executors, str):  # and not 'all'
+            choices = [executors]
         elif isinstance(executors, list):
             choices = executors
         else:
