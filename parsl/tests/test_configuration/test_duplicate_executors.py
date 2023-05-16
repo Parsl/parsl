@@ -14,13 +14,14 @@ def test_duplicate_label_in_config():
     e1 = ThreadPoolExecutor(label="same")
     e2 = ThreadPoolExecutor(label="same")
 
-    c = Config(executors = [e1, e2])
+    c = Config(executors=[e1, e2])
     with pytest.raises(ConfigurationError):
-        dfk = parsl.load(c)
+        parsl.load(c)
 
     # TODO: this leaves a partially constructed DFK which will have already
     # started threads in __init__ but will not shut them down when the
     # configuration exception is raised.
+
 
 @pytest.mark.local
 def test_duplicate_label_in_config_add_executor():
@@ -32,7 +33,7 @@ def test_duplicate_label_in_config_add_executor():
     e1 = ThreadPoolExecutor(label="same")
     e2 = ThreadPoolExecutor(label="same")
 
-    c = Config(executors = [e1])
+    c = Config(executors=[e1])
 
     dfk = parsl.load(c)
 
