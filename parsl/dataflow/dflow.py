@@ -1112,6 +1112,9 @@ class DataFlowKernel:
 
     def add_executors(self, executors):
         for executor in executors:
+            if executor.label in self.executors:
+                raise ConfigurationError("Executor {executor.label} already added")
+
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
             executor.hub_address = self.hub_address

@@ -144,6 +144,7 @@ class Strategy:
 
     def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         for executor in executors:
+            assert executor.label not in self.executors
             self.executors[executor.label] = {'idle_since': None}
 
     def _strategy_noop(self, status: List[jsp.PollItem]) -> None:
