@@ -39,14 +39,3 @@ def test_launch_apps(n=2, outdir='outputs'):
         [item for item in os.listdir(outdir) if item.endswith('.txt')])
     assert stdout_file_count == n, "Only {}/{} files in '{}' ".format(
             len(os.listdir('outputs/')), n, os.listdir(outdir))
-
-
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10",
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    x = test_launch_apps(2, "outputs")
-    # raise_error(0)
