@@ -1096,6 +1096,9 @@ class DataFlowKernel:
 
     def add_executors(self, executors):
         for executor in executors:
+            if executor.label in self.executors:
+                raise ConfigurationError('Executor must have unique label, but {executor.label} is duplicated.')
+
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
             executor.hub_address = self.hub_address

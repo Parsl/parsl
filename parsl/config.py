@@ -96,7 +96,6 @@ class Config(RepresentationMixin):
         if executors is None:
             self._executors = [ThreadPoolExecutor()]
         else:
-            self._validate_executors(executors)
             self._executors = executors
         self.app_cache = app_cache
         self.checkpoint_files = checkpoint_files
@@ -127,10 +126,3 @@ class Config(RepresentationMixin):
     @property
     def executors(self) -> Sequence[ParslExecutor]:
         return self._executors
-
-    def _validate_executors(self, executors: Sequence[ParslExecutor]) -> None:
-        labels = [e.label for e in executors]
-        duplicates = [e for n, e in enumerate(labels) if e in labels[:n]]
-        if len(duplicates) > 0:
-            raise ConfigurationError('Executors must have unique labels ({})'.format(
-                ', '.join(['label={}'.format(repr(d)) for d in duplicates])))
