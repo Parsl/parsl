@@ -32,8 +32,3 @@ def test_parallel_for():
     dfk.cleanup()
     parsl.clear()
     return d
-
-
-if __name__ == "__main__":
-
-    test_parallel_for()

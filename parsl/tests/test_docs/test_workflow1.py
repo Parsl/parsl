@@ -39,10 +39,3 @@ def test_procedural(N=2):
         item = int(f.read().strip())
         assert item <= N, "Expected file to contain int <= N"
         assert item >= 1, "Expected file to contain int >= 1"
-
-
-if __name__ == "__main__":
-    parsl.clear()
-    parsl.load(config)
-
-    test_procedural()
