@@ -30,8 +30,3 @@ def test_open():
 
     with open(str(pfile), 'r') as opfile:
         assert (opfile.readlines()[0] == 'Hello')
-
-
-if __name__ == '__main__':
-
-    test_files()

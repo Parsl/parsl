@@ -63,9 +63,3 @@ def test_parallel_sleep_python(n=3, sleep_dur=2, tolerance=0.3):
     print("Sleep time : {0}, expected ~{1}+/- 0.3s".format(delta, sleep_dur))
     assert delta > sleep_dur - tolerance, "Slept too little"
     assert delta < sleep_dur + tolerance, "Slept too much"
-
-
-if __name__ == "__main__":
-
-    test_parallel_sleep_bash()
-    test_parallel_sleep_python()

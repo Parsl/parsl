@@ -61,20 +61,3 @@ def test_parallel2(n=2):
     print("Total time : ", ttc)
 
     return ttc
-
-
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10",
-                        help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    x = test_plain(int(args.count))
-    x = test_parallel(int(args.count))
-    x = test_parallel2(int(args.count))

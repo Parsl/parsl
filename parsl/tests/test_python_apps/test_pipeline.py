@@ -36,21 +36,3 @@ def test_increment_slow(depth=2):
 
     print(futs[i])
     print([futs[i].result() for i in futs if not isinstance(futs[i], int)])
-
-
-if __name__ == '__main__':
-    parsl.clear()
-    parsl.load(config)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--width", default="5",
-                        help="width of the pipeline")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    # test_increment(depth=int(args.width))
-    test_increment_slow(depth=int(args.width))
