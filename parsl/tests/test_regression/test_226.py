@@ -69,9 +69,3 @@ def test_bash_default_arg():
     echo('hello').result()
     with open('std.out', 'r') as f:
         assert f.read().strip() == 'hello there', "Output should be 'hello there'"
-
-
-if __name__ == '__main__':
-    test_no_eq()
-    test_bash_default_arg()
-    test_get_dataframe()
