@@ -123,13 +123,3 @@ def test_5():
     hello2.result()
     with open(hello2.outputs[0].result().filepath, 'r') as f:
         print(f.read())
-
-
-if __name__ == "__main__":
-    parsl.clear()
-    parsl.load(config)
-    test_1()
-    test_2()
-    test_3()
-    test_4()
-    test_5()

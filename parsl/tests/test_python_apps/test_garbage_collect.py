@@ -28,11 +28,3 @@ def test_garbage_collect():
 
     time.sleep(0.2)  # Give enough time for task wipes to work
     assert x.tid not in parsl.dfk().tasks, "Task record should be wiped after task completion"
-
-
-if __name__ == '__main__':
-
-    from parsl.tests.configs.htex_local_alternate import config
-    parsl.load(config)
-    # parsl.load()
-    test_garbage_collect()
