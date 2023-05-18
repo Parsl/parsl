@@ -26,8 +26,3 @@ def test_lazy_behavior():
     parsl.dfk().cleanup()
     parsl.clear()
     return
-
-
-if __name__ == "__main__":
-
-    test_lazy_behavior()

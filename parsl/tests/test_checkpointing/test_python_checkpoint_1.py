@@ -51,18 +51,3 @@ def test_initial_checkpoint_write(n=2):
     parsl.clear()
 
     return run_dir, results
-
-
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10",
-                        help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    x = test_initial_checkpoint_write(n=4)
