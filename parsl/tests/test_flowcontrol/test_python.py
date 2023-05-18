@@ -28,8 +28,3 @@ def test_python(N=2):
     print("Waiting ....")
     for i in range(0, N):
         print(results[0].result())
-
-
-if __name__ == '__main__':
-
-    test_python()
