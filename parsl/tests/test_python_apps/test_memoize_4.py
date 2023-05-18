@@ -24,21 +24,3 @@ def test_python_memoization(n=2):
 
     y = random_uuid(0)
     assert x.result() != y.result(), "Memoized results were not used"
-
-
-if __name__ == '__main__':
-    parsl.clear()
-    parsl.load(config)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10",
-                        help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    x = test_python_memoization(n=4)
-    # x = test_bash_memoization (n=4)
