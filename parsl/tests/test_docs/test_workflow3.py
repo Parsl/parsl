@@ -21,10 +21,3 @@ def test_parallel_for(N=2):
     # wait for all apps to finish and collect the results
     outputs = [i.result() for i in rand_nums]
     return outputs
-
-
-if __name__ == "__main__":
-
-    parsl.clear()
-    parsl.load(config)
-    test_parallel_for()
