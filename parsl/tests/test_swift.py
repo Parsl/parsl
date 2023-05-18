@@ -1,7 +1,5 @@
 import pytest
 
-import parsl
-
 from parsl.executors.swift_t import TurbineExecutor
 
 
@@ -54,13 +52,3 @@ def test_except():
         tex.start()
         x = tex.submit(bad_foo, 5, 10)
         x.result()
-
-
-if __name__ == "__main__":
-    parsl.set_stream_logger()
-
-    # test_simple()
-    # test_slow()
-    test_except()
-
-    print("Done")
