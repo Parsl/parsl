@@ -82,8 +82,3 @@ def test_checkpointing_at_dfk_exit():
             pass
         print("Tasks from cache : ", tasks)
         assert len(tasks) == 1, "Expected {} checkpoint events, got {}".format(1, len(tasks))
-
-
-if __name__ == "__main__":
-    test_regression_239()
-    test_checkpointing_at_dfk_exit()

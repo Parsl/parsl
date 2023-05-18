@@ -64,18 +64,3 @@ def test_at_task_exit(n=2):
             pass
 
         assert len(tasks) == n, "Expected {} checkpoint events, got {}".format(n, len(tasks))
-
-
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default=10, type=int,
-                        help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    x = test_at_task_exit(args.count)
