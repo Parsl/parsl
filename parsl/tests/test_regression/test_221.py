@@ -27,8 +27,3 @@ def test_cleanup_behavior_221():
     for i in round_1:
         f = slow_double(i)
         round_2.append(f)
-
-
-if __name__ == "__main__":
-
-    test_cleanup_behavior_221()
