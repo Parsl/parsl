@@ -41,8 +41,3 @@ def test_parallel(N=2):
     assert doubled_z.result() == N * \
         2, "Expected doubled_z = N*2 = {0}".format(N * 2)
     assert delta > 4 and delta < 5, "Time delta exceeded expected 4 < duration < 5"
-
-
-if __name__ == "__main__":
-
-    test_parallel()
