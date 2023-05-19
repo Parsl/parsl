@@ -61,17 +61,3 @@ def test_multiline():
     os.remove('std.err')
     os.remove('std.out')
     return True
-
-
-if __name__ == '__main__':
-    parsl.clear()
-    dfk = parsl.load(config)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    # if args.debug:
-    #    parsl.set_stream_logger()
-    test_multiline()

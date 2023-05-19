@@ -19,7 +19,3 @@ def test_1653():
 
     x = compute_descript(size=1000).result()
     assert x.shape == (1000,), "Got incorrect numpy shape"
-
-
-if __name__ == "__main__":
-    test_1653()
