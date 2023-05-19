@@ -67,9 +67,3 @@ def test_delayed_datafuture():
     state_3 = d_fu.__str__()
     print("State_3 : ", state_3, "Fu:", fu.parent)
     assert "finished" in state_3, "DataFuture should now be finished"
-
-
-if __name__ == "__main__":
-
-    test_immediate_datafuture()
-    test_delayed_datafuture()
