@@ -11,7 +11,13 @@ if TYPE_CHECKING:
 
 from concurrent.futures import Future
 
-from parsl.serialize import serialize
+# this serialize doesn't work right for memoisation when using Interesting Serializers such as proxystore
+# from parsl.serialize import serialize
+
+def serialize(d: Any) -> bytes:
+    import pickle
+    return pickle.dumps(d)
+
 import types
 
 logger = logging.getLogger(__name__)
