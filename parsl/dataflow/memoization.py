@@ -14,9 +14,11 @@ from concurrent.futures import Future
 # this serialize doesn't work right for memoisation when using Interesting Serializers such as proxystore
 # from parsl.serialize import serialize
 
+
 def serialize(d: Any) -> bytes:
     import pickle
     return pickle.dumps(d)
+
 
 import types
 
