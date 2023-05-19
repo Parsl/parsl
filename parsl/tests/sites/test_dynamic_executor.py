@@ -75,7 +75,3 @@ def test_dynamic_executor():
 
     dfk.cleanup()
     parsl.clear()
-
-
-if __name__ == "__main__":
-    test_dynamic_executor()
