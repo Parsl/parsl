@@ -78,9 +78,12 @@ def serialize(obj: Any, buffer_threshold: int = int(1e6)) -> bytes:
                 break
     else:
         for method in methods_for_data.values():
+            logger.error(f"BENC: trying serializer {method}")
             try:
                 result = method.serialize(obj)
+                logger.error(f"BENC: successful with serializer {method}")
             except Exception as e:
+                logger.error(f"BENC: failed with with serializer {method}, error: {e}", exc_info=True)
                 result = e
                 continue
             else:

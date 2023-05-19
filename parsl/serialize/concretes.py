@@ -7,6 +7,32 @@ from parsl.serialize.base import SerializerBase
 
 from typing import Any
 
+from proxystore.store import Store, get_store, register_store
+from proxystore.connectors.file import FileConnector
+store = Store(name='parsl_store', connector=FileConnector(store_dir="/tmp"))
+register_store(store)
+
+class ProxyStoreSerializer(SerializerBase):
+    _identifier = b'99\n'
+    _for_code = False
+    _for_data = True
+
+    def serialize(self, data: Any) -> bytes:
+ 
+        store = get_store("parsl_store")
+        assert store is not None, "Could not find store"
+
+        p = store.proxy(data)
+
+        d = pickle.dumps(p)
+
+        return self.identifier + d
+
+    def deserialize(self, payload: bytes) -> Any:
+        chomped = self.chomp(payload)
+        proxy = pickle.loads(chomped)
+        return proxy
+
 
 class PickleSerializer(SerializerBase):
     """ Pickle serialization covers most python objects, with some notable exceptions:
