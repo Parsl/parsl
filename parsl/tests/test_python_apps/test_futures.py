@@ -129,24 +129,3 @@ def test_fut_case_4():
     assert contents == '3', 'Output does not match expected "3", got: "{0}"'.format(
         result)
     return True
-
-
-if __name__ == '__main__':
-    parsl.clear()
-    parsl.load(config)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10",
-                        help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    # x = test_parallel_for(int(args.count))
-    # y = test_fut_case_2()
-    # y = test_fut_case_3()
-    y = test_fut_case_4()
-    # raise_error(0)

@@ -83,7 +83,3 @@ def test_row_counts():
         assert c >= 1
 
     logger.info("all done")
-
-
-if __name__ == "__main__":
-    test_row_counts()

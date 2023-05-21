@@ -1,5 +1,5 @@
-Roadmap
-=======
+Historical: Roadmap
+===================
 
 
 Before diving into the roadmap, a quick retrospective look at the evolution of workflow
@@ -12,8 +12,8 @@ Sufficient capabilities to use Parsl in many common situations already exist.  T
 it contains a list of features that Parsl has or will have.  Features that exist today are marked in bold, with the release
 in which they were added marked for releases since 0.3.0. Help in providing any of the yet-to-be-developed capabilities is welcome.
 
-The upcoming release is Parsl v0.9.0 and features in preparation are documented via Github
-`issues <https://github.com/Parsl/parsl/issues>`_ and `milestones <https://github.com/Parsl/parsl/milestone/7>`_.
+Features in preparation are documented via Github
+`issues <https://github.com/Parsl/parsl/issues>`_ and `pull requests <https://github.com/Parsl/parsl/pulls>`_.
 
 
 Core Functionality
