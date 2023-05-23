@@ -21,7 +21,7 @@ class ProxyStoreSerializer(SerializerBase):
     _for_data = True
 
     def serialize(self, data: Any) -> bytes:
-
+        assert data is not None
         store = get_store("parsl_store")
         assert store is not None, "Could not find store"
 
