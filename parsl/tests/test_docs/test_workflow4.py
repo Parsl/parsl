@@ -51,10 +51,3 @@ def test_parallel_dataflow():
     # calculate the average of the random numbers
     totals = total(inputs=[cc.outputs[0]])
     print(totals.result())
-
-
-if __name__ == "__main__":
-    parsl.clear()
-    parsl.load(config)
-
-    test_parallel_dataflow()
