@@ -20,6 +20,9 @@ class SerializerBase:
         methods for serializing code or data
         """
         super().__init_subclass__(**kwargs)
+
+        assert len(cls._identifier) == 3
+
         if cls._for_code:
             METHODS_MAP_CODE[cls._identifier] = cls
         if cls._for_data:

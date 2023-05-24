@@ -104,19 +104,3 @@ def test_deps(numtasks=2):
         assert False, "Expected DependencyError but got: %s" % e
     else:
         raise RuntimeError("Expected DependencyError, but got no exception")
-
-
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10",
-                        help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    test_no_deps(numtasks=int(args.count))
-    test_fail_sequence(numtasks=int(args.count))
