@@ -175,7 +175,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             this will provide a reasonable set of categories automatically.
             Default is True.
 
-        max_retries: Optional[int]
+        max_retries: int
             Set the number of retries that TaskVine will make when a task
             fails. This is distinct from Parsl level retries configured in
             parsl.config.Config. Set to None to allow TaskVine to retry
@@ -217,8 +217,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             The Parsl provider that will spawn worker processes.
             Default to spawning one local vine worker process.
 
-        storage_access: Redundant argument to comply with other executors.
-            Default is None. Not used.
+        storage_access: Optional[List[Staging]]
+            Define Parsl file staging providers for this executor.
+            Default is None.
     """
 
     radio_mode = "filesystem"
@@ -240,13 +241,13 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  autolabel: bool = False,
                  autolabel_window: int = 1,
                  autocategory: bool = True,
-                 max_retries: Optional[int] = 1,
+                 max_retries: int = 1,
                  init_command: str = "",
                  worker_options: str = "",
                  worker_executable: str = 'vine_worker',
                  function_dir: Optional[str] = None,
-                 wait_for_workers: Optional[int] = 0,
-                 enable_peer_transfers: Optional[bool] = True,
+                 wait_for_workers: int = 0,
+                 enable_peer_transfers: bool = True,
                  full_debug: bool = False,
                  provider: ExecutionProvider = LocalProvider(),
                  storage_access: Optional[List[Staging]] = None):

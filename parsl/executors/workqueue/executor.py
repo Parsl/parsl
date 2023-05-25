@@ -179,7 +179,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             invocations of an app have similar performance characteristics,
             this will provide a reasonable set of categories automatically.
 
-        max_retries: Optional[int]
+        max_retries: int
             Set the number of retries that Work Queue will make when a task
             fails. This is distinct from Parsl level retries configured in
             parsl.config.Config. Set to None to allow Work Queue to retry
@@ -234,7 +234,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  autolabel: bool = False,
                  autolabel_window: int = 1,
                  autocategory: bool = True,
-                 max_retries: Optional[int] = 1,
+                 max_retries: int = 1,
                  init_command: str = "",
                  worker_options: str = "",
                  full_debug: bool = True,
