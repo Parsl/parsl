@@ -293,7 +293,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.collector_queue: multiprocessing.Queue = multiprocessing.Queue()
 
         self.blocks: Dict[str, str] = {}  # track Parsl blocks
-        self.task_counter = -1  # task id starts from 0
+        self.executor_task_counter = -1  # task id starts from 0
         self.should_stop = multiprocessing.Value(c_bool, False)
 
         # mapping of function's unique memory address to its solved environment
@@ -369,7 +369,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Initialize scaling for the provider
         self.initialize_scaling()
 
-    def _path_in_task(self, task_id, *path_components):
+    def _path_in_task(self, executor_task_id, *path_components):
         """Returns a filename fixed and specific to a task.
         It is used for the following filename's:
             (not given): The subdirectory per task that contains function, result, etc.
@@ -377,7 +377,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             'result': Pickled file that (will) contain the result of the function.
             'map': Pickled file with a dict between local parsl names, and remote taskvine names.
         """
-        task_dir = "{:04d}".format(task_id)
+        task_dir = "{:04d}".format(executor_task_id)
         return os.path.join(self.function_data_dir, task_dir, *path_components)
 
     def submit(self, func, resource_specification, *args, **kwargs):
@@ -445,11 +445,11 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 elif k == 'running_time_min':
                     running_time_min = resource_specification[k]
 
-        self.task_counter += 1
-        task_id = self.task_counter
+        self.executor_task_counter += 1
+        executor_task_id = self.executor_task_counter
 
         # Create a per task directory for the function, result, map, and result files
-        os.mkdir(self._path_in_task(task_id))
+        os.mkdir(self._path_in_task(executor_task_id))
 
         input_files = []
         output_files = []
@@ -472,21 +472,21 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Create a Future object and have it be mapped from the task ID in the tasks dictionary
         fu = Future()
-        fu.parsl_executor_task_id = task_id
+        fu.parsl_executor_task_id = executor_task_id
         logger.debug("Getting tasks_lock to set vine-level task entry")
         with self.tasks_lock:
             logger.debug("Got tasks_lock to set vine-level task entry")
-            self.tasks[str(task_id)] = fu
+            self.tasks[str(executor_task_id)] = fu
 
-        logger.debug("Creating task {} for function {} with args {}".format(task_id, func, args))
+        logger.debug("Creating task {} for function {} with args {}".format(executor_task_id, func, args))
 
         # Pickle the result into object to pass into message buffer
-        function_file = self._path_in_task(task_id, "function")
-        result_file = self._path_in_task(task_id, "result")
-        map_file = self._path_in_task(task_id, "map")
+        function_file = self._path_in_task(executor_task_id, "function")
+        result_file = self._path_in_task(executor_task_id, "result")
+        map_file = self._path_in_task(executor_task_id, "map")
 
-        logger.debug("Creating Task {} with function at: {}".format(task_id, function_file))
-        logger.debug("Creating Task {} with result to be found at: {}".format(task_id, result_file))
+        logger.debug("Creating Task {} with function at: {}".format(executor_task_id, function_file))
+        logger.debug("Creating Executor Task {} with result to be found at: {}".format(executor_task_id, result_file))
 
         self._serialize_function(function_file, func, args, kwargs)
 
@@ -498,17 +498,17 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if self.pack_env:
             env_pkg = self.pack_env
 
-        logger.debug("Constructing map for local filenames at worker for task {}".format(task_id))
+        logger.debug("Constructing map for local filenames at worker for task {}".format(executor_task_id))
         self._construct_map_file(map_file, input_files, output_files)
 
         if not self.submit_process.is_alive():
             raise ExecutorError(self, "taskvine Submit Process is not alive")
 
         # Create message to put into the message queue
-        logger.debug("Placing task {} on message queue".format(task_id))
+        logger.debug("Placing task {} on message queue".format(executor_task_id))
         if category is None:
             category = func.__name__ if self.autocategory else 'parsl-default'
-        self.task_queue.put_nowait(ParslTaskToVine(task_id,
+        self.task_queue.put_nowait(ParslTaskToVine(executor_task_id,
                                                    category,
                                                    cores,
                                                    memory,
@@ -816,7 +816,7 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
 
     orig_ppid = os.getppid()
 
-    result_file_of_task_id = {}  # Mapping taskid -> result file for active tasks.
+    result_file_of_task_id = {}  # Mapping executor task id -> result file for active tasks.
 
     poncho_env_to_file = {}  # Mapping poncho_env file to File object in TaskVine
 
@@ -830,7 +830,7 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
 
     # Mapping of tasks from vine id to parsl id
     # Dict[str] -> str
-    vine_id_to_parsl_id = {}
+    vine_id_to_executor_task_id = {}
 
     while not should_stop.value:
         # Monitor the task queue
@@ -844,7 +844,7 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
             # Obtain task from task_queue
             try:
                 task = task_queue.get(timeout=1)
-                logger.debug("Removing task from queue")
+                logger.debug("Removing executor task from queue")
             except queue.Empty:
                 continue
 
@@ -854,11 +854,11 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                                             result=os.path.basename(task.result_file))
 
             # Create TaskVine task for the command
-            logger.debug("Sending task {} with command: {}".format(task.id, command_str))
+            logger.debug("Sending executor task {} with command: {}".format(task.id, command_str))
             try:
                 t = Task(command_str)
             except Exception as e:
-                logger.error("Unable to create task: {}".format(e))
+                logger.error("Unable to create executor task: {}".format(e))
                 collector_queue.put_nowait(VineTaskToParsl(id=task.id,
                                                            result_received=False,
                                                            result=None,
@@ -921,7 +921,7 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
 
             result_file_of_task_id[str(task.id)] = task.result_file
 
-            logger.debug("Parsl ID: {}".format(task.id))
+            logger.debug("Executor task id: {}".format(task.id))
 
             # Specify input/output files that need to be staged.
             # Absolute paths are assumed to be in shared filesystem, and thus
@@ -947,10 +947,10 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                         t.add_output(task_out_file, spec.parsl_name)
 
             # Submit the task to the TaskVine object
-            logger.debug("Submitting task {} to TaskVine".format(task.id))
+            logger.debug("Submitting executor task {} to TaskVine".format(task.id))
             try:
                 vine_id = m.submit(t)
-                vine_id_to_parsl_id[str(vine_id)] = str(task.id)
+                vine_id_to_executor_task_id[str(vine_id)] = str(task.id)
             except Exception as e:
                 logger.error("Unable to submit task to taskvine: {}".format(e))
                 collector_queue.put_nowait(VineTaskToParsl(id=task.id,
@@ -959,7 +959,7 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                                                            reason="task could not be submited to taskvine",
                                                            status=-1))
                 continue
-            logger.info("Task {} submitted to TaskVine with id {}".format(task.id, vine_id))
+            logger.info("Executor task {} submitted as TaskVine task with id {}".format(task.id, vine_id))
 
         # If the queue is not empty wait on the TaskVine queue for a task
         task_found = True
@@ -971,12 +971,12 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                     task_found = False
                     continue
                 # When a task is found:
-                parsl_id = vine_id_to_parsl_id[str(t.id)]
-                logger.debug("Completed TaskVine task {}, parsl task {}".format(t.id, parsl_id))
-                result_file = result_file_of_task_id.pop(parsl_id)
-                vine_id_to_parsl_id.pop(str(t.id))
+                executor_task_id = vine_id_to_executor_id[str(t.id)]
+                logger.debug("Completed TaskVine task {}, executor task {}".format(t.id, executor_id))
+                result_file = result_file_of_task_id.pop(executor_id)
+                vine_id_to_executor_task_id.pop(str(t.id))
 
-                logger.debug(f"completed task info: {parsl_id}, {t.category}, {t.command}, {t.std_output}")
+                logger.debug(f"completed executor task info: {executor_task_id}, {t.category}, {t.command}, {t.std_output}")
 
                 # A tasks completes 'succesfully' if it has result file,
                 # and it can be loaded. This may mean that the 'success' is
@@ -986,7 +986,7 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                     with open(result_file, "rb") as f_in:
                         result = pickle.load(f_in)
                     logger.debug("Found result in {}".format(result_file))
-                    collector_queue.put_nowait(VineTaskToParsl(id=parsl_id,
+                    collector_queue.put_nowait(VineTaskToParsl(id=executor_task_id,
                                                                result_received=True,
                                                                result=result,
                                                                reason=None,
@@ -1000,9 +1000,9 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                     logger.debug("Did not find result in {}".format(result_file))
                     logger.debug("Wrapper Script status: {}\nTaskVine Status: {}"
                                  .format(t.exit_code, t.result))
-                    logger.debug("Task with id parsl {} / vine {} failed because:\n{}"
-                                 .format(parsl_id, t.id, reason))
-                    collector_queue.put_nowait(VineTaskToParsl(id=parsl_id,
+                    logger.debug("Task with executor id {} / vine id {} failed because:\n{}"
+                                 .format(executor_task_id, t.id, reason))
+                    collector_queue.put_nowait(VineTaskToParsl(id=executor_task_id,
                                                                result_received=False,
                                                                result=e,
                                                                reason=reason,
