@@ -122,8 +122,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             In this case, environment variables can be used to influence the
             choice of port, documented here:
             https://ccl.cse.nd.edu/software/manuals/api/html/work__queue_8h.html#a21714a10bcdfcf5c3bd44a96f5dcbda6
-
-            Default: 0.
+            Default: WORK_QUEUE_DEFAULT_PORT.
 
         env: dict{str}
             Dictionary that contains the environmental variables that

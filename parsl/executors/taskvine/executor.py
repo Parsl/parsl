@@ -114,8 +114,13 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         port: int
             TCP port on Parsl submission machine for TaskVine workers
-            to connect to. Workers will specify this port number when
-            trying to connect to Parsl. Default is 9123.
+            to connect to. Workers will connect to Parsl using this port.
+
+            If 0, TaskVine will allocate a port number automatically.
+            In this case, environment variables can be used to influence the
+            choice of port, documented here:
+            https://cctools.readthedocs.io/en/stable/api/html/taskvine_8h.html#a47ac70464e357e4dfcb0722fee6c44a0
+            Default is VINE_DEFAULT_PORT.
 
         env: dict{str}
             Dictionary that contains the environmental variables that
