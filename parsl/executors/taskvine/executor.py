@@ -302,10 +302,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if not self.address:
             self.address = socket.gethostname()
 
-        if self.project_password_file is not None:
-            if os.path.exists(self.project_password_file) is False:
-                logger.debug("Password File does not exist, no file used")
-                self.project_password_file = None
+        if self.project_password_file is not None and not os.path.exists(self.project_password_file):
+            raise TaskVineFailure('Could not find password file: {}'.format(self.project_password_file))
 
         # Build foundations of the launch command
         self.launch_cmd = ("python3 exec_parsl_function.py {mapping} {function} {result}")
