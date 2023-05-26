@@ -62,7 +62,7 @@ The instructions for these tasks are contained within `"apps" <#application-type
 that users define using Python functions.
 Each remote computer (e.g., a node on a supercomputer) has a single `"Executor" <#executors>`_
 which manages the workers.
-Remote resources available to Parsl are acquired by a `"Provider" <#resource-providers>`_,
+Remote resources available to Parsl are acquired by a `"Provider" <#execution-providers>`_,
 which places the executor on a system with a `"Launcher" <#launchers>`_.
 Task execution is brokered by a `"Data Flow Kernel" <#benefits-of-a-data-flow-kernel>`_ that runs on your local system.
 
