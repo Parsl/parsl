@@ -69,18 +69,3 @@ def test_stage_in_out_globus():
     assert sorted_file is result_file, "Result file is not the specified input-output file"
 
     assert result_file.local_path is None, "Result file on local side has overridden local_path, file: {}".format(repr(result_file))
-
-
-if __name__ == "__main__":
-
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    test_stage_in_out_globus()

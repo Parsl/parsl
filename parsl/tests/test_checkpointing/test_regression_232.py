@@ -84,9 +84,3 @@ def test_regress_232_dfk_exit(count=2):
         print("Tasks from cache : ", tasks)
         assert len(tasks) == count, "Expected {} checkpoint events, got {}".format(
             1, len(tasks))
-
-
-if __name__ == "__main__":
-
-    test_regress_232_task_exit()
-    test_regress_232_dfk_exit()
