@@ -971,9 +971,9 @@ def _taskvine_submit_wait(task_queue=multiprocessing.Queue(),
                     task_found = False
                     continue
                 # When a task is found:
-                executor_task_id = vine_id_to_executor_id[str(t.id)]
-                logger.debug("Completed TaskVine task {}, executor task {}".format(t.id, executor_id))
-                result_file = result_file_of_task_id.pop(executor_id)
+                executor_task_id = vine_id_to_executor_task_id[str(t.id)]
+                logger.debug("Completed TaskVine task {}, executor task {}".format(t.id, executor_task_id))
+                result_file = result_file_of_task_id.pop(executor_task_id)
                 vine_id_to_executor_task_id.pop(str(t.id))
 
                 logger.debug(f"completed executor task info: {executor_task_id}, {t.category}, {t.command}, {t.std_output}")
