@@ -174,11 +174,11 @@ Internal
     parsl.app.bash.BashApp
     parsl.app.python.PythonApp
     parsl.dataflow.dflow.DataFlowKernel
-    parsl.dataflow.flow_control.FlowControl
+    parsl.dataflow.job_status_poller.JobStatusPoller
     parsl.dataflow.memoization.id_for_memo
     parsl.dataflow.memoization.Memoizer
     parsl.dataflow.states.FINAL_STATES
     parsl.dataflow.states.States
     parsl.dataflow.strategy.Strategy
-    parsl.dataflow.flow_control.Timer
     parsl.dataflow.taskrecord.TaskRecord
+    parsl.utils.Timer
