@@ -150,7 +150,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         Returns:
               [status...] : Status list of all jobs
         '''
-        job_id_list = ','.join(self.resources.keys())
+        job_id_list = ' '.join(self.resources.keys())
         cmd = "bjobs {0}".format(job_id_list)
 
         retcode, stdout, stderr = super().execute_wait(cmd)
