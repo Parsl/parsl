@@ -91,6 +91,10 @@ def pytest_configure(config):
         'markers',
         'staging_required: Marks tests that require a staging provider, when there is no sharedFS)'
     )
+    config.addinivalue_line(
+        'markers',
+        'sshd_required: Marks tests that require a SSHD'
+    )
 
 
 @pytest.fixture(autouse=True, scope='session')

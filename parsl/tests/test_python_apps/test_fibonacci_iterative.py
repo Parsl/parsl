@@ -23,13 +23,3 @@ def test_fibonacci(num=3):
             print(results[i])
         else:
             print(results[i].result())
-
-
-if __name__ == '__main__':
-    parsl.clear()
-    parsl.load(config)
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--num", default="5",
-                        action="store", dest="a", type=int)
-    args = parser.parse_args()
-    test_fibonacci(args.a)

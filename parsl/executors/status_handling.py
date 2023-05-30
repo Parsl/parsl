@@ -189,7 +189,7 @@ class BlockProviderExecutor(ParslExecutor):
     def _launch_block(self, block_id: str) -> Any:
         launch_cmd = self._get_launch_command(block_id)
         job_name = f"parsl.{self.label}.block-{block_id}"
-        logger.debug("Submitting to provider with job_name {job_name}")
+        logger.debug("Submitting to provider with job_name %s", job_name)
         job_id = self.provider.submit(launch_cmd, 1, job_name)
         if job_id:
             logger.debug(f"Launched block {block_id} on executor {self.label} with job ID {job_id}")

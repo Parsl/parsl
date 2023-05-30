@@ -29,8 +29,8 @@ from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
-from parsl.dataflow.flow_control import FlowControl
 from parsl.dataflow.futures import AppFuture
+from parsl.dataflow.job_status_poller import JobStatusPoller
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
@@ -176,10 +176,9 @@ class DataFlowKernel:
         self.checkpoint_mode = config.checkpoint_mode
         self.checkpointable_tasks: List[TaskRecord] = []
 
-        # the flow control keeps track of executors and provider task states;
-        # must be set before executors are added since add_executors calls
-        # flowcontrol.add_executors.
-        self.flowcontrol = FlowControl(self)
+        # this must be set before executors are added since add_executors calls
+        # job_status_poller.add_executors.
+        self.job_status_poller = JobStatusPoller(self)
 
         self.executors: Dict[str, ParslExecutor] = {}
 
@@ -1195,7 +1194,7 @@ class DataFlowKernel:
                 msg = executor.create_monitoring_info(new_status)
                 logger.debug("Sending monitoring message {} to hub from DFK".format(msg))
                 self.monitoring.send(MessageType.BLOCK_INFO, msg)
-        self.flowcontrol.add_executors(executors)
+        self.job_status_poller.add_executors(executors)
 
     def atexit_cleanup(self) -> None:
         if not self.cleanup_called:
@@ -1257,9 +1256,9 @@ class DataFlowKernel:
         self.usage_tracker.send_message()
         self.usage_tracker.close()
 
-        logger.info("Closing flowcontrol")
-        self.flowcontrol.close()
-        logger.info("Terminated flow control")
+        logger.info("Closing job status poller")
+        self.job_status_poller.close()
+        logger.info("Terminated job status poller")
 
         logger.info("Scaling in and shutting down executors")
 

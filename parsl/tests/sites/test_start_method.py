@@ -12,7 +12,7 @@ from parsl import python_app
 
 
 @python_app()
-def test_function():
+def get_pid():
     return os.getpid()
 
 
@@ -47,7 +47,7 @@ def config(start_method: str, **kwargs):
 def test_spawn_method(start_method: str):
     with config(start_method):
         # Get the PID for the child function as a way of making sure it launches
-        future = test_function()
+        future = get_pid()
         remote_pid = future.result()
         assert remote_pid != os.getpid()
 
