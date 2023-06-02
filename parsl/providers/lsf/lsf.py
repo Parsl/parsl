@@ -150,28 +150,36 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         Returns:
               [status...] : Status list of all jobs
         '''
-        job_id_list = ' '.join(self.resources.keys())
-        cmd = "bjobs {0}".format(job_id_list)
-
-        retcode, stdout, stderr = super().execute_wait(cmd)
-        # Execute_wait failed. Do no update
-        if retcode != 0:
-            logger.debug("Updating job status from {} failed with return code {}".format(self.label,
-                                                                                         retcode))
+        job_id_list = ' '.join(
+            [jid for jid, job in self.resources.items() if not job['status'].terminal]
+        )
+        if not job_id_list:
+            logger.debug('No active jobs, skipping status update')
             return
 
-        jobs_missing = list(self.resources.keys())
-        for line in stdout.split('\n'):
-            parts = line.split()
-            if parts and parts[0] != 'JOBID':
-                job_id = parts[0]
-                # the line can be uncompleted. len > 2 ensures safe indexing.
-                if len(parts) > 2:
-                    state = translate_table.get(parts[2], JobState.UNKNOWN)
-                    self.resources[job_id]['status'] = JobStatus(state)
-                    jobs_missing.remove(job_id)
+        cmd = "bjobs -noheader {0}".format(job_id_list)
 
-        # squeue does not report on jobs that are not running. So we are filling in the
+        retcode, stdout, stderr = self.execute_wait(cmd)
+        # Execute_wait failed. Do no update
+        if retcode != 0:
+            logger.warning("bjobs failed with non-zero exit code {}".format(retcode))
+            return
+
+        jobs_missing = set(self.resources.keys())
+        for line in stdout.split('\n'):
+            if not line:
+                # Blank line
+                continue
+            line_list = line.split()
+            job_id = line_list[0]
+            lsf_state = line_list[2]
+            if lsf_state not in translate_table:
+                logger.warning(f"LSF status {lsf_state} is not recognized")
+            state = translate_table.get(lsf_state, JobState.UNKNOWN)
+            self.resources[job_id]['status'] = JobStatus(state)
+            jobs_missing.remove(job_id)
+
+        # bjobs does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
             self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
@@ -252,11 +260,11 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = super().execute_wait("bkill {0}".format(job_id_list))
+        retcode, stdout, stderr = self.execute_wait("bkill {0}".format(job_id_list))
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = translate_table['USUSP']  # Job suspended by user/admin
+                self.resources[jid]['status'] = JobStatus(JobState.CANCELLED)  # Setting state to cancelled
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]
