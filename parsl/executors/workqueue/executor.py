@@ -934,7 +934,12 @@ def _work_queue_submit_wait(*,
                     logger.debug("Sending executor task {} with command: {}".format(task.id, command_str))
                     t = wq.Task(command_str)
                 else:
-                    t = wq.RemoteTask("run_parsl_task", "parsl_coprocess", task.map_file, task.function_file, task.result_file, task.log_file)
+                    t = wq.RemoteTask("run_parsl_task",
+                                      "parsl_coprocess",
+                                      os.path.basename(task.map_file),
+                                      os.path.basename(task.function_file),
+                                      os.path.basename(task.result_file),
+                                      os.path.basename(task.log_file))
                     t.specify_exec_method("direct")
                     logger.debug("Sending executor task {} to coprocess".format(task.id))
 
