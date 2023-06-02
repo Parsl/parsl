@@ -150,19 +150,21 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         Returns:
               [status...] : Status list of all jobs
         '''
+        logger.debug(f"Resources: {self.resources}")
         job_id_list = ' '.join(
             [jid for jid, job in self.resources.items() if not job['status'].terminal]
         )
         if not job_id_list:
             logger.debug('No active jobs, skipping status update')
             return
-
+        logger.debug(f"job_id_list: {job_id_list}")
         cmd = "bjobs -noheader {0}".format(job_id_list)
-
+        logger.debug(f"Executing command: {cmd}")
         retcode, stdout, stderr = self.execute_wait(cmd)
+        logger.debug(f"bjobs returned: stdout={stdout}, stderr={stderr}")
         # Execute_wait failed. Do no update
         if retcode != 0:
-            logger.warning("bjobs failed with non-zero exit code {}".format(retcode))
+            logger.warning(f"bjobs failed with non-zero exit code: {retcode}")
             return
 
         jobs_missing = set(self.resources.keys())
@@ -176,12 +178,15 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
             if lsf_state not in translate_table:
                 logger.warning(f"LSF status {lsf_state} is not recognized")
             state = translate_table.get(lsf_state, JobState.UNKNOWN)
+            logger.debug(f"Updating job {job_id} with LSF status {lsf_state} "
+                         f"to parsl state {state.status_name}")
             self.resources[job_id]['status'] = JobStatus(state)
             jobs_missing.remove(job_id)
 
         # bjobs does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
+            logger.debug(f"Updating missing job {missing_job} to completed status")
             self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
     def submit(self, command, tasks_per_node, job_name="parsl.lsf"):
