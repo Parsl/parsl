@@ -26,8 +26,8 @@ translate_table = {
 class LSFProvider(ClusterProvider, RepresentationMixin):
     """LSF Execution Provider
 
-    This provider uses sbatch to submit, squeue for status and scancel to cancel
-    jobs. The sbatch script to be used is created from a template file in this
+    This provider uses bsub to submit, bjobs for status and bkill to cancel
+    jobs. The bsub script to be used is created from a template file in this
     same module.
 
     Parameters
@@ -61,7 +61,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
     queue : str
         Queue to which to submit the job request
     scheduler_options : str
-        String to prepend to the #SBATCH blocks in the submit script to the scheduler.
+        String to prepend to the #BSUB blocks in the submit script to the scheduler.
     worker_init : str
         Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     cmd_timeout : int
