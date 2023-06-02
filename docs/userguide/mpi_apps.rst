@@ -96,7 +96,7 @@ is below.
     mkdir -p /tmp/hostfiles/
     split --lines={nodes_per_task} -d --suffix-length=2 $PBS_NODEFILE /tmp/hostfiles/hostfile.""",
                     walltime="6:00:00",
-                    launcher=SimpleLauncher(),  # Launches only a single copy of the workflows
+                    launcher=SimpleLauncher(),  # Launches only a single executor per block
                     select_options="ngpus=4",
                     nodes_per_block=nodes_per_task * tasks_per_block,
                     min_blocks=0,
@@ -133,7 +133,7 @@ set by HTEx to select the correct hostfile:
 
     @bash_app
     def echo_hello(n: int, stderr='std.err', stdout='std.out'):
-        return (f'mpiexec -n {n} --ppn 1
+        return (f'mpiexec -n {n} --ppn 1 '
                 '--hostfile /tmp/hostfiles/local_hostfile.`printf %02d $PARSL_WORKER_RANK` '
                 'hostname')
 
