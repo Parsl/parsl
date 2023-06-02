@@ -161,7 +161,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         cmd = "bjobs -noheader {0}".format(job_id_list)
         logger.debug(f"Executing command: {cmd}")
         retcode, stdout, stderr = self.execute_wait(cmd)
-        logger.debug(f"bjobs returned: stdout={stdout}, stderr={stderr}")
+        logger.debug(f"bjobs returned:\nstdout=\n{stdout}stderr=\n{stderr}")
         # Execute_wait failed. Do no update
         if retcode != 0:
             logger.warning(f"bjobs failed with non-zero exit code: {retcode}")
@@ -179,7 +179,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
                 logger.warning(f"LSF status {lsf_state} is not recognized")
             state = translate_table.get(lsf_state, JobState.UNKNOWN)
             logger.debug(f"Updating job {job_id} with LSF status {lsf_state} "
-                         f"to parsl state {state.status_name}")
+                         f"to parsl state {state}")
             self.resources[job_id]['status'] = JobStatus(state)
             jobs_missing.remove(job_id)
 
