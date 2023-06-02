@@ -9,6 +9,22 @@ import networkx as nx
 from parsl.monitoring.visualization.utils import timestamp_to_int, num_to_timestamp, DB_DATE_FORMAT
 
 
+# gantt_colors must assign a color value for every state name defined
+# in parsl/dataflow/states.py
+gantt_colors = {'unsched': 'rgb(240, 240, 240)',
+                'pending': 'rgb(168, 168, 168)',
+                'launched': 'rgb(100, 255, 255)',
+                'running': 'rgb(0, 0, 255)',
+                'running_ended': 'rgb(64, 64, 255)',
+                'joining': 'rgb(128, 128, 255)',
+                'dep_fail': 'rgb(255, 128, 255)',
+                'failed': 'rgb(200, 0, 0)',
+                'exec_done': 'rgb(0, 200, 0)',
+                'memo_done': 'rgb(64, 200, 64)',
+                'fail_retryable': 'rgb(200, 128,128)'
+               }
+
+
 def task_gantt_plot(df_task, df_status, time_completed=None):
 
     # if the workflow is not recorded as completed, then assume
@@ -47,25 +63,9 @@ def task_gantt_plot(df_task, df_status, time_completed=None):
                               }
             parsl_tasks.extend([last_status_bar])
 
-    # colours must assign a colour value for every state name defined
-    # in parsl/dataflow/states.py
-
-    colors = {'unsched': 'rgb(240, 240, 240)',
-              'pending': 'rgb(168, 168, 168)',
-              'launched': 'rgb(100, 255, 255)',
-              'running': 'rgb(0, 0, 255)',
-              'running_ended': 'rgb(64, 64, 255)',
-              'joining': 'rgb(128, 128, 255)',
-              'dep_fail': 'rgb(255, 128, 255)',
-              'failed': 'rgb(200, 0, 0)',
-              'exec_done': 'rgb(0, 200, 0)',
-              'memo_done': 'rgb(64, 200, 64)',
-              'fail_retryable': 'rgb(200, 128,128)'
-             }
-
     fig = ff.create_gantt(parsl_tasks,
                           title="",
-                          colors=colors,
+                          colors=gantt_colors,
                           group_tasks=True,
                           show_colorbar=True,
                           index_col='Resource',
@@ -194,6 +194,20 @@ def total_tasks_plot(df_task, df_status, columns=20):
     return plot(fig, show_link=False, output_type="div", include_plotlyjs=False)
 
 
+dag_state_colors = {"unsched": (0, 'rgb(240, 240, 240)'),
+                    "pending": (1, 'rgb(168, 168, 168)'),
+                    "launched": (2, 'rgb(100, 255, 255)'),
+                    "running": (3, 'rgb(0, 0, 255)'),
+                    "dep_fail": (4, 'rgb(255, 128, 255)'),
+                    "failed": (5, 'rgb(200, 0, 0)'),
+                    "exec_done": (6, 'rgb(0, 200, 0)'),
+                    "memo_done": (7, 'rgb(64, 200, 64)'),
+                    "fail_retryable": (8, 'rgb(200, 128,128)'),
+                    "joining": (9, 'rgb(128, 128, 255)'),
+                    "running_ended": (10, 'rgb(64, 64, 255)')
+                   }
+
+
 def workflow_dag_plot(df_tasks, group_by_apps=True):
     G = nx.DiGraph(directed=True)
     nodes = df_tasks['task_id'].unique()
@@ -215,18 +229,7 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
         groups_list = {app: (i, None) for i, app in enumerate(
             df_tasks['task_func_name'].unique())}
     else:
-        groups_list = {"unsched": (0, 'rgb(240, 240, 240)'),
-                       "pending": (1, 'rgb(168, 168, 168)'),
-                       "launched": (2, 'rgb(100, 255, 255)'),
-                       "running": (3, 'rgb(0, 0, 255)'),
-                       "dep_fail": (4, 'rgb(255, 128, 255)'),
-                       "failed": (5, 'rgb(200, 0, 0)'),
-                       "exec_done": (6, 'rgb(0, 200, 0)'),
-                       "memo_done": (7, 'rgb(64, 200, 64)'),
-                       "fail_retryable": (8, 'rgb(200, 128,128)'),
-                       "joining": (9, 'rgb(128, 128, 255)'),
-                       "running_ended": (10, 'rgb(64, 64, 255)')
-                      }
+        groups_list = dag_state_colors
 
     node_traces = [...] * len(groups_list)
 
