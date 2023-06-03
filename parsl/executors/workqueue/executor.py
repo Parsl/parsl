@@ -473,7 +473,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         logger.debug("Creating executor task {} for function {} with args {}".format(executor_task_id, func, args))
 
-        # Pickle the result into object to pass into message buffer
         function_file = self._path_in_task(executor_task_id, "function")
         result_file = self._path_in_task(executor_task_id, "result")
         map_file = self._path_in_task(executor_task_id, "map")
@@ -860,7 +859,11 @@ def _work_queue_submit_wait(*,
                     logger.debug("Sending executor task {} with command: {}".format(task.id, command_str))
                     t = wq.Task(command_str)
                 else:
-                    t = wq.RemoteTask("run_parsl_task", "parsl_coprocess", task.map_file, task.function_file, task.result_file)
+                    t = wq.RemoteTask("run_parsl_task",
+                                      "parsl_coprocess",
+                                      os.path.basename(task.map_file),
+                                      os.path.basename(task.function_file),
+                                      os.path.basename(task.result_file))
                     t.specify_exec_method("direct")
                     logger.debug("Sending executor task {} to coprocess".format(task.id))
 
