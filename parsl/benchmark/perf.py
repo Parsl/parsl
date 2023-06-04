@@ -4,6 +4,8 @@ import time
 import concurrent.futures
 import parsl
 
+min_iterations = 2
+
 
 # TODO: factor with conftest.py where this is copy/pasted from?
 def load_dfk_from_config(filename):
@@ -34,7 +36,7 @@ def performance(*, resources: dict, target_t: float):
 
     iteration = 1
 
-    while delta_t < threshold_t:
+    while delta_t < threshold_t or iteration <= min_iterations:
         print(f"==== Iteration {iteration} ====")
         print(f"Will run {n} tasks to target {target_t} seconds runtime")
         start_t = time.time()
