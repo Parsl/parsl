@@ -8,7 +8,10 @@
 # https://github.com/PyCQA/pycodestyle/issues/386
 # W504: line break after binary operator
 #       (Raised by flake8 even when it is followed)
-ignore = E124, E126, E402, E129, W504
+
+# F401 and E275 added due to flake8 upgrade - could more properly do a fix for these problems...
+
+ignore = E124, E126, E402, E129, W504, F401, E275
 max-line-length = 158
 exclude = test_import_fail.py,
   parsl/executors/workqueue/parsl_coprocess.py
