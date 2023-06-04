@@ -30,6 +30,10 @@ jobs:
         # this is to make the workqueue binary installer happy
         sudo apt-get install -y libpython3.5
 
+        # force a greenlet version, as released versions don't build with
+        # python 3.12
+        pip install 'greenlet @ git+https://github.com/mdboom/greenlet@python-312'
+
     - name: make deps clean_coverage
       run: |
         make deps
