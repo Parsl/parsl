@@ -4,6 +4,8 @@ import time
 import concurrent.futures
 import parsl
 
+min_iterations = 2
+
 
 # TODO: factor with conftest.py where this is copy/pasted from?
 def load_dfk_from_config(filename):
@@ -34,7 +36,7 @@ def performance(*, resources: dict, target_t: float):
 
     iteration = 1
 
-    while delta_t < threshold_t:
+    while delta_t < threshold_t or iteration <= min_iterations:
         print(f"==== Iteration {iteration} ====")
         print(f"Will run {n} tasks to target {target_t} seconds runtime")
         start_t = time.time()
@@ -46,7 +48,7 @@ def performance(*, resources: dict, target_t: float):
 
         submitted_t = time.time()
         print(f"All {n} tasks submitted ... waiting for completion")
-        print(f"Submission took {submitted_t - start_t} seconds = {n/(submitted_t - start_t)} tasks/second")
+        print(f"Submission took {submitted_t - start_t:.3f} seconds = {n/(submitted_t - start_t):.3f} tasks/second")
 
         for f in concurrent.futures.as_completed(fs):
             assert f.result() == 7
@@ -57,8 +59,8 @@ def performance(*, resources: dict, target_t: float):
 
         rate = n / delta_t
 
-        print(f"Runtime: {delta_t}s vs target {target_t}")
-        print(f"Tasks per second: {rate}")
+        print(f"Runtime: actual {delta_t:.3f}s vs target {target_t}s")
+        print(f"Tasks per second: {rate:.3f}")
 
         n = int(target_t * rate)
 

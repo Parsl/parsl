@@ -81,6 +81,7 @@ Subsystem sftp {sftp_path}
 # It would probably be better, when more formalized site testing comes into existence, to
 # use a site-testing provided server/configuration instead of the current scheme
 @pytest.mark.local
+@pytest.mark.sshd_required
 def test_ssh_channel():
     with tempfile.TemporaryDirectory() as config_dir:
         sshd_thread, priv_key, server_port = _start_sshd(config_dir)

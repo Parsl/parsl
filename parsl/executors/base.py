@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
 from typing import Any, Callable, Dict, Optional, List
+from typing_extensions import Literal, Self
 
 from parsl.providers.base import JobStatus
 
@@ -11,8 +12,8 @@ class ParslExecutor(metaclass=ABCMeta):
     """Executors are abstractions that represent available compute resources
     to which you could submit arbitrary App tasks.
 
-    This is a metaclass that only enforces concrete implementations of
-    functionality by the child classes.
+    This is an abstract base class that only enforces concrete implementations
+    of functionality by the child classes.
 
     Can be used as a context manager. On exit, calls ``self.shutdown()`` with
     no arguments and re-raises any thrown exception.
@@ -46,10 +47,10 @@ class ParslExecutor(metaclass=ABCMeta):
     label: str = "undefined"
     radio_mode: str = "udp"
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> Literal[False]:
         self.shutdown()
         return False
 
@@ -75,10 +76,6 @@ class ParslExecutor(metaclass=ABCMeta):
     @abstractmethod
     def scale_out(self, blocks: int) -> List[str]:
         """Scale out method.
-
-        We should have the scale out method simply take resource object
-        which will have the scaling methods, scale_out itself should be a coroutine, since
-        scaling tasks can be slow.
 
         :return: A list of block ids corresponding to the blocks that were added.
         """
@@ -183,7 +180,7 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def set_bad_state_and_fail_all(self, exception: Exception):
+    def set_bad_state_and_fail_all(self, exception: Exception) -> None:
         """Allows external error handlers to mark this executor as irrecoverably bad and cause
         all tasks submitted to it now and in the future to fail. The executor is responsible
         for checking  :method:bad_state_is_set() in the :method:submit() method and raising the

@@ -59,32 +59,3 @@ def test_func_2(width=2):
     assert sum([i.result() for i in fu_2]) == sum(
         range(1, width + 1)) * 2, "Sums do not match"
     return fu_2
-
-
-if __name__ == '__main__':
-    parsl.clear()
-    parsl.load(config)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--width", default="10",
-                        help="width of the pipeline")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    tests = [test_func_1, test_func_2]
-    for test in tests:
-        print("*" * 50)
-        try:
-
-            test(width=int(args.width))
-        except AssertionError as e:
-            print("[TEST]  %s [FAILED]" % test.__name__)
-            print(e)
-        else:
-            print("[TEST]  %s type [SUCCESS]" % test.__name__)
-
-        print("*" * 50)

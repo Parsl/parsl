@@ -23,9 +23,3 @@ def test_walltime_longer():
     """Test that an app that runs in less than walltime will succeed."""
     y = echo_to_file(walltime=2)
     y.result()
-
-
-if __name__ == "__main__":
-    parsl.clear()
-    parsl.load(config)
-    test_walltime()
