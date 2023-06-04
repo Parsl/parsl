@@ -191,3 +191,11 @@ Limitations
 The following limitation applies to Bash apps:
 
 1. Environment variables are not supported.
+
+
+MPI Apps
+--------
+
+Applications which employ MPI to span multiple nodes are a special case of Bash or Python apps,
+and require special modification of Parsl's `execution environment <execution.html>`_ to function.
+We describe support for MPI applications `in a later section <mpi_apps.html>`_.
