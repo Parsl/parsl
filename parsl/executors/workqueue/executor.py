@@ -43,10 +43,10 @@ from .errors import WorkQueueFailure
 from collections import namedtuple
 
 try:
-    import ndcctools.work_queue as wq
-    from ndcctools.work_queue import WorkQueue
-    from ndcctools.work_queue import WORK_QUEUE_DEFAULT_PORT
-    from ndcctools.work_queue import WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT
+    import work_queue as wq
+    from work_queue import WorkQueue
+    from work_queue import WORK_QUEUE_DEFAULT_PORT
+    from work_queue import WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT
 except ImportError:
     _work_queue_enabled = False
     WORK_QUEUE_DEFAULT_PORT = 0
