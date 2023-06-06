@@ -261,7 +261,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.storage_access = storage_access
         self.use_cache = use_cache
         self.working_dir = working_dir
-        self.registered_files = set()  # type: Set[str]
+        self.registered_files: Set[str] = set()
         self.full_debug = full_debug
         self.source = True if pack else source
         self.pack = pack
