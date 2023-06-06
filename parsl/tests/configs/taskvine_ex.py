@@ -1,5 +1,5 @@
 from parsl.config import Config
-from parsl.executors import TaskVineExecutor
+from parsl.executors.taskvine import TaskVineExecutor
 
 from parsl.data_provider.http import HTTPInTaskStaging
 from parsl.data_provider.ftp import FTPInTaskStaging
