@@ -271,7 +271,7 @@ def pytest_ignore_collect(path):
         return True
     elif 'manual_tests' in path.strpath:
         return True
-    elif 'workqueue_tests/test_scale' in path.strpath:
+    elif 'scaling_tests/test_scale' in path.strpath:
         return True
     else:
         return False
