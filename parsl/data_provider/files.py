@@ -44,7 +44,7 @@ class File:
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
-        self.local_path = None  # type: Optional[str]
+        self.local_path: Optional[str] = None
 
     def cleancopy(self) -> "File":
         """Returns a copy of the file containing only the global immutable state,

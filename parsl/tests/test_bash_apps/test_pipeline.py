@@ -52,7 +52,7 @@ def test_increment(depth=5):
     futs = {}
     for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
-        assert(isinstance(prev, DataFuture) or isinstance(prev, File))
+        assert isinstance(prev, DataFuture) or isinstance(prev, File)
         output = File("test{0}.txt".format(i))
         fu = increment(inputs=[prev],  # Depend on the future from previous call
                        # Name the file to be created here
@@ -62,7 +62,7 @@ def test_increment(depth=5):
         [prev] = fu.outputs
         futs[i] = prev
         print(prev.filepath)
-        assert(isinstance(prev, DataFuture))
+        assert isinstance(prev, DataFuture)
 
     for key in futs:
         if key > 0:
