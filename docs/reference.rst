@@ -76,7 +76,6 @@ Executors
     parsl.executors.ThreadPoolExecutor
     parsl.executors.HighThroughputExecutor
     parsl.executors.WorkQueueExecutor
-    parsl.executors.ExtremeScaleExecutor
     parsl.executors.FluxExecutor
     parsl.executors.swift_t.TurbineExecutor
 
@@ -87,7 +86,7 @@ Launchers
     :toctree: stubs
     :nosignatures:
 
-    parsl.launchers.launchers.Launcher
+    parsl.launchers.base.Launcher
     parsl.launchers.SimpleLauncher
     parsl.launchers.SingleNodeLauncher
     parsl.launchers.SrunLauncher
@@ -137,21 +136,22 @@ Exceptions
     parsl.app.errors.BashExitFailure
     parsl.app.errors.MissingOutputs
     parsl.app.errors.ParslError
+    parsl.errors.ConfigurationError
     parsl.errors.OptionalModuleMissing
     parsl.executors.errors.ExecutorError
     parsl.executors.errors.ScalingFailed
     parsl.executors.errors.SerializationError
     parsl.executors.errors.DeserializationError
     parsl.executors.errors.BadMessage
-    parsl.dataflow.error.DataFlowException
-    parsl.dataflow.error.ConfigurationError
-    parsl.dataflow.error.BadCheckpoint
-    parsl.dataflow.error.DependencyError
-    parsl.launchers.error.BadLauncher
-    parsl.providers.error.ExecutionProviderException
-    parsl.providers.error.ScaleOutFailed
-    parsl.providers.error.SchedulerMissingArgs
-    parsl.providers.error.ScriptPathError
+    parsl.dataflow.errors.DataFlowException
+    parsl.dataflow.errors.BadCheckpoint
+    parsl.dataflow.errors.DependencyError
+    parsl.dataflow.errors.JoinError
+    parsl.launchers.errors.BadLauncher
+    parsl.providers.errors.ExecutionProviderException
+    parsl.providers.errors.ScaleOutFailed
+    parsl.providers.errors.SchedulerMissingArgs
+    parsl.providers.errors.ScriptPathError
     parsl.channels.errors.ChannelError
     parsl.channels.errors.BadHostKeyException
     parsl.channels.errors.BadScriptPath
@@ -174,11 +174,11 @@ Internal
     parsl.app.bash.BashApp
     parsl.app.python.PythonApp
     parsl.dataflow.dflow.DataFlowKernel
-    parsl.dataflow.flow_control.FlowControl
+    parsl.dataflow.job_status_poller.JobStatusPoller
     parsl.dataflow.memoization.id_for_memo
     parsl.dataflow.memoization.Memoizer
     parsl.dataflow.states.FINAL_STATES
     parsl.dataflow.states.States
     parsl.dataflow.strategy.Strategy
-    parsl.dataflow.flow_control.Timer
     parsl.dataflow.taskrecord.TaskRecord
+    parsl.utils.Timer

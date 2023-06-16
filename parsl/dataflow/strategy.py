@@ -2,10 +2,11 @@ import logging
 import time
 import math
 import warnings
-from typing import List
+from typing import Dict, List, Optional
 
 from parsl.dataflow.executor_status import ExecutorStatus
 from parsl.executors import HighThroughputExecutor
+from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.base import JobState
 from parsl.process_loggers import wrap_with_logs
@@ -14,7 +15,7 @@ from parsl.process_loggers import wrap_with_logs
 logger = logging.getLogger(__name__)
 
 
-class Strategy(object):
+class Strategy:
     """Scaling strategy.
 
     As a workflow dag is processed by Parsl, new tasks are added and completed
@@ -110,45 +111,38 @@ class Strategy(object):
 
     """
 
-    def __init__(self, dfk):
+    def __init__(self, *, strategy: Optional[str], max_idletime: float):
         """Initialize strategy."""
-        self.dfk = dfk
-        self.config = dfk.config
+        self.executors: Dict[str, ParslExecutor]
         self.executors = {}
-        self.max_idletime = self.dfk.config.max_idletime
-
-        for e in self.dfk.config.executors:
-            self.executors[e.label] = {'idle_since': None}
+        self.max_idletime = max_idletime
 
         self.strategies = {None: self._strategy_noop,
                            'none': self._strategy_noop,
                            'simple': self._strategy_simple,
                            'htex_auto_scale': self._strategy_htex_auto_scale}
 
-        if self.config.strategy is None:
+        if strategy is None:
             warnings.warn("literal None for strategy choice is deprecated. Use string 'none' instead.",
                           DeprecationWarning)
 
-        self.strategize = self.strategies[self.config.strategy]
+        self.strategize = self.strategies[strategy]
 
-        logger.debug("Scaling strategy: {0}".format(self.config.strategy))
+        logger.debug("Scaling strategy: {0}".format(strategy))
 
     def add_executors(self, executors):
         for executor in executors:
             self.executors[executor.label] = {'idle_since': None}
 
-    def _strategy_noop(self, status: List[ExecutorStatus], tasks: List[int]) -> None:
+    def _strategy_noop(self, status: List[ExecutorStatus]) -> None:
         """Do nothing.
-
-        Args:
-            - tasks (task_ids): Not used here.
         """
         logger.debug("strategy_noop: doing nothing")
 
-    def _strategy_simple(self, status_list, tasks: List[int]) -> None:
-        self._general_strategy(status_list, tasks, strategy_type='simple')
+    def _strategy_simple(self, status_list) -> None:
+        self._general_strategy(status_list, strategy_type='simple')
 
-    def _strategy_htex_auto_scale(self, status_list, tasks: List[int]) -> None:
+    def _strategy_htex_auto_scale(self, status_list) -> None:
         """HTEX specific auto scaling strategy
 
         This strategy works only for HTEX. This strategy will scale out by
@@ -162,14 +156,11 @@ class Strategy(object):
         some blocks will reach 0% utilization. Consequently, this strategy can be
         expected to scale in effectively only when # of workers, or tasks executing
         per block is close to 1.
-
-        Args:
-            - tasks (task_ids): Not used here.
         """
-        self._general_strategy(status_list, tasks, strategy_type='htex')
+        self._general_strategy(status_list, strategy_type='htex')
 
     @wrap_with_logs
-    def _general_strategy(self, status_list, tasks, *, strategy_type):
+    def _general_strategy(self, status_list, *, strategy_type):
         logger.debug(f"general strategy starting with strategy_type {strategy_type} for {len(status_list)} executors")
 
         for exec_status in status_list:

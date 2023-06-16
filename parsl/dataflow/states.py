@@ -63,6 +63,9 @@ class States(IntEnum):
     anything about task success or failure, merely that the wrapper
     ran long enough to record it as finished."""
 
+    def __str__(self) -> str:
+        return self.__class__.__name__ + "." + self.name
+
 
 FINAL_STATES = [States.exec_done, States.memo_done, States.failed, States.dep_fail]
 """States from which we will never move to another state, because the job has

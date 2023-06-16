@@ -111,7 +111,7 @@ as shown below :
    the system and the pre-compiled bindings used for pyzmq. As a last resort, you can try:
    ``pip install --upgrade --no-binary pyzmq pyzmq``, which forces re-compilation.
 
-For the `parsl.executors.HighThroughputExecutor` as well as the `parsl.executors.ExtremeScaleExecutor`, ``address`` is a keyword argument
+For the `parsl.executors.HighThroughputExecutor`, ``address`` is a keyword argument
 taken at initialization. Here is an example for the `parsl.executors.HighThroughputExecutor`:
 
 .. code-block:: python
@@ -141,8 +141,8 @@ taken at initialization. Here is an example for the `parsl.executors.HighThrough
 
 .. _pyversion:
 
-parsl.dataflow.error.ConfigurationError
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+parsl.errors.ConfigurationError
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The Parsl configuration model underwent a major and non-backward compatible change in the transition to v0.6.0.
 Prior to v0.6.0 the configuration object was a python dictionary with nested dictionaries and lists.
@@ -154,7 +154,7 @@ style configuration was passed to Parsl v0.6.0+ and requires an upgrade to the c
 
    File "/home/yadu/src/parsl/parsl/dataflow/dflow.py", line 70, in __init__
        'Expected `Config` class, received dictionary. For help, '
-   parsl.dataflow.error.ConfigurationError: Expected `Config` class, received dictionary. For help,
+   parsl.errors.ConfigurationError: Expected `Config` class, received dictionary. For help,
    see http://parsl.readthedocs.io/en/stable/stubs/parsl.config.Config.html
 
 For more information on how to update your configuration script, please refer to:
@@ -197,28 +197,6 @@ For instance, with conda, follow this `cheatsheet <https://conda.io/docs/_downlo
    # Install packages:
    conda install <ipyparallel, dill, boto3...>
 
-
-zmq.error.ZMQError: Invalid argument
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-If you are making the transition from Parsl v0.3.0 to v0.4.0
-and you run into this error, please check your config structure.
-In v0.3.0, ``config['controller']['publicIp'] = '*'`` was commonly
-used to specify that the IP address should be autodetected.
-This has changed in v0.4.0 and setting ``'publicIp' = '*'`` results
-in an error with a traceback that looks like this:
-
-.. code-block:: python
-
-   File "/usr/local/lib/python3.5/dist-packages/ipyparallel/client/client.py", line 483, in __init__
-   self._query_socket.connect(cfg['registration'])
-   File "zmq/backend/cython/socket.pyx", line 528, in zmq.backend.cython.socket.Socket.connect (zmq/backend/cython/socket.c:5971)
-   File "zmq/backend/cython/checkrc.pxd", line 25, in zmq.backend.cython.checkrc._check_rc (zmq/backend/cython/socket.c:10014)
-   zmq.error.ZMQError: Invalid argument
-
-In v0.4.0, the controller block defaults to detecting the IP address
-automatically, and if that does not work for you, you can specify the
-IP address explicitly like this: ``config['controller']['publicIp'] = 'IP.ADD.RES.S'``
 
 How do I run code that uses Python2.X?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

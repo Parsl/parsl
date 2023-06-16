@@ -8,15 +8,15 @@ from parsl.channels import LocalChannel
 from parsl.providers.base import JobState, JobStatus
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
+from parsl.launchers.base import Launcher
 from parsl.providers.condor.template import template_string
 from parsl.providers.cluster_provider import ClusterProvider
-from parsl.providers.error import ScaleOutFailed
+from parsl.providers.errors import ScaleOutFailed
 
 logger = logging.getLogger(__name__)
 
 from typing import Dict, List, Optional
 from parsl.channels.base import Channel
-from parsl.launchers.launchers import Launcher
 
 # See http://pages.cs.wisc.edu/~adesmet/status.html
 translate_table = {

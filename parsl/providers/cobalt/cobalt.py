@@ -2,7 +2,7 @@ import logging
 import os
 import time
 
-from parsl.providers.error import ScaleOutFailed
+from parsl.providers.errors import ScaleOutFailed
 from parsl.channels import LocalChannel
 from parsl.launchers import AprunLauncher
 from parsl.providers.cobalt.template import template_string
@@ -196,7 +196,7 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
             self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
         else:
             logger.error("Submit command failed: {0}".format(stderr))
-            raise (ScaleOutFailed(self.__class__, "Request to submit job to local scheduler failed"))
+            raise ScaleOutFailed(self.__class__, "Request to submit job to local scheduler failed")
 
         logger.debug("Returning job id : {0}".format(job_id))
         return job_id

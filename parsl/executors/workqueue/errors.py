@@ -1,7 +1,8 @@
-import parsl.app.errors as perror
+from parsl.errors import ParslError
+from parsl.app.errors import AppException
 
 
-class WorkQueueTaskFailure(perror.AppException):
+class WorkQueueTaskFailure(AppException):
     """A failure executing a task in workqueue
 
     Contains:
@@ -14,7 +15,7 @@ class WorkQueueTaskFailure(perror.AppException):
         self.status = status
 
 
-class WorkQueueFailure(perror.ParslError):
+class WorkQueueFailure(ParslError):
     """A failure in the work queue executor that prevented the task to be
     executed.""
     """

@@ -7,7 +7,7 @@ import threading
 import time
 import typeguard
 from contextlib import contextmanager
-from typing import List, Tuple, Union, Generator, IO, AnyStr, Dict
+from typing import Any, Callable, List, Tuple, Union, Generator, IO, AnyStr, Dict, Optional
 
 import parsl
 from parsl.version import VERSION
@@ -55,7 +55,7 @@ def get_all_checkpoints(rundir: str = "runinfo") -> List[str]:
 
     """
 
-    if(not os.path.isdir(rundir)):
+    if not os.path.isdir(rundir):
         return []
 
     dirs = sorted(os.listdir(rundir))
@@ -99,17 +99,16 @@ def get_last_checkpoint(rundir: str = "runinfo") -> List[str]:
     last_runid = dirs[-1]
     last_checkpoint = os.path.abspath(f'{rundir}/{last_runid}/checkpoint')
 
-    if(not(os.path.isdir(last_checkpoint))):
+    if not os.path.isdir(last_checkpoint):
         return []
 
     return [last_checkpoint]
 
 
+@typeguard.typechecked
 def get_std_fname_mode(fdname: str, stdfspec: Union[str, Tuple[str, str]]) -> Tuple[str, str]:
     import parsl.app.errors as pe
-    if stdfspec is None:
-        return None, None
-    elif isinstance(stdfspec, str):
+    if isinstance(stdfspec, str):
         fname = stdfspec
         mode = 'a+'
     elif isinstance(stdfspec, tuple):
@@ -118,13 +117,6 @@ def get_std_fname_mode(fdname: str, stdfspec: Union[str, Tuple[str, str]]) -> Tu
                    f"{len(stdfspec)}")
             raise pe.BadStdStreamFile(msg, TypeError('Bad Tuple Length'))
         fname, mode = stdfspec
-        if not isinstance(fname, str) or not isinstance(mode, str):
-            msg = (f"std descriptor {fdname} has unexpected type "
-                   f"{type(stdfspec)}")
-            raise pe.BadStdStreamFile(msg, TypeError('Bad Tuple Type'))
-    else:
-        msg = f"std descriptor {fdname} has unexpected type {type(stdfspec)}"
-        raise pe.BadStdStreamFile(msg, TypeError('Bad Tuple Type'))
     return fname, mode
 
 
@@ -167,7 +159,7 @@ def wtime_to_minutes(time_string: str) -> int:
     return total_mins
 
 
-class RepresentationMixin(object):
+class RepresentationMixin:
     """A mixin class for adding a __repr__ method.
 
     The __repr__ method will return a string equivalent to the code used to instantiate
@@ -255,11 +247,11 @@ class AtomicIDCounter:
     """A class to allocate counter-style IDs, in a thread-safe way.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.count = 0
         self.lock = threading.Lock()
 
-    def get_id(self):
+    def get_id(self) -> int:
         with self.lock:
             new_id = self.count
             self.count += 1
@@ -271,3 +263,87 @@ def setproctitle(title: str) -> None:
         setproctitle_module.setproctitle(title)
     else:
         logger.warn(f"setproctitle not enabled for process {title}")
+
+
+class Timer:
+    """This class will make a callback periodically, with a period
+    specified by the interval parameter.
+
+    This is based on the following logic :
+
+    .. code-block:: none
+
+
+        BEGIN (INTERVAL, THRESHOLD, callback) :
+            start = current_time()
+
+            while (current_time()-start < INTERVAL) :
+                 wait()
+                 break
+
+            callback()
+
+    """
+
+    def __init__(self, callback: Callable, *args: Any, interval: int = 5, name: Optional[str] = None) -> None:
+        """Initialize the Timer object.
+        We start the timer thread here
+
+        KWargs:
+             - interval (int) : number of seconds between callback events
+             - name (str) : a base name to use when naming the started thread
+        """
+
+        self.interval = interval
+        self.cb_args = args
+        self.callback = callback
+        self._wake_up_time = time.time() + 1
+
+        self._kill_event = threading.Event()
+        if name is None:
+            name = "Timer-Thread-{}".format(id(self))
+        else:
+            name = "{}-Timer-Thread-{}".format(name, id(self))
+        self._thread = threading.Thread(target=self._wake_up_timer, args=(self._kill_event,), name=name)
+        self._thread.daemon = True
+        self._thread.start()
+
+    def _wake_up_timer(self, kill_event: threading.Event) -> None:
+        """Internal. This is the function that the thread will execute.
+        waits on an event so that the thread can make a quick exit when close() is called
+
+        Args:
+            - kill_event (threading.Event) : Event to wait on
+        """
+
+        # Sleep till time to wake up
+        while True:
+            prev = self._wake_up_time
+
+            # Waiting for the event returns True only when the event
+            # is set, usually by the parent thread
+            time_to_die = kill_event.wait(float(max(prev - time.time(), 0)))
+
+            if time_to_die:
+                return
+
+            if prev == self._wake_up_time:
+                self.make_callback()
+            else:
+                print("Sleeping a bit more")
+
+    def make_callback(self) -> None:
+        """Makes the callback and resets the timer.
+        """
+        self._wake_up_time = time.time() + self.interval
+
+        try:
+            self.callback(*self.cb_args)
+        except Exception:
+            logger.error("Callback threw an exception - logging and proceeding anyway", exc_info=True)
+
+    def close(self) -> None:
+        """Merge the threads and terminate.
+        """
+        self._kill_event.set()
+        self._thread.join()

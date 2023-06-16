@@ -52,7 +52,7 @@ def test_increment(depth=5):
     futs = {}
     for i in range(1, depth):
         print("Launching {0} with {1}".format(i, prev))
-        assert(isinstance(prev, DataFuture) or isinstance(prev, File))
+        assert isinstance(prev, DataFuture) or isinstance(prev, File)
         output = File("test{0}.txt".format(i))
         fu = increment(inputs=[prev],  # Depend on the future from previous call
                        # Name the file to be created here
@@ -62,7 +62,7 @@ def test_increment(depth=5):
         [prev] = fu.outputs
         futs[i] = prev
         print(prev.filepath)
-        assert(isinstance(prev, DataFuture))
+        assert isinstance(prev, DataFuture)
 
     for key in futs:
         if key > 0:
@@ -118,22 +118,3 @@ def test_increment_slow(depth=5, dur=0.5):
                 key), "[TEST] incr failed for key: {0} got: {1}".format(key, data)
 
     cleanup_work(depth)
-
-
-if __name__ == '__main__':
-    parsl.clear()
-    dfk = parsl.load(config)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-w", "--width", default="5",
-                        help="width of the pipeline")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    # test_increment(depth=int(args.width))
-    # test_increment(depth=int(args.width))
-    test_increment_slow(depth=int(args.width))

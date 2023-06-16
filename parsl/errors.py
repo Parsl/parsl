@@ -1,6 +1,16 @@
-from parsl.app.errors import ParslError
-
 from typing import List
+
+
+class ParslError(Exception):
+    """Base class for all exceptions.
+
+    Only to be invoked when a more specific error is not available.
+    """
+
+
+class ConfigurationError(ParslError):
+    """Raised when a component receives an invalid configuration.
+    """
 
 
 class OptionalModuleMissing(ParslError):

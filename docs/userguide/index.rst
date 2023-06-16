@@ -9,6 +9,7 @@ User guide
    futures
    data
    execution
+   mpi_apps
    exceptions
    checkpoints
    configuring

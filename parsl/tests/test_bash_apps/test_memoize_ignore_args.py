@@ -18,7 +18,7 @@ def test_memo_same_at_definition():
 
 
 @bash_app(cache=True, ignore_for_cache=['stdout'])
-def no_checkpoint_stdout_app(stdout=None):
+def no_checkpoint_stdout_app_ignore_args(stdout=None):
     return "echo X"
 
 
@@ -30,16 +30,19 @@ def test_memo_stdout():
     if os.path.exists(path_x):
         os.remove(path_x)
 
-    no_checkpoint_stdout_app(stdout=path_x).result()
+    no_checkpoint_stdout_app_ignore_args(stdout=path_x).result()
     assert os.path.exists(path_x)
 
     # this should be memoized, so not create benc.test.y
     path_y = "test.memo.stdout.y"
-    assert not os.path.exists(path_y)
-    no_checkpoint_stdout_app(stdout=path_y).result()
+
+    if os.path.exists(path_y):
+        os.remove(path_y)
+
+    no_checkpoint_stdout_app_ignore_args(stdout=path_y).result()
     assert not os.path.exists(path_y)
 
     # this should also be memoized, so not create an arbitrary name
-    z_fut = no_checkpoint_stdout_app(stdout=parsl.AUTO_LOGNAME)
+    z_fut = no_checkpoint_stdout_app_ignore_args(stdout=parsl.AUTO_LOGNAME)
     z_fut.result()
     assert not os.path.exists(z_fut.stdout)

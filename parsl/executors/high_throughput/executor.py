@@ -5,6 +5,7 @@ import threading
 import queue
 import datetime
 import pickle
+import warnings
 from multiprocessing import Queue
 from typing import Dict, Sequence  # noqa F401 (used in type annotation)
 from typing import List, Optional, Tuple, Union
@@ -132,11 +133,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         Caps the number of workers launched per node. Default: infinity
 
     cpu_affinity: string
-        Whether or how each worker process sets thread affinity. Options are "none" to forgo
+        Whether or how each worker process sets thread affinity. Options include "none" to forgo
         any CPU affinity configuration, "block" to assign adjacent cores to workers
         (ex: assign 0-1 to worker 0, 2-3 to worker 1), and
         "alternating" to assign cores to workers in round-robin
         (ex: assign 0,2 to worker 0, 1,3 to worker 1).
+        The "block-reverse" option assigns adjacent cores to workers, but assigns
+        the CPUs with large indices to low index workers (ex: assign 2-3 to worker 1, 0,1 to worker 2)
 
     available_accelerators: int | list
         Accelerators available for workers to use. Each worker will be pinned to exactly one of the provided
@@ -200,7 +203,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  max_workers: Union[int, float] = float('inf'),
                  cpu_affinity: str = 'none',
                  available_accelerators: Union[int, Sequence[str]] = (),
-                 start_method: str = 'fork',
+                 start_method: str = 'spawn',
                  prefetch_capacity: int = 0,
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
@@ -253,6 +256,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             raise ValueError('Thread affinity is not available with start method: "thread"')
         if start_method == "thread" and len(available_accelerators) > 0:
             raise ValueError('Accelerator pinning not available with start method: "thread"')
+        if start_method == "fork":
+            logger.warning("The 'fork' start method is deprecated")
+            warnings.warn("The 'fork' start method is deprecated")
 
         # Determine the number of workers per node
         self._workers_per_node = min(max_workers, mem_slots, cpu_slots)
@@ -350,8 +356,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.incoming_q = zmq_pipes.ResultsIncoming("127.0.0.1", self.interchange_port_range)
         self.command_client = zmq_pipes.CommandClient("127.0.0.1", self.interchange_port_range)
 
-        self.is_alive = True
-
         self._queue_management_thread = None
         self._start_queue_management_thread()
         self._start_local_interchange_process()
@@ -387,12 +391,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         while not self.bad_state_is_set:
             try:
-                msgs = self.incoming_q.get(timeout=1)
-
-            except queue.Empty:
-                logger.debug("queue empty")
-                # Timed out.
-                pass
+                msgs = self.incoming_q.get()
 
             except IOError as e:
                 logger.exception("Caught broken queue with exception code {}: {}".format(e.errno, e))
@@ -457,8 +456,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                         else:
                             raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
-            if not self.is_alive:
-                break
         logger.info("queue management worker finished")
 
     def _start_local_interchange_process(self):
@@ -508,7 +505,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         else:
             logger.error("Management thread already exists, returning")
 
-    def hold_worker(self, worker_id):
+    def hold_worker(self, worker_id: str) -> None:
         """Puts a worker on hold, preventing scheduling of additional tasks to it.
 
         This is called "hold" mostly because this only stops scheduling of tasks,
@@ -520,9 +517,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         worker_id : str
             Worker id to be put on hold
         """
-        c = self.command_client.run("HOLD_WORKER;{}".format(worker_id))
+        self.command_client.run("HOLD_WORKER;{}".format(worker_id))
         logger.debug("Sent hold request to manager: {}".format(worker_id))
-        return c
 
     @property
     def outstanding(self):
@@ -534,10 +530,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         workers = self.command_client.run("WORKERS")
         return workers
 
-    @property
     def connected_managers(self):
-        workers = self.command_client.run("MANAGERS")
-        return workers
+        managers = self.command_client.run("MANAGERS")
+        return managers
 
     def _hold_block(self, block_id):
         """ Sends hold command to all managers which are in a specific block
@@ -548,7 +543,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
              Block identifier of the block to be put on hold
         """
 
-        managers = self.connected_managers
+        managers = self.connected_managers()
 
         for manager in managers:
             if manager['block_id'] == block_id:
@@ -664,7 +659,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         if block_ids:
             block_ids_to_kill = block_ids
         else:
-            managers = self.connected_managers
+            managers = self.connected_managers()
             block_info = {}  # block id -> list( tasks, idle duration )
             for manager in managers:
                 if not manager['active']:
@@ -718,7 +713,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         return launch_cmd
 
     def shutdown(self):
-        """Shutdown the executor, including all workers and controllers.
+        """Shutdown the executor, including the interchange. This does not
+        shut down any workers directly - workers should be terminated by the
+        scaling mechanism or by heartbeat timeout.
         """
 
         logger.info("Attempting HighThroughputExecutor shutdown")

@@ -1,5 +1,5 @@
 from parsl import python_app
-from parsl.dataflow.error import DependencyError
+from parsl.dataflow.errors import DependencyError
 
 
 @python_app

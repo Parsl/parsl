@@ -16,10 +16,11 @@ logger = logging.getLogger(__name__)
 
 # these will be shared between all executors that do not explicitly
 # override, so should not contain executor-specific state
-default_staging = [NoOpFileStaging(), FTPSeparateTaskStaging(), HTTPSeparateTaskStaging()]  # type: List[Staging]
+default_staging: List[Staging]
+default_staging = [NoOpFileStaging(), FTPSeparateTaskStaging(), HTTPSeparateTaskStaging()]
 
 
-class DataManager(object):
+class DataManager:
     """The DataManager is responsible for transferring input and output data.
 
     """
