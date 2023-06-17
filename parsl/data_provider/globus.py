@@ -81,8 +81,6 @@ class Globus:
         tc = globus_sdk.TransferClient(authorizer=cls.authorizer)
         td = globus_sdk.TransferData(tc, src_ep, dst_ep)
         td.add_item(src_path, dst_path)
-        print('Globus transfer submitted from {}{} to {}{}'.format(
-            src_ep, src_path, dst_ep, dst_path))
         try:
             task = tc.submit_transfer(td)
         except Exception as e:
