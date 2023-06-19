@@ -39,7 +39,6 @@ import parsl
 # from parsl.tests.configs.comet_ipp_multinode import config
 
 # from parsl.tests.configs.htex_local import config
-# from parsl.tests.configs.exex_local import config
 parsl.set_stream_logger()
 
 # from htex_midway import config
