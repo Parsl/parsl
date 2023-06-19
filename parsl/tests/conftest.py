@@ -124,7 +124,7 @@ def load_dfk_session(request, pytestconfig):
 
         yield
 
-        if(parsl.dfk() != dfk):
+        if parsl.dfk() != dfk:
             raise RuntimeError("DFK changed unexpectedly during test")
         dfk.cleanup()
         parsl.clear()
@@ -158,16 +158,16 @@ def load_dfk_local_module(request, pytestconfig):
             assert isinstance(c, parsl.Config)
             dfk = parsl.load(c)
 
-        if(callable(local_setup)):
+        if callable(local_setup):
             local_setup()
 
         yield
 
-        if(callable(local_teardown)):
+        if callable(local_teardown):
             local_teardown()
 
-        if(local_config):
-            if(parsl.dfk() != dfk):
+        if local_config:
+            if parsl.dfk() != dfk:
                 raise RuntimeError("DFK changed unexpectedly during test")
             dfk.cleanup()
             parsl.clear()
@@ -271,7 +271,7 @@ def pytest_ignore_collect(path):
         return True
     elif 'manual_tests' in path.strpath:
         return True
-    elif 'workqueue_tests/test_scale' in path.strpath:
+    elif 'scaling_tests/test_scale' in path.strpath:
         return True
     else:
         return False
