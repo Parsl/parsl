@@ -73,10 +73,3 @@ def test_checkpoint_availability():
     print(original)
 
     assert cached == original, "All tasks were not cached"
-
-
-if __name__ == "__main__":
-
-    test_checkpoint_availability()
-    # test_regress_234()
-    # test_slower_apps()

@@ -505,7 +505,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         else:
             logger.error("Management thread already exists, returning")
 
-    def hold_worker(self, worker_id):
+    def hold_worker(self, worker_id: str) -> None:
         """Puts a worker on hold, preventing scheduling of additional tasks to it.
 
         This is called "hold" mostly because this only stops scheduling of tasks,
@@ -517,9 +517,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         worker_id : str
             Worker id to be put on hold
         """
-        c = self.command_client.run("HOLD_WORKER;{}".format(worker_id))
+        self.command_client.run("HOLD_WORKER;{}".format(worker_id))
         logger.debug("Sent hold request to manager: {}".format(worker_id))
-        return c
 
     @property
     def outstanding(self):

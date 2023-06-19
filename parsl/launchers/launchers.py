@@ -1,23 +1,8 @@
-from abc import ABCMeta, abstractmethod
 import logging
 
-from parsl.utils import RepresentationMixin
+from parsl.launchers.base import Launcher
 
 logger = logging.getLogger(__name__)
-
-
-class Launcher(RepresentationMixin, metaclass=ABCMeta):
-    """Launchers are basically wrappers for user submitted scripts as they
-    are submitted to a specific execution resource.
-    """
-    def __init__(self, debug: bool = True):
-        self.debug = debug
-
-    @abstractmethod
-    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int) -> str:
-        """ Wraps the command with the Launcher calls.
-        """
-        pass
 
 
 class SimpleLauncher(Launcher):

@@ -198,28 +198,6 @@ For instance, with conda, follow this `cheatsheet <https://conda.io/docs/_downlo
    conda install <ipyparallel, dill, boto3...>
 
 
-zmq.error.ZMQError: Invalid argument
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-If you are making the transition from Parsl v0.3.0 to v0.4.0
-and you run into this error, please check your config structure.
-In v0.3.0, ``config['controller']['publicIp'] = '*'`` was commonly
-used to specify that the IP address should be autodetected.
-This has changed in v0.4.0 and setting ``'publicIp' = '*'`` results
-in an error with a traceback that looks like this:
-
-.. code-block:: python
-
-   File "/usr/local/lib/python3.5/dist-packages/ipyparallel/client/client.py", line 483, in __init__
-   self._query_socket.connect(cfg['registration'])
-   File "zmq/backend/cython/socket.pyx", line 528, in zmq.backend.cython.socket.Socket.connect (zmq/backend/cython/socket.c:5971)
-   File "zmq/backend/cython/checkrc.pxd", line 25, in zmq.backend.cython.checkrc._check_rc (zmq/backend/cython/socket.c:10014)
-   zmq.error.ZMQError: Invalid argument
-
-In v0.4.0, the controller block defaults to detecting the IP address
-automatically, and if that does not work for you, you can specify the
-IP address explicitly like this: ``config['controller']['publicIp'] = 'IP.ADD.RES.S'``
-
 How do I run code that uses Python2.X?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

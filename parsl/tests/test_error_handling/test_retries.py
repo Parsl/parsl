@@ -109,20 +109,3 @@ def test_retry():
     fu = succeed_on_retry(fname)
 
     fu.result()
-
-
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10",
-                        help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    test_fail_nowait(numtasks=int(args.count))
-    # test_fail_delayed(numtasks=int(args.count))
-    # test_retry()
