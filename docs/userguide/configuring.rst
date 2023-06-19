@@ -75,6 +75,7 @@ Stepping through the following question should help formulate a suitable configu
 | Laptop/Workstation  | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.LocalProvider`        |
 |                     | * `parsl.executors.ThreadPoolExecutor`        |                                        |
 |                     | * `parsl.executors.WorkQueueExecutor`         |                                        |
+|                     | * `parsl.executors.taskvine.TaskVineExecutor` |                                        |
 +---------------------+-----------------------------------------------+----------------------------------------+
 | Amazon Web Services | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.AWSProvider`          |
 +---------------------+-----------------------------------------------+----------------------------------------+
@@ -82,6 +83,7 @@ Stepping through the following question should help formulate a suitable configu
 +---------------------+-----------------------------------------------+----------------------------------------+
 | Slurm based system  | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.SlurmProvider`        |
 |                     | * `parsl.executors.WorkQueueExecutor`         |                                        |
+|                     | * `parsl.executors.taskvine.TaskVineExecutor` |                                        |
 +---------------------+-----------------------------------------------+----------------------------------------+
 | Torque/PBS based    | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.TorqueProvider`       |
 | system              | * `parsl.executors.WorkQueueExecutor`         |                                        |
@@ -94,6 +96,7 @@ Stepping through the following question should help formulate a suitable configu
 +---------------------+-----------------------------------------------+----------------------------------------+
 | Condor based        | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.CondorProvider`       |
 | cluster or grid     | * `parsl.executors.WorkQueueExecutor`         |                                        |
+|                     | * `parsl.executors.taskvine.TaskVineExecutor` |                                        |
 +---------------------+-----------------------------------------------+----------------------------------------+
 | Kubernetes cluster  | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.KubernetesProvider`   |
 +---------------------+-----------------------------------------------+----------------------------------------+
@@ -102,17 +105,18 @@ Stepping through the following question should help formulate a suitable configu
 2.  How many nodes will be used to execute the apps? What task durations are necessary to achieve good performance?
 
 
-+------------------------------------------+----------------------+-------------------------------------+
-| Executor                                 | Number of Nodes [*]_ | Task duration for good performance  |
-+==========================================+======================+=====================================+
-| `parsl.executors.ThreadPoolExecutor`     | 1 (Only local)       | Any                                 |
-+------------------------------------------+----------------------+-------------------------------------+
-| `parsl.executors.HighThroughputExecutor` | <=2000               | Task duration(s)/#nodes >= 0.01     |
-|                                          |                      | longer tasks needed at higher scale |
-+------------------------------------------+----------------------+-------------------------------------+
-| `parsl.executors.WorkQueueExecutor`      | <=1000 [*]_          | 10s+                                |
-+------------------------------------------+----------------------+-------------------------------------+
-
++--------------------------------------------+----------------------+-------------------------------------+
+| Executor                                   | Number of Nodes [*]_ | Task duration for good performance  |
++============================================+======================+=====================================+
+| `parsl.executors.ThreadPoolExecutor`       | 1 (Only local)       | Any                                 |
++--------------------------------------------+----------------------+-------------------------------------+
+| `parsl.executors.HighThroughputExecutor`   | <=2000               | Task duration(s)/#nodes >= 0.01     |
+|                                            |                      | longer tasks needed at higher scale |
++--------------------------------------------+----------------------+-------------------------------------+
+| `parsl.executors.WorkQueueExecutor`        | <=1000 [*]_          | 10s+                                |
++--------------------------------------------+----------------------+-------------------------------------+
+| `parsl.executors.taskvine.TaskVineExecutor`| <=1000 [*]_          | 10s+                                |
++--------------------------------------------+----------------------+--------------------------------------
 
 .. [*] Assuming 32 workers per node. If there are fewer workers launched
        per node, a larger number of nodes could be supported.
@@ -120,6 +124,8 @@ Stepping through the following question should help formulate a suitable configu
 .. [*] The maximum number of nodes tested for the `parsl.executors.WorkQueueExecutor` is 10,000 GPU cores and
        20,000 CPU cores.
 
+.. [*] The maximum number of nodes tested for the `parsl.executors.taskvine.TaskVineExecutor` is 
+       10,000 GPU cores and 20,000 CPU cores.
 
 3. Should Parsl request multiple nodes in an individual scheduler job? 
 (Here the term block is equivalent to a single scheduler job.)
