@@ -1,7 +1,7 @@
 .. _label-performance:
 
-Performance and Scalability
-===========================
+Historical: Performance and Scalability
+=======================================
 
 Parsl is designed to scale from small to large systems .
 
