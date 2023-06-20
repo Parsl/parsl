@@ -1,5 +1,5 @@
 pyzmq>=17.1.2
-typeguard>=2.10
+typeguard>=2.13
 typing-extensions
 globus-sdk
 dill
