@@ -60,7 +60,6 @@ package_run_script = shutil.which("poncho_package_run")
 
 logger = logging.getLogger(__name__)
 
-
 # Support structure to communicate parsl tasks to the taskvine submit thread.
 ParslTaskToVine = namedtuple('ParslTaskToVine',
                              'id category cores memory disk gpus priority running_time_min \
@@ -79,7 +78,7 @@ ParslFileToVine = namedtuple('ParslFileToVine', 'parsl_name stage cache')
 
 
 class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
-    """Executor to use TaskVine batch system
+    """Executor to use TaskVine dynamic workflow system
 
     The TaskVineExecutor system utilizes the TaskVine framework to
     efficiently delegate Parsl apps to remote machines in clusters and
@@ -94,7 +93,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         label: str
             A human readable label for the executor, unique
-            with respect to other TaskVine master programs.
+            with respect to other TaskVine manager programs.
             Default is "TaskVineExecutor".
 
         project_name: str
@@ -107,7 +106,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             Optional password file for the taskvine project. Default is None.
 
         address: str
-            The ip to contact this taskvine master process.
+            The ip to contact this taskvine manager process.
             If not given, uses the address of the current machine as returned
             by socket.gethostname().
             Ignored if project_name is specified.
