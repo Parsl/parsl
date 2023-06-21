@@ -477,7 +477,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             logger.debug("Got tasks_lock to set vine-level task entry")
             self.tasks[str(executor_task_id)] = fu
 
-        logger.debug("Creating task {} for function {} with args {}".format(executor_task_id, func, args))
+        logger.debug("Creating task {} for function {} of type {} with args {}".format(executor_task_id, func, type(func), args))
 
         # Pickle the result into object to pass into message buffer
         function_file = self._path_in_task(executor_task_id, "function")
