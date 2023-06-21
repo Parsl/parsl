@@ -30,6 +30,7 @@ from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
 from parsl.executors.taskvine import exec_parsl_function
+from parsl.executors.taskvine.manager_config import TaskVineManagerConfig
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
@@ -230,6 +231,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self,
+                 manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  label: str = "TaskVineExecutor",
                  project_name: Optional[str] = None,
                  project_password_file: Optional[str] = None,
@@ -261,11 +263,14 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             raise OptionalModuleMissing(['taskvine'], "TaskVineExecutor requires the taskvine module.")
 
         self.label = label
-        self.project_name = project_name
-        self.project_password_file = project_password_file
-        self.address = address
-        self.port = port
-        self.env = env
+        
+        self.port = manager_config.port
+        self.address = manager_config.address
+        self.project_name = manager_config.project_name
+        self.project_password_file = manager_config.project_password_file
+        
+        self.env_vars = manager_config.env_vars
+        self.
         self.shared_fs = shared_fs
         self.use_cache = use_cache
         self.source = True if pack else source
