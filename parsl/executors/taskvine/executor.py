@@ -270,7 +270,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.project_password_file = manager_config.project_password_file
         
         self.env_vars = manager_config.env_vars
-        self.
+        self.init_command = manager_config.init_command
+        self.worker_options = manager_config.worker_options
+        self.worker_executable = manager_config.worker_executable
+
         self.shared_fs = shared_fs
         self.use_cache = use_cache
         self.source = True if pack else source
