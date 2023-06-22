@@ -15,8 +15,11 @@ class TaskVineTaskFailure(AppException):
         self.status = status
 
 
-class TaskVineFailure(ParslError):
+class TaskVineManagerFailure(ParslError):
     """A failure in the taskvine executor that prevented the task to be
     executed.""
     """
+    pass
+
+class TaskVineFactoryFailure(ParslError):
     pass
