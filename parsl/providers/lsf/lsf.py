@@ -166,7 +166,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
             logger.warning(f"bjobs failed with non-zero exit code: {retcode}")
             return
 
-        jobs_missing = set(self.resources.keys())
+        jobs_missing = set(job_id_list)
         bjobs_lines = stdout.rstrip('\n').split('\n')
 
         for line in bjobs_lines:
