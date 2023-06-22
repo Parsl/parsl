@@ -151,14 +151,13 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
               [status...] : Status list of all jobs
         '''
         logger.debug(f"Resources: {self.resources}")
-        job_id_list = ' '.join(
-            [jid for jid, job in self.resources.items() if not job['status'].terminal]
-        )
+        job_id_list = [jid for jid, job in self.resources.items() if not job['status'].terminal]
         if not job_id_list:
             logger.debug('No active jobs, skipping status update')
             return
         logger.debug(f"job_id_list: {job_id_list}")
-        cmd = "bjobs -noheader {0}".format(job_id_list)
+        # only request the JOBID and STAT columns from LSF
+        cmd = f"bjobs -noheader -o 'jobid stat' {' '.join(job_id_list)}"
         logger.debug(f"Executing command: {cmd}")
         retcode, stdout, stderr = self.execute_wait(cmd)
         logger.debug(f"bjobs returned:\nstdout=\n{stdout}stderr=\n{stderr}")
@@ -168,13 +167,17 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
             return
 
         jobs_missing = set(self.resources.keys())
-        for line in stdout.split('\n'):
-            if not line:
-                # Blank line
-                continue
+        bjobs_lines = stdout.rstrip('\n').split('\n')
+
+        for line in bjobs_lines:
             line_list = line.split()
-            job_id = line_list[0]
-            lsf_state = line_list[2]
+            if len(line_list) != 2:
+                logger.debug(f"{line_list} length not equal to 2, skipping")
+                continue
+            job_id, lsf_state = line_list
+            if job_id not in job_id_list:
+                logger.debug(f"job_id {job_id} not in job_id_list, skipping")
+                continue
             if lsf_state not in translate_table:
                 logger.warning(f"LSF status {lsf_state} is not recognized")
             state = translate_table.get(lsf_state, JobState.UNKNOWN)
