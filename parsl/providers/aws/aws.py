@@ -82,10 +82,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     walltime : str
         Walltime requested per block in HH:MM:SS. This option is not currently honored by this provider.
     launcher : Launcher
-        Launcher for this provider. Possible launchers include
-        :class:`~parsl.launchers.SingleNodeLauncher` (the default),
-        :class:`~parsl.launchers.SrunLauncher`, or
-        :class:`~parsl.launchers.AprunLauncher`
+        Launcher for this provider. With AWS, usually the default
+        :class:`~parsl.launchers.SingleNodeLauncher` will be appropriate.
     linger : Bool
         When set to True, the workers will not ``halt``. The user is responsible for shutting
         down the node.
