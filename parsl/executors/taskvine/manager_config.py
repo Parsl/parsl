@@ -1,17 +1,19 @@
 from dataclasses import dataclass
 from typing import Optional
+from ndcctools.taskvine.cvine import VINE_DEFAULT_PORT
 
 # Configuration of a TaskVine manager
 @dataclass
 class TaskVineManagerConfig:
     
     # Connection and communication settings
-    port: int = 0
+    port: int = VINE_DEFAULT_PORT
     address: Optional[str] = None
     project_name: Optional[str] = None
     project_password_file: Optional[str] = None
 
     # Task settings
+    init_command: str = ""
     shared_fs: bool = False
     env_vars: Optional[dict] = None # env
     env_pack: bool = False
@@ -30,3 +32,6 @@ class TaskVineManagerConfig:
     enable_peer_transfers: bool = True
     wait_for_workers: Optional[int] = 0
     full_debug: bool = False
+
+    # Logging settings
+    vine_log_dir: Optional[str] = None

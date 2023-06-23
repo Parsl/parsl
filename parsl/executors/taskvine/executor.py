@@ -7,9 +7,6 @@ high-throughput system for delegating Parsl tasks to thousands of remote machine
 import threading
 import multiprocessing
 import logging
-from concurrent.futures import Future
-from ctypes import c_bool
-
 import tempfile
 import hashlib
 import subprocess
@@ -21,43 +18,47 @@ import queue
 import inspect
 import shutil
 import itertools
+import uuid
+from ctypes import c_bool
+from concurrent.futures import Future
+from typing import Dict, List, Optional, Union
+from collections import namedtuple
 
-from parsl.serialize import pack_apply_message
+# Import Parsl constructs
 import parsl.utils as putils
-from parsl.executors.errors import ExecutorError
+from parsl.utils import setproctitle
+from parsl.data_provider.staging import Staging
+from parsl.serialize import pack_apply_message
 from parsl.data_provider.files import File
 from parsl.errors import OptionalModuleMissing
-from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
+from parsl.process_loggers import wrap_with_logs
+from parsl.executors.errors import ExecutorError
+from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.taskvine import exec_parsl_function
 from parsl.executors.taskvine.manager_config import TaskVineManagerConfig
 from parsl.executors.taskvine.factory_config import TaskVineFactoryConfig
-from parsl.process_loggers import wrap_with_logs
-from parsl.utils import setproctitle
+from parsl.executors.taskvine.errors import TaskVineTaskFailure
+from parsl.executors.taskvine.errors import TaskVineManagerFailure
+from parsl.executors.taskvine.errors import TaskVineFactoryFailure
 
+# Import other libraries
 import typeguard
-from typing import Dict, List, Optional, Union
-from parsl.data_provider.staging import Staging
 
-from .errors import TaskVineTaskFailure
-from .errors import TaskVineManagerFailure
-from .errors import TaskVineFactoryFailure
 
-from collections import namedtuple
-
+# Import TaskVine python modules
 try:
     from ndcctools.taskvine import cvine
     from ndcctools.taskvine import Manager
     from ndcctools.taskvine import Task
-    from ndcctools.taskvine.cvine import VINE_DEFAULT_PORT
     from ndcctools.taskvine.cvine import VINE_ALLOCATION_MODE_MAX_THROUGHPUT
 except ImportError:
     _taskvine_enabled = False
-    VINE_DEFAULT_PORT = 0
 else:
     _taskvine_enabled = True
 
+##TODO: BEGIN##
 package_analyze_script = shutil.which("poncho_package_analyze")
 package_create_script = shutil.which("poncho_package_create")
 package_run_script = shutil.which("poncho_package_run")
@@ -79,7 +80,7 @@ VineTaskToParsl = namedtuple('VineTaskToParsl', 'id result_received result reaso
 # stage tells whether the file should be copied by taskvine to the workers.
 # cache tells whether the file should be cached at workers. Only valid if stage == True
 ParslFileToVine = namedtuple('ParslFileToVine', 'parsl_name stage cache')
-
+##TODO: END##
 
 class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     """Executor to use TaskVine dynamic workflow system
@@ -91,14 +92,40 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     TaskVineExecutor, and Parsl apps will then be sent out to these
     machines for execution and retrieval.
 
+    This Executor sets up configurations for the TaskVine manager, TaskVine
+    factory, and run both in separate processes. Sending tasks and receiving
+    results are done through multiprocessing module native to Python.
 
     Parameters
     ----------
 
         label: str
             A human readable label for the executor, unique
-            with respect to other TaskVine manager programs.
+            with respect to other executors.
             Default is "TaskVineExecutor".
+        
+        python_app_only: bool
+            Choose whether to transfer parsl app information as
+            source code. (Note: this increases throughput for
+            @python_apps, but the implementation does not include
+            functionality for @bash_apps, and thus source=False
+            must be used for programs utilizing @bash_apps.)
+            Default is False.
+
+        manager_config: TaskVineManagerConfig
+            Configuration for the TaskVine manager.
+
+        factory_config: TaskVineFactoryConfig
+            Configuration for the TaskVine factory.
+            Use of factory is disabled by default.
+
+        provider: ExecutionProvider
+            The Parsl provider that will spawn worker processes.
+            Default to spawning one local vine worker process.
+
+        storage_access: List[Staging]
+            Define Parsl file staging providers for this executor.
+            Default is None.
     """
 
     radio_mode = "filesystem"
@@ -107,29 +134,25 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     def __init__(self,
                  label: str = "TaskVineExecutor",
                  python_app_only: bool = False,
-                 function_dir: Optional[str] = None,
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  factory_config: TaskVineFactoryConfig = TaskVineFactoryConfig(),
-                 provider: ExecutionProvider = LocalProvider(),
+                 provider: ExecutionProvider = LocalProvider(init_blocks=1),
                  storage_access: Optional[List[Staging]] = None):
+
+        # Initialize the parent class with the execution provider and block error handling enabled.
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
+
+        # Raise an exception if there's a problem importing TaskVine
         if not _taskvine_enabled:
             raise OptionalModuleMissing(['taskvine'], "TaskVineExecutor requires the taskvine module.")
 
         # Executor configurations
         self.label = label
         self.python_app_only = python_app_only
-        self.function_dir = function_dir
         self.manager_config = manager_config
         self.factory_config = factory_config
         self.storage_access = storage_access
-
-        # Manager and factory must share connection and communication settings
-        self.factory_config.port = self.manager_config.port
-        self.factory_config.address = self.manager_config.address
-        self.factory_config.project_name = self.manager_config.project_name
-        self.factory_config.project_password_file = self.manager_config.project_password_file
 
         # Queue to send ready tasks from TaskVine executor process to TaskVine manager process
         self.ready_task_queue: multiprocessing.Queue = multiprocessing.Queue()
@@ -137,72 +160,91 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Queue to send finished tasks from TaskVine manager process to TaskVine executor process
         self.finished_task_queue: multiprocessing.Queue = multiprocessing.Queue()
 
-        self.executor_task_counter = -1  # task id starts from 0
+        # track task id of submitted parsl tasks
+        # task ids are incremental and start from 0
+        self.executor_task_counter = -1 
 
         # Value to signal whether the manager and factory processes should stop running
         self.should_stop = multiprocessing.Value(c_bool, False)
-
-        # Build foundations of the launch command
-        self.launch_cmd = ("python3 exec_parsl_function.py {mapping} {function} {result}")
-        if self.factory_config.init_command != "":
-            self.launch_cmd = self.factory_config.init_command + "; " + self.launch_cmd
-        
+    
+        # Worker command to be given to an execution provider (e.g., local or Condor)
         self.worker_command = ""
-        
+       
+        # Threading lock to manage self.tasks dictionary object, which maps a task id
+        # to its future object.
         self.tasks_lock = threading.Lock()
 
+        # Path to directory that holds all tasks' data and results
         self.function_data_dir = ""
 
-        self.vine_log_dir = ""
-
+        # TaskVine manager process
         self.submit_process = None
+
+        # TaskVine factory process
+        self.factory_process = None
         
+        # Executor thread to collect results from TaskVine manager and set
+        # tasks' futures to done status.
         self.collector_thread = None
 
     def _get_launch_command(self, block_id):
-        # this executor uses different terminology for worker/launch
-        # commands than in htex
+        # Implements BlockProviderExecutor's abstract method.
+        # This executor uses different terminology for worker/launch
+        # commands than in htex.
         return f"PARSL_WORKER_BLOCK_ID={block_id} {self.worker_command}"
+
+    def __synchronize_manager_factory_comm_settings(self):
+        # Synchronize the communication settings between the manager and the factory
+        # so the factory can direct workers to contact the manager.
+
+        # If the manager can choose any available port, then it must have a project name
+        # so the factory can look it up. Otherwise the factory process will not know the
+        # port number as it's only chosen when the TaskVine manager process is run.
+        if self.manager_config.port == 0 and self.manager_config.project_name is None:
+            self.manager_config_project_name = "parsl-vine-" + str(uuid.uuid4())
+
+        # Factory communication settings are overridden by manager communication settings.
+        self.factory_config.port = self.manager_config.port
+        self.factory_config.address = self.manager_config.address
+        self.factory_config.project_name = self.manager_config.project_name
+        self.factory_config.project_password_file = self.manager_config.project_password_file
 
     def start(self):
         """Create submit process and collector thread to create, send, and
         retrieve Parsl tasks within the TaskVine system.
         """
 
+        # Synchronize connection and communication settings between the manager and factory
+        self.__synchronize_manager_factory_comm_settings()
+
+        # Use the current run directory from Parsl
         run_dir = self.run_dir
 
         # Create directories for data and results
-        if not self.function_dir:
-            function_data_dir = os.path.join(run_dir, self.label, "function_data")
-        else:
-            tp = str(time.time())
-            tx = os.path.join(self.function_dir, tp)
-            os.makedirs(tx)
-            function_data_dir = os.path.join(self.function_dir, tp, self.label, "function_data")
-        self.vine_log_dir = os.path.join(run_dir, self.label)
-        self.function_data_dir = function_data_dir
-        logger.debug("function data directory: {}\nlog directory: {}".format(self.function_data_dir, self.vine_log_dir))
-        os.makedirs(self.vine_log_dir)
+        self.function_data_dir = os.path.join(run_dir, self.label, "function_data")
+        log_dir = os.path.join(run_dir, self.label)
+        logger.debug("function data directory: {}\nlog directory: {}".format(self.function_data_dir, log_dir))
+        os.makedirs(log_dir)
         os.makedirs(self.function_data_dir)
 
         logger.debug("Starting TaskVineExecutor")
 
-        # Create a Process to perform TaskVine submissions
+        # Create a Process to run the TaskVine manager.
         submit_process_kwargs = {"ready_task_queue": self.ready_task_queue,
-                                 "launch_cmd": self.launch_cmd,
                                  "finished_task_queue": self.finished_task_queue,
                                  "should_stop": self.should_stop,
-                                 "vine_log_dir": self.vine_log_dir,
                                  "manager_config": self.manager_config}
         self.submit_process = multiprocessing.Process(target=_taskvine_submit_wait,
                                                       name="TaskVine-Submit-Process",
                                                       kwargs=submit_process_kwargs)
 
+        # Run thread to collect results and set tasks' futures.
         self.collector_thread = threading.Thread(target=self._collect_taskvine_results,
-                                                 name="TaskVine-collector-thread")
+                                                 name="TaskVine-Collector-Thread")
+        # Interpreter can exit without waiting for this thread.
         self.collector_thread.daemon = True
 
-        # Begin both processes
+        # Begin work
         self.submit_process.start()
         self.collector_thread.start()
 
@@ -589,10 +631,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
 @wrap_with_logs
 def _taskvine_submit_wait(ready_task_queue=None,
-                          launch_cmd=None,
                           finished_task_queue=None,
                           should_stop=None,
-                          vine_log_dir=None,
                           manager_config=None
                           ):
     """Thread to handle Parsl app submissions to the TaskVine objects.
@@ -609,9 +649,14 @@ def _taskvine_submit_wait(ready_task_queue=None,
     logger.debug("Starting TaskVine Submit/Wait Process")
     setproctitle("parsl: TaskVine submit/wait")
 
+    # Construct launch command
+    launch_cmd = "python3 exec_parsl_function.py {mapping} {function} {result}"
+    if manager_config.init_command != '':
+        launch_cmd = manager_config.init_command + ";" + launch_cmd
+
     # Enable debugging flags and create logging file
-    if vine_log_dir is not None:
-        logger.debug("Setting debugging flags and creating logging file at {}".format(vine_log_dir))
+    if manager_config.vine_log_dir is not None:
+        logger.debug("Setting debugging flags and creating logging file at {}".format(manager_config.vine_log_dir))
 
     # Create TaskVine queue object
     logger.debug("Creating TaskVine Object")
@@ -619,7 +664,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
         logger.debug("Listening on port {}".format(manager_config.port))
         m = Manager(port=manager_config.port,
                     name=manager_config.project_name,
-                    run_info_path=vine_log_dir)
+                    run_info_path=manager_config.vine_log_dir)
     except Exception as e:
         logger.error("Unable to create TaskVine object: {}".format(e))
         raise e
@@ -639,10 +684,10 @@ def _taskvine_submit_wait(ready_task_queue=None,
     if manager_config.enable_peer_transfers:
         m.enable_peer_transfers()
 
-    # Only write logs when the vine_log_dir is specified, which it most likely will be
-    # if vine_log_dir is not None:
+    # Only write logs when the manager_config.vine_log_dir is specified, which it most likely will be
+    # if manager_config.vine_log_dir is not None:
     if manager_config.full_debug and manager_config.autolabel:
-        m.enable_monitoring_full(dirname=vine_log_dir)
+        m.enable_monitoring_full(dirname=manager_config.vine_log_dir)
 
     orig_ppid = os.getppid()
 

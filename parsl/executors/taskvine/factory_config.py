@@ -11,6 +11,5 @@ class TaskVineFactoryConfig:
     project_password_file: Optional[str] = None
 
     # Worker settings
-    init_command: Optional[str] = ''
     worker_options: Optional[str] = ''
     worker_executable: Optional[str] = 'vine_worker'
