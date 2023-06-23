@@ -86,7 +86,7 @@ Launchers
     :toctree: stubs
     :nosignatures:
 
-    parsl.launchers.launchers.Launcher
+    parsl.launchers.base.Launcher
     parsl.launchers.SimpleLauncher
     parsl.launchers.SingleNodeLauncher
     parsl.launchers.SrunLauncher

@@ -176,7 +176,7 @@ class Memoizer:
             - hash (str) : A unique hash string
         """
 
-        t = []  # type: List[bytes]
+        t: List[bytes] = []
 
         # if kwargs contains an outputs parameter, that parameter is removed
         # and normalised differently - with output_ref set to True.
