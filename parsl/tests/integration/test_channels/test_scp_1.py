@@ -32,10 +32,6 @@ def test_connect_1():
         'swift': {
             'url': 'swift.rcc.uchicago.edu',
             'uname': 'yadunand'
-        },
-        'cori': {
-            'url': 'cori.nersc.gov',
-            'uname': 'yadunand'
         }
     }
 
