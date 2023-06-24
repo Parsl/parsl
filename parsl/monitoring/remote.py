@@ -71,6 +71,7 @@ def monitor_wrapper(f: Any,           # per app
                                        sleep_dur,
                                        run_dir,
                                        terminate_event),
+                                 daemon=True,
                                  name="Monitor-Wrapper-{}".format(task_id))
                 pp.start()
                 p = pp
@@ -188,6 +189,10 @@ def monitor(pid: int,
     import logging
     import platform
     import psutil
+
+    from parsl.utils import setproctitle
+
+    setproctitle("parsl: task resource monitor")
 
     radio: MonitoringRadio
     if radio_mode == "udp":
