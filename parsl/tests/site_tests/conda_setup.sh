@@ -75,15 +75,6 @@ create_conda() {
         echo "module load ibm-wml-ce"                    >  ~/setup_parsl_test_env.sh
         echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
 
-    elif [[ "$(hostname)" =~ .*cori.* ]]
-    then
-        echo "On Cori"
-        module load python/3.7-anaconda-2019.07
-        conda create -p $CONDA_TARGET python=3.7 --yes --force
-        conda activate $PWD/$CONDA_TARGET
-        echo "module load python/3.7-anaconda-2019.07;"  >  ~/setup_parsl_test_env.sh
-        echo "conda activate $PWD/$CONDA_TARGET"         >> ~/setup_parsl_test_env.sh
-
     elif [[ "$(hostname)" =~ .*stampede2.* ]]
     then
         echo "On Stampede2"
