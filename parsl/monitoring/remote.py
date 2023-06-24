@@ -190,6 +190,10 @@ def monitor(pid: int,
     import platform
     import psutil
 
+    from parsl.utils import setproctitle
+
+    setproctitle("parsl: task resource monitor")
+
     radio: MonitoringRadio
     if radio_mode == "udp":
         radio = UDPRadio(monitoring_hub_url,
