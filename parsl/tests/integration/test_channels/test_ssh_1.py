@@ -35,15 +35,6 @@ def test_osg():
     print("Sitename :{0}  hostname:{1}".format(url, out))
 
 
-def test_cori():
-    ''' Test ssh connectivity to cori
-    '''
-    url = 'cori.nersc.gov'
-    uname = 'yadunand'
-    out = connect_and_list(url, uname)
-    print("Sitename :{0}  hostname:{1}".format(url, out))
-
-
 if __name__ == "__main__":
 
     pass
