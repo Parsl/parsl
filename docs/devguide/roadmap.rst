@@ -1,6 +1,10 @@
 Historical: Roadmap
 ===================
 
+.. note::
+   This roadmap has not been current since version 0.7.0, and does not reflect
+   changes in direction and funding since that time. For this reason, this
+   roadmap is marked as historical.
 
 Before diving into the roadmap, a quick retrospective look at the evolution of workflow
 solutions that came before Parsl from the workflows group at UChicago and Argonne National Laboratory.
