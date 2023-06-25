@@ -35,7 +35,7 @@ from parsl.serialize import unpack_apply_message, serialize
 HEARTBEAT_CODE = (2 ** 32) - 1
 
 
-class Manager(object):
+class Manager:
     """ Manager manages task execution by the workers
 
                 |         zmq              |    Manager         |   Worker Processes
@@ -119,7 +119,7 @@ class Manager(object):
              Timeout period used by the manager in milliseconds. Default: 10ms
 
         cpu_affinity : str
-             Whether each worker should force its affinity to different CPUs
+             Whether or how each worker should force its affinity to different CPUs
 
         available_accelerators: list of str
             List of accelerators available to the workers. Default: Empty list
@@ -549,6 +549,9 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         # Determine this worker's cores
         if cpu_affinity == "block":
             my_cores = avail_cores[cores_per_worker * worker_id:cores_per_worker * (worker_id + 1)]
+        elif cpu_affinity == "block-reverse":
+            cpu_worker_id = pool_size - worker_id - 1  # To assign in reverse order
+            my_cores = avail_cores[cores_per_worker * cpu_worker_id:cores_per_worker * (cpu_worker_id + 1)]
         elif cpu_affinity == "alternating":
             my_cores = avail_cores[worker_id::pool_size]
         else:
@@ -591,7 +594,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
 
         try:
             result = execute_task(req['buffer'])
-            serialized_result = serialize(result, buffer_threshold=1e6)
+            serialized_result = serialize(result, buffer_threshold=1000000)
         except Exception as e:
             logger.info('Caught an exception: {}'.format(e))
             result_package = {'type': 'result', 'task_id': tid, 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
@@ -673,7 +676,7 @@ if __name__ == "__main__":
                         help="Poll period used in milliseconds")
     parser.add_argument("-r", "--result_port", required=True,
                         help="REQUIRED: Result port for posting results to the interchange")
-    parser.add_argument("--cpu-affinity", type=str, choices=["none", "block", "alternating"],
+    parser.add_argument("--cpu-affinity", type=str, choices=["none", "block", "alternating", "block-reverse"],
                         help="Whether/how workers should control CPU affinity.")
     parser.add_argument("--available-accelerators", type=str, nargs="*",
                         help="Names of available accelerators")

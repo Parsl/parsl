@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 logger = logging.getLogger(__name__)
 
 
-class File(object):
+class File:
     """The Parsl File Class.
 
     This represents the global, and sometimes local, URI/path to a file.
@@ -44,7 +44,7 @@ class File(object):
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
-        self.local_path = None  # type: Optional[str]
+        self.local_path: Optional[str] = None
 
     def cleancopy(self) -> "File":
         """Returns a copy of the file containing only the global immutable state,

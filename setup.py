@@ -8,19 +8,18 @@ with open('requirements.txt') as f:
 
 extras_require = {
     'monitoring' : [
-        'sqlalchemy>=1.3.0,<2',
+        'sqlalchemy>=1.4,<2',
         'pydot',
         'networkx>=2.5,<2.6',
         'Flask>=1.0.2',
         'flask_sqlalchemy',
-        'pandas<1.4',
+        'pandas<2',
         'plotly',
         'python-daemon'
     ],
     'aws' : ['boto3'],
     'kubernetes' : ['kubernetes'],
     'oauth_ssh' : ['oauth-ssh>=0.9'],
-    'extreme_scale' : ['mpi4py'],
     'docs' : ['nbsphinx', 'sphinx_rtd_theme', 'ipython<=8.6.0'],
     'google_cloud' : ['google-auth', 'google-api-python-client'],
     'gssapi' : ['python-gssapi'],
@@ -45,11 +44,11 @@ setup(
     include_package_data=True,
     package_data={'parsl': ['py.typed']},
     packages=find_packages(),
-    python_requires=">=3.7.0",
+    python_requires=">=3.8.0",
     install_requires=install_requires,
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
-               'parsl/executors/extreme_scale/mpi_worker_pool.py',
                'parsl/executors/workqueue/exec_parsl_function.py',
+               'parsl/executors/workqueue/parsl_coprocess.py',
     ],
 
     extras_require=extras_require,
@@ -61,15 +60,16 @@ setup(
         # Licence, must match with licence above
         'License :: OSI Approved :: Apache Software License',
         # Python versions supported
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
     keywords=['Workflows', 'Scientific computing'],
     entry_points={'console_scripts':
       [
        'parsl-globus-auth=parsl.data_provider.globus:cli_run',
        'parsl-visualize=parsl.monitoring.visualization.app:cli_run',
+       'parsl-perf=parsl.benchmark.perf:cli_run',
       ]}
 )

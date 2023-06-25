@@ -61,4 +61,4 @@ def test_retry():
     with pytest.raises(parsl.app.errors.BashExitFailure):
         fu.result()
 
-    assert(fu.exception().exitcode == 5)
+    assert fu.exception().exitcode == 5

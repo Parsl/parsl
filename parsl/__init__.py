@@ -23,7 +23,6 @@ from parsl.app.app import bash_app, join_app, python_app
 from parsl.config import Config
 from parsl.executors import ThreadPoolExecutor
 from parsl.executors import HighThroughputExecutor
-from parsl.executors import ExtremeScaleExecutor
 from parsl.executors import WorkQueueExecutor
 from parsl.log_utils import set_stream_logger
 from parsl.log_utils import set_file_logger
@@ -33,9 +32,9 @@ from parsl.data_provider.files import File
 
 from parsl.dataflow.dflow import DataFlowKernel, DataFlowKernelLoader
 
-import multiprocessing
+import multiprocessing as _multiprocessing
 if platform.system() == 'Darwin':
-    multiprocessing.set_start_method('fork', force=True)
+    _multiprocessing.set_start_method('fork', force=True)
 
 __author__ = 'The Parsl Team'
 __version__ = VERSION
@@ -62,7 +61,6 @@ __all__ = [
     # executors
     'ThreadPoolExecutor',
     'HighThroughputExecutor',
-    'ExtremeScaleExecutor',
     'WorkQueueExecutor',
 
     # monitoring

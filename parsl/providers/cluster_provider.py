@@ -2,8 +2,8 @@ import logging
 from abc import abstractmethod
 from string import Template
 
-from parsl.providers.error import SchedulerMissingArgs, ScriptPathError
-from parsl.launchers.error import BadLauncher
+from parsl.providers.errors import SchedulerMissingArgs, ScriptPathError
+from parsl.launchers.errors import BadLauncher
 from parsl.providers.base import ExecutionProvider
 
 logger = logging.getLogger(__name__)
@@ -67,9 +67,7 @@ class ClusterProvider(ExecutionProvider):
         self.walltime = walltime
         self.cmd_timeout = cmd_timeout
         if not callable(self.launcher):
-            raise(BadLauncher(self.launcher,
-                              "Launcher for executor: {} is of type: {}. Expects a parsl.launcher.launcher.Launcher or callable".format(
-                                  label, type(self.launcher))))
+            raise BadLauncher(self.launcher)
 
         self.script_dir = None
 

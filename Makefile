@@ -3,12 +3,12 @@ SHELL := $(shell which bash) # Use bash instead of bin/sh as shell
 GIT := $(shell which git || echo ".git_is_missing")
 CWD := $(shell pwd)
 DEPS := .deps
-WORKQUEUE_INSTALL := /tmp/cctools
+CCTOOLS_INSTALL := /tmp/cctools
 MPICH=mpich
 OPENMPI=openmpi
 EXECUTORS_PATH := $(shell ls -d parsl/executors/*/ | tr '\n' ':')
-export PATH := $(EXECUTORS_PATH):$(WORKQUEUE_INSTALL)/bin/:$(PATH)
-export CCTOOLS_VERSION=7.1.11
+export PATH := $(EXECUTORS_PATH):$(CCTOOLS_INSTALL)/bin/:$(PATH)
+export CCTOOLS_VERSION=7.5.4
 export HYDRA_LAUNCHER=fork
 export OMPI_MCA_rmaps_base_oversubscribe=yes
 MPI=$(MPICH)
@@ -20,7 +20,7 @@ help: ## me
 VENV = .venv
 .PHONY: virtualenv
 virtualenv: ## create an activate a virtual env
-	test -f venv/bin/activate || $(PYTHON) -m venv $(VENV)
+	test -f $(VENV)/bin/activate || $(PYTHON) -m venv $(VENV)
 	echo "Run 'source $(VENV)/bin/activate' to activate the virtual environment"
 
 
@@ -61,18 +61,20 @@ htex_local_alternate_test: ## run all tests with htex_local config
 	pip3 install ".[monitoring]"
 	PYTHONPATH=.  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --random-order
 
-$(WORKQUEUE_INSTALL):
-	parsl/executors/workqueue/install-workqueue.sh
+$(CCTOOLS_INSTALL):	#CCtools contains both taskvine and workqueue so install only once
+	parsl/executors/taskvine/install-taskvine.sh
 
-.PHONY: workqueue_ex_test
-workqueue_ex_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
+.PHONY: vineex_local_test
+vineex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with vineex_local config
+	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/taskvine_ex.py --random-order
+
+.PHONY: wqex_local_test
+wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with wqex_local config
 	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --random-order
 
 .PHONY: config_local_test
 config_local_test:
-	echo "$(MPI)"
-	parsl/executors/extreme_scale/install-mpi.sh $(MPI)
-	pip3 install ".[extreme_scale,monitoring]"
+	pip3 install ".[monitoring]"
 	PYTHONPATH=. pytest parsl/tests/ -k "not cleannet" --config local --random-order
 
 .PHONY: site_test
@@ -80,8 +82,12 @@ site_test:
 	pytest parsl/tests/ -k "not cleannet" ${SHARED_FS_OPTIONS} --config parsl/tests/site_tests/site_config_selector.py --random-order
 	pytest parsl/tests/site_tests/ ${SHARED_FS_OPTIONS} --config local
 
+.PHONY: perf_test
+perf_test:
+	parsl-perf --time 5 --config parsl/tests/configs/local_threads.py
+
 .PHONY: test ## run all tests with all config types
-test: clean_coverage lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test workqueue_ex_test  config_local_test ## run all tests
+test: clean_coverage lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test wqex_local_test vineex_local_test config_local_test perf_test ## run all tests
 
 .PHONY: tag
 tag: ## create a tag in git. to run, do a 'make VERSION="version string" tag

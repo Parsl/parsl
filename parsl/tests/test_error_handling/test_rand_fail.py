@@ -133,7 +133,7 @@ def test_deps(numtasks=10):
 
     try:
         print("Final status : ", fu_final.result())
-    except parsl.dataflow.error.DependencyError as e:
+    except parsl.dataflow.errors.DependencyError as e:
         print("Caught the right exception")
         print("Exception : ", e)
     except Exception as e:
@@ -169,22 +169,3 @@ def test_fail_nowait(numtasks=10):
     # fus[0].result()
     time.sleep(1)
     print("Done")
-
-
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10",
-                        help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    test_simple()
-    # test_fail_nowait(numtasks=int(args.count))
-    # test_no_deps(numtasks=int(args.count))
-    # test_fail_sequence(numtasks=int(args.count))
-    # test_deps(numtasks=int(args.count))

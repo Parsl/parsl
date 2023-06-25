@@ -163,13 +163,3 @@ be created (``hello.outputs[0].result()``).
       # Print the contents of the output DataFuture when complete
       with open(hello.outputs[0].result().filepath, 'r') as f:
            print(f.read())
-
-.. note::
-      Adding ``.filepath`` is only needed on Python 3.5. With Python
-      >= 3.6 the resulting file can be passed to `open` directly.
-
-
-
-
-
-

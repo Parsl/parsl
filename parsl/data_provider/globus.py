@@ -48,7 +48,7 @@ def get_globus():
     return Globus()
 
 
-class Globus(object):
+class Globus:
     """
     All communication with the Globus Auth and Globus Transfer services is enclosed
     in the Globus class. In particular, the Globus class is responsible for:
@@ -94,7 +94,7 @@ class Globus(object):
         with 60 second timeout limit. If the task is ACTIVE after time runs out 'task_wait' returns False,
         and True otherwise.
         """
-        while not tc.task_wait(task['task_id'], 60, 15):
+        while not tc.task_wait(task['task_id'], timeout=60):
             task = tc.get_task(task['task_id'])
             # Get the last error Globus event
             events = tc.task_event_list(task['task_id'], num_results=1, filter='is_error:1')

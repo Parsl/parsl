@@ -8,6 +8,7 @@ import random
 import time
 import datetime
 import pickle
+import signal
 import logging
 import queue
 import threading
@@ -61,7 +62,7 @@ class VersionMismatch(Exception):
         return self.__repr__()
 
 
-class Interchange(object):
+class Interchange:
     """ Interchange is a task orchestrator for distributed systems.
 
     1. Asynchronously queue large volume of tasks (>100K)
@@ -311,10 +312,11 @@ class Interchange(object):
                     if manager_id in self._ready_managers:
                         m = self._ready_managers[manager_id]
                         m['active'] = False
-                        reply = True
                         self._send_monitoring_info(hub_channel, m)
                     else:
-                        reply = False
+                        logger.warning("Worker to hold was not in ready managers list")
+
+                    reply = None
 
                 else:
                     reply = None
@@ -330,6 +332,17 @@ class Interchange(object):
     def start(self):
         """ Start the interchange
         """
+
+        # If a user workflow has set its own signal handler for sigterm, that
+        # handler will be inherited by the interchange process because it is
+        # launched as a multiprocessing fork process.
+        # That can interfere with the interchange shutdown mechanism, which is
+        # to receive a SIGTERM and exit immediately.
+        # See Parsl issue #2343 (Threads and multiprocessing cannot be
+        # intermingled without deadlocks) which talks about other fork-related
+        # parent-process-inheritance problems.
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+
         logger.info("Incoming ports bound")
 
         hub_channel = self._create_monitoring_channel()
@@ -339,11 +352,13 @@ class Interchange(object):
         start = time.time()
 
         self._task_puller_thread = threading.Thread(target=self.task_puller,
-                                                    name="Interchange-Task-Puller")
+                                                    name="Interchange-Task-Puller",
+                                                    daemon=True)
         self._task_puller_thread.start()
 
         self._command_thread = threading.Thread(target=self._command_server,
-                                                name="Interchange-Command")
+                                                name="Interchange-Command",
+                                                daemon=True)
         self._command_thread.start()
 
         kill_event = threading.Event()

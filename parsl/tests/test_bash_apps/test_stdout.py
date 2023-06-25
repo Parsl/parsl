@@ -48,10 +48,9 @@ def test_bad_stdout_specs(spec):
     try:
         fn.result()
     except Exception as e:
-        assert isinstance(
-            e, perror.BadStdStreamFile), "Expected BadStdStreamFile, got: {0}".format(type(e))
+        assert isinstance(e, TypeError) or isinstance(e, perror.BadStdStreamFile), "Exception is wrong type"
     else:
-        assert False, "Did not raise expected exception BadStdStreamFile"
+        assert False, "Did not raise expected exception"
 
     return
 
@@ -68,9 +67,8 @@ def test_bad_stderr_file():
 
     try:
         fn.result()
-    except Exception as e:
-        assert isinstance(
-            e, perror.BadStdStreamFile), "Expected BadStdStreamFile, got: {0}".format(type(e))
+    except perror.BadStdStreamFile:
+        pass
     else:
         assert False, "Did not raise expected exception BadStdStreamFile"
 
@@ -115,25 +113,3 @@ def test_stdout_append():
     assert len1 == 1 and len2 == 2, "Line count of output files should be 1 and 2, but:  len1={} len2={}".format(len1, len2)
 
     os.system('rm -f ' + out + ' ' + err)
-
-
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--count", default="10",
-                        help="Count of apps to launch")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Enable debug output to console")
-    args = parser.parse_args()
-
-    if args.debug:
-        parsl.set_stream_logger()
-
-    parsl.load(config)
-
-    # test_bad_stdout_specs is omitted because it is called in a
-    # more complicated parameterised fashion by pytest.
-
-    y = test_bad_stderr_file()
-    y = test_stdout_truncate()
-    y = test_stdout_append()

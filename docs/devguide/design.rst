@@ -1,9 +1,11 @@
-Design and Rationale
+Historical: Swift vs Parsl
+--------------------------
 
-
-
-Swift vs Parsl
---------------
+.. note::
+   This section describes comparisons between Parsl and an earlier workflow
+   system, Swift, as part of a justification for the early prototyping stages
+   of Parsl development. It is no longer relevant for modern Parsl users, but
+   remains of historical interest.
 
 The following text is not well structured, and is mostly a brain dump that needs to be organized.
 Moving from Swift to an established language (python) came with its own tradeoffs. We get the backing
@@ -140,27 +142,6 @@ Here is a set of features that should be implemented or borrowed :
    Since the current roadmap to remote execution is through ipython-parallel, we will limit support
    to Python3.5+ to avoid library naming issues.
 
-
-Availability of Python3.5 on target resources
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The availability of Python3.5 on compute resources, especially one's on which the user does not have
-admin privileges could be a concern. This was raised by Lincoln from the OSG Team. Here's a small
-table of our initial target systems as of Mar 3rd, 2017 :
-
-+----------------------------------------+----------+----------+----------+
-| Compute Resource                       |Python3.4 |Python3.5 |Python3.6 |
-+========================================+==========+==========+==========+
-| Midway (RCC, UChicago)                 |     X    |    X     |          |
-+----------------------------------------+----------+----------+----------+
-| Open Science Grid                      |     X    |    X     |          |
-+----------------------------------------+----------+----------+----------+
-| BlueWaters                             |     X    |    X     |          |
-+----------------------------------------+----------+----------+----------+
-| AWS/Google Cloud                       |     X    |    X     |    X     |
-+----------------------------------------+----------+----------+----------+
-| Beagle                                 |     X    |          |          |
-+----------------------------------------+----------+----------+----------+
 
 ======
 Design
