@@ -5,12 +5,12 @@ import datetime
 from functools import wraps
 
 from parsl.multiprocessing import ForkProcess
-from multiprocessing import Event, Process
+from multiprocessing import Event
 from parsl.process_loggers import wrap_with_logs
 
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios import MonitoringRadio, UDPRadio, HTEXRadio, FilesystemRadio
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,6 @@ def monitor_wrapper(f: Any,           # per app
                                radio_mode,
                                run_dir)
 
-            p: Optional[Process]
             if monitor_resources:
                 # create the monitor process and start
                 pp = ForkProcess(target=monitor,
