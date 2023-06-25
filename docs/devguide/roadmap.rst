@@ -2,8 +2,8 @@ Historical: Roadmap
 ===================
 
 .. note::
-   This roadmap has not been current since version 0.7.0, and does not reflect
-   changes in direction and funding since that time. For this reason, this
+   This roadmap has not been current since version 0.9.0 in 2019, and does
+   not reflect changes in project direction then. For this reason, this
    roadmap is marked as historical.
 
 Before diving into the roadmap, a quick retrospective look at the evolution of workflow
