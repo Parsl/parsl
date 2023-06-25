@@ -171,7 +171,10 @@ class MonitoringHub(RepresentationMixin):
         self.logger.debug("Initializing ZMQ Pipes to client")
         self.monitoring_hub_active = True
 
-        comm_q: Queue[Union[Tuple[int, int], str]]
+        # This annotation is incompatible with typeguard 4.x instrumentation
+        # of local variables, because Queue is not a type: it's a method on
+        # multiprocessing.context.DefaultContext.
+        # comm_q: Queue[Union[Tuple[int, int], str]]
         comm_q = SizedQueue(maxsize=10)
 
         self.exception_q: Queue[Tuple[str, str]]
