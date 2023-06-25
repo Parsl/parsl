@@ -65,9 +65,9 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     max_blocks : int
         Maximum number of blocks to maintain. Default is 10.
     instance_type : str
-        EC2 instance type. Instance types comprise varying combinations of CPU, memory,  .
-        storage, and networking capacity For more information on possible instance types,.
-        see `here <https://aws.amazon.com/ec2/instance-types/>`_ Default is 't2.small'.
+        EC2 instance type. Instance types comprise varying combinations of CPU, memory,
+        storage, and networking capacity For more information on possible instance types,
+        see `here <https://aws.amazon.com/ec2/instance-types/>`_. Default is 't2.small'.
     region : str
         Amazon Web Service (AWS) region to launch machines. Default is 'us-east-2'.
     key_name : str
