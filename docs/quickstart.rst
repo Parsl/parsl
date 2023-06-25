@@ -10,7 +10,7 @@ Installation
 
 Parsl is available on `PyPI <https://pypi.org/project/parsl/>`_ and `conda-forge <https://anaconda.org/conda-forge/parsl>`_. 
 
-Parsl requires Python3.7+ and has been tested on Linux and macOS.
+Parsl requires Python3.8+ and has been tested on Linux and macOS.
 
 
 Installation using Pip
@@ -31,8 +31,8 @@ Installation using Conda
 
 1. Create and activate a new conda environment::
 
-     $ conda create --name parsl_py37 python=3.7
-     $ source activate parsl_py37
+     $ conda create --name parsl_py38 python=3.8
+     $ source activate parsl_py38
 
 2. Install Parsl::
 
