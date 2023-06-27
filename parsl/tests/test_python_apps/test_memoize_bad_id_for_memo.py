@@ -29,9 +29,8 @@ def noop_app(x, inputs=[], cache=True):
 
 
 @python_app
-def sleep(t):
-    import time
-    time.sleep(t)
+def some_func(_t):
+    pass
 
 
 def test_python_unmemoizable():
@@ -51,14 +50,14 @@ def test_python_failing_memoizer():
 
 
 def test_python_unmemoizable_after_dep():
-    sleep_fut = sleep(1)
-    fut = noop_app(Unmemoizable(), inputs=[sleep_fut])
+    memoizable_fut = some_func(1)
+    fut = noop_app(Unmemoizable(), inputs=[memoizable_fut])
     with pytest.raises(ValueError):
         fut.result()
 
 
 def test_python_failing_memoizer_afer_dep():
-    sleep_fut = sleep(1)
-    fut = noop_app(FailingMemoizable(), inputs=[sleep_fut])
+    memoizable_fut = some_func(1)
+    fut = noop_app(FailingMemoizable(), inputs=[memoizable_fut])
     with pytest.raises(ValueError):
         fut.result()
