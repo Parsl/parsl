@@ -21,6 +21,7 @@ class TaskVineManagerConfig:
     poncho_pack_conda_by_name: Optional[str] = None
     poncho_pack_conda_by_path: Optional[str] = None
     poncho_env: Optional[str] = None  # pack_env
+    poncho_run_script: str = ""
     extra_pkgs: Optional[list] = None
     max_retries: int = 1
 
@@ -31,7 +32,6 @@ class TaskVineManagerConfig:
     autocategory: bool = True
     enable_peer_transfers: bool = True
     wait_for_workers: Optional[int] = 0
-    full_debug: bool = False
 
     # Logging settings
     vine_log_dir: Optional[str] = None
