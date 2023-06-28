@@ -479,16 +479,10 @@ using the `parsl.providers.CobaltProvider`. This configuration assumes that the 
 
 .. _configuring_nersc_cori:
 
-Cori (NERSC)
-------------
+Perlmutter (NERSC)
+------------------
 
-.. image:: https://6lli539m39y3hpkelqsm3c2fg-wpengine.netdna-ssl.com/wp-content/uploads/2017/08/Cori-NERSC.png
-
-The following snippet shows an example configuration for accessing NERSC's **Cori** supercomputer. This example uses the `parsl.executors.HighThroughputExecutor` and connects to Cori's Slurm scheduler.
-It is configured to request 2 nodes configured with 1 TaskBlock per node. Finally it includes override information to request a particular node type (Haswell) and to configure a specific Python environment on the worker nodes using Anaconda.
-
-.. literalinclude:: ../../parsl/configs/cori.py
-
+NERSC provides documentation on `how to use Parsl on Perlmutter <https://docs.nersc.gov/jobs/workflow/parsl/>`_.
 
 Frontera (TACC)
 ---------------

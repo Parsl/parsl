@@ -5,9 +5,13 @@ import shlex
 import subprocess
 import threading
 import time
+from types import TracebackType
+
 import typeguard
 from contextlib import contextmanager
 from typing import Any, Callable, List, Tuple, Union, Generator, IO, AnyStr, Dict, Optional
+
+from typing_extensions import Type
 
 import parsl
 from parsl.version import VERSION
@@ -347,3 +351,28 @@ class Timer:
         """
         self._kill_event.set()
         self._thread.join()
+
+
+class AutoCancelTimer(threading.Timer):
+    """
+    Extend threading.Timer for use as a context manager
+
+    Example:
+
+        with AutoCancelTimer(delay, your_callback):
+            some_func()
+
+    If `some_func()` returns before the delay is up, the timer will
+    be cancelled.
+    """
+    def __enter__(self) -> "AutoCancelTimer":
+        self.start()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType]
+    ) -> None:
+        self.cancel()
