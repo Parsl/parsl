@@ -1,61 +1,33 @@
-import argparse
-import random
+import pytest
 
-import parsl
 from parsl.app.app import python_app
-from parsl.tests.configs.local_threads import config
 
 
 @python_app
-def map_one(x, dur):
-    import time
-    time.sleep(dur)
+def map_x2(x):
     return x * 2
 
 
 @python_app
-def map_two(x, dur):
-    import time
-    time.sleep(dur)
-    return x * 5
-
-
-@python_app
-def add_two(x, y, dur):
-    import time
-    time.sleep(dur)
+def add_xy(x, y):
     return x + y
 
 
-def test_func_1(width=2):
+@pytest.mark.parametrize("n", (2, 3, 5))
+def test_func_linked_to_previous_result(n):
+    futs = (map_x2(i) for i in range(1, n + 1))
+    for _ in range(1, n - 1):
+        futs = (map_x2(fut) for fut in futs)
+    futs = [map_x2(fut) for fut in futs]
 
-    fu_1 = []
-    for i in range(1, width + 1):
-        fu = map_one(i, random.randint(0, 5) / 10)
-        fu_1.extend([fu])
-
-    fu_2 = []
-    for fu in fu_1:
-        fu = map_two(fu, 0)
-        fu_2.extend([fu])
-
-    assert sum([i.result() for i in fu_2]) == sum(
-        range(1, width + 1)) * 10, "Sums do not match"
-    return fu_2
+    assert sum(f.result() for f in futs) == (2 ** n) * sum(range(1, n + 1))
 
 
-def test_func_2(width=2):
+@pytest.mark.parametrize("width", (2, 4, 8, 32))
+def test_func_linked_to_multiple_previous_results(width):
+    futs = (map_x2(i) for i in range(1, width + 1))
+    f_it = iter(futs)
 
-    fu_1 = []
-    for i in range(1, width + 1):
-        fu = map_one(i, random.randint(0, 5))
-        fu_1.extend([fu])
-
-    fu_2 = []
-    for i in range(0, width + 1, 2)[0:-1]:
-        fu = add_two(fu_1[i], fu_1[i + 1], 0)
-        fu_2.extend([fu])
-
-    assert sum([i.result() for i in fu_2]) == sum(
-        range(1, width + 1)) * 2, "Sums do not match"
-    return fu_2
+    # Requires that len(futs) % 2 == 0 (even number of items)
+    futs = [add_xy(f, next(f_it)) for f in f_it]
+    assert sum(f.result() for f in futs) == 2 * sum(range(1, width + 1))
