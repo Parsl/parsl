@@ -22,6 +22,7 @@ class SerializerBase:
         super().__init_subclass__(**kwargs)
 
         assert len(cls._identifier) == 3
+        assert cls._identifier[2] == 10  # \n in decimal
 
         if cls._for_code:
             METHODS_MAP_CODE[cls._identifier] = cls
