@@ -21,6 +21,7 @@ import itertools
 import uuid
 import time
 import ctypes
+import importlib
 from ctypes import c_bool
 from concurrent.futures import Future
 from typing import Dict, List, Optional, Union
@@ -824,9 +825,34 @@ def _taskvine_submit_wait(ready_task_queue=None,
             # Create TaskVine task for the command or create TaskVine serverless task
             # depending on whether the current task is declared to be serverless or not
             elif manager_config.task_mode == 'serverless_task' or (manager_config.serverless_functions and task.category in manager_config.serverless_functions):
+
+                fn_src = '\n'.join((task.func_src).split('\n')[1:])
+                #task.func_src =  
+                #exec(task.func_src, globals(), locals())
+                #print(type(fn_src), fn_src)
+                #tmp_ns = {'__builtins__': __builtins__}
+                #exec(fn_src, tmp_ns)
+                #func_obj = tmp_ns.get(task.category)
+                #print(fn_src)
+                #print(func_obj)
+                with open('tmp.py', 'w') as fh:
+                    fh.write(fn_src)
+                    fh.flush()
+               
+                tmp_ns = {'__builtins__': __builtins__}
+                #importlib.import_module('tmp')
+                func_obj_name = 'func_obj'
+                exec(f'import tmp; {func_obj_name} = tmp.{task.category};print(func_obj)', tmp_ns)
+                func_obj = tmp_ns[func_obj_name]
+                print(func_obj)
+                tmp_lib_task = m.create_library_from_functions(task.category, func_obj)
+                tmp_lib_task.set_cores(1)
+                tmp_lib_task.set_memory(2000)
+                tmp_lib_task.set_disk(2000)
+                m.install_library(tmp_lib_task)
                 logger.debug("Sending executor task {} (mode: serverless) with category: {}".format(task.id, task.category))
                 try:
-                    t = vine.FunctionCall("parsl-vine-serverless-library", task.category, *task.args, **task.kwargs)
+                    t = FunctionCall(task.category, task.category, *task.func_args, **task.func_kwargs)
                 except Exception as e:
                     logger.error("Unable to create executor task: {}".format(e))
                     finished_task_queue.put_nowait(VineTaskToParsl(id=task.id,
@@ -943,6 +969,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
                 if t is None:
                     task_found = False
                     continue
+                logger.debug('Found a task!')
                 # When a task is found
                 if manager_config.task_mode == 'regular_task':
                     executor_task_id = vine_id_to_executor_task_id[str(t.id)]
