@@ -12,7 +12,7 @@ class TaskVineManagerConfig:
     project_name: Optional[str] = None
     project_password_file: Optional[str] = None
 
-    # Task settings
+    # Global task settings
     init_command: str = ""
     shared_fs: bool = False
     env_vars: Optional[dict] = None # env
@@ -24,6 +24,8 @@ class TaskVineManagerConfig:
     poncho_run_script: str = ""
     extra_pkgs: Optional[list] = None
     max_retries: int = 1
+    task_mode: str = "regular_task"  # regular_task, python_task, serverless_task
+    serverless_functions: Optional[list] = None
 
     # Performance-specific settings
     autolabel: bool = False
