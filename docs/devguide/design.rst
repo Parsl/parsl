@@ -1,6 +1,12 @@
 Historical: Swift vs Parsl
 --------------------------
 
+.. note::
+   This section describes comparisons between Parsl and an earlier workflow
+   system, Swift, as part of a justification for the early prototyping stages
+   of Parsl development. It is no longer relevant for modern Parsl users, but
+   remains of historical interest.
+
 The following text is not well structured, and is mostly a brain dump that needs to be organized.
 Moving from Swift to an established language (python) came with its own tradeoffs. We get the backing
 of a rich and very well known language to handle the language aspects as well as the libraries.
