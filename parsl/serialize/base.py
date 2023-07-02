@@ -40,16 +40,6 @@ class SerializerBase:
         """
         return self._identifier
 
-    def enable_caching(self, maxsize: int = 128) -> None:
-        """ Add functools.lru_cache onto the serialize, deserialize methods
-        """
-
-        # ignore types here because mypy at the moment is not fond of monkeypatching
-        self.serialize = functools.lru_cache(maxsize=maxsize)(self.serialize)  # type: ignore[method-assign]
-        self.deserialize = functools.lru_cache(maxsize=maxsize)(self.deserialize)  # type: ignore[method-assign]
-
-        return
-
     @abstractmethod
     def serialize(self, data: Any) -> bytes:
         pass
