@@ -10,9 +10,6 @@ logger = logging.getLogger(__name__)
 """ Instantiate the appropriate classes
 """
 
-# unused now...
-# headers = list(METHODS_MAP_CODE.keys()) + list(METHODS_MAP_DATA.keys())
-
 # TODO: don't need to duplicate these lists as mathods_for_code and METHODS_MAP_CODE...
 methods_for_code = {}
 methods_for_data = {}
