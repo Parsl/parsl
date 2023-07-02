@@ -9,8 +9,6 @@ logger = logging.getLogger(__name__)
 
 """ Instantiate the appropriate classes
 """
-headers = list(METHODS_MAP_CODE.keys()) + list(METHODS_MAP_DATA.keys())
-
 methods_for_code = {}
 methods_for_data = {}
 
