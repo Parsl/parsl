@@ -35,11 +35,12 @@ class SerializerBase:
 
     @property
     def identifier(self) -> bytes:
-        """ Get the identifier of the serialization method
+        """Get that identifier that will be used to indicate in byte streams
+        that this class should be used for deserialization.
 
         Returns
         -------
-        identifier : str
+        identifier : bytes
         """
         return self._identifier
 
