@@ -16,7 +16,7 @@ register_store(store)
 
 
 class ProxyStoreSerializer(SerializerBase):
-    _identifier = b'99\n'
+    _identifier = b'99'
     _for_code = False
     _for_data = True
 
@@ -29,12 +29,10 @@ class ProxyStoreSerializer(SerializerBase):
 
         d = pickle.dumps(p)
 
-        return self.identifier + d
+        return d
 
-    def deserialize(self, payload: bytes) -> Any:
-        chomped = self.chomp(payload)
-        proxy = pickle.loads(chomped)
-        return proxy
+    def deserialize(self, body: bytes) -> Any:
+        return pickle.loads(body)
 
 
 class PickleSerializer(SerializerBase):
