@@ -1,13 +1,13 @@
 from parsl.providers.errors import ExecutionProviderException
+from parsl.launchers.base import Launcher
 
 
-class BadLauncher(ExecutionProviderException):
-    """Error raised when a non callable object is provider as Launcher
+class BadLauncher(ExecutionProviderException, TypeError):
+    """Error raised when an object of inappropriate type is supplied as a Launcher
     """
 
-    def __init__(self, launcher, reason):
+    def __init__(self, launcher: Launcher):
         self.launcher = launcher
-        self.reason = reason
 
-    def __repr__(self):
-        return "Bad Launcher provided:{0} Reason:{1}".format(self.launcher, self.reason)
+    def __str__(self) -> str:
+        return f"Bad Launcher provided: {self.launcher}, expecting a parsl.launcher.launcher.Launcher or callable"

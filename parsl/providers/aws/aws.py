@@ -65,9 +65,9 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     max_blocks : int
         Maximum number of blocks to maintain. Default is 10.
     instance_type : str
-        EC2 instance type. Instance types comprise varying combinations of CPU, memory,  .
-        storage, and networking capacity For more information on possible instance types,.
-        see `here <https://aws.amazon.com/ec2/instance-types/>`_ Default is 't2.small'.
+        EC2 instance type. Instance types comprise varying combinations of CPU, memory,
+        storage, and networking capacity For more information on possible instance types,
+        see `here <https://aws.amazon.com/ec2/instance-types/>`_. Default is 't2.small'.
     region : str
         Amazon Web Service (AWS) region to launch machines. Default is 'us-east-2'.
     key_name : str
@@ -82,10 +82,8 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
     walltime : str
         Walltime requested per block in HH:MM:SS. This option is not currently honored by this provider.
     launcher : Launcher
-        Launcher for this provider. Possible launchers include
-        :class:`~parsl.launchers.SingleNodeLauncher` (the default),
-        :class:`~parsl.launchers.SrunLauncher`, or
-        :class:`~parsl.launchers.AprunLauncher`
+        Launcher for this provider. With AWS, usually the default
+        :class:`~parsl.launchers.SingleNodeLauncher` will be appropriate.
     linger : Bool
         When set to True, the workers will not ``halt``. The user is responsible for shutting
         down the node.

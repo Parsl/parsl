@@ -11,18 +11,15 @@ Same applies to datafutures, and we need to know the behavior wrt.
 2. done() called on 1, vs 2
 
 """
-import argparse
-import os
 import pytest
+from os.path import basename
 
-import parsl
 from parsl.app.app import python_app
 from parsl.data_provider.files import File
-from parsl.tests.configs.local_threads import config
 
 
 @python_app
-def delay_incr(x, delay=0, outputs=[]):
+def delay_incr(x, delay=0.0, outputs=()):
     import time
     if outputs:
         with open(outputs[0].filepath, 'w') as outs:
@@ -32,100 +29,59 @@ def delay_incr(x, delay=0, outputs=[]):
 
 
 def get_contents(filename):
-    c = None
     with open(filename, 'r') as f:
-        c = f.read()
-    return c
+        return f.read()
 
 
 def test_fut_case_1():
     """Testing the behavior of AppFutures where there are no dependencies
     """
 
-    app_fu = delay_incr(1, delay=0.5)
-
-    status = app_fu.done()
-    result = app_fu.result()
-
-    print("Status : ", status)
-    print("Result : ", result)
-
-    assert result == 2, 'Output does not match expected 2, goot: "{0}"'.format(
-        result)
-    return True
+    app_fu = delay_incr(1, delay=0.01)
+    assert app_fu.result() == 2
 
 
 @pytest.mark.staging_required
-def test_fut_case_2():
+def test_fut_case_2(tmp_path):
     """Testing the behavior of DataFutures where there are no dependencies
     """
-    output_f = 'test_fut_case_2.txt'
-    app_fu = delay_incr(1, delay=10, outputs=[File(output_f)])
+    output_f = tmp_path / 'test_fut_case_2.txt'
+    app_fu = delay_incr(1, delay=0.01, outputs=[File(str(output_f))])
     data_fu = app_fu.outputs[0]
 
-    data_fu.done()
     result = data_fu.result().filepath
-    print("App_fu  : ", app_fu)
-    print("Data_fu : ", data_fu)
-
-    assert os.path.basename(result) == output_f, \
-        "DataFuture did not return the filename, got : {0}".format(result)
-    print("Status : ", data_fu.done())
-    print("Result : ", result)
+    assert basename(result) == output_f.name, "DataFuture did not return filename"
 
     contents = get_contents(result)
-    assert contents == '2', 'Output does not match expected "2", got: "{0}"'.format(
-        contents)
-    return True
+    assert contents == '2'
 
 
 def test_fut_case_3():
     """Testing the behavior of AppFutures where there are dependencies
 
-    The first call has a delay of 0.5s, and the second call depends on the first
+    The first call has a delay, and the second call depends on the first
     """
 
-    app_1 = delay_incr(1, delay=0.5)
+    app_1 = delay_incr(1, delay=0.01)
     app_2 = delay_incr(app_1)
 
-    status = app_2.done()
-    result = app_2.result()
-
-    print("Status : ", status)
-    print("Result : ", result)
-
-    assert result == 3, 'Output does not match expected 2, goot: "{0}"'.format(
-        result)
-    return True
+    assert app_2.result() == 3
 
 
 @pytest.mark.staging_required
-def test_fut_case_4():
+def test_fut_case_4(tmp_path):
     """Testing the behavior of DataFutures where there are dependencies
 
-    The first call has a delay of 0.5s, and the second call depends on the first
+    The first call has a delay, and the second call depends on the first
     """
-    """Testing the behavior of DataFutures where there are no dependencies
-    """
-    output_f1 = 'test_fut_case_4_f1.txt'
-    output_f2 = 'test_fut_case_4_f2.txt'
-    app_1 = delay_incr(1, delay=0.5, outputs=[File(output_f1)])
-    app_1.outputs[0]
-    app_2 = delay_incr(app_1, delay=0.5, outputs=[File(output_f2)])
+    output_f1 = tmp_path / 'test_fut_case_4_f1.txt'
+    output_f2 = tmp_path / 'test_fut_case_4_f2.txt'
+    app_1 = delay_incr(1, delay=0.01, outputs=[File(str(output_f1))])
+    app_2 = delay_incr(app_1, delay=0.01, outputs=[File(str(output_f2))])
     data_2 = app_2.outputs[0]
 
-    status = data_2.done()
     result = data_2.result().filepath
-    print("App_fu  : ", app_2)
-    print("Data_fu : ", data_2)
-
-    print("Status : ", status)
-    print("Result : ", result)
-
-    assert os.path.basename(result) == output_f2, \
-        "DataFuture did not return the filename, got : {0}".format(result)
+    assert basename(result) == output_f2.name, "DataFuture did not return the filename"
 
     contents = get_contents(result)
-    assert contents == '3', 'Output does not match expected "3", got: "{0}"'.format(
-        result)
-    return True
+    assert contents == '3'

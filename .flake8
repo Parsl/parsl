@@ -17,8 +17,6 @@ exclude = test_import_fail.py,
 # a keyword arg
 # F821: undefined name
 per-file-ignores = parsl/monitoring/visualization/*:E741,
-  # needed because this deliberately has undefined names in it
-  parsl/tests/test_swift.py:F821,
   # test_ssh_errors.py really is broken
   parsl/tests/integration/test_channels/test_ssh_errors.py:F821,
 
