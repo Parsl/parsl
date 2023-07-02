@@ -1,6 +1,5 @@
 from abc import abstractmethod
 import logging
-import functools
 
 from typing import Any
 
