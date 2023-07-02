@@ -63,10 +63,6 @@ then explore the `parallel computing patterns <https://parsl.readthedocs.io/en/s
 Quickstart
 ==========
 
-Parsl is now available on PyPI, but first make sure you have Python3.7+ ::
-
-    $ python3 --version
-
 Install Parsl using pip::
 
     $ pip3 install parsl
@@ -114,7 +110,7 @@ For Developers
 Requirements
 ============
 
-Parsl is supported in Python 3.7+. Requirements can be found `here <requirements.txt>`_. Requirements for running tests can be found `here <test-requirements.txt>`_.
+Parsl is supported in Python 3.8+. Requirements can be found `here <requirements.txt>`_. Requirements for running tests can be found `here <test-requirements.txt>`_.
 
 Code of Conduct
 ===============

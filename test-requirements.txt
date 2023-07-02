@@ -1,5 +1,4 @@
 flake8==6.0.0
-importlib-metadata<5  # due to flake8 incompatibility with importlib 5.0.0
 ipyparallel
 # pandas   - removed because it seems to want to build with now-removed distutils
 pytest>=6.2.5,<7

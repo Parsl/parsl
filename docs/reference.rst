@@ -77,7 +77,6 @@ Executors
     parsl.executors.HighThroughputExecutor
     parsl.executors.WorkQueueExecutor
     parsl.executors.FluxExecutor
-    parsl.executors.swift_t.TurbineExecutor
 
 Launchers
 =========
