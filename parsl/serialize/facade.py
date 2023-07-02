@@ -1,8 +1,8 @@
 from parsl.serialize.concretes import *  # noqa: F403,F401
-from parsl.serialize.base import METHODS_MAP_DATA, METHODS_MAP_CODE, SerializerBase
+from parsl.serialize.base import METHODS_MAP_DATA, METHODS_MAP_CODE
 import logging
 
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, List, Union
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +20,6 @@ for key in METHODS_MAP_CODE:
 
 for key in METHODS_MAP_DATA:
     methods_for_data[key] = METHODS_MAP_DATA[key]()
-
-
-def _list_methods() -> Tuple[Dict[bytes, SerializerBase], Dict[bytes, SerializerBase]]:
-    return methods_for_code, methods_for_data
 
 
 def pack_apply_message(func: Any, args: Any, kwargs: Any, buffer_threshold: int = int(128 * 1e6)) -> bytes:
