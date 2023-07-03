@@ -2,14 +2,14 @@ import importlib.util
 import logging
 import os
 import pathlib
+import signal
+import sys
 import tempfile
+import threading
+import traceback
 from datetime import datetime
 from glob import glob
 from itertools import chain
-import signal
-import sys
-import threading
-import traceback
 
 import pytest
 import _pytest.runner as runner
@@ -233,10 +233,8 @@ def setup_data(tmpd_cwd):
     data_dir = tmpd_cwd / "data"
     data_dir.mkdir()
 
-    with open(data_dir / "test1.txt", "w") as f:
-        f.write("1\n")
-    with open(data_dir / "test2.txt", "w") as f:
-        f.write("2\n")
+    (data_dir / "test1.txt").write_text("1\n")
+    (data_dir / "test2.txt").write_text("2\n")
     return data_dir
 
 
