@@ -21,9 +21,6 @@ class SerializerBase:
         """
         super().__init_subclass__(**kwargs)
 
-        assert len(cls._identifier) == 3
-        assert cls._identifier[2] == 10  # \n in decimal
-
         if cls._for_code:
             METHODS_MAP_CODE[cls._identifier] = cls
         if cls._for_data:
@@ -42,19 +39,6 @@ class SerializerBase:
         identifier : str
         """
         return self._identifier
-
-    def chomp(self, payload: bytes) -> bytes:
-        """ If the payload starts with the identifier, return the remaining block
-
-        Parameters
-        ----------
-        payload : str
-            Payload blob
-        """
-        s_id, payload = payload.split(b'\n', 1)
-        if (s_id + b'\n') != self.identifier:
-            raise TypeError("Buffer does not start with parsl.serialize identifier:{!r}".format(self.identifier))
-        return payload
 
     def enable_caching(self, maxsize: int = 128) -> None:
         """ Add functools.lru_cache onto the serialize, deserialize methods

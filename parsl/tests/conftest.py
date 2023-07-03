@@ -211,16 +211,16 @@ def apply_masks(request, pytestconfig):
             pytest.skip('intended for explicit config')
 
 
-@pytest.fixture()
-def setup_data():
-    import os
-    if not os.path.isdir('data'):
-        os.mkdir('data')
+@pytest.fixture
+def setup_data(tmp_path):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
 
-    with open("data/test1.txt", 'w') as f:
+    with open(data_dir / "test1.txt", "w") as f:
         f.write("1\n")
-    with open("data/test2.txt", 'w') as f:
+    with open(data_dir / "test2.txt", "w") as f:
         f.write("2\n")
+    return data_dir
 
 
 @pytest.fixture(autouse=True, scope='function')
