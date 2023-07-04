@@ -194,23 +194,20 @@ class Memoizer:
 
         ignore_list = task['ignore_for_cache']
 
-        logger.debug("Ignoring these kwargs for checkpointing: {}".format(ignore_list))
+        logger.debug("Ignoring these kwargs for checkpointing: %s", ignore_list)
         for k in ignore_list:
-            logger.debug("Ignoring kwarg {}".format(k))
+            logger.debug("Ignoring kwarg %s", k)
             del filtered_kw[k]
 
         if 'outputs' in task['kwargs']:
             outputs = task['kwargs']['outputs']
             del filtered_kw['outputs']
-            t = t + [id_for_memo(outputs, output_ref=True)]   # TODO: use append?
+            t.append(id_for_memo(outputs, output_ref=True))
 
-        t = t + [id_for_memo(filtered_kw)]
-        t = t + [id_for_memo(task['func']),
-                 id_for_memo(task['args'])]
+        t.extend(map(id_for_memo, (filtered_kw, task['func'], task['args'])))
 
         x = b''.join(t)
-        hashedsum = hashlib.md5(x).hexdigest()
-        return hashedsum
+        return hashlib.md5(x).hexdigest()
 
     def check_memo(self, task: TaskRecord) -> Optional[Future[Any]]:
         """Create a hash of the task and its inputs and check the lookup table for this hash.
