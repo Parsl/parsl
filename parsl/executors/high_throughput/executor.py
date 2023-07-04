@@ -432,6 +432,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
                             if 'result' in msg:
                                 result = deserialize(msg['result'])
+                                # ^ if this raises an exception, queue management worker fails and
+                                # parsl hangs. this is more relevant now allowing user-pluggable
+                                # serialization and so user code exceptions can be raised here.
                                 task_fut.set_result(result)
 
                             elif 'exception' in msg:
