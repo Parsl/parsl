@@ -24,11 +24,11 @@ def test_range_identities():
     # This is not strictly part of the regression test for #2555
     # but will detect related unexpected Future caching.
 
-    assert(fut1 != fut2)
-    assert(id(fut1) != id(fut2))
+    assert fut1 != fut2
+    assert id(fut1) != id(fut2)
 
     # check that the two invocations returned the same value...
     assert res1 == res2
 
     # ... but in two different objects.
-    assert(id(res1) != id(res2))
+    assert id(res1) != id(res2)
