@@ -64,3 +64,16 @@ types, and raises an exception on unknown types:
 
 You can plug in your own type-specific hash code for additional types that
 you need and understand using `id_for_memo`.
+
+
+Invoking other asynchronous components
+--------------------------------------
+
+Parsl code can invoke other asynchronous components which return Futures, and
+integrate those Futures into the task graph: Parsl apps can be given any
+`concurrent.futures.Future` as a dependency, even if those futures do not come
+from invoking a Parsl app. This includes as the return value of a
+``join_app``.
+
+An specific example of this is integrating Globus Compute tasks into a Parsl
+task graph. See :ref:`label-join-globus-compute`
