@@ -68,6 +68,13 @@ Task execution is brokered by a `"Data Flow Kernel" <#benefits-of-a-data-flow-ke
 
 We describe these components briefly here, and link to more details in the `User Guide <userguide/index.html>`_.
 
+.. note::
+
+    Parsl's documentation includes `templates for many supercomputers <userguide/configuring.html>`_.
+    Even though you may not need to write a configuration from a blank slate,
+    understanding the basic terminology below will be very useful.
+
+
 Application Types
 ^^^^^^^^^^^^^^^^^
 

@@ -1,17 +1,14 @@
 from parsl.serialize.concretes import *  # noqa: F403,F401
-from parsl.serialize.base import METHODS_MAP_DATA, METHODS_MAP_CODE, SerializerBase
+from parsl.serialize.base import METHODS_MAP_DATA, METHODS_MAP_CODE
 import logging
 
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, List, Union
 
 logger = logging.getLogger(__name__)
 
 
 """ Instantiate the appropriate classes
 """
-headers = list(METHODS_MAP_CODE.keys()) + list(METHODS_MAP_DATA.keys())
-header_size = len(headers[0])
-
 methods_for_code = {}
 methods_for_data = {}
 
@@ -21,10 +18,6 @@ for key in METHODS_MAP_CODE:
 
 for key in METHODS_MAP_DATA:
     methods_for_data[key] = METHODS_MAP_DATA[key]()
-
-
-def _list_methods() -> Tuple[Dict[bytes, SerializerBase], Dict[bytes, SerializerBase]]:
-    return methods_for_code, methods_for_data
 
 
 def pack_apply_message(func: Any, args: Any, kwargs: Any, buffer_threshold: int = int(128 * 1e6)) -> bytes:
@@ -70,7 +63,7 @@ def serialize(obj: Any, buffer_threshold: int = int(1e6)) -> bytes:
     if callable(obj):
         for method in methods_for_code.values():
             try:
-                result = method.serialize(obj)
+                result = method._identifier + b'\n' + method.serialize(obj)
             except Exception as e:
                 result = e
                 continue
@@ -79,7 +72,7 @@ def serialize(obj: Any, buffer_threshold: int = int(1e6)) -> bytes:
     else:
         for method in methods_for_data.values():
             try:
-                result = method.serialize(obj)
+                result = method._identifier + b'\n' + method.serialize(obj)
             except Exception as e:
                 result = e
                 continue
@@ -102,11 +95,12 @@ def deserialize(payload: bytes) -> Any:
        Payload object to be deserialized
 
     """
-    header = payload[0:header_size]
+    header, body = payload.split(b'\n', 1)
+
     if header in methods_for_code:
-        result = methods_for_code[header].deserialize(payload)
+        result = methods_for_code[header].deserialize(body)
     elif header in methods_for_data:
-        result = methods_for_data[header].deserialize(payload)
+        result = methods_for_data[header].deserialize(body)
     else:
         raise TypeError("Invalid header: {!r} in data payload. Buffer is either corrupt or not created by ParslSerializer".format(header))
 
