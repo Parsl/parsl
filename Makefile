@@ -70,6 +70,12 @@ vineex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with vineex_local config
 
 .PHONY: wqex_local_test
 wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with wqex_local config
+	echo PATH:
+	echo $(PATH)
+	echo which of coprocess command:
+	which parsl_coprocess.py
+	echo listing explicit path:
+	ls -l parsl/executors/workqueue/parsl_coprocess.py
 	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --random-order --durations 10
 
 .PHONY: config_local_test
