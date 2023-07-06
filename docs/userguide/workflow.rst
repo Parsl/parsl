@@ -228,6 +228,12 @@ The following figure shows the resulting task graph.
 
 .. image:: ../images/MapReduce.png
 
+Caching expensive initialisation between tasks
+----------------------------------------------
+
+Many tasks in workflows require a expensive "initialization" steps that, once performed, can be used across successive invocations for that task. For example, you may want to reuse a machine learning model for multiple interface tasks and avoid loading it onto GPUs more than once.
+
+`This ExaWorks tutorial <https://github.com/ExaWorks/warmable-function-calls>`_ gives examples of how to do this.
 
 Other useful patterns
 =====================
@@ -249,5 +255,3 @@ So although the app commandline might look like:
 .. code-block::
 
     myscience input.txt 5 10
-
-

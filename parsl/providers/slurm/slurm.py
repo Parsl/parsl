@@ -10,7 +10,7 @@ from typing import Optional
 from parsl.channels import LocalChannel
 from parsl.channels.base import Channel
 from parsl.launchers import SingleNodeLauncher
-from parsl.launchers.launchers import Launcher
+from parsl.launchers.base import Launcher
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.base import JobState, JobStatus
 from parsl.providers.slurm.template import template_string

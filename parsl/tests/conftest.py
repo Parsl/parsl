@@ -1,6 +1,9 @@
 import importlib.util
 import logging
 import os
+import pathlib
+import tempfile
+from datetime import datetime
 from glob import glob
 from itertools import chain
 import signal
@@ -35,6 +38,20 @@ def dumpstacks(sig, frame):
 
 def pytest_sessionstart(session):
     signal.signal(signal.SIGUSR1, dumpstacks)
+
+
+@pytest.fixture(scope="session")
+def tmpd_cwd_session():
+    n = datetime.now().strftime('%Y%m%d.%H%I%S')
+    with tempfile.TemporaryDirectory(dir=os.getcwd(), prefix=f".pytest-{n}-") as tmpd:
+        yield pathlib.Path(tmpd)
+
+
+@pytest.fixture
+def tmpd_cwd(tmpd_cwd_session, request):
+    prefix = f"{request.node.name}-"
+    with tempfile.TemporaryDirectory(dir=tmpd_cwd_session, prefix=prefix) as tmpd:
+        yield pathlib.Path(tmpd)
 
 
 def pytest_addoption(parser):
@@ -133,7 +150,7 @@ def load_dfk_session(request, pytestconfig):
 
         yield
 
-        if(parsl.dfk() != dfk):
+        if parsl.dfk() != dfk:
             raise RuntimeError("DFK changed unexpectedly during test")
         dfk.cleanup()
         parsl.clear()
@@ -167,16 +184,16 @@ def load_dfk_local_module(request, pytestconfig):
             assert isinstance(c, parsl.Config)
             dfk = parsl.load(c)
 
-        if(callable(local_setup)):
+        if callable(local_setup):
             local_setup()
 
         yield
 
-        if(callable(local_teardown)):
+        if callable(local_teardown):
             local_teardown()
 
-        if(local_config):
-            if(parsl.dfk() != dfk):
+        if local_config:
+            if parsl.dfk() != dfk:
                 raise RuntimeError("DFK changed unexpectedly during test")
             dfk.cleanup()
             parsl.clear()
@@ -220,16 +237,16 @@ def apply_masks(request, pytestconfig):
             pytest.skip('intended for explicit config')
 
 
-@pytest.fixture()
-def setup_data():
-    import os
-    if not os.path.isdir('data'):
-        os.mkdir('data')
+@pytest.fixture
+def setup_data(tmpd_cwd):
+    data_dir = tmpd_cwd / "data"
+    data_dir.mkdir()
 
-    with open("data/test1.txt", 'w') as f:
+    with open(data_dir / "test1.txt", "w") as f:
         f.write("1\n")
-    with open("data/test2.txt", 'w') as f:
+    with open(data_dir / "test2.txt", "w") as f:
         f.write("2\n")
+    return data_dir
 
 
 @pytest.fixture(autouse=True, scope='function')
@@ -284,7 +301,7 @@ def pytest_ignore_collect(path):
         return True
     elif 'manual_tests' in path.strpath:
         return True
-    elif 'workqueue_tests/test_scale' in path.strpath:
+    elif 'scaling_tests/test_scale' in path.strpath:
         return True
     else:
         return False

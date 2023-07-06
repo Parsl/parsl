@@ -139,7 +139,7 @@ class MonitoringHub(RepresentationMixin):
         self._dfk_channel = None  # type: Any
 
         if _db_manager_excepts:
-            raise(_db_manager_excepts)
+            raise _db_manager_excepts
 
         self.client_address = client_address
         self.client_port_range = client_port_range
@@ -170,12 +170,23 @@ class MonitoringHub(RepresentationMixin):
         self.logger.debug("Initializing ZMQ Pipes to client")
         self.monitoring_hub_active = True
 
-        comm_q = SizedQueue(maxsize=10)  # type: Queue[Union[Tuple[int, int], Exception]]
-        self.exception_q = SizedQueue(maxsize=10)  # type: Queue[Tuple[str, str]]
-        self.priority_msgs = SizedQueue()  # type: Queue[Tuple[Any, int]]
-        self.resource_msgs = SizedQueue()  # type: Queue[AddressedMonitoringMessage]
-        self.node_msgs = SizedQueue()  # type: Queue[AddressedMonitoringMessage]
-        self.block_msgs = SizedQueue()  # type:  Queue[AddressedMonitoringMessage]
+        comm_q: Queue[Union[Tuple[int, int], Exception]]
+        comm_q = SizedQueue(maxsize=10)
+
+        self.exception_q: Queue[Tuple[str, str]]
+        self.exception_q = SizedQueue(maxsize=10)
+
+        self.priority_msgs: Queue[Tuple[Any, int]]
+        self.priority_msgs = SizedQueue()
+
+        self.resource_msgs: Queue[AddressedMonitoringMessage]
+        self.resource_msgs = SizedQueue()
+
+        self.node_msgs: Queue[AddressedMonitoringMessage]
+        self.node_msgs = SizedQueue()
+
+        self.block_msgs: Queue[AddressedMonitoringMessage]
+        self.block_msgs = SizedQueue()
 
         self.router_proc = ForkProcess(target=router_starter,
                                        args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),
@@ -337,7 +348,7 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]
                 with open(full_path_filename, "rb") as f:
                     message = deserialize(f.read())
                 logger.info(f"Message received is: {message}")
-                assert(isinstance(message, tuple))
+                assert isinstance(message, tuple)
                 q.put(cast(AddressedMonitoringMessage, message))
                 os.remove(full_path_filename)
             except Exception:

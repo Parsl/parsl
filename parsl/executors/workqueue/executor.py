@@ -125,8 +125,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             In this case, environment variables can be used to influence the
             choice of port, documented here:
             https://ccl.cse.nd.edu/software/manuals/api/html/work__queue_8h.html#a21714a10bcdfcf5c3bd44a96f5dcbda6
-
-            Default: 0.
+            Default: WORK_QUEUE_DEFAULT_PORT.
 
         env: dict{str}
             Dictionary that contains the environmental variables that
@@ -182,7 +181,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             invocations of an app have similar performance characteristics,
             this will provide a reasonable set of categories automatically.
 
-        max_retries: Optional[int]
+        max_retries: int
             Set the number of retries that Work Queue will make when a task
             fails. This is distinct from Parsl level retries configured in
             parsl.config.Config. Set to None to allow Work Queue to retry
@@ -240,7 +239,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  autolabel_window: int = 1,
                  autocategory: bool = True,
                  enable_monitoring: bool = False,
-                 max_retries: Optional[int] = 1,
+                 max_retries: int = 1,
                  init_command: str = "",
                  worker_options: str = "",
                  full_debug: bool = True,
@@ -268,7 +267,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.storage_access = storage_access
         self.use_cache = use_cache
         self.working_dir = working_dir
-        self.registered_files = set()  # type: Set[str]
+        self.registered_files: Set[str] = set()
         self.full_debug = full_debug
         self.source = True if pack else source
         self.pack = pack
@@ -494,7 +493,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         logger.debug("Creating executor task {} for function {} with args {}".format(executor_task_id, func, args))
 
-        # Pickle the result into object to pass into message buffer
         function_file = self._path_in_task(executor_task_id, "function")
         result_file = self._path_in_task(executor_task_id, "result")
         map_file = self._path_in_task(executor_task_id, "map")

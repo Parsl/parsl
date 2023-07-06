@@ -77,7 +77,6 @@ Executors
     parsl.executors.HighThroughputExecutor
     parsl.executors.WorkQueueExecutor
     parsl.executors.FluxExecutor
-    parsl.executors.swift_t.TurbineExecutor
 
 Launchers
 =========
@@ -86,7 +85,7 @@ Launchers
     :toctree: stubs
     :nosignatures:
 
-    parsl.launchers.launchers.Launcher
+    parsl.launchers.base.Launcher
     parsl.launchers.SimpleLauncher
     parsl.launchers.SingleNodeLauncher
     parsl.launchers.SrunLauncher

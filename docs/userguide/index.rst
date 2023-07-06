@@ -9,6 +9,7 @@ User guide
    futures
    data
    execution
+   mpi_apps
    exceptions
    checkpoints
    configuring
@@ -16,6 +17,6 @@ User guide
    workflow
    modularizing
    joins
-   performance
    usage_tracking
    plugins
+   performance

@@ -216,7 +216,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
             logger.debug("Pushing start script")
             script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        logger.debug("Launching in remote mode")
+        logger.debug("Launching")
         # We need to capture the exit code and the streams, so we put them in files. We also write
         # '-' to the exit code file to isolate potential problems with writing to files in the
         # script directory

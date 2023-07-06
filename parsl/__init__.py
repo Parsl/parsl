@@ -65,9 +65,9 @@ def lazy_loader(name):
 # parsl/__init__.py:61: error: Cannot assign to a method
 parsl.__getattr__ = lazy_loader  # type: ignore
 
-import multiprocessing
+import multiprocessing as _multiprocessing
 if platform.system() == 'Darwin':
-    multiprocessing.set_start_method('fork', force=True)
+    _multiprocessing.set_start_method('fork', force=True)
 
 
 AUTO_LOGNAME = -1
