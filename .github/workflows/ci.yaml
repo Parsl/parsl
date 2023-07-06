@@ -37,6 +37,7 @@ jobs:
 
     - name: make wqex_local_test 
       run: |
+        make --version
         make wqex_local_test 
 
     - name: Archive runinfo logs
