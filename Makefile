@@ -53,7 +53,8 @@ local_thread_test: ## run all tests with local_thread config
 
 .PHONY: htex_local_test
 htex_local_test: ## run all tests with htex_local config
-	PYTHONPATH=.  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local.py --random-order --durations 10
+	pip3 install .
+	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local.py --random-order --durations 10
 
 .PHONY: htex_local_alternate_test
 htex_local_alternate_test: ## run all tests with htex_local config
