@@ -132,4 +132,6 @@ class Config(RepresentationMixin):
         if len(duplicates) > 0:
             raise ConfigurationError('Executors must have unique labels ({})'.format(
                 ', '.join(['label={}'.format(repr(d)) for d in duplicates])))
+        if 'all' in labels:
+            raise ConfigurationError('Executor cannot be labelled "all"')
         self._executors = executors
