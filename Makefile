@@ -6,8 +6,7 @@ DEPS := .deps
 CCTOOLS_INSTALL := /tmp/cctools
 MPICH=mpich
 OPENMPI=openmpi
-EXECUTORS_PATH := $(shell ls -d parsl/executors/*/ | tr '\n' ':')
-export PATH := $(EXECUTORS_PATH):$(CCTOOLS_INSTALL)/bin/:$(PATH)
+export PATH := $(CCTOOLS_INSTALL)/bin/:$(PATH)
 export CCTOOLS_VERSION=7.5.4
 export HYDRA_LAUNCHER=fork
 export OMPI_MCA_rmaps_base_oversubscribe=yes
@@ -54,23 +53,24 @@ local_thread_test: ## run all tests with local_thread config
 
 .PHONY: htex_local_test
 htex_local_test: ## run all tests with htex_local config
-	PYTHONPATH=.  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local.py --random-order --durations 10
+	pip3 install .
+	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local.py --random-order --durations 10
 
 .PHONY: htex_local_alternate_test
 htex_local_alternate_test: ## run all tests with htex_local config
 	pip3 install ".[monitoring]"
-	PYTHONPATH=.  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --random-order --durations 10
+	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --random-order --durations 10
 
 $(CCTOOLS_INSTALL):	#CCtools contains both taskvine and workqueue so install only once
 	parsl/executors/taskvine/install-taskvine.sh
 
 .PHONY: vineex_local_test
 vineex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with vineex_local config
-	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/taskvine_ex.py --random-order --durations 10
+	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/taskvine_ex.py --random-order --durations 10
 
 .PHONY: wqex_local_test
 wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with wqex_local config
-	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --random-order --durations 10
+	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --random-order --durations 10
 
 .PHONY: workqueue_mon_test
 workqueue_mon_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
