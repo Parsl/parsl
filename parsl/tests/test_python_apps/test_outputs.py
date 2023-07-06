@@ -1,12 +1,9 @@
-import argparse
 import os
-import pytest
-import shutil
-
 from concurrent.futures import wait
 
+import pytest
+
 from parsl import File, python_app
-from parsl.tests.configs.local_threads import fresh_config as local_config
 
 
 @python_app
@@ -20,22 +17,12 @@ whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', 
 
 
 @pytest.mark.issue363
-def test_launch_apps(n=2, outdir='outputs'):
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
-    else:
-        shutil.rmtree(outdir)
-        os.makedirs(outdir)
-    print('outdir is ', outdir)
+def test_launch_apps(tmpd_cwd, n=2):
+    outdir = tmpd_cwd / "outputs"
+    outdir.mkdir()
 
-    all_futs = []
-    for i in range(n):
-        fus = double(i, outputs=[File('{0}/{1}.txt'.format(outdir, i))])
-        all_futs.append(fus)
+    futs = [double(i, outputs=[File(str(outdir / f"{i}.txt"))]) for i in range(n)]
+    wait(futs)
 
-    wait(all_futs)
-
-    stdout_file_count = len(
-        [item for item in os.listdir(outdir) if item.endswith('.txt')])
-    assert stdout_file_count == n, "Only {}/{} files in '{}' ".format(
-            len(os.listdir('outputs/')), n, os.listdir(outdir))
+    stdout_file_count = len(list(outdir.glob("*.txt")))
+    assert stdout_file_count == n, sorted(outdir.glob("*.txt"))
