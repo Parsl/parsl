@@ -69,6 +69,7 @@ vineex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with vineex_local config
 
 .PHONY: wqex_local_test
 wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with wqex_local config
+	pip3 install .
 	echo PATH:
 	echo $(PATH)
 	echo which of coprocess command:
