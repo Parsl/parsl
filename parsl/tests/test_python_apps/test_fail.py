@@ -1,89 +1,59 @@
-import argparse
+import pytest
 
-import parsl
 from parsl.app.app import python_app
-from parsl.tests.configs.local_threads import fresh_config as local_config
+from parsl.dataflow.errors import DependencyError
+
+
+class ManufacturedTestFailure(Exception):
+    pass
 
 
 @python_app
-def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
-    import time
+def random_fail(fail_prob: float, inputs=()):
     import random
-
-    s = sleep_dur + random.randint(-sleep_rand_max, sleep_rand_max)
-
-    time.sleep(s)
-    raise Exception("App failure")
+    if random.random() < fail_prob:
+        raise ManufacturedTestFailure("App failure")
 
 
-def test_no_deps(numtasks=2):
+def test_no_deps():
     """Test basic error handling, with no dependent failures
     """
+    futs = [random_fail(1), random_fail(0), random_fail(0)]
 
-    fus = []
-    for i in range(0, numtasks):
-
-        fu = sleep_fail(0.1, 0, .8)
-        fus.extend([fu])
-
-    count = 0
-    for fu in fus:
+    for f in futs:
         try:
-            fu.result()
-        except Exception as e:
-            print("Caught exception : ", "*" * 20)
-            print(e)
-            print("*" * 20)
-            count += 1
-
-    print("Caught failures of  {0}/{1}".format(count, len(fus)))
+            f.result()
+        except ManufacturedTestFailure:
+            pass
 
 
-def test_fail_sequence(numtasks=2):
+@pytest.mark.parametrize("fail_probs", ((1, 0), (0, 1)))
+def test_fail_sequence(fail_probs):
     """Test failure in a sequence of dependencies
 
     App1 -> App2 ... -> AppN
     """
 
-    sleep_dur = 0.1
-    fail_prob = 0.4
+    t1_fail_prob, t2_fail_prob = fail_probs
+    t1 = random_fail(fail_prob=t1_fail_prob)
+    t2 = random_fail(fail_prob=t2_fail_prob, inputs=[t1])
+    t_final = random_fail(fail_prob=0, inputs=[t2])
 
-    fus = {0: None}
-    for i in range(0, numtasks):
-        print("Chaining {0} to {1}".format(i + 1, fus[i]))
-        fus[i + 1] = sleep_fail(sleep_dur, 0, fail_prob, inputs=[fus[i]])
-
-    # time.sleep(numtasks*sleep_dur)
-    for k in sorted(fus.keys()):
-        try:
-            x = fus[i].result()
-            print("{0} : {1}".format(k, x))
-        except Exception as e:
-            print("{0} : {1}".format(k, e))
-
-    return
+    with pytest.raises(DependencyError):
+        t_final.result()
 
 
-def test_deps(numtasks=2):
-    """Random failures in branches of Map -> Map -> reduce
-
-    App1   App2  ... AppN
-    """
-
-    fus = []
-    for i in range(0, numtasks):
-        fu = sleep_fail(0.2, 0, .4)
-        fus.extend([fu])
+def test_deps(width=3):
+    """Random failures in branches of Map -> Map -> reduce"""
+    # App1   App2  ... AppN
+    futs = [random_fail(fail_prob=0.4) for _ in range(width)]
 
     # App1   App2  ... AppN
     # |       |        |
     # V       V        V
     # App1   App2  ... AppN
 
-    fus_2 = []
-    for fu in fus:
-        fu = sleep_fail(0, 0, .8, inputs=[fu])
-        fus_2.extend([fu])
+    futs = [random_fail(fail_prob=0.8, inputs=[f]) for f in futs]
 
     # App1   App2  ... AppN
     #   |       |        |
@@ -92,15 +62,7 @@ def test_deps(numtasks=2):
     #    \      |       /
     #     \     |      /
     # App_Final
-
-    fu_final = sleep_fail(1, 0, 0, inputs=fus_2)
-
     try:
-        print("Final status : ", fu_final.result())
-    except parsl.dataflow.errors.DependencyError as e:
-        print("Caught the right exception")
-        print("Exception : ", e)
-    except Exception as e:
-        assert False, "Expected DependencyError but got: %s" % e
-    else:
-        raise RuntimeError("Expected DependencyError, but got no exception")
+        random_fail(fail_prob=0, inputs=futs).result()
+    except DependencyError:
+        pass
