@@ -1,16 +1,13 @@
-import argparse
 import os
 
 import pytest
 
-import parsl
 import parsl.app.errors as perror
 from parsl.app.app import bash_app
-from parsl.tests.configs.local_threads import config
 
 
 @bash_app
-def echo_to_streams(msg, stderr='std.err', stdout='std.out'):
+def echo_to_streams(msg, stderr=None, stdout=None):
     return 'echo "{0}"; echo "{0}" >&2'.format(msg)
 
 
@@ -40,8 +37,7 @@ testids = [
 @pytest.mark.issue363
 @pytest.mark.parametrize('spec', speclist, ids=testids)
 def test_bad_stdout_specs(spec):
-    """Testing bad stdout spec cases
-    """
+    """Testing bad stdout spec cases"""
 
     fn = echo_to_streams("Hello world", stdout=spec, stderr='t.err')
 
@@ -52,18 +48,14 @@ def test_bad_stdout_specs(spec):
     else:
         assert False, "Did not raise expected exception"
 
-    return
-
 
 @pytest.mark.issue363
 def test_bad_stderr_file():
+    """Testing bad stderr file"""
 
-    """ Testing bad stderr file """
-
-    out = "t2.out"
     err = "/bad/dir/t2.err"
 
-    fn = echo_to_streams("Hello world", stdout=out, stderr=err)
+    fn = echo_to_streams("Hello world", stderr=err)
 
     try:
         fn.result()
@@ -76,13 +68,11 @@ def test_bad_stderr_file():
 
 
 @pytest.mark.issue363
-def test_stdout_truncate():
+def test_stdout_truncate(tmpd_cwd):
+    """Testing truncation of prior content of stdout"""
 
-    """ Testing truncation of prior content of stdout """
-
-    out = ('t1.out', 'w')
-    err = 't1.err'
-    os.system('rm -f ' + out[0] + ' ' + err)
+    out = (str(tmpd_cwd / 't1.out'), 'w')
+    err = str(tmpd_cwd / 't1.err')
 
     echo_to_streams('hi', stdout=out, stderr=err).result()
     len1 = len(open(out[0]).readlines())
@@ -90,19 +80,16 @@ def test_stdout_truncate():
     echo_to_streams('hi', stdout=out, stderr=err).result()
     len2 = len(open(out[0]).readlines())
 
-    assert len1 == len2 == 1, "Line count of output files should both be 1, but: len1={} len2={}".format(len1, len2)
-
-    os.system('rm -f ' + out[0] + ' ' + err)
+    assert len1 == 1
+    assert len1 == len2
 
 
 @pytest.mark.issue363
-def test_stdout_append():
+def test_stdout_append(tmpd_cwd):
+    """Testing appending to prior content of stdout (default open() mode)"""
 
-    """ Testing appending to prior content of stdout (default open() mode) """
-
-    out = 't1.out'
-    err = 't1.err'
-    os.system('rm -f ' + out + ' ' + err)
+    out = str(tmpd_cwd / 't1.out')
+    err = str(tmpd_cwd / 't1.err')
 
     echo_to_streams('hi', stdout=out, stderr=err).result()
     len1 = len(open(out).readlines())
@@ -110,6 +97,4 @@ def test_stdout_append():
     echo_to_streams('hi', stdout=out, stderr=err).result()
     len2 = len(open(out).readlines())
 
-    assert len1 == 1 and len2 == 2, "Line count of output files should be 1 and 2, but:  len1={} len2={}".format(len1, len2)
-
-    os.system('rm -f ' + out + ' ' + err)
+    assert len1 == 1 and len2 == 2
