@@ -380,6 +380,12 @@ class DataFlowKernel:
                         task_record['join_lock'] = threading.Lock()
                         self._send_task_log_info(task_record)
                         joinable.add_done_callback(partial(self.handle_join_update, task_record))
+                    elif joinable == []:  # got a list, but it had no entries, and specifically, no Futures.
+                        self.update_task_state(task_record, States.joining)
+                        task_record['joins'] = joinable
+                        task_record['join_lock'] = threading.Lock()
+                        self._send_task_log_info(task_record)
+                        self.handle_join_update(task_record, None)
                     elif isinstance(joinable, list) and [j for j in joinable if not isinstance(j, Future)] == []:
                         self.update_task_state(task_record, States.joining)
                         task_record['joins'] = joinable
@@ -403,7 +409,7 @@ class DataFlowKernel:
         if task_record['status'] == States.pending:
             self.launch_if_ready(task_record)
 
-    def handle_join_update(self, task_record: TaskRecord, inner_app_future: AppFuture) -> None:
+    def handle_join_update(self, task_record: TaskRecord, inner_app_future: Optional[AppFuture]) -> None:
         with task_record['join_lock']:
             # inner_app_future has completed, which is one (potentially of many)
             # futures the outer task is joining on.

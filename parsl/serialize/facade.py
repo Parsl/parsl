@@ -14,7 +14,6 @@ methods_for_data = {}
 
 for key in METHODS_MAP_CODE:
     methods_for_code[key] = METHODS_MAP_CODE[key]()
-    methods_for_code[key].enable_caching(maxsize=128)
 
 for key in METHODS_MAP_DATA:
     methods_for_data[key] = METHODS_MAP_DATA[key]()
