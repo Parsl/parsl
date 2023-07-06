@@ -53,7 +53,6 @@ The following alternative formulation is valid Parsl.
 
 .. code-block:: python
 
-       import random
        factor = 5
 
        @python_app
@@ -71,7 +70,9 @@ In this case, Parsl will establish a dependency between the two apps and will no
 execute the dependent app until all dependent futures are resolved.
 Further detail is provided in :ref:`label-futures`.
 
-A Python app may also act upon files. In order to make Parsl aware of these files, they must be specified by using the ``inputs`` and/or ``outputs`` keyword arguments, as in following code snippet, which copies the contents of one file (``in.txt``) to another (``out.txt``).
+A Python app may also act upon files. In order to make Parsl aware of these files,
+they must be specified by using the ``inputs`` and/or ``outputs`` keyword arguments,
+as in following code snippet, which copies the contents of one file (``in.txt``) to another (``out.txt``).
 
 .. code-block:: python
 
@@ -98,6 +99,34 @@ Any Parsl app (a Python function decorated with the ``@python_app`` or ``@bash_a
 3. walltime: (int) This keyword argument places a limit on the app's
    runtime in seconds. If the walltime is exceed, Parsl will raise an `parsl.app.errors.AppTimeout` exception.
 
+Serializing Functions from Libraries
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Parsl can create Apps directly from functions defined in Python modules.
+Supply the function as an argument to ``python_app`` rather than creating a new function which is decorated.
+
+.. code-block:: python
+
+    from module import function
+    function_app = python_app(function, executors='all')
+
+``function_app`` will act as Parsl App function of ``function``.
+
+It is also possible to create wrapped versions of functions, such as ones with pinned arguments.
+Parsl just requires first calling :meth:`~functools.update_wrapped` with the wrapped function
+to include attributes from the original function (e.g., its name).
+
+.. code-block:: python
+
+    from functools import partial, update_wrapped
+    import numpy as np
+    my_max = partial(np.max, axis=0, keepdims=True)
+    my_max = update_wrapper(my_max, max)  # Copy over the names
+    my_max_app = python_app(my_max)
+
+
+Apps created using ``python_app`` as a function will work just like those which use it as a decorator.
+
 Returns
 ^^^^^^^
 
@@ -112,7 +141,7 @@ Limitations
 There are some limitations on the Python functions that can be converted to apps:
 
 1. Functions should act only on defined input arguments. That is, they should not use script-level or global variables.
-2. Functions must explicitly import any required modules.
+2. Functions must explicitly import any required modules if they are defined in script which starts Parsl.
 3. Parsl uses dill and pickle to serialize Python objects to/from apps. Therefore, Parsl require that all input and output objects can be serialized by dill or pickle. See :ref:`label_serialization_error`.
 4. STDOUT and STDERR produced by Python apps remotely are not captured.
 
