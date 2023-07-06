@@ -1,6 +1,9 @@
 import importlib.util
 import logging
 import os
+import pathlib
+import tempfile
+from datetime import datetime
 from glob import glob
 from itertools import chain
 import signal
@@ -34,6 +37,20 @@ def dumpstacks(sig, frame):
 
 def pytest_sessionstart(session):
     signal.signal(signal.SIGUSR1, dumpstacks)
+
+
+@pytest.fixture(scope="session")
+def tmpd_cwd_session():
+    n = datetime.now().strftime('%Y%m%d.%H%I%S')
+    with tempfile.TemporaryDirectory(dir=os.getcwd(), prefix=f".pytest-{n}-") as tmpd:
+        yield pathlib.Path(tmpd)
+
+
+@pytest.fixture
+def tmpd_cwd(tmpd_cwd_session, request):
+    prefix = f"{request.node.name}-"
+    with tempfile.TemporaryDirectory(dir=tmpd_cwd_session, prefix=prefix) as tmpd:
+        yield pathlib.Path(tmpd)
 
 
 def pytest_addoption(parser):
@@ -212,8 +229,8 @@ def apply_masks(request, pytestconfig):
 
 
 @pytest.fixture
-def setup_data(tmp_path):
-    data_dir = tmp_path / "data"
+def setup_data(tmpd_cwd):
+    data_dir = tmpd_cwd / "data"
     data_dir.mkdir()
 
     with open(data_dir / "test1.txt", "w") as f:
