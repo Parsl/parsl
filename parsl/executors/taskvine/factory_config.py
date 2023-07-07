@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
+# Configuration of a TaskVine factory
 @dataclass
 class TaskVineFactoryConfig:
 
