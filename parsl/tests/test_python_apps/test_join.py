@@ -126,3 +126,15 @@ def test_one_error_one_result():
     de0 = e.dependent_exceptions_tids[0][0]
     assert isinstance(de0, InnerError)
     assert de0.args[0] == "Error A"
+
+
+@join_app
+def app_no_futures():
+    return []
+
+
+def test_no_futures():
+    # tests that a list of futures that contains no futures will
+    # complete - regression test for issue #2792
+    f = app_no_futures()
+    assert f.result() == []

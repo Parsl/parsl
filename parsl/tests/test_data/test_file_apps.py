@@ -12,13 +12,13 @@ def cat(inputs=(), outputs=(), stdout=None, stderr=None):
 
 @pytest.mark.staging_required
 def test_files(setup_data):
-    fs = sorted(str(setup_data / f) for f in setup_data.iterdir())
+    fs = sorted(setup_data / f for f in setup_data.iterdir())
     fs = list(map(File, fs))
     x = cat(
         inputs=fs,
-        outputs=[File(str(setup_data / "cat_out.txt"))],
-        stdout=str(setup_data / "f_app.out"),
-        stderr=str(setup_data / "f_app.err"),
+        outputs=[File(setup_data / "cat_out.txt")],
+        stdout=setup_data / "f_app.out",
+        stderr=setup_data / "f_app.err",
     )
     x.result()
     d_x = x.outputs[0]
@@ -28,29 +28,27 @@ def test_files(setup_data):
 
 @bash_app
 def increment(inputs=(), outputs=(), stdout=None, stderr=None):
-    # Place double braces to avoid python complaining about missing keys for {item = $1}
-    return """
-    x=$(cat {i})
-    echo $(($x+1)) > {o}
-    """.format(i=inputs[0], o=outputs[0])
+    return (
+        f"x=$(cat {inputs[0]})\n"
+        f"echo $(($x+1)) > {outputs[0]}"
+    )
 
 
 @pytest.mark.staging_required
 def test_increment(tmp_path, depth=5):
-    """Test simple pipeline A->B...->N
-    """
+    """Test simple pipeline A->B...->N"""
     # Test setup
     first_fpath = tmp_path / "test0.txt"
     first_fpath.write_text("0\n")
 
-    prev = [File(str(first_fpath))]
+    prev = [File(first_fpath)]
     futs = []
     for i in range(1, depth):
         f = increment(
             inputs=prev,
-            outputs=[File(str(tmp_path / f"test{i}.txt"))],
-            stdout=str(tmp_path / f"incr{i}.out"),
-            stderr=str(tmp_path / f"incr{i}.err"),
+            outputs=[File(tmp_path / f"test{i}.txt")],
+            stdout=tmp_path / f"incr{i}.out",
+            stderr=tmp_path / f"incr{i}.err",
         )
         prev = f.outputs
         futs.append((i, prev[0]))
