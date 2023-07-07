@@ -13,6 +13,7 @@ class TaskVineManagerConfig:
 
     port: int
         Network port for the manager to communicate with workers.
+        A value of 0 means TaskVine chooses any available port.
         Default is VINE_DEFAULT_PORT.
 
     address: str
@@ -57,6 +58,8 @@ class TaskVineManagerConfig:
         for each app. Enabling this increases first task latency but 
         does not require a common environment or a shared filesystem
         on workers.
+        If env_pack is specified, app_pack if set to True will override
+        env_pack.
         Default is False.
 
     extra_pkgs: Optional[list]
