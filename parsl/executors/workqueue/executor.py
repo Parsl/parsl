@@ -371,7 +371,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         task_dir = "{:04d}".format(executor_task_id)
         return os.path.join(self.function_data_dir, task_dir, *path_components)
 
-    def submit(self, func, resource_specification, *args, **kwargs):
+    def submit(self, func, call_specs, *args, **kwargs):
         """Processes the Parsl app by its arguments and submits the function
         information to the task queue, to be executed using the Work Queue
         system. The args and kwargs are processed for input and output files to
@@ -395,16 +395,16 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         priority = None
         category = None
         running_time_min = None
-        if resource_specification and isinstance(resource_specification, dict):
-            logger.debug("Got resource specification: {}".format(resource_specification))
+        if call_specs and isinstance(call_specs, dict):
+            logger.debug("Got call_specs: {}".format(call_specs))
 
             required_resource_types = set(['cores', 'memory', 'disk'])
-            acceptable_resource_types = set(['cores', 'memory', 'disk', 'gpus', 'priority', 'running_time_min'])
-            keys = set(resource_specification.keys())
+            acceptable_fields = set(['cores', 'memory', 'disk', 'gpus', 'priority', 'running_time_min', 'app_type'])
+            keys = set(call_specs.keys())
 
-            if not keys.issubset(acceptable_resource_types):
+            if not keys.issubset(acceptable_fields):
                 message = "Task resource specification only accepts these types of resources: {}".format(
-                        ', '.join(acceptable_resource_types))
+                        ', '.join(acceptable_fields))
                 logger.error(message)
                 raise ExecutorError(self, message)
 
@@ -423,19 +423,19 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
             for k in keys:
                 if k == 'cores':
-                    cores = resource_specification[k]
+                    cores = call_specs[k]
                 elif k == 'memory':
-                    memory = resource_specification[k]
+                    memory = call_specs[k]
                 elif k == 'disk':
-                    disk = resource_specification[k]
+                    disk = call_specs[k]
                 elif k == 'gpus':
-                    gpus = resource_specification[k]
+                    gpus = call_specs[k]
                 elif k == 'priority':
-                    priority = resource_specification[k]
+                    priority = call_specs[k]
                 elif k == 'category':
-                    category = resource_specification[k]
+                    category = call_specs[k]
                 elif k == 'running_time_min':
-                    running_time_min = resource_specification[k]
+                    running_time_min = call_specs[k]
 
         self.executor_task_counter += 1
         executor_task_id = self.executor_task_counter

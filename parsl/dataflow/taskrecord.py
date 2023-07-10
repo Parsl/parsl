@@ -79,14 +79,11 @@ class TaskRecord(TypedDict, total=False):
     id: int
     try_id: int
 
-    resource_specification: Dict[str, Any]
-
-    app_mode: str
-    """Execution mode of this app. Used in TaskVineExecutor.
-    Out of {regular, python, serverless}."""
-
-    app_type: Optional[str]
-    """Type of this app. Out of {python, bash} if given."""
+    call_specs: Dict[str, Any]
+    """Dictionary containing relevant info for a task execution.
+    Includes resources to allocate, execution mode, and
+    app type (python, bash) as a given
+    executor permits."""
 
     join: bool
     """Is this a join_app?"""

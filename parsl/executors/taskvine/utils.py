@@ -6,7 +6,7 @@ class ParslTaskToVine:
 
     def __init__(self,
                  executor_id: int,                 # executor id of Parsl function
-                 app_mode: str,                    # execution mode of function, out of {regular, python, serverless}
+                 exec_mode: str,                   # execution mode of function, out of {regular, python, serverless}
                  func_args: list,                  # list of positional arguments of the function
                  func_kwargs: dict,                # dictionary of keyword arguments of the function
                  category: str,                    # category of Parsl function
@@ -25,7 +25,7 @@ class ParslTaskToVine:
                  env_pkg: Optional[str],           # path to a poncho environment tarball
                  ):
         self.executor_id = executor_id
-        self.app_mode = app_mode
+        self.exec_mode = exec_mode
         self.func_args = func_args
         self.func_kwargs = func_kwargs
         self.category = category

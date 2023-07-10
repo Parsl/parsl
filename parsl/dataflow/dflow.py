@@ -716,7 +716,7 @@ class DataFlowKernel:
                                                                          self.run_dir)
 
         with self.submitter_lock:
-            exec_fu = executor.submit(executable, task_record['resource_specification'], task_record['app_mode'], task_record['app_type'], *args, **kwargs)
+            exec_fu = executor.submit(executable, task_record['call_specs'], *args, **kwargs)
         self.update_task_state(task_record, States.launched)
 
         self._send_task_log_info(task_record)
@@ -966,8 +966,8 @@ class DataFlowKernel:
                                     kw)
                     )
 
-        resource_specification = app_kwargs.get('parsl_resource_specification', {})
-        app_mode = app_kwargs.get('parsl_app_mode', None)
+        call_specs = app_kwargs.get('parsl_call_specs', {})
+        call_specs.update({'app_type': app_type})
 
         task_def: TaskRecord
         task_def = {'depends': [],
@@ -989,9 +989,7 @@ class DataFlowKernel:
                     'time_returned': None,
                     'try_time_launched': None,
                     'try_time_returned': None,
-                    'resource_specification': resource_specification,
-                    'app_mode': app_mode,
-                    'app_type': app_type}
+                    'call_specs': call_specs}
 
         self.update_task_state(task_def, States.unsched)
 

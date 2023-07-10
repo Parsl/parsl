@@ -550,7 +550,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                 logger.debug("Sending hold to manager: {}".format(manager['manager']))
                 self.hold_worker(manager['manager'])
 
-    def submit(self, func, resource_specification, *args, **kwargs):
+    def submit(self, func, call_specs, *args, **kwargs):
         """Submits work to the outgoing_q.
 
         The outgoing_q is an external process listens on this
@@ -559,6 +559,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         Args:
             - func (callable) : Callable function
+            - call_specs (dict): Dictionary containing relevant info about task that is needed by underlying executors.
             - args (list) : List of arbitrary positional arguments.
 
         Kwargs:
@@ -567,11 +568,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         Returns:
               Future
         """
-        if resource_specification:
-            logger.error("Ignoring the resource specification. "
-                         "Parsl resource specification is not supported in HighThroughput Executor. "
-                         "Please check WorkQueueExecutor if resource specification is needed.")
-            raise UnsupportedFeatureError('resource specification', 'HighThroughput Executor', 'WorkQueue Executor')
+        if 'app_type' in call_specs and len(call_specs) > 1:
+            logger.error("Ignoring the call specification. "
+                         "Parsl call specification is not supported in HighThroughput Executor. "
+                         "Please check WorkQueueExecutor or TaskVineExecutor if call specification is needed.")
+            raise UnsupportedFeatureError('call specification', 'HighThroughput Executor', 'WorkQueue Executor')
 
         if self.bad_state_is_set:
             raise self.executor_exception

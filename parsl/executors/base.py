@@ -63,7 +63,7 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def submit(self, func: Callable, resource_specification: Dict[str, Any], *args: Any, **kwargs: Any) -> Future:
+    def submit(self, func: Callable, call_specs: Dict[str, Any], *args: Any, **kwargs: Any) -> Future:
         """Submit.
 
         The executor can optionally set a parsl_executor_task_id attribute on

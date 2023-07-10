@@ -45,18 +45,19 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.executor = cf.ThreadPoolExecutor(max_workers=self.max_threads,
                                               thread_name_prefix=self.thread_name_prefix)
 
-    def submit(self, func, resource_specification, *args, **kwargs):
+    def submit(self, func, call_specs, *args, **kwargs):
         """Submits work to the thread pool.
 
         This method is simply pass through and behaves like a submit call as described
         here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
 
         """
-        if resource_specification:
-            logger.error("Ignoring the resource specification. "
-                         "Parsl resource specification is not supported in ThreadPool Executor. "
-                         "Please check WorkQueue Executor if resource specification is needed.")
-            raise UnsupportedFeatureError('resource specification', 'ThreadPool Executor', 'WorkQueue Executor')
+        if 'app_type' in call_specs and len(call_specs) > 1:
+            logger.error("Ignoring the call specification. "
+                         "Parsl call specification is not supported in ThreadPool Executor. "
+                         "Please check WorkQueue Executor or TaskVine Executor "
+                         "if call specification is needed.")
+            raise UnsupportedFeatureError('call specification', 'ThreadPool Executor', 'WorkQueue Executor')
 
         return self.executor.submit(func, *args, **kwargs)
 
