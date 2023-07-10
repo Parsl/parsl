@@ -81,6 +81,13 @@ class TaskRecord(TypedDict, total=False):
 
     resource_specification: Dict[str, Any]
 
+    app_mode: str
+    """Execution mode of this app. Used in TaskVineExecutor.
+    Out of {regular, python, serverless}."""
+
+    app_type: Optional[str]
+    """Type of this app. Out of {python, bash} if given."""
+
     join: bool
     """Is this a join_app?"""
 

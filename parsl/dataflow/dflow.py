@@ -716,7 +716,7 @@ class DataFlowKernel:
                                                                          self.run_dir)
 
         with self.submitter_lock:
-            exec_fu = executor.submit(executable, task_record['resource_specification'], *args, **kwargs)
+            exec_fu = executor.submit(executable, task_record['resource_specification'], task_record['app_mode'], task_record['app_type'], *args, **kwargs)
         self.update_task_state(task_record, States.launched)
 
         self._send_task_log_info(task_record)
@@ -901,6 +901,7 @@ class DataFlowKernel:
                cache: bool = False,
                ignore_for_cache: Optional[Sequence[str]] = None,
                app_kwargs: Dict[str, Any] = {},
+               app_type: Optional[str] = None,
                join: bool = False) -> AppFuture:
         """Add task to the dataflow system.
 
@@ -919,6 +920,7 @@ class DataFlowKernel:
             - cache (Bool) : To enable memoization or not
             - ignore_for_cache (list) : List of kwargs to be ignored for memoization/checkpointing
             - app_kwargs (dict) : Rest of the kwargs to the fn passed as dict.
+            - app_type (str): Whether this app is python or bash. Out of {'python', 'bash'}
 
         Returns:
                (AppFuture) [DataFutures,]
@@ -965,6 +967,7 @@ class DataFlowKernel:
                     )
 
         resource_specification = app_kwargs.get('parsl_resource_specification', {})
+        app_mode = app_kwargs.get('parsl_app_mode', None)
 
         task_def: TaskRecord
         task_def = {'depends': [],
@@ -986,7 +989,9 @@ class DataFlowKernel:
                     'time_returned': None,
                     'try_time_launched': None,
                     'try_time_returned': None,
-                    'resource_specification': resource_specification}
+                    'resource_specification': resource_specification,
+                    'app_mode': app_mode,
+                    'app_type': app_type}
 
         self.update_task_state(task_def, States.unsched)
 

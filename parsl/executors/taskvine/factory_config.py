@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
+
 # Configuration of a TaskVine factory
 # Default to spawning one local worker.
 @dataclass
@@ -76,10 +77,10 @@ class TaskVineFactoryConfig:
         Default is 'local'.
 
     condor_requirements: Optional[str]
-        String describing the condor requirements for slots 
+        String describing the condor requirements for slots
         that workers should land on.
         Default is None.
-        
+
     batch_options: Optional[str]
         String describing generic batch options. Varies with the
         type of batch system.

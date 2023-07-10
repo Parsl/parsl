@@ -4,6 +4,7 @@ from typing import Optional
 
 from ndcctools.taskvine.cvine import VINE_DEFAULT_PORT
 
+
 # Configuration of a TaskVine manager
 @dataclass
 class TaskVineManagerConfig:
@@ -28,8 +29,8 @@ class TaskVineManagerConfig:
         Default is None. Overrides address.
 
     project_password_file: Optional[str]
-        If given, manager and workers will authenticate each other 
-        with the given password file. 
+        If given, manager and workers will authenticate each other
+        with the given password file.
         Default is None.
 
     init_command: str
@@ -37,7 +38,7 @@ class TaskVineManagerConfig:
         Default is ''.
 
     env_vars: Optional[dict]
-        Dictionary of environment variables to set in a shell 
+        Dictionary of environment variables to set in a shell
         before executing a task.
         Default is None
 
@@ -45,17 +46,17 @@ class TaskVineManagerConfig:
         Used to encapsulate package dependencies of tasks to
         execute them remotely without needing a shared filesystem.
         Recommended way to manage tasks' dependency requirements.
-        If an absolute path to a conda environment or a conda 
-        environment name is given, TaskVine will package the conda 
-        environment in a tarball and send it along with tasks to be 
+        If an absolute path to a conda environment or a conda
+        environment name is given, TaskVine will package the conda
+        environment in a tarball and send it along with tasks to be
         executed in a replicated conda environment.
-        If a tarball of packages (*.tar.gz) is given, TaskVine 
-        skips the packaging step and sends the tarball along with 
+        If a tarball of packages (*.tar.gz) is given, TaskVine
+        skips the packaging step and sends the tarball along with
         tasks to be executed in a replicated conda environment.
 
     app_pack: bool
         Use conda-pack to prepare a self-contained Python environment
-        for each app. Enabling this increases first task latency but 
+        for each app. Enabling this increases first task latency but
         does not require a common environment or a shared filesystem
         on workers.
         If env_pack is specified, app_pack if set to True will override
@@ -71,11 +72,11 @@ class TaskVineManagerConfig:
 
     max_retries: int
         Set the number of retries that TaskVine will make when a task
-        fails. This is distinct from Parsl level retries configured in 
+        fails. This is distinct from Parsl level retries configured in
         parsl.config.Config. Set to None to allow TaskVine to retry tasks
         forever.
         Default is 1.
-    
+
     task_mode: str
         Type of TaskVine tasks to execute Parsl app.
         'regular': use Parsl serialization method to transfer app.
@@ -103,13 +104,13 @@ class TaskVineManagerConfig:
         this parameter will reduce the number of failed tasks due to
         resource exhaustion when autolabeling, at the cost of increased
         resources spent collecting stats.
-    
+
     autolabel_algorithm: str
         Choose an autolabeling algorithm to label resources to tasks.
         'max-xput': smartly guess a resource value, then fall back if task
         fails due to overconsumption.
         'bucketing': group tasks into buckets based on resource consumption
-        similarity, and randomly choose a bucket to assign resources to the 
+        similarity, and randomly choose a bucket to assign resources to the
         next task.
         'max': always allocate max resources seen so far. Allocate a whole
         machine if task fails.
@@ -123,7 +124,7 @@ class TaskVineManagerConfig:
         this parameter will reduce the number of failed tasks due to
         resource exhaustion when autolabeling, at the cost of increased
         resources spent collecting stats.
-    
+
     autocategory: bool
         Place each app in its own category by default. If all
         invocations of an app have similar performance characteristics,
@@ -131,8 +132,8 @@ class TaskVineManagerConfig:
         Default is True.
 
     enable_peer_transfers: bool
-        Whether to enable workers' capability to transfer files among 
-        themselves or not. Helpful if TaskVine manages all files 
+        Whether to enable workers' capability to transfer files among
+        themselves or not. Helpful if TaskVine manages all files
         tasks in the workflow use. Require that workers can communicate
         with each other via TCP ports.
         Default is True.
@@ -148,18 +149,18 @@ class TaskVineManagerConfig:
     """
 
     # Connection and communication settings
-    port: int = VINE_DEFAULT_PORT                   
-    address: str = socket.gethostname()            
-    project_name: Optional[str] = None             
+    port: int = VINE_DEFAULT_PORT
+    address: str = socket.gethostname()
+    project_name: Optional[str] = None
     project_password_file: Optional[str] = None
 
     # Global task settings
-    env_vars: Optional[dict] = None # env
+    env_vars: Optional[dict] = None
     env_pack: Optional[str] = None
     app_pack: bool = False
     extra_pkgs: Optional[list] = None
     max_retries: int = 1
-    
+
     # Performance-specific settings
     shared_fs: bool = False
     autolabel: bool = False

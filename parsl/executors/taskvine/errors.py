@@ -21,6 +21,7 @@ class TaskVineManagerFailure(ParslError):
     """
     pass
 
+
 class TaskVineFactoryFailure(ParslError):
     """A failure in the TaskVine factory that prevents the factory from
     supplying workers to the manager.

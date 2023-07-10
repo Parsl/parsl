@@ -150,6 +150,7 @@ class BashApp(AppBase):
                              executors=self.executors,
                              cache=self.cache,
                              ignore_for_cache=self.ignore_for_cache,
-                             app_kwargs=invocation_kwargs)
+                             app_kwargs=invocation_kwargs,
+                             app_type='bash')
 
         return app_fut

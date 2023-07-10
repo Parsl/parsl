@@ -1,10 +1,12 @@
 from typing import Optional
 
+
 class ParslTaskToVine:
     """ Helper class to transform a Parsl function into a TaskVine task."""
 
     def __init__(self,
                  executor_id: int,                 # executor id of Parsl function
+                 app_mode: str,                    # execution mode of function, out of {regular, python, serverless}
                  func_args: list,                  # list of positional arguments of the function
                  func_kwargs: dict,                # dictionary of keyword arguments of the function
                  category: str,                    # category of Parsl function
@@ -23,6 +25,7 @@ class ParslTaskToVine:
                  env_pkg: Optional[str],           # path to a poncho environment tarball
                  ):
         self.executor_id = executor_id
+        self.app_mode = app_mode
         self.func_args = func_args
         self.func_kwargs = func_kwargs
         self.category = category
@@ -48,11 +51,11 @@ class VineTaskToParsl:
     reason and status are only valid if result_received is False
     """
     def __init__(self,
-                 executor_id: int,      # executor id of task
-                 result_received: bool, # whether result is received or not
-                 result,                # result object if available
-                 reason: Optional[str], # string describing why execution fails
-                 status: Optional[int]  # exit code of execution of task
+                 executor_id: int,          # executor id of task
+                 result_received: bool,     # whether result is received or not
+                 result,                    # result object if available
+                 reason: Optional[str],     # string describing why execution fails
+                 status: Optional[int]      # exit code of execution of task
                  ):
         self.executor_id = executor_id
         self.result_received = result_received
