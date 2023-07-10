@@ -25,7 +25,7 @@ class ProxyStoreDeepPickler(dill.Pickler):
         self._policy = policy
 
     def reducer_override(self, o: Any) -> Any:
-        logger.info(f"BENC: reducing object {o}")
+        logger.info(f"BENC: reducing object {o!r}")
 
         if type(o) is self._policy:  # not isinstance, because want exact class match
             logger.info("BENC: Policy class detected")
