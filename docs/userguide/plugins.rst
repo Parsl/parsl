@@ -77,3 +77,19 @@ from invoking a Parsl app. This includes as the return value of a
 
 An specific example of this is integrating Globus Compute tasks into a Parsl
 task graph. See :ref:`label-join-globus-compute`
+
+
+Serialization
+-------------
+
+By default Parsl will serialize objects with either `pickle` or `dill`, in
+some cases applying an LRU cache.
+
+Parsl has an unstable API to register new serialization methods
+
+Additional serialization methods can be registered by XXXXX TODO XXXXX
+
+Limitations:
+these mechanisms are not registered on the remote side, so custom
+deserialization cannot be implemented -- instead, custom serializers can
+only generate byte streams to be deserialized by pickle or dill

@@ -12,4 +12,5 @@ requests
 paramiko
 psutil>=5.5.1
 setproctitle
-proxystore
+proxystore  # for proxystore demo plugin
+serpent  # for serpent demo plugin

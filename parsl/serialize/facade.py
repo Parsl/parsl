@@ -1,22 +1,69 @@
-from parsl.serialize.concretes import *  # noqa: F403,F401
-from parsl.serialize.base import METHODS_MAP_DATA, METHODS_MAP_CODE
 import logging
+import parsl.serialize.concretes as c
 
+from parsl.serialize.base import SerializerBase
 from typing import Any, List, Union
 
 logger = logging.getLogger(__name__)
 
+# these are used for two directions:
 
-""" Instantiate the appropriate classes
-"""
-methods_for_code = {}
-methods_for_data = {}
+# 1. to iterate over to find a valid serializer
+# for that, the ordering is important
 
-for key in METHODS_MAP_CODE:
-    methods_for_code[key] = METHODS_MAP_CODE[key]()
+# 2. to perform an ID -> deserializer lookup
 
-for key in METHODS_MAP_DATA:
-    methods_for_data[key] = METHODS_MAP_DATA[key]()
+# These must be registered in reverse order of
+# importance: later registered serializers
+# will take priority over earlier ones. This is
+# to facilitate user registered serializers
+
+methods_for_code: List[SerializerBase]
+methods_for_code = []
+
+methods_for_data: List[SerializerBase]
+methods_for_data = []
+
+deserializers = {}
+
+def clear_serializers():
+    # does not clear deserializers because remote sending back will have a different serializer list (and wants to send back results with one of the default 4) so clearing all the deserializers means we cannot receive results...
+    global methods_for_data, methods_for_code
+    methods_for_code = []
+    methods_for_data = []
+
+def register_serializer(serializer: SerializerBase) -> None:
+    deserializers[serializer._identifier] = serializer
+
+    if serializer._for_code:
+        methods_for_code.insert(0, serializer)
+    if serializer._for_data:
+        methods_for_data.insert(0, serializer)
+
+
+def unregister_serializer(serializer: SerializerBase) -> None:
+    logger.info(f"BENC: deserializers {deserializers}, serializer {serializer}")
+    logger.info(f"BENC: unregistering serializer {serializer}")
+    if serializer._identifier in deserializers:
+        del deserializers[serializer._identifier]
+    else:
+        logger.warning("BENC: not found in deserializers list")
+    if serializer in methods_for_code:
+        logger.info("BENC: removing serializer from methods_for_code")
+        methods_for_code.remove(serializer)
+    else:
+        logger.warning("BENC: not found in methods for code")
+    if serializer in methods_for_data:
+        logger.info("BENC: removing serializer from methods_for_data")
+        methods_for_data.remove(serializer)
+    else:
+        logger.warning("BENC: not found in methods for data")
+
+
+register_serializer(c.DillSerializer())
+register_serializer(c.DillCallableSerializer())
+register_serializer(c.PickleSerializer())
+register_serializer(c.PickleCallableSerializer())
 
 
 def pack_apply_message(func: Any, args: Any, kwargs: Any, buffer_threshold: int = int(128 * 1e6)) -> bytes:
@@ -58,24 +105,34 @@ def serialize(obj: Any, buffer_threshold: int = int(1e6)) -> bytes:
     Individual serialization methods might raise a TypeError (eg. if objects are non serializable)
     This method will raise the exception from the last method that was tried, if all methods fail.
     """
-    result: Union[bytes, Exception]
+    logger.info(f"BENC: Trying to serialize {obj}")
+    result: Union[bytes, Exception, None]
+    result = None
     if callable(obj):
         methods = methods_for_code
     else:
         methods = methods_for_data
 
-    for method in methods.values():
+    for method in methods:
         try:
+            logger.info(f"BENC: trying serializer {method}")
             result = method._identifier + b'\n' + method.serialize(obj)
         except Exception as e:
+            logger.warning(f"BENC: serializer {method} skipping, with exception: {e}")
             result = e
             continue
         else:
             break
 
-    if isinstance(result, BaseException):
+    # if no serializer found
+    if result is None:
+        logger.error("BENC: no serializer returned a result")
+        raise RuntimeError("BENC: No serializers")
+    elif isinstance(result, BaseException):
+        logger.error("BENC: exception from final serializer")
         raise result
     else:
+        logger.info("BENC: serialization complete")
         if len(result) > buffer_threshold:
             logger.warning(f"Serialized object exceeds buffer threshold of {buffer_threshold} bytes, this could cause overflows")
         return result
@@ -91,13 +148,22 @@ def deserialize(payload: bytes) -> Any:
     """
     header, body = payload.split(b'\n', 1)
 
-    if header in methods_for_code:
-        result = methods_for_code[header].deserialize(body)
-    elif header in methods_for_data:
-        result = methods_for_data[header].deserialize(body)
+    if header in deserializers:
+        result = deserializers[header].deserialize(body)
     else:
-        raise TypeError("Invalid header: {!r} in data payload. Buffer is either corrupt or not created by ParslSerializer".format(header))
+        logger.warning("BENC: unknown serialization header: {!r} - trying to load dynamically".format(header))
+        import importlib
+        module_name, class_name = header.split(b' ', 1)
+        try:
+            decoded_module_name = module_name.decode('utf-8')
+        except UnicodeDecodeError as e:
+            raise RuntimeError(f"Got unicode error with string {module_name!r} exception is {e}")
+        module = importlib.import_module(decoded_module_name)
+        deserializer_class = getattr(module, class_name.decode('utf-8'))
+        deserializer = deserializer_class()
+        result = deserializer.deserialize(body)
 
+        # raise TypeError("Invalid serialization header: {!r}".format(header))
     return result
 
 

@@ -1,10 +1,10 @@
 import pytest
-from parsl.serialize.concretes import ProxyStoreSerializer
+from parsl.serialize.plugin_proxystore import create_proxystore_serializer
 
 
 @pytest.mark.local
 def test_proxystore_wrapper():
-    s = ProxyStoreSerializer()
+    s = create_proxystore_serializer()
     d = s.serialize(1)
     assert isinstance(d, bytes)
     assert s.deserialize(d) == 1

@@ -8,33 +8,6 @@ from parsl.serialize.base import SerializerBase
 
 from typing import Any
 
-# parsl/serialize/concretes.py:10: error: Module "proxystore.store" does not explicitly export attribute "Store"  [attr-defined]
-from proxystore.store import Store, get_store, register_store  # type: ignore
-
-from proxystore.connectors.file import FileConnector
-store = Store(name='parsl_store', connector=FileConnector(store_dir="/tmp"))
-register_store(store)
-
-
-class ProxyStoreSerializer(SerializerBase):
-    _identifier = b'99'
-    _for_code = False
-    _for_data = True
-
-    def serialize(self, data: Any) -> bytes:
-        assert data is not None
-        store = get_store("parsl_store")
-        assert store is not None, "Could not find store"
-
-        p = store.proxy(data)
-
-        d = pickle.dumps(p)
-
-        return d
-
-    def deserialize(self, body: bytes) -> Any:
-        return pickle.loads(body)
-
 
 class PickleSerializer(SerializerBase):
     """ Pickle serialization covers most python objects, with some notable exceptions:
