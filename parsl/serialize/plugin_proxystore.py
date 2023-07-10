@@ -44,6 +44,7 @@ def create_proxystore_serializer() -> ProxyStoreSerializer:
     """Creates a serializer but does not register with global system - so this
     can be used in testing."""
 
-    store = Store(name='parsl_store', connector=FileConnector(store_dir="/tmp"))
+    import uuid
+    store = Store(name='parsl_store_' + str(uuid.uuid4()), connector=FileConnector(store_dir="/tmp"))
     register_store(store)
     return ProxyStoreSerializer(store)
