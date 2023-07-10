@@ -2,6 +2,7 @@ from __future__ import annotations
 import hashlib
 from functools import lru_cache, singledispatch
 import logging
+import pickle
 from parsl.dataflow.taskrecord import TaskRecord
 
 from typing import Dict, Any, List, Optional, TYPE_CHECKING
@@ -10,15 +11,6 @@ if TYPE_CHECKING:
     from parsl import DataFlowKernel  # import loop at runtime - needed for typechecking - TODO turn into "if typing:"
 
 from concurrent.futures import Future
-
-# this serialize doesn't work right for memoisation when using Interesting Serializers such as proxystore
-# from parsl.serialize import serialize
-
-
-def serialize(d: Any) -> bytes:
-    import pickle
-    return pickle.dumps(d)
-
 
 import types
 
@@ -62,8 +54,8 @@ def id_for_memo(obj: object, output_ref: bool = False) -> bytes:
 @id_for_memo.register(int)
 @id_for_memo.register(float)
 @id_for_memo.register(type(None))
-def id_for_memo_serialize(obj: object, output_ref: bool = False) -> bytes:
-    return serialize(obj)
+def id_for_memo_pickle(obj: object, output_ref: bool = False) -> bytes:
+    return pickle.dumps(obj)
 
 
 @id_for_memo.register(list)
@@ -76,7 +68,7 @@ def id_for_memo_list(denormalized_list: list, output_ref: bool = False) -> bytes
     for e in denormalized_list:
         normalized_list.append(id_for_memo(e, output_ref=output_ref))
 
-    return serialize(normalized_list)
+    return pickle.dumps(normalized_list)
 
 
 @id_for_memo.register(tuple)
@@ -89,7 +81,7 @@ def id_for_memo_tuple(denormalized_tuple: tuple, output_ref: bool = False) -> by
     for e in denormalized_tuple:
         normalized_list.append(id_for_memo(e, output_ref=output_ref))
 
-    return serialize(normalized_list)
+    return pickle.dumps(normalized_list)
 
 
 @id_for_memo.register(dict)
@@ -108,7 +100,7 @@ def id_for_memo_dict(denormalized_dict: dict, output_ref: bool = False) -> bytes
     for k in keys:
         normalized_list.append(id_for_memo(k))
         normalized_list.append(id_for_memo(denormalized_dict[k], output_ref=output_ref))
-    return serialize(normalized_list)
+    return pickle.dumps(normalized_list)
 
 
 # the LRU cache decorator must be applied closer to the id_for_memo_function call
@@ -120,7 +112,7 @@ def id_for_memo_function(f: types.FunctionType, output_ref: bool = False) -> byt
     This means that changing source code (other than the function name) will
     not cause a checkpoint invalidation.
     """
-    return serialize(["types.FunctionType", f.__name__, f.__module__])
+    return pickle.dumps(["types.FunctionType", f.__name__, f.__module__])
 
 
 class Memoizer:

@@ -60,26 +60,18 @@ def serialize(obj: Any, buffer_threshold: int = int(1e6)) -> bytes:
     """
     result: Union[bytes, Exception]
     if callable(obj):
-        for method in methods_for_code.values():
-            try:
-                result = method._identifier + b'\n' + method.serialize(obj)
-            except Exception as e:
-                result = e
-                continue
-            else:
-                break
+        methods = methods_for_code
     else:
-        for method in methods_for_data.values():
-            logger.error(f"BENC: trying serializer {method}")
-            try:
-                result = method._identifier + b'\n' + method.serialize(obj)
-                logger.error(f"BENC: successful with serializer {method}")
-            except Exception as e:
-                logger.error(f"BENC: failed with with serializer {method}, error: {e}", exc_info=True)
-                result = e
-                continue
-            else:
-                break
+        methods = methods_for_data
+
+    for method in methods.values():
+        try:
+            result = method._identifier + b'\n' + method.serialize(obj)
+        except Exception as e:
+            result = e
+            continue
+        else:
+            break
 
     if isinstance(result, BaseException):
         raise result
