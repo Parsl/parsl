@@ -1,7 +1,6 @@
 # parsl/serialize/concretes.py:10: error: Module "proxystore.store" does not explicitly export attribute "Store"  [attr-defined]
 from proxystore.store import Store, register_store  # type: ignore
 from proxystore.connectors.file import FileConnector
-from parsl.serialize.facade import register_serializer
 
 from parsl.serialize.base import SerializerBase
 
@@ -17,18 +16,19 @@ from typing import Type
 
 logger = logging.getLogger(__name__)
 
+
 class ProxyStoreDeepPickler(dill.Pickler):
 
-    def __init__(self, *args, policy, store, **kwargs):
+    def __init__(self, *args: Any, policy: Type, store: Store, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._store = store
         self._policy = policy
 
-    def reducer_override(self, o):
+    def reducer_override(self, o: Any) -> Any:
         logger.info(f"BENC: reducing object {o}")
 
-        if type(o) is self._policy: # not isinstance, because don't want subclasses (like bool<int)
-            logger.info(f"BENC: Policy class detected")
+        if type(o) is self._policy:  # not isinstance, because want exact class match
+            logger.info("BENC: Policy class detected")
             proxy = self._store.proxy(o)
             return proxy.__reduce__()
         else:
@@ -43,7 +43,7 @@ class ProxyStoreDeepSerializer(SerializerBase):
     _for_code = True
     _for_data = True
 
-    def __init__(self, *, policy: Type = None, store: Optional[Store] = None) -> None:
+    def __init__(self, *, policy: Optional[Type] = None, store: Optional[Store] = None) -> None:
         """Because of jumbled use of this class for init-time configurable
         serialization, and non-configurable remote deserializer loading, the
         store and policy fields can be None... TODO: this would go away if serializer and
@@ -73,12 +73,6 @@ class ProxyStoreDeepSerializer(SerializerBase):
         # dill for deserialization; but otherwise could create a
         # custom Unpickler here...
         return dill.loads(body)
-
-
-def register_proxystore_serializer() -> None:
-    """Initializes proxystore and registers it as a serializer with parsl"""
-    serializer = create_proxystore_serializer_deep_pickle()
-    register_serializer(serializer)
 
 
 def create_deep_proxystore_serializer(*, policy: Type) -> ProxyStoreDeepSerializer:

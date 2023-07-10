@@ -26,11 +26,16 @@ methods_for_data = []
 
 deserializers = {}
 
-def clear_serializers():
-    # does not clear deserializers because remote sending back will have a different serializer list (and wants to send back results with one of the default 4) so clearing all the deserializers means we cannot receive results...
+
+def clear_serializers() -> None:
+    # does not clear deserializers because remote sending back will have a
+    # different serializer list (and wants to send back results with one of
+    # the default 4) so clearing all the deserializers means we cannot receive
+    # results...
     global methods_for_data, methods_for_code
     methods_for_code = []
     methods_for_data = []
+
 
 def register_serializer(serializer: SerializerBase) -> None:
     deserializers[serializer._identifier] = serializer

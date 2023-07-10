@@ -17,9 +17,11 @@ logger = logging.getLogger(__name__)
 def func(x, y):
     return x + y + 1
 
+
 @parsl.python_app
 def func2(v):
     return str(v)
+
 
 class MyDemo:
     def __init__(self, v):
@@ -40,16 +42,15 @@ class MyDemo:
 def test_proxystore_single_call():
     later_c = [v for v in parsl.serialize.facade.methods_for_code]
     later_d = [v for v in parsl.serialize.facade.methods_for_data]
-    clear_serializers() # does not clear deserializers... to allow results to come back...
+    clear_serializers()
     s = create_deep_proxystore_serializer(policy=MyDemo)
-
 
     register_serializer(s)
 
     try:
         assert func(100, 4).result() == 105  # but how do we know this went through proxystore?
 
-        m = MyDemo([1,2,3,4])
+        m = MyDemo([1, 2, 3, 4])
 
         assert func2(m).result() == "[1, 2, 3, 4]"
 
