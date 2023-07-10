@@ -154,22 +154,20 @@ class TaskVineManagerConfig:
     project_password_file: Optional[str] = None
 
     # Global task settings
-    init_command: str = ""
     env_vars: Optional[dict] = None # env
     env_pack: Optional[str] = None
     app_pack: bool = False
     extra_pkgs: Optional[list] = None
     max_retries: int = 1
-    task_mode: str = "python"
-
+    
     # Performance-specific settings
     shared_fs: bool = False
     autolabel: bool = False
     autolabel_algorithm: str = 'max-xput'
-    autolabel_window: Optional[int] = 1
+    autolabel_window: Optional[int] = None
     autocategory: bool = True
     enable_peer_transfers: bool = True
-    wait_for_workers: Optional[int] = 0
+    wait_for_workers: Optional[int] = None
 
     # Logging settings
     vine_log_dir: Optional[str] = None

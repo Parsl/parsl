@@ -305,7 +305,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         task_dir = "{:04d}".format(executor_task_id)
         return os.path.join(self.function_data_dir, task_dir, *path_components)
 
-    def submit(self, func, resource_specification, *args, **kwargs):
+    def submit(self, func, resource_specification, app_mode='regular', *args, **kwargs):
         """Processes the Parsl app by its arguments and submits the function
         information to the task queue, to be executed using the TaskVine
         system. The args and kwargs are processed for input and output files to
@@ -385,8 +385,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         function_file = None
         result_file = None
         map_file = None
-        # Use executor's serialization method if task mode is regular
-        if self.manager_config.task_mode == 'regular_task':
+        # Use executor's serialization method if app mode is 'regular'
+        if app_mode == 'regular':
             # Get path to files that will contain the pickled function, result, and map of input and output files
             function_file = self._path_in_task(executor_task_id, "function")
             result_file = self._path_in_task(executor_task_id, "result")
@@ -625,7 +625,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
     @wrap_with_logs
     def _collect_taskvine_results(self):
-        """Sets the values of tasks' futures of tasks completed by taskvine.
+        """Sets the values of tasks' futures completed by taskvine.
         """
         logger.debug("Starting Collector Thread")
         try:
@@ -686,12 +686,6 @@ def _taskvine_submit_wait(ready_task_queue=None,
     logger.debug("Starting TaskVine Submit/Wait Process")
     setproctitle("parsl: TaskVine submit/wait")
 
-    # Construct launch command for each task
-    # Used only when task mode is 'regular'
-    launch_cmd = "python3 exec_parsl_function.py {mapping} {function} {result}"
-    if manager_config.init_command != '':
-        launch_cmd = manager_config.init_command + ";" + launch_cmd
-
     # Enable debugging flags and create logging file
     if manager_config.vine_log_dir is not None:
         logger.debug("Setting debugging flags and creating logging file at {}".format(manager_config.vine_log_dir))
@@ -736,6 +730,10 @@ def _taskvine_submit_wait(ready_task_queue=None,
     # Mapping of parsl local file name to TaskVine File object
     # dict[str] -> vine File object
     parsl_file_name_to_vine_file = {}
+    
+    # Mapping of tasks from vine id to parsl id
+    # Dict[str] -> str
+    vine_id_to_executor_task_id = {}
 
     # Find poncho run script to activate an environment tarball
     poncho_run_script = shutil.which("poncho_package_run")
@@ -743,10 +741,6 @@ def _taskvine_submit_wait(ready_task_queue=None,
     # Declare helper scripts as cache-able and peer-transferable
     package_run_script_file = m.declare_file(poncho_run_script, cache=True, peer_transfer=True)
     exec_parsl_function_file = m.declare_file(exec_parsl_function.__file__, cache=True, peer_transfer=True)
-
-    # Mapping of tasks from vine id to parsl id
-    # Dict[str] -> str
-    vine_id_to_executor_task_id = {}
 
     logger.debug("Entering main loop of TaskVine manager")
 
@@ -766,8 +760,9 @@ def _taskvine_submit_wait(ready_task_queue=None,
             except queue.Empty:
                 logger.debug("Queue is empty")
                 continue
-            if manager_config.task_mode == 'regular_task':
+            if task.app_mode == 'regular':
                 # Create command string
+                launch_cmd = "python3 exec_parsl_function.py {mapping} {function} {result}"
                 command_str = launch_cmd.format(mapping=os.path.basename(task.map_file),
                                                 function=os.path.basename(task.function_file),
                                                 result=os.path.basename(task.result_file))
@@ -782,7 +777,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
                                                                    reason="task could not be created by taskvine",
                                                                    status=-1))
                     continue
-            elif manager_config.task_mode == 'python_task':
+            elif task.app_mode == 'python':
                 # strip off decorator from function source
                 fn_src = '\n'.join((task.func_src).split('\n')[1:])
 
@@ -803,7 +798,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
                                                                    status=-1))
                     continue
             else:
-                raise Exception(f'Unrecognized task mode {manager_config.task_mode. Exiting...'}
+                raise Exception(f'Unrecognized task mode {task.app_mode. Exiting...'}
            
             # Add environment file to the task if possible
             # Prioritize local poncho environment over global poncho environment
@@ -812,12 +807,14 @@ def _taskvine_submit_wait(ready_task_queue=None,
             
             # check if env_pack is specified
             if manager_config.env_pack is not None:
+                # check if the environment file is not already created
                 if manager_config.env_pack not in poncho_env_to_file:
-                    if manager_config.env_pack.endswith('.tar.gz'):
-                        poncho_env_file = m.declare_poncho(manager_config.env_pack, cache=True, peer_transfer=True)
-                    else:
+                    # if the environment is already packaged as a tarball, then add the file
+                    # otherwise it is an environment name or path, so create a poncho tarball then add it
+                    if not manager_config.env_pack.endswith('.tar.gz'):
                         env_tarball = str(uuid.uuid4()) + '.tar.gz'
                         subprocess.run([self.package_create_script, manager_config.env_pack, env_tarball], stdout=subprocess.DEVNULL, check=True)
+                    poncho_env_file = m.declare_poncho(manager_config.env_pack, cache=True, peer_transfer=True)
                     poncho_env_to_file[manager_config.env_pack] = poncho_env_file
                 else:
                     poncho_env_file = poncho_env_to_file[manager_config.env_pack]
@@ -871,8 +868,9 @@ def _taskvine_submit_wait(ready_task_queue=None,
                 for var in manager_config.env_vars:
                     t.set_env_var(str(var), str(manager_config.env_vars[var]))
 
-            if manager_config.task_mode == 'regular_task':
-                # Add helper function that execute parsl functions on remote nodes
+            if task.app_mode == 'regular':
+                # Add helper files that execute parsl functions on remote nodes
+                # only needed for tasks with 'regular' mode
                 t.add_input(exec_parsl_function_file, "exec_parsl_function.py")
 
                 # Declare and add task-specific function, data, and result files to task
@@ -917,7 +915,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
             try:
                 vine_id = m.submit(t)
                 logger.debug("Submitted executor task {} to TaskVine".format(task.executor_id))
-                vine_id_to_executor_task_id[str(vine_id)] = str(task.executor_id)
+                vine_id_to_executor_task_id[str(vine_id)] = str(task.executor_id), task.app_mode
             except Exception as e:
                 logger.error("Unable to submit task to taskvine: {}".format(e))
                 finished_task_queue.put_nowait(VineTaskToParsl(executor_id=task.executor_id,
@@ -939,11 +937,12 @@ def _taskvine_submit_wait(ready_task_queue=None,
                     task_found = False
                     continue
                 logger.debug('Found a task!')
+                executor_task_id = vine_id_to_executor_task_id[str(t.id)][0]
+                app_mode_of_task = vine_id_to_executor_task_id[str(t.id)][1]
+                vine_id_to_executor_task_id.pop(str(t.id))
                 # When a task is found
-                if manager_config.task_mode == 'regular_task':
-                    executor_task_id = vine_id_to_executor_task_id[str(t.id)]
+                if app_mode_of_task == 'regular':
                     result_file = result_file_of_task_id.pop(executor_task_id)
-                    vine_id_to_executor_task_id.pop(str(t.id))
 
                     logger.debug(f"completed executor task info: {executor_task_id}, {t.category}, {t.command}, {t.std_output}")
 
@@ -976,22 +975,22 @@ def _taskvine_submit_wait(ready_task_queue=None,
                                                                    result=e,
                                                                    reason=reason,
                                                                    status=t.exit_code))
-                elif manager_config.task_mode == 'python_task':
-                    executor_task_id = vine_id_to_executor_task_id[str(t.id)]
+                elif app_mode_of_task == 'python':
                     logger.debug(f"completed executor task with python mode info: {executor_task_id}, {t.category}")
                     finished_task_queue.put_nowait(VineTaskToParsl(executor_id=executor_task_id,
                                                                    result_received=True,
                                                                    result=t.output,
                                                                    reason=None,
                                                                    status=t.exit_code))
-                elif manager_config.task_mode == 'serverless_task':
-                    executor_task_id = vine_id_to_executor_task_id[str(t.id)]
+                elif app_mode_of_task == 'serverless':
                     logger.debug(f"completed executor task with serverless mode info: {executor_task_id}, {t.category}")
                     finished_task_queue.put_nowait(VineTaskToParsl(executor_id=executor_task_id,
                                                                    result_received=True,
                                                                    result=t.output,
                                                                    reason=None,
                                                                    status=t.exit_code))
+                else:
+                    raise Exception('Unknown app mode: {app_mode_of_task}.')
 
 
     logger.debug("Exiting TaskVine Monitoring Process")
@@ -1044,6 +1043,7 @@ def _explain_taskvine_result(vine_task):
 @wrap_with_logs
 def _taskvine_factory(should_stop, factory_config):
     logger.debug("Starting TaskVine factory process")
+    # create the factory according to the project name
     if factory_config._project_name:
         factory = Factory(batch_type=factory_config.batch_type,
                           manager_name=factory_config._project_name,
@@ -1057,9 +1057,7 @@ def _taskvine_factory(should_stop, factory_config):
     if factory_config._project_password_file:
         factory.password=factory_config._project_password_file
     factory.factory_timeout = factory_config.factory_timeout 
-
     factory.scratch_dir = factory_config.scratch_dir
-
     factory.min_workers = factory_config.min_workers
     factory.max_workers = factory_config.max_workers
     factory.workers_per_cycle = factory_config.workers_per_cycle
@@ -1082,7 +1080,9 @@ def _taskvine_factory(should_stop, factory_config):
         factory.condor_requirements = factory_config.condor_requirements
     if factory_config.batch_options:
         factory.batch_options = factory_config.batch_options
-    
+   
+    # setup factory context and sleep for a second for every loop to
+    # avoid wasting CPU
     with factory:
         while not should_stop.value:
             time.sleep(1)
