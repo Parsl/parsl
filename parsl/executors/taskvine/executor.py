@@ -289,7 +289,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         task_dir = "{:04d}".format(executor_task_id)
         return os.path.join(self.function_data_dir, task_dir, *path_components)
 
-    def submit(self, func, call_specs, *args, **kwargs):
+    def submit(self, func, resource_specification, *args, **kwargs):
         """Processes the Parsl app by its arguments and submits the function
         information to the task queue, to be executed using the TaskVine
         system. The args and kwargs are processed for input and output files to
@@ -300,7 +300,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         func : function
             Parsl app to be submitted to the TaskVine system
-        call_specs: dict
+        resource_specification: dict
             Dictionary containing relevant info about task.
             Include information about resources of task, execution mode
             of task (out of {regular, python, serverless}), and which app
@@ -312,9 +312,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """
 
         # Default execution mode of apps is regular (using TaskVineExecutor serialization and execution mode)
-        exec_mode = call_specs.get('exec_mode', 'regular')
+        exec_mode = resource_specification.get('exec_mode', 'regular')
 
-        logger.debug(f'Got call specs: {call_specs}')
+        logger.debug(f'Got resource specification: {resource_specification}')
 
         # Detect resources and features of a submitted Parsl app
         cores = None
@@ -324,22 +324,22 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         priority = None
         category = None
         running_time_min = None
-        if call_specs and isinstance(call_specs, dict):
-            for k in call_specs:
+        if resource_specification and isinstance(resource_specification, dict):
+            for k in resource_specification:
                 if k == 'cores':
-                    cores = call_specs[k]
+                    cores = resource_specification[k]
                 elif k == 'memory':
-                    memory = call_specs[k]
+                    memory = resource_specification[k]
                 elif k == 'disk':
-                    disk = call_specs[k]
+                    disk = resource_specification[k]
                 elif k == 'gpus':
-                    gpus = call_specs[k]
+                    gpus = resource_specification[k]
                 elif k == 'priority':
-                    priority = call_specs[k]
+                    priority = resource_specification[k]
                 elif k == 'category':
-                    category = call_specs[k]
+                    category = resource_specification[k]
                 elif k == 'running_time_min':
-                    running_time_min = call_specs[k]
+                    running_time_min = resource_specification[k]
 
         # Assign executor task id to app
         executor_task_id = self.executor_task_counter
@@ -389,7 +389,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             logger.debug("Creating executor task {} with function at: {} and result to be found at: {}".format(executor_task_id, function_file, result_file))
 
             # Pickle the result into object to pass into message buffer
-            self._serialize_function(call_specs['app_type'], function_file, func, args, kwargs)
+            self._serialize_function(resource_specification['app_type'], function_file, func, args, kwargs)
 
             # Construct the map file of local filenames at worker
             self._construct_map_file(map_file, input_files, output_files)

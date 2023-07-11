@@ -252,7 +252,7 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     def submit(
         self,
         func: Callable,
-        call_specs: Dict[str, Any],
+        parsl_resource_specification: Dict[str, Any],
         *args: Any,
         **kwargs: Any,
     ):
@@ -260,7 +260,7 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         :param func: The callable to submit as a job to Flux
 
-        :param call_specs: A mapping defining the resources to allocate to the Flux job.
+        :param parsl_resource_specification: A mapping defining the resources to allocate to the Flux job.
 
             Only the following keys are checked for:
 
@@ -292,7 +292,7 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                 infile_handle.write(fn_buf)
             future = FluxFutureWrapper()
             self._submission_queue.put(
-                _FluxJobInfo(future, task_id, infile, outfile, call_specs)
+                _FluxJobInfo(future, task_id, infile, outfile, parsl_resource_specification)
             )
             return future
 

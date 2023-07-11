@@ -34,11 +34,14 @@ class UnsupportedFeatureError(ExecutorError):
         self.target_executor = target_executor
 
     def __str__(self):
-        return "The {} feature is unsupported in {}. \
-Please checkout {} for this feature".format(self.feature,
-                                            self.current_executor,
-                                            self.target_executor)
-
+        if self.target_executor:
+            return "The {} feature is unsupported in {}. \
+                    Please checkout {} for this feature".format(self.feature,
+                                                                self.current_executor,
+                                                                self.target_executor)
+        else:
+            return "The {} feature is unsupported in {}.".format(self.feature,
+                                                                 self.current_executor)
 
 class ScalingFailed(ExecutorError):
     """Scaling failed due to error in Execution provider."""
