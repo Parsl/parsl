@@ -472,12 +472,18 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Either build a dictionary with the source of the function, or pickle
         # the function directly:
+        use_source_code = False
         if app_type == 'python':
-            function_info = {"source code": inspect.getsource(parsl_fn),
-                             "name": parsl_fn.__name__,
-                             "args": parsl_fn_args,
-                             "kwargs": parsl_fn_kwargs}
-        else:
+            try:
+                function_info = {"source code": inspect.getsource(parsl_fn),
+                                "name": parsl_fn.__name__,
+                                "args": parsl_fn_args,
+                                "kwargs": parsl_fn_kwargs}
+                use_source_code = True
+            except:
+                pass
+
+        if not use_source_code:
             function_info = {"byte code": pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
                                                              buffer_threshold=1024 * 1024)}
 
