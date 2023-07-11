@@ -129,8 +129,46 @@ def encode_function(user_namespace, fn, fn_name, fn_args, fn_kwargs):
 
     return (code, result_name)
 
+def realign_source_code(src_code: str):
+    # We expect the first line in the source code to be a parsl decorator.
+    # This function then detects type of indentation (tab or space) and number
+    # of indentations then trims each line with that amount.
+    type_indent = None
+    num_indent = 0
+    src_code_conformed = False
+    for c in src_code:
+        if c != '@':
+            num_indent += 1
+            type_indent = c
+        else:
+            src_code_conformed = True
+            break
+
+    if not src_code_conformed:
+        raise Exception('Source code of function does not have a decorator as expected. Exiting...')
+
+    if type_indent != ' ' and type_indent != '\t':
+        raise Exception('Source code of function is not indented with either spaces or tabs. Exiting...')
+    
+    # no alignment needed
+    if num_indent == 0:
+        return src_code
+
+    prefix = type_indent * num_indent
+    aligned_code = ''
+    src_lines = src_code.split('\n')
+    for l in src_lines:
+        if l.startswith(prefix):
+            aligned_code += l[num_indent:]
+        else:
+            raise Exception('Source code of function does not align properly. Exiting...')
+        aligned_code += '\n'
+    return aligned_code
 
 def encode_source_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name):
+    # Realign source code to the leftmost indentation
+    fn = realign_source_code(fn)
+
     # We drop the first line as it names the parsl decorator used (i.e., @python_app)
     source = fn.split('\n')[1:]
     fn_app = "{0} = {1}(*{2}, **{3})".format(result_name, fn_name, args_name, kwargs_name)
