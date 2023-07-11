@@ -1,12 +1,16 @@
 import importlib.util
+import itertools
 import logging
 import os
 import pathlib
+import time
+import types
 import signal
 import sys
 import tempfile
 import threading
 import traceback
+import typing as t
 from datetime import datetime
 from glob import glob
 from itertools import chain
@@ -290,3 +294,67 @@ def pytest_ignore_collect(path):
         return True
     else:
         return False
+
+
+def create_traceback(start: int = 0) -> t.Optional[types.TracebackType]:
+    """
+    Dynamically create a traceback.
+
+    Builds a traceback from the top of the stack (the currently executing frame) on
+    down to the root frame.  Optionally, use start to build from an earlier stack
+    frame.
+
+    N.B. uses `sys._getframe`, which I only know to exist in CPython.
+    """
+    tb = None
+    for depth in itertools.count(start + 1, 1):
+        try:
+            frame = sys._getframe(depth)
+            tb = types.TracebackType(tb, frame, frame.f_lasti, frame.f_lineno)
+        except ValueError:
+            break
+    return tb
+
+
+@pytest.fixture
+def try_assert():
+    def _impl(
+        test_func: t.Callable[[], bool],
+        fail_msg: str = "",
+        timeout_ms: float = 5000,
+        attempts: int = 0,
+        check_period_ms: int = 20,
+    ):
+        tb = create_traceback(start=1)
+        timeout_s = abs(timeout_ms) / 1000.0
+        check_period_s = abs(check_period_ms) / 1000.0
+        if attempts > 0:
+            for _attempt_no in range(attempts):
+                if test_func():
+                    return
+                time.sleep(check_period_s)
+            else:
+                att_fail = (
+                    f"\n  (Still failing after attempt limit [{attempts}], testing"
+                    f" every {check_period_ms}ms)"
+                )
+                exc = AssertionError(f"{str(fail_msg)}{att_fail}".strip())
+                raise exc.with_traceback(tb)
+
+        elif timeout_s > 0:
+            end = time.monotonic() + timeout_s
+            while time.monotonic() < end:
+                if test_func():
+                    return
+                time.sleep(check_period_s)
+            att_fail = (
+                f"\n  (Still failing after timeout [{timeout_ms}ms], with attempts "
+                f"every {check_period_ms}ms)"
+            )
+            exc = AssertionError(f"{str(fail_msg)}{att_fail}".strip())
+            raise exc.with_traceback(tb)
+
+        else:
+            raise AssertionError("Bad assert call: no attempts or timeout period")
+
+    yield _impl
