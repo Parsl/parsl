@@ -47,7 +47,6 @@ from parsl.executors.taskvine.utils import ParslFileToVine
 
 # Import other libraries
 import typeguard
-import autopep8
 
 # Import TaskVine python modules
 try:
@@ -412,7 +411,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # need source of function to send tasks as python or serverless tasks
         if exec_mode == 'python' or exec_mode == 'serverless':
-            func_src = autopep8.fix_code(inspect.getsource(func))
+            func_src = inspect.getsource(func)
         else:
             func_src = None
         task_info = ParslTaskToVine(executor_id=executor_task_id,
@@ -474,7 +473,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Either build a dictionary with the source of the function, or pickle
         # the function directly:
         if app_type == 'python':
-            function_info = {"source code": autopep8.fix_code(inspect.getsource(parsl_fn)),
+            function_info = {"source code": inspect.getsource(parsl_fn),
                              "name": parsl_fn.__name__,
                              "args": parsl_fn_args,
                              "kwargs": parsl_fn_kwargs}
