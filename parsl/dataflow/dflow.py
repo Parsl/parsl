@@ -1202,15 +1202,16 @@ class DataFlowKernel:
             if not executor.bad_state_is_set:
                 if isinstance(executor, BlockProviderExecutor):
                     logger.info(f"Scaling in executor {executor.label}")
-                    job_ids = executor.provider.resources.keys()
-                    block_ids = executor.scale_in(len(job_ids))
-                    if self.monitoring and block_ids:
-                        new_status = {}
-                        for bid in block_ids:
-                            new_status[bid] = JobStatus(JobState.CANCELLED)
-                        msg = executor.create_monitoring_info(new_status)
-                        logger.debug("Sending message {} to hub from DFK".format(msg))
-                        self.monitoring.send(MessageType.BLOCK_INFO, msg)
+                    if executor.provider:
+                        job_ids = executor.provider.resources.keys()
+                        block_ids = executor.scale_in(len(job_ids))
+                        if self.monitoring and block_ids:
+                            new_status = {}
+                            for bid in block_ids:
+                                new_status[bid] = JobStatus(JobState.CANCELLED)
+                            msg = executor.create_monitoring_info(new_status)
+                            logger.debug("Sending message {} to hub from DFK".format(msg))
+                            self.monitoring.send(MessageType.BLOCK_INFO, msg)
                 logger.info(f"Shutting down executor {executor.label}")
                 executor.shutdown()
                 logger.info(f"Shut down executor {executor.label}")

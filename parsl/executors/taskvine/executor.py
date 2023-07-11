@@ -123,7 +123,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # If TaskVine factory is used, disable the Parsl provider
         if use_factory:
-            provider = LocalProvider(init_blocks=0, max_blocks=0)
+            provider = None
 
         # Initialize the parent class with the execution provider and block error handling enabled.
         BlockProviderExecutor.__init__(self, provider=provider,
