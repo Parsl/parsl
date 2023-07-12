@@ -28,25 +28,6 @@ class PickleSerializer(SerializerBase):
         return pickle.loads(body)
 
 
-class PickleCallableSerializer(SerializerBase):
-    """This serializer is a variant of the PickleSerializer that will
-    serialize and deserialize callables using an lru_cache, under the
-    assumption that callables are immutable and so can be cached.
-    """
-
-    _identifier = b'C1'
-    _for_code = True
-    _for_data = False
-
-    @functools.lru_cache
-    def serialize(self, data: Any) -> bytes:
-        return pickle.dumps(data)
-
-    @functools.lru_cache
-    def deserialize(self, body: bytes) -> Any:
-        return pickle.loads(body)
-
-
 class DillSerializer(SerializerBase):
     """ Dill serialization works on a superset of object including the ones covered by pickle.
     However for most cases pickle is faster. For most callable objects the additional overhead
