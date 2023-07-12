@@ -3,6 +3,7 @@ from abc import abstractmethod
 from string import Template
 
 from parsl.providers.errors import SchedulerMissingArgs, ScriptPathError
+from parsl.launchers.base import Launcher
 from parsl.launchers.errors import BadLauncher
 from parsl.providers.base import ExecutionProvider
 
@@ -66,7 +67,7 @@ class ClusterProvider(ExecutionProvider):
         self.launcher = launcher
         self.walltime = walltime
         self.cmd_timeout = cmd_timeout
-        if not callable(self.launcher):
+        if not isinstance(self.launcher, Launcher):
             raise BadLauncher(self.launcher)
 
         self.script_dir = None

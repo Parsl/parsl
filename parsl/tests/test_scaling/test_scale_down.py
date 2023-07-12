@@ -1,80 +1,97 @@
 import logging
-import parsl
-import pytest
 import time
-from parsl import python_app
 
+import pytest
+
+import parsl
+
+from parsl import File, python_app
 from parsl.providers import LocalProvider
 from parsl.channels import LocalChannel
-# from parsl.launchers import SimpleLauncher
 from parsl.launchers import SingleNodeLauncher
-
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 
 logger = logging.getLogger(__name__)
+
+_max_blocks = 5
+_min_blocks = 2
 
 
 def local_config():
     return Config(
         executors=[
             HighThroughputExecutor(
-                heartbeat_period=2,
-                heartbeat_threshold=6,
-                poll_period=1,
+                heartbeat_period=1,
+                heartbeat_threshold=2,
+                poll_period=100,
                 label="htex_local",
+                address="127.0.0.1",
                 max_workers=1,
                 provider=LocalProvider(
                     channel=LocalChannel(),
                     init_blocks=0,
-                    max_blocks=5,
-                    min_blocks=2,
+                    max_blocks=_max_blocks,
+                    min_blocks=_min_blocks,
                     launcher=SingleNodeLauncher(),
                 ),
             )
         ],
-        max_idletime=5,
+        max_idletime=0.5,
         strategy='htex_auto_scale',
     )
 
 
 @python_app
-def sleeper(t):
+def waiting_app(ident: int, inputs=()):
+    import pathlib
     import time
-    time.sleep(t)
+
+    # Approximate an Event by writing to files; the test logic will poll this file
+    with open(inputs[0], "a") as f:
+        f.write(f"Ready: {ident}\n")
+
+    # Similarly, use Event approximation (file check!) by polling.
+    may_finish_file = pathlib.Path(inputs[1])
+    while not may_finish_file.exists():
+        time.sleep(0.01)
 
 
 # see issue #1885 for details of failures of this test.
 # at the time of issue #1885 this test was failing frequently
 # in CI.
 @pytest.mark.local
-def test_scale_out():
-    logger.info("start")
+def test_scale_out(tmpd_cwd, try_assert):
     dfk = parsl.dfk()
 
-    logger.info("initial asserts")
-    assert len(dfk.executors['htex_local'].connected_managers()) == 0, "Expected 0 managers at start"
+    num_managers = len(dfk.executors['htex_local'].connected_managers())
+
+    assert num_managers == 0, "Expected 0 managers at start"
     assert dfk.executors['htex_local'].outstanding == 0, "Expected 0 tasks at start"
 
-    logger.info("launching tasks")
-    fus = [sleeper(i) for i in [15 for x in range(0, 10)]]
+    ntasks = 10
+    ready_path = tmpd_cwd / "workers_ready"
+    finish_path = tmpd_cwd / "workers_may_continue"
+    ready_path.touch()
+    inputs = [File(str(ready_path)), File(str(finish_path))]
 
-    logger.info("waiting for warm up")
-    time.sleep(15)
+    futs = [waiting_app(i, inputs=inputs) for i in range(ntasks)]
 
-    logger.info("asserting 5 managers")
-    assert len(dfk.executors['htex_local'].connected_managers()) == 5, "Expected 5 managers after some time"
+    while ready_path.read_text().count("\n") < _max_blocks:
+        time.sleep(0.5)
 
-    logger.info("waiting for all futures to complete")
-    [x.result() for x in fus]
+    assert len(dfk.executors['htex_local'].connected_managers()) == _max_blocks
 
-    logger.info("asserting 0 outstanding tasks after completion")
-    assert dfk.executors['htex_local'].outstanding == 0, "Expected 0 outstanding tasks after future completion"
+    finish_path.touch()  # Approximation of Event, via files
+    [x.result() for x in futs]
 
-    logger.info("waiting a while for scale down")
-    time.sleep(25)
+    assert dfk.executors['htex_local'].outstanding == 0
 
-    logger.info("asserting 2 managers remain")
-    assert len(dfk.executors['htex_local'].connected_managers()) == 2, "Expected 2 managers when no tasks, lower bound by min_blocks"
+    def assert_kernel():
+        return len(dfk.executors['htex_local'].connected_managers()) == _min_blocks
 
-    logger.info("test passed")
+    try_assert(
+        assert_kernel,
+        fail_msg=f"Expected {_min_blocks} managers when no tasks (min_blocks)",
+        timeout_ms=15000,
+    )
