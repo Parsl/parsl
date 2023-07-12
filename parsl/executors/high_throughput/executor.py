@@ -595,10 +595,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         except TypeError:
             raise SerializationError(func.__name__)
 
-        msg = {"task_id": task_id,
-               "buffer": fn_buf}
+        msg = {"task_id": task_id, "buffer": fn_buf}
 
-        # Post task to the the outgoing queue
+        # Post task to the outgoing queue
         self.outgoing_q.put(msg)
 
         # Return the future
