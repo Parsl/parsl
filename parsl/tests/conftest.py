@@ -161,9 +161,9 @@ def load_dfk_local_module(request, pytestconfig):
     parsl.load. It should be a Callable that returns a parsl Config object.
 
     If local_setup and/or local_teardown are callables (such as functions) in
-    the test module, they they will be invoked before/after the tests. This
-    can be used to perform more interesting DFK initialisation not possible
-    with local_config.
+    the test module, they will be invoked before/after the tests. This can
+    be used to perform more interesting DFK initialisation not possible with
+    local_config.
     """
 
     config = pytestconfig.getoption('config')[0]
