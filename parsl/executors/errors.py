@@ -43,6 +43,7 @@ class UnsupportedFeatureError(ExecutorError):
             return "The {} feature is unsupported in {}.".format(self.feature,
                                                                  self.current_executor)
 
+
 class ScalingFailed(ExecutorError):
     """Scaling failed due to error in Execution provider."""
 

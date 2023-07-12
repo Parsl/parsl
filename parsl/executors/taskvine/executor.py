@@ -122,7 +122,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # If TaskVine factory is used, disable the Parsl provider
         if use_factory:
-            provider = None
+            provider = LocalProvider(init_blocks=0, max_blocks=0)
 
         # Initialize the parent class with the execution provider and block error handling enabled.
         BlockProviderExecutor.__init__(self, provider=provider,
@@ -476,11 +476,12 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if app_type == 'python':
             try:
                 function_info = {"source code": inspect.getsource(parsl_fn),
-                                "name": parsl_fn.__name__,
-                                "args": parsl_fn_args,
-                                "kwargs": parsl_fn_kwargs}
+                                 "name": parsl_fn.__name__,
+                                 "args": parsl_fn_args,
+                                 "kwargs": parsl_fn_kwargs}
                 use_source_code = True
-            except:
+            except Exception:
+                logger.debug(f'Function {parsl_fn} cannot be serialized with source code, default to pack_apply_message.')
                 pass
 
         if not use_source_code:

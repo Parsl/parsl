@@ -129,6 +129,7 @@ def encode_function(user_namespace, fn, fn_name, fn_args, fn_kwargs):
 
     return (code, result_name)
 
+
 def realign_source_code(src_code: str):
     # We expect the first line in the source code to be a parsl decorator.
     # This function then detects type of indentation (tab or space) and number
@@ -149,7 +150,7 @@ def realign_source_code(src_code: str):
 
     if type_indent != ' ' and type_indent != '\t':
         raise Exception('Source code of function is not indented with either spaces or tabs. Exiting...')
-    
+
     # no alignment needed
     if num_indent == 0:
         return src_code
@@ -157,13 +158,14 @@ def realign_source_code(src_code: str):
     prefix = type_indent * num_indent
     aligned_code = ''
     src_lines = src_code.split('\n')
-    for l in src_lines:
-        if l.startswith(prefix):
-            aligned_code += l[num_indent:]
+    for line in src_lines:
+        if line.startswith(prefix):
+            aligned_code += line[num_indent:]
         else:
             raise Exception('Source code of function does not align properly. Exiting...')
         aligned_code += '\n'
     return aligned_code
+
 
 def encode_source_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name):
     # Realign source code to the leftmost indentation

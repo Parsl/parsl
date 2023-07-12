@@ -79,7 +79,7 @@ class TaskRecord(TypedDict, total=False):
     id: int
     try_id: int
 
-    call_specs: Dict[str, Any]
+    resource_specification: Dict[str, Any]
     """Dictionary containing relevant info for a task execution.
     Includes resources to allocate, execution mode, and
     app type (python, bash) as a given
