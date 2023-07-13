@@ -80,21 +80,7 @@ def remap_all_files(mapping, fn_args, fn_kwargs):
 
 def unpack_function(function_info, user_namespace):
     """ Unpack a function according to its encoding scheme."""
-    if "source code" in function_info:
-        return unpack_source_code_function(function_info, user_namespace)
-    elif "byte code" in function_info:
-        return unpack_byte_code_function(function_info, user_namespace)
-    else:
-        raise ValueError("Function file does not have a valid function representation.")
-
-
-def unpack_source_code_function(function_info, user_namespace):
-    """ Returns source code, name, positional arguments, and keyword arguments for a function."""
-    source_code = function_info["source code"]
-    name = function_info["name"]
-    args = function_info["args"]
-    kwargs = function_info["kwargs"]
-    return (source_code, name, args, kwargs)
+    return unpack_byte_code_function(function_info, user_namespace)
 
 
 def unpack_byte_code_function(function_info, user_namespace):
@@ -106,8 +92,7 @@ def unpack_byte_code_function(function_info, user_namespace):
 
 
 def encode_function(user_namespace, fn, fn_name, fn_args, fn_kwargs):
-    """ Register the given function to the given namespace, whether the function is given
-    as source code or as Python object."""
+    """ Register the given function to the given namespace."""
     # Returns a tuple (code, result_name)
     # code can be exec in the user_namespace to produce result_name.
     prefix = "parsl_"
@@ -120,65 +105,12 @@ def encode_function(user_namespace, fn, fn_name, fn_args, fn_kwargs):
                            kwargs_name: fn_kwargs,
                            result_name: result_name})
 
-    if isinstance(fn, str):
-        code = encode_source_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name)
-    elif callable(fn):
+    if callable(fn):
         code = encode_byte_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name)
     else:
         raise ValueError("Function object does not look like a function.")
 
     return (code, result_name)
-
-
-def realign_source_code(src_code: str):
-    # We expect the first line in the source code to be a parsl decorator.
-    # This function then detects type of indentation (tab or space) and number
-    # of indentations then trims each line with that amount.
-    type_indent = None
-    num_indent = 0
-    src_code_conformed = False
-    for c in src_code:
-        if c != '@':
-            num_indent += 1
-            type_indent = c
-        else:
-            src_code_conformed = True
-            break
-
-    if not src_code_conformed:
-        raise Exception('Source code of function does not have a decorator as expected. Exiting...')
-
-    if type_indent != ' ' and type_indent != '\t':
-        raise Exception('Source code of function is not indented with either spaces or tabs. Exiting...')
-
-    # no alignment needed
-    if num_indent == 0:
-        return src_code
-
-    prefix = type_indent * num_indent
-    aligned_code = ''
-    src_lines = src_code.split('\n')
-    for line in src_lines:
-        if line.startswith(prefix):
-            aligned_code += line[num_indent:]
-        else:
-            raise Exception('Source code of function does not align properly. Exiting...')
-        aligned_code += '\n'
-    return aligned_code
-
-
-def encode_source_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name):
-    # Realign source code to the leftmost indentation
-    fn = realign_source_code(fn)
-
-    # We drop the first line as it names the parsl decorator used (i.e., @python_app)
-    source = fn.split('\n')[1:]
-    fn_app = "{0} = {1}(*{2}, **{3})".format(result_name, fn_name, args_name, kwargs_name)
-
-    source.append(fn_app)
-
-    code = "\n".join(source)
-    return code
 
 
 def encode_byte_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name):
