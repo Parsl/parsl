@@ -55,7 +55,6 @@ try:
     from ndcctools.taskvine import Manager
     from ndcctools.taskvine import Factory
     from ndcctools.taskvine import Task
-    from ndcctools.taskvine import PythonTask
     from ndcctools.taskvine.cvine import VINE_ALLOCATION_MODE_MAX_THROUGHPUT
     from ndcctools.taskvine.cvine import VINE_ALLOCATION_MODE_EXHAUSTIVE_BUCKETING
     from ndcctools.taskvine.cvine import VINE_ALLOCATION_MODE_MAX
@@ -410,7 +409,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if category is None:
             category = func.__name__ if self.manager_config.autocategory else 'parsl-default'
 
-        # support for python and serverless exec mode delayed 
+        # support for python and serverless exec mode delayed
         if exec_mode == 'python' or exec_mode == 'serverless':
             raise UnsupportedFeatureError(f'Execution mode {exec_mode} is not currently supported.')
         task_info = ParslTaskToVine(executor_id=executor_task_id,
