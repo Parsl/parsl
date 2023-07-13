@@ -34,6 +34,7 @@ from parsl.providers.base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
 from parsl.process_loggers import wrap_with_logs
 from parsl.executors.errors import ExecutorError
+from parsl.executors.errors import UnsupportedFeatureError
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.taskvine import exec_parsl_function
 from parsl.executors.taskvine.manager_config import TaskVineManagerConfig
@@ -388,7 +389,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             logger.debug("Creating executor task {} with function at: {} and result to be found at: {}".format(executor_task_id, function_file, result_file))
 
             # Pickle the result into object to pass into message buffer
-            self._serialize_function(resource_specification['app_type'], function_file, func, args, kwargs)
+            self._serialize_function(function_file, func, args, kwargs)
 
             # Construct the map file of local filenames at worker
             self._construct_map_file(map_file, input_files, output_files)
@@ -409,17 +410,14 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if category is None:
             category = func.__name__ if self.manager_config.autocategory else 'parsl-default'
 
-        # need source of function to send tasks as python or serverless tasks
+        # support for python and serverless exec mode delayed 
         if exec_mode == 'python' or exec_mode == 'serverless':
-            func_src = inspect.getsource(func)
-        else:
-            func_src = None
+            raise UnsupportedFeatureError(f'Execution mode {exec_mode} is not currently supported.')
         task_info = ParslTaskToVine(executor_id=executor_task_id,
                                     exec_mode=exec_mode,
                                     func_args=args,
                                     func_kwargs=kwargs,
                                     category=category,
-                                    func_src=func_src,
                                     input_files=input_files,
                                     output_files=output_files,
                                     map_file=map_file,
@@ -466,27 +464,11 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             if self.project_password_file:
                 self.provider.transfer_input_files.append(self.project_password_file)
 
-    def _serialize_function(self, app_type, fn_path, parsl_fn, parsl_fn_args, parsl_fn_kwargs):
+    def _serialize_function(self, fn_path, parsl_fn, parsl_fn_args, parsl_fn_kwargs):
         """Takes the function application parsl_fn(*parsl_fn_args, **parsl_fn_kwargs)
         and serializes it to the file fn_path."""
-
-        # Either build a dictionary with the source of the function, or pickle
-        # the function directly:
-        use_source_code = False
-        if app_type == 'python':
-            try:
-                function_info = {"source code": inspect.getsource(parsl_fn),
-                                 "name": parsl_fn.__name__,
-                                 "args": parsl_fn_args,
-                                 "kwargs": parsl_fn_kwargs}
-                use_source_code = True
-            except Exception:
-                logger.debug(f'Function {parsl_fn} cannot be serialized with source code, default to pack_apply_message.')
-                pass
-
-        if not use_source_code:
-            function_info = {"byte code": pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
-                                                             buffer_threshold=1024 * 1024)}
+        function_info = {"byte code": pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
+                                                         buffer_threshold=1024 * 1024)}
 
         with open(fn_path, "wb") as f_out:
             pickle.dump(function_info, f_out)
@@ -768,32 +750,15 @@ def _taskvine_submit_wait(ready_task_queue=None,
             if task.exec_mode == 'regular':
                 # Create command string
                 launch_cmd = "python3 exec_parsl_function.py {mapping} {function} {result}"
-                command_str = launch_cmd.format(mapping=os.path.basename(task.map_file),
+                if manager_config.init_command != '':
+                    launch_cmd = "{init_cmd};" + launch_cmd
+                command_str = launch_cmd.format(init_cmd=manager_config.init_command,
+                                                mapping=os.path.basename(task.map_file),
                                                 function=os.path.basename(task.function_file),
                                                 result=os.path.basename(task.result_file))
                 logger.debug("Sending executor task {} (mode: regular) with command: {}".format(task.executor_id, command_str))
                 try:
                     t = Task(command_str)
-                except Exception as e:
-                    logger.error("Unable to create executor task (mode:regular): {}".format(e))
-                    finished_task_queue.put_nowait(VineTaskToParsl(executor_id=task.executor_id,
-                                                                   result_received=False,
-                                                                   result=None,
-                                                                   reason="task could not be created by taskvine",
-                                                                   status=-1))
-                    continue
-            elif task.exec_mode == 'python':
-                # strip off decorator from function source
-                fn_src = '\n'.join((task.func_src).split('\n')[1:])
-
-                # materialize function source into function object using a temporary namespace
-                tmp_ns = {'__builtins__': __builtins__}
-                exec(fn_src, tmp_ns)
-                func_obj = tmp_ns.get(task.category)
-
-                logger.debug("Sending executor task {} (mode: python) with category: {} and func obj is {}".format(task.executor_id, task.category, func_obj))
-                try:
-                    t = PythonTask(func_obj, *task.func_args, **task.func_kwargs)
                 except Exception as e:
                     logger.error("Unable to create executor task (mode:regular): {}".format(e))
                     finished_task_queue.put_nowait(VineTaskToParsl(executor_id=task.executor_id,
@@ -980,22 +945,8 @@ def _taskvine_submit_wait(ready_task_queue=None,
                                                                        result=e,
                                                                        reason=reason,
                                                                        status=t.exit_code))
-                elif exec_mode_of_task == 'python':
-                    logger.debug(f"completed executor task with python mode info: {executor_task_id}, {t.category}")
-                    finished_task_queue.put_nowait(VineTaskToParsl(executor_id=executor_task_id,
-                                                                   result_received=True,
-                                                                   result=t.output,
-                                                                   reason=None,
-                                                                   status=t.exit_code))
-                elif exec_mode_of_task == 'serverless':
-                    logger.debug(f"completed executor task with serverless mode info: {executor_task_id}, {t.category}")
-                    finished_task_queue.put_nowait(VineTaskToParsl(executor_id=executor_task_id,
-                                                                   result_received=True,
-                                                                   result=t.output,
-                                                                   reason=None,
-                                                                   status=t.exit_code))
                 else:
-                    raise Exception('Unknown app mode: {exec_mode_of_task}.')
+                    raise Exception(f'Unknown exec mode for executor task {executor_task_id}: {exec_mode_of_task}.')
 
     logger.debug("Exiting TaskVine Monitoring Process")
     return 0

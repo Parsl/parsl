@@ -10,7 +10,6 @@ class ParslTaskToVine:
                  func_args: list,                  # list of positional arguments of the function
                  func_kwargs: dict,                # dictionary of keyword arguments of the function
                  category: str,                    # category of Parsl function
-                 func_src: str,                    # source code of the function
                  input_files: list,                # list of input files to this function
                  output_files: list,               # list of output files to this function
                  map_file: Optional[str],          # pickled file containing mapping of local to remote names of files
@@ -29,7 +28,6 @@ class ParslTaskToVine:
         self.func_args = func_args
         self.func_kwargs = func_kwargs
         self.category = category
-        self.func_src = func_src
         self.map_file = map_file
         self.function_file = function_file
         self.result_file = result_file

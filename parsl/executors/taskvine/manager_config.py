@@ -33,14 +33,14 @@ class TaskVineManagerConfig:
         with the given password file.
         Default is None.
 
-    init_command: str
-        Command line to run before executing a task in a worker.
-        Default is ''.
-
     env_vars: Optional[dict]
         Dictionary of environment variables to set in a shell
         before executing a task.
         Default is None
+
+    init_command: str
+        Command line to run before executing a task in a worker.
+        Default is ''.
 
     env_pack: Optional[str]
         Used to encapsulate package dependencies of tasks to
@@ -76,15 +76,6 @@ class TaskVineManagerConfig:
         parsl.config.Config. Set to None to allow TaskVine to retry tasks
         forever.
         Default is 1.
-
-    task_mode: str
-        Type of TaskVine tasks to execute Parsl app.
-        'regular': use Parsl serialization method to transfer app.
-        'python': use TaskVine serialization method to transfer app.
-        'serverless': tasks will be registered to a remote service task,
-        which then executes functions given their parameters. Useful
-        to reduce task completion latency but might reduce throughput.
-        Default is 'python'.
 
     shared_fs: bool
         Whether workers will use a shared filesystem or not. If so, TaskVine
@@ -156,6 +147,7 @@ class TaskVineManagerConfig:
 
     # Global task settings
     env_vars: Optional[dict] = None
+    init_command: str = ""
     env_pack: Optional[str] = None
     app_pack: bool = False
     extra_pkgs: Optional[list] = None
