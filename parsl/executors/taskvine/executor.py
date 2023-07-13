@@ -411,11 +411,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # support for python and serverless exec mode delayed
         if exec_mode == 'python' or exec_mode == 'serverless':
-            raise UnsupportedFeatureError(f'Execution mode {exec_mode} is not currently supported.')
+            raise UnsupportedFeatureError(f'Execution mode {exec_mode} is not currently supported.', 'TaskVineExecutor', None)
         task_info = ParslTaskToVine(executor_id=executor_task_id,
                                     exec_mode=exec_mode,
-                                    func_args=args,
-                                    func_kwargs=kwargs,
                                     category=category,
                                     input_files=input_files,
                                     output_files=output_files,

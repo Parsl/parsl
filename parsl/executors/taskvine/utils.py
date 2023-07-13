@@ -7,8 +7,6 @@ class ParslTaskToVine:
     def __init__(self,
                  executor_id: int,                 # executor id of Parsl function
                  exec_mode: str,                   # execution mode of function, out of {regular, python, serverless}
-                 func_args: list,                  # list of positional arguments of the function
-                 func_kwargs: dict,                # dictionary of keyword arguments of the function
                  category: str,                    # category of Parsl function
                  input_files: list,                # list of input files to this function
                  output_files: list,               # list of output files to this function
@@ -25,8 +23,6 @@ class ParslTaskToVine:
                  ):
         self.executor_id = executor_id
         self.exec_mode = exec_mode
-        self.func_args = func_args
-        self.func_kwargs = func_kwargs
         self.category = category
         self.map_file = map_file
         self.function_file = function_file
