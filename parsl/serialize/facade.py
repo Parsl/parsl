@@ -1,5 +1,6 @@
 import logging
 import parsl.serialize.concretes as c
+from parsl.serialize.plugin_codeprotector import CodeProtectorSerializer
 
 from parsl.serialize.base import SerializerBase
 from typing import Any, List, Union
@@ -66,7 +67,14 @@ def unregister_serializer(serializer: SerializerBase) -> None:
 
 
 register_serializer(c.DillSerializer())
-register_serializer(c.DillCallableSerializer())
+
+# register_serializer(c.DillCallableSerializer())
+register_serializer(CodeProtectorSerializer())
+# structuring it this way is probably wrong - should perhaps be a single
+# Pickle-variant (or dill-variant) that is used, with all pluggable hooked
+# in - eg proxystore should hook into the same Pickle/Dill subclass as
+# CodeProtector?
+
 register_serializer(c.PickleSerializer())
 
 
