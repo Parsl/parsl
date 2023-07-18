@@ -28,6 +28,9 @@ from parsl.process_loggers import wrap_with_logs
 HEARTBEAT_CODE = (2 ** 32) - 1
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
 
+LOGGER_NAME = "interchange"
+logger = logging.getLogger(LOGGER_NAME)
+
 
 class ManagerLost(Exception):
     ''' Task lost due to manager loss. Manager is considered lost when multiple heartbeats
@@ -585,7 +588,7 @@ class Interchange:
                 interesting_managers.remove(manager_id)
 
 
-def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_string=None):
+def start_file_logger(filename, level=logging.DEBUG, format_string=None):
     """Add a stream log handler.
 
     Parameters
@@ -593,8 +596,6 @@ def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_
 
     filename: string
         Name of the file to write logs to. Required.
-    name: string
-        Logger name. Default="parsl.executors.interchange"
     level: logging.LEVEL
         Set the logging level. Default=logging.DEBUG
         - format_string (string): Set the format string
@@ -609,7 +610,7 @@ def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_
         format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d %(processName)s(%(process)d) %(threadName)s %(funcName)s [%(levelname)s]  %(message)s"
 
     global logger
-    logger = logging.getLogger(name)
+    logger = logging.getLogger(LOGGER_NAME)
     logger.setLevel(level)
     handler = logging.FileHandler(filename)
     handler.setLevel(level)
