@@ -11,12 +11,12 @@ import types
 logger = logging.getLogger(__name__)
 
 
-def _deprotectCode(major, minor, b):
+def _deprotectCode(major: int, minor: int, b: bytes) -> Any:
     if sys.version_info.major != major:
         raise RuntimeError("Major version mismatch deserializing code")
     if sys.version_info.minor != minor:
         raise RuntimeError("Major version mismatch deserializing code")
-    
+
     return dill.loads(b)
 
 
@@ -44,8 +44,6 @@ class CodeProtectorSerializer(SerializerBase):
         pickler = CodeProtectorPickler(file=f)
         pickler.dump(data)
         return f.getvalue()
-
-        return dill.dumps(data)
 
     def deserialize(self, body: bytes) -> Any:
         return dill.loads(body)
