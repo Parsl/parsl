@@ -1,7 +1,7 @@
 flake8==6.0.0
 ipyparallel
 pandas
-pytest>=6.2.5,<7
+pytest>=7.4.0,<8
 pytest-cov
 pytest-random-order
 mock>=1.0.0

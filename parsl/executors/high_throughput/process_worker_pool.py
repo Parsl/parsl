@@ -370,7 +370,7 @@ class Manager:
         logger.critical("Exiting")
 
     @wrap_with_logs
-    def worker_watchdog(self, kill_event):
+    def worker_watchdog(self, kill_event: threading.Event):
         """Keeps workers alive.
 
         Parameters:
@@ -381,7 +381,7 @@ class Manager:
 
         logger.debug("Starting worker watchdog")
 
-        while not kill_event.is_set():
+        while not kill_event.wait(self.heartbeat_period):
             for worker_id, p in self.procs.items():
                 if not p.is_alive():
                     logger.error("Worker {} has died".format(worker_id))
@@ -409,7 +409,6 @@ class Manager:
                                        name="HTEX-Worker-{}".format(worker_id))
                     self.procs[worker_id] = p
                     logger.info("Worker {} has been restarted".format(worker_id))
-                time.sleep(self.heartbeat_period)
 
         logger.critical("Exiting")
 
