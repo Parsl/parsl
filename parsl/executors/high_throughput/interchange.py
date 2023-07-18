@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import argparse
 import zmq
 import os
 import sys
@@ -630,47 +629,4 @@ def starter(comm_q, *args, **kwargs):
     ic = Interchange(*args, **kwargs)
     comm_q.put((ic.worker_task_port,
                 ic.worker_result_port))
-    ic.start()
-
-
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--client_address",
-                        help="Client address")
-    parser.add_argument("-l", "--logdir", default="parsl_worker_logs",
-                        help="Parsl worker log directory")
-    parser.add_argument("-t", "--task_url",
-                        help="REQUIRED: ZMQ url for receiving tasks")
-    parser.add_argument("-r", "--result_url",
-                        help="REQUIRED: ZMQ url for posting results")
-    parser.add_argument("-p", "--poll_period",
-                        help="REQUIRED: poll period used for main thread")
-    parser.add_argument("--worker_ports", default=None,
-                        help="OPTIONAL, pair of workers ports to listen on, eg --worker_ports=50001,50005")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-
-    args = parser.parse_args()
-
-    # Setup logging
-    global logger
-    format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-
-    logger = logging.getLogger("interchange")
-    logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
-    handler.setLevel('DEBUG' if args.debug is True else 'INFO')
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-    logger.debug("Starting Interchange")
-
-    optionals = {}
-
-    if args.worker_ports:
-        optionals['worker_ports'] = [int(i) for i in args.worker_ports.split(',')]
-
-    ic = Interchange(**optionals)
     ic.start()
