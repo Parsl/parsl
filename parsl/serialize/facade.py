@@ -68,7 +68,6 @@ def unregister_serializer(serializer: SerializerBase) -> None:
 register_serializer(c.DillSerializer())
 register_serializer(c.DillCallableSerializer())
 register_serializer(c.PickleSerializer())
-register_serializer(c.PickleCallableSerializer())
 
 
 def pack_apply_message(func: Any, args: Any, kwargs: Any, buffer_threshold: int = int(128 * 1e6)) -> bytes:
