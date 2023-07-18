@@ -7,9 +7,8 @@ from parsl.app.errors import AppTimeout
 
 
 @bash_app
-def echo_to_file(inputs=[], outputs=[], stderr='std.err', stdout='std.out', walltime=0.5):
-    return """echo "sleeping";
-    sleep 1 """
+def echo_to_file(inputs=(), outputs=(), walltime=0.01):
+    return """echo "sleeping"; sleep 0.05"""
 
 
 def test_walltime():
@@ -21,5 +20,5 @@ def test_walltime():
 
 def test_walltime_longer():
     """Test that an app that runs in less than walltime will succeed."""
-    y = echo_to_file(walltime=2)
+    y = echo_to_file(walltime=0.2)
     y.result()
