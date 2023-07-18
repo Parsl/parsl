@@ -14,7 +14,7 @@ import queue
 import threading
 import json
 
-from typing import cast, Any, Dict, Set
+from typing import cast, Any, Dict, Set, Optional
 
 from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
@@ -72,7 +72,7 @@ class Interchange:
     """
     def __init__(self,
                  client_address="127.0.0.1",
-                 interchange_address="127.0.0.1",
+                 interchange_address: Optional[str] = None,
                  client_ports=(50055, 50056, 50057),
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
@@ -89,8 +89,9 @@ class Interchange:
         client_address : str
              The ip address at which the parsl client can be reached. Default: "127.0.0.1"
 
-        interchange_address : str
-             The ip address at which the workers will be able to reach the Interchange. Default: "127.0.0.1"
+        interchange_address : Optional str
+             If specified the interchange will only listen on this address for connections from workers
+             else, it binds to all addresses.
 
         client_ports : triple(int, int, int)
              The ports at which the client can be reached
@@ -162,18 +163,23 @@ class Interchange:
         self.results_incoming = self.context.socket(zmq.ROUTER)
         self.results_incoming.set_hwm(0)
 
+        self.listen_address: str = "*"
+        if self.interchange_address:
+            logger.info("Interchange binding to address:{}".format(self.interchange_address))
+            self.listen_address = self.interchange_address
+
         if self.worker_ports:
             self.worker_task_port = self.worker_ports[0]
             self.worker_result_port = self.worker_ports[1]
 
-            self.task_outgoing.bind("tcp://*:{}".format(self.worker_task_port))
-            self.results_incoming.bind("tcp://*:{}".format(self.worker_result_port))
+            self.task_outgoing.bind(f"tcp://{self.listen_address}:{self.worker_task_port}")
+            self.results_incoming.bind(f"tcp://{self.listen_address}:{self.worker_result_port}")
 
         else:
-            self.worker_task_port = self.task_outgoing.bind_to_random_port('tcp://*',
+            self.worker_task_port = self.task_outgoing.bind_to_random_port(f"tcp://{self.listen_address}",
                                                                            min_port=worker_port_range[0],
                                                                            max_port=worker_port_range[1], max_tries=100)
-            self.worker_result_port = self.results_incoming.bind_to_random_port('tcp://*',
+            self.worker_result_port = self.results_incoming.bind_to_random_port(f"tcp://{self.listen_address}",
                                                                                 min_port=worker_port_range[0],
                                                                                 max_port=worker_port_range[1], max_tries=100)
 
