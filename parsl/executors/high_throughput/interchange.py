@@ -39,11 +39,8 @@ class ManagerLost(Exception):
         self.tstamp = time.time()
         self.hostname = hostname
 
-    def __repr__(self):
-        return "Task failure due to loss of manager {} on host {}".format(self.manager_id.decode(), self.hostname)
-
     def __str__(self):
-        return self.__repr__()
+        return "Task failure due to loss of manager {} on host {}".format(self.manager_id.decode(), self.hostname)
 
 
 class VersionMismatch(Exception):
@@ -53,13 +50,10 @@ class VersionMismatch(Exception):
         self.interchange_version = interchange_version
         self.manager_version = manager_version
 
-    def __repr__(self):
+    def __str__(self):
         return "Manager version info {} does not match interchange version info {}, causing a critical failure".format(
             self.manager_version,
             self.interchange_version)
-
-    def __str__(self):
-        return self.__repr__()
 
 
 class Interchange:
