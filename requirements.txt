@@ -1,5 +1,5 @@
 pyzmq>=17.1.2
-typeguard>=2.10,<5
+typeguard>=4,<5
 typing-extensions>=4.6,<5
 six
 globus-sdk
