@@ -6,7 +6,7 @@ import parsl
 from parsl.tests.configs.htex_local import fresh_config as local_config
 
 from parsl.serialize.base import SerializerBase
-from parsl.serialize.facade import serialize, deserialize, register_serializer, unregister_serializer, clear_serializers
+from parsl.serialize.facade import serialize, deserialize, register_method_for_data, unregister_serializer, clear_serializers
 
 from parsl.serialize.plugin_proxystore_deep_pickle import create_deep_proxystore_serializer
 
@@ -45,7 +45,7 @@ def test_proxystore_single_call():
     clear_serializers()
     s = create_deep_proxystore_serializer(policy=MyDemo)
 
-    register_serializer(s)
+    register_method_for_data(s)
 
     try:
         assert func(100, 4).result() == 105  # but how do we know this went through proxystore?

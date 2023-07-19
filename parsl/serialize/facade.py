@@ -1,18 +1,11 @@
 import logging
-import parsl.serialize.concretes as c
 from parsl.serialize.plugin_codeprotector import CodeProtectorSerializer
+from typing import Any, Dict, List, Union
 
+import parsl.serialize.concretes as concretes
 from parsl.serialize.base import SerializerBase
-from typing import Any, List, Union
 
 logger = logging.getLogger(__name__)
-
-# these are used for two directions:
-
-# 1. to iterate over to find a valid serializer
-# for that, the ordering is important
-
-# 2. to perform an ID -> deserializer lookup
 
 # These must be registered in reverse order of
 # importance: later registered serializers
@@ -25,6 +18,7 @@ methods_for_code = []
 methods_for_data: List[SerializerBase]
 methods_for_data = []
 
+deserializers: Dict[bytes, SerializerBase]
 deserializers = {}
 
 
@@ -36,15 +30,6 @@ def clear_serializers() -> None:
     global methods_for_data, methods_for_code
     methods_for_code = []
     methods_for_data = []
-
-
-def register_serializer(serializer: SerializerBase) -> None:
-    deserializers[serializer._identifier] = serializer
-
-    if serializer._for_code:
-        methods_for_code.insert(0, serializer)
-    if serializer._for_data:
-        methods_for_data.insert(0, serializer)
 
 
 def unregister_serializer(serializer: SerializerBase) -> None:
@@ -66,16 +51,27 @@ def unregister_serializer(serializer: SerializerBase) -> None:
         logger.warning("BENC: not found in methods for data")
 
 
-register_serializer(c.DillSerializer())
-
-# register_serializer(c.DillCallableSerializer())
-register_serializer(CodeProtectorSerializer())
 # structuring it this way is probably wrong - should perhaps be a single
 # Pickle-variant (or dill-variant) that is used, with all pluggable hooked
 # in - eg proxystore should hook into the same Pickle/Dill subclass as
 # CodeProtector?
 
-register_serializer(c.PickleSerializer())
+def register_method_for_code(s: SerializerBase) -> None:
+    deserializers[s.identifier] = s
+    methods_for_code.insert(0, s)
+
+
+# register_method_for_code(concretes.DillCallableSerializer())
+register_method_for_code(CodeProtectorSerializer())
+
+
+def register_method_for_data(s: SerializerBase) -> None:
+    deserializers[s.identifier] = s
+    methods_for_data.insert(0, s)
+
+
+register_method_for_data(concretes.PickleSerializer())
+register_method_for_data(concretes.DillSerializer())
 
 
 def pack_apply_message(func: Any, args: Any, kwargs: Any, buffer_threshold: int = int(128 * 1e6)) -> bytes:

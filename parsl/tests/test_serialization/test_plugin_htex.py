@@ -6,7 +6,7 @@ import parsl
 from parsl.tests.configs.htex_local import fresh_config as local_config
 
 from parsl.serialize.base import SerializerBase
-from parsl.serialize.facade import serialize, deserialize, register_serializer, unregister_serializer
+from parsl.serialize.facade import serialize, deserialize, register_method_for_data, unregister_serializer
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ def func(x):
 @pytest.mark.local
 def test_const_inprocess():
     s = XXXXSerializer()
-    register_serializer(s)
+    register_method_for_data(s)
 
     try:
         assert func(100).result() == 100  # but how do we know this went through XXXXSerializer? (or not)

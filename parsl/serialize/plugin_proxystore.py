@@ -1,7 +1,7 @@
 # parsl/serialize/concretes.py:10: error: Module "proxystore.store" does not explicitly export attribute "Store"  [attr-defined]
 from proxystore.store import Store, register_store
 from proxystore.connectors.file import FileConnector
-from parsl.serialize.facade import register_serializer
+from parsl.serialize.facade import register_method_for_data
 
 from parsl.serialize.base import SerializerBase
 
@@ -37,7 +37,7 @@ class ProxyStoreSerializer(SerializerBase):
 def register_proxystore_serializer() -> None:
     """Initializes proxystore and registers it as a serializer with parsl"""
     serializer = create_proxystore_serializer()
-    register_serializer(serializer)
+    register_method_for_data(serializer)
 
 
 def create_proxystore_serializer() -> ProxyStoreSerializer:

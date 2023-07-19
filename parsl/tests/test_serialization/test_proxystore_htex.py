@@ -6,7 +6,7 @@ import parsl
 from parsl.tests.configs.htex_local import fresh_config as local_config
 
 from parsl.serialize.base import SerializerBase
-from parsl.serialize.facade import serialize, deserialize, register_serializer, unregister_serializer
+from parsl.serialize.facade import serialize, deserialize, register_method_for_data, unregister_serializer
 
 from parsl.serialize.plugin_proxystore import create_proxystore_serializer
 
@@ -28,7 +28,7 @@ def func(x, y):
 @pytest.mark.local
 def test_proxystore_single_call():
     s = create_proxystore_serializer()  # TODO this isnt' testing the register_proxystore_serializer function...
-    register_serializer(s)
+    register_method_for_data(s)
 
     try:
         assert func(100, 4).result() == 105  # but how do we know this went through proxystore?

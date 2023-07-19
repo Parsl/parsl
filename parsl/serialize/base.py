@@ -10,10 +10,6 @@ class SerializerBase(metaclass=ABCMeta):
     # For deserializer
     _identifier: bytes
 
-    # For serializer
-    _for_code: bool
-    _for_data: bool
-
     # For deserializer
     @property
     def identifier(self) -> bytes:

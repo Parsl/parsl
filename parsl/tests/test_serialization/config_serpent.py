@@ -22,7 +22,7 @@ from parsl.data_provider.http import HTTPInTaskStaging
 from parsl.data_provider.ftp import FTPInTaskStaging
 from parsl.data_provider.file_noop import NoOpFileStaging
 
-from parsl.serialize.facade import register_serializer  # TODO: move this into parsl.serialize root as its user exposed
+from parsl.serialize.facade import register_method_for_data  # TODO: move this into parsl.serialize root as its user exposed
 
 from parsl.serialize.plugin_serpent import SerpentSerializer
 
@@ -30,7 +30,7 @@ working_dir = os.getcwd() + "/" + "test_htex_alternate"
 
 
 def fresh_config():
-    register_serializer(SerpentSerializer())
+    register_method_for_data(SerpentSerializer())
 
     return Config(
         executors=[

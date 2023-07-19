@@ -3,7 +3,7 @@
 import pytest
 
 from parsl.serialize.base import SerializerBase
-from parsl.serialize.facade import serialize, deserialize, register_serializer, unregister_serializer
+from parsl.serialize.facade import serialize, deserialize, register_method_for_data, unregister_serializer
 
 B_MAGIC = b'3626874628368432'  # arbitrary const bytestring
 V_MAGIC = 777  # arbitrary const object
@@ -14,9 +14,6 @@ class ConstSerializer(SerializerBase):
     It serializes all values to the same constant, and likewise for
     deserialization.
     """
-
-    _for_code = True
-    _for_data = True
 
     # TODO: should be enforcing/defaulting this to class name so that by default we can dynamically load the serializer remotely?
     _identifier = b'parsl.tests.test_serializer.test_plugin ConstSerializer'
@@ -40,7 +37,7 @@ class ConstSerializer(SerializerBase):
 @pytest.mark.local
 def test_const_inprocess():
     s = ConstSerializer()
-    register_serializer(s)
+    register_method_for_data(s)
 
     try:
 
