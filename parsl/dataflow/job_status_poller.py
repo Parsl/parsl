@@ -2,10 +2,10 @@ import logging
 import parsl  # noqa F401 (used in string type annotation)
 import time
 import zmq
+from abc import ABCMeta, abstractmethod
 from typing import Dict, Sequence
 from typing import List  # noqa F401 (used in type annotation)
 
-from parsl.dataflow.executor_status import ExecutorStatus
 from parsl.dataflow.job_error_handler import JobErrorHandler
 from parsl.dataflow.strategy import Strategy
 from parsl.executors.base import ParslExecutor
@@ -15,7 +15,20 @@ from parsl.providers.base import JobStatus, JobState
 
 from parsl.utils import Timer
 
+
 logger = logging.getLogger(__name__)
+
+
+class ExecutorStatus(metaclass=ABCMeta):
+    @property
+    @abstractmethod
+    def executor(self) -> "parsl.executors.base.ParslExecutor":
+        pass
+
+    @property
+    @abstractmethod
+    def status(self) -> Dict[str, "parsl.providers.base.JobStatus"]:
+        pass
 
 
 class PollItem(ExecutorStatus):
