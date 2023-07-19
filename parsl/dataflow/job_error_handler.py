@@ -1,16 +1,16 @@
 from typing import List, Dict
 
-from parsl.dataflow.job_status_poller import ExecutorStatus
+from parsl.dataflow.job_status_poller import PollItem
 from parsl.executors.base import ParslExecutor
 from parsl.providers.base import JobStatus, JobState
 
 
 class JobErrorHandler:
-    def run(self, status: List[ExecutorStatus]):
+    def run(self, status: List[PollItem]):
         for es in status:
             self._check_irrecoverable_executor(es)
 
-    def _check_irrecoverable_executor(self, es: ExecutorStatus):
+    def _check_irrecoverable_executor(self, es: PollItem):
         if not es.executor.error_management_enabled:
             return
         es.executor.handle_errors(self, es.status)

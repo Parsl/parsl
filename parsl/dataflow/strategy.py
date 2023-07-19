@@ -4,7 +4,7 @@ import math
 import warnings
 from typing import Dict, List, Optional
 
-from parsl.dataflow.job_status_poller import ExecutorStatus
+from parsl.dataflow.job_status_poller import PollItem
 from parsl.executors import HighThroughputExecutor
 from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
@@ -134,7 +134,7 @@ class Strategy:
         for executor in executors:
             self.executors[executor.label] = {'idle_since': None}
 
-    def _strategy_noop(self, status: List[ExecutorStatus]) -> None:
+    def _strategy_noop(self, status: List[PollItem]) -> None:
         """Do nothing.
         """
         logger.debug("strategy_noop: doing nothing")

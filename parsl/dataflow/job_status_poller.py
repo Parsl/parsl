@@ -18,20 +18,7 @@ from parsl.utils import Timer
 
 logger = logging.getLogger(__name__)
 
-
-class ExecutorStatus(metaclass=ABCMeta):
-    @property
-    @abstractmethod
-    def executor(self) -> "parsl.executors.base.ParslExecutor":
-        pass
-
-    @property
-    @abstractmethod
-    def status(self) -> Dict[str, "parsl.providers.base.JobStatus"]:
-        pass
-
-
-class PollItem(ExecutorStatus):
+class PollItem:
     def __init__(self, executor: ParslExecutor, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
         self._executor = executor
         self._dfk = dfk
