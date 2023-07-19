@@ -1,22 +1,34 @@
-from parsl.serialize.concretes import *  # noqa: F403,F401
-from parsl.serialize.base import METHODS_MAP_DATA, METHODS_MAP_CODE
+from parsl.serialize.base import SerializerBase
 import logging
 
-from typing import Any, List, Union
+from typing import Any, Dict, List, Union
 
 logger = logging.getLogger(__name__)
 
+import parsl.serialize.concretes as concretes
 
-""" Instantiate the appropriate classes
-"""
+
+methods_for_code: Dict[bytes, SerializerBase]
 methods_for_code = {}
+
+
+def register_method_for_code(s: SerializerBase) -> None:
+    methods_for_code[s.identifier] = s
+
+
+register_method_for_code(concretes.DillCallableSerializer())
+
+
+methods_for_data: Dict[bytes, SerializerBase]
 methods_for_data = {}
 
-for key in METHODS_MAP_CODE:
-    methods_for_code[key] = METHODS_MAP_CODE[key]()
 
-for key in METHODS_MAP_DATA:
-    methods_for_data[key] = METHODS_MAP_DATA[key]()
+def register_method_for_data(s: SerializerBase) -> None:
+    methods_for_data[s.identifier] = s
+
+
+register_method_for_data(concretes.PickleSerializer())
+register_method_for_data(concretes.DillSerializer())
 
 
 def pack_apply_message(func: Any, args: Any, kwargs: Any, buffer_threshold: int = int(128 * 1e6)) -> bytes:
