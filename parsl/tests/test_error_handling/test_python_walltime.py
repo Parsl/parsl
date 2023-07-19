@@ -5,9 +5,11 @@ from parsl.app.errors import AppTimeout
 
 
 @parsl.python_app
-def my_app(t, walltime=1):
+def my_app(t=0.0, walltime=0.1):
     import time
-    time.sleep(t)
+    end = time.monotonic() + t
+    while time.monotonic() < end:
+        time.sleep(0.01)  # work with timeout(); allow access to thread
     return 7
 
 
@@ -18,12 +20,12 @@ def test_python_walltime():
 
 
 def test_python_longer_walltime_at_invocation():
-    f = my_app(1, walltime=6)
+    f = my_app(0.01, walltime=6)
     assert f.result() == 7
 
 
 def test_python_walltime_wrapped_names():
-    f = my_app(1, walltime=6)
+    f = my_app(0.01, walltime=6)
     assert f.result() == 7
     assert f.task_def['func'].__name__ == "my_app"
     assert f.task_def['func_name'] == "my_app"
