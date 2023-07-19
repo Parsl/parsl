@@ -9,14 +9,14 @@ from parsl.executors.high_throughput.interchange import Interchange
 
 def test_interchange_binding_no_address():
     ix = Interchange()
-    assert ix.listen_address == "*"
+    assert ix.interchange_address == "*"
 
 
 def test_interchange_binding_with_address():
     # Using loopback address
     address = "127.0.0.1"
     ix = Interchange(interchange_address=address)
-    assert ix.listen_address == address
+    assert ix.interchange_address == address
 
 
 def test_interchange_binding_with_non_ipv4_address():

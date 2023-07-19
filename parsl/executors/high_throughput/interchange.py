@@ -134,7 +134,7 @@ class Interchange:
         logger.debug("Initializing Interchange process")
 
         self.client_address = client_address
-        self.interchange_address = interchange_address
+        self.interchange_address: str = interchange_address or "*"
         self.poll_period = poll_period
 
         logger.info("Attempting connection to client at {} on ports: {},{},{}".format(
@@ -165,23 +165,18 @@ class Interchange:
         self.results_incoming = self.context.socket(zmq.ROUTER)
         self.results_incoming.set_hwm(0)
 
-        self.listen_address: str = "*"
-        if self.interchange_address:
-            logger.info("Interchange binding to address:{}".format(self.interchange_address))
-            self.listen_address = self.interchange_address
-
         if self.worker_ports:
             self.worker_task_port = self.worker_ports[0]
             self.worker_result_port = self.worker_ports[1]
 
-            self.task_outgoing.bind(f"tcp://{self.listen_address}:{self.worker_task_port}")
-            self.results_incoming.bind(f"tcp://{self.listen_address}:{self.worker_result_port}")
+            self.task_outgoing.bind(f"tcp://{self.interchange_address}:{self.worker_task_port}")
+            self.results_incoming.bind(f"tcp://{self.interchange_address}:{self.worker_result_port}")
 
         else:
-            self.worker_task_port = self.task_outgoing.bind_to_random_port(f"tcp://{self.listen_address}",
+            self.worker_task_port = self.task_outgoing.bind_to_random_port(f"tcp://{self.interchange_address}",
                                                                            min_port=worker_port_range[0],
                                                                            max_port=worker_port_range[1], max_tries=100)
-            self.worker_result_port = self.results_incoming.bind_to_random_port(f"tcp://{self.listen_address}",
+            self.worker_result_port = self.results_incoming.bind_to_random_port(f"tcp://{self.interchange_address}",
                                                                                 min_port=worker_port_range[0],
                                                                                 max_port=worker_port_range[1], max_tries=100)
 
