@@ -44,7 +44,7 @@ class BlockProviderExecutor(ParslExecutor):
     I'm not sure of use cases for switchability at the moment beyond "yes or no"
     """
     def __init__(self, *,
-                 provider: ExecutionProvider,
+                 provider: Optional[ExecutionProvider],
                  block_error_handler: bool):
         super().__init__()
         self._provider = provider

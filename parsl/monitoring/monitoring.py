@@ -20,11 +20,9 @@ from parsl.serialize import deserialize
 
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import AddressedMonitoringMessage, TaggedMonitoringMessage
-from typing import cast, Any, Callable, Dict, Optional, Sequence, Union
+from typing import cast, Any, Callable, Dict, Optional, Sequence, Tuple, Union
 
 _db_manager_excepts: Optional[Exception]
-
-from typing import Optional, Tuple
 
 
 try:
