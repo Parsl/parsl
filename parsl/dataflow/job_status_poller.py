@@ -2,7 +2,6 @@ import logging
 import parsl  # noqa F401 (used in string type annotation)
 import time
 import zmq
-from abc import ABCMeta, abstractmethod
 from typing import Dict, Sequence
 from typing import List  # noqa F401 (used in type annotation)
 
@@ -17,6 +16,7 @@ from parsl.utils import Timer
 
 
 logger = logging.getLogger(__name__)
+
 
 class PollItem:
     def __init__(self, executor: ParslExecutor, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
