@@ -1,15 +1,13 @@
-from parsl.serialize.base import SerializerBase
 import logging
-
 from typing import Any, Dict, List, Union
+
+import parsl.serialize.concretes as concretes
+from parsl.serialize.base import SerializerBase
 
 logger = logging.getLogger(__name__)
 
-import parsl.serialize.concretes as concretes
 
-
-methods_for_code: Dict[bytes, SerializerBase]
-methods_for_code = {}
+methods_for_code: Dict[bytes, SerializerBase] = {}
 
 
 def register_method_for_code(s: SerializerBase) -> None:
@@ -19,8 +17,7 @@ def register_method_for_code(s: SerializerBase) -> None:
 register_method_for_code(concretes.DillCallableSerializer())
 
 
-methods_for_data: Dict[bytes, SerializerBase]
-methods_for_data = {}
+methods_for_data: Dict[bytes, SerializerBase] = {}
 
 
 def register_method_for_data(s: SerializerBase) -> None:
