@@ -1,10 +1,12 @@
+from __future__ import annotations
 import logging
 import time
 import math
 import warnings
 from typing import Dict, List, Optional
 
-from parsl.dataflow.job_status_poller import PollItem
+# from parsl.dataflow.job_status_poller import PollItem
+import parsl.dataflow.job_status_poller as jsp
 from parsl.executors import HighThroughputExecutor
 from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
@@ -134,7 +136,7 @@ class Strategy:
         for executor in executors:
             self.executors[executor.label] = {'idle_since': None}
 
-    def _strategy_noop(self, status: List[PollItem]) -> None:
+    def _strategy_noop(self, status: List[jsp.PollItem]) -> None:
         """Do nothing.
         """
         logger.debug("strategy_noop: doing nothing")
