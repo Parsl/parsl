@@ -5,9 +5,9 @@ import zmq
 from typing import Dict, Sequence
 from typing import List  # noqa F401 (used in type annotation)
 
-from parsl.dataflow.strategy import Strategy
 from parsl.executors.base import ParslExecutor
 from parsl.jobs.job_error_handler import JobErrorHandler
+from parsl.jobs.strategy import Strategy
 from parsl.monitoring.message_type import MessageType
 
 from parsl.providers.base import JobStatus, JobState
