@@ -117,7 +117,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  use_factory: bool = False,
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  factory_config: TaskVineFactoryConfig = TaskVineFactoryConfig(),
-                 provider: ExecutionProvider = LocalProvider(init_blocks=1),
+                 provider: Optional[ExecutionProvider] = LocalProvider(init_blocks=1),
                  storage_access: Optional[List[Staging]] = None):
 
         # If TaskVine factory is used, disable the Parsl provider
@@ -272,7 +272,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             self.factory_process.start()
         else:
             self.initialize_scaling()
-        
+
         self.collector_thread.start()
 
         logger.debug("All components in TaskVineExecutor started")
