@@ -168,7 +168,16 @@ class MonitoringHub(RepresentationMixin):
         self.logger.debug("Initializing ZMQ Pipes to client")
         self.monitoring_hub_active = True
 
-        comm_q: Queue[Union[Tuple[int, int], str]]
+        # Typechecking note:
+        # Queue is not a type at runtime - it's a method that looks like
+        # a type. mypy seems happy enough with this, but Python
+        # doesn't like subscripting a method like this, which is needed at
+        # runtime for typeguard 4.0.0. So this type is left here for
+        # documentation and perhaps later re-specialisation.
+        # The other queues defined here are attributes on self, not local
+        # variables, and so apparently typeguard 4.0.0 checks them less hard.
+        # comm_q: Queue[Union[Tuple[int, int], str]]
+        comm_q: Queue
         comm_q = SizedQueue(maxsize=10)
 
         self.exception_q: Queue[Tuple[str, str]]
