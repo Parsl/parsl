@@ -26,6 +26,10 @@ virtualenv: ## create an activate a virtual env
 $(DEPS): test-requirements.txt requirements.txt
 	pip3 install --upgrade pip
 	pip3 install -r test-requirements.txt -r requirements.txt
+        # TODO: this is a hack to get packages installed for optional plugins for mypy
+        # -- a better story might be that the relevant setup.py dependencies get
+        # installed as a dep for mypy...
+        pip3 install proxystore serpent
 	touch $(DEPS)
 
 .PHONY: deps
