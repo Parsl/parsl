@@ -5,7 +5,7 @@ import time
 import typeguard
 
 from parsl.channels import LocalChannel
-from parsl.providers.base import JobState, JobStatus
+from parsl.jobs.states import JobState, JobStatus
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
 from parsl.launchers.base import Launcher

@@ -3,8 +3,8 @@ import os
 import time
 
 from parsl.channels import LocalChannel
+from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import AprunLauncher
-from parsl.providers.base import JobState, JobStatus
 from parsl.providers.torque.template import template_string
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.utils import RepresentationMixin
