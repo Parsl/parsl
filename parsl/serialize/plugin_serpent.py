@@ -5,8 +5,6 @@ from typing import Any
 
 
 class SerpentSerializer(SerializerBase):
-    _for_code = False
-    _for_data = True
 
     def serialize(self, data: Any) -> bytes:
         body = serpent.dumps(data)

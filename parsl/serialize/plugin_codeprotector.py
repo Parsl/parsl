@@ -33,9 +33,6 @@ class CodeProtectorPickler(dill.Pickler):
 
 class CodeProtectorSerializer(SerializerBase):
 
-    _for_code = True
-    _for_data = False
-
     def serialize(self, data: Any) -> bytes:
 
         f = io.BytesIO()

@@ -37,8 +37,6 @@ class ProxyStoreDeepPickler(dill.Pickler):
 
 
 class ProxyStoreDeepSerializer(SerializerBase):
-    _for_code = True
-    _for_data = True
 
     def __init__(self, *, policy: Optional[Type] = None, store: Optional[Store] = None) -> None:
         """Because of jumbled use of this class for init-time configurable

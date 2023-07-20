@@ -18,11 +18,6 @@ class XXXXSerializer(SerializerBase):
     """This is a test deserializer but puts some padding round to help distinguish...
     """
 
-    _for_code = True
-    _for_data = True
-
-    # TODO: better enforcement of the presence of these values? tied into abstract base class?
-
     def serialize(self, o):
         import dill
         logger.error(f"BENC: XXXX serializer serializing value {o} of type {type(o)}")
