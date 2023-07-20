@@ -1,5 +1,4 @@
 import logging
-from parsl.serialize.plugin_codeprotector import CodeProtectorSerializer
 from typing import Any, Dict, List, Union
 
 import parsl.serialize.concretes as concretes
@@ -68,8 +67,8 @@ def register_method_for_code(s: SerializerBase) -> None:
     methods_for_code.insert(0, s)
 
 
-# register_method_for_code(concretes.DillCallableSerializer())
-register_method_for_code(CodeProtectorSerializer())
+register_method_for_code(concretes.DillCallableSerializer())
+# register_method_for_code(CodeProtectorSerializer())
 
 
 def register_method_for_data(s: SerializerBase) -> None:
