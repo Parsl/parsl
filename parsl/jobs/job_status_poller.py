@@ -7,10 +7,10 @@ from typing import List  # noqa F401 (used in type annotation)
 
 from parsl.executors.base import ParslExecutor
 from parsl.jobs.job_error_handler import JobErrorHandler
+from parsl.jobs.states import JobStatus, JobState
 from parsl.jobs.strategy import Strategy
 from parsl.monitoring.message_type import MessageType
 
-from parsl.providers.base import JobStatus, JobState
 
 from parsl.utils import Timer
 

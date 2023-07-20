@@ -3,7 +3,7 @@ from concurrent.futures import Future
 from typing import Any, Callable, Dict, Optional, List
 from typing_extensions import Literal, Self
 
-from parsl.providers.base import JobStatus
+from parsl.jobs.states import JobStatus
 
 import parsl  # noqa F401
 

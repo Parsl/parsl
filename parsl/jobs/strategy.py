@@ -10,7 +10,7 @@ import parsl.jobs.job_status_poller as jsp
 from parsl.executors import HighThroughputExecutor
 from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.providers.base import JobState
+from parsl.jobs.states import JobState
 from parsl.process_loggers import wrap_with_logs
 
 
