@@ -902,7 +902,6 @@ class DataFlowKernel:
                cache: bool = False,
                ignore_for_cache: Optional[Sequence[str]] = None,
                app_kwargs: Dict[str, Any] = {},
-               app_type: Optional[str] = None,
                join: bool = False) -> AppFuture:
         """Add task to the dataflow system.
 
@@ -921,7 +920,6 @@ class DataFlowKernel:
             - cache (Bool) : To enable memoization or not
             - ignore_for_cache (list) : List of kwargs to be ignored for memoization/checkpointing
             - app_kwargs (dict) : Rest of the kwargs to the fn passed as dict.
-            - app_type (str): Whether this app is python or bash. Out of {'python', 'bash'}
 
         Returns:
                (AppFuture) [DataFutures,]
@@ -968,7 +966,6 @@ class DataFlowKernel:
                     )
 
         resource_specification = app_kwargs.get('parsl_resource_specification', {})
-        resource_specification.update({'app_type': app_type})
 
         task_def: TaskRecord
         task_def = {'depends': [],

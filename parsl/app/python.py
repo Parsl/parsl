@@ -78,7 +78,6 @@ class PythonApp(AppBase):
                              cache=self.cache,
                              ignore_for_cache=self.ignore_for_cache,
                              app_kwargs=invocation_kwargs,
-                             app_type='python',
                              join=self.join)
 
         return app_fut

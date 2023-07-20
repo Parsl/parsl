@@ -122,7 +122,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # If TaskVine factory is used, disable the Parsl provider
         if use_factory:
-            provider = LocalProvider(init_blocks=0, max_blocks=0)
+            provider = None
 
         # Initialize the parent class with the execution provider and block error handling enabled.
         BlockProviderExecutor.__init__(self, provider=provider,
@@ -266,13 +266,15 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Begin work
         self.submit_process.start()
-        self.collector_thread.start()
 
         # Run worker scaler either with Parsl provider or TaskVine factory
         if self.use_factory:
             self.factory_process.start()
         else:
             self.initialize_scaling()
+        
+        self.collector_thread.start()
+
         logger.debug("All components in TaskVineExecutor started")
 
     def _path_in_task(self, executor_task_id, *path_components):

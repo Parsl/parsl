@@ -81,8 +81,7 @@ class TaskRecord(TypedDict, total=False):
 
     resource_specification: Dict[str, Any]
     """Dictionary containing relevant info for a task execution.
-    Includes resources to allocate, execution mode, and
-    app type (python, bash) as a given
+    Includes resources to allocate and execution mode as a given
     executor permits."""
 
     join: bool
