@@ -5,7 +5,6 @@ from typing import Any
 
 
 class SerpentSerializer(SerializerBase):
-    _identifier = b'parsl.serialize.plugin_serpent SerpentSerializer'
     _for_code = False
     _for_data = True
 

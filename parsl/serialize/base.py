@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABCMeta
-
+from functools import cached_property
 from typing import Any
 
 
@@ -7,23 +7,23 @@ class SerializerBase(metaclass=ABCMeta):
     """ Adds shared functionality for all serializer implementations
     """
 
-    _identifier: bytes
-
-    @property
+    @cached_property
     def identifier(self) -> bytes:
-        """Get that identifier that will be used to indicate in byte streams
+        """Compute the identifier that will be used to indicate in byte streams
         that this class should be used for deserialization.
 
-        TODO: for user derived serialisers, this should be fixed to be the
-        appropriate module and class name so that it can be loaded dynamically:
-        a serializer shouldn't be forced to specify an _identifier unless its
-        trying to short-cut that path.
+        Classes that wish to use a self-managed identifier namespace, such as
+        the default concretes.py implementations, should override this property
+        with their own identifier.
 
         Returns
         -------
         identifier : bytes
         """
-        return self._identifier
+        t = type(self)
+        m = bytes(t.__module__, encoding="utf-8")
+        c = bytes(t.__name__, encoding="utf-8")
+        return m + b' ' + c
 
     @abstractmethod
     def serialize(self, data: Any) -> bytes:

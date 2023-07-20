@@ -15,10 +15,6 @@ class ConstSerializer(SerializerBase):
     deserialization.
     """
 
-    # TODO: should be enforcing/defaulting this to class name so that by default we can dynamically load the serializer remotely?
-    _identifier = b'parsl.tests.test_serializer.test_plugin ConstSerializer'
-    # note a space in the name here not final dot, to distinguish modules vs attribute in module
-
     # TODO: better enforcement of the presence of these values? tied into abstract base class?
 
     def serialize(self, o):

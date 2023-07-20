@@ -33,8 +33,6 @@ class CodeProtectorPickler(dill.Pickler):
 
 class CodeProtectorSerializer(SerializerBase):
 
-    _identifier = b'parsl.serialize.plugin_codeprotector CodeProtectorSerializer'
-
     _for_code = True
     _for_data = False
 
