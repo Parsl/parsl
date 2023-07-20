@@ -114,9 +114,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     address : string
         An address to connect to the main Parsl process which is reachable from the network in which
-        workers will be running. This can be either a hostname as returned by ``hostname`` or an
-        IP address. Most login nodes on clusters have several network interfaces available, only
-        some of which can be reached from the compute nodes.
+        workers will be running. This field expects an IPv4 address (xxx.xxx.xxx.xxx).
+        Most login nodes on clusters have several network interfaces available, only some of which
+        can be reached from the compute nodes. This field can be used to limit the executor to listen
+        only on a specific interface, and limiting connections to the internal network.
         By default, the executor will attempt to enumerate and connect through all possible addresses.
         Setting an address here overrides the default behavior.
         default=None
@@ -471,6 +472,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                             kwargs={"client_ports": (self.outgoing_q.port,
                                                                      self.incoming_q.port,
                                                                      self.command_client.port),
+                                                    "interchange_address": self.address,
                                                     "worker_ports": self.worker_ports,
                                                     "worker_port_range": self.worker_port_range,
                                                     "hub_address": self.hub_address,
@@ -595,10 +597,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         except TypeError:
             raise SerializationError(func.__name__)
 
-        msg = {"task_id": task_id,
-               "buffer": fn_buf}
+        msg = {"task_id": task_id, "buffer": fn_buf}
 
-        # Post task to the the outgoing queue
+        # Post task to the outgoing queue
         self.outgoing_q.put(msg)
 
         # Return the future

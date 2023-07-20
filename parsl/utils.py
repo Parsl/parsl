@@ -5,12 +5,11 @@ import shlex
 import subprocess
 import threading
 import time
-from types import TracebackType
-
-import typeguard
 from contextlib import contextmanager
+from types import TracebackType
 from typing import Any, Callable, List, Tuple, Union, Generator, IO, AnyStr, Dict, Optional
 
+import typeguard
 from typing_extensions import Type
 
 import parsl
@@ -110,9 +109,12 @@ def get_last_checkpoint(rundir: str = "runinfo") -> List[str]:
 
 
 @typeguard.typechecked
-def get_std_fname_mode(fdname: str, stdfspec: Union[str, Tuple[str, str]]) -> Tuple[str, str]:
+def get_std_fname_mode(
+    fdname: str,
+    stdfspec: Union[os.PathLike, str, Tuple[str, str], Tuple[os.PathLike, str]]
+) -> Tuple[str, str]:
     import parsl.app.errors as pe
-    if isinstance(stdfspec, str):
+    if isinstance(stdfspec, (str, os.PathLike)):
         fname = stdfspec
         mode = 'a+'
     elif isinstance(stdfspec, tuple):
@@ -121,7 +123,7 @@ def get_std_fname_mode(fdname: str, stdfspec: Union[str, Tuple[str, str]]) -> Tu
                    f"{len(stdfspec)}")
             raise pe.BadStdStreamFile(msg, TypeError('Bad Tuple Length'))
         fname, mode = stdfspec
-    return fname, mode
+    return str(fname), mode
 
 
 @contextmanager

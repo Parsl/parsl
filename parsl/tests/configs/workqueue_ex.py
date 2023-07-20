@@ -9,7 +9,8 @@ from parsl.providers import LocalProvider
 
 
 def fresh_config():
-    return Config(executors=[WorkQueueExecutor(port=9000, coprocess=True,
+    return Config(executors=[WorkQueueExecutor(port=9000,
+                                               coprocess=True,
                                                storage_access=[FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging()],
                                                provider=LocalProvider(init_blocks=0, min_blocks=0, max_blocks=1)
                                                )],

@@ -1,4 +1,5 @@
 import os
+import typeguard
 
 import pytest
 
@@ -44,7 +45,7 @@ def test_bad_stdout_specs(spec):
     try:
         fn.result()
     except Exception as e:
-        assert isinstance(e, TypeError) or isinstance(e, perror.BadStdStreamFile), "Exception is wrong type"
+        assert isinstance(e, (typeguard.TypeCheckError, TypeError, perror.BadStdStreamFile)), "Exception is wrong type"
     else:
         assert False, "Did not raise expected exception"
 

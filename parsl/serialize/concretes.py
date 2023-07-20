@@ -18,31 +18,10 @@ class PickleSerializer(SerializerBase):
     """
 
     _identifier = b'01'
-    _for_code = False
-    _for_data = True
 
     def serialize(self, data: Any) -> bytes:
         return pickle.dumps(data)
 
-    def deserialize(self, body: bytes) -> Any:
-        return pickle.loads(body)
-
-
-class PickleCallableSerializer(SerializerBase):
-    """This serializer is a variant of the PickleSerializer that will
-    serialize and deserialize callables using an lru_cache, under the
-    assumption that callables are immutable and so can be cached.
-    """
-
-    _identifier = b'C1'
-    _for_code = True
-    _for_data = False
-
-    @functools.lru_cache
-    def serialize(self, data: Any) -> bytes:
-        return pickle.dumps(data)
-
-    @functools.lru_cache
     def deserialize(self, body: bytes) -> Any:
         return pickle.loads(body)
 
@@ -60,8 +39,6 @@ class DillSerializer(SerializerBase):
     """
 
     _identifier = b'02'
-    _for_code = False
-    _for_data = True
 
     def serialize(self, data: Any) -> bytes:
         return dill.dumps(data)
@@ -77,8 +54,6 @@ class DillCallableSerializer(SerializerBase):
     """
 
     _identifier = b'C2'
-    _for_code = True
-    _for_data = False
 
     @functools.lru_cache
     def serialize(self, data: Any) -> bytes:
