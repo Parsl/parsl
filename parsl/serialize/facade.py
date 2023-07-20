@@ -22,14 +22,21 @@ deserializers: Dict[bytes, SerializerBase]
 deserializers = {}
 
 
-def clear_serializers() -> None:
-    # does not clear deserializers because remote sending back will have a
-    # different serializer list (and wants to send back results with one of
-    # the default 4) so clearing all the deserializers means we cannot receive
-    # results...
-    global methods_for_data, methods_for_code
-    methods_for_code = []
-    methods_for_data = []
+# maybe it's weird to want to clear away all serializers rather than just the
+# data or just code ones? eg in proxystore test, clearing serializers means
+# there is no code serializer... so just data sreializer should be cleared
+# (or if only having one kind of serializer, no code/data distinction, then
+# this is more consistent, but clearing serializer is still a bit weird in
+#  that case (maybe for security?) - with inserting one near the start more
+# usual?
+# def clear_serializers() -> None:
+#    # does not clear deserializers because remote sending back will have a
+#    # different serializer list (and wants to send back results with one of
+#    # the default 4) so clearing all the deserializers means we cannot receive
+#    # results...
+#    global methods_for_data, methods_for_code
+#    methods_for_code = []
+#    methods_for_data = []
 
 
 def unregister_serializer(serializer: SerializerBase) -> None:
@@ -121,6 +128,9 @@ def serialize(obj: Any, buffer_threshold: int = int(1e6)) -> bytes:
     else:
         methods = methods_for_data
 
+    if methods == []:
+        raise RuntimeError("There are no configured serializers")
+
     for method in methods:
         try:
             logger.info(f"BENC: trying serializer {method}")
@@ -132,15 +142,13 @@ def serialize(obj: Any, buffer_threshold: int = int(1e6)) -> bytes:
         else:
             break
 
-    # if no serializer found
     if result is None:
-        logger.error("BENC: no serializer returned a result")
-        raise RuntimeError("BENC: No serializers")
+        raise RuntimeError("No serializer returned a result")
     elif isinstance(result, BaseException):
-        logger.error("BENC: exception from final serializer")
+        logger.error("Serializer returned an excepton, reraise")
         raise result
     else:
-        logger.info("BENC: serialization complete")
+        logger.debug("Serialization complete")
         if len(result) > buffer_threshold:
             logger.warning(f"Serialized object exceeds buffer threshold of {buffer_threshold} bytes, this could cause overflows")
         return result

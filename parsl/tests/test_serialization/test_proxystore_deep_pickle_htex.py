@@ -6,7 +6,7 @@ import parsl
 from parsl.tests.configs.htex_local import fresh_config as local_config
 
 from parsl.serialize.base import SerializerBase
-from parsl.serialize.facade import serialize, deserialize, register_method_for_data, unregister_serializer, clear_serializers
+from parsl.serialize.facade import serialize, deserialize, register_method_for_data, unregister_serializer
 
 from parsl.serialize.plugin_proxystore_deep_pickle import create_deep_proxystore_serializer
 
@@ -42,7 +42,10 @@ class MyDemo:
 def test_proxystore_single_call():
     later_c = [v for v in parsl.serialize.facade.methods_for_code]
     later_d = [v for v in parsl.serialize.facade.methods_for_data]
-    clear_serializers()
+
+    # clear the data serializers, leaving the code serializers in place
+    parsl.serialize.facade.methods_for_data = []
+
     s = create_deep_proxystore_serializer(policy=MyDemo)
 
     register_method_for_data(s)
