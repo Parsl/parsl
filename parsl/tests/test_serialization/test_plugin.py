@@ -46,7 +46,7 @@ def test_const_inprocess():
         assert deserialize(serialize(1)) != 1
 
         # and that the behaviour looks like ConstSerializer
-        assert serialize(1) == ConstSerializer._identifier + b'\n' + B_MAGIC
+        assert serialize(1) == s.identifier + b'\n' + B_MAGIC
         assert deserialize(serialize(1)) == V_MAGIC
     finally:
         unregister_serializer(s)

@@ -42,8 +42,8 @@ deserializers = {}
 def unregister_serializer(serializer: SerializerBase) -> None:
     logger.info(f"BENC: deserializers {deserializers}, serializer {serializer}")
     logger.info(f"BENC: unregistering serializer {serializer}")
-    if serializer._identifier in deserializers:
-        del deserializers[serializer._identifier]
+    if serializer.identifier in deserializers:
+        del deserializers[serializer.identifier]
     else:
         logger.warning("BENC: not found in deserializers list")
     if serializer in methods_for_code:
@@ -134,7 +134,7 @@ def serialize(obj: Any, buffer_threshold: int = int(1e6)) -> bytes:
     for method in methods:
         try:
             logger.info(f"BENC: trying serializer {method}")
-            result = method._identifier + b'\n' + method.serialize(obj)
+            result = method.identifier + b'\n' + method.serialize(obj)
         except Exception as e:
             logger.warning(f"BENC: serializer {method} skipping, with exception: {e}")
             result = e
