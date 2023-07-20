@@ -167,7 +167,7 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
+    def handle_errors(self, error_handler: "parsl.jobs.job_error_handler.JobErrorHandler",
                       status: Dict[str, JobStatus]) -> None:
         """This method is called by the error management infrastructure after a status poll. The
         executor implementing this method is then responsible for detecting abnormal conditions

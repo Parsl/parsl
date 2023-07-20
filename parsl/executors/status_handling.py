@@ -135,7 +135,7 @@ class BlockProviderExecutor(ParslExecutor):
     def error_management_enabled(self):
         return self.block_error_handler
 
-    def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
+    def handle_errors(self, error_handler: "parsl.jobs.job_error_handler.JobErrorHandler",
                       status: Dict[str, JobStatus]) -> None:
         if not self.block_error_handler:
             return
@@ -235,7 +235,7 @@ class NoStatusHandlingExecutor(ParslExecutor):
     def status(self):
         return {}
 
-    def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
+    def handle_errors(self, error_handler: "parsl.jobs.job_error_handler.JobErrorHandler",
                       status: Dict[str, JobStatus]) -> None:
         pass
 

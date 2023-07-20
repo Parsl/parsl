@@ -5,7 +5,7 @@ import math
 import warnings
 from typing import Dict, List, Optional
 
-import parsl.dataflow.job_status_poller as jsp
+import parsl.jobs.job_status_poller as jsp
 
 from parsl.executors import HighThroughputExecutor
 from parsl.executors.base import ParslExecutor
