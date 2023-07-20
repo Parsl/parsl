@@ -18,8 +18,6 @@ class PickleSerializer(SerializerBase):
     """
 
     _identifier = b'01'
-    _for_code = False
-    _for_data = True
 
     def serialize(self, data: Any) -> bytes:
         return pickle.dumps(data)
@@ -41,8 +39,6 @@ class DillSerializer(SerializerBase):
     """
 
     _identifier = b'02'
-    _for_code = False
-    _for_data = True
 
     def serialize(self, data: Any) -> bytes:
         return dill.dumps(data)
@@ -58,8 +54,6 @@ class DillCallableSerializer(SerializerBase):
     """
 
     _identifier = b'C2'
-    _for_code = True
-    _for_data = False
 
     @functools.lru_cache
     def serialize(self, data: Any) -> bytes:
