@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import argparse
 import zmq
 import os
 import sys
@@ -14,7 +13,7 @@ import queue
 import threading
 import json
 
-from typing import cast, Any, Dict, Set
+from typing import cast, Any, Dict, Set, Optional
 
 from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
@@ -28,6 +27,9 @@ from parsl.process_loggers import wrap_with_logs
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
+
+LOGGER_NAME = "interchange"
+logger = logging.getLogger(LOGGER_NAME)
 
 
 class ManagerLost(Exception):
@@ -66,7 +68,7 @@ class Interchange:
     """
     def __init__(self,
                  client_address="127.0.0.1",
-                 interchange_address="127.0.0.1",
+                 interchange_address: Optional[str] = None,
                  client_ports=(50055, 50056, 50057),
                  worker_ports=None,
                  worker_port_range=(54000, 55000),
@@ -83,8 +85,9 @@ class Interchange:
         client_address : str
              The ip address at which the parsl client can be reached. Default: "127.0.0.1"
 
-        interchange_address : str
-             The ip address at which the workers will be able to reach the Interchange. Default: "127.0.0.1"
+        interchange_address : Optional str
+             If specified the interchange will only listen on this address for connections from workers
+             else, it binds to all addresses.
 
         client_ports : triple(int, int, int)
              The ports at which the client can be reached
@@ -125,7 +128,7 @@ class Interchange:
         logger.debug("Initializing Interchange process")
 
         self.client_address = client_address
-        self.interchange_address = interchange_address
+        self.interchange_address: str = interchange_address or "*"
         self.poll_period = poll_period
 
         logger.info("Attempting connection to client at {} on ports: {},{},{}".format(
@@ -160,14 +163,14 @@ class Interchange:
             self.worker_task_port = self.worker_ports[0]
             self.worker_result_port = self.worker_ports[1]
 
-            self.task_outgoing.bind("tcp://*:{}".format(self.worker_task_port))
-            self.results_incoming.bind("tcp://*:{}".format(self.worker_result_port))
+            self.task_outgoing.bind(f"tcp://{self.interchange_address}:{self.worker_task_port}")
+            self.results_incoming.bind(f"tcp://{self.interchange_address}:{self.worker_result_port}")
 
         else:
-            self.worker_task_port = self.task_outgoing.bind_to_random_port('tcp://*',
+            self.worker_task_port = self.task_outgoing.bind_to_random_port(f"tcp://{self.interchange_address}",
                                                                            min_port=worker_port_range[0],
                                                                            max_port=worker_port_range[1], max_tries=100)
-            self.worker_result_port = self.results_incoming.bind_to_random_port('tcp://*',
+            self.worker_result_port = self.results_incoming.bind_to_random_port(f"tcp://{self.interchange_address}",
                                                                                 min_port=worker_port_range[0],
                                                                                 max_port=worker_port_range[1], max_tries=100)
 
@@ -574,7 +577,7 @@ class Interchange:
                 interesting_managers.remove(manager_id)
 
 
-def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_string=None):
+def start_file_logger(filename, level=logging.DEBUG, format_string=None):
     """Add a stream log handler.
 
     Parameters
@@ -582,8 +585,6 @@ def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_
 
     filename: string
         Name of the file to write logs to. Required.
-    name: string
-        Logger name. Default="parsl.executors.interchange"
     level: logging.LEVEL
         Set the logging level. Default=logging.DEBUG
         - format_string (string): Set the format string
@@ -598,7 +599,7 @@ def start_file_logger(filename, name='interchange', level=logging.DEBUG, format_
         format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d %(processName)s(%(process)d) %(threadName)s %(funcName)s [%(levelname)s]  %(message)s"
 
     global logger
-    logger = logging.getLogger(name)
+    logger = logging.getLogger(LOGGER_NAME)
     logger.setLevel(level)
     handler = logging.FileHandler(filename)
     handler.setLevel(level)
@@ -618,47 +619,4 @@ def starter(comm_q, *args, **kwargs):
     ic = Interchange(*args, **kwargs)
     comm_q.put((ic.worker_task_port,
                 ic.worker_result_port))
-    ic.start()
-
-
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--client_address",
-                        help="Client address")
-    parser.add_argument("-l", "--logdir", default="parsl_worker_logs",
-                        help="Parsl worker log directory")
-    parser.add_argument("-t", "--task_url",
-                        help="REQUIRED: ZMQ url for receiving tasks")
-    parser.add_argument("-r", "--result_url",
-                        help="REQUIRED: ZMQ url for posting results")
-    parser.add_argument("-p", "--poll_period",
-                        help="REQUIRED: poll period used for main thread")
-    parser.add_argument("--worker_ports", default=None,
-                        help="OPTIONAL, pair of workers ports to listen on, eg --worker_ports=50001,50005")
-    parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
-
-    args = parser.parse_args()
-
-    # Setup logging
-    global logger
-    format_string = "%(asctime)s %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-
-    logger = logging.getLogger("interchange")
-    logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
-    handler.setLevel('DEBUG' if args.debug is True else 'INFO')
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-    logger.debug("Starting Interchange")
-
-    optionals = {}
-
-    if args.worker_ports:
-        optionals['worker_ports'] = [int(i) for i in args.worker_ports.split(',')]
-
-    ic = Interchange(**optionals)
     ic.start()
