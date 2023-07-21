@@ -5,7 +5,8 @@ from parsl.providers.kubernetes.template import template_string
 logger = logging.getLogger(__name__)
 
 from parsl.errors import OptionalModuleMissing
-from parsl.providers.base import ExecutionProvider, JobState, JobStatus
+from parsl.jobs.states import JobState, JobStatus
+from parsl.providers.base import ExecutionProvider
 from parsl.utils import RepresentationMixin
 
 import typeguard
