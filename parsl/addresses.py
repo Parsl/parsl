@@ -122,6 +122,7 @@ def get_all_addresses() -> Set[str]:
 
     return s_addresses
 
+
 def get_any_address() -> str:
     """ Uses a combination of methods to find any address of the local machine.
 
@@ -146,7 +147,7 @@ def get_any_address() -> str:
             return addr
         except Exception:
             logger.exception("Ignoring an address finder exception")
-    
+
     if addr == '':
         raise Exception('Cannot find address of the local machine.')
     return addr
