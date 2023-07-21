@@ -45,6 +45,7 @@ from parsl.executors.taskvine.errors import TaskVineFactoryFailure
 from parsl.executors.taskvine.utils import ParslTaskToVine
 from parsl.executors.taskvine.utils import VineTaskToParsl
 from parsl.executors.taskvine.utils import ParslFileToVine
+from parsl.executors.taskvine.utils import run_parsl_function
 
 # Import other libraries
 import typeguard
@@ -416,26 +417,25 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if category is None:
             category = func.__name__ if self.manager_config.autocategory else 'parsl-default'
 
-        # support for python and serverless exec mode delayed
-        if exec_mode == 'python' or exec_mode == 'serverless':
+        if exec_mode == 'regular' or exec_mode == 'serverless':
+            task_info = ParslTaskToVine(executor_id=executor_task_id,
+                                        exec_mode=exec_mode,
+                                        category=category,
+                                        input_files=input_files,
+                                        output_files=output_files,
+                                        map_file=map_file,
+                                        function_file=function_file,
+                                        argument_file=argument_file,
+                                        result_file=result_file,
+                                        cores=cores,
+                                        memory=memory,
+                                        disk=disk,
+                                        gpus=gpus,
+                                        priority=priority,
+                                        running_time_min=running_time_min,
+                                        env_pkg=env_pkg)
+        else:
             raise UnsupportedFeatureError(f'Execution mode {exec_mode} is not currently supported.', 'TaskVineExecutor', None)
-        task_info = ParslTaskToVine(executor_id=executor_task_id,
-                                    exec_mode=exec_mode,
-                                    category=category,
-                                    input_files=input_files,
-                                    output_files=output_files,
-                                    map_file=map_file,
-                                    function_file=function_file,
-                                    argument_file=argument_file,
-                                    result_file=result_file,
-                                    cores=cores,
-                                    memory=memory,
-                                    disk=disk,
-                                    gpus=gpus,
-                                    priority=priority,
-                                    running_time_min=running_time_min,
-                                    env_pkg=env_pkg)
-
         # Send ready task to manager process
         self.ready_task_queue.put_nowait(task_info)
 
@@ -727,9 +727,13 @@ def _taskvine_submit_wait(ready_task_queue=None,
     # Find poncho run script to activate an environment tarball
     poncho_run_script = shutil.which("poncho_package_run")
 
-    # Declare helper scripts as cache-able and peer-transferable
+    # Declare helper scripts for regular tasks as cache-able and peer-transferable
     package_run_script_file = m.declare_file(poncho_run_script, cache=True, peer_transfer=True)
     exec_parsl_function_file = m.declare_file(exec_parsl_function.__file__, cache=True, peer_transfer=True)
+
+    # Flag to keep track if there's at least 1 serverless task. If so then
+    # library is declared and installed only once.
+    lib_installed = False
 
     logger.debug("Entering main loop of TaskVine manager")
 
@@ -770,6 +774,24 @@ def _taskvine_submit_wait(ready_task_queue=None,
                                                                    reason="task could not be created by taskvine",
                                                                    status=-1))
                     continue
+            elif task.exec_mode == 'serverless':
+                if not lib_installed:
+                    # Declare and install common library for serverless tasks
+                    serverless_lib = m.create_library_from_functions('common-parsl-taskvine-lib', run_parsl_function)
+                    m.install_library(serverless_lib)
+                    lib_installed = True
+                try:
+                    # run_parsl_function only needs remote names of map_file, function_file, argument_file,
+                    # and result_file, which are simply named map, function, argument, result.
+                    # These names are given when these files are declared below.
+                    t = FunctionCall('common-parsl-taskvine-lib', run_parsl_function.__name__, 'map', 'function', 'argument', 'result')
+                except:
+                    logger.error("Unable to create executor task (mode:serverless): {}".format(e))
+                    finished_task_queue.put_nowait(VineTaskToParsl(executor_id=task.executor_id,
+                                                                   result_received=False,
+                                                                   result=None,
+                                                                   reason="task could not be created by taskvine",
+                                                                   status=-1))
             else:
                 raise Exception(f'Unrecognized task mode {task.exec_mode}. Exiting...')
 
@@ -843,23 +865,23 @@ def _taskvine_submit_wait(ready_task_queue=None,
 
             if task.exec_mode == 'regular':
                 # Add helper files that execute parsl functions on remote nodes
-                # only needed for tasks with 'regular' mode
+                # only needed to add as file for tasks with 'regular' mode
                 t.add_input(exec_parsl_function_file, "exec_parsl_function.py")
 
-                # Declare and add task-specific function, data, and result files to task
-                task_function_file = m.declare_file(task.function_file, cache=False, peer_transfer=False)
-                t.add_input(task_function_file, "function")
+            # Declare and add task-specific function, data, and result files to task
+            task_function_file = m.declare_file(task.function_file, cache=False, peer_transfer=False)
+            t.add_input(task_function_file, "function")
 
-                task_argument_file = m.declare_file(task.argument_file, cache=False, peer_transfer=False)
-                t.add_input(task_argument_file, "argument")
+            task_argument_file = m.declare_file(task.argument_file, cache=False, peer_transfer=False)
+            t.add_input(task_argument_file, "argument")
 
-                task_map_file = m.declare_file(task.map_file, cache=False, peer_transfer=False)
-                t.add_input(task_map_file, "map")
+            task_map_file = m.declare_file(task.map_file, cache=False, peer_transfer=False)
+            t.add_input(task_map_file, "map")
 
-                task_result_file = m.declare_file(task.result_file, cache=False, peer_transfer=False)
-                t.add_output(task_result_file, "result")
+            task_result_file = m.declare_file(task.result_file, cache=False, peer_transfer=False)
+            t.add_output(task_result_file, "result")
 
-                result_file_of_task_id[str(task.executor_id)] = task.result_file
+            result_file_of_task_id[str(task.executor_id)] = task.result_file
 
             logger.debug("Executor task id: {}".format(task.executor_id))
 
@@ -917,7 +939,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
                 exec_mode_of_task = vine_id_to_executor_task_id[str(t.id)][1]
                 vine_id_to_executor_task_id.pop(str(t.id))
                 # When a task is found
-                if exec_mode_of_task == 'regular':
+                if exec_mode_of_task == 'regular' or exec_mode_of_task == 'serverless':
                     result_file = result_file_of_task_id.pop(executor_task_id)
 
                     logger.debug(f"completed executor task info: {executor_task_id}, {t.category}, {t.command}, {t.std_output}")

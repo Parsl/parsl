@@ -149,21 +149,8 @@ def execute_function(namespace, function_code, result_name):
     return result
 
 
-def run():
+def run(map_file, function_file, argument_file, result_file):
     try:
-        # parse the four required command line arguments:
-        # map_file: contains a pickled dictionary to map original names to
-        #           names at the execution site.
-        # function_file: contains the pickled parsl function to execute.
-        # argument_file: contains the pickled arguments to the function call.
-        # result_file: any output (including exceptions) will be written to
-        #              this file.
-        try:
-            (map_file, function_file, argument_file, result_file) = sys.argv[1:]
-        except ValueError:
-            print("Usage:\n\t{} function argument result mapping\n".format(sys.argv[0]))
-            raise
-
         try:
             (namespace, function_code, result_name) = load_function(map_file, function_file, argument_file)
         except Exception:
@@ -189,4 +176,16 @@ def run():
 
 
 if __name__ == "__main__":
-    run() 
+    # parse the four required command line arguments:
+    # map_file: contains a pickled dictionary to map original names to
+    #           names at the execution site.
+    # function_file: contains the pickled parsl function to execute.
+    # argument_file: contains the pickled arguments to the function call.
+    # result_file: any output (including exceptions) will be written to
+    #              this file.
+    try:
+        (map_file, function_file, argument_file, result_file) = sys.argv[1:]
+    except ValueError:
+        print("Usage:\n\t{} function argument result mapping\n".format(sys.argv[0]))
+        raise
+    run(map_file, function_file, argument_file, result_file) 

@@ -75,3 +75,9 @@ class ParslFileToVine:
         self.parsl_name = parsl_name
         self.stage = stage
         self.cache = cache
+
+
+def run_parsl_function():
+    # This function assumes that parsl module is importable on remote nodes
+    from parsl.executors.taskvine.exec_parsl_function import run
+    run()
