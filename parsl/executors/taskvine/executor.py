@@ -26,7 +26,6 @@ from typing import List, Optional, Union
 import parsl.utils as putils
 from parsl.utils import setproctitle
 from parsl.data_provider.staging import Staging
-from parsl.serialize import pack_apply_message
 from parsl.serialize import serialize
 from parsl.data_provider.files import File
 from parsl.errors import OptionalModuleMissing
@@ -393,9 +392,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
             logger.debug("Creating executor task {} with function at: {}, argument at: {}, and result to be found at: {}".format(executor_task_id, function_file, argument_file, result_file))
 
-            # Pickle the result into object to pass into message buffer
-            #self._serialize_function(function_file, func, args, kwargs)
-
             # Serialize both function object and arguments, separately
             self._serialize_object(function_file, func)
             args_dict = {'args': args, 'kwargs': kwargs}
@@ -478,15 +474,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         serialized_obj = serialize(obj, buffer_threshold=1024 * 1024)
         with open(path, 'wb') as f_out:
             pickle.dump(serialized_obj, f_out)
-
-    #def _serialize_function(self, fn_path, parsl_fn, parsl_fn_args, parsl_fn_kwargs):
-    #    """Takes the function application parsl_fn(*parsl_fn_args, **parsl_fn_kwargs)
-    #    and serializes it to the file fn_path."""
-    #    function_info = {"byte code": pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
-    #                                                     buffer_threshold=1024 * 1024)}
-
-    #    with open(fn_path, "wb") as f_out:
-    #        pickle.dump(function_info, f_out)
 
     def _construct_map_file(self, map_file, input_files, output_files):
         """ Map local filepath of parsl files to the filenames at the execution worker.

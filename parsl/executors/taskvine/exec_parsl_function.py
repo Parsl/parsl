@@ -79,25 +79,10 @@ def remap_all_files(mapping, fn_args, fn_kwargs):
 
 
 def unpack_object(serialized_obj, user_namespace):
-    #from parsl.serialize import unpack_apply_message
     from parsl.serialize import deserialize
-    #obj = unpack_apply_message(serialized_obj, user_namespace, copy=False)
     obj = deserialize(serialized_obj)
     return obj
     
-
-#def unpack_function(function_info, user_namespace):
-#    """ Unpack a function according to its encoding scheme."""
-#    return unpack_byte_code_function(function_info, user_namespace)
-#
-#
-#def unpack_byte_code_function(function_info, user_namespace):
-#    """ Returns a function object, a default name, positional arguments, and keyword arguments
-#    for a function."""
-#    from parsl.serialize import unpack_apply_message
-#    func, args, kwargs = unpack_apply_message(function_info["byte code"], user_namespace, copy=False)
-#    return (func, 'parsl_function_name', args, kwargs)
-
 
 def encode_function(user_namespace, fn, fn_name, fn_args, fn_kwargs):
     """ Register the given function to the given namespace."""
@@ -146,7 +131,6 @@ def load_function(map_file, function_file, argument_file):
     fn_args = args_dict['args']
     fn_kwargs = args_dict['kwargs']
     fn_name = 'parsl_tmp_func_name'
-    #(fn, fn_name, fn_args, fn_kwargs) = unpack_function(function_info, user_ns)
 
     mapping = load_pickled_file(map_file)
     remap_all_files(mapping, fn_args, fn_kwargs)
@@ -159,7 +143,6 @@ def load_function(map_file, function_file, argument_file):
 def execute_function(namespace, function_code, result_name):
     # On executing the function inside the namespace, its result will be in a
     # variable named result_name.
-    #raise Exception(f'function_code: {function_code}, namespace: {namespace}')
     exec(function_code, namespace, namespace)
     result = namespace.get(result_name)
 
