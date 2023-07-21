@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Union
 
 import parsl.serialize.concretes as concretes
 from parsl.serialize.base import SerializerBase
+from parsl.serialize.errors import DeserializerPluginError
 
 logger = logging.getLogger(__name__)
 
@@ -108,11 +109,11 @@ def deserialize(payload: bytes) -> Any:
     header, body = payload.split(b'\n', 1)
 
     if header in methods_for_code:
-        result = methods_for_code[header].deserialize(body)
+        deserializer = methods_for_code[header]
     elif header in methods_for_data:
-        result = methods_for_data[header].deserialize(body)
+        deserializer = methods_for_data[header]
     elif header in additional_methods_for_deserialization:
-        result = additional_methods_for_deserialization[header].deserialize(body)
+        deserializer = additional_methods_for_deserialization[header]
     else:
         logger.info("Trying to dynamically load deserializer: {!r}".format(header))
         # This is a user plugin point, so expect exceptions to happen.
@@ -124,9 +125,9 @@ def deserialize(payload: bytes) -> Any:
             deserializer = deserializer_class()
             additional_methods_for_deserialization[header] = deserializer
         except Exception as e:
-            raise RuntimeError("Could not dynamically load deserializer") from e
+            raise DeserializerPluginError(header) from e
 
-        result = deserializer.deserialize(body)
+    result = deserializer.deserialize(body)
 
     return result
 
