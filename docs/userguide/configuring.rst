@@ -116,7 +116,8 @@ Stepping through the following question should help formulate a suitable configu
 | `parsl.executors.WorkQueueExecutor`        | <=1000 [*]_          | 10s+                                |
 +--------------------------------------------+----------------------+-------------------------------------+
 | `parsl.executors.taskvine.TaskVineExecutor`| <=1000 [*]_          | 10s+                                |
-+--------------------------------------------+----------------------+--------------------------------------
++--------------------------------------------+----------------------+-------------------------------------+
+
 
 .. [*] Assuming 32 workers per node. If there are fewer workers launched
        per node, a larger number of nodes could be supported.
