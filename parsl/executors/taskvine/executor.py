@@ -27,6 +27,7 @@ import parsl.utils as putils
 from parsl.utils import setproctitle
 from parsl.data_provider.staging import Staging
 from parsl.serialize import pack_apply_message
+from parsl.serialize import serialize
 from parsl.data_provider.files import File
 from parsl.errors import OptionalModuleMissing
 from parsl.providers.base import ExecutionProvider
@@ -378,19 +379,27 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Creating task {} for function {} of type {} with args {}".format(executor_task_id, func, type(func), args))
 
         function_file = None
+        argument_file = None
         result_file = None
         map_file = None
         # Use executor's serialization method if app mode is 'regular'
         if exec_mode == 'regular':
-            # Get path to files that will contain the pickled function, result, and map of input and output files
+            # Get path to files that will contain the pickled function, 
+            # arguments, result, and map of input and output files
             function_file = self._path_in_task(executor_task_id, "function")
+            argument_file = self._path_in_task(executor_task_id, "argument")
             result_file = self._path_in_task(executor_task_id, "result")
             map_file = self._path_in_task(executor_task_id, "map")
 
-            logger.debug("Creating executor task {} with function at: {} and result to be found at: {}".format(executor_task_id, function_file, result_file))
+            logger.debug("Creating executor task {} with function at: {}, argument at: {}, and result to be found at: {}".format(executor_task_id, function_file, argument_file, result_file))
 
             # Pickle the result into object to pass into message buffer
-            self._serialize_function(function_file, func, args, kwargs)
+            #self._serialize_function(function_file, func, args, kwargs)
+
+            # Serialize both function object and arguments, separately
+            self._serialize_object(function_file, func)
+            args_dict = {'args': args, 'kwargs': kwargs}
+            self._serialize_object(argument_file, args_dict)
 
             # Construct the map file of local filenames at worker
             self._construct_map_file(map_file, input_files, output_files)
@@ -421,6 +430,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                     output_files=output_files,
                                     map_file=map_file,
                                     function_file=function_file,
+                                    argument_file=argument_file,
                                     result_file=result_file,
                                     cores=cores,
                                     memory=memory,
@@ -463,14 +473,20 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             if self.project_password_file:
                 self.provider.transfer_input_files.append(self.project_password_file)
 
-    def _serialize_function(self, fn_path, parsl_fn, parsl_fn_args, parsl_fn_kwargs):
-        """Takes the function application parsl_fn(*parsl_fn_args, **parsl_fn_kwargs)
-        and serializes it to the file fn_path."""
-        function_info = {"byte code": pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
-                                                         buffer_threshold=1024 * 1024)}
+    def _serialize_object(self, path, obj):
+        """Takes any object and serializes it to the file path."""
+        serialized_obj = serialize(obj, buffer_threshold=1024 * 1024)
+        with open(path, 'wb') as f_out:
+            pickle.dump(serialized_obj, f_out)
 
-        with open(fn_path, "wb") as f_out:
-            pickle.dump(function_info, f_out)
+    #def _serialize_function(self, fn_path, parsl_fn, parsl_fn_args, parsl_fn_kwargs):
+    #    """Takes the function application parsl_fn(*parsl_fn_args, **parsl_fn_kwargs)
+    #    and serializes it to the file fn_path."""
+    #    function_info = {"byte code": pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
+    #                                                     buffer_threshold=1024 * 1024)}
+
+    #    with open(fn_path, "wb") as f_out:
+    #        pickle.dump(function_info, f_out)
 
     def _construct_map_file(self, map_file, input_files, output_files):
         """ Map local filepath of parsl files to the filenames at the execution worker.
@@ -748,12 +764,13 @@ def _taskvine_submit_wait(ready_task_queue=None,
                 continue
             if task.exec_mode == 'regular':
                 # Create command string
-                launch_cmd = "python3 exec_parsl_function.py {mapping} {function} {result}"
+                launch_cmd = "python3 exec_parsl_function.py {mapping} {function} {argument} {result}"
                 if manager_config.init_command != '':
                     launch_cmd = "{init_cmd};" + launch_cmd
                 command_str = launch_cmd.format(init_cmd=manager_config.init_command,
                                                 mapping=os.path.basename(task.map_file),
                                                 function=os.path.basename(task.function_file),
+                                                argument=os.path.basename(task.argument_file),
                                                 result=os.path.basename(task.result_file))
                 logger.debug("Sending executor task {} (mode: regular) with command: {}".format(task.executor_id, command_str))
                 try:
@@ -845,6 +862,9 @@ def _taskvine_submit_wait(ready_task_queue=None,
                 # Declare and add task-specific function, data, and result files to task
                 task_function_file = m.declare_file(task.function_file, cache=False, peer_transfer=False)
                 t.add_input(task_function_file, "function")
+
+                task_argument_file = m.declare_file(task.argument_file, cache=False, peer_transfer=False)
+                t.add_input(task_argument_file, "argument")
 
                 task_map_file = m.declare_file(task.map_file, cache=False, peer_transfer=False)
                 t.add_input(task_map_file, "map")
