@@ -75,7 +75,7 @@ def serialize(obj: Any, buffer_threshold: int = int(1e6)) -> bytes:
 
     for method in methods.values():
         try:
-            result = method._identifier + b'\n' + method.serialize(obj)
+            result = method.identifier + b'\n' + method.serialize(obj)
         except Exception as e:
             result = e
             continue
