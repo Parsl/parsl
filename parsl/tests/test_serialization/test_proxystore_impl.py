@@ -1,6 +1,5 @@
 import pytest
 
-# from parsl.serialize.facade import methods_for_data
 from parsl.serialize.proxystore import ProxyStoreSerializer
 
 
@@ -10,7 +9,7 @@ def policy_example(o):
 
 @pytest.mark.local
 def test_proxystore_nonglobal():
-    """Check that non-proxy-store values are roundtripped.
+    """Check that values are roundtripped, for both proxied and non-proxied types.
     """
     # import in function, because proxystore is not importable in base parsl
     # installation.
