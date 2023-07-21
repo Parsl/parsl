@@ -1,3 +1,4 @@
+import importlib
 import logging
 from typing import Any, Dict, List, Union
 
@@ -26,6 +27,12 @@ def register_method_for_data(s: SerializerBase) -> None:
 
 register_method_for_data(concretes.PickleSerializer())
 register_method_for_data(concretes.DillSerializer())
+
+
+# When deserialize dynamically loads a deserializer, it will be stored here,
+# rather than in the methods_for_* dictionaries, so that loading does not
+# cause it to be used for future serializations.
+additional_methods_for_deserialization: Dict[bytes, SerializerBase] = {}
 
 
 def pack_apply_message(func: Any, args: Any, kwargs: Any, buffer_threshold: int = int(128 * 1e6)) -> bytes:
@@ -104,8 +111,22 @@ def deserialize(payload: bytes) -> Any:
         result = methods_for_code[header].deserialize(body)
     elif header in methods_for_data:
         result = methods_for_data[header].deserialize(body)
+    elif header in additional_methods_for_deserialization:
+        result = additional_methods_for_deserialization[header].deserialize(body)
     else:
-        raise TypeError("Invalid header: {!r} in data payload. Buffer is either corrupt or not created by ParslSerializer".format(header))
+        logger.info("Trying to dynamically load deserializer: {!r}".format(header))
+        # This is a user plugin point, so expect exceptions to happen.
+        try:
+            module_name, class_name = header.split(b' ', 1)
+            decoded_module_name = module_name.decode('utf-8')
+            module = importlib.import_module(decoded_module_name)
+            deserializer_class = getattr(module, class_name.decode('utf-8'))
+            deserializer = deserializer_class()
+            additional_methods_for_deserialization[header] = deserializer
+        except Exception as e:
+            raise RuntimeError("Could not dynamically load deserializer") from e
+
+        result = deserializer.deserialize(body)
 
     return result
 
