@@ -139,8 +139,6 @@ Exceptions
     parsl.errors.OptionalModuleMissing
     parsl.executors.errors.ExecutorError
     parsl.executors.errors.ScalingFailed
-    parsl.executors.errors.SerializationError
-    parsl.executors.errors.DeserializationError
     parsl.executors.errors.BadMessage
     parsl.dataflow.errors.DataFlowException
     parsl.dataflow.errors.BadCheckpoint
@@ -161,6 +159,8 @@ Exceptions
     parsl.channels.errors.FileCopyException
     parsl.executors.high_throughput.errors.WorkerLost
     parsl.executors.high_throughput.interchange.ManagerLost
+    parsl.serialize.errors.DeserializationError
+    parsl.serialize.errors.SerializationError
 
 Internal
 ========
