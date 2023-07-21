@@ -47,17 +47,6 @@ class ScalingFailed(ExecutorError):
         return f"Executor {self.executor.label} failed to scale due to: {self.reason}"
 
 
-class DeserializationError(ParslError):
-    """ Failure at the Deserialization of results/exceptions from remote workers
-    """
-
-    def __init__(self, reason):
-        self.reason = reason
-
-    def __str__(self):
-        return "Failed to deserialize return objects. Reason:{}".format(self.reason)
-
-
 class BadMessage(ParslError):
     """ Mangled/Poorly formatted/Unsupported message received
     """
