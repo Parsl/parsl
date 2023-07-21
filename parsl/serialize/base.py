@@ -13,13 +13,13 @@ class SerializerBase:
 
     @cached_property
     def identifier(self) -> bytes:
-        """
-         Compute the identifier that will be used to indicate in byte streams
-￼        that this class should be used for deserialization.
+        """Compute identifier used in serialization header.
+        This will be used to indicate in byte streams that this class should
+        be used for deserialization.
 ￼
-￼        Serializers that use identifiers that don't align with the way this is
-         computed (such as the default concretes.py implementations) should
-         override this property with their own identifier.
+￼       Serializers that use identifiers that don't align with the way this is
+        computed (such as the default concretes.py implementations) should
+        override this property with their own identifier.
 ￼
         Returns
         -------
