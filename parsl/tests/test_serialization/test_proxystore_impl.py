@@ -1,8 +1,6 @@
 import pytest
 import uuid
 
-from parsl.serialize.proxystore import ProxyStoreSerializer
-
 
 def policy_example(o):
     """Example policy will proxy only lists."""
@@ -15,6 +13,7 @@ def test_proxystore_nonglobal():
     """
     # import in function, because proxystore is not importable in base parsl
     # installation.
+    from parsl.serialize.proxystore import ProxyStoreSerializer
     from proxystore.proxy import Proxy
     from proxystore.store import Store, register_store
     from proxystore.connectors.file import FileConnector

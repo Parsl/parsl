@@ -4,7 +4,6 @@ import uuid
 
 import parsl
 from parsl.serialize.facade import additional_methods_for_deserialization, methods_for_data, register_method_for_data
-from parsl.serialize.proxystore import ProxyStoreSerializer
 from parsl.tests.configs.htex_local import fresh_config
 
 
@@ -12,9 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 def local_setup():
-    parsl.load(fresh_config())
+    from parsl.serialize.proxystore import ProxyStoreSerializer
     from proxystore.store import Store, register_store
     from proxystore.connectors.file import FileConnector
+
+    parsl.load(fresh_config())
 
     store = Store(name='parsl_store_' + str(uuid.uuid4()), connector=FileConnector(store_dir="/tmp"))
     register_store(store)
