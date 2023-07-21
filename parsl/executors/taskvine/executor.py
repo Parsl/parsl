@@ -33,6 +33,7 @@ from parsl.errors import OptionalModuleMissing
 from parsl.providers.base import ExecutionProvider
 from parsl.providers import LocalProvider, CondorProvider
 from parsl.process_loggers import wrap_with_logs
+from parsl.addresses import get_any_address
 from parsl.executors.errors import ExecutorError
 from parsl.executors.errors import UnsupportedFeatureError
 from parsl.executors.status_handling import BlockProviderExecutor
@@ -202,7 +203,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # guess the host name if the project name is not given
         if not self.manager_config.project_name:
-            self.manager_config.address = socket.gethostname()
+            self.manager_config.address = get_any_address()
 
         # Factory communication settings are overridden by manager communication settings.
         self.factory_config._project_port = self.manager_config.port
