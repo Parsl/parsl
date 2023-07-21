@@ -1,4 +1,5 @@
 import pytest
+import uuid
 
 from parsl.serialize.proxystore import ProxyStoreSerializer
 
@@ -17,7 +18,7 @@ def test_proxystore_nonglobal():
     from proxystore.store import Store, register_store
     from proxystore.connectors.file import FileConnector
 
-    store = Store(name='parsl_store', connector=FileConnector(store_dir="/tmp"))
+    store = Store(name='parsl_store_'+str(uuid.uuid4()), connector=FileConnector(store_dir="/tmp"))
     register_store(store)
 
     s = ProxyStoreSerializer(store=store, should_proxy=policy_example)
