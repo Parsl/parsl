@@ -12,12 +12,13 @@ from typing import List, Optional, Tuple, Union
 import math
 
 from parsl.serialize import pack_apply_message, deserialize
+from parsl.serialize.errors import SerializationError
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
     BadMessage, ScalingFailed,
-    DeserializationError, SerializationError,
+    DeserializationError,
     UnsupportedFeatureError
 )
 

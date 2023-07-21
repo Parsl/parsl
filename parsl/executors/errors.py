@@ -58,19 +58,6 @@ class DeserializationError(ParslError):
         return "Failed to deserialize return objects. Reason:{}".format(self.reason)
 
 
-class SerializationError(ParslError):
-    """ Failure to serialize data arguments for the tasks
-    """
-
-    def __init__(self, fname):
-        self.fname = fname
-        self.troubleshooting = "https://parsl.readthedocs.io/en/latest/faq.html#addressing-serializationerror"
-
-    def __str__(self):
-        return "Failed to serialize data objects for {}. Refer {} ".format(self.fname,
-                                                                           self.troubleshooting)
-
-
 class BadMessage(ParslError):
     """ Mangled/Poorly formatted/Unsupported message received
     """
