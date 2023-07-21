@@ -570,7 +570,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         Returns:
               Future
         """
-        if 'app_type' in resource_specification and len(resource_specification) > 1:
+        if resource_specification:
             logger.error("Ignoring the call specification. "
                          "Parsl call specification is not supported in HighThroughput Executor.")
             raise UnsupportedFeatureError('resource specification', 'HighThroughput Executor', None)

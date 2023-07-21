@@ -52,7 +52,7 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
 
         """
-        if 'app_type' in resource_specification and len(resource_specification) > 1:
+        if resource_specification:
             logger.error("Ignoring the resource specification. "
                          "Parsl resource specification is not supported in ThreadPool Executor.")
             raise UnsupportedFeatureError('resource specification', 'ThreadPool Executor', None)

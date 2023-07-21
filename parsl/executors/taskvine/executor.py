@@ -905,7 +905,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
                 if t is None:
                     task_found = False
                     continue
-                logger.debug('Found a task!')
+                logger.debug('Found a task')
                 executor_task_id = vine_id_to_executor_task_id[str(t.id)][0]
                 exec_mode_of_task = vine_id_to_executor_task_id[str(t.id)][1]
                 vine_id_to_executor_task_id.pop(str(t.id))

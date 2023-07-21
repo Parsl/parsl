@@ -399,7 +399,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             logger.debug("Got resource_specification: {}".format(resource_specification))
 
             required_resource_types = set(['cores', 'memory', 'disk'])
-            acceptable_fields = set(['cores', 'memory', 'disk', 'gpus', 'priority', 'running_time_min', 'app_type'])
+            acceptable_fields = set(['cores', 'memory', 'disk', 'gpus', 'priority', 'running_time_min'])
             keys = set(resource_specification.keys())
 
             if not keys.issubset(acceptable_fields):
