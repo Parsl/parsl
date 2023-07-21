@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import List, Dict
 
-import parsl.dataflow.job_status_poller as jsp
+import parsl.jobs.job_status_poller as jsp
 
 from parsl.executors.base import ParslExecutor
-from parsl.providers.base import JobStatus, JobState
+from parsl.jobs.states import JobStatus, JobState
 
 
 class JobErrorHandler:

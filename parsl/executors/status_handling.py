@@ -8,7 +8,8 @@ from typing import List, Any, Dict, Optional, Tuple, Union
 import parsl  # noqa F401
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
-from parsl.providers.base import JobStatus, ExecutionProvider, JobState
+from parsl.jobs.states import JobStatus, JobState
+from parsl.providers.base import ExecutionProvider
 from parsl.utils import AtomicIDCounter
 
 
@@ -135,7 +136,7 @@ class BlockProviderExecutor(ParslExecutor):
     def error_management_enabled(self):
         return self.block_error_handler
 
-    def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
+    def handle_errors(self, error_handler: "parsl.jobs.job_error_handler.JobErrorHandler",
                       status: Dict[str, JobStatus]) -> None:
         if not self.block_error_handler:
             return
@@ -235,7 +236,7 @@ class NoStatusHandlingExecutor(ParslExecutor):
     def status(self):
         return {}
 
-    def handle_errors(self, error_handler: "parsl.dataflow.job_error_handler.JobErrorHandler",
+    def handle_errors(self, error_handler: "parsl.jobs.job_error_handler.JobErrorHandler",
                       status: Dict[str, JobStatus]) -> None:
         pass
 
