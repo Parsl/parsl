@@ -30,7 +30,6 @@ def test_proxystore_nonglobal():
 
 
     l = [1,2,3]
-    k = s.serialize(l)
     roundtripped_l = s.deserialize(s.serialize(l))
     assert roundtripped_l == l
     assert isinstance(roundtripped_l, Proxy)
