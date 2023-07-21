@@ -22,4 +22,4 @@ class DeserializerPluginError(ParslError):
         self.header = bytes
 
     def __str__(self) -> str:
-        return "Failed to load deserializer plugin for header {header!r}"
+        return f"Failed to load deserializer plugin for header {header!r}"
