@@ -5,10 +5,11 @@ from typing import Optional
 from ndcctools.taskvine.cvine import VINE_DEFAULT_PORT
 
 
-# Configuration of a TaskVine manager
 @dataclass
 class TaskVineManagerConfig:
     """
+    Configuration of a TaskVine manager
+
     Parameters
     ----------
 

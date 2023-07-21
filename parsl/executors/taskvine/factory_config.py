@@ -2,11 +2,12 @@ from dataclasses import dataclass
 from typing import Optional
 
 
-# Configuration of a TaskVine factory
-# Default to spawning one local worker.
 @dataclass
 class TaskVineFactoryConfig:
     """
+    Configuration of a TaskVine factory.
+    Default is to spawn one local worker.
+
     Parameters
     ----------
     factory_timeout: int
