@@ -76,6 +76,7 @@ Executors
     parsl.executors.ThreadPoolExecutor
     parsl.executors.HighThroughputExecutor
     parsl.executors.WorkQueueExecutor
+    parsl.executors.taskvine.TaskVineExecutor
     parsl.executors.FluxExecutor
 
 Launchers
