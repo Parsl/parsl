@@ -56,6 +56,7 @@ try:
     from ndcctools.taskvine import Manager
     from ndcctools.taskvine import Factory
     from ndcctools.taskvine import Task
+    from ndcctools.taskvine import FunctionCall
     from ndcctools.taskvine.cvine import VINE_ALLOCATION_MODE_MAX_THROUGHPUT
     from ndcctools.taskvine.cvine import VINE_ALLOCATION_MODE_EXHAUSTIVE_BUCKETING
     from ndcctools.taskvine.cvine import VINE_ALLOCATION_MODE_MAX
@@ -382,8 +383,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         argument_file = None
         result_file = None
         map_file = None
-        # Use executor's serialization method if app mode is 'regular'
-        if exec_mode == 'regular':
+        # Use executor's serialization method if app mode is 'regular' or 'serverless'
+        if exec_mode == 'regular' or exec_mode == 'serverless':
             # Get path to files that will contain the pickled function, 
             # arguments, result, and map of input and output files
             function_file = self._path_in_task(executor_task_id, "function")
@@ -777,15 +778,17 @@ def _taskvine_submit_wait(ready_task_queue=None,
             elif task.exec_mode == 'serverless':
                 if not lib_installed:
                     # Declare and install common library for serverless tasks
+                    logger.debug('a')
                     serverless_lib = m.create_library_from_functions('common-parsl-taskvine-lib', run_parsl_function)
                     m.install_library(serverless_lib)
                     lib_installed = True
                 try:
+                    logger.debug('b')
                     # run_parsl_function only needs remote names of map_file, function_file, argument_file,
                     # and result_file, which are simply named map, function, argument, result.
                     # These names are given when these files are declared below.
                     t = FunctionCall('common-parsl-taskvine-lib', run_parsl_function.__name__, 'map', 'function', 'argument', 'result')
-                except:
+                except Exception as e:
                     logger.error("Unable to create executor task (mode:serverless): {}".format(e))
                     finished_task_queue.put_nowait(VineTaskToParsl(executor_id=task.executor_id,
                                                                    result_received=False,
@@ -795,6 +798,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
             else:
                 raise Exception(f'Unrecognized task mode {task.exec_mode}. Exiting...')
 
+            logger.debug('c')
             # Add environment file to the task if possible
             # Prioritize local poncho environment over global poncho environment
             # (local: use app_pack, global: use env_pack)
