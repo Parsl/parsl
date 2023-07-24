@@ -578,7 +578,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         else:
             event("WQEX_SUBMIT_SERIALIZE_PACK_APPLY", span)
             function_info = {"byte code": pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
-                                                             buffer_threshold=1024 * 1024)}
+                                                             buffer_threshold=1024 * 1024,
+                                                             super_span=span)}
 
         event("WQEX_SUBMIT_SERIALIZE_OPEN", span)
         with open(fn_path, "wb") as f_out:
