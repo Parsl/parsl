@@ -56,9 +56,8 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         """
         if resource_specification:
             logger.error("Ignoring the resource specification. "
-                         "Parsl resource specification is not supported in ThreadPool Executor. "
-                         "Please check WorkQueue Executor if resource specification is needed.")
-            raise UnsupportedFeatureError('resource specification', 'ThreadPool Executor', 'WorkQueue Executor')
+                         "Parsl resource specification is not supported in ThreadPool Executor.")
+            raise UnsupportedFeatureError('resource specification', 'ThreadPool Executor', None)
 
         return self.executor.submit(func, *args, **kwargs)
 
