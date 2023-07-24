@@ -21,7 +21,7 @@ from concurrent.futures import Future
 from functools import partial
 
 import parsl
-from parsl.trace import event, span_bind_sub
+from parsl.trace import event, span_bind_sub, output_event_stats
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.app.futures import DataFuture
 from parsl.channels import Channel
@@ -1305,6 +1305,10 @@ class DataFlowKernel:
             logger.info("Terminating monitoring")
             self.monitoring.close()
             logger.info("Terminated monitoring")
+
+        # TODO: enabling based on whether dict tracing is enabled or not.
+        logger.info("Writing tracing pickle file")
+        output_event_stats(directory=self.run_dir)
 
         logger.info("DFK cleanup complete")
 

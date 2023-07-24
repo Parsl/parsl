@@ -586,7 +586,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         else:
             event("WQEX_SUBMIT_SERIALIZE_PACK_APPLY", "EXECUTOR_TASK", task_id)
             function_info = {"byte code": pack_apply_message(parsl_fn, parsl_fn_args, parsl_fn_kwargs,
-                                                             buffer_threshold=1024 * 1024)}
+                                                             buffer_threshold=1024 * 1024,
+                                                             super_spantype="EXECUTOR_TASK",
+                                                             super_spanid=task_id)}
 
         event("WQEX_SUBMIT_SERIALIZE_OPEN", "EXECUTOR_TASK", task_id)
         with open(fn_path, "wb") as f_out:
@@ -1026,7 +1028,7 @@ def _work_queue_submit_wait(*,
                     continue
                 # When a task is found:
                 executor_task_id = t.tag
-                logger.debug("Completed Work Queue task {}, executor task {}".format(t.id, t.tag))
+                logger.info("Completed Work Queue task {}, executor task {}".format(t.id, t.tag))
                 result_file = result_file_of_task_id.pop(t.tag)
 
                 # A tasks completes 'succesfully' if it has result file,

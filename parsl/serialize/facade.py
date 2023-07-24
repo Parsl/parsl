@@ -1,8 +1,11 @@
 import logging
+import uuid
 from typing import Any, Dict, List, Union
 
 import parsl.serialize.concretes as concretes
 from parsl.serialize.base import SerializerBase
+from parsl.trace import span_bind_sub, event
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +31,12 @@ register_method_for_data(concretes.PickleSerializer())
 register_method_for_data(concretes.DillSerializer())
 
 
-def pack_apply_message(func: Any, args: Any, kwargs: Any, buffer_threshold: int = int(128 * 1e6)) -> bytes:
+def pack_apply_message(func: Any,
+                       args: Any,
+                       kwargs: Any,
+                       buffer_threshold: int = int(128 * 1e6),
+                       super_spantype: Any = None,
+                       super_spanid: Any = None) -> bytes:
     """Serialize and pack function and parameters
 
     Parameters
@@ -47,10 +55,23 @@ def pack_apply_message(func: Any, args: Any, kwargs: Any, buffer_threshold: int 
         Limits buffer to specified size in bytes. Exceeding this limit would give you
         a warning in the log. Default is 128MB.
     """
+    pack_apply_id = str(uuid.uuid4())
+    if super_spantype is not None and super_spanid is not None:
+        span_bind_sub(super_spantype, super_spanid, "PACKAPPLY", pack_apply_id)
+
+    event("SERIALIZE_PACK_APPLY_FUNC", "PACKAPPLY", pack_apply_id)
     b_func = serialize(func, buffer_threshold=buffer_threshold)
+
+    event("SERIALIZE_PACK_APPLY_ARGS", "PACKAPPLY", pack_apply_id)
     b_args = serialize(args, buffer_threshold=buffer_threshold)
+
+    event("SERIALIZE_PACK_APPLY_KWARGS", "PACKAPPLY", pack_apply_id)
     b_kwargs = serialize(kwargs, buffer_threshold=buffer_threshold)
+
+    event("SERIALIZE_PACK_APPLY_PACK_BUFFERS", "PACKAPPLY", pack_apply_id)
     packed_buffer = pack_buffers([b_func, b_args, b_kwargs])
+
+    event("SERIALIZE_PACK_APPLY_END", "PACKAPPLY", pack_apply_id)
     return packed_buffer
 
 

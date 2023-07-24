@@ -8,7 +8,7 @@ from typing import Any, List, Tuple
 logger = logging.getLogger(__name__)
 
 trace_by_logger = False
-trace_by_dict = False
+trace_by_dict = True
 
 events: List[Tuple[float, str, str, Any]] = []
 binds: List[Tuple[str, Any, str, Any]] = []
@@ -38,7 +38,7 @@ def span_bind_sub(super_spantype: str, super_spanid: Any, sub_spantype: str, sub
         binds.append(b)
 
 
-def output_event_stats():
+def output_event_stats(directory="."):
     print("Event stats")
     print("===========")
     print(f"Count of events: {len(events)}")
@@ -68,5 +68,5 @@ def output_event_stats():
     print(f"Total real time accounted for here: {all_tasks_t} sec")
     """
     summary = {"events": events, "binds": binds}
-    with open("parsl_tracing.pickle", "wb") as f:
+    with open(f"{directory}/parsl_tracing.pickle", "wb") as f:
         pickle.dump(summary, f)
