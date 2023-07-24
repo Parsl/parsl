@@ -396,15 +396,15 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         category = None
         running_time_min = None
         if resource_specification and isinstance(resource_specification, dict):
-            logger.debug("Got resource specification: {}".format(resource_specification))
+            logger.debug("Got resource_specification: {}".format(resource_specification))
 
             required_resource_types = set(['cores', 'memory', 'disk'])
-            acceptable_resource_types = set(['cores', 'memory', 'disk', 'gpus', 'priority', 'running_time_min'])
+            acceptable_fields = set(['cores', 'memory', 'disk', 'gpus', 'priority', 'running_time_min'])
             keys = set(resource_specification.keys())
 
-            if not keys.issubset(acceptable_resource_types):
+            if not keys.issubset(acceptable_fields):
                 message = "Task resource specification only accepts these types of resources: {}".format(
-                        ', '.join(acceptable_resource_types))
+                        ', '.join(acceptable_fields))
                 logger.error(message)
                 raise ExecutorError(self, message)
 
