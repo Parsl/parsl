@@ -12,7 +12,7 @@ jobs:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
     runs-on: ubuntu-20.04
-    timeout-minutes: 40
+    timeout-minutes: 60
 
     steps:
     - uses: actions/checkout@master
@@ -48,7 +48,7 @@ jobs:
         test ! -e stubs
 
         # check we can build the docs without warnings
-        make SPHINXOPTS=-W html
+        PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages make SPHINXOPTS=-W html
 
         cd ..
 

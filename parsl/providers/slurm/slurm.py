@@ -9,10 +9,10 @@ from typing import Optional
 
 from parsl.channels import LocalChannel
 from parsl.channels.base import Channel
+from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.launchers.base import Launcher
 from parsl.providers.cluster_provider import ClusterProvider
-from parsl.providers.base import JobState, JobStatus
 from parsl.providers.slurm.template import template_string
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 

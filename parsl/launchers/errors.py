@@ -10,4 +10,4 @@ class BadLauncher(ExecutionProviderException, TypeError):
         self.launcher = launcher
 
     def __str__(self) -> str:
-        return f"Bad Launcher provided: {self.launcher}, expecting a parsl.launcher.launcher.Launcher or callable"
+        return f"Bad Launcher provided: {self.launcher}, expecting a parsl.launcher.launcher.Launcher"

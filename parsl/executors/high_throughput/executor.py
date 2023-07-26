@@ -97,9 +97,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     address : string
         An address to connect to the main Parsl process which is reachable from the network in which
-        workers will be running. This can be either a hostname as returned by ``hostname`` or an
-        IP address. Most login nodes on clusters have several network interfaces available, only
-        some of which can be reached from the compute nodes.
+        workers will be running. This field expects an IPv4 address (xxx.xxx.xxx.xxx).
+        Most login nodes on clusters have several network interfaces available, only some of which
+        can be reached from the compute nodes. This field can be used to limit the executor to listen
+        only on a specific interface, and limiting connections to the internal network.
         By default, the executor will attempt to enumerate and connect through all possible addresses.
         Setting an address here overrides the default behavior.
         default=None
@@ -470,6 +471,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                             kwargs={"client_ports": (self.outgoing_q.port,
                                                                      self.incoming_q.port,
                                                                      self.command_client.port),
+                                                    "interchange_address": self.address,
                                                     "worker_ports": self.worker_ports,
                                                     "worker_port_range": self.worker_port_range,
                                                     "hub_address": self.hub_address,
@@ -559,6 +561,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         Args:
             - func (callable) : Callable function
+            - resource_specification (dict): Dictionary containing relevant info about task that is needed by underlying executors.
             - args (list) : List of arbitrary positional arguments.
 
         Kwargs:
@@ -568,10 +571,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
               Future
         """
         if resource_specification:
-            logger.error("Ignoring the resource specification. "
-                         "Parsl resource specification is not supported in HighThroughput Executor. "
-                         "Please check WorkQueueExecutor if resource specification is needed.")
-            raise UnsupportedFeatureError('resource specification', 'HighThroughput Executor', 'WorkQueue Executor')
+            logger.error("Ignoring the call specification. "
+                         "Parsl call specification is not supported in HighThroughput Executor.")
+            raise UnsupportedFeatureError('resource specification', 'HighThroughput Executor', None)
 
         if self.bad_state_is_set:
             raise self.executor_exception
@@ -595,10 +597,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         except TypeError:
             raise SerializationError(func.__name__)
 
-        msg = {"task_id": task_id,
-               "buffer": fn_buf}
+        msg = {"task_id": task_id, "buffer": fn_buf}
 
-        # Post task to the the outgoing queue
+        # Post task to the outgoing queue
         self.outgoing_q.put(msg)
 
         # Return the future

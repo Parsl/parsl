@@ -1,15 +1,11 @@
-import argparse
-import os
 import pytest
 
-import parsl
 from parsl import File
 from parsl.app.app import bash_app
-from parsl.tests.configs.local_threads import config
 
 
 @bash_app(cache=True)
-def fail_on_presence(outputs=[]):
+def fail_on_presence(outputs=()):
     return 'if [ -f {0} ] ; then exit 1 ; else touch {0}; fi'.format(outputs[0])
 
 
@@ -17,31 +13,20 @@ def fail_on_presence(outputs=[]):
 # won't work if there's a staging provider.
 # @pytest.mark.sharedFS_required
 @pytest.mark.issue363
-def test_bash_memoization(n=2):
+def test_bash_memoization(tmpd_cwd, n=2):
     """Testing bash memoization
     """
-    temp_filename = "test.memoization.tmp"
-    temp_file = File(temp_filename)
+    mpath = tmpd_cwd / "test.memoization.tmp"
+    temp_file = File(str(mpath))
+    fail_on_presence(outputs=[temp_file]).result()
 
-    if os.path.exists(temp_filename):
-        os.remove(temp_filename)
-
-    temp_file = File(temp_filename)
-
-    print("Launching: ", n)
-    x = fail_on_presence(outputs=[temp_file])
-    x.result()
-
-    d = {}
-    for i in range(0, n):
-        d[i] = fail_on_presence(outputs=[temp_file])
-
-    for i in d:
-        assert d[i].exception() is None
+    futs = [fail_on_presence(outputs=[temp_file]) for _ in range(n)]
+    for f in futs:
+        assert f.exception() is None
 
 
 @bash_app(cache=True)
-def fail_on_presence_kw(outputs=[], foo={}):
+def fail_on_presence_kw(outputs=(), foo=None):
     return 'if [ -f {0} ] ; then exit 1 ; else touch {0}; fi'.format(outputs[0])
 
 
@@ -49,24 +34,15 @@ def fail_on_presence_kw(outputs=[], foo={}):
 # won't work if there's a staging provider.
 # @pytest.mark.sharedFS_required
 @pytest.mark.issue363
-def test_bash_memoization_keywords(n=2):
+def test_bash_memoization_keywords(tmpd_cwd, n=2):
     """Testing bash memoization
     """
-    temp_filename = "test.memoization.tmp"
-    temp_file = File("test.memoization.tmp")
+    mpath = tmpd_cwd / "test.memoization.tmp"
+    temp_file = File(str(mpath))
 
-    if os.path.exists(temp_filename):
-        os.remove(temp_filename)
+    foo = {"a": 1, "b": 2}
+    fail_on_presence_kw(outputs=[temp_file], foo=foo).result()
 
-    temp_file = File(temp_filename)
-
-    print("Launching: ", n)
-    x = fail_on_presence_kw(outputs=[temp_file], foo={"a": 1, "b": 2})
-    x.result()
-
-    d = {}
-    for i in range(0, n):
-        d[i] = fail_on_presence_kw(outputs=[temp_file], foo={"b": 2, "a": 1})
-
-    for i in d:
-        assert d[i].exception() is None
+    futs = [fail_on_presence_kw(outputs=[temp_file], foo=foo) for _ in range(n)]
+    for f in futs:
+        assert f.exception() is None

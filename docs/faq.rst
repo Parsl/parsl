@@ -51,8 +51,21 @@ The App will wait for all inputs to be satisfied before execution.
 Can I pass any Python object between apps?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-No. Unfortunately, only `picklable <https://docs.python.org/3/library/pickle.html#what-can-be-pickled-and-unpickled>`_ objects can be passed between apps.
-For objects that can't be pickled, it is recommended to use object specific methods
+This depends on the executor in use. The :py:class:`parsl.executors.threads.ThreadPoolExecutor`
+can receive and return any Python object. Other executors will serialize their
+parameters and return values, so only objects which Parsl knows how to
+serialize can be passed.
+
+Parsl knows how to serialize objects using the Pickle and Dill
+libraries.
+
+Pickle provides a list of objects that it knows how to serialize:
+`What can be pickled and unpickled? <https://docs.python.org/3/library/pickle.html#what-can-be-pickled-and-unpickled>`_.
+
+Dill can serialize much more than Pickle, documented in the
+`dill documentation <https://dill.readthedocs.io/en/latest/>`_.
+
+For objects that can't be pickled, use object specific methods
 to write the object into a file and use files to communicate between apps.
 
 How do I specify where apps should be run?

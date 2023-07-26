@@ -1,6 +1,6 @@
 from parsl.config import Config
 from parsl.executors.taskvine import TaskVineExecutor
-
+from parsl.executors.taskvine import TaskVineManagerConfig
 import uuid
 
 config = Config(
@@ -13,14 +13,7 @@ config = Config(
             # which can be viewed here:  http://ccl.cse.nd.edu/software/taskvine/status
 
             # To disable status reporting, comment out the project_name.
-            project_name="parsl-vine-" + str(uuid.uuid4()),
-
-            # The port number that TaskVine will listen on for connecting workers
-            # 0 means a random port.
-            port=0,
-
-            # A shared filesystem is not needed when using TaskVine.
-            shared_fs=False
+            manager_config=TaskVineManagerConfig(project_name="parsl-vine-" + str(uuid.uuid4())),
         )
     ]
 )
