@@ -2,7 +2,6 @@ import os
 import time
 import logging
 import datetime
-from functools import wraps
 
 from parsl.multiprocessing import ForkProcess
 from multiprocessing import Event, Queue
@@ -45,7 +44,6 @@ def monitor_wrapper(f: Any,           # per app
 
     else:
 
-        @wraps(f)
         def wrapped(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
             task_id = kwargs.pop('_parsl_monitoring_task_id')
             try_id = kwargs.pop('_parsl_monitoring_try_id')
