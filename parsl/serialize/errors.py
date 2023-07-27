@@ -22,3 +22,14 @@ class SerializationError(ParslError):
 
     def __str__(self) -> str:
         return f"Failed to serialize objects for an invocation of function {self.fname}. Refer {self.troubleshooting}"
+
+
+class DeserializerPluginError(ParslError):
+    """Failure to dynamically load a deserializer plugin.
+    """
+
+    def __init__(self, header: bytes) -> None:
+        self.header = header
+
+    def __str__(self) -> str:
+        return f"Failed to load deserializer plugin for header {self.header!r}"
