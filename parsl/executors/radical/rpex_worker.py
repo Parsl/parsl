@@ -7,7 +7,8 @@ import radical.pilot as rp
 #
 class RPEX_MPIWorker(rp.raptor.MPIWorker):
     '''
-    This class provides the required functionality to execute MPI Work requests.
+    This class provides the required functionality to execute
+    MPI Work requests.
     '''
 
     # --------------------------------------------------------------------------
@@ -19,7 +20,8 @@ class RPEX_MPIWorker(rp.raptor.MPIWorker):
 
 class RPEX_Worker(rp.raptor.DefaultWorker):
     '''
-    This class provides the required functionality to execute Regular work requests.
+    This class provides the required functionality to execute
+    Regular work requests.
     '''
 
     # --------------------------------------------------------------------------

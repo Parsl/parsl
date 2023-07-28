@@ -36,19 +36,19 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
       1. "start"    :creating the RADICAL-executor session and pilot.
       2. "translate":unwrap/identify/ out of parsl task and construct RP task.
-      2. "submit"   :translating and submiting Parsl tasks the RADICAL-executor.
+      2. "submit"   :translating and submiting Parsl tasks to Radical Pilot.
       3. "shut_down":shutting down the RADICAL-executor components.
 
     RADICAL Executor
-    ------------------------------------------------------------------------------------------------
-             Parsl DFK/dflow               |      Task Translator      |     RP-Client/Task-Manager
-    ---------------------------------------|---------------------------|----------------------------
-                                           |                           |
-    -> Dep. check ------> Parsl_tasks{} <--+--> Parsl Task/func/arg/kwg| tmgr.submit_Tasks(RP_tasks)
-     Data management          +dfk.submit  |             |             |
-                                           |             v             |
-                                           |     RP Task/Tasks desc. --+->
-    ------------------------------------------------------------------------------------------------
+    ---------------------------------------------------------------------------
+             Parsl DFK/dflow               |   Task Translator |  Task-Manager
+    ---------------------------------------|-------------------|---------------
+                                           |                   |
+    -> Dep. check ------> Parsl_tasks{} <--+--> Parsl Task     | submit(task)
+     Data management          +dfk.submit  |        |          |
+                                           |        v          |
+                                           |    RP Task(s) ->  |
+    ---------------------------------------------------------------------------
     """
 
     @typeguard.typechecked
@@ -111,7 +111,8 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             parsl_task = self.future_tasks[task.uid]
 
             if state == rp.DONE:
-                if task.description['mode'] in [rp.TASK_EXECUTABLE, rp.TASK_EXEC]:
+                if task.description['mode'] in [rp.TASK_EXECUTABLE,
+                                                rp.TASK_EXEC]:
                     parsl_task.set_result(int(task.exit_code))
 
                 else:
@@ -129,7 +130,8 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         logger.info("starting RadicalPilotExecutor")
         logger.info('Parsl: {0}'.format(parsl.__version__))
         logger.info('RADICAL pilot: {0}'.format(rp.version))
-        self.session = rp.Session(uid=ru.generate_id('rpex.session', mode=ru.ID_PRIVATE))
+        self.session = rp.Session(uid=ru.generate_id('rpex.session',
+                                                     mode=ru.ID_PRIVATE))
 
         if self.resource is None:
             logger.error("specify remote or local resource")
@@ -189,10 +191,13 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         python_v = '{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
         pilot.prepare_env(env_name='ve_rpex',
-                          env_spec={'type': self.pilot_env.get('type', 'virtualenv'),
-                                    'version': self.pilot_env.get('version', python_v),
+                          env_spec={'type': self.pilot_env.get('type',
+                                                               'virtualenv'),
+                                    'version': self.pilot_env.get('version',
+                                                                  python_v),
                                     'path': self.pilot_env.get('path', ''),
-                                    'pre_exec': self.pilot_env.get('pre_exec', []),
+                                    'pre_exec': self.pilot_env.get('pre_exec',
+                                                                   []),
                                     'setup': self.pilot_env.get('setup', [])})
 
         self.tmgr.add_pilots(pilot)
@@ -265,7 +270,8 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             - *args (list)     : List of arbitrary positional arguments.
 
         Kwargs:
-            - **kwargs (dict) : A dictionary of arbitrary keyword args for func.
+            - **kwargs (dict) : A dictionary of arbitrary keyword
+              args for func.
 
         """
 
@@ -279,7 +285,8 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     # Execute the func to get the command
                     bash_app = func(*args, **kwargs)
                     if not isinstance(bash_app, str):
-                        raise ValueError("Expected a str for bash_app cmd, got: {0}".format(type(bash_app)))
+                        raise ValueError("Expected a str for bash_app cmd,"
+                                         "got: {0}".format(type(bash_app)))
                 except AttributeError as e:
                     raise Exception("failed to obtain bash app cmd") from e
 
@@ -321,7 +328,8 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             while time.time() - now < self._max_bulk_time:
 
                 try:
-                    task = self._bulk_queue.get(block=True, timeout=self._min_bulk_time)
+                    task = self._bulk_queue.get(block=True,
+                                                timeout=self._min_bulk_time)
                 except queue.Empty:
                     task = None
 
@@ -338,15 +346,16 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
     def submit(self, func, *args, **kwargs):
         """
-        Submits tasks iteratively (stream mode) or tasks in bulks (bulk mode) to
-        RADICAL task_manager.
+        Submits tasks in stream mode or bulks (bulk mode)
+        to RADICAL task_manager.
 
         Args:
             - func (callable) : Callable function
             - *args (list)    : List of arbitrary positional arguments.
 
         Kwargs:
-            - **kwargs (dict) : A dictionary of arbitrary keyword args for func.
+            - **kwargs (dict) : A dictionary of arbitrary keyword
+              args for func.
         """
         rp_tid = ru.generate_id('task.%(item_counter)06d', ru.ID_CUSTOM,
                                 ns=self.session.uid)

@@ -2,6 +2,7 @@
 
 import os
 import sys
+import time
 
 from collections import defaultdict
 
@@ -80,10 +81,11 @@ class RPEXMaster(rp.raptor.Master):
 #
 if __name__ == '__main__':
 
-    # This master script runs as a task within a pilot allocation.  The purpose
-    # of this master is to (a) spawn a set or workers within the same
-    # allocation, (b) to distribute work items (`hello` function calls) to those
-    # workers, and (c) to collect the responses again.
+    # This master script runs as a task within a pilot allocation.
+    # The purpose of this master is to (a) spawn a set or workers
+    # within the same allocation, (b) to distribute work items
+    # (`hello` function calls) to those workers, and (c) to collect
+    # the responses again.
     cfg_fname = str(sys.argv[1])
     cfg = ru.Config(cfg=ru.read_json(cfg_fname))
     cfg.rank = int(sys.argv[2])
@@ -95,10 +97,10 @@ if __name__ == '__main__':
     descr = cfg.worker_descr
     pwd = os.getcwd()
 
-    # one node is used by master.  Alternatively (and probably better), we could
-    # reduce one of the worker sizes by one core.  But it somewhat depends on
-    # the worker type and application workload to judge if that makes sense, so
-    # we leave it for now.
+    # one node is used by master.  Alternatively (and probably better),
+    # we could reduce one of the worker sizes by one core.  But it somewhat
+    # depends on the worker type and application workload to judge if that
+    # makes sense, so we leave it for now.
 
     # create a master class instance - this will establish communication to the
     # pilot agent
@@ -113,12 +115,17 @@ if __name__ == '__main__':
     worker_ids = master.submit_workers(
                  [rp.TaskDescription(descr) for _ in range(n_workers)])
 
-    # wait until all of the workers are up
-    master.wait()
+    master.wait_workers(count=1)
     master.start()
     master.submit()
-    master.join()
+
+    # let some time pass for client side tasks to complete
+    time.sleep(60)
+
+    # TODO: can be run from thread?
     master.stop()
 
+    # TODO: worker state callback
+    master.join()
 
 # ------------------------------------------------------------------------------
