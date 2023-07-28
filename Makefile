@@ -80,8 +80,8 @@ workqueue_mon_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex con
 
 .PHONY: config_local_test
 config_local_test:   # TODO: this doesn't check workqueue is installed -- because that's done in a different 'make' run, and there is nothing to cache that fact between runs in the current make impl (eg looking for a particular file to be there...)
-	pip3 install ".[monitoring]"
-	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages pytest parsl/tests/ -k "not cleannet and not site" --config local --random-order
+	pip3 install ".[monitoring,proxystore]"
+	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages pytest parsl/tests/ -k "not cleannet and not site" --config local --random-order
 
 .PHONY: site_test
 site_test:
