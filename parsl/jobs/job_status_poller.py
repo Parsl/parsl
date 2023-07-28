@@ -11,6 +11,7 @@ from parsl.jobs.states import JobStatus, JobState
 from parsl.jobs.strategy import Strategy
 from parsl.monitoring.message_type import MessageType
 
+from parsl.process_loggers import wrap_with_logs
 
 from parsl.utils import Timer
 
@@ -116,10 +117,15 @@ class JobStatusPoller(Timer):
         self._error_handler = JobErrorHandler()
         super().__init__(self.poll, interval=5, name="JobStatusPoller")
 
+    @wrap_with_logs
     def poll(self):
+        logger.info("POLL: update state")
         self._update_state()
+        logger.info("POLL: run error handler")
         self._error_handler.run(self._poll_items)
+        logger.info("POLL: strategize")
         self._strategy.strategize(self._poll_items)
+        logger.info("POLL: done")
 
     def _update_state(self) -> None:
         now = time.time()
