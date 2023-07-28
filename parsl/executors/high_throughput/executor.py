@@ -659,7 +659,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         -------
         List of job_ids marked for termination
         """
-        logger.debug(f"Scale in called, blocks={blocks}, block_ids={block_ids}")
+        logger.info(f"Scale in called, blocks={blocks}, block_ids={block_ids}")
         if block_ids:
             block_ids_to_kill = block_ids
         else:
@@ -693,21 +693,26 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                 if len(block_ids_to_kill) < blocks:
                     logger.warning(f"Could not find enough blocks to kill: wanted {blocks} but only selected {len(block_ids_to_kill)}")
 
+        logger.info("Iterating over block IDs")
         # Hold the block
         for block_id in block_ids_to_kill:
             self._hold_block(block_id)
+        logger.info("Iterated over block IDs")
 
         # Now kill via provider
         # Potential issue with multiple threads trying to remove the same blocks
         to_kill = [self.blocks[bid] for bid in block_ids_to_kill if bid in self.blocks]
 
+        logger.info("Calling provider cancel")
         r = self.provider.cancel(to_kill)
+        logger.info("Provide cancel returned")
         job_ids = self._filter_scale_in_ids(to_kill, r)
 
         # to_kill block_ids are fetched from self.blocks
         # If a block_id is in self.block, it must exist in self.block_mapping
         block_ids_killed = [self.block_mapping[jid] for jid in job_ids]
 
+        logger.info("htex scale in returning")
         return block_ids_killed
 
     def _get_launch_command(self, block_id: str) -> str:
