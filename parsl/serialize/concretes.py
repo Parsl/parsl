@@ -17,7 +17,7 @@ class PickleSerializer(SerializerBase):
     * closures, generators and coroutines
     """
 
-    _identifier = b'01'
+    identifier = b'01'
 
     def serialize(self, data: Any) -> bytes:
         return pickle.dumps(data)
@@ -38,7 +38,7 @@ class DillSerializer(SerializerBase):
     * closures
     """
 
-    _identifier = b'02'
+    identifier = b'02'
 
     def serialize(self, data: Any) -> bytes:
         return dill.dumps(data)
@@ -53,7 +53,7 @@ class DillCallableSerializer(SerializerBase):
     assumption that callables are immutable and so can be cached.
     """
 
-    _identifier = b'C2'
+    identifier = b'C2'
 
     @functools.lru_cache
     def serialize(self, data: Any) -> bytes:
