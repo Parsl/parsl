@@ -1,5 +1,6 @@
 pyzmq>=17.1.2
-typeguard>=4,<5
+# typeguard 4.0.1 has https://github.com/agronholm/typeguard/issues/372
+typeguard>=4,<5,!=4.0.1
 typing-extensions>=4.6,<5
 six
 globus-sdk
