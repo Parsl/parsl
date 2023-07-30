@@ -165,7 +165,9 @@ def run(map_file, function_file, argument_file, result_file):
     except Exception:
         traceback.print_exc()
         result = RemoteExceptionWrapper(*sys.exc_info())
-
+    
+    with open('/tmp/test_exec_parsl.tmp', 'w') as f:
+        f.write('debug' + str(result))
     # Write out function result to the result file
     try:
         dump_result_to_file(result_file, result)

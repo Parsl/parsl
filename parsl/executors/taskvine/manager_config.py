@@ -47,6 +47,7 @@ class TaskVineManagerConfig:
         Used to encapsulate package dependencies of tasks to
         execute them remotely without needing a shared filesystem.
         Recommended way to manage tasks' dependency requirements.
+        All tasks will be executed in the encapsulated environment.
         If an absolute path to a conda environment or a conda
         environment name is given, TaskVine will package the conda
         environment in a tarball and send it along with tasks to be

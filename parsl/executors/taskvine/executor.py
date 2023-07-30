@@ -90,10 +90,11 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             with respect to other executors.
             Default is "TaskVineExecutor".
 
-        use_factory: bool
-            Choose to whether use either the Parsl provider or
-            TaskVine factory to scale workers.
-            Default is False.
+        worker_launch_method: str
+            Choose to use Parsl provider, TaskVine factory, or
+            manual user-provided workers to scale workers.
+            Options are among {'provider', 'factory', 'manual'}.
+            Default is 'factory'.
 
         manager_config: TaskVineManagerConfig
             Configuration for the TaskVine manager. Default
@@ -116,17 +117,21 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     @typeguard.typechecked
     def __init__(self,
                  label: str = "TaskVineExecutor",
-                 use_factory: bool = False,
+                 worker_launch_method: str = 'factory',
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  factory_config: TaskVineFactoryConfig = TaskVineFactoryConfig(),
                  provider: Optional[ExecutionProvider] = LocalProvider(init_blocks=1),
                  storage_access: Optional[List[Staging]] = None):
 
-        # If TaskVine factory is used, disable the Parsl provider
-        if use_factory:
+        # Set worker launch option for this executor
+        if worker_launch_method == 'factory' or worker_launch_method == 'manual':
             provider = None
+        elif worker_launch_method != 'provider':
+            raise ExecutorError(self, "Worker launch option '{worker_launch_method}' \
+                                       is not supported.")
 
         # Initialize the parent class with the execution provider and block error handling enabled.
+        # If provider is None, then no worker is launched via the provider method.
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
 
@@ -136,60 +141,63 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Executor configurations
         self.label = label
-        self.use_factory = use_factory
+        self.worker_launch_method = worker_launch_method
         self.manager_config = manager_config
         self.factory_config = factory_config
         self.storage_access = storage_access
 
         # Queue to send ready tasks from TaskVine executor process to TaskVine manager process
-        self.ready_task_queue: multiprocessing.Queue = multiprocessing.Queue()
+        self._ready_task_queue: multiprocessing.Queue = multiprocessing.Queue()
 
         # Queue to send finished tasks from TaskVine manager process to TaskVine executor process
-        self.finished_task_queue: multiprocessing.Queue = multiprocessing.Queue()
+        self._finished_task_queue: multiprocessing.Queue = multiprocessing.Queue()
 
         # Value to signal whether the manager and factory processes should stop running
-        self.should_stop = multiprocessing.Value(c_bool, False)
+        self._should_stop = multiprocessing.Value(c_bool, False)
 
         # TaskVine manager process
-        self.submit_process = None
+        self._submit_process = None
 
         # TaskVine factory process
-        self.factory_process = None
+        self._factory_process = None
 
         # Executor thread to collect results from TaskVine manager and set
         # tasks' futures to done status.
-        self.collector_thread = None
+        self._collector_thread = None
 
         # track task id of submitted parsl tasks
         # task ids are incremental and start from 0
-        self.executor_task_counter = 0
+        self._executor_task_counter = 0
 
         # track number of tasks that are waiting/running
-        self.outstanding_tasks = 0
+        self._outstanding_tasks = 0
 
-        # Lock for threads to access self.outstanding_tasks attribute
-        self.outstanding_tasks_lock = threading.Lock()
+        # Lock for threads to access self._outstanding_tasks attribute
+        self._outstanding_tasks_lock = threading.Lock()
 
         # Threading lock to manage self.tasks dictionary object, which maps a task id
         # to its future object.
-        self.tasks_lock = threading.Lock()
+        self._tasks_lock = threading.Lock()
 
         # Worker command to be given to an execution provider (e.g., local or Condor)
-        self.worker_command = ""
+        self._worker_command = ""
 
-        # Path to directory that holds all tasks' data and results, only used when
-        # manager's task mode is 'regular'.
-        self.function_data_dir = ""
+        # Path to directory that holds all tasks' data and results.
+        self._function_data_dir = ""
 
         # helper scripts to prepare package tarballs for Parsl apps
-        self.package_analyze_script = shutil.which("poncho_package_analyze")
-        self.package_create_script = shutil.which("poncho_package_create")
+        self._package_analyze_script = shutil.which("poncho_package_analyze")
+        self._package_create_script = shutil.which("poncho_package_create")
+        if self._package_analyze_script is None or self._package_create_script is None:
+            self._poncho_available = False
+        else:
+            self._poncho_available = True
 
     def _get_launch_command(self, block_id):
         # Implements BlockProviderExecutor's abstract method.
         # This executor uses different terminology for worker/launch
         # commands than in htex.
-        return f"PARSL_WORKER_BLOCK_ID={block_id} {self.worker_command}"
+        return f"PARSL_WORKER_BLOCK_ID={block_id} {self._worker_command}"
 
     def __synchronize_manager_factory_comm_settings(self):
         # Synchronize the communication settings between the manager and the factory
@@ -211,6 +219,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.factory_config._project_address = self.manager_config.address
         self.factory_config._project_name = self.manager_config.project_name
         self.factory_config._project_password_file = self.manager_config.project_password_file
+        logger.debug('Communication settings between TaskVine manager and factory synchronized.')
 
     def __create_data_and_logging_dirs(self):
         # Create neccessary data and logging directories
@@ -219,16 +228,19 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         run_dir = self.run_dir
 
         # Create directories for data and results
-        self.function_data_dir = os.path.join(run_dir, self.label, "function_data")
         log_dir = os.path.join(run_dir, self.label)
-        logger.debug("function data directory: {}\nlog directory: {}".format(self.function_data_dir, log_dir))
+        self._function_data_dir = os.path.join(run_dir, self.label, "function_data")
         os.makedirs(log_dir)
-        os.makedirs(self.function_data_dir)
+        os.makedirs(self._function_data_dir)
 
         # put TaskVine logs inside run directory of Parsl by default
         if self.manager_config.vine_log_dir is None:
             self.manager_config.vine_log_dir = log_dir
-            self.factory_config.scratch_dir = log_dir
+
+        # factory logs go with manager logs regardless
+        self.factory_config.scratch_dir = self.manager_config.vine_log_dir
+        logger.debug("Function data directory: {}, log directory: {}".format(self._function_data_dir, log_dir))
+        logger.debug("TaskVine manager log directory: {}, factory log directory: {}".format(self.manager_config.vine_log_dir, self.factory_config.scratch_dir))
 
     def start(self):
         """Create submit process and collector thread to create, send, and
@@ -244,53 +256,53 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Starting TaskVineExecutor")
 
         # Create a process to run the TaskVine manager.
-        submit_process_kwargs = {"ready_task_queue": self.ready_task_queue,
-                                 "finished_task_queue": self.finished_task_queue,
-                                 "should_stop": self.should_stop,
+        submit_process_kwargs = {"ready_task_queue": self._ready_task_queue,
+                                 "finished_task_queue": self._finished_task_queue,
+                                 "should_stop": self._should_stop,
                                  "manager_config": self.manager_config}
-        self.submit_process = multiprocessing.Process(target=_taskvine_submit_wait,
+        self._submit_process = multiprocessing.Process(target=_taskvine_submit_wait,
                                                       name="TaskVine-Submit-Process",
                                                       kwargs=submit_process_kwargs)
 
         # Create a process to run the TaskVine factory if enabled.
-        if self.use_factory:
-            factory_process_kwargs = {"should_stop": self.should_stop,
+        if self.worker_launch_method == 'factory':
+            factory_process_kwargs = {"should_stop": self._should_stop,
                                       "factory_config": self.factory_config}
-            self.factory_process = multiprocessing.Process(target=_taskvine_factory,
+            self._factory_process = multiprocessing.Process(target=_taskvine_factory,
                                                            name="TaskVine-Factory-Process",
                                                            kwargs=factory_process_kwargs)
 
         # Run thread to collect results and set tasks' futures.
-        self.collector_thread = threading.Thread(target=self._collect_taskvine_results,
+        self._collector_thread = threading.Thread(target=self._collect_taskvine_results,
                                                  name="TaskVine-Collector-Thread")
         # Interpreter can exit without waiting for this thread.
-        self.collector_thread.daemon = True
+        self._collector_thread.daemon = True
 
         # Begin work
-        self.submit_process.start()
+        self._submit_process.start()
 
         # Run worker scaler either with Parsl provider or TaskVine factory
-        if self.use_factory:
-            self.factory_process.start()
+        if self.worker_launch_method == 'factory':
+            self._factory_process.start()
         else:
             self.initialize_scaling()
 
-        self.collector_thread.start()
+        self._collector_thread.start()
 
         logger.debug("All components in TaskVineExecutor started")
 
     def _path_in_task(self, executor_task_id, *path_components):
         """
-        Only used when task mode is `regular`.
         Returns a filename fixed and specific to a task.
         It is used for the following filename's:
             (not given): The subdirectory per task that contains function, result, etc.
             'function': Pickled file that contains the function to be executed.
+            'argument': Pickled file that contains the arguments of the function call.
             'result': Pickled file that (will) contain the result of the function.
             'map': Pickled file with a dict between local parsl names, and remote taskvine names.
         """
         task_dir = "{:04d}".format(executor_task_id)
-        return os.path.join(self.function_data_dir, task_dir, *path_components)
+        return os.path.join(self._function_data_dir, task_dir, *path_components)
 
     def submit(self, func, resource_specification, *args, **kwargs):
         """Processes the Parsl app by its arguments and submits the function
@@ -306,18 +318,17 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         resource_specification: dict
             Dictionary containing relevant info about task.
             Include information about resources of task, execution mode
-            of task (out of {regular, python, serverless}), and which app
-            type this function was submitted as (out of {python, bash}).
+            of task (out of {regular, serverless}).
         args : list
             Arguments to the Parsl app
         kwargs : dict
             Keyword arguments to the Parsl app
         """
 
-        # Default execution mode of apps is regular (using TaskVineExecutor serialization and execution mode)
-        exec_mode = resource_specification.get('exec_mode', 'regular')
-
         logger.debug(f'Got resource specification: {resource_specification}')
+
+        # Default execution mode of apps is regular
+        exec_mode = resource_specification.get('exec_mode', 'regular')
 
         # Detect resources and features of a submitted Parsl app
         cores = None
@@ -345,10 +356,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     running_time_min = resource_specification[k]
 
         # Assign executor task id to app
-        executor_task_id = self.executor_task_counter
-        self.executor_task_counter += 1
+        executor_task_id = self._executor_task_counter
+        self._executor_task_counter += 1
 
-        # Create a per task directory for the function, map, and result files
+        # Create a per task directory for the function, argument, map, and result files
         os.mkdir(self._path_in_task(executor_task_id))
 
         input_files = []
@@ -374,33 +385,31 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Create a Future object and have it be mapped from the task ID in the tasks dictionary
         fu = Future()
         fu.parsl_executor_task_id = executor_task_id
-        with self.tasks_lock:
+        with self._tasks_lock:
             self.tasks[str(executor_task_id)] = fu
 
-        logger.debug("Creating task {} for function {} of type {} with args {}".format(executor_task_id, func, type(func), args))
-
+        # Setup files to be used on a worker to execute the function
         function_file = None
         argument_file = None
         result_file = None
         map_file = None
-        # Use executor's serialization method if app mode is 'regular' or 'serverless'
-        if exec_mode == 'regular' or exec_mode == 'serverless':
-            # Get path to files that will contain the pickled function, 
-            # arguments, result, and map of input and output files
-            function_file = self._path_in_task(executor_task_id, "function")
-            argument_file = self._path_in_task(executor_task_id, "argument")
-            result_file = self._path_in_task(executor_task_id, "result")
-            map_file = self._path_in_task(executor_task_id, "map")
+        
+        # Get path to files that will contain the pickled function, 
+        # arguments, result, and map of input and output files
+        function_file = self._path_in_task(executor_task_id, "function")
+        argument_file = self._path_in_task(executor_task_id, "argument")
+        result_file = self._path_in_task(executor_task_id, "result")
+        map_file = self._path_in_task(executor_task_id, "map")
 
-            logger.debug("Creating executor task {} with function at: {}, argument at: {}, and result to be found at: {}".format(executor_task_id, function_file, argument_file, result_file))
+        logger.debug("Creating executor task {} with function at: {}, argument at: {}, and result to be found at: {}".format(executor_task_id, function_file, argument_file, result_file))
 
-            # Serialize both function object and arguments, separately
-            self._serialize_object(function_file, func)
-            args_dict = {'args': args, 'kwargs': kwargs}
-            self._serialize_object(argument_file, args_dict)
+        # Serialize function object and arguments, separately
+        self._serialize_object(function_file, func)
+        args_dict = {'args': args, 'kwargs': kwargs}
+        self._serialize_object(argument_file, args_dict)
 
-            # Construct the map file of local filenames at worker
-            self._construct_map_file(map_file, input_files, output_files)
+        # Construct the map file of local filenames at worker
+        self._construct_map_file(map_file, input_files, output_files)
 
         # Register a tarball containing all package dependencies for this app if instructed
         if self.manager_config.app_pack:
@@ -408,7 +417,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         else:
             env_pkg = None
 
-        if not self.submit_process.is_alive():
+        if not self._submit_process.is_alive():
             raise ExecutorError(self, "taskvine Submit Process is not alive")
 
         # Create message to put into the message queue
@@ -418,32 +427,32 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if category is None:
             category = func.__name__ if self.manager_config.autocategory else 'parsl-default'
 
-        if exec_mode == 'regular' or exec_mode == 'serverless':
-            task_info = ParslTaskToVine(executor_id=executor_task_id,
-                                        exec_mode=exec_mode,
-                                        category=category,
-                                        input_files=input_files,
-                                        output_files=output_files,
-                                        map_file=map_file,
-                                        function_file=function_file,
-                                        argument_file=argument_file,
-                                        result_file=result_file,
-                                        cores=cores,
-                                        memory=memory,
-                                        disk=disk,
-                                        gpus=gpus,
-                                        priority=priority,
-                                        running_time_min=running_time_min,
-                                        env_pkg=env_pkg)
-        else:
-            raise UnsupportedFeatureError(f'Execution mode {exec_mode} is not currently supported.', 'TaskVineExecutor', None)
+        task_info = ParslTaskToVine(executor_id=executor_task_id,
+                                    exec_mode=exec_mode,
+                                    category=category,
+                                    input_files=input_files,
+                                    output_files=output_files,
+                                    map_file=map_file,
+                                    function_file=function_file,
+                                    argument_file=argument_file,
+                                    result_file=result_file,
+                                    cores=cores,
+                                    memory=memory,
+                                    disk=disk,
+                                    gpus=gpus,
+                                    priority=priority,
+                                    running_time_min=running_time_min,
+                                    env_pkg=env_pkg)
+        
         # Send ready task to manager process
-        self.ready_task_queue.put_nowait(task_info)
+        self._ready_task_queue.put_nowait(task_info)
 
         # Increment outstanding task counter
-        with self.outstanding_tasks_lock:
-            self.outstanding_tasks += 1
+        with self._outstanding_tasks_lock:
+            self._outstanding_tasks += 1
 
+        # Return the future for this function, will be set by collector thread when result
+        # comes back from the TaskVine manager.
         return fu
 
     def _construct_worker_command(self):
@@ -465,7 +474,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # (Currently only for the CondorProvider)
         if isinstance(self.provider, CondorProvider):
             path_to_worker = shutil.which('vine_worker')
-            self.worker_command = './' + self.worker_command
+            self._worker_command = './' + self._worker_command
             self.provider.transfer_input_files.append(path_to_worker)
             if self.project_password_file:
                 self.provider.transfer_input_files.append(self.project_password_file)
@@ -525,7 +534,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         os.makedirs(pkg_dir, exist_ok=True)
         with tempfile.NamedTemporaryFile(suffix='.yaml') as spec:
             logger.info("Analyzing dependencies of %s", fn_name)
-            analyze_cmdline = [self.package_analyze_script, exec_parsl_function.__file__, '-', spec.name]
+            analyze_cmdline = [self._package_analyze_script, exec_parsl_function.__file__, '-', spec.name]
             for p in extra_pkgs:
                 analyze_cmdline += ["--extra-pkg", p]
             subprocess.run(analyze_cmdline, input=source_code, check=True)
@@ -541,7 +550,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             os.close(fd)
             logger.info("Creating dependency package for %s", fn_name)
             logger.debug("Writing deps for %s to %s", fn_name, tarball)
-            subprocess.run([self.package_create_script, spec.name, tarball], stdout=subprocess.DEVNULL, check=True)
+            subprocess.run([self._package_create_script, spec.name, tarball], stdout=subprocess.DEVNULL, check=True)
             logger.debug("Done with conda-pack; moving %s to %s", tarball, pkg)
             os.rename(tarball, pkg)
             self.cached_envs[fn_id] = pkg
@@ -554,7 +563,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """
         # Start scaling in/out
         logger.debug("Starting TaskVineExecutor with provider: %s", self.provider)
-        self.worker_command = self._construct_worker_command()
+        self._worker_command = self._construct_worker_command()
         self._patch_providers()
 
         if hasattr(self.provider, 'init_blocks'):
@@ -567,8 +576,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     @property
     def outstanding(self) -> int:
         """Count the number of outstanding tasks."""
-        logger.debug(f"Counted {self.outstanding_tasks} outstanding tasks")
-        return self.outstanding_tasks
+        logger.debug(f"Counted {self._outstanding_tasks} outstanding tasks")
+        return self._outstanding_tasks
 
     @property
     def workers_per_node(self) -> Union[int, float]:
@@ -592,7 +601,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         collector thread, which shuts down the TaskVine system submission.
         """
         logger.debug("TaskVine shutdown started")
-        self.should_stop.value = True
+        self._should_stop.value = True
 
         # Remove the workers that are still going
         kill_ids = [self.blocks[block] for block in self.blocks.keys()]
@@ -602,12 +611,12 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Join all processes before exiting
         logger.debug("Joining on submit process")
-        self.submit_process.join()
+        self._submit_process.join()
         logger.debug("Joining on collector thread")
-        self.collector_thread.join()
-        if self.use_factory:
+        self._collector_thread.join()
+        if self.worker_launch_method == 'factory':
             logger.debug("Joining on factory process")
-            self.factory_process.join()
+            self._factory_process.join()
 
         logger.debug("TaskVine shutdown completed")
         return True
@@ -618,22 +627,21 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """
         logger.debug("Starting Collector Thread")
         try:
-            while not self.should_stop.value:
-                if not self.submit_process.is_alive():
+            while not self._should_stop.value:
+                if not self._submit_process.is_alive():
                     raise ExecutorError(self, "taskvine Submit Process is not alive")
 
-                # Get the result message from the finished_task_queue
+                # Get the result message from the _finished_task_queue
                 try:
-                    task_report = self.finished_task_queue.get(timeout=1)
+                    task_report = self._finished_task_queue.get(timeout=1)
                 except queue.Empty:
                     continue
 
                 # Obtain the future from the tasks dictionary
-                with self.tasks_lock:
+                with self._tasks_lock:
                     future = self.tasks.pop(task_report.executor_id)
 
-                logger.debug("Updating Future for Parsl Task {}".format(task_report.executor_id))
-                logger.debug(f'task {task_report.executor_id} has result_received set to {task_report.result_received} and result to {task_report.result}')
+                logger.debug(f'Updating Future for Parsl Task: {task_report.executor_id}. Task {task_report.executor_id} has result_received set to {task_report.result_received} and result to {task_report.result}')
                 if task_report.result_received:
                     future.set_result(task_report.result)
                 else:
@@ -642,12 +650,12 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     future.set_exception(TaskVineTaskFailure(task_report.reason, task_report.result))
 
                 # decrement outstanding task counter
-                with self.outstanding_tasks_lock:
-                    self.outstanding_tasks -= 1
+                with self._outstanding_tasks_lock:
+                    self._outstanding_tasks -= 1
         finally:
             logger.debug(f"Marking all {self.outstanding} outstanding tasks as failed")
             logger.debug("Acquiring tasks_lock")
-            with self.tasks_lock:
+            with self._tasks_lock:
                 logger.debug("Acquired tasks_lock")
                 # set exception for tasks waiting for results that taskvine did not execute
                 for fu in self.tasks.values():
@@ -779,7 +787,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
                 if not lib_installed:
                     # Declare and install common library for serverless tasks
                     logger.debug('a')
-                    serverless_lib = m.create_library_from_functions('common-parsl-taskvine-lib', run_parsl_function)
+                    serverless_lib = m.create_library_from_functions('common-parsl-taskvine-lib', run_parsl_function, poncho_env='/home/jason/work/parsl_taskvine/parsl_vine.tar.gz')
                     m.install_library(serverless_lib)
                     lib_installed = True
                 try:

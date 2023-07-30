@@ -77,7 +77,8 @@ class ParslFileToVine:
         self.cache = cache
 
 
-def run_parsl_function():
+def run_parsl_function(map_file, function_file, argument_file, result_file):
     # This function assumes that parsl module is importable on remote nodes
+    # and executes function after reading relevant files.
     from parsl.executors.taskvine.exec_parsl_function import run
-    run()
+    run(map_file, function_file, argument_file, result_file)
