@@ -1,5 +1,5 @@
 import pytest
-from parsl.providers.base import JobState
+from parsl.jobs.states import JobState
 
 
 @pytest.mark.local

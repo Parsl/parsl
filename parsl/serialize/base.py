@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from functools import cached_property
 import logging
 
 from typing import Any
@@ -10,18 +11,24 @@ class SerializerBase:
     """ Adds shared functionality for all serializer implementations
     """
 
-    _identifier: bytes
-
-    @property
+    @cached_property
     def identifier(self) -> bytes:
-        """Get that identifier that will be used to indicate in byte streams
-        that this class should be used for deserialization.
-
+        """Compute identifier used in serialization header.
+        This will be used to indicate in byte streams that this class should
+        be used for deserialization.
+￼
+￼       Serializers that use identifiers that don't align with the way this is
+        computed (such as the default concretes.py implementations) should
+        override this property with their own identifier.
+￼
         Returns
         -------
         identifier : bytes
         """
-        return self._identifier
+        t = type(self)
+        m = bytes(t.__module__, encoding="utf-8")
+        c = bytes(t.__name__, encoding="utf-8")
+        return m + b' ' + c
 
     @abstractmethod
     def serialize(self, data: Any) -> bytes:

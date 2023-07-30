@@ -11,9 +11,9 @@ import threading
 import time
 
 from parsl.channels import LocalChannel, SSHChannel
+from parsl.jobs.states import JobState
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers import LocalProvider
-from parsl.providers.base import JobState
 
 logger = logging.getLogger(__name__)
 

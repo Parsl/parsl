@@ -1,16 +1,19 @@
+from __future__ import annotations
+
 from typing import List, Dict
 
-from parsl.dataflow.executor_status import ExecutorStatus
+import parsl.jobs.job_status_poller as jsp
+
 from parsl.executors.base import ParslExecutor
-from parsl.providers.base import JobStatus, JobState
+from parsl.jobs.states import JobStatus, JobState
 
 
 class JobErrorHandler:
-    def run(self, status: List[ExecutorStatus]):
+    def run(self, status: List[jsp.PollItem]):
         for es in status:
             self._check_irrecoverable_executor(es)
 
-    def _check_irrecoverable_executor(self, es: ExecutorStatus):
+    def _check_irrecoverable_executor(self, es: jsp.PollItem):
         if not es.executor.error_management_enabled:
             return
         es.executor.handle_errors(self, es.status)

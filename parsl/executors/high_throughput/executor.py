@@ -12,12 +12,12 @@ from typing import List, Optional, Tuple, Union
 import math
 
 from parsl.serialize import pack_apply_message, deserialize
+from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
     BadMessage, ScalingFailed,
-    DeserializationError, SerializationError,
     UnsupportedFeatureError
 )
 
@@ -561,6 +561,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         Args:
             - func (callable) : Callable function
+            - resource_specification (dict): Dictionary containing relevant info about task that is needed by underlying executors.
             - args (list) : List of arbitrary positional arguments.
 
         Kwargs:
@@ -570,10 +571,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
               Future
         """
         if resource_specification:
-            logger.error("Ignoring the resource specification. "
-                         "Parsl resource specification is not supported in HighThroughput Executor. "
-                         "Please check WorkQueueExecutor if resource specification is needed.")
-            raise UnsupportedFeatureError('resource specification', 'HighThroughput Executor', 'WorkQueue Executor')
+            logger.error("Ignoring the call specification. "
+                         "Parsl call specification is not supported in HighThroughput Executor.")
+            raise UnsupportedFeatureError('resource specification', 'HighThroughput Executor', None)
 
         if self.bad_state_is_set:
             raise self.executor_exception
