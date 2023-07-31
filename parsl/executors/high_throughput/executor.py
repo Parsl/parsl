@@ -527,22 +527,19 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     def outstanding(self) -> int:
         """Returns the count of tasks outstanding across the interchange
         and managers"""
-        outstanding_c = self.command_client.run("OUTSTANDING_C")
-        return outstanding_c
+        return self.command_client.run("OUTSTANDING_C")
 
     @property
     def connected_workers(self) -> int:
         """Returns the count of workers across all connected managers"""
-        workers = self.command_client.run("WORKERS")
-        return workers
+        return self.command_client.run("WORKERS")
 
     def connected_managers(self) -> List[Dict[str, typing.Any]]:
         """Returns a list of dicts one for each connected managers.
         The dict contains info on manager(str:manager_id), block_id,
         worker_count, tasks(int), idle_durations(float), active(bool)
         """
-        managers = self.command_client.run("MANAGERS")
-        return managers
+        return self.command_client.run("MANAGERS")
 
     def _hold_block(self, block_id):
         """ Sends hold command to all managers which are in a specific block
