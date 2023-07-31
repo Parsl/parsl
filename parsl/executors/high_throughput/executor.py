@@ -1,3 +1,4 @@
+import typing
 from concurrent.futures import Future
 import typeguard
 import logging
@@ -523,16 +524,23 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         logger.debug("Sent hold request to manager: {}".format(worker_id))
 
     @property
-    def outstanding(self):
+    def outstanding(self) -> int:
+        """Returns the count of tasks outstanding across the interchange
+        and managers"""
         outstanding_c = self.command_client.run("OUTSTANDING_C")
         return outstanding_c
 
     @property
-    def connected_workers(self):
+    def connected_workers(self) -> int:
+        """Returns the count of workers across all connected managers"""
         workers = self.command_client.run("WORKERS")
         return workers
 
-    def connected_managers(self):
+    def connected_managers(self) -> List[Dict[str, typing.Any]]:
+        """Returns a list of dicts one for each connected managers.
+        The dict contains info on manager(str:manager_id), block_id,
+        worker_count, tasks(int), idle_durations(float), active(bool)
+        """
         managers = self.command_client.run("MANAGERS")
         return managers
 
