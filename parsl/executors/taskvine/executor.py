@@ -226,16 +226,18 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Use the current run directory from Parsl
         run_dir = self.run_dir
-
+        
         # Create directories for data and results
         log_dir = os.path.join(run_dir, self.label)
         self._function_data_dir = os.path.join(run_dir, self.label, "function_data")
         os.makedirs(log_dir)
         os.makedirs(self._function_data_dir)
 
-        # put TaskVine logs inside run directory of Parsl by default
+        # put TaskVine logs outside of a Parsl run as TaskVine caches between runs while
+        # Parsl does not.
+        vine_log_dir = os.path.join(os.path.dirname(run_dir), self.label)
         if self.manager_config.vine_log_dir is None:
-            self.manager_config.vine_log_dir = log_dir
+            self.manager_config.vine_log_dir = vine_log_dir
 
         # factory logs go with manager logs regardless
         self.factory_config.scratch_dir = self.manager_config.vine_log_dir
@@ -417,9 +419,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         else:
             env_pkg = None
 
-        if not self._submit_process.is_alive():
-            raise ExecutorError(self, "taskvine Submit Process is not alive")
-
         # Create message to put into the message queue
         logger.debug("Placing task {} on message queue".format(executor_task_id))
 
@@ -445,6 +444,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                     env_pkg=env_pkg)
         
         # Send ready task to manager process
+        if not self._submit_process.is_alive():
+            raise ExecutorError(self, "taskvine Submit Process is not alive")
+       
         self._ready_task_queue.put_nowait(task_info)
 
         # Increment outstanding task counter
@@ -524,6 +526,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     def _prepare_package(self, fn, extra_pkgs):
         """ Look at source code of apps to figure out their package depedencies
         and output a tarball containing those to send along with tasks for execution."""
+
+        if not self._poncho_available:
+            raise ExecutorError(self, 'poncho package is not available to individually pack apps.')
+
         fn_id = id(fn)
         fn_name = fn.__name__
         if fn_id in self.cached_envs:
@@ -641,7 +647,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 with self._tasks_lock:
                     future = self.tasks.pop(task_report.executor_id)
 
-                logger.debug(f'Updating Future for Parsl Task: {task_report.executor_id}. Task {task_report.executor_id} has result_received set to {task_report.result_received} and result to {task_report.result}')
+                logger.debug(f'Updating Future for Parsl Task: {task_report.executor_id}. Task {task_report.executor_id} has result_received set to {task_report.result_received}')
                 if task_report.result_received:
                     future.set_result(task_report.result)
                 else:
@@ -736,7 +742,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
     # Find poncho run script to activate an environment tarball
     poncho_run_script = shutil.which("poncho_package_run")
 
-    # Declare helper scripts for regular tasks as cache-able and peer-transferable
+    # Declare helper scripts  as cache-able and peer-transferable
     package_run_script_file = m.declare_file(poncho_run_script, cache=True, peer_transfer=True)
     exec_parsl_function_file = m.declare_file(exec_parsl_function.__file__, cache=True, peer_transfer=True)
 
@@ -785,13 +791,16 @@ def _taskvine_submit_wait(ready_task_queue=None,
                     continue
             elif task.exec_mode == 'serverless':
                 if not lib_installed:
+                    
                     # Declare and install common library for serverless tasks
-                    logger.debug('a')
-                    serverless_lib = m.create_library_from_functions('common-parsl-taskvine-lib', run_parsl_function, poncho_env='/home/jason/work/parsl_taskvine/parsl_vine.tar.gz')
+                    if manager_config.init_command == '':
+                        serverless_lib = m.create_library_from_functions('common-parsl-taskvine-lib', run_parsl_function, poncho_env='/home/jason/work/parsl_taskvine/parsl_vine.tar.gz', None)
+                    else:
+                        serverless_lib = m.create_library_from_functions('common-parsl-taskvine-lib', run_parsl_function, poncho_env='/home/jason/work/parsl_taskvine/parsl_vine.tar.gz', manager_config.init_command)
+
                     m.install_library(serverless_lib)
                     lib_installed = True
                 try:
-                    logger.debug('b')
                     # run_parsl_function only needs remote names of map_file, function_file, argument_file,
                     # and result_file, which are simply named map, function, argument, result.
                     # These names are given when these files are declared below.
@@ -806,7 +815,6 @@ def _taskvine_submit_wait(ready_task_queue=None,
             else:
                 raise Exception(f'Unrecognized task mode {task.exec_mode}. Exiting...')
 
-            logger.debug('c')
             # Add environment file to the task if possible
             # Prioritize local poncho environment over global poncho environment
             # (local: use app_pack, global: use env_pack)
