@@ -82,7 +82,7 @@ def unpack_object(serialized_obj, user_namespace):
     from parsl.serialize import deserialize
     obj = deserialize(serialized_obj)
     return obj
-    
+
 
 def encode_function(user_namespace, fn, fn_name, fn_args, fn_kwargs):
     """ Register the given function to the given namespace."""
@@ -165,9 +165,7 @@ def run(map_file, function_file, argument_file, result_file):
     except Exception:
         traceback.print_exc()
         result = RemoteExceptionWrapper(*sys.exc_info())
-    
-    with open('/tmp/test_exec_parsl.tmp', 'w') as f:
-        f.write('debug' + str(result))
+
     # Write out function result to the result file
     try:
         dump_result_to_file(result_file, result)
@@ -190,4 +188,4 @@ if __name__ == "__main__":
     except ValueError:
         print("Usage:\n\t{} function argument result mapping\n".format(sys.argv[0]))
         raise
-    run(map_file, function_file, argument_file, result_file) 
+    run(map_file, function_file, argument_file, result_file)
