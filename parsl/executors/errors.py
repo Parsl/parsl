@@ -51,30 +51,6 @@ class ScalingFailed(ExecutorError):
         return f"Executor {self.executor.label} failed to scale due to: {self.reason}"
 
 
-class DeserializationError(ParslError):
-    """ Failure at the Deserialization of results/exceptions from remote workers
-    """
-
-    def __init__(self, reason):
-        self.reason = reason
-
-    def __str__(self):
-        return "Failed to deserialize return objects. Reason:{}".format(self.reason)
-
-
-class SerializationError(ParslError):
-    """ Failure to serialize data arguments for the tasks
-    """
-
-    def __init__(self, fname):
-        self.fname = fname
-        self.troubleshooting = "https://parsl.readthedocs.io/en/latest/faq.html#addressing-serializationerror"
-
-    def __str__(self):
-        return "Failed to serialize data objects for {}. Refer {} ".format(self.fname,
-                                                                           self.troubleshooting)
-
-
 class BadMessage(ParslError):
     """ Mangled/Poorly formatted/Unsupported message received
     """
