@@ -332,7 +332,7 @@ class MonitoringHub(RepresentationMixin):
 def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]", run_dir: str) -> None:
     logger = start_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
                                name="monitoring_filesystem_radio",
-                               level=logging.DEBUG)
+                               level=logging.INFO)
 
     logger.info("Starting filesystem radio receiver")
     setproctitle("parsl: monitoring filesystem receiver")
@@ -345,7 +345,7 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]
     os.makedirs(new_dir, exist_ok=True)
 
     while True:  # this loop will end on process termination
-        logger.info("Start filesystem radio receiver loop")
+        logger.debug("Start filesystem radio receiver loop")
 
         # iterate over files in new_dir
         for filename in os.listdir(new_dir):
@@ -354,7 +354,7 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]
                 full_path_filename = f"{new_dir}/{filename}"
                 with open(full_path_filename, "rb") as f:
                     message = deserialize(f.read())
-                logger.info(f"Message received is: {message}")
+                logger.debug(f"Message received is: {message}")
                 assert isinstance(message, tuple)
                 q.put(cast(AddressedMonitoringMessage, message))
                 os.remove(full_path_filename)

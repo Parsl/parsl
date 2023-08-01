@@ -2,6 +2,7 @@ import os
 import time
 import logging
 import datetime
+import functools
 
 from parsl.multiprocessing import ForkProcess
 from multiprocessing import Event, Queue
@@ -16,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 monitoring_wrapper_cache: Dict
 monitoring_wrapper_cache = {}
-
 
 def monitor_wrapper(f: Any,           # per app
                     args: Sequence,   # per invocation
@@ -40,11 +40,17 @@ def monitor_wrapper(f: Any,           # per app
     cache_key = (run_id, f, radio_mode)
 
     if cache_key in monitoring_wrapper_cache:
-        wrapped = monitoring_wrapper_cache[cache_key]
+        parsl_monitoring_wrapper = monitoring_wrapper_cache[cache_key]
 
     else:
 
-        def wrapped(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
+        # This is all of functools.WRAPPER_ASSIGNMENTS except __module__.
+        # Assigning __module__ in @wraps is causing the entire module to be
+        # serialized. This doesn't happen on the underlying wrapped function
+        # and doesn't happen if no @wraps is specified.
+        # I am unsure why.
+        @functools.wraps(f, assigned = ('__name__', '__qualname__', '__doc__', '__annotations__'))
+        def parsl_monitoring_wrapper(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
             task_id = kwargs.pop('_parsl_monitoring_task_id')
             try_id = kwargs.pop('_parsl_monitoring_try_id')
             terminate_event = Event()
@@ -156,13 +162,13 @@ def monitor_wrapper(f: Any,           # per app
             else:
                 return ret_v
 
-        monitoring_wrapper_cache[cache_key] = wrapped
+        monitoring_wrapper_cache[cache_key] = parsl_monitoring_wrapper
 
     new_kwargs = kwargs.copy()
     new_kwargs['_parsl_monitoring_task_id'] = x_task_id
     new_kwargs['_parsl_monitoring_try_id'] = x_try_id
 
-    return (wrapped, args, new_kwargs)
+    return (parsl_monitoring_wrapper, args, new_kwargs)
 
 
 @wrap_with_logs

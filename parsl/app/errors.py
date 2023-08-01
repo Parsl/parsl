@@ -139,11 +139,11 @@ R = TypeVar('R')
 
 def wrap_error(func: Callable[P, R]) -> Callable[P, Union[R, RemoteExceptionWrapper]]:
     @wraps(func)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Union[R, RemoteExceptionWrapper]:
+    def parsl_error_wrapper(*args: P.args, **kwargs: P.kwargs) -> Union[R, RemoteExceptionWrapper]:
         import sys
         from parsl.app.errors import RemoteExceptionWrapper
         try:
             return func(*args, **kwargs)
         except Exception:
             return RemoteExceptionWrapper(*sys.exc_info())
-    return wrapper
+    return parsl_error_wrapper
