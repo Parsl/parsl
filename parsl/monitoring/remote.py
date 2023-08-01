@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 monitoring_wrapper_cache: Dict
 monitoring_wrapper_cache = {}
 
+
 def monitor_wrapper(f: Any,           # per app
                     args: Sequence,   # per invocation
                     kwargs: Dict,     # per invocation
@@ -49,7 +50,7 @@ def monitor_wrapper(f: Any,           # per app
         # serialized. This doesn't happen on the underlying wrapped function
         # and doesn't happen if no @wraps is specified.
         # I am unsure why.
-        @functools.wraps(f, assigned = ('__name__', '__qualname__', '__doc__', '__annotations__'))
+        @functools.wraps(f, assigned=('__name__', '__qualname__', '__doc__', '__annotations__'))
         def parsl_monitoring_wrapper(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
             task_id = kwargs.pop('_parsl_monitoring_task_id')
             try_id = kwargs.pop('_parsl_monitoring_try_id')
