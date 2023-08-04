@@ -12,6 +12,7 @@ from parsl.jobs.states import JobStatus, JobState
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import AtomicIDCounter
 
+import parsl.jobs.simple_error_handler as error_handler
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +137,7 @@ class BlockProviderExecutor(ParslExecutor):
     def error_management_enabled(self):
         return self.block_error_handler
 
-    def handle_errors(self, error_handler: "parsl.jobs.job_error_handler.JobErrorHandler",
+    def handle_errors(self, _unused: "parsl.jobs.job_error_handler.JobErrorHandler",
                       status: Dict[str, JobStatus]) -> None:
         if not self.block_error_handler:
             return
@@ -236,7 +237,7 @@ class NoStatusHandlingExecutor(ParslExecutor):
     def status(self):
         return {}
 
-    def handle_errors(self, error_handler: "parsl.jobs.job_error_handler.JobErrorHandler",
+    def handle_errors(self, _unused: "parsl.jobs.job_error_handler.JobErrorHandler",
                       status: Dict[str, JobStatus]) -> None:
         pass
 
