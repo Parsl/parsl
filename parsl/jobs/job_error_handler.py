@@ -11,10 +11,6 @@ class JobErrorHandler:
 
 def run(status: List[jsp.PollItem]):
     for es in status:
-        _check_irrecoverable_executor(es)
-
-
-def _check_irrecoverable_executor(es: jsp.PollItem):
-    if not es.executor.error_management_enabled:
-        return
-    es.executor.handle_errors(es.status)
+        if not es.executor.error_management_enabled:
+            return
+        es.executor.handle_errors(es.status)
