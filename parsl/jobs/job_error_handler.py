@@ -8,9 +8,10 @@ import parsl.jobs.job_status_poller as jsp
 class JobErrorHandler:
     def run(self, status: List[jsp.PollItem]):
         for es in status:
-            self._check_irrecoverable_executor(es)
+            _check_irrecoverable_executor(es)
 
-    def _check_irrecoverable_executor(self, es: jsp.PollItem):
-        if not es.executor.error_management_enabled:
-            return
-        es.executor.handle_errors(es.status)
+
+def _check_irrecoverable_executor(es: jsp.PollItem):
+    if not es.executor.error_management_enabled:
+        return
+    es.executor.handle_errors(es.status)
