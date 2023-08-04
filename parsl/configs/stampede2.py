@@ -3,12 +3,14 @@ from parsl.providers import SlurmProvider
 from parsl.launchers import SrunLauncher
 from parsl.executors import HighThroughputExecutor
 from parsl.data_provider.globus import GlobusStaging
+from parsl.addresses import address_by_interface
 
 
 config = Config(
     executors=[
         HighThroughputExecutor(
             label='Stampede2_HTEX',
+            address=address_by_interface('em3'),
             max_workers=2,
             provider=SlurmProvider(
                 nodes_per_block=2,
