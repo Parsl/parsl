@@ -5,6 +5,8 @@ import zmq
 from typing import Dict, Sequence
 from typing import List  # noqa F401 (used in type annotation)
 
+import parsl.jobs.job_error_handler as error_handler
+
 from parsl.executors.base import ParslExecutor
 from parsl.jobs.job_error_handler import JobErrorHandler
 from parsl.jobs.states import JobStatus, JobState
@@ -112,7 +114,7 @@ class JobStatusPoller(Timer):
 
     def poll(self):
         self._update_state()
-        self._error_handler.run(self._poll_items)
+        error_handler.run(self._poll_items)
         self._strategy.strategize(self._poll_items)
 
     def _update_state(self) -> None:
