@@ -153,31 +153,6 @@ class BlockProviderExecutor(ParslExecutor):
         """Returns an exception that indicates why this executor is in an irrecoverable state."""
         return self._executor_exception
 
-    @property
-    def error_management_enabled(self):
-        """Indicates whether worker error management is supported by this executor. Worker error
-        management is done externally to the executor. However, the executor must implement
-        certain status handling methods that allow this to function. These methods are:
-
-        :method:handle_errors
-        :method:set_bad_state_and_fail_all
-
-        The basic idea of worker error management is that an external entity maintains a view of
-        the state of the workers by calling :method:status() which is then processed to detect
-        abnormal conditions. This can be done externally, as well as internally, through
-        :method:handle_errors. If an entity external to the executor detects an abnormal condition,
-        it can notify the executor using :method:set_bad_state_and_fail_all(exception).
-
-        Some of the scaffolding needed for implementing error management inside executors,
-        including implementations for the status handling methods above, is available in
-        :class:parsl.executors.status_handling.BlockProviderExecutor, which interested executors
-        should inherit from. Noop versions of methods that are related to status handling and
-        running parsl tasks through workers are implemented by
-        :class:parsl.executors.status_handling.NoStatusHandlingExecutor.
-        """
-
-        return self.block_error_handler
-
     def handle_errors(self, status: Dict[str, JobStatus]) -> None:
         """This method is called by the error management infrastructure after a status poll. The
         executor implementing this method is then responsible for detecting abnormal conditions

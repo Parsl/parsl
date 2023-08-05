@@ -115,8 +115,6 @@ class JobStatusPoller(Timer):
 
     def _run_error_handlers(self, status: List[PollItem]):
         for es in status:
-            if not es.executor.error_management_enabled:
-                return
             es.executor.handle_errors(es.status)
 
     def _update_state(self) -> None:
