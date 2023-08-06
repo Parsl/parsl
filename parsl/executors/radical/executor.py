@@ -24,6 +24,7 @@ from parsl.app.errors import AppException
 from parsl.utils import RepresentationMixin
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 
+RPEX = 'RPEX'
 BASH = 'bash'
 PYTHON = 'python'
 
@@ -56,7 +57,7 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     @typeguard.typechecked
     def __init__(self,
                  rpex_cfg=RPEX_ResourceConfig,
-                 label: str = 'RPEX',
+                 label: str = RPEX,
                  bulk_mode: bool = False,
                  resource: Optional[str] = None,
                  login_method: Optional[str] = None,
@@ -68,7 +69,7 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  partition: Optional[str] = None,
                  project: Optional[str] = None):
 
-        self._uid = 'rpex'
+        self._uid = RPEX.lower()
         self.project = project
         self.bulk_mode = bulk_mode
         self.resource = resource
