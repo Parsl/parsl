@@ -55,7 +55,7 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self,
-                 rpex_cfg = RPEX_ResourceConfig,
+                 rpex_cfg=RPEX_ResourceConfig,
                  label: str = 'RPEX',
                  bulk_mode: bool = False,
                  resource: Optional[str] = None,

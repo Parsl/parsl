@@ -1,5 +1,6 @@
 import json
 
+
 class RPEX_ResourceConfig:
     def __init__(self):
         self.cores_per_node = 4
@@ -31,9 +32,8 @@ class RPEX_ResourceConfig:
         }
 
     def get_cfg_file(self):
-         # Convert the class instance to a JSON string
-         config_path = 'rpex.cfg'
-         with open('rpex.cfg', 'w') as f:
+        # Convert the class instance to a JSON string
+        config_path = 'rpex.cfg'
+        with open('rpex.cfg', 'w') as f:
             json.dump(self.__dict__, f, indent=4)
-
-         return config_path
+        return config_path
