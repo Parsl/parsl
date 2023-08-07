@@ -6,7 +6,6 @@ from typing import Dict, Sequence
 from typing import List  # noqa F401 (used in type annotation)
 
 from parsl.executors.base import ParslExecutor
-from parsl.jobs.job_error_handler import JobErrorHandler
 from parsl.jobs.states import JobStatus, JobState
 from parsl.jobs.strategy import Strategy
 from parsl.monitoring.message_type import MessageType
@@ -107,13 +106,18 @@ class JobStatusPoller(Timer):
         self.dfk = dfk
         self._strategy = Strategy(strategy=dfk.config.strategy,
                                   max_idletime=dfk.config.max_idletime)
-        self._error_handler = JobErrorHandler()
         super().__init__(self.poll, interval=5, name="JobStatusPoller")
 
     def poll(self):
         self._update_state()
-        self._error_handler.run(self._poll_items)
+        self._run_error_handlers(self._poll_items)
         self._strategy.strategize(self._poll_items)
+
+    def _run_error_handlers(self, status: List[PollItem]):
+        for es in status:
+            if not es.executor.error_management_enabled:
+                return
+            es.executor.handle_errors(es.status)
 
     def _update_state(self) -> None:
         now = time.time()
