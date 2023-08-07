@@ -12,6 +12,7 @@ class ParslTaskToVine:
                  output_files: list,               # list of output files to this function
                  map_file: Optional[str],          # pickled file containing mapping of local to remote names of files
                  function_file: Optional[str],     # pickled file containing the function information
+                 argument_file: Optional[str],     # pickled file containing the arguments to the function call
                  result_file: Optional[str],       # path to the pickled result object of the function execution
                  cores: Optional[float],           # number of cores to allocate
                  memory: Optional[int],            # amount of memory in MBs to allocate
@@ -26,6 +27,7 @@ class ParslTaskToVine:
         self.category = category
         self.map_file = map_file
         self.function_file = function_file
+        self.argument_file = argument_file
         self.result_file = result_file
         self.input_files = input_files
         self.output_files = output_files
@@ -73,3 +75,11 @@ class ParslFileToVine:
         self.parsl_name = parsl_name
         self.stage = stage
         self.cache = cache
+
+
+def run_parsl_function(map_file, function_file, argument_file, result_file):
+    """
+    Wrapper function to deploy with FunctionCall as serverless tasks.
+    """
+    from parsl.executors.taskvine.exec_parsl_function import run
+    run(map_file, function_file, argument_file, result_file)
