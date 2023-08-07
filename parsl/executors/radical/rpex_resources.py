@@ -1,3 +1,4 @@
+import sys
 import json
 
 
@@ -11,9 +12,12 @@ class RPEX_ResourceConfig:
         self.masters_per_node = 1
         self.nodes_per_worker = 1
 
+        python_v = '{0}.{1}'.format(sys.version_info[0],
+                                    sys.version_info[1])
+
         self.pilot_env = {
             "type": "virtualenv",
-            "version": 3.8,
+            "version": python_v,
             "setup": ["mpi4py", "radical.pilot"]
         }
 
@@ -32,7 +36,7 @@ class RPEX_ResourceConfig:
         }
 
     def get_cfg_file(self):
-        # Convert the class instance to a JSON string
+        # Convert the class instance to a cfg file.
         config_path = 'rpex.cfg'
         with open('rpex.cfg', 'w') as f:
             json.dump(self.__dict__, f, indent=4)

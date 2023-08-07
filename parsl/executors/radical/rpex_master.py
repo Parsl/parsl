@@ -2,7 +2,6 @@
 
 import os
 import sys
-import time
 
 from collections import defaultdict
 
@@ -74,12 +73,6 @@ class RPEXMaster(rp.raptor.Master):
                   % (task['uid'], task['state'], task['stdout'],
                      task['return_value']))
 
-    # --------------------------------------------------------------------------
-    #
-    def stay_alive(self):
-        while True:
-            time.sleep(1)
-
 
 # ------------------------------------------------------------------------------
 #
@@ -120,6 +113,6 @@ if __name__ == '__main__':
     # wait for all workers
     master.wait_workers()
     master.start()
-    master.stay_alive()
+    master.join()
 
 # ------------------------------------------------------------------------------

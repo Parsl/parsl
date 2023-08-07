@@ -1,7 +1,6 @@
 """RadicalPilotExecutor builds on the RADICAL-Pilot/Parsl
 """
 import os
-import sys
 import time
 import parsl
 import queue
@@ -185,12 +184,10 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         pilot = self.pmgr.submit_pilots(pd)
         self.tmgr.submit_tasks(tds)
 
-        python_v = '{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
         pilot.prepare_env(env_name='ve_rpex',
                           env_spec={'type': self.pilot_env.get('type',
                                                                'virtualenv'),
-                                    'version': self.pilot_env.get('version',
-                                                                  python_v),
+                                    'version': self.pilot_env.get('version'),
                                     'path': self.pilot_env.get('path', ''),
                                     'pre_exec': self.pilot_env.get('pre_exec',
                                                                    []),
