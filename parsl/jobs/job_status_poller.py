@@ -5,9 +5,9 @@ import zmq
 from typing import Dict, Sequence
 from typing import List  # noqa F401 (used in type annotation)
 
-from parsl.executors.base import ParslExecutor
 from parsl.jobs.states import JobStatus, JobState
 from parsl.jobs.strategy import Strategy
+from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.monitoring.message_type import MessageType
 
 
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class PollItem:
-    def __init__(self, executor: ParslExecutor, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
+    def __init__(self, executor: BlockProviderExecutor, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
         self._executor = executor
         self._dfk = dfk
         self._interval = executor.status_polling_interval
@@ -70,7 +70,7 @@ class PollItem:
         return self._status
 
     @property
-    def executor(self) -> ParslExecutor:
+    def executor(self) -> BlockProviderExecutor:
         return self._executor
 
     def scale_in(self, n, force=True, max_idletime=None):
@@ -124,7 +124,7 @@ class JobStatusPoller(Timer):
         for item in self._poll_items:
             item.poll(now)
 
-    def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
+    def add_executors(self, executors: Sequence[BlockProviderExecutor]) -> None:
         for executor in executors:
             if executor.status_polling_interval > 0:
                 logger.debug("Adding executor {}".format(executor.label))

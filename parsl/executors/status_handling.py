@@ -82,6 +82,14 @@ class BlockProviderExecutor(ParslExecutor):
 
     @property
     def status_polling_interval(self):
+        """Returns the interval, in seconds, at which the status method should be called. The
+        assumption here is that, once initialized, an executor's polling interval is fixed.
+        In practice, at least given the current situation, the executor uses a single task provider
+        and this method is a delegate to the corresponding method in the provider.
+
+        :return: the number of seconds to wait between calls to status() or zero if no polling
+                 should be done
+        """
         if self._provider is None:
             return 0
         else:
@@ -104,8 +112,10 @@ class BlockProviderExecutor(ParslExecutor):
                                   "outstanding()")
 
     def status(self) -> Dict[str, JobStatus]:
-        """Return status of all blocks."""
+        """Return the status of all jobs/blocks currently known to this executor.
 
+        :return: a dictionary mapping block ids (in string) to job status
+        """
         if self._provider:
             block_ids, job_ids = self._get_block_and_job_ids()
             status = self._make_status_dict(block_ids, self._provider.status(job_ids))
@@ -116,6 +126,11 @@ class BlockProviderExecutor(ParslExecutor):
         return status
 
     def set_bad_state_and_fail_all(self, exception: Exception):
+        """Allows external error handlers to mark this executor as irrecoverably bad and cause
+        all tasks submitted to it now and in the future to fail. The executor is responsible
+        for checking  :method:bad_state_is_set() in the :method:submit() method and raising the
+        appropriate exception, which is available through :method:executor_exception().
+        """
         logger.exception("Setting bad state due to exception", exc_info=exception)
         self._executor_exception = exception
         # Set bad state to prevent new tasks from being submitted
@@ -127,17 +142,50 @@ class BlockProviderExecutor(ParslExecutor):
 
     @property
     def bad_state_is_set(self):
+        """Returns true if this executor is in an irrecoverable error state. If this method
+        returns true, :property:executor_exception should contain an exception indicating the
+        cause.
+        """
         return self._executor_bad_state.is_set()
 
     @property
     def executor_exception(self):
+        """Returns an exception that indicates why this executor is in an irrecoverable state."""
         return self._executor_exception
 
     @property
     def error_management_enabled(self):
+        """Indicates whether worker error management is supported by this executor. Worker error
+        management is done externally to the executor. However, the executor must implement
+        certain status handling methods that allow this to function. These methods are:
+
+        :method:handle_errors
+        :method:set_bad_state_and_fail_all
+
+        The basic idea of worker error management is that an external entity maintains a view of
+        the state of the workers by calling :method:status() which is then processed to detect
+        abnormal conditions. This can be done externally, as well as internally, through
+        :method:handle_errors. If an entity external to the executor detects an abnormal condition,
+        it can notify the executor using :method:set_bad_state_and_fail_all(exception).
+
+        Some of the scaffolding needed for implementing error management inside executors,
+        including implementations for the status handling methods above, is available in
+        :class:parsl.executors.status_handling.BlockProviderExecutor, which interested executors
+        should inherit from. Noop versions of methods that are related to status handling and
+        running parsl tasks through workers are implemented by
+        :class:parsl.executors.status_handling.NoStatusHandlingExecutor.
+        """
+
         return self.block_error_handler
 
     def handle_errors(self, status: Dict[str, JobStatus]) -> None:
+        """This method is called by the error management infrastructure after a status poll. The
+        executor implementing this method is then responsible for detecting abnormal conditions
+        based on the status of submitted jobs. If the executor does not implement any special
+        error handling, this method should return False, in which case a generic error handling
+        scheme will be used.
+        :param status: status of all jobs launched by this executor
+        """
         if not self.block_error_handler:
             return
         init_blocks = 3
@@ -211,34 +259,3 @@ class BlockProviderExecutor(ParslExecutor):
     @abstractproperty
     def workers_per_node(self) -> Union[int, float]:
         pass
-
-
-class NoStatusHandlingExecutor(ParslExecutor):
-    @property
-    def status_polling_interval(self):
-        return -1
-
-    @property
-    def bad_state_is_set(self):
-        return False
-
-    @property
-    def error_management_enabled(self):
-        return False
-
-    @property
-    def executor_exception(self):
-        return None
-
-    def set_bad_state_and_fail_all(self, exception: Exception):
-        pass
-
-    def status(self):
-        return {}
-
-    def handle_errors(self, status: Dict[str, JobStatus]) -> None:
-        pass
-
-    @property
-    def provider(self):
-        return self._provider

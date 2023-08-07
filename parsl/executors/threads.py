@@ -5,7 +5,7 @@ import concurrent.futures as cf
 from typing import List, Optional
 
 from parsl.data_provider.staging import Staging
-from parsl.executors.status_handling import NoStatusHandlingExecutor
+from parsl.executors.base import ParslExecutor
 from parsl.utils import RepresentationMixin
 from parsl.executors.errors import UnsupportedFeatureError
 
@@ -13,7 +13,7 @@ from parsl.executors.errors import UnsupportedFeatureError
 logger = logging.getLogger(__name__)
 
 
-class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
+class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
     """A thread-based executor.
 
     Parameters
@@ -30,7 +30,7 @@ class ThreadPoolExecutor(NoStatusHandlingExecutor, RepresentationMixin):
     def __init__(self, label: str = 'threads', max_threads: int = 2,
                  thread_name_prefix: str = '', storage_access: Optional[List[Staging]] = None,
                  working_dir: Optional[str] = None):
-        NoStatusHandlingExecutor.__init__(self)
+        ParslExecutor.__init__(self)
         self.label = label
         self.max_threads = max_threads
         self.thread_name_prefix = thread_name_prefix
