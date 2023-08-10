@@ -3,7 +3,7 @@ import threading
 from itertools import compress
 from abc import abstractmethod, abstractproperty
 from concurrent.futures import Future
-from typing import List, Any, Dict, Optional, Tuple, Union
+from typing import List, Any, Dict, Optional, Tuple, Union, Callable
 
 import parsl  # noqa F401
 from parsl.executors.base import ParslExecutor
@@ -11,8 +11,6 @@ from parsl.executors.errors import BadStateException, ScalingFailed
 from parsl.jobs.states import JobStatus, JobState
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import AtomicIDCounter
-
-import parsl.jobs.simple_error_handler as error_handler
 
 logger = logging.getLogger(__name__)
 
@@ -47,10 +45,12 @@ class BlockProviderExecutor(ParslExecutor):
     """
     def __init__(self, *,
                  provider: Optional[ExecutionProvider],
-                 block_error_handler: bool):
+                 block_error_handler: Union[bool, Callable[[ParslExecutor, Dict[str, JobStatus], int], None]],
+                 block_error_threshold: int = 3,):
         super().__init__()
         self._provider = provider
         self.block_error_handler = block_error_handler
+        self.block_error_threshold = block_error_threshold
         # errors can happen during the submit call to the provider; this is used
         # to keep track of such errors so that they can be handled in one place
         # together with errors reported by status()
@@ -163,12 +163,7 @@ class BlockProviderExecutor(ParslExecutor):
         """
         if not self.block_error_handler:
             return
-        init_blocks = 3
-        if hasattr(self.provider, 'init_blocks'):
-            init_blocks = self.provider.init_blocks
-        if init_blocks < 1:
-            init_blocks = 1
-        error_handler.simple_error_handler(self, status, init_blocks)
+        self.block_error_handler(self, status, threshold=self.block_error_threshold)
 
     @property
     def tasks(self) -> Dict[object, Future]:
