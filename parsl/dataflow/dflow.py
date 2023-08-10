@@ -1128,7 +1128,8 @@ class DataFlowKernel:
                 msg = executor.create_monitoring_info(new_status)
                 logger.debug("Sending monitoring message {} to hub from DFK".format(msg))
                 self.monitoring.send(MessageType.BLOCK_INFO, msg)
-        self.job_status_poller.add_executors(executors)
+        block_executors = [e for e in executors if isinstance(e, BlockProviderExecutor)]
+        self.job_status_poller.add_executors(block_executors)
 
     def atexit_cleanup(self) -> None:
         if not self.cleanup_called:
@@ -1197,8 +1198,8 @@ class DataFlowKernel:
         logger.info("Scaling in and shutting down executors")
 
         for executor in self.executors.values():
-            if not executor.bad_state_is_set:
-                if isinstance(executor, BlockProviderExecutor):
+            if isinstance(executor, BlockProviderExecutor):
+                if not executor.bad_state_is_set:
                     logger.info(f"Scaling in executor {executor.label}")
                     if executor.provider:
                         job_ids = executor.provider.resources.keys()
@@ -1210,11 +1211,11 @@ class DataFlowKernel:
                             msg = executor.create_monitoring_info(new_status)
                             logger.debug("Sending message {} to hub from DFK".format(msg))
                             self.monitoring.send(MessageType.BLOCK_INFO, msg)
-                logger.info(f"Shutting down executor {executor.label}")
-                executor.shutdown()
-                logger.info(f"Shut down executor {executor.label}")
-            else:  # and bad_state_is_set
-                logger.warning(f"Not shutting down executor {executor.label} because it is in bad state")
+                else:  # and bad_state_is_set
+                    logger.warning(f"Not shutting down executor {executor.label} because it is in bad state")
+            logger.info(f"Shutting down executor {executor.label}")
+            executor.shutdown()
+            logger.info(f"Shut down executor {executor.label}")
 
         logger.info("Terminated executors")
         self.time_completed = datetime.datetime.now()

@@ -18,7 +18,7 @@ import weakref
 import zmq
 
 from parsl.utils import RepresentationMixin
-from parsl.executors.status_handling import NoStatusHandlingExecutor
+from parsl.executors.base import ParslExecutor
 from parsl.executors.flux.execute_parsl_task import __file__ as _WORKER_PATH
 from parsl.executors.flux.flux_instance_manager import __file__ as _MANAGER_PATH
 from parsl.executors.errors import ScalingFailed
@@ -124,7 +124,7 @@ def _complete_future(
         )
 
 
-class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
+class FluxExecutor(ParslExecutor, RepresentationMixin):
     """Executor that uses Flux to schedule and run jobs.
 
     Every callable submitted to the executor is wrapped into a Flux job.
@@ -189,7 +189,7 @@ class FluxExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         super().__init__()
         if provider is None:
             provider = LocalProvider()
-        self._provider = provider
+        self.provider = provider
         self.label = label
         if working_dir is None:
             working_dir = self.label + "_" + str(uuid.uuid4())
