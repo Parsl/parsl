@@ -13,7 +13,7 @@ def test_error_1():
     try:
         connect_and_list("bad.url.gov", "ubuntu")
     except Exception as e:
-        assert type(e) == SSHException, "Expected SSException, got: {0}".format(e)
+        assert type(e) is SSHException, "Expected SSException, got: {0}".format(e)
 
 
 def test_error_2():
