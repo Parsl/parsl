@@ -22,3 +22,9 @@ sqlalchemy2-stubs
 Sphinx==4.5.0
 twine
 wheel
+
+# Numpy is required by:
+# parsl/tests/test_regression/test_1653.py
+# This has previously been imported transitively via pandas
+# but should be explicit about it.
+numpy>=1.24
