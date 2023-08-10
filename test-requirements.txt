@@ -1,6 +1,10 @@
 flake8==6.1.0
 ipyparallel
-# pandas   - removed because it seems to want to build with now-removed distutils
+
+# previously removed because it seems to want to build with now-removed distutils
+# ... but as python 3.12 has progressed, maybe we can bring it back?
+pandas
+
 pytest>=7.4.0,<8
 pytest-cov
 pytest-random-order
