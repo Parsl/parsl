@@ -4,6 +4,7 @@ from parsl.executors import HighThroughputExecutor
 from unittest.mock import Mock
 from parsl.jobs.states import JobStatus, JobState
 from parsl.jobs.simple_error_handler import simple_error_handler, windowed_error_handler
+from functools import partial
 
 
 @pytest.mark.local
@@ -38,7 +39,7 @@ def test_block_error_handler_mock():
 
     htex.handle_errors(bad_jobs)
     handler_mock.assert_called()
-    handler_mock.assert_called_with(htex, bad_jobs, threshold=3)
+    handler_mock.assert_called_with(htex, bad_jobs)
 
 
 @pytest.mark.local
@@ -109,9 +110,9 @@ def test_windowed_error_handler():
 
 @pytest.mark.local
 def test_windowed_error_handler_with_threshold():
-    htex = HighThroughputExecutor(block_error_handler=windowed_error_handler,
-                                  block_error_threshold=2)
-    assert htex.block_error_handler is windowed_error_handler
+    error_handler = partial(windowed_error_handler, threshold=2)
+    htex = HighThroughputExecutor(block_error_handler=error_handler)
+    assert htex.block_error_handler is error_handler
 
     bad_state_mock = Mock()
     htex.set_bad_state_and_fail_all = bad_state_mock

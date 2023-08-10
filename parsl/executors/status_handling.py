@@ -45,12 +45,10 @@ class BlockProviderExecutor(ParslExecutor):
     """
     def __init__(self, *,
                  provider: Optional[ExecutionProvider],
-                 block_error_handler: Union[bool, Callable[[ParslExecutor, Dict[str, JobStatus], int], None]],
-                 block_error_threshold: int = 3,):
+                 block_error_handler: Union[bool, Callable[[ParslExecutor, Dict[str, JobStatus]], None]]):
         super().__init__()
         self._provider = provider
         self.block_error_handler = block_error_handler
-        self.block_error_threshold = block_error_threshold
         # errors can happen during the submit call to the provider; this is used
         # to keep track of such errors so that they can be handled in one place
         # together with errors reported by status()
@@ -163,7 +161,8 @@ class BlockProviderExecutor(ParslExecutor):
         """
         if not self.block_error_handler:
             return
-        self.block_error_handler(self, status, threshold=self.block_error_threshold)
+        assert isinstance(Callable, self.block_error_handler)
+        self.block_error_handler(self, status)
 
     @property
     def tasks(self) -> Dict[object, Future]:

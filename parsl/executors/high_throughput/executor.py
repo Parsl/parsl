@@ -214,12 +214,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  poll_period: int = 10,
                  address_probe_timeout: Optional[int] = None,
                  worker_logdir_root: Optional[str] = None,
-                 block_error_handler: Union[bool, Callable[[ParslExecutor, Dict[str, JobStatus], int], None]] = False,
-                 block_error_threshold: int = 3):
+                 block_error_handler: Union[bool, Callable[[ParslExecutor, Dict[str, JobStatus]], None]] = False):
 
         logger.debug("Initializing HighThroughputExecutor")
 
-        BlockProviderExecutor.__init__(self, provider=provider, block_error_handler=block_error_handler, block_error_threshold=block_error_threshold)
+        BlockProviderExecutor.__init__(self, provider=provider, block_error_handler=block_error_handler)
         self.label = label
         self.launch_cmd = launch_cmd
         self.worker_debug = worker_debug
