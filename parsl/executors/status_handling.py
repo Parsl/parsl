@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging
 import threading
 from itertools import compress
@@ -9,6 +10,7 @@ import parsl  # noqa F401
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
 from parsl.jobs.states import JobStatus, JobState
+from parsl.jobs.simple_error_handler import simple_error_handler, noop_error_handler
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import AtomicIDCounter
 
@@ -45,10 +47,18 @@ class BlockProviderExecutor(ParslExecutor):
     """
     def __init__(self, *,
                  provider: Optional[ExecutionProvider],
-                 block_error_handler: Union[bool, Callable[[ParslExecutor, Dict[str, JobStatus]], None]]):
+                 block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]]):
         super().__init__()
         self._provider = provider
-        self.block_error_handler = block_error_handler
+        self.block_error_handler: Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]
+        if isinstance(block_error_handler, bool):
+            if block_error_handler:
+                self.block_error_handler = simple_error_handler
+            else:
+                self.block_error_handler = noop_error_handler
+        else:
+            self.block_error_handler = block_error_handler
+
         # errors can happen during the submit call to the provider; this is used
         # to keep track of such errors so that they can be handled in one place
         # together with errors reported by status()
@@ -159,9 +169,6 @@ class BlockProviderExecutor(ParslExecutor):
         scheme will be used.
         :param status: status of all jobs launched by this executor
         """
-        if not self.block_error_handler:
-            return
-        assert isinstance(Callable, self.block_error_handler)
         self.block_error_handler(self, status)
 
     @property

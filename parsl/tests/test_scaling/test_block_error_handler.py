@@ -1,9 +1,10 @@
 import pytest
 
 from parsl.executors import HighThroughputExecutor
+from parsl.providers import LocalProvider
 from unittest.mock import Mock
 from parsl.jobs.states import JobStatus, JobState
-from parsl.jobs.simple_error_handler import simple_error_handler, windowed_error_handler
+from parsl.jobs.simple_error_handler import simple_error_handler, windowed_error_handler, noop_error_handler
 from functools import partial
 
 
@@ -11,7 +12,7 @@ from functools import partial
 def test_block_error_handler_false():
     mock = Mock()
     htex = HighThroughputExecutor(block_error_handler=False)
-    assert htex.block_error_handler is False
+    assert htex.block_error_handler is noop_error_handler
     htex.set_bad_state_and_fail_all = mock
 
     bad_jobs = {'1': JobStatus(JobState.FAILED),
@@ -44,7 +45,9 @@ def test_block_error_handler_mock():
 
 @pytest.mark.local
 def test_simple_error_handler():
-    htex = HighThroughputExecutor(block_error_handler=simple_error_handler)
+    htex = HighThroughputExecutor(block_error_handler=simple_error_handler,
+                                  provider=LocalProvider(init_blocks=3))
+
     assert htex.block_error_handler is simple_error_handler
 
     bad_state_mock = Mock()
@@ -104,6 +107,31 @@ def test_windowed_error_handler():
                 '2': JobStatus(JobState.FAILED),
                 '3': JobStatus(JobState.FAILED),
                 '4': JobStatus(JobState.FAILED)}
+    htex.handle_errors(bad_jobs)
+    bad_state_mock.assert_called()
+
+
+@pytest.mark.local
+def test_windowed_error_handler_sorting():
+    htex = HighThroughputExecutor(block_error_handler=windowed_error_handler)
+    assert htex.block_error_handler is windowed_error_handler
+
+    bad_state_mock = Mock()
+    htex.set_bad_state_and_fail_all = bad_state_mock
+
+    bad_jobs = {'8': JobStatus(JobState.FAILED),
+                '9': JobStatus(JobState.FAILED),
+                '10': JobStatus(JobState.FAILED),
+                '11': JobStatus(JobState.COMPLETED),
+                '12': JobStatus(JobState.COMPLETED)}
+    htex.handle_errors(bad_jobs)
+    bad_state_mock.assert_not_called()
+
+    bad_jobs = {'8': JobStatus(JobState.COMPLETED),
+                '9': JobStatus(JobState.FAILED),
+                '21': JobStatus(JobState.FAILED),
+                '22': JobStatus(JobState.FAILED),
+                '10': JobStatus(JobState.FAILED)}
     htex.handle_errors(bad_jobs)
     bad_state_mock.assert_called()
 

@@ -15,7 +15,6 @@ import math
 from parsl.serialize import pack_apply_message, deserialize
 from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
-from parsl.executors.base import ParslExecutor
 from parsl.jobs.states import JobStatus
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
@@ -214,7 +213,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  poll_period: int = 10,
                  address_probe_timeout: Optional[int] = None,
                  worker_logdir_root: Optional[str] = None,
-                 block_error_handler: Union[bool, Callable[[ParslExecutor, Dict[str, JobStatus]], None]] = False):
+                 block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True):
 
         logger.debug("Initializing HighThroughputExecutor")
 
