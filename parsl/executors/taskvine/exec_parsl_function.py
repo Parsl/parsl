@@ -5,16 +5,17 @@ import traceback
 import sys
 import pickle
 
-# This scripts executes a parsl function which is pickled in a file:
+# This scripts executes a parsl function which is pickled in 3 files:
 #
 # exec_parsl_function.py map_file function_file result_file
 #
 # map_file: Contains a pickled dictionary that indicates which local_paths the
 #           parsl Files should take.
 #
-# function_file: Contains a pickle parsl function.
+# function_file: Contains a pickle parsl function. Function might be serialized in advance.
+# See @parsl.serialize.concretes.py
 #
-# result_file: It will contain the result of the function, including any
+# result_file: A file path, whose content will contain the result of the function, including any
 #              exception generated. Exceptions will be wrapped with RemoteExceptionWrapper.
 #
 # Exit codes:
@@ -25,17 +26,20 @@ import pickle
 #
 
 
-def load_pickled_file(filename):
+def load_pickled_file(filename: str):
+    """ Load a pickled file and return its pickled object."""
     with open(filename, "rb") as f_in:
         return pickle.load(f_in)
 
 
-def dump_result_to_file(result_file, result_package):
+def dump_result_to_file(result_file: str, result_package):
+    """ Dump a result to the given result file."""
     with open(result_file, "wb") as f_out:
         pickle.dump(result_package, f_out)
 
 
 def remap_location(mapping, parsl_file):
+    """ Remap files from local name (on manager) to remote name (on worker)."""
     if not isinstance(parsl_file, File):
         return
     # Below we rewrite .local_path when scheme != file only when the local_name
@@ -48,6 +52,7 @@ def remap_location(mapping, parsl_file):
 
 
 def remap_list_of_files(mapping, maybe_files):
+    """ Remap a list of potential files."""
     for maybe_file in maybe_files:
         remap_location(mapping, maybe_file)
 
@@ -73,30 +78,14 @@ def remap_all_files(mapping, fn_args, fn_kwargs):
             remap_location(mapping, maybe_file)
 
 
-def unpack_function(function_info, user_namespace):
-    if "source code" in function_info:
-        return unpack_source_code_function(function_info, user_namespace)
-    elif "byte code" in function_info:
-        return unpack_byte_code_function(function_info, user_namespace)
-    else:
-        raise ValueError("Function file does not have a valid function representation.")
-
-
-def unpack_source_code_function(function_info, user_namespace):
-    source_code = function_info["source code"]
-    name = function_info["name"]
-    args = function_info["args"]
-    kwargs = function_info["kwargs"]
-    return (source_code, name, args, kwargs)
-
-
-def unpack_byte_code_function(function_info, user_namespace):
-    from parsl.serialize import unpack_apply_message
-    func, args, kwargs = unpack_apply_message(function_info["byte code"], user_namespace, copy=False)
-    return (func, 'parsl_function_name', args, kwargs)
+def unpack_object(serialized_obj, user_namespace):
+    from parsl.serialize import deserialize
+    obj = deserialize(serialized_obj)
+    return obj
 
 
 def encode_function(user_namespace, fn, fn_name, fn_args, fn_kwargs):
+    """ Register the given function to the given namespace."""
     # Returns a tuple (code, result_name)
     # code can be exec in the user_namespace to produce result_name.
     prefix = "parsl_"
@@ -109,25 +98,12 @@ def encode_function(user_namespace, fn, fn_name, fn_args, fn_kwargs):
                            kwargs_name: fn_kwargs,
                            result_name: result_name})
 
-    if isinstance(fn, str):
-        code = encode_source_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name)
-    elif callable(fn):
+    if callable(fn):
         code = encode_byte_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name)
     else:
         raise ValueError("Function object does not look like a function.")
 
     return (code, result_name)
-
-
-def encode_source_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name):
-    # We drop the first line as it names the parsl decorator used (i.e., @python_app)
-    source = fn.split('\n')[1:]
-    fn_app = "{0} = {1}(*{2}, **{3})".format(result_name, fn_name, args_name, kwargs_name)
-
-    source.append(fn_app)
-
-    code = "\n".join(source)
-    return code
 
 
 def encode_byte_code_function(user_namespace, fn, fn_name, args_name, kwargs_name, result_name):
@@ -136,7 +112,7 @@ def encode_byte_code_function(user_namespace, fn, fn_name, args_name, kwargs_nam
     return code
 
 
-def load_function(map_file, function_file):
+def load_function(map_file, function_file, argument_file):
     # Decodes the function and its file arguments to be executed into
     # function_code, and updates a user namespace with the function name and
     # the variable named result_name. When the function is executed, its result
@@ -147,9 +123,14 @@ def load_function(map_file, function_file):
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})
 
-    function_info = load_pickled_file(function_file)
+    packed_function = load_pickled_file(function_file)
+    packed_argument = load_pickled_file(argument_file)
 
-    (fn, fn_name, fn_args, fn_kwargs) = unpack_function(function_info, user_ns)
+    fn = unpack_object(packed_function, user_ns)
+    args_dict = unpack_object(packed_argument, user_ns)
+    fn_args = args_dict['args']
+    fn_kwargs = args_dict['kwargs']
+    fn_name = 'parsl_tmp_func_name'
 
     mapping = load_pickled_file(map_file)
     remap_all_files(mapping, fn_args, fn_kwargs)
@@ -162,29 +143,16 @@ def load_function(map_file, function_file):
 def execute_function(namespace, function_code, result_name):
     # On executing the function inside the namespace, its result will be in a
     # variable named result_name.
-
     exec(function_code, namespace, namespace)
     result = namespace.get(result_name)
 
     return result
 
 
-if __name__ == "__main__":
+def run(map_file, function_file, argument_file, result_file):
     try:
-        # parse the three required command line arguments:
-        # map_file: contains a pickled dictionary to map original names to
-        #           names at the execution site.
-        # function_file: contains the pickled parsl function to execute.
-        # result_file: any output (including exceptions) will be written to
-        #              this file.
         try:
-            (map_file, function_file, result_file) = sys.argv[1:]
-        except ValueError:
-            print("Usage:\n\t{} function result mapping\n".format(sys.argv[0]))
-            raise
-
-        try:
-            (namespace, function_code, result_name) = load_function(map_file, function_file)
+            (namespace, function_code, result_name) = load_function(map_file, function_file, argument_file)
         except Exception:
             print("There was an error setting up the function for execution.")
             raise
@@ -205,3 +173,19 @@ if __name__ == "__main__":
         print("Could not write to result file.")
         traceback.print_exc()
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    # parse the four required command line arguments:
+    # map_file: contains a pickled dictionary to map original names to
+    #           names at the execution site.
+    # function_file: contains the pickled parsl function to execute.
+    # argument_file: contains the pickled arguments to the function call.
+    # result_file: any output (including exceptions) will be written to
+    #              this file.
+    try:
+        (map_file, function_file, argument_file, result_file) = sys.argv[1:]
+    except ValueError:
+        print("Usage:\n\t{} function argument result mapping\n".format(sys.argv[0]))
+        raise
+    run(map_file, function_file, argument_file, result_file)

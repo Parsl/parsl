@@ -3,8 +3,9 @@ import os
 import time
 
 from parsl.channels import LocalChannel
+from parsl.jobs.states import JobStatus, JobState
 from parsl.launchers import SimpleLauncher
-from parsl.providers.base import ExecutionProvider, JobStatus, JobState
+from parsl.providers.base import ExecutionProvider
 from parsl.providers.errors import ScriptPathError
 from parsl.utils import RepresentationMixin
 

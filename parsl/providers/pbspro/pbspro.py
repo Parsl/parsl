@@ -4,10 +4,10 @@ import time
 import json
 
 from parsl.channels import LocalChannel
+from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.pbspro.template import template_string
 from parsl.providers import TorqueProvider
-from parsl.providers.base import JobState, JobStatus
 
 from parsl.providers.torque.torque import translate_table
 

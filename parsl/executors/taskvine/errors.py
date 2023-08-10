@@ -3,20 +3,27 @@ from parsl.app.errors import AppException
 
 
 class TaskVineTaskFailure(AppException):
-    """A failure executing a task in taskvine
+    """A failure executing a task in TaskVine
 
     Contains:
     reason(string)
     status(int)
     """
 
-    def __init__(self, reason, status):
+    def __init__(self, reason: str, status: int):
         self.reason = reason
         self.status = status
 
 
-class TaskVineFailure(ParslError):
+class TaskVineManagerFailure(ParslError):
     """A failure in the taskvine executor that prevented the task to be
-    executed.""
+    executed.
+    """
+    pass
+
+
+class TaskVineFactoryFailure(ParslError):
+    """A failure in the TaskVine factory that prevents the factory from
+    supplying workers to the manager.
     """
     pass

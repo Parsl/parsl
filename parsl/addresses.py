@@ -110,8 +110,7 @@ def get_all_addresses() -> Set[str]:
         try:
             s_addresses.add(address_by_interface(interface))
         except Exception:
-            logger.exception("Ignoring failure to fetch address from interface {}".format(interface))
-            pass
+            logger.info("Ignoring failure to fetch address from interface {}".format(interface))
 
     resolution_functions: List[Callable[[], str]]
     resolution_functions = [address_by_hostname, address_by_route, address_by_query]
@@ -119,6 +118,36 @@ def get_all_addresses() -> Set[str]:
         try:
             s_addresses.add(f())
         except Exception:
-            logger.exception("Ignoring an address finder exception")
+            logger.info("Ignoring an address finder exception")
 
     return s_addresses
+
+
+def get_any_address() -> str:
+    """ Uses a combination of methods to find any address of the local machine.
+
+    Returns:
+        one address in string
+    """
+    net_interfaces = psutil.net_if_addrs()
+
+    addr = ''
+    for interface in net_interfaces:
+        try:
+            addr = address_by_interface(interface)
+            return addr
+        except Exception:
+            logger.info("Ignoring failure to fetch address from interface {}".format(interface))
+
+    resolution_functions: List[Callable[[], str]]
+    resolution_functions = [address_by_hostname, address_by_route, address_by_query]
+    for f in resolution_functions:
+        try:
+            addr = f()
+            return addr
+        except Exception:
+            logger.info("Ignoring an address finder exception")
+
+    if addr == '':
+        raise Exception('Cannot find address of the local machine.')
+    return addr

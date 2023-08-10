@@ -2,6 +2,7 @@ from __future__ import annotations
 import hashlib
 from functools import lru_cache, singledispatch
 import logging
+import pickle
 from parsl.dataflow.taskrecord import TaskRecord
 
 from typing import Dict, Any, List, Optional, TYPE_CHECKING
@@ -11,7 +12,6 @@ if TYPE_CHECKING:
 
 from concurrent.futures import Future
 
-from parsl.serialize import serialize
 import types
 
 logger = logging.getLogger(__name__)
@@ -54,8 +54,8 @@ def id_for_memo(obj: object, output_ref: bool = False) -> bytes:
 @id_for_memo.register(int)
 @id_for_memo.register(float)
 @id_for_memo.register(type(None))
-def id_for_memo_serialize(obj: object, output_ref: bool = False) -> bytes:
-    return serialize(obj)
+def id_for_memo_pickle(obj: object, output_ref: bool = False) -> bytes:
+    return pickle.dumps(obj)
 
 
 @id_for_memo.register(list)
@@ -68,7 +68,7 @@ def id_for_memo_list(denormalized_list: list, output_ref: bool = False) -> bytes
     for e in denormalized_list:
         normalized_list.append(id_for_memo(e, output_ref=output_ref))
 
-    return serialize(normalized_list)
+    return pickle.dumps(normalized_list)
 
 
 @id_for_memo.register(tuple)
@@ -81,7 +81,7 @@ def id_for_memo_tuple(denormalized_tuple: tuple, output_ref: bool = False) -> by
     for e in denormalized_tuple:
         normalized_list.append(id_for_memo(e, output_ref=output_ref))
 
-    return serialize(normalized_list)
+    return pickle.dumps(normalized_list)
 
 
 @id_for_memo.register(dict)
@@ -100,7 +100,7 @@ def id_for_memo_dict(denormalized_dict: dict, output_ref: bool = False) -> bytes
     for k in keys:
         normalized_list.append(id_for_memo(k))
         normalized_list.append(id_for_memo(denormalized_dict[k], output_ref=output_ref))
-    return serialize(normalized_list)
+    return pickle.dumps(normalized_list)
 
 
 # the LRU cache decorator must be applied closer to the id_for_memo_function call
@@ -112,7 +112,7 @@ def id_for_memo_function(f: types.FunctionType, output_ref: bool = False) -> byt
     This means that changing source code (other than the function name) will
     not cause a checkpoint invalidation.
     """
-    return serialize(["types.FunctionType", f.__name__, f.__module__])
+    return pickle.dumps(["types.FunctionType", f.__name__, f.__module__])
 
 
 class Memoizer:
@@ -186,23 +186,20 @@ class Memoizer:
 
         ignore_list = task['ignore_for_cache']
 
-        logger.debug("Ignoring these kwargs for checkpointing: {}".format(ignore_list))
+        logger.debug("Ignoring these kwargs for checkpointing: %s", ignore_list)
         for k in ignore_list:
-            logger.debug("Ignoring kwarg {}".format(k))
+            logger.debug("Ignoring kwarg %s", k)
             del filtered_kw[k]
 
         if 'outputs' in task['kwargs']:
             outputs = task['kwargs']['outputs']
             del filtered_kw['outputs']
-            t = t + [id_for_memo(outputs, output_ref=True)]   # TODO: use append?
+            t.append(id_for_memo(outputs, output_ref=True))
 
-        t = t + [id_for_memo(filtered_kw)]
-        t = t + [id_for_memo(task['func']),
-                 id_for_memo(task['args'])]
+        t.extend(map(id_for_memo, (filtered_kw, task['func'], task['args'])))
 
         x = b''.join(t)
-        hashedsum = hashlib.md5(x).hexdigest()
-        return hashedsum
+        return hashlib.md5(x).hexdigest()
 
     def check_memo(self, task: TaskRecord) -> Optional[Future[Any]]:
         """Create a hash of the task and its inputs and check the lookup table for this hash.

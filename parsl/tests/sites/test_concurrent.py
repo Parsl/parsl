@@ -1,5 +1,4 @@
 """Tests of the interfaces to Python's concurrent library"""
-
 from pytest import mark, warns
 
 from parsl import Config, HighThroughputExecutor
@@ -14,7 +13,10 @@ def make_config(run_dir):
     return Config(
         executors=[
             HighThroughputExecutor(
+                address="127.0.0.1",
                 max_workers=2,
+                heartbeat_period=2,
+                heartbeat_threshold=4,
             )
         ],
         strategy='none',

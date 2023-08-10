@@ -28,19 +28,20 @@ from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
-from parsl.dataflow.job_status_poller import JobStatusPoller
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.taskrecord import TaskRecord
 from parsl.errors import ConfigurationError
+from parsl.jobs.job_status_poller import JobStatusPoller
+from parsl.jobs.states import JobStatus, JobState
 from parsl.usage_tracking.usage import UsageTracker
 from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.monitoring import MonitoringHub
 from parsl.process_loggers import wrap_with_logs
-from parsl.providers.base import ExecutionProvider, JobStatus, JobState
+from parsl.providers.base import ExecutionProvider
 from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints, Timer
 
 from parsl.monitoring.message_type import MessageType
@@ -380,6 +381,12 @@ class DataFlowKernel:
                         task_record['join_lock'] = threading.Lock()
                         self._send_task_log_info(task_record)
                         joinable.add_done_callback(partial(self.handle_join_update, task_record))
+                    elif joinable == []:  # got a list, but it had no entries, and specifically, no Futures.
+                        self.update_task_state(task_record, States.joining)
+                        task_record['joins'] = joinable
+                        task_record['join_lock'] = threading.Lock()
+                        self._send_task_log_info(task_record)
+                        self.handle_join_update(task_record, None)
                     elif isinstance(joinable, list) and [j for j in joinable if not isinstance(j, Future)] == []:
                         self.update_task_state(task_record, States.joining)
                         task_record['joins'] = joinable
@@ -403,7 +410,7 @@ class DataFlowKernel:
         if task_record['status'] == States.pending:
             self.launch_if_ready(task_record)
 
-    def handle_join_update(self, task_record: TaskRecord, inner_app_future: AppFuture) -> None:
+    def handle_join_update(self, task_record: TaskRecord, inner_app_future: Optional[AppFuture]) -> None:
         with task_record['join_lock']:
             # inner_app_future has completed, which is one (potentially of many)
             # futures the outer task is joining on.
@@ -1121,7 +1128,8 @@ class DataFlowKernel:
                 msg = executor.create_monitoring_info(new_status)
                 logger.debug("Sending monitoring message {} to hub from DFK".format(msg))
                 self.monitoring.send(MessageType.BLOCK_INFO, msg)
-        self.job_status_poller.add_executors(executors)
+        block_executors = [e for e in executors if isinstance(e, BlockProviderExecutor)]
+        self.job_status_poller.add_executors(block_executors)
 
     def atexit_cleanup(self) -> None:
         if not self.cleanup_called:
@@ -1190,23 +1198,24 @@ class DataFlowKernel:
         logger.info("Scaling in and shutting down executors")
 
         for executor in self.executors.values():
-            if not executor.bad_state_is_set:
-                if isinstance(executor, BlockProviderExecutor):
+            if isinstance(executor, BlockProviderExecutor):
+                if not executor.bad_state_is_set:
                     logger.info(f"Scaling in executor {executor.label}")
-                    job_ids = executor.provider.resources.keys()
-                    block_ids = executor.scale_in(len(job_ids))
-                    if self.monitoring and block_ids:
-                        new_status = {}
-                        for bid in block_ids:
-                            new_status[bid] = JobStatus(JobState.CANCELLED)
-                        msg = executor.create_monitoring_info(new_status)
-                        logger.debug("Sending message {} to hub from DFK".format(msg))
-                        self.monitoring.send(MessageType.BLOCK_INFO, msg)
-                logger.info(f"Shutting down executor {executor.label}")
-                executor.shutdown()
-                logger.info(f"Shut down executor {executor.label}")
-            else:  # and bad_state_is_set
-                logger.warning(f"Not shutting down executor {executor.label} because it is in bad state")
+                    if executor.provider:
+                        job_ids = executor.provider.resources.keys()
+                        block_ids = executor.scale_in(len(job_ids))
+                        if self.monitoring and block_ids:
+                            new_status = {}
+                            for bid in block_ids:
+                                new_status[bid] = JobStatus(JobState.CANCELLED)
+                            msg = executor.create_monitoring_info(new_status)
+                            logger.debug("Sending message {} to hub from DFK".format(msg))
+                            self.monitoring.send(MessageType.BLOCK_INFO, msg)
+                else:  # and bad_state_is_set
+                    logger.warning(f"Not shutting down executor {executor.label} because it is in bad state")
+            logger.info(f"Shutting down executor {executor.label}")
+            executor.shutdown()
+            logger.info(f"Shut down executor {executor.label}")
 
         logger.info("Terminated executors")
         self.time_completed = datetime.datetime.now()

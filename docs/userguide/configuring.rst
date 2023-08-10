@@ -17,8 +17,8 @@ supercomputer at TACC.
 This config uses the `parsl.executors.HighThroughputExecutor` to submit
 tasks from a login node (`parsl.channels.LocalChannel`). It requests an allocation of
 128 nodes, deploying 1 worker for each of the 56 cores per node, from the normal partition.
-The config uses the `address_by_hostname()` helper function to determine
-the login node's IP address.
+To limit network connections to just the internal network the config specifies the address
+used by the infiniband interface with ``address_by_interface('ib0')``
 
 .. code-block:: python
 
@@ -27,13 +27,13 @@ the login node's IP address.
     from parsl.providers import SlurmProvider
     from parsl.executors import HighThroughputExecutor
     from parsl.launchers import SrunLauncher
-    from parsl.addresses import address_by_hostname
+    from parsl.addresses import address_by_interface
 
     config = Config(
         executors=[
             HighThroughputExecutor(
                 label="frontera_htex",
-                address=address_by_hostname(),
+                address=address_by_interface('ib0'),
                 max_workers=56,
                 provider=SlurmProvider(
                     channel=LocalChannel(),
@@ -75,6 +75,7 @@ Stepping through the following question should help formulate a suitable configu
 | Laptop/Workstation  | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.LocalProvider`        |
 |                     | * `parsl.executors.ThreadPoolExecutor`        |                                        |
 |                     | * `parsl.executors.WorkQueueExecutor`         |                                        |
+|                     | * `parsl.executors.taskvine.TaskVineExecutor` |                                        |
 +---------------------+-----------------------------------------------+----------------------------------------+
 | Amazon Web Services | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.AWSProvider`          |
 +---------------------+-----------------------------------------------+----------------------------------------+
@@ -82,6 +83,7 @@ Stepping through the following question should help formulate a suitable configu
 +---------------------+-----------------------------------------------+----------------------------------------+
 | Slurm based system  | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.SlurmProvider`        |
 |                     | * `parsl.executors.WorkQueueExecutor`         |                                        |
+|                     | * `parsl.executors.taskvine.TaskVineExecutor` |                                        |
 +---------------------+-----------------------------------------------+----------------------------------------+
 | Torque/PBS based    | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.TorqueProvider`       |
 | system              | * `parsl.executors.WorkQueueExecutor`         |                                        |
@@ -94,6 +96,7 @@ Stepping through the following question should help formulate a suitable configu
 +---------------------+-----------------------------------------------+----------------------------------------+
 | Condor based        | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.CondorProvider`       |
 | cluster or grid     | * `parsl.executors.WorkQueueExecutor`         |                                        |
+|                     | * `parsl.executors.taskvine.TaskVineExecutor` |                                        |
 +---------------------+-----------------------------------------------+----------------------------------------+
 | Kubernetes cluster  | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.KubernetesProvider`   |
 +---------------------+-----------------------------------------------+----------------------------------------+
@@ -102,16 +105,18 @@ Stepping through the following question should help formulate a suitable configu
 2.  How many nodes will be used to execute the apps? What task durations are necessary to achieve good performance?
 
 
-+------------------------------------------+----------------------+-------------------------------------+
-| Executor                                 | Number of Nodes [*]_ | Task duration for good performance  |
-+==========================================+======================+=====================================+
-| `parsl.executors.ThreadPoolExecutor`     | 1 (Only local)       | Any                                 |
-+------------------------------------------+----------------------+-------------------------------------+
-| `parsl.executors.HighThroughputExecutor` | <=2000               | Task duration(s)/#nodes >= 0.01     |
-|                                          |                      | longer tasks needed at higher scale |
-+------------------------------------------+----------------------+-------------------------------------+
-| `parsl.executors.WorkQueueExecutor`      | <=1000 [*]_          | 10s+                                |
-+------------------------------------------+----------------------+-------------------------------------+
++--------------------------------------------+----------------------+-------------------------------------+
+| Executor                                   | Number of Nodes [*]_ | Task duration for good performance  |
++============================================+======================+=====================================+
+| `parsl.executors.ThreadPoolExecutor`       | 1 (Only local)       | Any                                 |
++--------------------------------------------+----------------------+-------------------------------------+
+| `parsl.executors.HighThroughputExecutor`   | <=2000               | Task duration(s)/#nodes >= 0.01     |
+|                                            |                      | longer tasks needed at higher scale |
++--------------------------------------------+----------------------+-------------------------------------+
+| `parsl.executors.WorkQueueExecutor`        | <=1000 [*]_          | 10s+                                |
++--------------------------------------------+----------------------+-------------------------------------+
+| `parsl.executors.taskvine.TaskVineExecutor`| <=1000 [*]_          | 10s+                                |
++--------------------------------------------+----------------------+-------------------------------------+
 
 
 .. [*] Assuming 32 workers per node. If there are fewer workers launched
@@ -120,6 +125,8 @@ Stepping through the following question should help formulate a suitable configu
 .. [*] The maximum number of nodes tested for the `parsl.executors.WorkQueueExecutor` is 10,000 GPU cores and
        20,000 CPU cores.
 
+.. [*] The maximum number of nodes tested for the `parsl.executors.taskvine.TaskVineExecutor` is 
+       10,000 GPU cores and 20,000 CPU cores.
 
 3. Should Parsl request multiple nodes in an individual scheduler job? 
 (Here the term block is equivalent to a single scheduler job.)
@@ -539,13 +546,8 @@ Polaris (ALCF)
 .. image:: https://www.alcf.anl.gov/sites/default/files/styles/965x543/public/2022-07/33181D_086_ALCF%20Polaris%20Crop.jpg?itok=HVAHsZtt
     :width: 75%
 
-`Polaris <https://www.alcf.anl.gov/support/user-guides/polaris/getting-started/index.html>`_
-is a HPE Apollo supercomputer that uses PBSPro to manage 560 nodes each with 4 Nvidia GPUs.
-Follow ALCF's guide to `clone the base Anaconda environment <https://www.alcf.anl.gov/support/user-guides/polaris/data-science-workflows/python/index.html#cloning-the-base-anaconda-environment>`_
-and install Parsl using pip.
-The following configuration places a four workers on each node and pins each to a single GPU.
+ALCF provides documentation on `how to use Parsl on Polaris <https://docs.alcf.anl.gov/polaris/workflows/parsl/>`_.
 
-.. literalinclude:: ../../parsl/configs/polaris.py
 
 Stampede2 (TACC)
 ----------------

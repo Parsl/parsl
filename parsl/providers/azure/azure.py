@@ -5,8 +5,9 @@ import time
 from string import Template
 
 from parsl.errors import ConfigurationError
+from parsl.jobs.states import JobState, JobStatus
 from parsl.providers.azure.template import template_string
-from parsl.providers.base import ExecutionProvider, JobState, JobStatus
+from parsl.providers.base import ExecutionProvider
 from parsl.errors import OptionalModuleMissing
 from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
