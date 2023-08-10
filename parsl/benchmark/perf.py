@@ -48,7 +48,7 @@ def performance(*, resources: dict, target_t: float):
 
         submitted_t = time.time()
         print(f"All {n} tasks submitted ... waiting for completion")
-        print(f"Submission took {submitted_t - start_t:.3f} seconds = {n/(submitted_t - start_t):.3f} tasks/second")
+        print(f"Submission took {submitted_t - start_t:.3f} seconds = {n / (submitted_t - start_t):.3f} tasks/second")
 
         for f in concurrent.futures.as_completed(fs):
             assert f.result() == 7
