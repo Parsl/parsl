@@ -17,8 +17,8 @@ supercomputer at TACC.
 This config uses the `parsl.executors.HighThroughputExecutor` to submit
 tasks from a login node (`parsl.channels.LocalChannel`). It requests an allocation of
 128 nodes, deploying 1 worker for each of the 56 cores per node, from the normal partition.
-The config uses the `address_by_hostname()` helper function to determine
-the login node's IP address.
+To limit network connections to just the internal network the config specifies the address
+used by the infiniband interface with ``address_by_interface('ib0')``
 
 .. code-block:: python
 
@@ -27,13 +27,13 @@ the login node's IP address.
     from parsl.providers import SlurmProvider
     from parsl.executors import HighThroughputExecutor
     from parsl.launchers import SrunLauncher
-    from parsl.addresses import address_by_hostname
+    from parsl.addresses import address_by_interface
 
     config = Config(
         executors=[
             HighThroughputExecutor(
                 label="frontera_htex",
-                address=address_by_hostname(),
+                address=address_by_interface('ib0'),
                 max_workers=56,
                 provider=SlurmProvider(
                     channel=LocalChannel(),
