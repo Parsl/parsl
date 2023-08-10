@@ -36,6 +36,10 @@ jobs:
         # python 3.12
         pip install 'greenlet @ git+https://github.com/mdboom/greenlet@python-312'
 
+        # numpy releases (<=1.25 at time of writing) don't build with python 3.12
+        # due to distutils disappearing. See https://github.com/numpy/numpy/issues/23808
+        pip install 'numpy @ git+https://github.com/numpy/numpy'
+
     - name: make deps clean_coverage
       run: |
         make deps
