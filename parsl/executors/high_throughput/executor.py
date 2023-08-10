@@ -9,12 +9,14 @@ import pickle
 import warnings
 from multiprocessing import Queue
 from typing import Dict, Sequence  # noqa F401 (used in type annotation)
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Callable
 import math
 
 from parsl.serialize import pack_apply_message, deserialize
 from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
+from parsl.executors.base import ParslExecutor
+from parsl.jobs.states import JobStatus
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
@@ -212,11 +214,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  poll_period: int = 10,
                  address_probe_timeout: Optional[int] = None,
                  worker_logdir_root: Optional[str] = None,
-                 block_error_handler: bool = True):
+                 block_error_handler: Union[bool, Callable[[ParslExecutor, Dict[str, JobStatus], int], None]] = False,
+                 block_error_threshold: int = 3):
 
         logger.debug("Initializing HighThroughputExecutor")
 
-        BlockProviderExecutor.__init__(self, provider=provider, block_error_handler=block_error_handler)
+        BlockProviderExecutor.__init__(self, provider=provider, block_error_handler=block_error_handler, block_error_threshold=block_error_threshold)
         self.label = label
         self.launch_cmd = launch_cmd
         self.worker_debug = worker_debug
