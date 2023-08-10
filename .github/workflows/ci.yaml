@@ -38,7 +38,7 @@ jobs:
 
         # numpy releases (<=1.25 at time of writing) don't build with python 3.12
         # due to distutils disappearing. See https://github.com/numpy/numpy/issues/23808
-        pip install 'numpy @ git+https://github.com/numpy/numpy'
+        BLAS=None LAPACK=None ATLAS=None pip install 'numpy @ git+https://github.com/numpy/numpy'
 
     - name: make deps clean_coverage
       run: |
