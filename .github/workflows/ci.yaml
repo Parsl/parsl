@@ -41,6 +41,10 @@ jobs:
         sudo apt-get install -y libopenblas-dev 
         pip install 'numpy @ git+https://github.com/numpy/numpy'
 
+        # pandas latest release doesn't build with python 3.12. trying github.
+        # see, for example, https://github.com/pandas-dev/pandas/pull/53743
+        pip install 'pandas @ git+https://github.com/pandas-dev/pandas'
+
     - name: make deps clean_coverage
       run: |
         make deps
