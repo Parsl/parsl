@@ -30,9 +30,6 @@ def test_block_error_handler_mock():
     htex = HighThroughputExecutor(block_error_handler=handler_mock)
     assert htex.block_error_handler is handler_mock
 
-    bad_state_mock = Mock()
-    htex.set_bad_state_and_fail_all = bad_state_mock
-
     bad_jobs = {'1': JobStatus(JobState.FAILED),
                 '2': JobStatus(JobState.FAILED),
                 '3': JobStatus(JobState.FAILED),
