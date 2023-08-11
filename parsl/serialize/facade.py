@@ -82,12 +82,6 @@ register_method_for_data(concretes.PickleSerializer())
 register_method_for_data(concretes.DillSerializer())
 
 
-# When deserialize dynamically loads a deserializer, it will be stored here,
-# rather than in the methods_for_* dictionaries, so that loading does not
-# cause it to be used for future serializations.
-additional_methods_for_deserialization: Dict[bytes, SerializerBase] = {}
-
-
 def pack_apply_message(func: Any, args: Any, kwargs: Any, buffer_threshold: int = int(128 * 1e6)) -> bytes:
     """Serialize and pack function and parameters
 
@@ -171,12 +165,8 @@ def deserialize(payload: bytes) -> Any:
     """
     header, body = payload.split(b'\n', 1)
 
-    if header in methods_for_code:
-        deserializer = methods_for_code[header]
-    elif header in methods_for_data:
-        deserializer = methods_for_data[header]
-    elif header in additional_methods_for_deserialization:
-        deserializer = additional_methods_for_deserialization[header]
+    if header in deserializers:
+        deserializer = deserializers[header]
     else:
         logger.info("Trying to dynamically load deserializer: {!r}".format(header))
         # This is a user plugin point, so expect exceptions to happen.
@@ -186,13 +176,12 @@ def deserialize(payload: bytes) -> Any:
             module = importlib.import_module(decoded_module_name)
             deserializer_class = getattr(module, class_name.decode('utf-8'))
             deserializer = deserializer_class()
-            additional_methods_for_deserialization[header] = deserializer
+            deserializers[header] = deserializer
         except Exception as e:
             raise DeserializerPluginError(header) from e
 
     result = deserializer.deserialize(body)
 
-        # raise TypeError("Invalid serialization header: {!r}".format(header))
     return result
 
 
