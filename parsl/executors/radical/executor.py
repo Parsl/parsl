@@ -21,7 +21,7 @@ from .rpex_resources import RPEX_ResourceConfig
 from radical.pilot import PythonTask
 from parsl.app.errors import AppException
 from parsl.utils import RepresentationMixin
-from parsl.executors.status_handling import NoStatusHandlingExecutor
+from parsl.executors.base import ParslExecutor
 
 RPEX = 'RPEX'
 BASH = 'bash'
@@ -30,7 +30,7 @@ PYTHON = 'python'
 logger = logging.getLogger(__name__)
 
 
-class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
+class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
     """Executor designed for: executing heterogeneous tasks in terms of
                               type/resource
 
@@ -68,6 +68,7 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  partition: Optional[str] = None,
                  project: Optional[str] = None):
 
+        super().__init__()
         self._uid = RPEX.lower()
         self.project = project
         self.bulk_mode = bulk_mode
@@ -88,7 +89,7 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.tmgr = None
 
         # Raptor specific
-        self.rpex_cfg = rpex_cfg().get_cfg_file()
+        self.rpex_cfg = rpex_cfg.get_cfg_file()
         cfg = ru.Config(cfg=ru.read_json(self.rpex_cfg))
 
         self.master = cfg.master_descr
