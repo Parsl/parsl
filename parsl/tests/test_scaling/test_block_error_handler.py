@@ -4,7 +4,7 @@ from parsl.executors import HighThroughputExecutor
 from parsl.providers import LocalProvider
 from unittest.mock import Mock
 from parsl.jobs.states import JobStatus, JobState
-from parsl.jobs.simple_error_handler import simple_error_handler, windowed_error_handler, noop_error_handler
+from parsl.jobs.error_handlers import simple_error_handler, windowed_error_handler, noop_error_handler
 from functools import partial
 
 
