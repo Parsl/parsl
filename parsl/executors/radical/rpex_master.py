@@ -2,7 +2,6 @@
 
 import os
 import sys
-import time
 
 from collections import defaultdict
 
@@ -23,8 +22,6 @@ import radical.pilot as rp
 #   - terminate the worker
 #
 # The worker itself is an external program which is not covered in this code.
-
-RANKS = 1
 
 
 # ------------------------------------------------------------------------------
@@ -81,11 +78,9 @@ class RPEXMaster(rp.raptor.Master):
 #
 if __name__ == '__main__':
 
-    # This master script runs as a task within a pilot allocation.
     # The purpose of this master is to (a) spawn a set or workers
-    # within the same allocation, (b) to distribute work items
-    # (`hello` function calls) to those workers, and (c) to collect
-    # the responses again.
+    # within the same allocation, (b) to distribute work items to
+    # those workers, and (c) to collect the responses again.
     cfg_fname = str(sys.argv[1])
     cfg = ru.Config(cfg=ru.read_json(cfg_fname))
     cfg.rank = int(sys.argv[2])
@@ -115,17 +110,9 @@ if __name__ == '__main__':
     worker_ids = master.submit_workers(
                  [rp.TaskDescription(descr) for _ in range(n_workers)])
 
-    master.wait_workers(count=1)
+    # wait for all workers
+    master.wait_workers()
     master.start()
-    master.submit()
-
-    # let some time pass for client side tasks to complete
-    time.sleep(60)
-
-    # TODO: can be run from thread?
-    master.stop()
-
-    # TODO: worker state callback
     master.join()
 
 # ------------------------------------------------------------------------------

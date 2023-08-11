@@ -1,7 +1,6 @@
 """RadicalPilotExecutor builds on the RADICAL-Pilot/Parsl
 """
 import os
-import sys
 import time
 import parsl
 import queue
@@ -17,11 +16,14 @@ from functools import partial
 from typing import Optional, Dict
 from concurrent.futures import Future
 
+from .rpex_resources import RPEX_ResourceConfig
+
 from radical.pilot import PythonTask
 from parsl.app.errors import AppException
 from parsl.utils import RepresentationMixin
 from parsl.executors.status_handling import NoStatusHandlingExecutor
 
+RPEX = 'RPEX'
 BASH = 'bash'
 PYTHON = 'python'
 
@@ -53,8 +55,8 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self,
-                 rpex_cfg,
-                 label: str = 'RPEX',
+                 rpex_cfg=RPEX_ResourceConfig,
+                 label: str = RPEX,
                  bulk_mode: bool = False,
                  resource: Optional[str] = None,
                  login_method: Optional[str] = None,
@@ -66,7 +68,7 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                  partition: Optional[str] = None,
                  project: Optional[str] = None):
 
-        self._uid = 'rpex'
+        self._uid = RPEX.lower()
         self.project = project
         self.bulk_mode = bulk_mode
         self.resource = resource
@@ -86,7 +88,7 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         self.tmgr = None
 
         # Raptor specific
-        self.rpex_cfg = rpex_cfg
+        self.rpex_cfg = rpex_cfg().get_cfg_file()
         cfg = ru.Config(cfg=ru.read_json(self.rpex_cfg))
 
         self.master = cfg.master_descr
@@ -159,8 +161,8 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
             td.uid = ru.generate_id('master.%(item_counter)06d', ru.ID_CUSTOM,
                                     ns=self.session.uid)
             td.arguments = [self.rpex_cfg, i]
-            td.cpu_threads = 1
-            td.cpu_processes = 1
+            td.ranks = 1
+            td.cores_per_rank = 1
             td.input_staging = [{'source': master_path,
                                  'target': 'rpex_master.py',
                                  'action': rp.TRANSFER,
@@ -182,19 +184,10 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
         pilot = self.pmgr.submit_pilots(pd)
         self.tmgr.submit_tasks(tds)
 
-        # FIXME: master tasks are never checked for, should add a task state
-        #        callback to do so.
-
-        pilot.stage_in({'source': ru.which('radical-pilot-hello.sh'),
-                        'target': 'radical-pilot-hello.sh',
-                        'action': rp.TRANSFER})
-
-        python_v = '{0}.{1}'.format(sys.version_info[0], sys.version_info[1])
         pilot.prepare_env(env_name='ve_rpex',
                           env_spec={'type': self.pilot_env.get('type',
                                                                'virtualenv'),
-                                    'version': self.pilot_env.get('version',
-                                                                  python_v),
+                                    'version': self.pilot_env.get('version'),
                                     'path': self.pilot_env.get('path', ''),
                                     'pre_exec': self.pilot_env.get('pre_exec',
                                                                    []),
@@ -291,7 +284,6 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
                     raise Exception("failed to obtain bash app cmd") from e
 
                 task.mode = rp.TASK_EXECUTABLE
-                task.scheduler = None
                 task.executable = '/bin/bash'
                 task.arguments = ['-c', bash_app]
 
@@ -300,18 +292,18 @@ class RadicalPilotExecutor(NoStatusHandlingExecutor, RepresentationMixin):
 
         elif PYTHON in task_type or not task_type:
             task.mode = rp.TASK_FUNCTION
-            task.scheduler = 'master.%06d' % (tid % self.n_masters)
+            task.raptor_id = 'master.%06d' % (tid % self.n_masters)
             task.function = PythonTask(func, *args, **kwargs)
 
+        task.ranks = kwargs.get('ranks', 1)
+        task.cores_per_rank = kwargs.get('cores_per_rank', 1)
+        task.threading_type = kwargs.get('threading_type', '')
+        task.gpus_per_rank = kwargs.get('gpus_per_rank', 0)
+        task.gpu_type = kwargs.get('gpu_type', '')
+        task.mem_per_rank = kwargs.get('mem_per_rank', 0)
         task.stdout = kwargs.get('stdout', '')
         task.stderr = kwargs.get('stderr', '')
         task.timeout = kwargs.get('walltime', 0.0)
-        task.cpu_threads = kwargs.get('cpu_threads', 1)
-        task.gpu_threads = kwargs.get('gpu_threads', 0)
-        task.cpu_processes = kwargs.get('cpu_processes', 1)
-        task.gpu_processes = kwargs.get('gpu_processes', 0)
-        task.cpu_process_type = kwargs.get('cpu_process_type', '')
-        task.gpu_process_type = kwargs.get('gpu_process_type', '')
 
         return task
 
