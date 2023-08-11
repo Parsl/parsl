@@ -26,10 +26,6 @@ virtualenv: ## create an activate a virtual env
 $(DEPS): test-requirements.txt requirements.txt
 	pip3 install --upgrade pip
 	pip3 install -r test-requirements.txt -r requirements.txt
-	# TODO: this is a hack to get packages installed for optional plugins for mypy
-	# -- a better story might be that the relevant setup.py dependencies get
-	# installed as a dep for mypy...
-	pip3 install proxystore serpent
 	touch $(DEPS)
 
 .PHONY: deps
@@ -78,7 +74,7 @@ wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with workqueue_ex config
 
 .PHONY: config_local_test
 config_local_test:
-	pip3 install ".[monitoring,proxystore]"
+	pip3 install ".[monitoring,proxystore,serializer_demos]"
 	pytest parsl/tests/ -k "not cleannet" --config local --random-order --durations 10
 
 .PHONY: site_test
