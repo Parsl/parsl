@@ -262,7 +262,7 @@ def monitor(pid: int,
     next_send = time.time()
     accumulate_dur = 5.0  # TODO: make configurable?
 
-    while not terminate_event.is_set():
+    while not terminate_event.is_set() and pm.is_running():
         logging.debug("start of monitoring loop")
         try:
             d = accumulate_and_prepare()
