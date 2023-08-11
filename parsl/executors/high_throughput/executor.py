@@ -1,3 +1,4 @@
+import typing
 from concurrent.futures import Future
 import typeguard
 import logging
@@ -12,12 +13,12 @@ from typing import List, Optional, Tuple, Union
 import math
 
 from parsl.serialize import pack_apply_message, deserialize
+from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
     BadMessage, ScalingFailed,
-    DeserializationError, SerializationError,
     UnsupportedFeatureError
 )
 
@@ -523,18 +524,22 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         logger.debug("Sent hold request to manager: {}".format(worker_id))
 
     @property
-    def outstanding(self):
-        outstanding_c = self.command_client.run("OUTSTANDING_C")
-        return outstanding_c
+    def outstanding(self) -> int:
+        """Returns the count of tasks outstanding across the interchange
+        and managers"""
+        return self.command_client.run("OUTSTANDING_C")
 
     @property
-    def connected_workers(self):
-        workers = self.command_client.run("WORKERS")
-        return workers
+    def connected_workers(self) -> int:
+        """Returns the count of workers across all connected managers"""
+        return self.command_client.run("WORKERS")
 
-    def connected_managers(self):
-        managers = self.command_client.run("MANAGERS")
-        return managers
+    def connected_managers(self) -> List[Dict[str, typing.Any]]:
+        """Returns a list of dicts one for each connected managers.
+        The dict contains info on manager(str:manager_id), block_id,
+        worker_count, tasks(int), idle_durations(float), active(bool)
+        """
+        return self.command_client.run("MANAGERS")
 
     def _hold_block(self, block_id):
         """ Sends hold command to all managers which are in a specific block
@@ -561,6 +566,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         Args:
             - func (callable) : Callable function
+            - resource_specification (dict): Dictionary containing relevant info about task that is needed by underlying executors.
             - args (list) : List of arbitrary positional arguments.
 
         Kwargs:
@@ -570,10 +576,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
               Future
         """
         if resource_specification:
-            logger.error("Ignoring the resource specification. "
-                         "Parsl resource specification is not supported in HighThroughput Executor. "
-                         "Please check WorkQueueExecutor if resource specification is needed.")
-            raise UnsupportedFeatureError('resource specification', 'HighThroughput Executor', 'WorkQueue Executor')
+            logger.error("Ignoring the call specification. "
+                         "Parsl call specification is not supported in HighThroughput Executor.")
+            raise UnsupportedFeatureError('resource specification', 'HighThroughput Executor', None)
 
         if self.bad_state_is_set:
             raise self.executor_exception

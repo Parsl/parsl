@@ -60,7 +60,7 @@ def id_for_memo_pickle(obj: object, output_ref: bool = False) -> bytes:
 
 @id_for_memo.register(list)
 def id_for_memo_list(denormalized_list: list, output_ref: bool = False) -> bytes:
-    if type(denormalized_list) != list:
+    if type(denormalized_list) is not list:
         raise ValueError("id_for_memo_list cannot work on subclasses of list")
 
     normalized_list = []
@@ -73,7 +73,7 @@ def id_for_memo_list(denormalized_list: list, output_ref: bool = False) -> bytes
 
 @id_for_memo.register(tuple)
 def id_for_memo_tuple(denormalized_tuple: tuple, output_ref: bool = False) -> bytes:
-    if type(denormalized_tuple) != tuple:
+    if type(denormalized_tuple) is not tuple:
         raise ValueError("id_for_memo_tuple cannot work on subclasses of tuple")
 
     normalized_list = []
@@ -91,7 +91,7 @@ def id_for_memo_dict(denormalized_dict: dict, output_ref: bool = False) -> bytes
     When output_ref=True, the values are normalised as output refs, but
     the keys are not.
     """
-    if type(denormalized_dict) != dict:
+    if type(denormalized_dict) is not dict:
         raise ValueError("id_for_memo_dict cannot work on subclasses of dict")
 
     keys = sorted(denormalized_dict)
