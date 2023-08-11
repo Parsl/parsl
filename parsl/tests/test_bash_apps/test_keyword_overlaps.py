@@ -3,7 +3,7 @@ import parsl
 
 @parsl.bash_app
 def my_app(cache=7):
-    assert type(cache) == int
+    assert type(cache) is int
     return "true"
 
 
