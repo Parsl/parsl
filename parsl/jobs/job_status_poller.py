@@ -5,10 +5,9 @@ import zmq
 from typing import Dict, Sequence
 from typing import List  # noqa F401 (used in type annotation)
 
-from parsl.executors.base import ParslExecutor
-from parsl.jobs.job_error_handler import JobErrorHandler
 from parsl.jobs.states import JobStatus, JobState
 from parsl.jobs.strategy import Strategy
+from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.monitoring.message_type import MessageType
 
 
@@ -19,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class PollItem:
-    def __init__(self, executor: ParslExecutor, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
+    def __init__(self, executor: BlockProviderExecutor, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
         self._executor = executor
         self._dfk = dfk
         self._interval = executor.status_polling_interval
@@ -71,7 +70,7 @@ class PollItem:
         return self._status
 
     @property
-    def executor(self) -> ParslExecutor:
+    def executor(self) -> BlockProviderExecutor:
         return self._executor
 
     def scale_in(self, n, force=True, max_idletime=None):
@@ -107,20 +106,23 @@ class JobStatusPoller(Timer):
         self.dfk = dfk
         self._strategy = Strategy(strategy=dfk.config.strategy,
                                   max_idletime=dfk.config.max_idletime)
-        self._error_handler = JobErrorHandler()
         super().__init__(self.poll, interval=5, name="JobStatusPoller")
 
     def poll(self):
         self._update_state()
-        self._error_handler.run(self._poll_items)
+        self._run_error_handlers(self._poll_items)
         self._strategy.strategize(self._poll_items)
+
+    def _run_error_handlers(self, status: List[PollItem]):
+        for es in status:
+            es.executor.handle_errors(es.status)
 
     def _update_state(self) -> None:
         now = time.time()
         for item in self._poll_items:
             item.poll(now)
 
-    def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
+    def add_executors(self, executors: Sequence[BlockProviderExecutor]) -> None:
         for executor in executors:
             if executor.status_polling_interval > 0:
                 logger.debug("Adding executor {}".format(executor.label))

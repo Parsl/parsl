@@ -1,5 +1,7 @@
-from abc import abstractmethod, ABCMeta
+from abc import abstractmethod
 from functools import cached_property
+import logging
+
 from typing import Any
 
 
@@ -9,13 +11,14 @@ class SerializerBase(metaclass=ABCMeta):
 
     @cached_property
     def identifier(self) -> bytes:
-        """Compute the identifier that will be used to indicate in byte streams
-        that this class should be used for deserialization.
-
-        Classes that wish to use a self-managed identifier namespace, such as
-        the default concretes.py implementations, should override this property
-        with their own identifier.
-
+        """Compute identifier used in serialization header.
+        This will be used to indicate in byte streams that this class should
+        be used for deserialization.
+￼
+￼       Serializers that use identifiers that don't align with the way this is
+        computed (such as the default concretes.py implementations) should
+        override this property with their own identifier.
+￼
         Returns
         -------
         identifier : bytes

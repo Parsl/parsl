@@ -80,6 +80,9 @@ class TaskRecord(TypedDict, total=False):
     try_id: int
 
     resource_specification: Dict[str, Any]
+    """Dictionary containing relevant info for a task execution.
+    Includes resources to allocate and execution mode as a given
+    executor permits."""
 
     join: bool
     """Is this a join_app?"""
