@@ -18,7 +18,7 @@
 # B027 script_dir is an empty method in an abstract base class, but has no abstract decorator.
 # B028: No explicit stacklevel argument found. 
 
-ignore = E124, E126, E402, E129, W504, B006, B007, B008, B011, B019, B027, B028
+ignore = E124, E126, E402, E129, W504, B007, B008, B011, B019, B027, B028
 
 max-line-length = 158
 exclude = test_import_fail.py,
