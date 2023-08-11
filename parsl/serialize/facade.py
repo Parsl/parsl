@@ -8,11 +8,6 @@ from parsl.serialize.errors import DeserializerPluginError
 
 logger = logging.getLogger(__name__)
 
-# These must be registered in reverse order of
-# importance: later registered serializers
-# will take priority over earlier ones. This is
-# to facilitate user registered serializers
-
 methods_for_code: List[SerializerBase]
 methods_for_code = []
 
@@ -77,6 +72,11 @@ def register_method_for_data(s: SerializerBase) -> None:
     deserializers[s.identifier] = s
     methods_for_data.insert(0, s)
 
+
+# These must be registered in reverse order of
+# importance: later registered serializers
+# will take priority over earlier ones. This is
+# to facilitate user registered serializers
 
 register_method_for_data(concretes.PickleSerializer())
 register_method_for_data(concretes.DillSerializer())
