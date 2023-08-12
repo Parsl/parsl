@@ -73,15 +73,14 @@ def python_app(function=None,
                data_flow_kernel: Optional[DataFlowKernel] = None,
                cache: bool = False,
                executors: Union[List[str], Literal['all']] = 'all',
-               ignore_for_cache: Optional[List[str]] = None,
-               join: bool = False):
+               ignore_for_cache: Optional[List[str]] = None):
     """Decorator function for making python apps.
 
     Parameters
     ----------
     function : function
         Do not pass this keyword argument directly. This is needed in order to allow for omitted parenthesis,
-        for example, ``@join_app`` if using all defaults or ``@python_app(walltime=120)``. If the
+        for example, ``@python_app`` if using all defaults or ``@python_app(walltime=120)``. If the
         decorator is used alone, function will be the actual function being decorated, whereas if it
         is called with arguments, function will be None. Default is None.
     data_flow_kernel : DataFlowKernel
@@ -112,7 +111,6 @@ def python_app(function=None,
 def join_app(function=None,
              data_flow_kernel: Optional[DataFlowKernel] = None,
              cache: bool = False,
-             executors: Union[List[str], Literal['all']] = 'all',
              ignore_for_cache: Optional[List[str]] = None):
     """Decorator function for making join apps
 
