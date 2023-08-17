@@ -106,6 +106,8 @@ def _prepare_environment_regular(m, manager_config, t, task, poncho_env_to_file,
                 env_tarball = str(uuid.uuid4()) + '.tar.gz'
                 logger.debug(f'Creating a poncho environment at {env_tarball} from conda environment {manager_config.env_pack}')
                 subprocess.run([poncho_create_script, manager_config.env_pack, env_tarball], stdout=subprocess.DEVNULL, check=True)
+            else:
+                env_tarball = manager_config.env_pack
             poncho_env_file = m.declare_poncho(env_tarball, cache=True, peer_transfer=True)
             poncho_env_to_file[manager_config.env_pack] = poncho_env_file
         else:
