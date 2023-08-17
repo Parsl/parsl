@@ -93,9 +93,8 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         cfg = ru.Config(cfg=ru.read_json(self.rpex_cfg))
 
         self.master = cfg.master_descr
-        self.worker = cfg.worker_descr
-        self.cpn = cfg.cpn         # cores per node
-        self.gpn = cfg.gpn         # gpus per node
+        self.cpn = cfg.cpn  # cores per node
+        self.gpn = cfg.gpn  # gpus per node
         self.n_masters = cfg.n_masters   # number of total masters
         self.masters_pn = cfg.masters_pn  # number of masters per node
 
@@ -114,8 +113,8 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
             parsl_task = self.future_tasks[task.uid]
 
             if state == rp.DONE:
-                if task.description['mode'] in [rp.TASK_EXECUTABLE,
-                                                rp.TASK_EXEC]:
+                if task.description['mode'] in [rp.TASK_EXEC,
+                                                rp.TASK_EXECUTABLE]:
                     parsl_task.set_result(int(task.exit_code))
 
                 else:
@@ -140,20 +139,20 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
             logger.error("specify remote or local resource")
 
         else:
-            pd_init = {'resource': self.resource,
-                       'runtime': self.walltime,
-                       'exit_on_error': True,
-                       'project': self.project,
-                       'queue': self.partition,
-                       'access_schema': self.login_method,
+            pd_init = {'gpus': self.gpus,
                        'cores': self.cores,
-                       'gpus': self.gpus}
+                       'exit_on_error': True,
+                       'queue': self.partition,
+                       'project': self.project,
+                       'runtime': self.walltime,
+                       'resource': self.resource,
+                       'access_schema': self.login_method}
+
         pd = rp.PilotDescription(pd_init)
 
         tds = list()
         executor_path = os.path.abspath(os.path.dirname(__file__))
         master_path = '{0}/rpex_master.py'.format(executor_path)
-        worker_path = '{0}/rpex_worker.py'.format(executor_path)
 
         for i in range(self.n_masters):
             td = rp.TaskDescription(self.master)
@@ -166,10 +165,6 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
             td.cores_per_rank = 1
             td.input_staging = [{'source': master_path,
                                  'target': 'rpex_master.py',
-                                 'action': rp.TRANSFER,
-                                 'flags': rp.DEFAULT_FLAGS},
-                                {'source': worker_path,
-                                 'target': 'rpex_worker.py',
                                  'action': rp.TRANSFER,
                                  'flags': rp.DEFAULT_FLAGS},
                                 {'source': self.rpex_cfg,
@@ -186,13 +181,11 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         self.tmgr.submit_tasks(tds)
 
         pilot.prepare_env(env_name='ve_rpex',
-                          env_spec={'type': self.pilot_env.get('type',
-                                                               'virtualenv'),
+                          env_spec={'type': self.pilot_env.get('type'),
+                                    'path': self.pilot_env.get('path'),
+                                    'setup': self.pilot_env.get('setup'),
                                     'version': self.pilot_env.get('version'),
-                                    'path': self.pilot_env.get('path', ''),
-                                    'pre_exec': self.pilot_env.get('pre_exec',
-                                                                   []),
-                                    'setup': self.pilot_env.get('setup', [])})
+                                    'pre_exec': self.pilot_env.get('pre_exec')})
 
         self.tmgr.add_pilots(pilot)
         self.tmgr.register_callback(self.task_state_cb)

@@ -63,7 +63,7 @@ htex_local_alternate_test: ## run all tests with htex_local config
 
 $(CCTOOLS_INSTALL):	#CCtools contains both taskvine and workqueue so install only once
 	parsl/executors/taskvine/install-taskvine.sh
-
+ 
 .PHONY: vineex_local_test
 vineex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with taskvine_ex config
 	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/taskvine_ex.py --random-order --durations 10
@@ -71,6 +71,13 @@ vineex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with taskvine_ex config
 .PHONY: wqex_local_test
 wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with workqueue_ex config
 	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --random-order --durations 10
+
+.PHONY: radical_ex_test
+radical_ex_test:
+	pip3 install radical.pilot
+	RPEX_BULK=True pytest parsl/tests/test_radical/bulk.py --config parsl/tests/configs/local_radical.py
+	pytest parsl/tests/test_callables.py -k "not cleannet and not dynamically_loaded_module and not test_check_importlib_file_function" --config parsl/tests/configs/local_radical.py
+	RPEX_MPI=True pytest parsl/tests/test_radical/mpi_funcs.py --config parsl/tests/configs/local_radical.py
 
 .PHONY: config_local_test
 config_local_test:

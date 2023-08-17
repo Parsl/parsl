@@ -1,26 +1,35 @@
 import sys
 import json
+import radical.pilot as rp
+import radical.utils as ru
 
 
 class RPEX_ResourceConfig:
 
-    cores_per_node = 4
-    gpus_per_node = 0
-
     n_masters = 1
     n_workers = 1
+
+    gpus_per_node = 0
+    cores_per_node = 4
+
     masters_per_node = 1
     nodes_per_worker = 1
 
-    pilot_env_type = "virtualenv"
     pilot_env_path = ""
-    pilot_env_setup = ["radical.pilot"]
-    rpex_env = 've_rpex'
-    python_v = '{0}.{1}'.format(sys.version_info[0],
-                                sys.version_info[1])
+    pilot_env_pre_exec = []
+    pilot_env_type = "venv"
+    pilot_env_setup = ["parsl",
+                       rp.sdist_path,
+                       ru.sdist_path]
+
+    python_v = f'{sys.version_info[0]}.{sys.version_info[1]}'
+    rpex_worker = "DefaultWorker"
 
     @classmethod
     def get_cfg_file(cls):
+        if 'MPI' in cls.rpex_worker and 'mpi4py' not in cls.pilot_env_setup:
+            cls.pilot_env_setup.append('mpi4py')
+
         cfg = {
             'n_masters': cls.n_masters,
             'n_workers': cls.n_workers,
@@ -33,21 +42,20 @@ class RPEX_ResourceConfig:
                 "version": cls.python_v,
                 "path": cls.pilot_env_path,
                 "type": cls.pilot_env_type,
-                "setup": cls.pilot_env_setup
+                "setup": cls.pilot_env_setup,
+                "pre_exec": cls.pilot_env_pre_exec
             },
 
             'master_descr': {
-                "cpu_processes": 1,
                 "mode": "raptor.master",
-                "named_env": cls.rpex_env,
+                "named_env": 've_rpex',
                 "executable": "python3 rpex_master.py",
             },
 
             'worker_descr': {
-                "named_env": cls.rpex_env,
                 "mode": "raptor.worker",
-                "worker_class": "RPEX_Worker",
-                "worker_file": "./rpex_worker.py"
+                "named_env": 've_rpex',
+                "raptor_class": cls.rpex_worker,
             }}
 
         # Convert the class instance to a cfg file.
