@@ -6,9 +6,24 @@ import parsl.executors.status_handling as status_handling
 from parsl.jobs.states import JobStatus, JobState
 
 
-def simple_error_handler(executor: status_handling.BlockProviderExecutor, status: Dict[str, JobStatus], threshold: int):
+def noop_error_handler(executor: status_handling.BlockProviderExecutor, status: Dict[str, JobStatus], threshold: int = 3):
+    pass
+
+
+def simple_error_handler(executor: status_handling.BlockProviderExecutor, status: Dict[str, JobStatus], threshold: int = 3):
     (total_jobs, failed_jobs) = _count_jobs(status)
+    if hasattr(executor.provider, "init_blocks"):
+        threshold = max(1, executor.provider.init_blocks)
+
     if total_jobs >= threshold and failed_jobs == total_jobs:
+        executor.set_bad_state_and_fail_all(_get_error(status))
+
+
+def windowed_error_handler(executor: status_handling.BlockProviderExecutor, status: Dict[str, JobStatus], threshold: int = 3):
+    sorted_status = [(key, status[key]) for key in sorted(status, key=lambda x: int(x))]
+    current_window = dict(sorted_status[-threshold:])
+    total, failed = _count_jobs(current_window)
+    if failed == threshold:
         executor.set_bad_state_and_fail_all(_get_error(status))
 
 
