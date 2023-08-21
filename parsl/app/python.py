@@ -36,7 +36,7 @@ def timeout(f, seconds: float):
 class PythonApp(AppBase):
     """Extends AppBase to cover the Python App."""
 
-    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=[], join=False):
+    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None, join=False):
         super().__init__(
             wrap_error(func),
             data_flow_kernel=data_flow_kernel,
