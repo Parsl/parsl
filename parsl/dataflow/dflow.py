@@ -69,7 +69,7 @@ class DataFlowKernel:
     """
 
     @typechecked
-    def __init__(self, config: Config = Config()) -> None:
+    def __init__(self, config: Config) -> None:
         """Initialize the DataFlowKernel.
 
         Parameters
