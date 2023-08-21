@@ -898,10 +898,10 @@ class DataFlowKernel:
     def submit(self,
                func: Callable,
                app_args: Sequence[Any],
-               executors: Union[str, Sequence[str]] = 'all',
-               cache: bool = False,
-               ignore_for_cache: Optional[Sequence[str]] = None,
-               app_kwargs: Dict[str, Any] = {},
+               executors: Union[str, Sequence[str]],
+               cache: bool,
+               ignore_for_cache: Optional[Sequence[str]],
+               app_kwargs: Dict[str, Any],
                join: bool = False) -> AppFuture:
         """Add task to the dataflow system.
 
