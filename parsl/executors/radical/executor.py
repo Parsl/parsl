@@ -156,7 +156,6 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
         for i in range(self.n_masters):
             td = rp.TaskDescription(self.master)
-            td.named_env = 'rp'
             td.mode = rp.RAPTOR_MASTER
             td.uid = ru.generate_id('master.%(item_counter)06d', ru.ID_CUSTOM,
                                     ns=self.session.uid)
@@ -180,7 +179,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         pilot = self.pmgr.submit_pilots(pd)
         self.tmgr.submit_tasks(tds)
 
-        pilot.prepare_env(env_name='ve_rpex',
+        pilot.prepare_env(env_name=self.pilot_env.get('name'),
                           env_spec={'type': self.pilot_env.get('type'),
                                     'path': self.pilot_env.get('path'),
                                     'setup': self.pilot_env.get('setup'),

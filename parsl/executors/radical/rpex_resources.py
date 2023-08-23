@@ -16,6 +16,7 @@ class RPEX_ResourceConfig:
     nodes_per_worker = 1
 
     pilot_env_path = ""
+    pilot_env_name = "ve_rpex"
     pilot_env_pre_exec = []
     pilot_env_type = "venv"
     pilot_env_setup = ["parsl",
@@ -40,6 +41,7 @@ class RPEX_ResourceConfig:
 
             'pilot_env': {
                 "version": cls.python_v,
+                "name": cls.pilot_env_name,
                 "path": cls.pilot_env_path,
                 "type": cls.pilot_env_type,
                 "setup": cls.pilot_env_setup,
@@ -48,13 +50,13 @@ class RPEX_ResourceConfig:
 
             'master_descr': {
                 "mode": "raptor.master",
-                "named_env": 've_rpex',
+                "named_env": cls.pilot_env_name,
                 "executable": "python3 rpex_master.py",
             },
 
             'worker_descr': {
                 "mode": "raptor.worker",
-                "named_env": 've_rpex',
+                "named_env": cls.pilot_env_name,
                 "raptor_class": cls.rpex_worker,
             }}
 

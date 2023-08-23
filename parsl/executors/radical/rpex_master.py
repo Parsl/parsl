@@ -92,7 +92,7 @@ if __name__ == '__main__':
     descr = cfg.worker_descr
     pwd = os.getcwd()
 
-    # one node is used by master.  Alternatively (and probably better),
+    # one node is used by master. Alternatively (and probably better),
     # we could reduce one of the worker sizes by one core.  But it somewhat
     # depends on the worker type and application workload to judge if that
     # makes sense, so we leave it for now.
