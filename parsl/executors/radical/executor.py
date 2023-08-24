@@ -16,7 +16,7 @@ from functools import partial
 from typing import Optional, Dict
 from concurrent.futures import Future
 
-from .rpex_resources import RPEX_ResourceConfig
+from .rpex_resources import ResourceConfig
 
 from radical.pilot import PythonTask
 from parsl.app.errors import AppException
@@ -31,40 +31,89 @@ logger = logging.getLogger(__name__)
 
 
 class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
-    """Executor designed for: executing heterogeneous tasks in terms of
-                              type/resource
+    """Executor is designed for executing heterogeneous tasks
+       in terms of type/resource.
 
     The RadicalPilotExecutor system has the following components:
 
       1. "start"    :creating the RADICAL-executor session and pilot.
       2. "translate":unwrap/identify/ out of parsl task and construct RP task.
-      2. "submit"   :translating and submiting Parsl tasks to Radical Pilot.
-      3. "shut_down":shutting down the RADICAL-executor components.
+      3. "submit"   :translating and submiting Parsl tasks to Radical Pilot.
+      4. "shut_down":shutting down the RADICAL-executor components.
 
-    RADICAL Executor
+    Here is a diagram
+
+    .. code:: python
+
     ---------------------------------------------------------------------------
-             Parsl DFK/dflow               |   Task Translator |  Task-Manager
+             Parsl Data Flow Kernel        |   Task Translator |  Task-Manager
     ---------------------------------------|-------------------|---------------
                                            |                   |
-    -> Dep. check ------> Parsl_tasks{} <--+--> Parsl Task     | submit(task)
+    -> Dep. check ------> Parsl_tasks{} <--+--> Parsl Task     |
      Data management          +dfk.submit  |        |          |
                                            |        v          |
-                                           |    RP Task(s) ->  |
+                                           |    RP Task(s) ->  | submit(task)
     ---------------------------------------------------------------------------
+
+    The RadicalPilotExecutor creates a ``SESSION OBJECT``, ``TASK_MANAGER``,
+    and ``PILOT_MANAGER``. The executor receives the tasks from the DFK and
+    translates these tasks (in-memory) into ``RP.TASK_DESCRIPTION`` object to
+    be passed to the ``TASK_MANAGER``. This executor has two submission mechanisms:
+
+    1. Default_mode: where the executor submits the tasks directly to RADICAL-Pilot.
+
+    2. Bulk_mode: where the executor accumulates N tasks (functions and executables)
+       and submit them.
+
+    Parameters
+    ----------
+    rpex_cfg : :class: `~parsl.executors.rpex_resources.ResourceConfig
+        An instance of ResourceConfig specifying resource configuration.
+        Default is ResourceConfig instance.
+
+    label : str
+        Label for this executor instance.
+        Default is "RPEX".
+
+    bulk_mode : bool
+        Enable bulk mode submssion and execution. Default is False (stream).
+
+    resource : Optional[str]
+        The resource name of the targeted HPC machine or cluster.
+        Default is local.localhost (user local machine).
+
+    access_schema : Optional[str]
+        The key of an access mechanism to use. Default local.
+
+    walltime : int
+        The maximum walltime for the entire job in minutes.
+        Default is 30.
+
+    cores : int
+        The number of CPU cores to allocate per job (pilot). Default is 2.
+
+    gpus : int
+        The number of GPUs to allocate per job (pilot). Default is 0.
+
+    partition : Optional[str]
+        The resource partition (queue) for the job (pilot). Default is None.
+
+    project : Optional[str]
+        The project name for resource allocation. Default is None.
+
+    For more information: https://radicalpilot.readthedocs.io/en/stable/
     """
 
     @typeguard.typechecked
     def __init__(self,
-                 rpex_cfg=RPEX_ResourceConfig,
+                 rpex_cfg=ResourceConfig,
                  label: str = RPEX,
                  bulk_mode: bool = False,
                  resource: Optional[str] = None,
-                 login_method: Optional[str] = None,
-                 walltime: int = 10,
-                 managed: bool = True,
-                 cores: int = 1,
+                 access_schema: Optional[str] = None,
+                 walltime: int = 30,
+                 cores: int = 2,
                  gpus: int = 0,
-                 worker_logdir_root: Optional[str] = ".",
                  partition: Optional[str] = None,
                  project: Optional[str] = None):
 
@@ -73,42 +122,34 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         self.project = project
         self.bulk_mode = bulk_mode
         self.resource = resource
-        self.login_method = login_method
+        self.access_schema = access_schema
         self.partition = partition
         self.walltime = walltime
         self.label = label
         self.future_tasks: Dict[str, Future] = {}
         self.cores = cores
         self.gpus = gpus
-        self.managed = managed
         self.run_dir = '.'
-        self.worker_logdir_root = worker_logdir_root
-
         self.session = None
         self.pmgr = None
         self.tmgr = None
 
-        # Raptor specific
         self.rpex_cfg = rpex_cfg.get_cfg_file()
         cfg = ru.Config(cfg=ru.read_json(self.rpex_cfg))
 
         self.master = cfg.master_descr
-        self.cpn = cfg.cpn  # cores per node
-        self.gpn = cfg.gpn  # gpus per node
-        self.n_masters = cfg.n_masters   # number of total masters
-        self.masters_pn = cfg.masters_pn  # number of masters per node
+        self.cpn = cfg.cpn
+        self.gpn = cfg.gpn
+        self.n_masters = cfg.n_masters
+        self.masters_pn = cfg.masters_pn
 
         self.pilot_env = cfg.pilot_env
 
     def task_state_cb(self, task, state):
         """
         Update the state of Parsl Future tasks
-        Based on RP task state
+        Based on RP task state callbacks.
         """
-
-        # FIXME: user might specify task uid as
-        # task.uid = 'master...' this migh create
-        # a confusion with the raptpor master
         if not task.uid.startswith('master'):
             parsl_task = self.future_tasks[task.uid]
 
@@ -146,7 +187,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                        'project': self.project,
                        'runtime': self.walltime,
                        'resource': self.resource,
-                       'access_schema': self.login_method}
+                       'access_schema': self.access_schema}
 
         pd = rp.PilotDescription(pd_init)
 
@@ -189,8 +230,8 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         self.tmgr.add_pilots(pilot)
         self.tmgr.register_callback(self.task_state_cb)
 
-        # create a bulking thread to run the actual task submittion to RP in
-        # bulks
+        # create a bulking thread to run the actual task submittion
+        # to RP in bulks
         if self.bulk_mode:
             self._max_bulk_size = 1024
             self._max_bulk_time = 3        # seconds
@@ -205,23 +246,36 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         return True
 
     def unwrap(self, func, args):
+        """
+        Unwrap a parsl app and its args for further processing.
+
+        Parameters
+        ----------
+        func : callable
+            The function to be unwrapped.
+
+        args : tuple
+            The arguments associated with the function.
+
+        Returns
+        -------
+        tuple
+            A tuple containing the unwrapped function, adjusted arguments,
+            and task type information.
+        """
 
         task_type = ''
 
-        # Ignore the resource dict from Parsl
+        # ignore the resource dict from Parsl
         new_args = list(args)
         new_args.pop(0)
         args = tuple(new_args)
 
-        # remove the remote wrapper from parsl
         while hasattr(func, '__wrapped__'):
             func = func.__wrapped__
 
-        # identify the task type
         try:
-            # bash and python might be partial wrapped
             if isinstance(func, partial):
-                # @bash_app from parsl
                 try:
                     task_type = inspect.getsource(func.args[0]).split('\n')[0]
                     if BASH in task_type:
@@ -235,7 +289,6 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
                     return func, args, task_type
 
-            # @python_app from parsl
             else:
                 task_type = inspect.getsource(func).split('\n')[0]
                 if PYTHON in task_type:
@@ -250,15 +303,6 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
     def task_translate(self, tid, func, args, kwargs):
         """
         Convert parsl function to RADICAL-Pilot Task-Description
-        Args:
-            - tid   (int)      : Parsl task id
-            - func  (callable) : Callable function
-            - *args (list)     : List of arbitrary positional arguments.
-
-        Kwargs:
-            - **kwargs (dict) : A dictionary of arbitrary keyword
-              args for func.
-
         """
 
         task = rp.TaskDescription()
@@ -332,15 +376,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
     def submit(self, func, *args, **kwargs):
         """
         Submits tasks in stream mode or bulks (bulk mode)
-        to RADICAL task_manager.
-
-        Args:
-            - func (callable) : Callable function
-            - *args (list)    : List of arbitrary positional arguments.
-
-        Kwargs:
-            - **kwargs (dict) : A dictionary of arbitrary keyword
-              args for func.
+        to RADICAL-Pilot rp.TASK_MANAGER.
         """
         rp_tid = ru.generate_id('task.%(item_counter)06d', ru.ID_CUSTOM,
                                 ns=self.session.uid)
