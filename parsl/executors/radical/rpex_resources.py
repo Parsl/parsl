@@ -22,7 +22,7 @@ class ResourceConfig:
         Default is 1.
 
     workers : int
-        The number of workers nodes to be deployed by RAPTOR.
+        The number of workers to be deployed by RAPTOR.
         Default is 1.
 
     worker_gpus_per_node : int
@@ -34,11 +34,11 @@ class ResourceConfig:
         Default is 4.
 
     masters_per_node : int
-        The number of masters to be placed on a single/multiple nodes.
+        The number of masters to be placed on every node.
         Default is 1.
 
     nodes_per_worker : int
-        The number of workers to be placed on a single/multiple nodes.
+        The number of nodes to be occupied by every worker.
         Default is 1.
 
     pilot_env_path : str
@@ -93,8 +93,8 @@ class ResourceConfig:
 
     @classmethod
     def get_cfg_file(cls):
-        if 'MPI' in cls.worker_type and 'mpi4py' not in cls.pilot_env_setup:
-            cls.pilot_env_setup.append('mpi4py')
+        if "mpi" in cls.worker_type.lower() and "mpi4py" not in cls.pilot_env_setup:
+            cls.pilot_env_setup.append("mpi4py")
 
         cfg = {
             'n_masters': cls.masters,
@@ -122,7 +122,7 @@ class ResourceConfig:
             'worker_descr': {
                 "mode": "raptor.worker",
                 "named_env": cls.pilot_env_name,
-                "raptor_class": cls.worker_type if cls.worker_type != "MPI" else "MPIWorker",
+                "raptor_class": cls.worker_type if cls.worker_type.lower() != "mpi" else "MPIWorker",
             }}
 
         # Convert the class instance to a cfg file.

@@ -68,7 +68,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
     Parameters
     ----------
     rpex_cfg : :class: `~parsl.executors.rpex_resources.ResourceConfig
-        An instance of ResourceConfig specifying resource configuration.
+        a dataclass specifying resource configuration.
         Default is ResourceConfig instance.
 
     label : str
@@ -138,10 +138,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         cfg = ru.Config(cfg=ru.read_json(self.rpex_cfg))
 
         self.master = cfg.master_descr
-        self.cpn = cfg.cpn
-        self.gpn = cfg.gpn
         self.n_masters = cfg.n_masters
-        self.masters_pn = cfg.masters_pn
 
         self.pilot_env = cfg.pilot_env
 
