@@ -30,9 +30,6 @@ user_opts = {
     'theta': {
         'worker_init': 'source ~/setup_parsl_test_env.sh;',
     },
-    'cori': {
-        'worker_init': 'source ~/setup_parsl_test_env.sh;',
-    },
     'summit': {
         'worker_init': 'source ~/setup_parsl_test_env.sh;',
     },
@@ -62,13 +59,6 @@ user_opts = {
     #     'script_dir': '/home/{}/parsl_scripts'.format(OSG_USERNAME),
     #     'scheduler_options': "",
     #     'worker_init' : 'module load python/3.5.2; python3 -m venv parsl_env; source parsl_env/bin/activate; python3 -m pip install parsl==0.5.2'
-    # },
-    # 'cori': {
-    #     'username': CORI_USERNAME,
-    #     'script_dir': "/global/homes/y/{}/parsl_scripts".format(CORI_USERNAME),
-    #     'scheduler_options': "#SBATCH --constraint=haswell",
-    #     "worker_init": """module load python/3.6-anaconda-4.4 ;
-    #     source activate parsl_env_3.6"""
     # },
     # 'swan': {
     #     'username': SWAN_USERNAME,

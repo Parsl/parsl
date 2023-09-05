@@ -4,10 +4,10 @@ import logging
 import math
 
 from parsl.channels import LocalChannel
+from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.lsf.template import template_string
-from parsl.providers.base import JobState, JobStatus
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
 logger = logging.getLogger(__name__)
@@ -26,8 +26,8 @@ translate_table = {
 class LSFProvider(ClusterProvider, RepresentationMixin):
     """LSF Execution Provider
 
-    This provider uses sbatch to submit, squeue for status and scancel to cancel
-    jobs. The sbatch script to be used is created from a template file in this
+    This provider uses bsub to submit, bjobs for status and bkill to cancel
+    jobs. The bsub script to be used is created from a template file in this
     same module.
 
     Parameters
@@ -61,7 +61,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
     queue : str
         Queue to which to submit the job request
     scheduler_options : str
-        String to prepend to the #SBATCH blocks in the submit script to the scheduler.
+        String to prepend to the #BSUB blocks in the submit script to the scheduler.
     worker_init : str
         Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     cmd_timeout : int
@@ -150,30 +150,46 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         Returns:
               [status...] : Status list of all jobs
         '''
-        job_id_list = ','.join(self.resources.keys())
-        cmd = "bjobs {0}".format(job_id_list)
-
-        retcode, stdout, stderr = super().execute_wait(cmd)
+        logger.debug(f"Resources: {self.resources}")
+        job_id_list = [jid for jid, job in self.resources.items() if not job['status'].terminal]
+        if not job_id_list:
+            logger.debug('No active jobs, skipping status update')
+            return
+        logger.debug(f"job_id_list: {job_id_list}")
+        # only request the JOBID and STAT columns from LSF
+        cmd = f"bjobs -noheader -o 'jobid stat' {' '.join(job_id_list)}"
+        logger.debug(f"Executing command: {cmd}")
+        retcode, stdout, stderr = self.execute_wait(cmd)
+        logger.debug(f"bjobs returned:\nstdout=\n{stdout}stderr=\n{stderr}")
         # Execute_wait failed. Do no update
         if retcode != 0:
-            logger.debug("Updating job status from {} failed with return code {}".format(self.label,
-                                                                                         retcode))
+            logger.warning(f"bjobs failed with non-zero exit code: {retcode}")
             return
 
-        jobs_missing = list(self.resources.keys())
-        for line in stdout.split('\n'):
-            parts = line.split()
-            if parts and parts[0] != 'JOBID':
-                job_id = parts[0]
-                # the line can be uncompleted. len > 2 ensures safe indexing.
-                if len(parts) > 2:
-                    state = translate_table.get(parts[2], JobState.UNKNOWN)
-                    self.resources[job_id]['status'] = JobStatus(state)
-                    jobs_missing.remove(job_id)
+        jobs_missing = set(job_id_list)
+        bjobs_lines = stdout.rstrip('\n').split('\n')
 
-        # squeue does not report on jobs that are not running. So we are filling in the
+        for line in bjobs_lines:
+            line_list = line.split()
+            if len(line_list) != 2:
+                logger.debug(f"{line_list} length not equal to 2, skipping")
+                continue
+            job_id, lsf_state = line_list
+            if job_id not in job_id_list:
+                logger.debug(f"job_id {job_id} not in job_id_list, skipping")
+                continue
+            if lsf_state not in translate_table:
+                logger.warning(f"LSF status {lsf_state} is not recognized")
+            state = translate_table.get(lsf_state, JobState.UNKNOWN)
+            logger.debug(f"Updating job {job_id} with LSF status {lsf_state} "
+                         f"to parsl state {state}")
+            self.resources[job_id]['status'] = JobStatus(state)
+            jobs_missing.remove(job_id)
+
+        # bjobs does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
+            logger.debug(f"Updating missing job {missing_job} to completed status")
             self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
     def submit(self, command, tasks_per_node, job_name="parsl.lsf"):
@@ -252,11 +268,11 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = super().execute_wait("bkill {0}".format(job_id_list))
+        retcode, stdout, stderr = self.execute_wait("bkill {0}".format(job_id_list))
         rets = None
         if retcode == 0:
             for jid in job_ids:
-                self.resources[jid]['status'] = translate_table['USUSP']  # Job suspended by user/admin
+                self.resources[jid]['status'] = JobStatus(JobState.CANCELLED)  # Setting state to cancelled
             rets = [True for i in job_ids]
         else:
             rets = [False for i in job_ids]

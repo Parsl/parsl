@@ -1,4 +1,5 @@
 import logging
+import threading
 
 import tblib.pickling_support
 tblib.pickling_support.install()
@@ -8,15 +9,15 @@ from functools import wraps
 from parsl.app.app import AppBase
 from parsl.app.errors import wrap_error
 from parsl.dataflow.dflow import DataFlowKernelLoader
+from parsl.utils import AutoCancelTimer
 
 
 logger = logging.getLogger(__name__)
 
 
-def timeout(f, seconds):
+def timeout(f, seconds: float):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        import threading
         import ctypes
         import parsl.app.errors
 
@@ -27,18 +28,15 @@ def timeout(f, seconds):
             )
 
         thread = threading.current_thread().ident
-        timer = threading.Timer(seconds, inject_exception, args=[thread])
-        timer.start()
-        result = f(*args, **kwargs)
-        timer.cancel()
-        return result
+        with AutoCancelTimer(seconds, inject_exception, args=[thread]):
+            return f(*args, **kwargs)
     return wrapper
 
 
 class PythonApp(AppBase):
     """Extends AppBase to cover the Python App."""
 
-    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=[], join=False):
+    def __init__(self, func, data_flow_kernel=None, cache=False, executors='all', ignore_for_cache=None, join=False):
         super().__init__(
             wrap_error(func),
             data_flow_kernel=data_flow_kernel,

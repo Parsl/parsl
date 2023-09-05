@@ -76,8 +76,8 @@ Executors
     parsl.executors.ThreadPoolExecutor
     parsl.executors.HighThroughputExecutor
     parsl.executors.WorkQueueExecutor
+    parsl.executors.taskvine.TaskVineExecutor
     parsl.executors.FluxExecutor
-    parsl.executors.swift_t.TurbineExecutor
 
 Launchers
 =========
@@ -140,8 +140,6 @@ Exceptions
     parsl.errors.OptionalModuleMissing
     parsl.executors.errors.ExecutorError
     parsl.executors.errors.ScalingFailed
-    parsl.executors.errors.SerializationError
-    parsl.executors.errors.DeserializationError
     parsl.executors.errors.BadMessage
     parsl.dataflow.errors.DataFlowException
     parsl.dataflow.errors.BadCheckpoint
@@ -162,6 +160,8 @@ Exceptions
     parsl.channels.errors.FileCopyException
     parsl.executors.high_throughput.errors.WorkerLost
     parsl.executors.high_throughput.interchange.ManagerLost
+    parsl.serialize.errors.DeserializationError
+    parsl.serialize.errors.SerializationError
 
 Internal
 ========
@@ -174,11 +174,11 @@ Internal
     parsl.app.bash.BashApp
     parsl.app.python.PythonApp
     parsl.dataflow.dflow.DataFlowKernel
-    parsl.dataflow.job_status_poller.JobStatusPoller
     parsl.dataflow.memoization.id_for_memo
     parsl.dataflow.memoization.Memoizer
     parsl.dataflow.states.FINAL_STATES
     parsl.dataflow.states.States
-    parsl.dataflow.strategy.Strategy
     parsl.dataflow.taskrecord.TaskRecord
+    parsl.jobs.job_status_poller.JobStatusPoller
+    parsl.jobs.strategy.Strategy
     parsl.utils.Timer

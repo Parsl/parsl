@@ -6,7 +6,7 @@ from parsl.channels import LocalChannel
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.grid_engine.template import template_string
 from parsl.launchers import SingleNodeLauncher
-from parsl.providers.base import JobState, JobStatus
+from parsl.jobs.states import JobState, JobStatus
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -117,8 +117,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
 
     def submit(self, command, tasks_per_node, job_name="parsl.sge"):
         ''' The submit method takes the command string to be executed upon
-        instantiation of a resource most often to start a pilot (such as IPP engine
-        or even Swift-T engines).
+        instantiation of a resource most often to start a pilot.
 
         Args :
              - command (str) : The bash command string to be executed.

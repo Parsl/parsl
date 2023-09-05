@@ -1,12 +1,19 @@
 import importlib.util
+import itertools
 import logging
 import os
-from glob import glob
-from itertools import chain
+import pathlib
+import time
+import types
 import signal
 import sys
+import tempfile
 import threading
 import traceback
+import typing as t
+from datetime import datetime
+from glob import glob
+from itertools import chain
 
 import pytest
 import _pytest.runner as runner
@@ -34,6 +41,20 @@ def dumpstacks(sig, frame):
 
 def pytest_sessionstart(session):
     signal.signal(signal.SIGUSR1, dumpstacks)
+
+
+@pytest.fixture(scope="session")
+def tmpd_cwd_session():
+    n = datetime.now().strftime('%Y%m%d.%H%I%S')
+    with tempfile.TemporaryDirectory(dir=os.getcwd(), prefix=f".pytest-{n}-") as tmpd:
+        yield pathlib.Path(tmpd)
+
+
+@pytest.fixture
+def tmpd_cwd(tmpd_cwd_session, request):
+    prefix = f"{request.node.name}-"
+    with tempfile.TemporaryDirectory(dir=tmpd_cwd_session, prefix=prefix) as tmpd:
+        yield pathlib.Path(tmpd)
 
 
 def pytest_addoption(parser):
@@ -140,9 +161,9 @@ def load_dfk_local_module(request, pytestconfig):
     parsl.load. It should be a Callable that returns a parsl Config object.
 
     If local_setup and/or local_teardown are callables (such as functions) in
-    the test module, they they will be invoked before/after the tests. This
-    can be used to perform more interesting DFK initialisation not possible
-    with local_config.
+    the test module, they will be invoked before/after the tests. This can
+    be used to perform more interesting DFK initialisation not possible with
+    local_config.
     """
 
     config = pytestconfig.getoption('config')[0]
@@ -211,16 +232,14 @@ def apply_masks(request, pytestconfig):
             pytest.skip('intended for explicit config')
 
 
-@pytest.fixture()
-def setup_data():
-    import os
-    if not os.path.isdir('data'):
-        os.mkdir('data')
+@pytest.fixture
+def setup_data(tmpd_cwd):
+    data_dir = tmpd_cwd / "data"
+    data_dir.mkdir()
 
-    with open("data/test1.txt", 'w') as f:
-        f.write("1\n")
-    with open("data/test2.txt", 'w') as f:
-        f.write("2\n")
+    (data_dir / "test1.txt").write_text("1\n")
+    (data_dir / "test2.txt").write_text("2\n")
+    return data_dir
 
 
 @pytest.fixture(autouse=True, scope='function')
@@ -275,3 +294,67 @@ def pytest_ignore_collect(path):
         return True
     else:
         return False
+
+
+def create_traceback(start: int = 0) -> t.Optional[types.TracebackType]:
+    """
+    Dynamically create a traceback.
+
+    Builds a traceback from the top of the stack (the currently executing frame) on
+    down to the root frame.  Optionally, use start to build from an earlier stack
+    frame.
+
+    N.B. uses `sys._getframe`, which I only know to exist in CPython.
+    """
+    tb = None
+    for depth in itertools.count(start + 1, 1):
+        try:
+            frame = sys._getframe(depth)
+            tb = types.TracebackType(tb, frame, frame.f_lasti, frame.f_lineno)
+        except ValueError:
+            break
+    return tb
+
+
+@pytest.fixture
+def try_assert():
+    def _impl(
+        test_func: t.Callable[[], bool],
+        fail_msg: str = "",
+        timeout_ms: float = 5000,
+        attempts: int = 0,
+        check_period_ms: int = 20,
+    ):
+        tb = create_traceback(start=1)
+        timeout_s = abs(timeout_ms) / 1000.0
+        check_period_s = abs(check_period_ms) / 1000.0
+        if attempts > 0:
+            for _attempt_no in range(attempts):
+                if test_func():
+                    return
+                time.sleep(check_period_s)
+            else:
+                att_fail = (
+                    f"\n  (Still failing after attempt limit [{attempts}], testing"
+                    f" every {check_period_ms}ms)"
+                )
+                exc = AssertionError(f"{str(fail_msg)}{att_fail}".strip())
+                raise exc.with_traceback(tb)
+
+        elif timeout_s > 0:
+            end = time.monotonic() + timeout_s
+            while time.monotonic() < end:
+                if test_func():
+                    return
+                time.sleep(check_period_s)
+            att_fail = (
+                f"\n  (Still failing after timeout [{timeout_ms}ms], with attempts "
+                f"every {check_period_ms}ms)"
+            )
+            exc = AssertionError(f"{str(fail_msg)}{att_fail}".strip())
+            raise exc.with_traceback(tb)
+
+        else:
+            raise AssertionError("Bad assert call: no attempts or timeout period")
+
+    yield _impl
