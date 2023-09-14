@@ -69,7 +69,7 @@ class DataFlowKernel:
     """
 
     @typechecked
-    def __init__(self, config: Config = Config()) -> None:
+    def __init__(self, config: Config) -> None:
         """Initialize the DataFlowKernel.
 
         Parameters
@@ -898,10 +898,10 @@ class DataFlowKernel:
     def submit(self,
                func: Callable,
                app_args: Sequence[Any],
-               executors: Union[str, Sequence[str]] = 'all',
-               cache: bool = False,
-               ignore_for_cache: Optional[Sequence[str]] = None,
-               app_kwargs: Dict[str, Any] = {},
+               executors: Union[str, Sequence[str]],
+               cache: bool,
+               ignore_for_cache: Optional[Sequence[str]],
+               app_kwargs: Dict[str, Any],
                join: bool = False) -> AppFuture:
         """Add task to the dataflow system.
 
@@ -1146,8 +1146,11 @@ class DataFlowKernel:
 
         logger.info("Waiting for all remaining tasks to complete")
 
-        items = list(self.tasks.items())
-        for task_id, task_record in items:
+        # .values is made into a list immediately to reduce (although not
+        # eliminate) a race condition where self.tasks can be modified
+        # elsewhere by a completing task being removed from the dictionary.
+        task_records = list(self.tasks.values())
+        for task_record in task_records:
             # .exception() is a less exception throwing way of
             # waiting for completion than .result()
             fut = task_record['app_fu']
