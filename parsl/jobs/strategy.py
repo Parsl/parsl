@@ -204,12 +204,8 @@ class Strategy:
 
             logger.debug(f"Slot ratio calculation: active_slots = {active_slots}, active_tasks = {active_tasks}")
 
-            if hasattr(executor, 'connected_workers'):
-                logger.debug('Executor {} has {} active tasks, {}/{} running/pending blocks, and {} connected workers'.format(
-                    label, active_tasks, running, pending, executor.connected_workers))
-            else:
-                logger.debug('Executor {} has {} active tasks and {}/{} running/pending blocks'.format(
-                    label, active_tasks, running, pending))
+            logger.debug('Executor {} has {} active tasks and {}/{} running/pending blocks'.format(
+                label, active_tasks, running, pending))
 
             # reset idle timer if executor has active tasks
 

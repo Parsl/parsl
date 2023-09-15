@@ -33,7 +33,7 @@ def test_platform(n=2, sleep_dur=10):
     print([i.result() for i in x])
 
     print("Executor : ", dfk.executors[name])
-    print("Connected   : ", dfk.executors[name].connected_workers)
+    print("Connected   : ", dfk.executors[name]._connected_workers())
     print("Outstanding : ", dfk.executors[name].outstanding)
 
     d = []

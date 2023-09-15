@@ -55,7 +55,7 @@ def test_simple(mem_per_worker):
     # Prime a worker
     double(5).result()
     dfk = parsl.dfk()
-    connected = dfk.executors['htex_local'].connected_workers
+    connected = dfk.executors['htex_local']._connected_workers()
     print("Connected : ", connected)
     assert expected_workers == connected, "Expected {} workers, instead got {} workers".format(expected_workers,
                                                                                                connected)
