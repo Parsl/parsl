@@ -387,7 +387,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         The `None` message is a die request.
         """
-        logger.debug("queue management worker starting")
+        logger.debug("Queue management worker starting")
 
         while not self.bad_state_is_set:
             try:
@@ -456,7 +456,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                         else:
                             raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
-        logger.info("queue management worker finished")
+        logger.info("Queue management worker finished")
 
     def _start_local_interchange_process(self):
         """ Starts the interchange process locally
