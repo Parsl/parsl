@@ -1283,9 +1283,6 @@ class DataFlowKernel:
                 for task_record in checkpoint_queue:
                     task_id = task_record['id']
 
-                    if task_record['app_fu'] is None:
-                        continue
-
                     app_fu = task_record['app_fu']
 
                     if app_fu.done() and app_fu.exception() is None:
