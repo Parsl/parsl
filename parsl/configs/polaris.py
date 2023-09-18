@@ -1,4 +1,4 @@
-from parsl.addresses import address_by_hostname
+from parsl.addresses import address_by_interface
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import MpiExecLauncher
 from parsl.providers import PBSProProvider
@@ -15,7 +15,7 @@ config = Config(
     executors=[
         HighThroughputExecutor(
             available_accelerators=4,  # Ensures one worker per accelerator
-            address=address_by_hostname(),
+            address=address_by_interface('bond0'),
             cpu_affinity="alternating",  # Prevents thread contention
             prefetch_capacity=0,  # Increase if you have many more tasks than workers
             start_method="spawn",  # Needed to avoid interactions between MPI and os.fork

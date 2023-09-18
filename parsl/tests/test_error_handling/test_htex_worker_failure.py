@@ -1,28 +1,21 @@
 import pytest
 
-import parsl
 from parsl.app.app import python_app
-from parsl.tests.configs.htex_local import fresh_config
-
 from parsl.executors.high_throughput.errors import WorkerLost
 
 
-def local_setup():
+def local_config():
+    from parsl.tests.configs.htex_local import fresh_config
     config = fresh_config()
     config.executors[0].poll_period = 1
     config.executors[0].max_workers = 1
-    parsl.load(config)
-
-
-def local_teardown():
-    parsl.dfk().cleanup()
-    parsl.clear()
+    config.executors[0].heartbeat_period = 1
+    return config
 
 
 @python_app
 def kill_worker():
-    import sys
-    sys.exit(2)
+    raise SystemExit(2)
 
 
 @pytest.mark.local

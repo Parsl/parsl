@@ -1,74 +1,58 @@
-import os
-
 import pytest
 
-import parsl
 from parsl.app.app import bash_app
 from parsl.data_provider.files import File
-from parsl.tests.configs.local_threads import config
 
 
 @bash_app
-def cat(inputs=[], outputs=[], stdout=None, stderr=None):
-    infiles = ' '.join([i.filepath for i in inputs])
-    return """echo {i}
-    cat {i} &> {o}
-    """.format(i=infiles, o=outputs[0])
+def cat(inputs=(), outputs=(), stdout=None, stderr=None):
+    infiles = " ".join(i.filepath for i in inputs)
+    return f"cat {infiles} &> {outputs[0]}"
 
 
-@pytest.mark.usefixtures('setup_data')
 @pytest.mark.staging_required
-def test_files():
-
-    if os.path.exists('cat_out.txt'):
-        os.remove('cat_out.txt')
-
-    fs = [File('data/' + f) for f in os.listdir('data')]
-    x = cat(inputs=fs, outputs=[File('cat_out.txt')],
-            stdout='f_app.out', stderr='f_app.err')
+def test_files(setup_data):
+    fs = sorted(setup_data / f for f in setup_data.iterdir())
+    fs = list(map(File, fs))
+    x = cat(
+        inputs=fs,
+        outputs=[File(setup_data / "cat_out.txt")],
+        stdout=setup_data / "f_app.out",
+        stderr=setup_data / "f_app.err",
+    )
+    x.result()
     d_x = x.outputs[0]
-    print(x.result())
-    print(d_x, type(d_x))
+    data = open(d_x.filepath).read().strip()
+    assert "1\n2" == data, "Per setup_data fixture"
 
 
 @bash_app
-def increment(inputs=[], outputs=[], stdout=None, stderr=None):
-    # Place double braces to avoid python complaining about missing keys for {item = $1}
-    return """
-    x=$(cat {i})
-    echo $(($x+1)) > {o}
-    """.format(i=inputs[0], o=outputs[0])
+def increment(inputs=(), outputs=(), stdout=None, stderr=None):
+    return (
+        f"x=$(cat {inputs[0]})\n"
+        f"echo $(($x+1)) > {outputs[0]}"
+    )
 
 
-@pytest.mark.usefixtures('setup_data')
 @pytest.mark.staging_required
-def test_increment(depth=5):
-    """Test simple pipeline A->B...->N
-    """
-    # Create the first file
-    open("test0.txt", 'w').write('0\n')
+def test_increment(tmp_path, depth=5):
+    """Test simple pipeline A->B...->N"""
+    # Test setup
+    first_fpath = tmp_path / "test0.txt"
+    first_fpath.write_text("0\n")
 
-    # Create the first entry in the dictionary holding the futures
-    prev = File("test0.txt")
-    futs = {}
+    prev = [File(first_fpath)]
+    futs = []
     for i in range(1, depth):
-        print("Launching {0} with {1}".format(i, prev))
+        f = increment(
+            inputs=prev,
+            outputs=[File(tmp_path / f"test{i}.txt")],
+            stdout=tmp_path / f"incr{i}.out",
+            stderr=tmp_path / f"incr{i}.err",
+        )
+        prev = f.outputs
+        futs.append((i, prev[0]))
 
-        if os.path.exists('test{0}.txt'.format(i)):
-            os.remove('test{0}.txt'.format(i))
-
-        fu = increment(inputs=[prev],  # Depend on the future from previous call
-                       # Name the file to be created here
-                       outputs=[File("test{0}.txt".format(i))],
-                       stdout="incr{0}.out".format(i),
-                       stderr="incr{0}.err".format(i))
-        [prev] = fu.outputs
-        futs[i] = prev
-        print(prev.filepath)
-
-    for key in futs:
-        if key > 0:
-            fu = futs[key]
-            data = open(fu.result().filepath, 'r').read().strip()
-            assert data == str(
-                key), "[TEST] incr failed for key:{0} got:{1}".format(key, data)
+    for i, f in futs:
+        data = open(f.result().filepath).read().strip()
+        assert data == str(i)

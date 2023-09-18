@@ -35,6 +35,7 @@ Parsl lets you chain functions together and will launch each function as inputs 
 
 
 Start with the `configuration quickstart <quickstart.html#getting-started>`_ to learn how to tell Parsl how to use your computing resource,
+see if `a template configuration for your supercomputer <userguide/configuring.html>`_ is already available,
 then explore the `parallel computing patterns <userguide/workflow.html>`_ to determine how to use parallelism best in your application.
 
 Parsl is an open-source code, and available on GitHub: https://github.com/parsl/parsl/
@@ -54,6 +55,7 @@ Parsl works everywhere
 
 *Parsl can run parallel functions on a laptop and the world's fastest supercomputers.*
 Scaling from laptop to supercomputer is often as simple as changing the resource configuration.
+Parsl is tested `on many of the top supercomputers <userguide/configuring.html>`_.
 
 Parsl is flexible
 -----------------

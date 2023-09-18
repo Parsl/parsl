@@ -1,4 +1,5 @@
 import dill
+import functools
 import pickle
 import logging
 
@@ -14,21 +15,15 @@ class PickleSerializer(SerializerBase):
     * functions defined in a interpreter/notebook
     * classes defined in local context and not importable using a fully qualified name
     * closures, generators and coroutines
-    * [sometimes] issues with wrapped/decorated functions
     """
 
-    _identifier = b'01\n'
-    _for_code = True
-    _for_data = True
+    identifier = b'01'
 
     def serialize(self, data: Any) -> bytes:
-        x = pickle.dumps(data)
-        return self.identifier + x
+        return pickle.dumps(data)
 
-    def deserialize(self, payload: bytes) -> Any:
-        chomped = self.chomp(payload)
-        data = pickle.loads(chomped)
-        return data
+    def deserialize(self, body: bytes) -> Any:
+        return pickle.loads(body)
 
 
 class DillSerializer(SerializerBase):
@@ -43,15 +38,27 @@ class DillSerializer(SerializerBase):
     * closures
     """
 
-    _identifier = b'02\n'
-    _for_code = True
-    _for_data = True
+    identifier = b'02'
 
     def serialize(self, data: Any) -> bytes:
-        x = dill.dumps(data)
-        return self.identifier + x
+        return dill.dumps(data)
 
-    def deserialize(self, payload: bytes) -> Any:
-        chomped = self.chomp(payload)
-        data = dill.loads(chomped)
-        return data
+    def deserialize(self, body: bytes) -> Any:
+        return dill.loads(body)
+
+
+class DillCallableSerializer(SerializerBase):
+    """This serializer is a variant of the DillSerializer that will
+    serialize and deserialize callables using an lru_cache, under the
+    assumption that callables are immutable and so can be cached.
+    """
+
+    identifier = b'C2'
+
+    @functools.lru_cache
+    def serialize(self, data: Any) -> bytes:
+        return dill.dumps(data)
+
+    @functools.lru_cache
+    def deserialize(self, body: bytes) -> Any:
+        return dill.loads(body)

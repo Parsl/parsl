@@ -5,9 +5,12 @@ import shlex
 import subprocess
 import threading
 import time
-import typeguard
 from contextlib import contextmanager
+from types import TracebackType
 from typing import Any, Callable, List, Tuple, Union, Generator, IO, AnyStr, Dict, Optional
+
+import typeguard
+from typing_extensions import Type
 
 import parsl
 from parsl.version import VERSION
@@ -106,9 +109,12 @@ def get_last_checkpoint(rundir: str = "runinfo") -> List[str]:
 
 
 @typeguard.typechecked
-def get_std_fname_mode(fdname: str, stdfspec: Union[str, Tuple[str, str]]) -> Tuple[str, str]:
+def get_std_fname_mode(
+    fdname: str,
+    stdfspec: Union[os.PathLike, str, Tuple[str, str], Tuple[os.PathLike, str]]
+) -> Tuple[str, str]:
     import parsl.app.errors as pe
-    if isinstance(stdfspec, str):
+    if isinstance(stdfspec, (str, os.PathLike)):
         fname = stdfspec
         mode = 'a+'
     elif isinstance(stdfspec, tuple):
@@ -117,7 +123,7 @@ def get_std_fname_mode(fdname: str, stdfspec: Union[str, Tuple[str, str]]) -> Tu
                    f"{len(stdfspec)}")
             raise pe.BadStdStreamFile(msg, TypeError('Bad Tuple Length'))
         fname, mode = stdfspec
-    return fname, mode
+    return str(fname), mode
 
 
 @contextmanager
@@ -347,3 +353,28 @@ class Timer:
         """
         self._kill_event.set()
         self._thread.join()
+
+
+class AutoCancelTimer(threading.Timer):
+    """
+    Extend threading.Timer for use as a context manager
+
+    Example:
+
+        with AutoCancelTimer(delay, your_callback):
+            some_func()
+
+    If `some_func()` returns before the delay is up, the timer will
+    be cancelled.
+    """
+    def __enter__(self) -> "AutoCancelTimer":
+        self.start()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType]
+    ) -> None:
+        self.cancel()
