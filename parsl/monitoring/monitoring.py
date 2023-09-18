@@ -463,7 +463,12 @@ class MonitoringRouter:
                             if 'exit_now' in msg[1] and msg[1]['exit_now']:
                                 router_keep_going = False
                         else:
-                            self.logger.error(f"Discarding message from interchange with unknown type {msg[0].value}")
+                            # There is a type: ignore here because if msg[0]
+                            # is of the correct type, this code is unreachable,
+                            # but there is no verification that the message
+                            # received from ic_channel.recv_pyobj() is actually
+                            # of that type.
+                            self.logger.error(f"Discarding message from interchange with unknown type {msg[0].value}")  # type: ignore[unreachable]
                 except zmq.Again:
                     pass
                 except Exception:
