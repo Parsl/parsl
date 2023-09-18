@@ -305,10 +305,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     radio_mode = "htex"
 
     def initialize_scaling(self):
-        """ Compose the launch command and call the scale_out
-
-        This should be implemented in the child classes to take care of
-        executor specific oddities.
+        """Compose the launch command and scale out the initial blocks.
         """
         debug_opts = "--debug" if self.worker_debug else ""
         max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
