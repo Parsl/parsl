@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 
 class Channel(metaclass=ABCMeta):
@@ -38,7 +38,7 @@ class Channel(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def execute_wait(self, cmd: str, walltime: int = 0, envs: Dict[str, str] = {}) -> Tuple[int, Optional[str], Optional[str]]:
+    def execute_wait(self, cmd: str, walltime: int = 0, envs: Dict[str, str] = {}) -> Tuple[int, str, str]:
         ''' Executes the cmd, with a defined walltime.
 
         Args:
@@ -49,9 +49,7 @@ class Channel(metaclass=ABCMeta):
             - envs (Dict[str, str]) : Environment variables to push to the remote side
 
         Returns:
-            - (exit_code, stdout, stderr) (int, optional string, optional string)
-              If the exit code is a failure code, the stdout and stderr return values
-              may be None.
+            - (exit_code, stdout, stderr) (int, string, string)
         '''
         pass
 
