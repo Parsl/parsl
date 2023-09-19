@@ -7,7 +7,7 @@ pytest-random-order
 mock>=1.0.0
 nbsphinx
 sphinx_rtd_theme
-mypy==1.1.1
+mypy==1.5.1
 types-python-dateutil
 types-requests
 types-six

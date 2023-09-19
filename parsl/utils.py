@@ -192,7 +192,7 @@ class RepresentationMixin:
     __max_width__ = 80
 
     def __repr__(self) -> str:
-        init = self.__init__  # type: ignore
+        init = self.__init__  # type: ignore[misc]
 
         # This test looks for a single layer of wrapping performed by
         # functools.update_wrapper, commonly used in decorators. This will
