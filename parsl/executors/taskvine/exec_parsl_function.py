@@ -78,7 +78,7 @@ def remap_all_files(mapping, fn_args, fn_kwargs):
             remap_location(mapping, maybe_file)
 
 
-def unpack_object(serialized_obj, user_namespace):
+def unpack_object(serialized_obj):
     from parsl.serialize import deserialize
     obj = deserialize(serialized_obj)
     return obj
@@ -115,7 +115,7 @@ def encode_byte_code_function(user_namespace, fn, fn_name, args_name, kwargs_nam
 def load_function(map_file, function_file, argument_file):
     # Decodes the function and its file arguments to be executed into
     # function_code, and updates a user namespace with the function name and
-    # the variable named result_name. When the function is executed, its result
+    # the variable named `result_name`. When the function is executed, its result
     # will be stored in this variable in the user namespace.
     # Returns (namespace, function_code, result_name)
 
@@ -126,8 +126,8 @@ def load_function(map_file, function_file, argument_file):
     packed_function = load_pickled_file(function_file)
     packed_argument = load_pickled_file(argument_file)
 
-    fn = unpack_object(packed_function, user_ns)
-    args_dict = unpack_object(packed_argument, user_ns)
+    fn = unpack_object(packed_function)
+    args_dict = unpack_object(packed_argument)
     fn_args = args_dict['args']
     fn_kwargs = args_dict['kwargs']
     fn_name = 'parsl_tmp_func_name'
