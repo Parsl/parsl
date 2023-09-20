@@ -3,11 +3,12 @@ import logging
 import time
 import math
 import warnings
-from typing import Dict, List, Optional, TypedDict
+from typing import Dict, List, Optional, Sequence, TypedDict
 
 import parsl.jobs.job_status_poller as jsp
 
 from parsl.executors import HighThroughputExecutor
+from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import JobState
 from parsl.process_loggers import wrap_with_logs
@@ -122,7 +123,7 @@ class Strategy:
 
     """
 
-    def __init__(self, *, strategy: Optional[str], max_idletime: float):
+    def __init__(self, *, strategy: Optional[str], max_idletime: float) -> None:
         """Initialize strategy."""
         self.executors: Dict[str, ExecutorState]
         self.executors = {}
@@ -141,7 +142,7 @@ class Strategy:
 
         logger.debug("Scaling strategy: {0}".format(strategy))
 
-    def add_executors(self, executors):
+    def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         for executor in executors:
             self.executors[executor.label] = {'idle_since': None}
 
@@ -150,10 +151,10 @@ class Strategy:
         """
         logger.debug("strategy_noop: doing nothing")
 
-    def _strategy_simple(self, status_list) -> None:
+    def _strategy_simple(self, status_list: List[jsp.PollItem]) -> None:
         self._general_strategy(status_list, strategy_type='simple')
 
-    def _strategy_htex_auto_scale(self, status_list) -> None:
+    def _strategy_htex_auto_scale(self, status_list: List[jsp.PollItem]) -> None:
         """HTEX specific auto scaling strategy
 
         This strategy works only for HTEX. This strategy will scale out by

@@ -13,7 +13,7 @@ import socket
 try:
     import fcntl
 except ImportError:
-    fcntl = None  # type: ignore
+    fcntl = None  # type: ignore[assignment]
 import struct
 import typeguard
 import psutil

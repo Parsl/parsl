@@ -34,6 +34,7 @@ class AppBase(metaclass=ABCMeta):
                after calling :meth:`parsl.dataflow.dflow.DataFlowKernelLoader.load`.
              - executors (str|list) : Labels of the executors that this app can execute over. Default is 'all'.
              - cache (Bool) : Enable caching of this app ?
+             - ignore_for_cache (list|None): Names of arguments which will be ignored by the caching mechanism.
 
         Returns:
              - App object.
@@ -90,6 +91,8 @@ def python_app(function=None,
         Labels of the executors that this app can execute over. Default is 'all'.
     cache : bool
         Enable caching of the app call. Default is False.
+    ignore_for_cache : (list|None)
+        Names of arguments which will be ignored by the caching mechanism.
     """
     from parsl.app.python import PythonApp
 
@@ -126,6 +129,8 @@ def join_app(function=None,
         be omitted only after calling :meth:`parsl.dataflow.dflow.DataFlowKernelLoader.load`. Default is None.
     cache : bool
         Enable caching of the app call. Default is False.
+    ignore_for_cache : (list|None)
+        Names of arguments which will be ignored by the caching mechanism.
     """
     from parsl.app.python import PythonApp
 
@@ -167,6 +172,8 @@ def bash_app(function=None,
         Labels of the executors that this app can execute over. Default is 'all'.
     cache : bool
         Enable caching of the app call. Default is False.
+    ignore_for_cache : (list|None)
+        Names of arguments which will be ignored by the caching mechanism.
     """
     from parsl.app.bash import BashApp
 
