@@ -1438,5 +1438,5 @@ class DataFlowKernelLoader:
     def dfk(cls) -> DataFlowKernel:
         """Return the currently-loaded DataFlowKernel."""
         if cls._dfk is None:
-            raise ConfigurationError('Must first load config')
+            raise NoDataFlowKernelError('Must first load config')
         return cls._dfk
