@@ -32,7 +32,7 @@ from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.taskrecord import TaskRecord
-from parsl.errors import ConfigurationError
+from parsl.errors import ConfigurationError, InternalConsistencyError, NoDataFlowKernelError
 from parsl.jobs.job_status_poller import JobStatusPoller
 from parsl.jobs.states import JobStatus, JobState
 from parsl.usage_tracking.usage import UsageTracker
@@ -295,7 +295,7 @@ class DataFlowKernel:
         task_record['try_time_returned'] = datetime.datetime.now()
 
         if not future.done():
-            raise RuntimeError("done callback called, despite future not reporting itself as done")
+            raise InternalConsistencyError("done callback called, despite future not reporting itself as done")
 
         try:
             res = self._unwrap_remote_exception_wrapper(future)
@@ -535,7 +535,7 @@ class DataFlowKernel:
         elif self.checkpoint_mode is None:
             pass
         else:
-            raise RuntimeError(f"Invalid checkpoint mode {self.checkpoint_mode}")
+            raise InternalConsistencyError(f"Invalid checkpoint mode {self.checkpoint_mode}")
 
         self.wipe_task(task_id)
         return
@@ -933,7 +933,7 @@ class DataFlowKernel:
             ignore_for_cache = list(ignore_for_cache)
 
         if self.cleanup_called:
-            raise RuntimeError("Cannot submit to a DFK that has been cleaned up")
+            raise NoDataFlowKernelError("Cannot submit to a DFK that has been cleaned up")
 
         task_id = self.task_count
         self.task_count += 1
@@ -1283,9 +1283,6 @@ class DataFlowKernel:
                 for task_record in checkpoint_queue:
                     task_id = task_record['id']
 
-                    if task_record['app_fu'] is None:
-                        continue
-
                     app_fu = task_record['app_fu']
 
                     if app_fu.done() and app_fu.exception() is None:
@@ -1420,7 +1417,7 @@ class DataFlowKernelLoader:
             - DataFlowKernel : The loaded DataFlowKernel object.
         """
         if cls._dfk is not None:
-            raise RuntimeError('Config has already been loaded')
+            raise ConfigurationError('Config has already been loaded')
 
         if config is None:
             cls._dfk = DataFlowKernel(Config())
@@ -1441,5 +1438,5 @@ class DataFlowKernelLoader:
     def dfk(cls) -> DataFlowKernel:
         """Return the currently-loaded DataFlowKernel."""
         if cls._dfk is None:
-            raise RuntimeError('Must first load config')
+            raise ConfigurationError('Must first load config')
         return cls._dfk
