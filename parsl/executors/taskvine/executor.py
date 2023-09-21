@@ -389,9 +389,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 and result to be found at: {}".format(executor_task_id, function_file, argument_file, result_file))
 
         # Serialize function object and arguments, separately
-        self._serialize_object(function_file, func)
+        self._serialize_object_to_file(function_file, func)
         args_dict = {'args': args, 'kwargs': kwargs}
-        self._serialize_object(argument_file, args_dict)
+        self._serialize_object_to_file(argument_file, args_dict)
 
         # Construct the map file of local filenames at worker
         self._construct_map_file(map_file, input_files, output_files)
@@ -464,11 +464,13 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             if self.project_password_file:
                 self.provider.transfer_input_files.append(self.project_password_file)
 
-    def _serialize_object(self, path, obj):
+    def _serialize_object_to_file(self, path, obj):
         """Takes any object and serializes it to the file path."""
         serialized_obj = serialize(obj, buffer_threshold=1024 * 1024)
         with open(path, 'wb') as f_out:
-            pickle.dump(serialized_obj, f_out)
+            written = 0
+            while written < len(serialized_obj):
+                written += f_out.write(serialized_obj[written:])
 
     def _construct_map_file(self, map_file, input_files, output_files):
         """ Map local filepath of parsl files to the filenames at the execution worker.
@@ -483,8 +485,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             else:
                 remote_name = local_name
             file_translation_map[local_name] = remote_name
-        with open(map_file, "wb") as f_out:
-            pickle.dump(file_translation_map, f_out)
+        self._serialize_object_to_file(map_file, file_translation_map)
 
     def _register_file(self, parsl_file):
         """Generates a tuple (parsl_file.filepath, stage, cache) to give to

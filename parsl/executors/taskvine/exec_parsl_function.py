@@ -1,6 +1,7 @@
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.files import File
 from parsl.utils import get_std_fname_mode
+from parsl.serialize import deserialize
 import traceback
 import sys
 import pickle
@@ -26,12 +27,6 @@ import pickle
 # anything else: There was an error that prevented writing to the result file altogether.
 #                The exit code corresponds to whatever the python interpreter gives.
 #
-
-
-def load_pickled_file(filename: str):
-    """ Load a pickled file and return its pickled object."""
-    with open(filename, "rb") as f_in:
-        return pickle.load(f_in)
 
 
 def dump_result_to_file(result_file: str, result_package):
@@ -80,9 +75,9 @@ def remap_all_files(mapping, fn_args, fn_kwargs):
             remap_location(mapping, maybe_file)
 
 
-def unpack_object(serialized_obj):
-    from parsl.serialize import deserialize
-    obj = deserialize(serialized_obj)
+def unpack_object_from_file(path):
+    with open(path, 'rb') as f:
+        obj = deserialize(f.read())
     return obj
 
 
@@ -121,16 +116,13 @@ def load_function(map_file, function_file, argument_file):
     # will be stored in this variable in the user namespace.
     # Returns (namespace, function_code, result_name)
 
-    packed_function = load_pickled_file(function_file)
-    packed_argument = load_pickled_file(argument_file)
-
-    fn = unpack_object(packed_function)
-    args_dict = unpack_object(packed_argument)
+    fn = unpack_object_from_file(function_file)
+    args_dict = unpack_object_from_file(argument_file)
     fn_args = args_dict['args']
     fn_kwargs = args_dict['kwargs']
     fn_name = 'parsl_tmp_func_name'
 
-    mapping = load_pickled_file(map_file)
+    mapping = unpack_object_from_file(map_file)
     remap_all_files(mapping, fn_args, fn_kwargs)
     
     # Create the namespace to isolate the function execution.
