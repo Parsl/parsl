@@ -19,4 +19,5 @@ User guide
    joins
    usage_tracking
    plugins
+   parsl_perf
    performance
