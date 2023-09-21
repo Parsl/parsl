@@ -133,8 +133,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Queue to send finished tasks from TaskVine manager process to TaskVine executor process
         self._finished_task_queue: multiprocessing.Queue = multiprocessing.Queue()
 
-        # Value to signal whether the manager and factory processes should stop running
-        self._should_stop = multiprocessing.Value(c_bool, False)
+        # Event to signal whether the manager and factory processes should stop running
+        self._should_stop = multiprocessing.Event()
 
         # TaskVine manager process
         self._submit_process = None
@@ -591,7 +591,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         collector thread, which shuts down the TaskVine system submission.
         """
         logger.debug("TaskVine shutdown started")
-        self._should_stop.value = True
+        self._should_stop.set()
 
         # Remove the workers that are still going
         kill_ids = [self.blocks[block] for block in self.blocks.keys()]
@@ -617,7 +617,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """
         logger.debug("Starting Collector Thread")
         try:
-            while not self._should_stop.value:
+            while not self._should_stop.is_set():
                 if not self._submit_process.is_alive():
                     raise ExecutorError(self, "taskvine Submit Process is not alive")
 

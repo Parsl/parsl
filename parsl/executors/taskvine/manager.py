@@ -196,7 +196,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
 
     logger.debug("Entering main loop of TaskVine manager")
 
-    while not should_stop.value:
+    while not should_stop.is_set():
         # Monitor the task queue
         ppid = os.getppid()
         if ppid != orig_ppid:
@@ -204,7 +204,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
             break
 
         # Submit tasks
-        while ready_task_queue.qsize() > 0 and not should_stop.value:
+        while ready_task_queue.qsize() > 0 and not should_stop.is_set():
             # Obtain task from ready_task_queue
             try:
                 task = ready_task_queue.get(timeout=1)
@@ -379,7 +379,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
         # If the queue is not empty wait on the TaskVine queue for a task
         task_found = True
         if not m.empty():
-            while task_found and not should_stop.value:
+            while task_found and not should_stop.is_set():
                 # Obtain the task from the queue
                 t = m.wait(1)
                 if t is None:
