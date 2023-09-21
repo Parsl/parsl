@@ -1,10 +1,12 @@
+import traceback
+import sys
+import os
+
+import pickle
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.files import File
 from parsl.utils import get_std_fname_mode
 from parsl.serialize import deserialize
-import traceback
-import sys
-import pickle
 
 # This scripts executes a parsl function which is pickled in 4 files:
 #
