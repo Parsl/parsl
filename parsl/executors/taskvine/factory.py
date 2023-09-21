@@ -59,4 +59,3 @@ def _taskvine_factory(should_stop, factory_config):
         should_stop.wait()
 
     logger.debug("Exiting TaskVine factory process")
-    return 0
