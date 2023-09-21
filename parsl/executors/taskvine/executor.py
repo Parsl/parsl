@@ -107,9 +107,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Set worker launch option for this executor
         if worker_launch_method == 'factory' or worker_launch_method == 'manual':
             provider = None
-        elif worker_launch_method != 'provider':
-            raise ExecutorError(self, "Worker launch option '{worker_launch_method}' \
-                                       is not supported.")
 
         # Initialize the parent class with the execution provider and block error handling enabled.
         # If provider is None, then no worker is launched via the provider method.
