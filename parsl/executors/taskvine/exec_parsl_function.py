@@ -5,15 +5,17 @@ import traceback
 import sys
 import pickle
 
-# This scripts executes a parsl function which is pickled in 3 files:
+# This scripts executes a parsl function which is pickled in 4 files:
 #
-# exec_parsl_function.py map_file function_file result_file
+# exec_parsl_function.py map_file function_file argument_file result_file
 #
 # map_file: Contains a pickled dictionary that indicates which local_paths the
 #           parsl Files should take.
 #
 # function_file: Contains a pickle parsl function. Function might be serialized in advance.
 # See @parsl.serialize.concretes.py
+#
+# argument_file: Contains the serialized arguments to the function call.
 #
 # result_file: A file path, whose content will contain the result of the function, including any
 #              exception generated. Exceptions will be wrapped with RemoteExceptionWrapper.
@@ -119,10 +121,6 @@ def load_function(map_file, function_file, argument_file):
     # will be stored in this variable in the user namespace.
     # Returns (namespace, function_code, result_name)
 
-    # Create the namespace to isolate the function execution.
-    user_ns = locals()
-    user_ns.update({'__builtins__': __builtins__})
-
     packed_function = load_pickled_file(function_file)
     packed_argument = load_pickled_file(argument_file)
 
@@ -134,6 +132,10 @@ def load_function(map_file, function_file, argument_file):
 
     mapping = load_pickled_file(map_file)
     remap_all_files(mapping, fn_args, fn_kwargs)
+    
+    # Create the namespace to isolate the function execution.
+    user_ns = locals()
+    user_ns.update({'__builtins__': __builtins__})
 
     (code, result_name) = encode_function(user_ns, fn, fn_name, fn_args, fn_kwargs)
 
