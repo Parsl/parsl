@@ -19,7 +19,7 @@ import itertools
 import uuid
 from ctypes import c_bool
 from concurrent.futures import Future
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Literal
 
 # Import Parsl constructs
 import parsl.utils as putils
@@ -71,7 +71,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             with respect to other executors.
             Default is "TaskVineExecutor".
 
-        worker_launch_method: str
+        worker_launch_method: Union[Literal['provider'], Literal['factory'], Literal['manual']]
             Choose to use Parsl provider, TaskVine factory, or
             manual user-provided workers to scale workers.
             Options are among {'provider', 'factory', 'manual'}.
@@ -98,7 +98,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     @typeguard.typechecked
     def __init__(self,
                  label: str = "TaskVineExecutor",
-                 worker_launch_method: str = 'factory',
+                 worker_launch_method: Union[Literal['provider'], Literal['factory'], Literal['manual']] = 'factory',
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  factory_config: TaskVineFactoryConfig = TaskVineFactoryConfig(),
                  provider: Optional[ExecutionProvider] = LocalProvider(init_blocks=1),
