@@ -264,10 +264,11 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Begin work
         self._submit_process.start()
 
-        # Run worker scaler either with Parsl provider or TaskVine factory
+        # Run worker scaler either with Parsl provider or TaskVine factory.
+        # Skip if workers are launched manually.
         if self.worker_launch_method == 'factory':
             self._factory_process.start()
-        else:
+        elif self.worker_launch_method == 'provider':
             self.initialize_scaling()
 
         self._collector_thread.start()
