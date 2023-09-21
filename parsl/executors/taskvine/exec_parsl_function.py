@@ -1,6 +1,5 @@
 import traceback
 import sys
-import os
 
 import pickle
 from parsl.app.errors import RemoteExceptionWrapper
