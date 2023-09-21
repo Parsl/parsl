@@ -197,10 +197,10 @@ def _taskvine_submit_wait(ready_task_queue=None,
     logger.debug("Entering main loop of TaskVine manager")
 
     while not should_stop.is_set():
-        # Monitor the task queue
+        # Check if executor process is still running
         ppid = os.getppid()
         if ppid != orig_ppid:
-            logger.debug("new Process")
+            logger.debug("Executor process is detected to have exited. Exiting..")
             break
 
         # Submit tasks
