@@ -54,7 +54,7 @@ class PollItem:
             if delta_status:
                 self.send_monitoring_info(delta_status)
 
-    def send_monitoring_info(self, status: Dict):
+    def send_monitoring_info(self, status: Dict) -> None:
         # Send monitoring info for HTEX when monitoring enabled
         if self.monitoring_enabled:
             msg = self._executor.create_monitoring_info(status)
@@ -101,19 +101,19 @@ class PollItem:
 
 
 class JobStatusPoller(Timer):
-    def __init__(self, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
+    def __init__(self, dfk: "parsl.dataflow.dflow.DataFlowKernel") -> None:
         self._poll_items = []  # type: List[PollItem]
         self.dfk = dfk
         self._strategy = Strategy(strategy=dfk.config.strategy,
                                   max_idletime=dfk.config.max_idletime)
         super().__init__(self.poll, interval=5, name="JobStatusPoller")
 
-    def poll(self):
+    def poll(self) -> None:
         self._update_state()
         self._run_error_handlers(self._poll_items)
         self._strategy.strategize(self._poll_items)
 
-    def _run_error_handlers(self, status: List[PollItem]):
+    def _run_error_handlers(self, status: List[PollItem]) -> None:
         for es in status:
             es.executor.handle_errors(es.status)
 
