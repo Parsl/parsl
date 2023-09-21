@@ -77,6 +77,11 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             Options are among {'provider', 'factory', 'manual'}.
             Default is 'factory'.
 
+        function_exec_mode: Union[Literal['regular'], Literal['serverless']]
+            Choose to execute functions with a regular fresh python process or a 
+            pre-warmed forked python process.
+            Default is 'regular'.
+
         manager_config: TaskVineManagerConfig
             Configuration for the TaskVine manager. Default
 
@@ -99,6 +104,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     def __init__(self,
                  label: str = "TaskVineExecutor",
                  worker_launch_method: Union[Literal['provider'], Literal['factory'], Literal['manual']] = 'factory',
+                 function_exec_mode: Union[Literal['regular'], Literal['serverless']] = 'regular',
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  factory_config: TaskVineFactoryConfig = TaskVineFactoryConfig(),
                  provider: Optional[ExecutionProvider] = LocalProvider(init_blocks=1),
@@ -123,6 +129,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Executor configurations
         self.label = label
         self.worker_launch_method = worker_launch_method
+        self.function_exec_mode = function_exec_mode
         self.manager_config = manager_config
         self.factory_config = factory_config
         self.storage_access = storage_access
@@ -312,7 +319,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug(f'Got resource specification: {resource_specification}')
 
         # Default execution mode of apps is regular
-        exec_mode = resource_specification.get('exec_mode', 'regular')
+        exec_mode = resource_specification.get('exec_mode', self.function_exec_mode)
 
         # Detect resources and features of a submitted Parsl app
         cores = None
