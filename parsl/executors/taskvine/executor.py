@@ -11,13 +11,11 @@ import tempfile
 import hashlib
 import subprocess
 import os
-import pickle
 import queue
 import inspect
 import shutil
 import itertools
 import uuid
-from ctypes import c_bool
 from concurrent.futures import Future
 from typing import List, Optional, Union, Literal
 
@@ -78,7 +76,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             Default is 'factory'.
 
         function_exec_mode: Union[Literal['regular'], Literal['serverless']]
-            Choose to execute functions with a regular fresh python process or a 
+            Choose to execute functions with a regular fresh python process or a
             pre-warmed forked python process.
             Default is 'regular'.
 

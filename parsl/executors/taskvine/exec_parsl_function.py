@@ -125,7 +125,7 @@ def load_function(map_file, function_file, argument_file):
 
     mapping = unpack_object_from_file(map_file)
     remap_all_files(mapping, fn_args, fn_kwargs)
-    
+
     # Create the namespace to isolate the function execution.
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})

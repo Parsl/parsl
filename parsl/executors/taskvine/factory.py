@@ -1,5 +1,4 @@
 import logging
-import time
 
 from parsl.process_loggers import wrap_with_logs
 from parsl.executors.taskvine.errors import TaskVineFactoryFailure
