@@ -51,10 +51,6 @@ class LocalChannel(Channel, RepresentationMixin):
         Raises:
         None.
         '''
-        retcode = -1
-        stdout = None
-        stderr = None
-
         current_env = copy.deepcopy(self._envs)
         current_env.update(envs)
 
