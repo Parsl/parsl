@@ -1,5 +1,5 @@
 Roadmap
-===================
+=======
 
 **OVERVIEW**
 
@@ -10,7 +10,7 @@ Features and improvements are documented via GitHub
 
 
 Code Maintenance
----------------------
+----------------
 
 * **Type Annotations and Static Type Checking**: Add static type annotations throughout the codebase and add typeguard checks.
 * **Release Process**: `Improve the overall release process <https://github.com/Parsl/parsl/issues?q=is%3Aopen+is%3Aissue+label%3Arelease_process>`_ to synchronize docs and code releases, automatically produce changelog documentation.
@@ -19,7 +19,7 @@ Code Maintenance
 * **Distributed Testing Process**: All tests should be run against all possible schedulers, using different executors, on a variety of remote systems. Explore the use of containerized schedulers and remote testing on real systems.
 
 New Features and Integrations
----------------
+-----------------------------
 
 * **Enhanced MPI Support**: Extend Parsl’s MPI model with MPI apps and runtime support capable of running MPI apps in different environments (MPI flavor and launcher).
 * **Serialization Configuration**: Enable users to select what serialization methods are used and enable users to supply their own serializer.
@@ -35,15 +35,16 @@ New Features and Integrations
 * **Enhanced Debugging**: Application-level `logging <https://github.com/Parsl/parsl/issues/1984>`_ to understand app execution. 
 
 Tutorials, Training, and User Support
-------------------------------------
+-------------------------------------
 
 * **Configuration and Debugging**: Tutorials showing how to configure Parsl for different resources and debug execution. 
 * **Functional Serialization 101**: Tutorial describing how serialization works and how you can integrate custom serializers. 
 * **ProxyStore Data Management**: Tutorial showing how you can use ProxyStore to manage data for both inter and intra-site scenarios.
 * **Open Dev Calls on Zoom**: The internal core team holds an open dev call/office hours every other Thursday to help users troubleshoot issues, present and share their work, connect with each other, and provide community updates.
+* **Project Documentation**: is maintained and updated in `Read the Docs <https://parsl.readthedocs.io/en/stable/index.html>`_.
 
 Longer-term Objectives
------------------------------------
+----------------------
 
 * **Globus Compute Integration**: Once Globus Compute supports multi-tenancy, Parsl will be able to use it to run remote tasks on initially one and then later multiple resources.
 * **Multi-System Optimization**: Once Globus Compute integration is complete, it is best to use multiple systems for multiple tasks as part of a single workflow.
