@@ -62,7 +62,7 @@ def performance(*, resources: dict, target_t: float):
         print(f"Runtime: actual {delta_t:.3f}s vs target {target_t}s")
         print(f"Tasks per second: {rate:.3f}")
 
-        n = int(target_t * rate)
+        n = max(1, int(target_t * rate))
 
         iteration += 1
 
