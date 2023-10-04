@@ -12,7 +12,7 @@ from typing import Dict, Sequence  # noqa F401 (used in type annotation)
 from typing import List, Optional, Tuple, Union, Callable
 import math
 
-from parsl.serialize import pack_apply_message, deserialize
+from parsl.serialize import pack_res_spec_apply_message, deserialize
 from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.jobs.states import JobStatus
@@ -20,7 +20,6 @@ from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
     BadMessage, ScalingFailed,
-    UnsupportedFeatureError
 )
 
 from parsl.executors.status_handling import BlockProviderExecutor
@@ -32,6 +31,7 @@ from parsl.process_loggers import wrap_with_logs
 from parsl.multiprocessing import ForkProcess
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
+from parsl.executors.high_throughput.mpi_prefix_composer import VALID_LAUNCHERS
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +187,16 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     worker_logdir_root : string
         In case of a remote file system, specify the path to where logs will be kept.
+
+    enable_mpi_mode: bool
+        If enabled, MPI launch prefixes will be composed for the batch scheduler based on
+        the nodes available in each batch job and the resource_specification dict passed
+        from the app
+
+    mpi_launcher: str
+        This field is only used if enable_mpi_mode is set. Select one from the
+        list of supported MPI launchers = ("srun", "aprun", "mpiexec").
+        default: "mpiexec"
     """
 
     @typeguard.typechecked
@@ -213,6 +223,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  poll_period: int = 10,
                  address_probe_timeout: Optional[int] = None,
                  worker_logdir_root: Optional[str] = None,
+                 enable_mpi_mode: bool = False,
+                 mpi_launcher: str = "mpiexec",
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True):
 
         logger.debug("Initializing HighThroughputExecutor")
@@ -230,6 +242,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.address = address
         self.address_probe_timeout = address_probe_timeout
         self.start_method = start_method
+        self.enable_mpi_mode = enable_mpi_mode
+        assert mpi_launcher in VALID_LAUNCHERS, \
+            f"mpi_launcher must be set to one of {VALID_LAUNCHERS}"
+        self.mpi_launcher = mpi_launcher
+
         if self.address:
             self.all_addresses = address
         else:
@@ -300,6 +317,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                "--hb_threshold={heartbeat_threshold} "
                                "--cpu-affinity {cpu_affinity} "
                                "--available-accelerators {accelerators} "
+                               "{enable_mpi_mode} "
+                               "--mpi-launcher={mpi_launcher} "
                                "--start-method {start_method}")
 
     radio_mode = "htex"
@@ -308,6 +327,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """Compose the launch command and scale out the initial blocks.
         """
         debug_opts = "--debug" if self.worker_debug else ""
+        enable_mpi_opts = "--enable_mpi_mode " if self.enable_mpi_mode else ""
         max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
 
         address_probe_timeout_string = ""
@@ -333,6 +353,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                        logdir=worker_logdir,
                                        cpu_affinity=self.cpu_affinity,
                                        accelerators=" ".join(self.available_accelerators),
+                                       enable_mpi_mode=enable_mpi_opts,
+                                       mpi_launcher=self.mpi_launcher,
                                        start_method=self.start_method)
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
@@ -481,8 +503,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                                     "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
                                                     },
                                             daemon=True,
-                                            name="HTEX-Interchange"
-                                            )
+                                            name="HTEX-Interchange")
+
         self.interchange_proc.start()
         try:
             (self.worker_task_port, self.worker_result_port) = comm_q.get(block=True, timeout=120)
@@ -573,11 +595,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         Returns:
               Future
         """
+        """
         if resource_specification:
             logger.error("Ignoring the call specification. "
                          "Parsl call specification is not supported in HighThroughput Executor.")
             raise UnsupportedFeatureError('resource specification', 'HighThroughput Executor', None)
-
+        """
         if self.bad_state_is_set:
             raise self.executor_exception
 
@@ -595,8 +618,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.tasks[task_id] = fut
 
         try:
-            fn_buf = pack_apply_message(func, args, kwargs,
-                                        buffer_threshold=1024 * 1024)
+            fn_buf = pack_res_spec_apply_message(func, args, kwargs,
+                                                 resource_specification=resource_specification,
+                                                 buffer_threshold=1024 * 1024)
         except TypeError:
             raise SerializationError(func.__name__)
 

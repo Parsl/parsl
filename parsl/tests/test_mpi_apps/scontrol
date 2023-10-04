@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "NODE1"
+echo "NODE2"
+echo "NODE3"

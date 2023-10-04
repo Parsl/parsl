@@ -11,7 +11,7 @@ import time
 import queue
 import uuid
 from threading import Thread
-from typing import Sequence, Optional
+from typing import Sequence, Optional, Dict, List
 
 import zmq
 import math
@@ -27,10 +27,12 @@ from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.probe import probe_addresses
 from parsl.multiprocessing import ForkProcess as mpForkProcess
 from parsl.multiprocessing import SpawnProcess as mpSpawnProcess
-
 from parsl.multiprocessing import SizedQueue as mpQueue
-
-from parsl.serialize import unpack_apply_message, serialize
+from parsl.executors.high_throughput.mpi_resource_management import (
+    MPIResourceTracker
+)
+from parsl.executors.high_throughput.mpi_prefix_composer import compose_all, VALID_LAUNCHERS
+from parsl.serialize import unpack_res_spec_apply_message, serialize
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 
@@ -66,6 +68,8 @@ class Manager:
                  heartbeat_period=30,
                  poll_period=10,
                  cpu_affinity=False,
+                 enable_mpi_mode: bool = False,
+                 mpi_launcher: str = 'mpiexec',
                  available_accelerators: Sequence[str] = (),
                  start_method: str = 'fork'):
         """
@@ -128,6 +132,14 @@ class Manager:
             What method to use to start new worker processes. Choices are fork, spawn, and thread.
             Default: fork
 
+        enable_mpi_mode: bool
+            When set to true, the manager assumes ownership of the batch job and each worker
+            claims a subset of nodes from a shared pool to execute multi-node mpi tasks. Node
+            info is made available to workers via env vars.
+
+        mpi_launcher: str
+            Set to one of the supported MPI launchers: ("srun", "aprun", "mpiexec")
+
         """
 
         logger.info("Manager started")
@@ -163,6 +175,16 @@ class Manager:
 
         self.uid = uid
         self.block_id = block_id
+
+        self.enable_mpi_mode = enable_mpi_mode
+        self.mpi_node_tracker: Optional[MPIResourceTracker] = None
+
+        self.mpi_launcher = mpi_launcher
+        if self.enable_mpi_mode:
+            self.mpi_node_tracker = MPIResourceTracker(
+                nodes_q=multiprocessing.Queue(),
+                mpi_launcher=self.mpi_launcher,
+                inflight_q=multiprocessing.Queue())
 
         if os.environ.get('PARSL_CORES'):
             cores_on_node = int(os.environ['PARSL_CORES'])
@@ -405,7 +427,10 @@ class Manager:
                                                             self.pending_result_queue,
                                                             self.ready_worker_queue,
                                                             self._tasks_in_progress,
-                                                            self.cpu_affinity),
+                                                            self.cpu_affinity,
+                                                            self.mpi_launcher,
+                                                            self.mpi_node_tracker,
+                                                            ),
                                        name="HTEX-Worker-{}".format(worker_id))
                     self.procs[worker_id] = p
                     logger.info("Worker {} has been restarted".format(worker_id))
@@ -415,7 +440,7 @@ class Manager:
     def start(self):
         """ Start the worker processes.
 
-        TODO: Move task receiving to a thread
+        TODO: Move task receiving to a thread3
         """
         start = time.time()
         self._kill_event = threading.Event()
@@ -432,7 +457,10 @@ class Manager:
                                      self.ready_worker_queue,
                                      self._tasks_in_progress,
                                      self.cpu_affinity,
-                                     self.available_accelerators[worker_id] if self.accelerators_available else None),
+                                     self.available_accelerators[worker_id] if self.accelerators_available else None,
+                                     self.mpi_launcher,
+                                     self.mpi_node_tracker,
+                                     ),
                                name="HTEX-Worker-{}".format(worker_id))
             p.start()
             self.procs[worker_id] = p
@@ -477,7 +505,14 @@ class Manager:
         return
 
 
-def execute_task(bufs):
+def update_resource_spec_env_vars(mpi_launcher: str, resource_spec: Dict, node_info: List[str]) -> None:
+
+    prefix_table = compose_all(mpi_launcher, resource_spec=resource_spec, node_hostnames=node_info)
+    for key in prefix_table:
+        os.environ[key] = prefix_table[key]
+
+
+def execute_task(bufs, mpi_node_tracker: Optional[MPIResourceTracker] = None, mpi_launcher="mpiexec"):
     """Deserialize the buffer and execute the task.
 
     Returns the result or throws exception.
@@ -485,7 +520,22 @@ def execute_task(bufs):
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})
 
-    f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
+    f, args, kwargs, resource_spec = unpack_res_spec_apply_message(bufs, user_ns, copy=False)
+
+    nodes_for_task = None
+    for varname in resource_spec:
+        envname = "PARSL_" + str(varname).upper()
+        os.environ[envname] = str(resource_spec[varname])
+
+    if resource_spec.get('NUM_NODES') and mpi_node_tracker:
+        logger.warning(f"TODO: Requesting {resource_spec['NUM_NODES']} nodes")
+        worker_id = os.environ['PARSL_WORKER_RANK']
+        nodes_for_task = mpi_node_tracker.get_nodes(resource_spec['NUM_NODES'],
+                                                    owner_tag=worker_id)
+        logger.warning(f"TODO: Successfully provisioned nodes: {nodes_for_task}")
+        update_resource_spec_env_vars(mpi_launcher,
+                                      resource_spec=resource_spec,
+                                      node_info=nodes_for_task)
 
     # We might need to look into callability of the function from itself
     # since we change it's name in the new namespace
@@ -495,19 +545,34 @@ def execute_task(bufs):
     kwargname = prefix + "kwargs"
     resultname = prefix + "result"
 
-    user_ns.update({fname: f,
-                    argname: args,
-                    kwargname: kwargs,
-                    resultname: resultname})
+    try:
+        user_ns.update({fname: f,
+                        argname: args,
+                        kwargname: kwargs,
+                        resultname: resultname})
 
-    code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
-                                           argname, kwargname)
-    exec(code, user_ns, user_ns)
-    return user_ns.get(resultname)
+        code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
+                                               argname, kwargname)
+        exec(code, user_ns, user_ns)
+    finally:
+        # Return the held nodes if any before raising exceptions are processed
+        if nodes_for_task and mpi_node_tracker:
+            logger.info(f"Relinquishing nodes: {len(nodes_for_task)}")
+            logger.warning(
+                f"YADU BEFORE: inflight_qsize: {mpi_node_tracker.inflight_q.qsize()} nodes_qsize:{mpi_node_tracker.nodes_q.qsize()}")
+            mpi_node_tracker.return_nodes(num_nodes=len(nodes_for_task), owner_tag=worker_id)
+            logger.warning(
+                f"YADU AFTER: inflight_qsize: {mpi_node_tracker.inflight_q.qsize()} nodes_qsize:{mpi_node_tracker.nodes_q.qsize()}")
+
+    result = user_ns.get(resultname)
+    return result
 
 
 @wrap_with_logs(target="worker_log")
-def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue, tasks_in_progress, cpu_affinity, accelerator: Optional[str]):
+def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue, tasks_in_progress, cpu_affinity,
+           accelerator: Optional[str],
+           mpi_launcher: str,
+           mpi_node_tracker: Optional[MPIResourceTracker]):
     """
 
     Put request token into queue
@@ -537,6 +602,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
     logger.info('Worker {} started'.format(worker_id))
     if args.debug:
         logger.debug("Debug logging enabled")
+    logger.warning(f"YADU: Got mpi_node_tracker: {mpi_node_tracker}")
 
     # If desired, set process affinity
     if cpu_affinity != "none":
@@ -592,7 +658,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
             pass
 
         try:
-            result = execute_task(req['buffer'])
+            result = execute_task(req['buffer'], mpi_node_tracker=mpi_node_tracker, mpi_launcher=mpi_launcher)
             serialized_result = serialize(result, buffer_threshold=1000000)
         except Exception as e:
             logger.info('Caught an exception: {}'.format(e))
@@ -647,6 +713,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true',
                         help="Count of apps to launch")
+    parser.add_argument("--enable_mpi_mode", action='store_true',
+                        help="Enable MPI mode")
     parser.add_argument("-a", "--addresses", default='',
                         help="Comma separated list of addresses at which the interchange could be reached")
     parser.add_argument("-l", "--logdir", default="process_worker_pool_logs",
@@ -681,6 +749,8 @@ if __name__ == "__main__":
                         help="Names of available accelerators")
     parser.add_argument("--start-method", type=str, choices=["fork", "spawn", "thread"], default="fork",
                         help="Method used to start new worker processes")
+    parser.add_argument("--mpi-launcher", type=str, choices=VALID_LAUNCHERS,
+                        help="Mpi launcher to use iff enable_mpi_mode=true")
 
     args = parser.parse_args()
 
@@ -710,6 +780,7 @@ if __name__ == "__main__":
         logger.info("CPU affinity: {}".format(args.cpu_affinity))
         logger.info("Accelerators: {}".format(" ".join(args.available_accelerators)))
         logger.info("Start method: {}".format(args.start_method))
+        logger.info("enable_mpi_mode: {}".format(args.enable_mpi_mode))
 
         manager = Manager(task_port=args.task_port,
                           result_port=args.result_port,
@@ -725,6 +796,8 @@ if __name__ == "__main__":
                           heartbeat_period=int(args.hb_period),
                           poll_period=int(args.poll),
                           cpu_affinity=args.cpu_affinity,
+                          enable_mpi_mode=args.enable_mpi_mode,
+                          mpi_launcher=args.mpi_launcher,
                           available_accelerators=args.available_accelerators)
         manager.start()
 
