@@ -305,10 +305,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     radio_mode = "htex"
 
     def initialize_scaling(self):
-        """ Compose the launch command and call the scale_out
-
-        This should be implemented in the child classes to take care of
-        executor specific oddities.
+        """Compose the launch command and scale out the initial blocks.
         """
         debug_opts = "--debug" if self.worker_debug else ""
         max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
@@ -390,7 +387,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         The `None` message is a die request.
         """
-        logger.debug("queue management worker starting")
+        logger.debug("Queue management worker starting")
 
         while not self.bad_state_is_set:
             try:
@@ -459,7 +456,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                         else:
                             raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
-        logger.info("queue management worker finished")
+        logger.info("Queue management worker finished")
 
     def _start_local_interchange_process(self):
         """ Starts the interchange process locally

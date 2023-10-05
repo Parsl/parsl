@@ -297,12 +297,6 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
             )
             return future
 
-    def scale_in(self, *args, **kwargs):
-        pass
-
-    def scale_out(self):
-        pass
-
 
 def _submit_wrapper(
     submission_queue: queue.Queue, stop_event: threading.Event, *args, **kwargs
