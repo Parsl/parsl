@@ -123,7 +123,12 @@ class AppFuture(Future):
     def __getitem__(self, key: Any) -> AppFuture:
         # hack around circular imports for python_app
         from parsl.app.app import python_app
-        deferred_getitem_app = python_app(deferred_getitem)
+
+        # TODO: this should be run on the same DFK as is executing the
+        # task that is associated with this future. That value isn't
+        # easily available here (although probably the right thing to
+        # do is add it to self.task_def)
+        deferred_getitem_app = python_app(deferred_getitem, executors=['_parsl_internal'])
 
         return deferred_getitem_app(self, key)
 
