@@ -5,11 +5,12 @@ We have two basic types of futures:
     2. AppFutures which represent the futures on App/Leaf tasks.
 
 """
+from __future__ import annotations
 
 from concurrent.futures import Future
 import logging
 import threading
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence
 
 from parsl.app.futures import DataFuture
 from parsl.dataflow.taskrecord import TaskRecord
@@ -118,3 +119,17 @@ class AppFuture(Future):
     @property
     def outputs(self) -> Sequence[DataFuture]:
         return self._outputs
+
+    def __getitem__(self, key: Any) -> AppFuture:
+        
+        # hack around circular imports for python_app
+        from parsl.app.app import python_app
+        deferred_getitem_app = python_app(deferred_getitem) 
+
+        return deferred_getitem_app(self, key)
+
+# this needs python_app to be importable, but three's an import loop
+# if so... so hack around it for prototyping.
+# @python_app
+def deferred_getitem(o:Any, k: Any) -> Any:
+    return o[k]
