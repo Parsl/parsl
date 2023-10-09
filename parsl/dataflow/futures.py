@@ -124,6 +124,13 @@ class AppFuture(Future):
         # hack around circular imports for python_app
         from parsl.app.app import python_app
 
+        # TODO: it would be nice to avoid redecorating this each time,
+        # which was done to avoid import loops here -- but the DFK
+        # is not defined at import time, and so this decoration needs
+        # to happen at least once per DFK. So perhaps for implementation
+        # simplicity, this redecoration should always happen, as happens
+        # for example with the globus data provider.
+
         # TODO: this should be run on the same DFK as is executing the
         # task that is associated with this future. That value isn't
         # easily available here (although probably the right thing to
