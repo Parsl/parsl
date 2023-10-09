@@ -48,7 +48,7 @@ def performance(*, resources: dict, target_t: float):
 
         submitted_t = time.time()
         print(f"All {n} tasks submitted ... waiting for completion")
-        print(f"Submission took {submitted_t - start_t:.3f} seconds = {n/(submitted_t - start_t):.3f} tasks/second")
+        print(f"Submission took {submitted_t - start_t:.3f} seconds = {n / (submitted_t - start_t):.3f} tasks/second")
 
         for f in concurrent.futures.as_completed(fs):
             assert f.result() == 7
@@ -62,7 +62,7 @@ def performance(*, resources: dict, target_t: float):
         print(f"Runtime: actual {delta_t:.3f}s vs target {target_t}s")
         print(f"Tasks per second: {rate:.3f}")
 
-        n = int(target_t * rate)
+        n = max(1, int(target_t * rate))
 
         iteration += 1
 
