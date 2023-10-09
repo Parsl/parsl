@@ -121,15 +121,15 @@ class AppFuture(Future):
         return self._outputs
 
     def __getitem__(self, key: Any) -> AppFuture:
-        
         # hack around circular imports for python_app
         from parsl.app.app import python_app
-        deferred_getitem_app = python_app(deferred_getitem) 
+        deferred_getitem_app = python_app(deferred_getitem)
 
         return deferred_getitem_app(self, key)
+
 
 # this needs python_app to be importable, but three's an import loop
 # if so... so hack around it for prototyping.
 # @python_app
-def deferred_getitem(o:Any, k: Any) -> Any:
+def deferred_getitem(o: Any, k: Any) -> Any:
     return o[k]
