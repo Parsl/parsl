@@ -22,3 +22,13 @@ The end result is that this assertion will hold:
 but more concurrency will be available, as execution of the main workflow
 code will not stop to wait for ``result()`` to complete on the initial
 future.
+
+`AppFuture` does not implement other methods commonly associated with
+dicts and lists, such as ``len``, because those methods should return a
+specific type of result immediately, and that is not possible when the
+results are not available until the future.
+
+If a key does not exist in the returned result, then the exception will
+appear in the Future returned by ``[]``, rather than at the point that
+the ``[]`` operator is applied. This is because the valid values that can
+be used are not known until the underlying result is available.
