@@ -12,7 +12,7 @@ def returns_a_list():
 
 
 @python_app
-def returns_a_set():
+def returns_a_tuple():
     return ("X", "Y")
 
 
@@ -50,15 +50,15 @@ def test_returns_a_list():
     assert returns_a_list()[0].result() == "X"
 
 
-def test_returns_a_set():
+def test_returns_a_tuple():
 
-    # precondition that returns_a_set behaves
+    # precondition that returns_a_tuple behaves
     # correctly
-    assert returns_a_set().result()[0] == "X"
+    assert returns_a_tuple().result()[0] == "X"
 
     # check that the deferred __getitem__ functionality works,
     # allowing [] to be used on an AppFuture
-    assert returns_a_set()[0].result() == "X"
+    assert returns_a_tuple()[0].result() == "X"
 
 
 def test_returns_a_class():
