@@ -918,7 +918,7 @@ class DataFlowKernel:
             - executors (list or string) : List of executors this call could go to.
                     Default='all'
             - cache (Bool) : To enable memoization or not
-            - ignore_for_cache (list) : List of kwargs to be ignored for memoization/checkpointing
+            - ignore_for_cache (sequence) : List of kwargs to be ignored for memoization/checkpointing
             - app_kwargs (dict) : Rest of the kwargs to the fn passed as dict.
 
         Returns:
