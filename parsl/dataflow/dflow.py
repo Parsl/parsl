@@ -969,6 +969,7 @@ class DataFlowKernel:
 
         task_def: TaskRecord
         task_def = {'depends': [],
+                    'dfk': self,
                     'executor': executor,
                     'func_name': func.__name__,
                     'memoize': cache,
