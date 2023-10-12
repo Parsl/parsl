@@ -5,9 +5,11 @@ from parsl import python_app
 def returns_a_dict():
     return {"a": "X", "b": "Y"}
 
+
 @python_app
 def returns_a_list():
     return ["X", "Y"]
+
 
 @python_app
 def returns_a_class():
@@ -20,6 +22,7 @@ def returns_a_class():
 
     return MyClass
 
+
 def test_returns_a_dict():
 
     # precondition that returns_a_dict behaves
@@ -30,6 +33,7 @@ def test_returns_a_dict():
     # allowing [] to be used on an AppFuture
     assert returns_a_dict()["a"].result() == "X"
 
+
 def test_returns_a_list():
 
     # precondition that returns_a_list behaves
@@ -39,6 +43,7 @@ def test_returns_a_list():
     # check that the deferred __getitem__ functionality works,
     # allowing [] to be used on an AppFuture
     assert returns_a_list()[0].result() == "X"
+
 
 def test_returns_a_class():
 

@@ -158,11 +158,13 @@ class AppFuture(Future):
 
         return deferred_getattr_app(self, name)
 
+
 # this needs python_app to be importable, but three's an import loop
 # if so... so hack around it for prototyping.
 # @python_app
 def deferred_getitem(o: Any, k: Any) -> Any:
     return o[k]
+
 
 # this needs python_app to be importable, but three's an import loop
 # if so... so hack around it for prototyping.
