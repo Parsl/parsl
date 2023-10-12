@@ -12,6 +12,11 @@ def returns_a_list():
 
 
 @python_app
+def returns_a_set():
+    return ("X", "Y")
+
+
+@python_app
 def returns_a_class():
     from dataclasses import dataclass
 
@@ -43,6 +48,17 @@ def test_returns_a_list():
     # check that the deferred __getitem__ functionality works,
     # allowing [] to be used on an AppFuture
     assert returns_a_list()[0].result() == "X"
+
+
+def test_returns_a_set():
+
+    # precondition that returns_a_set behaves
+    # correctly
+    assert returns_a_set().result()[0] == "X"
+
+    # check that the deferred __getitem__ functionality works,
+    # allowing [] to be used on an AppFuture
+    assert returns_a_set()[0].result() == "X"
 
 
 def test_returns_a_class():
