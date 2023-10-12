@@ -11,15 +11,13 @@ import tempfile
 import hashlib
 import subprocess
 import os
-import pickle
 import queue
 import inspect
 import shutil
 import itertools
 import uuid
-from ctypes import c_bool
 from concurrent.futures import Future
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Literal
 
 # Import Parsl constructs
 import parsl.utils as putils
@@ -71,11 +69,16 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             with respect to other executors.
             Default is "TaskVineExecutor".
 
-        worker_launch_method: str
+        worker_launch_method: Union[Literal['provider'], Literal['factory'], Literal['manual']]
             Choose to use Parsl provider, TaskVine factory, or
             manual user-provided workers to scale workers.
             Options are among {'provider', 'factory', 'manual'}.
             Default is 'factory'.
+
+        function_exec_mode: Union[Literal['regular'], Literal['serverless']]
+            Choose to execute functions with a regular fresh python process or a
+            pre-warmed forked python process.
+            Default is 'regular'.
 
         manager_config: TaskVineManagerConfig
             Configuration for the TaskVine manager. Default
@@ -98,7 +101,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     @typeguard.typechecked
     def __init__(self,
                  label: str = "TaskVineExecutor",
-                 worker_launch_method: str = 'factory',
+                 worker_launch_method: Union[Literal['provider'], Literal['factory'], Literal['manual']] = 'factory',
+                 function_exec_mode: Union[Literal['regular'], Literal['serverless']] = 'regular',
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  factory_config: TaskVineFactoryConfig = TaskVineFactoryConfig(),
                  provider: Optional[ExecutionProvider] = LocalProvider(init_blocks=1),
@@ -107,9 +111,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Set worker launch option for this executor
         if worker_launch_method == 'factory' or worker_launch_method == 'manual':
             provider = None
-        elif worker_launch_method != 'provider':
-            raise ExecutorError(self, "Worker launch option '{worker_launch_method}' \
-                                       is not supported.")
 
         # Initialize the parent class with the execution provider and block error handling enabled.
         # If provider is None, then no worker is launched via the provider method.
@@ -126,6 +127,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Executor configurations
         self.label = label
         self.worker_launch_method = worker_launch_method
+        self.function_exec_mode = function_exec_mode
         self.manager_config = manager_config
         self.factory_config = factory_config
         self.storage_access = storage_access
@@ -136,8 +138,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Queue to send finished tasks from TaskVine manager process to TaskVine executor process
         self._finished_task_queue: multiprocessing.Queue = multiprocessing.Queue()
 
-        # Value to signal whether the manager and factory processes should stop running
-        self._should_stop = multiprocessing.Value(c_bool, False)
+        # Event to signal whether the manager and factory processes should stop running
+        self._should_stop = multiprocessing.Event()
 
         # TaskVine manager process
         self._submit_process = None
@@ -267,10 +269,11 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Begin work
         self._submit_process.start()
 
-        # Run worker scaler either with Parsl provider or TaskVine factory
+        # Run worker scaler either with Parsl provider or TaskVine factory.
+        # Skip if workers are launched manually.
         if self.worker_launch_method == 'factory':
             self._factory_process.start()
-        else:
+        elif self.worker_launch_method == 'provider':
             self.initialize_scaling()
 
         self._collector_thread.start()
@@ -314,7 +317,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug(f'Got resource specification: {resource_specification}')
 
         # Default execution mode of apps is regular
-        exec_mode = resource_specification.get('exec_mode', 'regular')
+        exec_mode = resource_specification.get('exec_mode', self.function_exec_mode)
 
         # Detect resources and features of a submitted Parsl app
         cores = None
@@ -391,9 +394,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 and result to be found at: {}".format(executor_task_id, function_file, argument_file, result_file))
 
         # Serialize function object and arguments, separately
-        self._serialize_object(function_file, func)
+        self._serialize_object_to_file(function_file, func)
         args_dict = {'args': args, 'kwargs': kwargs}
-        self._serialize_object(argument_file, args_dict)
+        self._serialize_object_to_file(argument_file, args_dict)
 
         # Construct the map file of local filenames at worker
         self._construct_map_file(map_file, input_files, output_files)
@@ -466,11 +469,13 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             if self.project_password_file:
                 self.provider.transfer_input_files.append(self.project_password_file)
 
-    def _serialize_object(self, path, obj):
+    def _serialize_object_to_file(self, path, obj):
         """Takes any object and serializes it to the file path."""
         serialized_obj = serialize(obj, buffer_threshold=1024 * 1024)
         with open(path, 'wb') as f_out:
-            pickle.dump(serialized_obj, f_out)
+            written = 0
+            while written < len(serialized_obj):
+                written += f_out.write(serialized_obj[written:])
 
     def _construct_map_file(self, map_file, input_files, output_files):
         """ Map local filepath of parsl files to the filenames at the execution worker.
@@ -485,8 +490,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             else:
                 remote_name = local_name
             file_translation_map[local_name] = remote_name
-        with open(map_file, "wb") as f_out:
-            pickle.dump(file_translation_map, f_out)
+        self._serialize_object_to_file(map_file, file_translation_map)
 
     def _register_file(self, parsl_file):
         """Generates a tuple (parsl_file.filepath, stage, cache) to give to
@@ -592,7 +596,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         collector thread, which shuts down the TaskVine system submission.
         """
         logger.debug("TaskVine shutdown started")
-        self._should_stop.value = True
+        self._should_stop.set()
 
         # Remove the workers that are still going
         kill_ids = [self.blocks[block] for block in self.blocks.keys()]
@@ -618,7 +622,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """
         logger.debug("Starting Collector Thread")
         try:
-            while not self._should_stop.value:
+            while not self._should_stop.is_set():
                 if not self._submit_process.is_alive():
                     raise ExecutorError(self, "taskvine Submit Process is not alive")
 

@@ -106,6 +106,8 @@ def _prepare_environment_regular(m, manager_config, t, task, poncho_env_to_file,
                 env_tarball = str(uuid.uuid4()) + '.tar.gz'
                 logger.debug(f'Creating a poncho environment at {env_tarball} from conda environment {manager_config.env_pack}')
                 subprocess.run([poncho_create_script, manager_config.env_pack, env_tarball], stdout=subprocess.DEVNULL, check=True)
+            else:
+                env_tarball = manager_config.env_pack
             poncho_env_file = m.declare_poncho(env_tarball, cache=True, peer_transfer=True)
             poncho_env_to_file[manager_config.env_pack] = poncho_env_file
         else:
@@ -194,15 +196,15 @@ def _taskvine_submit_wait(ready_task_queue=None,
 
     logger.debug("Entering main loop of TaskVine manager")
 
-    while not should_stop.value:
-        # Monitor the task queue
+    while not should_stop.is_set():
+        # Check if executor process is still running
         ppid = os.getppid()
         if ppid != orig_ppid:
-            logger.debug("new Process")
+            logger.debug("Executor process is detected to have exited. Exiting..")
             break
 
         # Submit tasks
-        while ready_task_queue.qsize() > 0 and not should_stop.value:
+        while ready_task_queue.qsize() > 0 and not should_stop.is_set():
             # Obtain task from ready_task_queue
             try:
                 task = ready_task_queue.get(timeout=1)
@@ -377,7 +379,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
         # If the queue is not empty wait on the TaskVine queue for a task
         task_found = True
         if not m.empty():
-            while task_found and not should_stop.value:
+            while task_found and not should_stop.is_set():
                 # Obtain the task from the queue
                 t = m.wait(1)
                 if t is None:
