@@ -12,6 +12,8 @@ import logging
 import threading
 from typing import Any, Optional, Sequence
 
+import parsl.app.app as app
+
 from parsl.app.futures import DataFuture
 from parsl.dataflow.taskrecord import TaskRecord
 
@@ -121,27 +123,13 @@ class AppFuture(Future):
         return self._outputs
 
     def __getitem__(self, key: Any) -> AppFuture:
-        # hack around circular imports for python_app
-        from parsl.app.app import python_app
-
-        # TODO: it would be nice to avoid redecorating this each time,
-        # which was done to avoid import loops here -- but the DFK
-        # is not defined at import time, and so this decoration needs
-        # to happen at least once per DFK. So perhaps for implementation
-        # simplicity, this redecoration should always happen, as happens
-        # for example with the globus data provider.
-
-        # TODO: this should be run on the same DFK as is executing the
-        # task that is associated with this future. That value isn't
-        # easily available here (although probably the right thing to
-        # do is add it to self.task_def)
-        deferred_getitem_app = python_app(deferred_getitem, executors=['_parsl_internal'])
+        # This is decorated on each invocation because the getitem task
+        # should be bound to the same DFK as the task associated with this
+        # Future.
+        deferred_getitem_app = app.python_app(deferred_getitem, executors=['_parsl_internal'], data_flow_kernel=self.task_def['dfk'])
 
         return deferred_getitem_app(self, key)
 
 
-# this needs python_app to be importable, but three's an import loop
-# if so... so hack around it for prototyping.
-# @python_app
 def deferred_getitem(o: Any, k: Any) -> Any:
     return o[k]
