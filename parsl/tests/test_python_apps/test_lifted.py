@@ -67,7 +67,7 @@ def test_returns_a_class():
     # correctly
     assert returns_a_class().result().a == "X"
 
-    # check that the deferred __getitem__ functionality works,
+    # check that the deferred __getattr__ functionality works,
     # allowing [] to be used on an AppFuture
     assert returns_a_class().a.result() == "X"
 
