@@ -2,7 +2,7 @@ import socket
 from dataclasses import dataclass
 from typing import Optional
 
-from ndcctools.taskvine.cvine import VINE_DEFAULT_PORT
+# from ndcctools.taskvine.cvine import VINE_DEFAULT_PORT
 
 
 @dataclass
@@ -142,7 +142,7 @@ class TaskVineManagerConfig:
     """
 
     # Connection and communication settings
-    port: int = VINE_DEFAULT_PORT
+    port: int = 99999999
     address: str = socket.gethostname()
     project_name: Optional[str] = None
     project_password_file: Optional[str] = None
