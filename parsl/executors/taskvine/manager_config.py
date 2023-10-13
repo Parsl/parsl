@@ -3,11 +3,11 @@ from dataclasses import dataclass
 from typing import Optional
 
 # This try except clause prevents import errors
-# when taskvine is not used in Parsl.
+# when TaskVine is not used in Parsl.
 try:
     from ndcctools.taskvine.cvine import VINE_DEFAULT_PORT
 except ImportError:
-    VINE_DEFAULT_PORT = 0
+    VINE_DEFAULT_PORT = 0   # use any available port.
 
 
 @dataclass
