@@ -1,17 +1,18 @@
+from __future__ import annotations
 import logging
 import threading
 from itertools import compress
 from abc import abstractmethod, abstractproperty
 from concurrent.futures import Future
-from typing import List, Any, Dict, Optional, Tuple, Union
+from typing import List, Any, Dict, Optional, Tuple, Union, Callable
 
 import parsl  # noqa F401
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
 from parsl.jobs.states import JobStatus, JobState
+from parsl.jobs.error_handlers import simple_error_handler, noop_error_handler
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import AtomicIDCounter
-
 
 logger = logging.getLogger(__name__)
 
@@ -46,10 +47,18 @@ class BlockProviderExecutor(ParslExecutor):
     """
     def __init__(self, *,
                  provider: Optional[ExecutionProvider],
-                 block_error_handler: bool):
+                 block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]]):
         super().__init__()
         self._provider = provider
-        self.block_error_handler = block_error_handler
+        self.block_error_handler: Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]
+        if isinstance(block_error_handler, bool):
+            if block_error_handler:
+                self.block_error_handler = simple_error_handler
+            else:
+                self.block_error_handler = noop_error_handler
+        else:
+            self.block_error_handler = block_error_handler
+
         # errors can happen during the submit call to the provider; this is used
         # to keep track of such errors so that they can be handled in one place
         # together with errors reported by status()
@@ -81,6 +90,14 @@ class BlockProviderExecutor(ParslExecutor):
 
     @property
     def status_polling_interval(self):
+        """Returns the interval, in seconds, at which the status method should be called. The
+        assumption here is that, once initialized, an executor's polling interval is fixed.
+        In practice, at least given the current situation, the executor uses a single task provider
+        and this method is a delegate to the corresponding method in the provider.
+
+        :return: the number of seconds to wait between calls to status() or zero if no polling
+                 should be done
+        """
         if self._provider is None:
             return 0
         else:
@@ -103,8 +120,10 @@ class BlockProviderExecutor(ParslExecutor):
                                   "outstanding()")
 
     def status(self) -> Dict[str, JobStatus]:
-        """Return status of all blocks."""
+        """Return the status of all jobs/blocks currently known to this executor.
 
+        :return: a dictionary mapping block ids (in string) to job status
+        """
         if self._provider:
             block_ids, job_ids = self._get_block_and_job_ids()
             status = self._make_status_dict(block_ids, self._provider.status(job_ids))
@@ -115,6 +134,11 @@ class BlockProviderExecutor(ParslExecutor):
         return status
 
     def set_bad_state_and_fail_all(self, exception: Exception):
+        """Allows external error handlers to mark this executor as irrecoverably bad and cause
+        all tasks submitted to it now and in the future to fail. The executor is responsible
+        for checking  :method:bad_state_is_set() in the :method:submit() method and raising the
+        appropriate exception, which is available through :method:executor_exception().
+        """
         logger.exception("Setting bad state due to exception", exc_info=exception)
         self._executor_exception = exception
         # Set bad state to prevent new tasks from being submitted
@@ -131,26 +155,26 @@ class BlockProviderExecutor(ParslExecutor):
 
     @property
     def bad_state_is_set(self):
+        """Returns true if this executor is in an irrecoverable error state. If this method
+        returns true, :property:executor_exception should contain an exception indicating the
+        cause.
+        """
         return self._executor_bad_state.is_set()
 
     @property
     def executor_exception(self):
+        """Returns an exception that indicates why this executor is in an irrecoverable state."""
         return self._executor_exception
 
-    @property
-    def error_management_enabled(self):
-        return self.block_error_handler
-
-    def handle_errors(self, error_handler: "parsl.jobs.job_error_handler.JobErrorHandler",
-                      status: Dict[str, JobStatus]) -> None:
-        if not self.block_error_handler:
-            return
-        init_blocks = 3
-        if hasattr(self.provider, 'init_blocks'):
-            init_blocks = self.provider.init_blocks
-        if init_blocks < 1:
-            init_blocks = 1
-        error_handler.simple_error_handler(self, status, init_blocks)
+    def handle_errors(self, status: Dict[str, JobStatus]) -> None:
+        """This method is called by the error management infrastructure after a status poll. The
+        executor implementing this method is then responsible for detecting abnormal conditions
+        based on the status of submitted jobs. If the executor does not implement any special
+        error handling, this method should return False, in which case a generic error handling
+        scheme will be used.
+        :param status: status of all jobs launched by this executor
+        """
+        self.block_error_handler(self, status)
 
     @property
     def tasks(self) -> Dict[object, Future]:
@@ -187,6 +211,20 @@ class BlockProviderExecutor(ParslExecutor):
                                      "Failed to start block {}: {}".format(block_id, ex))
         return block_ids
 
+    @abstractmethod
+    def scale_in(self, blocks: int) -> List[str]:
+        """Scale in method.
+
+        Cause the executor to reduce the number of blocks by count.
+
+        We should have the scale in method simply take resource object
+        which will have the scaling methods, scale_in itself should be a coroutine, since
+        scaling tasks can be slow.
+
+        :return: A list of block ids corresponding to the blocks that were removed.
+        """
+        pass
+
     def _launch_block(self, block_id: str) -> Any:
         launch_cmd = self._get_launch_command(block_id)
         job_name = f"parsl.{self.label}.block-{block_id}"
@@ -216,35 +254,3 @@ class BlockProviderExecutor(ParslExecutor):
     @abstractproperty
     def workers_per_node(self) -> Union[int, float]:
         pass
-
-
-class NoStatusHandlingExecutor(ParslExecutor):
-    @property
-    def status_polling_interval(self):
-        return -1
-
-    @property
-    def bad_state_is_set(self):
-        return False
-
-    @property
-    def error_management_enabled(self):
-        return False
-
-    @property
-    def executor_exception(self):
-        return None
-
-    def set_bad_state_and_fail_all(self, exception: Exception):
-        pass
-
-    def status(self):
-        return {}
-
-    def handle_errors(self, error_handler: "parsl.jobs.job_error_handler.JobErrorHandler",
-                      status: Dict[str, JobStatus]) -> None:
-        pass
-
-    @property
-    def provider(self):
-        return self._provider

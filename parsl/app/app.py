@@ -33,6 +33,7 @@ class AppBase(metaclass=ABCMeta):
                after calling :meth:`parsl.dataflow.dflow.DataFlowKernelLoader.load`.
              - executors (str|list) : Labels of the executors that this app can execute over. Default is 'all'.
              - cache (Bool) : Enable caching of this app ?
+             - ignore_for_cache (list|None): Names of arguments which will be ignored by the caching mechanism.
 
         Returns:
              - App object.
@@ -72,15 +73,14 @@ def python_app(function=None,
                data_flow_kernel: Optional[DataFlowKernel] = None,
                cache: bool = False,
                executors: Union[List[str], str] = 'all',
-               ignore_for_cache: Optional[List[str]] = None,
-               join: bool = False):
+               ignore_for_cache: Optional[List[str]] = None):
     """Decorator function for making python apps.
 
     Parameters
     ----------
     function : function
         Do not pass this keyword argument directly. This is needed in order to allow for omitted parenthesis,
-        for example, ``@join_app`` if using all defaults or ``@python_app(walltime=120)``. If the
+        for example, ``@python_app`` if using all defaults or ``@python_app(walltime=120)``. If the
         decorator is used alone, function will be the actual function being decorated, whereas if it
         is called with arguments, function will be None. Default is None.
     data_flow_kernel : DataFlowKernel
@@ -90,6 +90,8 @@ def python_app(function=None,
         Labels of the executors that this app can execute over. Default is 'all'.
     cache : bool
         Enable caching of the app call. Default is False.
+    ignore_for_cache : (list|None)
+        Names of arguments which will be ignored by the caching mechanism.
     """
     from parsl.app.python import PythonApp
 
@@ -111,7 +113,6 @@ def python_app(function=None,
 def join_app(function=None,
              data_flow_kernel: Optional[DataFlowKernel] = None,
              cache: bool = False,
-             executors: Union[List[str], str] = 'all',
              ignore_for_cache: Optional[List[str]] = None):
     """Decorator function for making join apps
 
@@ -127,6 +128,8 @@ def join_app(function=None,
         be omitted only after calling :meth:`parsl.dataflow.dflow.DataFlowKernelLoader.load`. Default is None.
     cache : bool
         Enable caching of the app call. Default is False.
+    ignore_for_cache : (list|None)
+        Names of arguments which will be ignored by the caching mechanism.
     """
     from parsl.app.python import PythonApp
 
@@ -168,6 +171,8 @@ def bash_app(function=None,
         Labels of the executors that this app can execute over. Default is 'all'.
     cache : bool
         Enable caching of the app call. Default is False.
+    ignore_for_cache : (list|None)
+        Names of arguments which will be ignored by the caching mechanism.
     """
     from parsl.app.bash import BashApp
 

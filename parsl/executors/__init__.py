@@ -30,7 +30,7 @@ def lazy_loader(name):
 
 
 # parsl/executors/__init__.py:34: error: Cannot assign to a method
-px.__getattr__ = lazy_loader  # type: ignore
+px.__getattr__ = lazy_loader  # type: ignore[method-assign]
 
 __all__ = ['ThreadPoolExecutor',
            'HighThroughputExecutor',

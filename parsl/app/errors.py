@@ -64,10 +64,9 @@ class MissingOutputs(ParslError):
 
     Contains:
     reason(string)
-    outputs(List of strings/files..)
+    outputs(List of files)
     """
-
-    def __init__(self, reason: str, outputs: List[Union[str, File]]) -> None:
+    def __init__(self, reason: str, outputs: List[File]) -> None:
         super().__init__(reason, outputs)
         self.reason = reason
         self.outputs = outputs
@@ -139,11 +138,11 @@ R = TypeVar('R')
 
 def wrap_error(func: Callable[P, R]) -> Callable[P, Union[R, RemoteExceptionWrapper]]:
     @wraps(func)
-    def parsl_error_wrapper(*args: P.args, **kwargs: P.kwargs) -> Union[R, RemoteExceptionWrapper]:
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> Union[R, RemoteExceptionWrapper]:
         import sys
         from parsl.app.errors import RemoteExceptionWrapper
         try:
             return func(*args, **kwargs)
         except Exception:
             return RemoteExceptionWrapper(*sys.exc_info())
-    return parsl_error_wrapper
+    return wrapper

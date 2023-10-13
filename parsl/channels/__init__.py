@@ -30,6 +30,6 @@ def lazy_loader(name):
     raise AttributeError(f"No (lazy loadable) attribute in {__name__} for {name}")
 
 
-px.__getattr__ = lazy_loader  # type: ignore
+px.__getattr__ = lazy_loader  # type: ignore[method-assign]
 
 __all__ = ['Channel', 'SSHChannel', 'LocalChannel', 'SSHInteractiveLoginChannel', 'OAuthSSHChannel']

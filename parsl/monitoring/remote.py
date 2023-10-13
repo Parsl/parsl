@@ -2,7 +2,7 @@ import os
 import time
 import logging
 import datetime
-import functools
+from functools import wraps
 
 from parsl.multiprocessing import ForkProcess
 from multiprocessing import Event, Queue
@@ -14,9 +14,6 @@ from parsl.monitoring.radios import MonitoringRadio, UDPRadio, ResultsRadio, HTE
 from typing import Any, Callable, Dict, List, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
-
-monitoring_wrapper_cache: Dict
-monitoring_wrapper_cache = {}
 
 
 def monitor_wrapper(f: Any,           # per app
@@ -34,142 +31,117 @@ def monitor_wrapper(f: Any,           # per app
     """Wrap the Parsl app with a function that will call the monitor function and point it at the correct pid when the task begins.
     """
 
-    # this makes assumptions that when subsequently executed with the same
-    # cache key, then the relevant parameters will not have changed from the
-    # first invocation with that cache key (otherwise, the resulting cached
-    # closure will be incorrectly cached)
-    cache_key = (run_id, f, radio_mode)
+    @wraps(f)
+    def wrapped(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
+        task_id = kwargs.pop('_parsl_monitoring_task_id')
+        try_id = kwargs.pop('_parsl_monitoring_try_id')
+        terminate_event = Event()
+        terminate_queue: Queue[List[Any]]
+        terminate_queue = Queue()
+        # Send first message to monitoring router
+        send_first_message(try_id,
+                           task_id,
+                           monitoring_hub_url,
+                           run_id,
+                           radio_mode,
+                           run_dir)
 
-    if cache_key in monitoring_wrapper_cache:
-        parsl_monitoring_wrapper = monitoring_wrapper_cache[cache_key]
+        if monitor_resources:
+            # create the monitor process and start
+            pp = ForkProcess(target=monitor,
+                             args=(os.getpid(),
+                                   try_id,
+                                   task_id,
+                                   monitoring_hub_url,
+                                   run_id,
+                                   radio_mode,
+                                   logging_level,
+                                   sleep_dur,
+                                   run_dir,
+                                   terminate_event,
+                                   terminate_queue),
+                             daemon=True,
+                             name="Monitor-Wrapper-{}".format(task_id))
+            pp.start()
+            p = pp
+            #  TODO: awkwardness because ForkProcess is not directly a constructor
+            # and type-checking is expecting p to be optional and cannot
+            # narrow down the type of p in this block.
 
-    else:
+        else:
+            p = None
 
-        # This is all of functools.WRAPPER_ASSIGNMENTS except __module__.
-        # Assigning __module__ in @wraps is causing the entire module to be
-        # serialized. This doesn't happen on the underlying wrapped function
-        # and doesn't happen if no @wraps is specified.
-        # I am unsure why.
-        @functools.wraps(f, assigned=('__name__', '__qualname__', '__doc__', '__annotations__'))
-        def parsl_monitoring_wrapper(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
-            task_id = kwargs.pop('_parsl_monitoring_task_id')
-            try_id = kwargs.pop('_parsl_monitoring_try_id')
-            terminate_event = Event()
-            terminate_queue: Queue[List[Any]]
-            terminate_queue = Queue()
-            # Send first message to monitoring router
-            send_first_message(try_id,
-                               task_id,
-                               monitoring_hub_url,
-                               run_id,
-                               radio_mode,
-                               run_dir)
+        try:
+            ret_v = f(*args, **kwargs)
+        finally:
+            # There's a chance of zombification if the workers are killed by some signals (?)
+            if p:
+                terminate_event.set()
 
-            if monitor_resources:
-                # create the monitor process and start
-                # TODO: this process will make its own monitoring radio
-                # which in the case of the ResultsRadio, at present will
-                # not be able to get its results into this processes
-                # monitoring messages list.
-                # can I extract them right before kill time?
-                pp = ForkProcess(target=monitor,
-                                 args=(os.getpid(),
-                                       try_id,
-                                       task_id,
-                                       monitoring_hub_url,
-                                       run_id,
-                                       radio_mode,
-                                       logging_level,
-                                       sleep_dur,
-                                       run_dir,
-                                       terminate_event,
-                                       terminate_queue),
-                                 daemon=True,
-                                 name="Monitor-Wrapper-{}".format(task_id))
-                pp.start()
-                p = pp
-                #  TODO: awkwardness because ForkProcess is not directly a constructor
-                # and type-checking is expecting p to be optional and cannot
-                # narrow down the type of p in this block.
+                try:
+                    more_monitoring_messages = terminate_queue.get(timeout=30)
+                except Empty:
+                    more_monitoring_messages = []
 
-            else:
-                p = None
+                p.join(30)
+                # 30 second delay for this -- this timeout will be hit in the
+                # case of an unusually long end-of-loop, plus 30 seconds from
+                # the earlier get.
 
-            # this logic flow is fairly contorted - can it look cleaner?
-            # different wrapper structure, eg?
-            try:
-                ret_v = f(*args, **kwargs)
-            finally:
-                # There's a chance of zombification if the workers are killed by some signals (?)
-                if p:
-                    # TODO: can I get monitoring results out of here somehow?
-                    # eg a shared object that comes back with more results?
-                    # (terminate_event is already a shared object...)
-                    # so just a single box that will be populated once at exit.
-                    # nothing more nuanced than that - deliberately avoiding queues that can get full, for example.
-                    terminate_event.set()
-                    try:
-                        more_monitoring_messages = terminate_queue.get(timeout=30)
-                    except Empty:
-                        more_monitoring_messages = []
+                if p.exitcode is None:
+                    logger.warn("Event-based termination of monitoring helper took too long. Using process-based termination.")
+                    p.terminate()
+                    # DANGER: this can corrupt shared queues according to docs.
+                    # So, better that the above termination event worked.
+                    # This is why this log message is a warning
+                    p.join()
 
-                    p.join(30)  # 60 second delay for this all together (30+10) -- this timeout will be hit in the case of an unusually long end-of-loop
-                    if p.exitcode is None:
-                        logger.warn("Event-based termination of monitoring helper took too long. Using process-based termination.")
-                        p.terminate()
-                        # DANGER: this can corrupt shared queues according to docs.
-                        # So, better that the above termination event worked.
-                        # This is why this log message is a warning
-                        p.join()
+            send_last_message(try_id,
+                              task_id,
+                              monitoring_hub_url,
+                              run_id,
+                              radio_mode, run_dir)
 
-                send_last_message(try_id,
-                                  task_id,
-                                  monitoring_hub_url,
-                                  run_id,
-                                  radio_mode, run_dir)
+        # if we reach here, the finally block has run, and
+        # ret_v has been populated. so we can do the return
+        # that used to live inside the try: block.
+        # If that block raised an exception, then the finally
+        # block would run, but then we would not come to this
+        # return statement. As before.
+        if radio_mode == "results":
+            # this import has to happen here, not at the top level: we
+            # want the result_radio_queue from the import on the
+            # execution side - we *don't* want to get the (empty)
+            # result_radio_queue on the submit side, send that with the
+            # closure, and then send it (still empty) back. This is pretty
+            # subtle, which suggests it needs either lots of documentation
+            # or perhaps something nicer than using globals like this?
+            from parsl.monitoring.radios import result_radio_queue
+            assert isinstance(result_radio_queue, list)
+            assert isinstance(more_monitoring_messages, list)
 
-            # if we reach here, the finally block has run, and
-            # ret_v has been populated. so we can do the return
-            # that used to live inside the try: block.
-            # If that block raised an exception, then the finally
-            # block would run, but then we would not come to this
-            # return statement. As before.
-            if radio_mode == "results":
-                # this import has to happen here, not at the top level: we
-                # want the result_radio_queue from the import on the
-                # execution side - we *don't* want to get the (empty)
-                # result_radio_queue on the submit side, send that with the
-                # closure, and then send it (still empty) back. This is pretty
-                # subtle, which suggests it needs either lots of documentation
-                # or perhaps something nicer than using globals like this?
-                from parsl.monitoring.radios import result_radio_queue
-                assert isinstance(result_radio_queue, list)
-                assert isinstance(more_monitoring_messages, list)
+            full = result_radio_queue + more_monitoring_messages
 
-                full = result_radio_queue + more_monitoring_messages
+            # due to fork/join when there are already results in the
+            # queue, messages may appear in `full` via two routes:
+            # once in process, and once via forking and joining.
+            # At present that seems to happen only with first_msg messages,
+            # so here check that full only has one.
+            first_msg = [m for m in full if m[1]['first_msg']]  # type: ignore[index]
+            not_first_msg = [m for m in full if not m[1]['first_msg']]  # type: ignore[index]
 
-                # due to fork/join when there are already results in the
-                # queue, messages may appear in `full` via two routes:
-                # once in process, and once via forking and joining.
-                # At present that seems to happen only with first_msg messages,
-                # so here check that full only has one.
-                first_msg = [m for m in full if m[1]['first_msg']]  # type: ignore
-                not_first_msg = [m for m in full if not m[1]['first_msg']]  # type: ignore
+            # now assume there will be at least one first_msg
+            full = [first_msg[0]] + not_first_msg
 
-                # now assume there will be at least one first_msg
-                full = [first_msg[0]] + not_first_msg
-
-                return (full, ret_v)
-            else:
-                return ret_v
-
-        monitoring_wrapper_cache[cache_key] = parsl_monitoring_wrapper
+            return (full, ret_v)
+        else:
+            return ret_v
 
     new_kwargs = kwargs.copy()
     new_kwargs['_parsl_monitoring_task_id'] = x_task_id
     new_kwargs['_parsl_monitoring_try_id'] = x_try_id
 
-    return (parsl_monitoring_wrapper, args, new_kwargs)
+    return (wrapped, args, new_kwargs)
 
 
 @wrap_with_logs
@@ -346,7 +318,7 @@ def monitor(pid: int,
     next_send = time.time()
     accumulate_dur = 5.0  # TODO: make configurable?
 
-    while not terminate_event.is_set():
+    while not terminate_event.is_set() and pm.is_running():
         logging.debug("start of monitoring loop")
         try:
             d = accumulate_and_prepare()

@@ -63,7 +63,7 @@ def lazy_loader(name):
 
 
 # parsl/__init__.py:61: error: Cannot assign to a method
-parsl.__getattr__ = lazy_loader  # type: ignore
+parsl.__getattr__ = lazy_loader  # type: ignore[method-assign]
 
 import multiprocessing as _multiprocessing
 if platform.system() == 'Darwin':

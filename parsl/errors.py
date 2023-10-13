@@ -25,3 +25,13 @@ class OptionalModuleMissing(ParslError):
         return "The functionality requested requires optional modules {0} which could not be imported, because: {1}".format(
             self.module_names, self.reason
         )
+
+
+class InternalConsistencyError(ParslError):
+    """Raised when a component enounters an internal inconsistency.
+    """
+
+
+class NoDataFlowKernelError(ParslError):
+    """Raised when no DataFlowKernel is available for an operation that needs one.
+    """

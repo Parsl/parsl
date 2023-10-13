@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from parsl.dataflow.futures import AppFuture
 
 from parsl.dataflow.states import States
+from parsl.trace import Span
 
 
 class TaskRecord(TypedDict, total=False):
@@ -95,3 +96,7 @@ class TaskRecord(TypedDict, total=False):
     """Restricts access to end-of-join behavior to ensure that joins
     only complete once, even if several joining Futures complete close
     together in time."""
+
+    span: Span
+    """Event tracing span for this task.
+    """
