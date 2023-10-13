@@ -105,18 +105,18 @@ Stepping through the following question should help formulate a suitable configu
 2.  How many nodes will be used to execute the apps? What task durations are necessary to achieve good performance?
 
 
-+--------------------------------------------+----------------------+-------------------------------------+
-| Executor                                   | Number of Nodes [*]_ | Task duration for good performance  |
-+============================================+======================+=====================================+
-| `parsl.executors.ThreadPoolExecutor`       | 1 (Only local)       | Any                                 |
-+--------------------------------------------+----------------------+-------------------------------------+
-| `parsl.executors.HighThroughputExecutor`   | <=2000               | Task duration(s)/#nodes >= 0.01     |
-|                                            |                      | longer tasks needed at higher scale |
-+--------------------------------------------+----------------------+-------------------------------------+
-| `parsl.executors.WorkQueueExecutor`        | <=1000 [*]_          | 10s+                                |
-+--------------------------------------------+----------------------+-------------------------------------+
-| `parsl.executors.taskvine.TaskVineExecutor`| <=1000 [*]_          | 10s+                                |
-+--------------------------------------------+----------------------+-------------------------------------+
++---------------------------------------------+----------------------+-------------------------------------+
+| Executor                                    | Number of Nodes [*]_ | Task duration for good performance  |
++=============================================+======================+=====================================+
+| `parsl.executors.ThreadPoolExecutor`        | 1 (Only local)       | Any                                 |
++---------------------------------------------+----------------------+-------------------------------------+
+| `parsl.executors.HighThroughputExecutor`    | <=2000               | Task duration(s)/#nodes >= 0.01     |
+|                                             |                      | longer tasks needed at higher scale |
++---------------------------------------------+----------------------+-------------------------------------+
+| `parsl.executors.WorkQueueExecutor`         | <=1000 [*]_          | 10s+                                |
++---------------------------------------------+----------------------+-------------------------------------+
+| `parsl.executors.taskvine.TaskVineExecutor` | <=1000 [*]_          | 10s+                                |
++---------------------------------------------+----------------------+-------------------------------------+
 
 
 .. [*] Assuming 32 workers per node. If there are fewer workers launched
