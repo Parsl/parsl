@@ -3,8 +3,6 @@ import logging
 from parsl.process_loggers import wrap_with_logs
 from parsl.executors.taskvine.errors import TaskVineFactoryFailure
 
-from ndcctools.taskvine import Factory
-
 logger = logging.getLogger(__name__)
 
 
