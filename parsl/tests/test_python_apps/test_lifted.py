@@ -1,3 +1,5 @@
+import pytest
+
 from parsl import python_app
 
 
@@ -61,6 +63,7 @@ def test_returns_a_tuple():
     assert returns_a_tuple()[0].result() == "X"
 
 
+@pytest.mark.skip("returning classes is not supported in WorkQueue or Task Vine - see issue #2908")
 def test_returns_a_class():
 
     # precondition that returns_a_class behaves
