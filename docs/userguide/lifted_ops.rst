@@ -1,5 +1,9 @@
 .. _label-liftedops:
 
+Parsl allows some operators (``[]`` and ``.``) to be used on an AppFuture in
+a way that makes sense with those operators on the eventually returned
+result.
+
 Lifted [] operator
 ==================
 
@@ -7,8 +11,8 @@ When an app returns a complex structure such as a ``dict`` or a ``list``,
 it is sometimes useful to pass an element of that structure to a subsequent
 task, without waiting for that subsequent task to complete.
 
-To help with this, Parsl allows the ``[]`` operator to be used on and
-`AppFuture`. This operator will return return another `AppFuture` that will
+To help with this, Parsl allows the ``[]`` operator to be used on an
+`AppFuture`. This operator will return another `AppFuture` that will
 complete after the initial future, with the result of `[]` on the value
 of the initial future.
 
@@ -32,3 +36,13 @@ If a key does not exist in the returned result, then the exception will
 appear in the Future returned by ``[]``, rather than at the point that
 the ``[]`` operator is applied. This is because the valid values that can
 be used are not known until the underlying result is available.
+
+Lifted . operator
+=================
+
+The ``.`` operator works similarly to ``[]`` described above:
+
+.. code-block:: python
+
+    fut = my_app
+    assert fut.x.result() == fut.result().x
