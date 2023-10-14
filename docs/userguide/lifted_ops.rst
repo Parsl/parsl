@@ -16,7 +16,7 @@ task, without waiting for that subsequent task to complete.
 
 To help with this, Parsl allows the ``[]`` operator to be used on an
 `AppFuture`. This operator will return another `AppFuture` that will
-complete after the initial future, with the result of `[]` on the value
+complete after the initial future, with the result of ``[]`` on the value
 of the initial future.
 
 The end result is that this assertion will hold:
