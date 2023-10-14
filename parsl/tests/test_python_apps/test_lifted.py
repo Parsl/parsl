@@ -31,6 +31,17 @@ def returns_a_class():
     return MyClass
 
 
+class MyOuterClass():
+    def __init__(self):
+        self.q = "A"
+        self.r = "B"
+
+
+@python_app
+def returns_a_class_instance():
+    return MyOuterClass()
+
+
 def test_returns_a_dict():
 
     # precondition that returns_a_dict behaves
@@ -66,6 +77,14 @@ def test_returns_a_tuple():
 
 def test_lifted_getitem_on_dict_bad_key():
     assert isinstance(returns_a_dict()["invalid"].exception(), KeyError)
+
+
+def test_returns_a_class_instance():
+    # precondition
+    assert returns_a_class_instance().result().q == "A"
+
+    # test of commuting . and result()
+    assert returns_a_class_instance().q.result() == "A"
 
 
 @pytest.mark.skip("returning classes is not supported in WorkQueue or Task Vine - see issue #2908")
