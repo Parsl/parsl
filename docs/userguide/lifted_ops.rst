@@ -1,11 +1,14 @@
 .. _label-liftedops:
 
+Lifted operators
+================
+
 Parsl allows some operators (``[]`` and ``.``) to be used on an AppFuture in
 a way that makes sense with those operators on the eventually returned
 result.
 
 Lifted [] operator
-==================
+------------------
 
 When an app returns a complex structure such as a ``dict`` or a ``list``,
 it is sometimes useful to pass an element of that structure to a subsequent
@@ -38,7 +41,7 @@ the ``[]`` operator is applied. This is because the valid values that can
 be used are not known until the underlying result is available.
 
 Lifted . operator
-=================
+-----------------
 
 The ``.`` operator works similarly to ``[]`` described above:
 
