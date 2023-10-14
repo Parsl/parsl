@@ -751,6 +751,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     # If there are no results, then the task failed according to one of
                     # work queue modes, such as resource exhaustion.
                     ex = WorkQueueTaskFailure(task_report.reason, None)
+                    if task_report.result is not None:
+                        ex.__cause__ = task_report.result
                     future.set_exception(ex)
         finally:
             logger.debug("Marking all outstanding tasks as failed")
@@ -1008,7 +1010,7 @@ def _explain_work_queue_result(wq_task):
     if wq_result == wq.WORK_QUEUE_RESULT_SUCCESS:
         reason += "succesful execution with exit code {}".format(wq_task.return_status)
     elif wq_result == wq.WORK_QUEUE_RESULT_OUTPUT_MISSING:
-        reason += "The result file was not transfered from the worker.\n"
+        reason += "A result file was not transfered from the worker.\n"
         reason += "This usually means that there is a problem with the python setup,\n"
         reason += "or the wrapper that executes the function."
         reason += "\nTrace:\n" + str(wq_task.output)
