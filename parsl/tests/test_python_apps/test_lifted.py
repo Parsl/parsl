@@ -87,6 +87,12 @@ def test_returns_a_class_instance():
     assert returns_a_class_instance().q.result() == "A"
 
 
+def test_returns_a_class_instance_no_underscores():
+    # test that _underscore attribute references are not lifted
+    with pytest.raises(AttributeError):
+        returns_a_class_instance()._nosuchattribute.result()
+
+
 @pytest.mark.skip("returning classes is not supported in WorkQueue or Task Vine - see issue #2908")
 def test_returns_a_class():
 

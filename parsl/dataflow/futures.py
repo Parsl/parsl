@@ -133,6 +133,12 @@ class AppFuture(Future):
     def __getattr__(self, name: str) -> AppFuture:
         from parsl.app.app import python_app
 
+        # this will avoid lifting behaviour on private methods and attributes,
+        # including __double_underscore__ methods which implement other
+        # Python syntax (such as iterators in for loops)
+        if name.startswith("_"):
+            raise AttributeError()
+
         deferred_getattr_app = python_app(deferred_getattr, executors=['_parsl_internal'], data_flow_kernel=self.task_def['dfk'])
 
         return deferred_getattr_app(self, name)

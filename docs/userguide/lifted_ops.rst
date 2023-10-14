@@ -46,3 +46,8 @@ The ``.`` operator works similarly to ``[]`` described above:
 
     fut = my_app
     assert fut.x.result() == fut.result().x
+
+Attributes beginning with ``_`` are not lifted as thus usually indicates an
+attribute that is used for internal purposes, and to try to avoid mixing
+protocols (such as iteration in for loops) defined on AppFutures vs protocols
+defined on the underlying result object.
