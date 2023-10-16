@@ -119,8 +119,8 @@ A common approach to executing Parsl apps in parallel is via loops. The followin
 			
     @python_app
     def generate(limit):
-        from random import randint
         """Generate a random integer and return it"""
+        from random import randint
         return randint(1, limit)
 
     rand_nums = []
@@ -137,6 +137,13 @@ The :class:`~parsl.concurrent.ParslPoolExecutor` simplifies this pattern using t
 
     from parsl.concurrent import ParslPoolExecutor
     from parsl.configs.htex_local import config
+
+    # NOTE: Functions used by the ParslPoolExecutor do _not_ use decorators
+    def generate(limit):
+        """Generate a random integer and return it"""
+        from random import randint
+        return randint(1, limit)
+
 
     with ParslPoolExecutor(config) as exec:
         outputs = pool.map(generate, range(1, 5))
