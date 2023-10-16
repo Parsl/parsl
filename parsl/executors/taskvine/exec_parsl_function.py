@@ -1,7 +1,6 @@
 import traceback
 import sys
 
-import pickle
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.files import File
 from parsl.utils import get_std_fname_mode

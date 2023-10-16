@@ -2,7 +2,6 @@ import logging
 import hashlib
 import subprocess
 import os
-import pickle
 import queue
 import shutil
 import uuid
@@ -394,8 +393,8 @@ def _taskvine_submit_wait(ready_task_queue=None,
 
                 logger.debug(f"completed executor task info: {executor_task_id}, {t.category}, {t.command}, {t.std_output}")
 
-                # A tasks completes 'succesfully' if it has result file. 
-                # A check whether the Python object represented using this file can be 
+                # A tasks completes 'succesfully' if it has result file.
+                # A check whether the Python object represented using this file can be
                 # deserialized happens later in the collector thread of the executor
                 # process.
                 logger.debug("Looking for result in {}".format(result_file))
@@ -407,7 +406,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
                                                                    reason=None,
                                                                    status=t.exit_code))
                 # If a result file could not be generated, explain the
-                # failure according to taskvine error codes. 
+                # failure according to taskvine error codes.
                 else:
                     reason = _explain_taskvine_result(t)
                     logger.debug("Did not find result in {}".format(result_file))

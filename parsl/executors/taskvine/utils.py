@@ -49,7 +49,7 @@ class VineTaskToParsl:
     def __init__(self,
                  executor_id: int,          # executor id of task
                  result_received: bool,     # whether result is received or not
-                 result_file: Optional[str],# path to file that contains the serialized result object
+                 result_file: Optional[str],    # path to file that contains the serialized result object
                  reason: Optional[str],     # string describing why execution fails
                  status: Optional[int]      # exit code of execution of task
                  ):
