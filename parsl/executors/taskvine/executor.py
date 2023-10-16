@@ -22,7 +22,7 @@ from typing import List, Optional, Union, Literal
 # Import Parsl constructs
 import parsl.utils as putils
 from parsl.data_provider.staging import Staging
-from parsl.serialize import serialize
+from parsl.serialize import serialize, deserialize
 from parsl.data_provider.files import File
 from parsl.errors import OptionalModuleMissing
 from parsl.providers.base import ExecutionProvider
@@ -639,11 +639,18 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 logger.debug(f'Updating Future for Parsl Task: {task_report.executor_id}. \
                                Task {task_report.executor_id} has result_received set to {task_report.result_received}')
                 if task_report.result_received:
-                    future.set_result(task_report.result)
+                    try:
+                        with open(task_report.result_file, 'rb') as f_in:
+                            result = deserialize(f_in.read())
+                    except Exception as e:
+                        logger.debug(f'Cannot load result from result file {task_report.result_file}. Exception: {e}')
+                        future.set_exception(TaskVineTaskFailure('Cannot load result from result file', None))
+                    else:
+                        future.set_result(result)
                 else:
                     # If there are no results, then the task failed according to one of
                     # taskvine modes, such as resource exhaustion.
-                    future.set_exception(TaskVineTaskFailure(task_report.reason, task_report.result))
+                    future.set_exception(TaskVineTaskFailure(task_report.reason, None))
 
                 # decrement outstanding task counter
                 with self._outstanding_tasks_lock:

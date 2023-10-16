@@ -42,20 +42,20 @@ class ParslTaskToVine:
 
 class VineTaskToParsl:
     """
-    Support structure to communicate final status of TaskVine tasks to Parsl
-    result is only valid if result_received is True
-    reason and status are only valid if result_received is False
+    Support structure to communicate final status of TaskVine tasks to Parsl.
+    result_file is only valid if result_received is True.
+    Reason and status are only valid if result_received is False.
     """
     def __init__(self,
                  executor_id: int,          # executor id of task
                  result_received: bool,     # whether result is received or not
-                 result,                    # result object if available
+                 result_file: Optional[str],# path to file that contains the serialized result object
                  reason: Optional[str],     # string describing why execution fails
                  status: Optional[int]      # exit code of execution of task
                  ):
         self.executor_id = executor_id
         self.result_received = result_received
-        self.result = result
+        self.result_file = result_file
         self.reason = reason
         self.status = status
 

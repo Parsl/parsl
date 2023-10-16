@@ -5,7 +5,7 @@ import pickle
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.files import File
 from parsl.utils import get_std_fname_mode
-from parsl.serialize import deserialize
+from parsl.serialize import deserialize, serialize
 
 # This scripts executes a parsl function which is pickled in 4 files:
 #
@@ -30,10 +30,10 @@ from parsl.serialize import deserialize
 #
 
 
-def dump_result_to_file(result_file: str, result_package):
+def dump_result_to_file(result_file: str, result):
     """ Dump a result to the given result file."""
     with open(result_file, "wb") as f_out:
-        pickle.dump(result_package, f_out)
+        f_out.write(serialize(result))
 
 
 def remap_location(mapping, parsl_file):
