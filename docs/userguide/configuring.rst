@@ -62,7 +62,7 @@ All Parsl applications start by creating or importing a configuration then calli
 
     parsl.load(config)
 
-The ``load`` statement can happen after Apps are defined and must occur before tasks are started.
+The ``load`` statement can happen after Apps are defined but must occur before tasks are started.
 
 The :class:`~parsl.config.Config` object may not be used again after loaded.
 Consider a configuration function if the application will shut down and re-launch the DFK.
