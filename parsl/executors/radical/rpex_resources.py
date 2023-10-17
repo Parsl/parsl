@@ -93,7 +93,8 @@ class ResourceConfig:
 
     @classmethod
     def get_cfg_file(cls):
-        if "mpi" in cls.worker_type.lower() and "mpi4py" not in cls.pilot_env_setup:
+        if "mpi" in cls.worker_type.lower() and \
+           "mpi4py" not in cls.pilot_env_setup:
             cls.pilot_env_setup.append("mpi4py")
 
         cfg = {
@@ -122,7 +123,8 @@ class ResourceConfig:
             'worker_descr': {
                 "mode": "raptor.worker",
                 "named_env": cls.pilot_env_name,
-                "raptor_class": cls.worker_type if cls.worker_type.lower() != "mpi" else "MPIWorker",
+                "raptor_class": cls.worker_type if
+                cls.worker_type.lower() != "mpi" else "MPIWorker",
             }}
 
         # Convert the class instance to a cfg file.

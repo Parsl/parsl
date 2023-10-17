@@ -59,12 +59,14 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
     The RadicalPilotExecutor creates a ``SESSION OBJECT``, ``TASK_MANAGER``,
     and ``PILOT_MANAGER``. The executor receives the tasks from the DFK and
     translates these tasks (in-memory) into ``RP.TASK_DESCRIPTION`` object to
-    be passed to the ``TASK_MANAGER``. This executor has two submission mechanisms:
+    be passed to the ``TASK_MANAGER``. This executor has two submission
+    mechanisms:
 
-    1. Default_mode: where the executor submits the tasks directly to RADICAL-Pilot.
+    1. Default_mode: where the executor submits the tasks directly to
+       RADICAL-Pilot.
 
-    2. Bulk_mode: where the executor accumulates N tasks (functions and executables)
-       and submit them.
+    2. Bulk_mode: where the executor accumulates N tasks (functions and
+       executables) and submit them.
 
     Parameters
     ----------
@@ -218,12 +220,14 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         pilot = self.pmgr.submit_pilots(pd)
         self.tmgr.submit_tasks(tds)
 
+        logger.info("setting up the executor environment")
         pilot.prepare_env(env_name=self.pilot_env.get('name'),
                           env_spec={'type': self.pilot_env.get('type'),
                                     'path': self.pilot_env.get('path'),
                                     'setup': self.pilot_env.get('setup'),
                                     'version': self.pilot_env.get('version'),
-                                    'pre_exec': self.pilot_env.get('pre_exec')})
+                                    'pre_exec': self.pilot_env.get('pre_exec')
+                                    })
 
         self.tmgr.add_pilots(pilot)
         self.tmgr.register_callback(self.task_state_cb)
@@ -380,7 +384,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                                 ns=self.session.uid)
         parsl_tid = int(rp_tid.split('task.')[1])
 
-        logger.debug("got {0} from parsl-dfk".format(parsl_tid))
+        logger.debug("got Task {0} from parsl-dfk".format(parsl_tid))
         task = self.task_translate(parsl_tid, func, args, kwargs)
 
         # assign task id for rp task
