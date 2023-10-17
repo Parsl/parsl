@@ -83,6 +83,64 @@ as in following code snippet, which copies the contents of one file (``in.txt``)
 
        echo(inputs=[in.txt], outputs=[out.txt])
 
+
+Imports and Global Variables
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Parsl apps have access to less information from the script that defined then
+than functions run via Python's native multiprocessing libraries.
+The reasons is that functions are executed on workers that
+do not have access to the same global variables as the script that defined them.
+Practically, this means
+
+1. *Functions may need to re-import libraries.*
+  Place the import statements that define functions or classes inside the function.
+  Type annotations should also not use libraries that must be defined later.
+
+  .. code-block:: python
+
+    import numpy as np
+
+    # BAD: Assumes library has been imported
+    @python_app
+    def linear_model(x: list[float] | np.ndarray, m: float, b: float):
+        return np.multiply(x, m) + b
+
+    # GOOD: Function imports libraries on remote worker
+    @python_app
+    def linear_model(x: list[float] | 'np.ndarray', m: float, b: float):
+        import numpy as np
+        return np.multiply(x, m) + b
+
+
+2. *Global variables are inaccessible*.
+   Functions should not use variables defined outside the function.
+   Likewise, do not assume that variables created inside the function are visible elsewhere.
+
+
+.. code-block:: python
+
+    # BAD: Uses global variables
+    global_var = {'a': 0}
+
+    @python_app
+    def counter_func(string: str, character: str = 'a'):
+        global_var[character] += string.count(character)  # `global_var` will not be accessible
+
+
+    # GOOD
+    @python_app
+    def counter_func(string: str, character: str = 'a'):
+        return {'A'} string.count(character)  # `global_var` will not be accessible
+
+    for ch, co in counter_func('parsl', 'a').result()
+        global_var[ch] += co
+
+.. note::
+
+    These rules do not apply to functions which are imported from libraries.
+    Library functions are sent to workers differently than functions defined in a script.
+
 Special Keyword Arguments
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -59,7 +59,7 @@ Sequential workflows can be created by passing an AppFuture from one task to ano
       def generate(limit):
             from random import randint
             """Generate a random integer and return it"""
-            return randint(1,limit)
+            return randint(1, limit)
 
       # Write a message to a file
       @bash_app
