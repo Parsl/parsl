@@ -141,7 +141,7 @@ There are several classes of allowed types, each with different rules.
               return fp.readline()
 
   Files can also be outputs of a function, but only through the ``outputs`` kwargs (described below).
-- *Parsl Futures*. Functions can receive results from other Apps as Parsl ``Future``s objects.
+- *Parsl Futures*. Functions can receive results from other Apps as Parsl ``Future`` objects.
   Parsl will establish a dependency on the App(s) which created the Future(s)
   and start executing as soon as the preceding ones complete.
 
@@ -232,7 +232,7 @@ Bash Apps can use the same kinds of inputs as Python Apps, but only communicate 
 The Bash Apps, unlike Python Apps, can also return the content printed to the Standard Output and Error.
 
 Special Keywords Arguments
-+++++++++++++++++++++++++
+++++++++++++++++++++++++++
 
 In addition to the ``inputs``, ``outputs``, and ``walltime`` keyword arguments
 described above, a Bash app can accept the following keywords:
@@ -248,13 +248,6 @@ If the Bash app exits with Unix exit code 0, then the AppFuture will complete. I
 exits with any other code, Parsl will treat this as a failure, and the AppFuture will instead
 contain an `BashExitFailure` exception. The Unix exit code can be accessed through the
 ``exitcode`` attribute of that `BashExitFailure`.
-
-Limitations
-^^^^^^^^^^^
-
-The following limitation applies to Bash apps:
-
-1. Environment variables are not supported.
 
 
 MPI Apps
