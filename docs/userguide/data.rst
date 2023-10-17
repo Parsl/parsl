@@ -107,7 +107,7 @@ irrespective of where that app executes.
 
     # call the print_file app with the Parsl file
     r = print_file(inputs=[f])
-        r.result()
+    r.result()
 
 As described below, the method by which this files are transferred
 depends on the scheme and the staging providers specified in the Parsl
