@@ -94,8 +94,9 @@ do not have access to the same global variables as the script that defined them.
 Practically, this means
 
 1. *Functions may need to re-import libraries.*
-  Place the import statements that define functions or classes inside the function.
-  Type annotations should also not use libraries that must be defined later.
+   Place the import statements that define functions or classes inside the function.
+   Type annotations should also not use libraries that must be defined later.
+
 
   .. code-block:: python
 
