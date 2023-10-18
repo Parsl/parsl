@@ -109,7 +109,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self,
-                 rpex_cfg=ResourceConfig,
+                 rpex_cfg: str = '',
                  label: str = RPEX,
                  bulk_mode: bool = False,
                  resource: Optional[str] = None,
@@ -137,12 +137,18 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         self.pmgr = None
         self.tmgr = None
 
-        self.rpex_cfg = rpex_cfg.get_cfg_file()
+        if rpex_cfg:
+            self.rpex_cfg = rpex_cfg
+        elif not rpex_cfg and 'local' in resource:
+            self.rpex_cfg = ResourceConfig.get_cfg_file()
+        else:
+            raise ValueError('Resource config file must be '
+                             'specified for a non-local execution')
+
         cfg = ru.Config(cfg=ru.read_json(self.rpex_cfg))
 
         self.master = cfg.master_descr
         self.n_masters = cfg.n_masters
-
         self.pilot_env = cfg.pilot_env
 
     def task_state_cb(self, task, state):

@@ -18,6 +18,6 @@ if os.environ.get("RPEX_BULK"):
 
 rpex_cfg.pilot_env_pre_exec.append(f"export PYTHONPATH=$PYTHONPATH:{tests_path}:{radical_test_path}")
 config = Config(
-    executors=[RadicalPilotExecutor(rpex_cfg=rpex_cfg, bulk_mode=bulk_mode,
+    executors=[RadicalPilotExecutor(rpex_cfg=rpex_cfg.get_cfg_file(), bulk_mode=bulk_mode,
                                     resource='local.localhost', access_schema='local',
                                     project='', partition='', walltime=30, cores=4)])
