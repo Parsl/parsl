@@ -5,14 +5,14 @@ Apps
 
 An **App** defines a computation that will be executed asynchronously by Parsl.
 Apps are Python functions marked with a decorator which
-designates that the function will run asynchronously and cause it return
+designates that the function will run asynchronously and cause it to return
 a :class:`~concurrent.futures.Future` instead of the result.
 
 Apps can be one of three types of functions, each with their own type of decorator
 
 - ``@python_app``: Most Python functions
-- ``@bash_app``: A python function which returns a command line program to execute
-- ``@join_app``: A function which returns launches other apps
+- ``@bash_app``: A Python function which returns a command line program to execute
+- ``@join_app``: A function which launches one or more new Apps
 
 The intricacies of Python and Bash apps are documented below. Join apps are documented in a later
 section (see :ref:`label-joinapp`).
@@ -29,7 +29,8 @@ Python Apps
     print(hello_world('user').result())
 
 
-Python Apps run Python functions. The code inside a function marked by ``@python_app`` will run on a remote system.
+Python Apps run Python functions. The code inside a function marked by ``@python_app`` is what will
+be executed either locally or on a remote system.
 
 Most functions can run without modification.
 Limitations on the content of the functions and their inputs/outputs are described below.
@@ -93,15 +94,16 @@ Practically, this means
 Functions from Modules
 ++++++++++++++++++++++
 
-The above rules do not apply for functions defined in Python modules.
-Functions in installed modules are sent to workers differently than functions defined in a script.
+The above rules assume that the user is running the example code from a standalone script or Jupyter Notebook.
+Functions that are defined in an installed Python module do not need to abide by these guidelines,
+as they are sent to workers differently than functions defined locally within a script.
 
-Supply a module function as an argument to ``python_app`` rather than creating a new function which is decorated.
+Directly convert a function from a library to a Python App by passing it as an argument to ``python_app``:
 
 .. code-block:: python
 
     from module import function
-    function_app = python_app(function, executors='all')
+    function_app = python_app(function)
 
 ``function_app`` will act as Parsl App function of ``function``.
 
@@ -117,7 +119,14 @@ to include attributes from the original function (e.g., its name).
     my_max = update_wrapper(my_max, max)  # Copy over the names
     my_max_app = python_app(my_max)
 
+The above example is equivalent to creating a new function (as below)
 
+.. code-block:: python
+
+    @python_app
+    def my_max_app(*args, **kwargs):
+        import numpy as np
+        return np.max(*args, keepdims=True, axis=0, **kwargs)
 
 Inputs and Outputs
 ^^^^^^^^^^^^^^^^^^
@@ -164,16 +173,51 @@ Learn more about the types of data allowed in `the data section <data.html>`_.
 Special Keyword Arguments
 +++++++++++++++++++++++++
 
-Parsl apps can use the following special reserved keyword arguments:
+Some keyword arguments to the Python function are treated differently by Parsl
 
 1. inputs: (list) This keyword argument defines a list of input :ref:`label-futures` or files. 
    Parsl will wait for the results of any listed :ref:`label-futures` to be resolved before executing the app.
    The ``inputs`` argument is useful both for passing files as arguments
    and when one wishes to pass in an arbitrary number of futures at call time.
+
+.. code-block:: python
+
+    @python_app()
+    def map_app(x):
+        return x * 2
+
+    @python_app()
+    def reduce_app(inputs = ()):
+        return sum(inputs)
+
+    map_futures = [map_app(x) for x in range(3)]
+    reduce_future = reduce_app(inputs=map_futures)
+
+    print(reduce_future.result())  # 0 + 1 * 2 + 2 * 2 = 6
+
 2. outputs: (list) This keyword argument defines a list of files that
    will be produced by the app. For each file thus listed, Parsl will create a future,
    track the file, and ensure that it is correctly created. The future 
    can then be passed to other apps as an input argument.
+
+.. code-block:: python
+
+    @python_app()
+    def write_app(message, outputs=()):
+        """Write a single message to every file in outputs"""
+        for path in outputs:
+            with open(path, 'w') as fp:
+                print(message, file=fp)
+
+    to_write = [
+        File(Path(tmpdir) / 'output-0.txt'),
+        File(Path(tmpdir) / 'output-1.txt')
+    ]
+    write_app('Hello!', outputs=to_write).result()
+    for path in to_write:
+        with open(path) as fp:
+            assert fp.read() == 'Hello!\n'
+
 3. walltime: (int) This keyword argument places a limit on the app's
    runtime in seconds. If the walltime is exceed, Parsl will raise an `parsl.app.errors.AppTimeout` exception.
 
@@ -184,6 +228,22 @@ A Python app returns an AppFuture (see :ref:`label-futures`) as a proxy for the 
 app once it is executed. This future can be inspected to obtain task status; 
 and it can be used to wait for the result, and when complete, present the output Python object(s) returned by the app.
 In case of an error or app failure, the future holds the exception raised by the app.
+
+Options for Python Apps
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The :meth:`~parsl.app.app.python_app` decorator has a few options which controls how Parsl executes all tasks
+run with that application.
+For example, you can ensure that Parsl caches the results of the function and executes tasks on specific sites.
+
+.. code-block:: python
+
+    @python_app(cache=True, executors=['gpu'])
+    def expensive_gpu_function():
+        # ...
+        return
+
+See the Parsl documentation for full details.
 
 Limitations
 ^^^^^^^^^^^
@@ -249,6 +309,11 @@ exits with any other code, Parsl will treat this as a failure, and the AppFuture
 contain an `BashExitFailure` exception. The Unix exit code can be accessed through the
 ``exitcode`` attribute of that `BashExitFailure`.
 
+
+Execution Options
+^^^^^^^^^^^^^^^^^
+
+Bash Apps have the same execution options (e.g., pinning to specific sites) as the Python Apps.
 
 MPI Apps
 ^^^^^^^^
