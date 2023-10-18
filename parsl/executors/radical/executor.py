@@ -109,16 +109,16 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self,
-                 rpex_cfg: str = '',
+                 cores: int,
+                 walltime: int,
+                 resource: str,
+                 gpus: int = 0,
                  label: str = RPEX,
                  bulk_mode: bool = False,
-                 resource: Optional[str] = None,
-                 access_schema: Optional[str] = None,
-                 walltime: int = 30,
-                 cores: int = 2,
-                 gpus: int = 0,
+                 project: Optional[str] = None,
+                 rpex_cfg: Optional[str] = None,
                  partition: Optional[str] = None,
-                 project: Optional[str] = None):
+                 access_schema: Optional[str] = None):
 
         super().__init__()
         self._uid = RPEX.lower()
