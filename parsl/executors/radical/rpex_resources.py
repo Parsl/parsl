@@ -3,6 +3,8 @@ import json
 import radical.pilot as rp
 import radical.utils as ru
 
+from typing import List
+
 
 class ResourceConfig:
     """
@@ -71,25 +73,24 @@ class ResourceConfig:
         Default is "DefaultWorker".
     """
 
-    masters = 1
-    workers = 1
+    masters: int = 1
+    workers: int = 1
 
-    worker_gpus_per_node = 0
-    worker_cores_per_node = 4
+    worker_gpus_per_node: int = 0
+    worker_cores_per_node: int = 4
 
-    masters_per_node = 1
-    nodes_per_worker = 1
+    masters_per_node: int = 1
+    nodes_per_worker: int = 1
 
-    pilot_env_path = ""
-    pilot_env_name = "ve_rpex"
-    pilot_env_pre_exec = []
-    pilot_env_type = "venv"
-    pilot_env_setup = ["parsl",
-                       rp.sdist_path,
-                       ru.sdist_path]
+    pilot_env_path: str = ""
+    pilot_env_type: str = "venv"
+    pilot_env_name: str = "ve_rpex"
+    pilot_env_pre_exec: List[str] = []
+    pilot_env_setup: List[str] = [rp.sdist_path,
+                                  ru.sdist_path]
 
-    python_v = f'{sys.version_info[0]}.{sys.version_info[1]}'
-    worker_type = "DefaultWorker"
+    python_v: str = f'{sys.version_info[0]}.{sys.version_info[1]}'
+    worker_type: str = "DefaultWorker"
 
     @classmethod
     def get_cfg_file(cls):
