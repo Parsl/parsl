@@ -1,13 +1,10 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta
 from functools import cached_property
-import logging
 
 from typing import Any
 
-logger = logging.getLogger(__name__)
 
-
-class SerializerBase:
+class SerializerBase(metaclass=ABCMeta):
     """ Adds shared functionality for all serializer implementations
     """
 
