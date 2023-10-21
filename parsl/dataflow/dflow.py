@@ -451,8 +451,8 @@ class DataFlowKernel:
             if isinstance(joinable, Future):
                 je = joinable.exception()
                 if je is not None:
-                    if hasattr(joinable, 'task_def'):
-                        tid = joinable.task_def['id']
+                    if hasattr(joinable, 'task_record'):
+                        tid = joinable.task_record['id']
                     else:
                         tid = None
                     exceptions_tids = [(je, tid)]
@@ -460,8 +460,8 @@ class DataFlowKernel:
                 for future in joinable:
                     je = future.exception()
                     if je is not None:
-                        if hasattr(joinable, 'task_def'):
-                            tid = joinable.task_def['id']
+                        if hasattr(joinable, 'task_record'):
+                            tid = joinable.task_record['id']
                         else:
                             tid = None
                         exceptions_tids.append((je, tid))
@@ -854,8 +854,8 @@ class DataFlowKernel:
                 try:
                     new_args.extend([dep.result()])
                 except Exception as e:
-                    if hasattr(dep, 'task_def'):
-                        tid = dep.task_def['id']
+                    if hasattr(dep, 'task_record'):
+                        tid = dep.task_record['id']
                     else:
                         tid = None
                     dep_failures.extend([(e, tid)])
@@ -869,8 +869,8 @@ class DataFlowKernel:
                 try:
                     kwargs[key] = dep.result()
                 except Exception as e:
-                    if hasattr(dep, 'task_def'):
-                        tid = dep.task_def['id']
+                    if hasattr(dep, 'task_record'):
+                        tid = dep.task_record['id']
                     else:
                         tid = None
                     dep_failures.extend([(e, tid)])
@@ -883,8 +883,8 @@ class DataFlowKernel:
                     try:
                         new_inputs.extend([dep.result()])
                     except Exception as e:
-                        if hasattr(dep, 'task_def'):
-                            tid = dep.task_def['id']
+                        if hasattr(dep, 'task_record'):
+                            tid = dep.task_record['id']
                         else:
                             tid = None
                         dep_failures.extend([(e, tid)])
@@ -967,38 +967,38 @@ class DataFlowKernel:
 
         resource_specification = app_kwargs.get('parsl_resource_specification', {})
 
-        task_def: TaskRecord
-        task_def = {'depends': [],
-                    'executor': executor,
-                    'func_name': func.__name__,
-                    'memoize': cache,
-                    'hashsum': None,
-                    'exec_fu': None,
-                    'fail_count': 0,
-                    'fail_cost': 0,
-                    'fail_history': [],
-                    'from_memo': None,
-                    'ignore_for_cache': ignore_for_cache,
-                    'join': join,
-                    'joins': None,
-                    'try_id': 0,
-                    'id': task_id,
-                    'time_invoked': datetime.datetime.now(),
-                    'time_returned': None,
-                    'try_time_launched': None,
-                    'try_time_returned': None,
-                    'resource_specification': resource_specification}
+        task_record: TaskRecord
+        task_record = {'depends': [],
+                       'executor': executor,
+                       'func_name': func.__name__,
+                       'memoize': cache,
+                       'hashsum': None,
+                       'exec_fu': None,
+                       'fail_count': 0,
+                       'fail_cost': 0,
+                       'fail_history': [],
+                       'from_memo': None,
+                       'ignore_for_cache': ignore_for_cache,
+                       'join': join,
+                       'joins': None,
+                       'try_id': 0,
+                       'id': task_id,
+                       'time_invoked': datetime.datetime.now(),
+                       'time_returned': None,
+                       'try_time_launched': None,
+                       'try_time_returned': None,
+                       'resource_specification': resource_specification}
 
-        self.update_task_state(task_def, States.unsched)
+        self.update_task_state(task_record, States.unsched)
 
-        app_fu = AppFuture(task_def)
+        app_fu = AppFuture(task_record)
 
         # Transform remote input files to data futures
         app_args, app_kwargs, func = self._add_input_deps(executor, app_args, app_kwargs, func)
 
         func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func)
 
-        task_def.update({
+        task_record.update({
                     'args': app_args,
                     'func': func,
                     'kwargs': app_kwargs,
@@ -1006,11 +1006,11 @@ class DataFlowKernel:
 
         assert task_id not in self.tasks
 
-        self.tasks[task_id] = task_def
+        self.tasks[task_id] = task_record
 
         # Get the list of dependencies for the task
         depends = self._gather_all_deps(app_args, app_kwargs)
-        task_def['depends'] = depends
+        task_record['depends'] = depends
 
         depend_descs = []
         for d in depends:
@@ -1025,16 +1025,16 @@ class DataFlowKernel:
             waiting_message = "not waiting on any dependency"
 
         logger.info("Task {} submitted for App {}, {}".format(task_id,
-                                                              task_def['func_name'],
+                                                              task_record['func_name'],
                                                               waiting_message))
 
-        task_def['task_launch_lock'] = threading.Lock()
+        task_record['task_launch_lock'] = threading.Lock()
 
-        app_fu.add_done_callback(partial(self.handle_app_update, task_def))
-        self.update_task_state(task_def, States.pending)
-        logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_def['app_fu']))
+        app_fu.add_done_callback(partial(self.handle_app_update, task_record))
+        self.update_task_state(task_record, States.pending)
+        logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_record['app_fu']))
 
-        self._send_task_log_info(task_def)
+        self._send_task_log_info(task_record)
 
         # at this point add callbacks to all dependencies to do a launch_if_ready
         # call whenever a dependency completes.
@@ -1051,14 +1051,14 @@ class DataFlowKernel:
         for d in depends:
 
             def callback_adapter(dep_fut: Future) -> None:
-                self.launch_if_ready(task_def)
+                self.launch_if_ready(task_record)
 
             try:
                 d.add_done_callback(callback_adapter)
             except Exception as e:
                 logger.error("add_done_callback got an exception {} which will be ignored".format(e))
 
-        self.launch_if_ready(task_def)
+        self.launch_if_ready(task_record)
 
         return app_fu
 
