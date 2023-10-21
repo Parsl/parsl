@@ -62,32 +62,32 @@ class AppFuture(Future):
 
     """
 
-    def __init__(self, task_def: TaskRecord) -> None:
+    def __init__(self, task_record: TaskRecord) -> None:
         """Initialize the AppFuture.
 
         Args:
 
         KWargs:
-             - task_def : The DFK task definition dictionary for the task represented
-                   by this future.
+             - task_record : The TaskRecord for the task represented by
+               this future.
         """
         super().__init__()
         self._update_lock = threading.Lock()
         self._outputs: Sequence[DataFuture]
         self._outputs = []
-        self.task_def = task_def
+        self.task_record = task_record
 
     @property
     def stdout(self) -> Optional[str]:
-        return self.task_def['kwargs'].get('stdout')
+        return self.task_record['kwargs'].get('stdout')
 
     @property
     def stderr(self) -> Optional[str]:
-        return self.task_def['kwargs'].get('stderr')
+        return self.task_record['kwargs'].get('stderr')
 
     @property
     def tid(self) -> int:
-        return self.task_def['id']
+        return self.task_record['id']
 
     def cancel(self) -> bool:
         raise NotImplementedError("Cancel not implemented")
@@ -116,7 +116,7 @@ class AppFuture(Future):
 
            Returns: str
         """
-        return self.task_def['status'].name
+        return self.task_record['status'].name
 
     @property
     def outputs(self) -> Sequence[DataFuture]:
