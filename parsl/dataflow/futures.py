@@ -126,7 +126,7 @@ class AppFuture(Future):
         # This is decorated on each invocation because the getitem task
         # should be bound to the same DFK as the task associated with this
         # Future.
-        deferred_getitem_app = app.python_app(deferred_getitem, executors=['_parsl_internal'], data_flow_kernel=self.task_def['dfk'])
+        deferred_getitem_app = app.python_app(deferred_getitem, executors=['_parsl_internal'], data_flow_kernel=self.task_record['dfk'])
 
         return deferred_getitem_app(self, key)
 
@@ -137,7 +137,7 @@ class AppFuture(Future):
         if name.startswith("_"):
             raise AttributeError()
 
-        deferred_getattr_app = app.python_app(deferred_getattr, executors=['_parsl_internal'], data_flow_kernel=self.task_def['dfk'])
+        deferred_getattr_app = app.python_app(deferred_getattr, executors=['_parsl_internal'], data_flow_kernel=self.task_record['dfk'])
 
         return deferred_getattr_app(self, name)
 
