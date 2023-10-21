@@ -5,11 +5,14 @@ We have two basic types of futures:
     2. AppFutures which represent the futures on App/Leaf tasks.
 
 """
+from __future__ import annotations
 
 from concurrent.futures import Future
 import logging
 import threading
-from typing import Optional, Sequence
+from typing import Any, Optional, Sequence
+
+import parsl.app.app as app
 
 from parsl.app.futures import DataFuture
 from parsl.dataflow.taskrecord import TaskRecord
@@ -118,3 +121,30 @@ class AppFuture(Future):
     @property
     def outputs(self) -> Sequence[DataFuture]:
         return self._outputs
+
+    def __getitem__(self, key: Any) -> AppFuture:
+        # This is decorated on each invocation because the getitem task
+        # should be bound to the same DFK as the task associated with this
+        # Future.
+        deferred_getitem_app = app.python_app(deferred_getitem, executors=['_parsl_internal'], data_flow_kernel=self.task_record['dfk'])
+
+        return deferred_getitem_app(self, key)
+
+    def __getattr__(self, name: str) -> AppFuture:
+        # this will avoid lifting behaviour on private methods and attributes,
+        # including __double_underscore__ methods which implement other
+        # Python syntax (such as iterators in for loops)
+        if name.startswith("_"):
+            raise AttributeError()
+
+        deferred_getattr_app = app.python_app(deferred_getattr, executors=['_parsl_internal'], data_flow_kernel=self.task_record['dfk'])
+
+        return deferred_getattr_app(self, name)
+
+
+def deferred_getitem(o: Any, k: Any) -> Any:
+    return o[k]
+
+
+def deferred_getattr(o: Any, name: str) -> Any:
+    return getattr(o, name)
