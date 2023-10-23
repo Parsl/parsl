@@ -10,12 +10,15 @@
 
 #include "chronolog_client.h"
 
+chronolog::Client *global_client;
+std::string story_name = gen_random(32);
+
+std::string chronicle_name = "parslmon";
+// TOOD: "parslmon" chronicle name should be more dynamic
+
 static PyObject *
 chronolog_start(PyObject *self, PyObject *args)
 {
-    // const char *command;
-    int sts = 7;
-
     // if (!PyArg_ParseTuple(args, "s", &command))
     //    return NULL;
 
@@ -36,8 +39,6 @@ chronolog_start(PyObject *self, PyObject *args)
     chronicle_attrs.emplace("Priority", "High");
     int flags = 1;
 
-    std::string chronicle_name = "parslmon";
-    // TOOD: "parslmon" chronicle name should be more dynamic
     ret = client->CreateChronicle(chronicle_name, chronicle_attrs, flags);
      
     // assert(ret == CL_SUCCESS);
@@ -45,7 +46,6 @@ chronolog_start(PyObject *self, PyObject *args)
     std::unordered_map<std::string, std::string> story_attrs;
 
      // TODO this is a workaround for acuiqrestory uniqueness bug
-    std::string story_name = gen_random(32);
     flags = 2;
     std::pair<int, chronolog::StoryHandle*> acquire_ret = client->AcquireStory(chronicle_name, story_name, story_attrs, flags);
 
@@ -53,17 +53,28 @@ chronolog_start(PyObject *self, PyObject *args)
    
     story->log_event("starting chronopy");
 
+    // client->ReleaseStory(chronicle_name, story_name);
+    // client->Disconnect();
 
-    client->ReleaseStory(chronicle_name, story_name);
-
-    client->Disconnect();
+    global_client = client;
  
-    return PyLong_FromLong(sts);
+    return PyLong_FromLong(123);
 }
 
-static PyMethodDef SpamMethods[] = {
+static PyObject *
+chronolog_end(PyObject *self, PyObject *args)
+{
+    global_client->ReleaseStory(chronicle_name, story_name);
+    global_client->Disconnect();
+
+    return PyLong_FromLong(321);
+}
+
+static PyMethodDef ChronoPyMethods[] = {
     {"start",  chronolog_start, METH_VARARGS,
      "start chronolog enough for parsl"},
+    {"end",  chronolog_end, METH_VARARGS,
+     "end chronolog enough for parsl"},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
@@ -73,7 +84,7 @@ static struct PyModuleDef chronologmodule = {
     NULL, /* module documentation, may be NULL */
     -1,       /* size of per-interpreter state of the module,
                  or -1 if the module keeps state in global variables. */
-    SpamMethods
+    ChronoPyMethods
 };
 
 PyMODINIT_FUNC
