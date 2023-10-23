@@ -51,6 +51,13 @@ chronolog_start(PyObject *self, PyObject *args)
     flags = 2;
     std::pair<int, chronolog::StoryHandle*> acquire_ret = client->AcquireStory(chronicle_name, story_name, story_attrs, flags);
 
+    if(acquire_ret.first != CL_SUCCESS) {
+        std::cerr << "acquire story did not succeed\n";
+        std::cerr.flush();
+    }
+
+    assert(acquire_ret.first == CL_SUCCESS);
+
     // chronolog::StoryHandle* story = acquire_ret.second;
     story = acquire_ret.second;
    

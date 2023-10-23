@@ -84,6 +84,12 @@ class FilesystemRadio(MonitoringRadio):
         os.rename(tmp_filename, new_filename)
 
 
+import chronopy
+# TODO: this should encapsulate chronopy state (eg ChronoLog handles) in some
+# object rather than being global. but it doesn't. so don't chronopy.start()
+# multiple times.
+chronopy.start()
+
 class HTEXRadio(MonitoringRadio):
 
     def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
@@ -125,15 +131,9 @@ class HTEXRadio(MonitoringRadio):
 
         # for the interchange, the outer wrapper, this needs to be a dict:
 
-        interchange_msg = {
-            'type': 'monitoring',
-            'payload': message
-        }
+        stringified = str(message)
 
-        if result_queue:
-            result_queue.put(pickle.dumps(interchange_msg))
-        else:
-            logger.error("result_queue is uninitialized - cannot put monitoring message")
+        chronopy.send(stringified)
 
         return
 
