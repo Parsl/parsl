@@ -34,10 +34,16 @@ chronolog_start(PyObject *self, PyObject *args)
     chronicle_attrs.emplace("Priority", "High");
     int flags = 1;
 
+    std::string chronicle_name = "parslmon";
     // TOOD: "parslmon" chronicle name should be more dynamic
-    ret = client->CreateChronicle("parslmon", chronicle_attrs, flags);
+    ret = client->CreateChronicle(chronicle_name, chronicle_attrs, flags);
      
     assert(ret == CL_SUCCESS);
+
+    std::unordered_map<std::string, std::string> story_attrs;
+ 
+    flags = 2;
+    auto acquire_ret = client->AcquireStory(chronicle_name, "parsl_story", story_attrs, flags);
  
     return PyLong_FromLong(sts);
 }
