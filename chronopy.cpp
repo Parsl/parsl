@@ -29,6 +29,15 @@ chronolog_start(PyObject *self, PyObject *args)
     int ret = client->Connect();
 
     assert(ret == CL_SUCCESS);
+
+    std::unordered_map<std::string, std::string> chronicle_attrs;
+    chronicle_attrs.emplace("Priority", "High");
+    int flags = 1;
+
+    // TOOD: "parslmon" chronicle name should be more dynamic
+    ret = client->CreateChronicle("parslmon", chronicle_attrs, flags);
+     
+    assert(ret == CL_SUCCESS);
  
     return PyLong_FromLong(sts);
 }
