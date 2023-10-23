@@ -28,6 +28,24 @@ ConfigurationManager.h: constructing configuration from a configuration file: de
 ERROR: ConfigurationManager.h: LoadConfFromJSONFile: 233: Unable to open file default.json, exiting ...
 
 
+====
+
+sometimes seeing this segfault in chronokeeper:
+
+(gdb) 
+#0  0x00007ff09013bcda in __GI___libc_free (mem=0x222717cc1d337c55) at ./malloc/malloc.c:3362
+#1  0x0000557c073878fd in chronolog::StoryChunkExtractorBase::drainExtractionQueue() ()
+#2  0x0000557c07382eae in thallium::xstream::forward_work_unit(void*) ()
+#3  0x00007ff0904eea2a in ABTD_ythread_func_wrapper ()
+   from /home/benc/parsl/src/spack/opt/spack/linux-debianbookworm-icelake/gcc-12.2.0/argobots-1.1-dviqdmrjzoagkbia26r3pvwacazmdtbi/lib/libabt.so.1
+#4  0x00007ff0904eebb1 in make_fcontext ()
+   from /home/benc/parsl/src/spack/opt/spack/linux-debianbookworm-icelake/gcc-12.2.0/argobots-1.1-dviqdmrjzoagkbia26r3pvwacazmdtbi/lib/libabt.so.1
+#5  0x0000000000000000 in ?? ()
+(gdb) 
+
+
+===
+
 Parsl - Parallel Scripting Library
 ==================================
 |licence| |build-status| |docs| |NSF-1550588| |NSF-1550476| |NSF-1550562| |NSF-1550528|
