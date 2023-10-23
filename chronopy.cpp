@@ -6,6 +6,8 @@
 
 #include <cassert>
 
+#include "common.h"
+
 #include "chronolog_client.h"
 
 static PyObject *
@@ -41,9 +43,20 @@ chronolog_start(PyObject *self, PyObject *args)
     // assert(ret == CL_SUCCESS);
 
     std::unordered_map<std::string, std::string> story_attrs;
- 
+
+     // TODO this is a workaround for acuiqrestory uniqueness bug
+    std::string story_name = gen_random(32);
     flags = 2;
-    auto acquire_ret = client->AcquireStory(chronicle_name, "parsl_story", story_attrs, flags);
+    std::pair<int, chronolog::StoryHandle*> acquire_ret = client->AcquireStory(chronicle_name, story_name, story_attrs, flags);
+
+    chronolog::StoryHandle* story = acquire_ret.second;
+   
+    story->log_event("starting chronopy");
+
+
+    client->ReleaseStory(chronicle_name, story_name);
+
+    client->Disconnect();
  
     return PyLong_FromLong(sts);
 }
