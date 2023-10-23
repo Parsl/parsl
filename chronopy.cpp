@@ -16,6 +16,8 @@ std::string story_name = gen_random(32);
 std::string chronicle_name = "parslmon";
 // TOOD: "parslmon" chronicle name should be more dynamic
 
+chronolog::StoryHandle* story;
+
 static PyObject *
 chronolog_start(PyObject *self, PyObject *args)
 {
@@ -49,7 +51,8 @@ chronolog_start(PyObject *self, PyObject *args)
     flags = 2;
     std::pair<int, chronolog::StoryHandle*> acquire_ret = client->AcquireStory(chronicle_name, story_name, story_attrs, flags);
 
-    chronolog::StoryHandle* story = acquire_ret.second;
+    // chronolog::StoryHandle* story = acquire_ret.second;
+    story = acquire_ret.second;
    
     story->log_event("starting chronopy");
 
@@ -62,8 +65,21 @@ chronolog_start(PyObject *self, PyObject *args)
 }
 
 static PyObject *
+chronolog_send(PyObject *self, PyObject *args)
+{
+    const char *message;
+
+    if (!PyArg_ParseTuple(args, "s", &message))
+       return NULL;
+    story->log_event(message);
+    return PyLong_FromLong(444888);
+}
+
+
+static PyObject *
 chronolog_end(PyObject *self, PyObject *args)
 {
+    story->log_event("ending chronopy");
     global_client->ReleaseStory(chronicle_name, story_name);
     global_client->Disconnect();
 
@@ -75,6 +91,8 @@ static PyMethodDef ChronoPyMethods[] = {
      "start chronolog enough for parsl"},
     {"end",  chronolog_end, METH_VARARGS,
      "end chronolog enough for parsl"},
+    {"send",  chronolog_send, METH_VARARGS,
+     "send a message into chronolog enough for parsl"},
     {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
