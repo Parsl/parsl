@@ -13,12 +13,19 @@ needs this C json library:
 
 
 
-
- gcc -fPIC -shared -I /usr/local/include/python3.11/ -I ../ChronoLog/Client/include/ -I ../ChronoLog/chrono_common/ -I ../ChronoLog/ChronoAPI/ChronoLog/include/ chronopy.cpp -o chronopy.so /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30 ../ChronoLog/build/Client/libchronolog_client.so
+gcc -fPIC -shared -I /usr/local/include/python3.11/ -I ../ChronoLog/Client/include/ -I ../ChronoLog/chrono_common/ -I ../ChronoLog/ChronoAPI/ChronoLog/include/ chronopy.cpp -o chronopy.so /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30 ../ChronoLog/build/Client/libchronolog_client.so 
 
 
 theres a conflict between the python errcode.h and chronolog errcode.h so we renamed the chronolog one to oooerrcode.h everywhere.
 
+
+export LD_LIBRARY_PATH=../ChronoLog/build/Client/:$LD_LIBRARY_PATH
+
+>>> import chronopy
+>>> chronopy.start()
+hello
+ConfigurationManager.h: constructing configuration from a configuration file: default.json
+ERROR: ConfigurationManager.h: LoadConfFromJSONFile: 233: Unable to open file default.json, exiting ...
 
 
 Parsl - Parallel Scripting Library
