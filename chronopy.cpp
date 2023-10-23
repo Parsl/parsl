@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 
+#include <cassert>
+
 #include "chronolog_client.h"
 
 static PyObject *
@@ -24,7 +26,7 @@ chronolog_start(PyObject *self, PyObject *args)
     ChronoLog::ConfigurationManager confManager(conf_file_path);
     chronolog::Client *client = new chronolog::Client(confManager);
    
-    int ret = client->Connect()
+    int ret = client->Connect();
 
     assert(ret == CL_SUCCESS);
  
