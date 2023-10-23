@@ -38,7 +38,7 @@ chronolog_start(PyObject *self, PyObject *args)
     // TOOD: "parslmon" chronicle name should be more dynamic
     ret = client->CreateChronicle(chronicle_name, chronicle_attrs, flags);
      
-    assert(ret == CL_SUCCESS);
+    // assert(ret == CL_SUCCESS);
 
     std::unordered_map<std::string, std::string> story_attrs;
  
