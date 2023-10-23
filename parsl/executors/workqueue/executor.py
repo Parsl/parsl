@@ -69,7 +69,7 @@ ParslTaskToWq = namedtuple('ParslTaskToWq',
 #   result_file is the path to the file containing the result.
 # if result_received is False:
 #   reason and status are only valid if result_received is False
-#   result_file is None 
+#   result_file is None
 WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result_file reason status')
 
 # Support structure to report parsl filenames to work queue.
@@ -747,7 +747,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 else:
                     # If there are no results, then the task failed according to one of
                     # work queue modes, such as resource exhaustion.
-                    ex = WorkQueueTaskFailure(task_report.reason, Exception(reason))
+                    ex = WorkQueueTaskFailure(task_report.reason, Exception(task_report.reason))
                     future.set_exception(ex)
         finally:
             logger.debug("Marking all outstanding tasks as failed")
