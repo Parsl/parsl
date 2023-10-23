@@ -21,17 +21,20 @@ theres a conflict between the python errcode.h and chronolog errcode.h so we ren
 
 export LD_LIBRARY_PATH=../ChronoLog/build/Client/:$LD_LIBRARY_PATH
 
+```
 >>> import chronopy
 >>> chronopy.start()
 hello
 ConfigurationManager.h: constructing configuration from a configuration file: default.json
 ERROR: ConfigurationManager.h: LoadConfFromJSONFile: 233: Unable to open file default.json, exiting ...
+```
 
 
 ====
 
 sometimes seeing this segfault in chronokeeper:
 
+```
 (gdb) 
 #0  0x00007ff09013bcda in __GI___libc_free (mem=0x222717cc1d337c55) at ./malloc/malloc.c:3362
 #1  0x0000557c073878fd in chronolog::StoryChunkExtractorBase::drainExtractionQueue() ()
@@ -42,6 +45,7 @@ sometimes seeing this segfault in chronokeeper:
    from /home/benc/parsl/src/spack/opt/spack/linux-debianbookworm-icelake/gcc-12.2.0/argobots-1.1-dviqdmrjzoagkbia26r3pvwacazmdtbi/lib/libabt.so.1
 #5  0x0000000000000000 in ?? ()
 (gdb) 
+```
 
 
 ===
