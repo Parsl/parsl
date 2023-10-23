@@ -65,8 +65,11 @@ ParslTaskToWq = namedtuple('ParslTaskToWq',
                            'id category cores memory disk gpus priority running_time_min env_pkg map_file function_file result_file input_files output_files')
 
 # Support structure to communicate final status of work queue tasks to parsl
-# result is only valid if result_received is True
-# reason and status are only valid if result_received is False
+# if result_received is True:
+#   result_file is the path to the file containing the result.
+# if result_received is False:
+#   reason and status are only valid if result_received is False
+#   result_file is None 
 WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result_file reason status')
 
 # Support structure to report parsl filenames to work queue.
@@ -726,6 +729,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 with self.tasks_lock:
                     future = self.tasks.pop(task_report.id)
                 logger.debug("Updating Future for executor task {}".format(task_report.id))
+                # If result_received, then there's a result file. The object inside the file
+                # may be a valid result or an exception caused within the function invocation.
+                # Otherwise there's no result file, implying errors from WorkQueue.
                 if task_report.result_received:
                     try:
                         with open(task_report.result_file, 'rb') as f_in:
@@ -734,11 +740,15 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                         logger.debug(f'Cannot load result from result file {task_report.result_file}. Exception: {e}')
                         future.set_exception(WorkQueueTaskFailure('Cannot load result from result file', None))
                     else:
-                        future.set_result(result)
+                        if isinstance(result, Exception):
+                            future.set_exception(result)
+                        else:
+                            future.set_result(result)
                 else:
                     # If there are no results, then the task failed according to one of
                     # work queue modes, such as resource exhaustion.
-                    future.set_exception(WorkQueueTaskFailure(task_report.reason, None))
+                    ex = WorkQueueTaskFailure(task_report.reason, Exception(reason))
+                    future.set_exception(ex)
         finally:
             logger.debug("Marking all outstanding tasks as failed")
             logger.debug("Acquiring tasks_lock")
@@ -970,9 +980,7 @@ def _work_queue_submit_wait(*,
                                                              reason=None,
                                                              status=t.return_status))
                 # If a result file could not be generated, explain the
-                # failure according to work queue error codes. We generate
-                # an exception and wrap it with RemoteExceptionWrapper, to
-                # match the positive case.
+                # failure according to work queue error codes.
                 else:
                     reason = _explain_work_queue_result(t)
                     logger.debug("Did not find result in {}".format(result_file))
