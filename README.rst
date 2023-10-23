@@ -1,3 +1,26 @@
+#
+#
+
+notes for chronolog branch:
+
+
+build:
+
+assuming you are in parsl directory and ChronoLog repo is checked out alongside (in ../ChronoLog)
+
+needs this C json library:
+ sudo apt-get install libjson-c-dev  libjson-c5 
+
+
+
+
+ gcc -fPIC -shared -I /usr/local/include/python3.11/ -I ../ChronoLog/Client/include/ -I ../ChronoLog/chrono_common/ -I ../ChronoLog/ChronoAPI/ChronoLog/include/ chronopy.cpp -o chronopy.so /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30 ../ChronoLog/build/Client/libchronolog_client.so
+
+
+theres a conflict between the python errcode.h and chronolog errcode.h so we renamed the chronolog one to oooerrcode.h everywhere.
+
+
+
 Parsl - Parallel Scripting Library
 ==================================
 |licence| |build-status| |docs| |NSF-1550588| |NSF-1550476| |NSF-1550562| |NSF-1550528|

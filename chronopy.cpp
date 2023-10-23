@@ -2,6 +2,9 @@
 #include <Python.h>
 
 #include <iostream>
+#include <string>
+
+#include "chronolog_client.h"
 
 static PyObject *
 chronolog_start(PyObject *self, PyObject *args)
@@ -14,8 +17,13 @@ chronolog_start(PyObject *self, PyObject *args)
 
     //    sts = system(command);
 
-    std::cout << "hello";
+    std::cout << "hello\n";
 
+    std::string conf_file_path="default.json";
+
+    ChronoLog::ConfigurationManager confManager(conf_file_path);
+    chronolog::Client *client = new chronolog::Client(confManager);
+    
     return PyLong_FromLong(sts);
 }
 
