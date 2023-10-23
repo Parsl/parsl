@@ -41,10 +41,10 @@ def fresh_config():
         executors=[
             HighThroughputExecutor(
                 address="127.0.0.1",
-                launch_cmd="davidadams_reporter.py /tmp/ " + DEFAULT_LAUNCH_CMD,
                 label="htex_Local",
                 working_dir=working_dir,
                 storage_access=[FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging()],
+                max_workers = 1,
                 worker_debug=True,
                 cores_per_worker=1,
                 heartbeat_period=2,
@@ -52,8 +52,8 @@ def fresh_config():
                 poll_period=100,
                 provider=LocalProvider(
                     channel=LocalChannel(),
-                    init_blocks=0,
-                    min_blocks=0,
+                    init_blocks=1,
+                    min_blocks=1,
                     max_blocks=5,
                     launcher=SingleNodeLauncher(),
                 ),
@@ -62,7 +62,6 @@ def fresh_config():
         ],
         strategy='simple',
         app_cache=True, checkpoint_mode='task_exit',
-        retries=2,
         monitoring=MonitoringHub(
                         hub_address="localhost",
                         hub_port=55055,

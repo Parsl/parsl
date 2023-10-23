@@ -85,10 +85,6 @@ class FilesystemRadio(MonitoringRadio):
 
 
 import chronopy
-# TODO: this should encapsulate chronopy state (eg ChronoLog handles) in some
-# object rather than being global. but it doesn't. so don't chronopy.start()
-# multiple times.
-chronopy.start()
 
 class HTEXRadio(MonitoringRadio):
 
@@ -106,6 +102,12 @@ class HTEXRadio(MonitoringRadio):
         """
         self.source_id = source_id
         logger.info("htex-based monitoring channel initialising")
+        # TODO: this should encapsulate chronopy state (eg ChronoLog handles) in some
+        # object rather than being global. but it doesn't. so don't chronopy.start()
+        # multiple times.
+        logger.info("Starting chronopy")
+        chronopy.start()
+        logger.info("Started chronopy")
 
     def send(self, message: object) -> None:
         """ Sends a message to the UDP receiver
@@ -120,20 +122,11 @@ class HTEXRadio(MonitoringRadio):
             None
         """
 
-        import parsl.executors.high_throughput.monitoring_info
-
-        result_queue = parsl.executors.high_throughput.monitoring_info.result_queue
-
-        # this message needs to go in the result queue tagged so that it is treated
-        # i) as a monitoring message by the interchange, and then further more treated
-        # as a RESOURCE_INFO message when received by monitoring (rather than a NODE_INFO
-        # which is the implicit default for messages from the interchange)
-
-        # for the interchange, the outer wrapper, this needs to be a dict:
-
         stringified = str(message)
 
+        logger.info("Sending message into chronopy")
         chronopy.send(stringified)
+        logger.info("Sent message into chronopy")
 
         return
 

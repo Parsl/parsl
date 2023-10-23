@@ -222,6 +222,7 @@ def monitor(pid: int,
     In some circumstances, it might be useful to hack in a handler so the
     logger calls remain in place.
     """
+    logger.info("monitor start")
     import logging
     import platform
     import psutil
@@ -235,8 +236,10 @@ def monitor(pid: int,
         radio = UDPRadio(monitoring_hub_url,
                          source_id=task_id)
     elif radio_mode == "htex":
+        logger.info("monitor creating HTEXRadio")
         radio = HTEXRadio(monitoring_hub_url,
                           source_id=task_id)
+        logger.info("monitor created HTEXRadio")
     elif radio_mode == "filesystem":
         radio = FilesystemRadio(monitoring_url=monitoring_hub_url,
                                 source_id=task_id, run_dir=run_dir)
@@ -246,7 +249,7 @@ def monitor(pid: int,
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
 
-    logging.debug("start of monitor")
+    logging.info("start of monitor")
 
     # these values are simple to log. Other information is available in special formats such as memory below.
     simple = ["cpu_num", 'create_time', 'cwd', 'exe', 'memory_percent', 'nice', 'name', 'num_threads', 'pid', 'ppid', 'status', 'username']
@@ -319,16 +322,17 @@ def monitor(pid: int,
     accumulate_dur = 5.0  # TODO: make configurable?
 
     while not terminate_event.is_set() and pm.is_running():
-        logging.debug("start of monitoring loop")
+        logging.info("start of monitoring loop")
         try:
+            logging.info("calling accumulate_and_prepare")
             d = accumulate_and_prepare()
             if time.time() >= next_send:
-                logging.debug("Sending intermediate resource message")
+                logging.info("Sending intermediate resource message")
                 radio.send((MessageType.RESOURCE_INFO, d))
                 next_send += sleep_dur
         except Exception:
             logging.exception("Exception getting the resource usage. Not sending usage to Hub", exc_info=True)
-        logging.debug("sleeping")
+        logging.info("sleeping")
 
         # wait either until approx next send time, or the accumulation period
         # so the accumulation period will not be completely precise.
@@ -337,7 +341,7 @@ def monitor(pid: int,
 
         terminate_event.wait(max(0, min(next_send - time.time(), accumulate_dur)))
 
-    logging.debug("Sending final resource message")
+    logging.info("Sending final resource message")
     try:
         d = accumulate_and_prepare()
         radio.send((MessageType.RESOURCE_INFO, d))
