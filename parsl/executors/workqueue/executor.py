@@ -65,8 +65,11 @@ ParslTaskToWq = namedtuple('ParslTaskToWq',
                            'id category cores memory disk gpus priority running_time_min env_pkg map_file function_file result_file input_files output_files')
 
 # Support structure to communicate final status of work queue tasks to parsl
-# result is only valid if result_received is True
-# reason and status are only valid if result_received is False
+# if result_received is True:
+#   result is the result
+# if result_received is False:
+#   reason and status are only valid if result_received is False
+#   result is either None or an exception raised while looking for a result
 WqTaskToParsl = namedtuple('WqTaskToParsl', 'id result_received result reason status')
 
 # Support structure to report parsl filenames to work queue.
@@ -731,7 +734,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 else:
                     # If there are no results, then the task failed according to one of
                     # work queue modes, such as resource exhaustion.
-                    future.set_exception(WorkQueueTaskFailure(task_report.reason, task_report.result))
+                    ex = WorkQueueTaskFailure(task_report.reason, task_report.result)
+                    if task_report.result is not None:
+                        ex.__cause__ = task_report.result
+                    future.set_exception(ex)
         finally:
             logger.debug("Marking all outstanding tasks as failed")
             logger.debug("Acquiring tasks_lock")
