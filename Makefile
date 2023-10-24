@@ -74,9 +74,9 @@ wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with workqueue_ex config
 
 .PHONY: radical_ex_test
 radical_ex_test:
-	RPEX_BULK=True pytest parsl/tests/test_radical/bulk.py --config parsl/tests/configs/local_radical.py
+	RPEX_BULK=True pytest parsl/tests/test_radical/test_bulk.py --config parsl/tests/configs/local_radical.py
 	pytest parsl/tests/test_callables.py -k "not cleannet and not dynamically_loaded_module and not test_check_importlib_file_function" --config parsl/tests/configs/local_radical.py
-	RPEX_MPI=True pytest parsl/tests/test_radical/mpi_funcs.py --config parsl/tests/configs/local_radical.py
+	RPEX_MPI=True pytest parsl/tests/test_radical/test_mpi_funcs.py --config parsl/tests/configs/local_radical.py
 
 .PHONY: config_local_test
 config_local_test:
