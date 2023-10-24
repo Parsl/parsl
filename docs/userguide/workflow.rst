@@ -63,7 +63,7 @@ Sequential workflows can be created by passing an AppFuture from one task to ano
 
       # Write a message to a file
       @bash_app
-      def save(message, outputs=[]):
+      def save(message, outputs=()):
             return 'echo {} &> {}'.format(message, outputs[0])
 
       message = generate(10)
@@ -159,15 +159,15 @@ In other cases, it can be convenient to pass data in files, as in the following 
       parsl.load()
 			
       @bash_app
-      def generate(outputs=[]):
+      def generate(outputs=()):
           return 'echo $(( RANDOM % (10 - 5 + 1 ) + 5 )) &> {}'.format(outputs[0])
 
       @bash_app
-      def concat(inputs=[], outputs=[], stdout='stdout.txt', stderr='stderr.txt'):
+      def concat(inputs=(), outputs=(), stdout='stdout.txt', stderr='stderr.txt'):
           return 'cat {0} >> {1}'.format(' '.join(inputs), outputs[0])
 
       @python_app
-      def total(inputs=[]):
+      def total(inputs=()):
           total = 0
           with open(inputs[0].filepath, 'r') as f:
               for l in f:
@@ -209,7 +209,7 @@ the sum of those results.
 
     # Reduce function that returns the sum of a list
     @python_app
-    def app_sum(inputs=[]):
+    def app_sum(inputs=()):
         return sum(inputs)
 
     # Create a list of integers

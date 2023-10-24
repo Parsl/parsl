@@ -97,7 +97,7 @@ irrespective of where that app executes.
 .. code-block:: python
 
     @python_app
-    def print_file(inputs=[]):
+    def print_file(inputs=()):
         with open(inputs[0].filepath, 'r') as inp:
             content = inp.read()
             return(content)
@@ -219,7 +219,7 @@ The following example illustrates how the remote file is implicitly downloaded f
 .. code-block:: python
 
     @python_app
-    def convert(inputs=[], outputs=[]):
+    def convert(inputs=(), outputs=()):
         with open(inputs[0].filepath, 'r') as inp:
             content = inp.read()
             with open(outputs[0].filepath, 'w') as out:
