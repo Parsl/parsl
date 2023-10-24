@@ -91,6 +91,26 @@ Practically, this means
         global_var[ch] += co
 
 
+
+3. *Outputs are only available through return statements*.
+   Parsl does not support generator functions (i.e., those which use ``yield`` statements) and
+   any changes to input arguments will not be communicated.
+
+.. code-block:: python
+
+    # BAD: Assumes changes to inputs will be communicated
+    @python_app
+    def append_to_list(input_list: list, new_val):
+        input_list.append(new_val)
+
+
+    # GOOD: Changes to inputs are returned
+    @python_app
+    def append_to_list(input_list: list, new_val) -> list:
+        input_list.append(new_val)
+        return input_list
+
+
 Functions from Modules
 ++++++++++++++++++++++
 
@@ -169,6 +189,10 @@ There are several classes of allowed types, each with different rules.
 
 
 Learn more about the types of data allowed in `the data section <data.html>`_.
+
+.. note::
+
+    Any changes to mutable input arguments will be ignored.
 
 Special Keyword Arguments
 +++++++++++++++++++++++++

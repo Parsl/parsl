@@ -58,3 +58,26 @@ except NameError as e:
 for ch, co in good_global('parsl', 'a').result().items():
     global_var[ch] += co
 
+
+# Part 3: Mutable args
+
+# BAD: Assumes changes to inputs will be communicated
+@python_app
+def append_to_list(input_list: list, new_val):
+    input_list.append(new_val)
+
+
+mutable_arg = []
+append_to_list(mutable_arg, 1).result()
+assert mutable_arg == [], 'The list _was_changed'
+
+
+# GOOD: Changes to inputs are returned
+@python_app
+def append_to_list(input_list: list, new_val) -> list:
+    input_list.append(new_val)
+    return input_list
+
+
+mutable_arg = append_to_list(mutable_arg, 1).result()
+assert mutable_arg == [1]
