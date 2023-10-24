@@ -12,6 +12,7 @@ types-python-dateutil
 types-requests
 types-six
 types-paramiko
+radical.pilot
 
 # sqlalchemy is needed for typechecking, so it's here
 # as well as at runtime for optional monitoring execution
