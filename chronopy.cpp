@@ -30,8 +30,14 @@ chronolog_start(PyObject *self, PyObject *args)
 
     std::string conf_file_path="default.json";
 
+    std::cerr << "BENC: before ConfigurationManager\n";
+    std::cerr.flush();
     ChronoLog::ConfigurationManager confManager(conf_file_path);
+    std::cerr << "BENC: before Client\n";
+    std::cerr.flush();
     chronolog::Client *client = new chronolog::Client(confManager);
+    std::cerr << "BENC: before Connect\n";
+    std::cerr.flush();
    
     int ret = client->Connect();
 
@@ -41,6 +47,8 @@ chronolog_start(PyObject *self, PyObject *args)
     chronicle_attrs.emplace("Priority", "High");
     int flags = 1;
 
+    std::cerr << "BENC: before CreateChronicle\n";
+    std::cerr.flush();
     ret = client->CreateChronicle(chronicle_name, chronicle_attrs, flags);
      
     // assert(ret == CL_SUCCESS);
@@ -49,6 +57,8 @@ chronolog_start(PyObject *self, PyObject *args)
 
      // TODO this is a workaround for acuiqrestory uniqueness bug
     flags = 2;
+    std::cerr << "BENC: before AcquireStory\n";
+    std::cerr.flush();
     std::pair<int, chronolog::StoryHandle*> acquire_ret = client->AcquireStory(chronicle_name, story_name, story_attrs, flags);
 
     if(acquire_ret.first != CL_SUCCESS) {
@@ -61,7 +71,11 @@ chronolog_start(PyObject *self, PyObject *args)
     // chronolog::StoryHandle* story = acquire_ret.second;
     story = acquire_ret.second;
    
+    std::cerr << "BENC: before send first message\n";
+    std::cerr.flush();
     story->log_event("starting chronopy");
+    std::cerr << "BENC: after send first message\n";
+    std::cerr.flush();
 
     // client->ReleaseStory(chronicle_name, story_name);
     // client->Disconnect();
