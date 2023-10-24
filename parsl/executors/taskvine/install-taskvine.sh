@@ -16,3 +16,6 @@ wget "$NO_VERBOSE" "$SHOW_HEADERS" -O /tmp/cctools.tar.gz "https://github.com/co
 
 mkdir -p /tmp/cctools
 tar -C /tmp/cctools -zxf /tmp/cctools.tar.gz --strip-components=1
+
+# install taskvine additional dependencies that are not included in the binary tarball
+pip install cloudpickle
