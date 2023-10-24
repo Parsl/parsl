@@ -8,8 +8,8 @@ if [[ -z $CCTOOLS_VERSION ]]; then
 fi
 
 #TARBALL="cctools-$CCTOOLS_VERSION-x86_64-ubuntu20.04.tar.gz"
-TARBALL="cctools-$CCTOOLS_VERSION.parsl.wq.chdir.fix-x86_64-ubuntu20.04.tar.gz"
-[[ -f "/etc/redhat-release" ]] && TARBALL="cctools-$CCTOOLS_VERSION.parsl.wq.chdir.fix-x86_64-centos8.tar.gz"
+TARBALL="cctools-7.7.0.parsl.wq.chdir.fix-x86_64-ubuntu20.04.tar.gz"
+[[ -f "/etc/redhat-release" ]] && TARBALL="cctools-7.7.0.parsl.wq.chdir.fix-x86_64-centos8.tar.gz"
 
 # If stderr is *not* a TTY, then disable progress bar and show HTTP response headers
 [[ ! -t 1 ]] && NO_VERBOSE="--no-verbose" SHOW_HEADERS="-S"
