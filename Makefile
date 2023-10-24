@@ -81,7 +81,7 @@ radical_ex_test:
 
 .PHONY: config_local_test
 config_local_test:
-	pip3 install ".[monitoring,proxystore]"
+	pip3 install ".[monitoring,visualization,proxystore]"
 	pytest parsl/tests/ -k "not cleannet" --config local --random-order --durations 10
 
 .PHONY: site_test
