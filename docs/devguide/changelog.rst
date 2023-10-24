@@ -289,7 +289,7 @@ New Functionality
    .. code-block:: python
 
       @bash_app
-      def cat(inputs=[], outputs=[]):
+      def cat(inputs=(), outputs=()):
            return 'cat {} > {}'.format(inputs[0], outputs[0])
 
       concat = cat(inputs=['hello-0.txt'],
@@ -302,7 +302,7 @@ New Functionality
       from parsl import File
 
       @bash_app
-      def cat(inputs=[], outputs=[]):
+      def cat(inputs=(), outputs=()):
            return 'cat {} > {}'.format(inputs[0].filepath, outputs[0].filepath)
 
       concat = cat(inputs=[File('hello-0.txt')],
@@ -316,7 +316,7 @@ New Functionality
       from parsl import File
 
       @bash_app
-      def cat(inputs=[], outputs=[]):
+      def cat(inputs=(), outputs=()):
            return 'cat {} > {}'.format(inputs[0].filepath, outputs[0].filepath)
 
 
@@ -397,16 +397,16 @@ New Functionality
 
         # The following example worked until v0.8.0
         @bash_app
-        def cat(inputs=[], outputs=[]):
+        def cat(inputs=(), outputs=()):
             return 'cat {inputs[0]} > {outputs[0]}' # <-- Relies on Parsl auto formatting the string
 
         # Following are two mechanisms that will work going forward from v0.9.0
         @bash_app
-        def cat(inputs=[], outputs=[]):
+        def cat(inputs=(), outputs=()):
             return 'cat {} > {}'.format(inputs[0], outputs[0]) # <-- Use str.format method
 
         @bash_app
-        def cat(inputs=[], outputs=[]):
+        def cat(inputs=(), outputs=()):
             return f'cat {inputs[0]} > {outputs[0]}' # <-- OR use f-strings introduced in Python3.6
 
 
@@ -510,12 +510,12 @@ New Functionality
 
      # Old style: " ".join(inputs) is legal since inputs will behave like a list of strings
      @bash_app
-     def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
+     def concat(inputs=(), outputs=(), stdout="stdout.txt", stderr='stderr.txt'):
          return "cat {0} > {1}".format(" ".join(inputs), outputs[0])
 
      # New style:
      @bash_app
-     def concat(inputs=[], outputs=[], stdout="stdout.txt", stderr='stderr.txt'):
+     def concat(inputs=(), outputs=(), stdout="stdout.txt", stderr='stderr.txt'):
          return "cat {0} > {1}".format(" ".join(list(map(str,inputs))), outputs[0])
 
 * Cleaner user app file log management.

@@ -3,112 +3,127 @@
 Apps
 ====
 
-An **app** is a Parsl construct for representing a fragment of Python code 
-or external Bash shell code that can be asynchronously executed.
+An **App** defines a computation that will be executed asynchronously by Parsl.
+Apps are Python functions marked with a decorator which
+designates that the function will run asynchronously and cause it to return
+a :class:`~concurrent.futures.Future` instead of the result.
 
-A Parsl app is defined by annotating a Python function with a decorator: 
-the ``@python_app`` decorator for a **Python app**, the ``@bash_app`` decorator for a **Bash app**,
-and the ``@join_app`` decorator for a **Join app**.
+Apps can be one of three types of functions, each with their own type of decorator
 
-Python apps encapsulate pure Python code, while Bash apps wrap calls to external applications and scripts,
-and Join apps allow composition of other apps to form sub-workflows.
+- ``@python_app``: Most Python functions
+- ``@bash_app``: A Python function which returns a command line program to execute
+- ``@join_app``: A function which launches one or more new Apps
 
-Python and Bash apps are documented below. Join apps are documented in a later
-section (see :ref:`label-joinapp`)
+The intricacies of Python and Bash apps are documented below. Join apps are documented in a later
+section (see :ref:`label-joinapp`).
 
 Python Apps
 -----------
 
-The following code snippet shows a Python function ``double(x: int)``, which returns double the input
-value. 
-The ``@python_app`` decorator defines the function as a Parsl Python app.  
+.. code-block:: python
+
+    @python_app
+    def hello_world(name: str) -> str:
+        return f'Hello, {name}!'
+
+    print(hello_world('user').result())
+
+
+Python Apps run Python functions. The code inside a function marked by ``@python_app`` is what will
+be executed either locally or on a remote system.
+
+Most functions can run without modification.
+Limitations on the content of the functions and their inputs/outputs are described below.
+
+Rules for Function Contents
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. _function-rules:
+
+Parsl apps have access to less information from the script that defined them
+than functions run via Python's native multiprocessing libraries.
+The reason is that functions are executed on workers that
+lack access to the global variables in the script that defined them.
+Practically, this means
+
+1. *Functions may need to re-import libraries.*
+   Place the import statements that define functions or classes inside the function.
+   Type annotations should not use libraries defined in the function.
+
+
+  .. code-block:: python
+
+    import numpy as np
+
+    # BAD: Assumes library has been imported
+    @python_app
+    def linear_model(x: list[float] | np.ndarray, m: float, b: float):
+        return np.multiply(x, m) + b
+
+    # GOOD: Function imports libraries on remote worker
+    @python_app
+    def linear_model(x: list[float] | 'np.ndarray', m: float, b: float):
+        import numpy as np
+        return np.multiply(x, m) + b
+
+
+2. *Global variables are inaccessible*.
+   Functions should not use variables defined outside the function.
+   Likewise, do not assume that variables created inside the function are visible elsewhere.
+
 
 .. code-block:: python
 
-       @python_app
-       def double(x):
-           return x * 2
+    # BAD: Uses global variables
+    global_var = {'a': 0}
 
-       double(42)
+    @python_app
+    def counter_func(string: str, character: str = 'a'):
+        global_var[character] += string.count(character)  # `global_var` will not be accessible
 
-As a Parsl Python app is executed asynchronously, and potentially remotely, the function
-cannot assume access to shared program state. For example, it must explicitly import any 
-required modules and cannot refer to variables used outside the function. 
-Thus while the following code fragment is valid Python, it is not valid Parsl, 
-as the ``bad_double()`` function requires the `random` module and refers to the external 
-variable ``factor``.
 
-.. code-block:: python
+    # GOOD
+    @python_app
+    def counter_func(string: str, character: str = 'a'):
+        return {character: string.count(character)}
 
-       import random
-       factor = 5
+    for ch, co in good_global('parsl', 'a').result().items():
+        global_var[ch] += co
 
-       @python_app
-       def bad_double(x):
-           return x * random.random() * factor
 
-       print(bad_double(42))
-       
-The following alternative formulation is valid Parsl.
+
+3. *Outputs are only available through return statements*.
+   Parsl does not support generator functions (i.e., those which use ``yield`` statements) and
+   any changes to input arguments will not be communicated.
 
 .. code-block:: python
 
-       factor = 5
+    # BAD: Assumes changes to inputs will be communicated
+    @python_app
+    def append_to_list(input_list: list, new_val):
+        input_list.append(new_val)
 
-       @python_app
-       def good_double(x, f):
-           import random
-           return x * random.random() * f
 
-       print(good_double(42, factor))
+    # GOOD: Changes to inputs are returned
+    @python_app
+    def append_to_list(input_list: list, new_val) -> list:
+        input_list.append(new_val)
+        return input_list
 
-Python apps may be passed any Python input argument, including primitive types, 
-files, and other complex types that can be serialized (e.g., numpy array,
-scikit-learn model). They may also be passed a Parsl ``Future`` (see :ref:`label-futures`) 
-returned by another Parsl app.
-In this case, Parsl will establish a dependency between the two apps and will not 
-execute the dependent app until all dependent futures are resolved.
-Further detail is provided in :ref:`label-futures`.
 
-A Python app may also act upon files. In order to make Parsl aware of these files,
-they must be specified by using the ``inputs`` and/or ``outputs`` keyword arguments,
-as in following code snippet, which copies the contents of one file (``in.txt``) to another (``out.txt``).
+Functions from Modules
+++++++++++++++++++++++
 
-.. code-block:: python
+The above rules assume that the user is running the example code from a standalone script or Jupyter Notebook.
+Functions that are defined in an installed Python module do not need to abide by these guidelines,
+as they are sent to workers differently than functions defined locally within a script.
 
-       @python_app
-       def echo(inputs=[], outputs=[]):
-           with open(inputs[0], 'r') as in_file, open(outputs[0], 'w') as out_file:
-               out_file.write(in_file.readline())
-
-       echo(inputs=[in.txt], outputs=[out.txt])
-
-Special Keyword Arguments
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Any Parsl app (a Python function decorated with the ``@python_app`` or ``@bash_app`` decorator) can use the following special reserved keyword arguments.
-
-1. inputs: (list) This keyword argument defines a list of input :ref:`label-futures` or files. 
-   Parsl will wait for the results of any listed :ref:`label-futures` to be resolved before executing the app.
-   The ``inputs`` argument is useful both for passing files as arguments
-   and when one wishes to pass in an arbitrary number of futures at call time.
-2. outputs: (list) This keyword argument defines a list of files that
-   will be produced by the app. For each file thus listed, Parsl will create a future,
-   track the file, and ensure that it is correctly created. The future 
-   can then be passed to other apps as an input argument.
-3. walltime: (int) This keyword argument places a limit on the app's
-   runtime in seconds. If the walltime is exceed, Parsl will raise an `parsl.app.errors.AppTimeout` exception.
-
-Serializing Functions from Libraries
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Parsl can create Apps directly from functions defined in Python modules.
-Supply the function as an argument to ``python_app`` rather than creating a new function which is decorated.
+Directly convert a function from a library to a Python App by passing it as an argument to ``python_app``:
 
 .. code-block:: python
 
     from module import function
-    function_app = python_app(function, executors='all')
+    function_app = python_app(function)
 
 ``function_app`` will act as Parsl App function of ``function``.
 
@@ -124,21 +139,140 @@ to include attributes from the original function (e.g., its name).
     my_max = update_wrapper(my_max, max)  # Copy over the names
     my_max_app = python_app(my_max)
 
+The above example is equivalent to creating a new function (as below)
 
-Apps created using ``python_app`` as a function will work just like those which use it as a decorator.
+.. code-block:: python
 
-Returns
-^^^^^^^
+    @python_app
+    def my_max_app(*args, **kwargs):
+        import numpy as np
+        return np.max(*args, keepdims=True, axis=0, **kwargs)
+
+Inputs and Outputs
+^^^^^^^^^^^^^^^^^^
+
+Python apps may be passed any Python type as an input and return any Python type, with a few exceptions.
+There are several classes of allowed types, each with different rules.
+
+- *Python Objects*: Any Python object that can be saved with
+  `pickle <https://docs.python.org/3/library/pickle.html>`_ or `dill <https://dill.readthedocs.io/>`_
+  can be used as an import or output.
+  All primitive types (e.g., floats, strings) are valid as are many complex types (e.g., numpy arrays).
+- *Files*: Pass files as inputs as a :py:class:`~parsl.data_provider.files.File` object.
+  Parsl can transfer them to a remote system and update the ``File`` object with a new path.
+  Access the new path with ``File.filepath`` attribute.
+
+  .. code-block:: python
+
+      @python_app
+      def read_first_line(x: File):
+          with open(x.filepath, 'r') as fp:
+              return fp.readline()
+
+  Files can also be outputs of a function, but only through the ``outputs`` kwargs (described below).
+- *Parsl Futures*. Functions can receive results from other Apps as Parsl ``Future`` objects.
+  Parsl will establish a dependency on the App(s) which created the Future(s)
+  and start executing as soon as the preceding ones complete.
+
+  .. code-block:: python
+
+    @python_app
+    def capitalize(x: str):
+        return x.upper()
+
+    input_file = File('text.txt')
+    first_line_future = read_first_line(input_file)
+    capital_future = capitalize(first_line_future)
+    print(capital_future.result())
+
+  See the section on `Futures <futures.html>`_ for more details.
+
+
+Learn more about the types of data allowed in `the data section <data.html>`_.
+
+.. note::
+
+    Any changes to mutable input arguments will be ignored.
+
+Special Keyword Arguments
++++++++++++++++++++++++++
+
+Some keyword arguments to the Python function are treated differently by Parsl
+
+1. inputs: (list) This keyword argument defines a list of input :ref:`label-futures` or files. 
+   Parsl will wait for the results of any listed :ref:`label-futures` to be resolved before executing the app.
+   The ``inputs`` argument is useful both for passing files as arguments
+   and when one wishes to pass in an arbitrary number of futures at call time.
+
+.. code-block:: python
+
+    @python_app()
+    def map_app(x):
+        return x * 2
+
+    @python_app()
+    def reduce_app(inputs = ()):
+        return sum(inputs)
+
+    map_futures = [map_app(x) for x in range(3)]
+    reduce_future = reduce_app(inputs=map_futures)
+
+    print(reduce_future.result())  # 0 + 1 * 2 + 2 * 2 = 6
+
+2. outputs: (list) This keyword argument defines a list of files that
+   will be produced by the app. For each file thus listed, Parsl will create a future,
+   track the file, and ensure that it is correctly created. The future 
+   can then be passed to other apps as an input argument.
+
+.. code-block:: python
+
+    @python_app()
+    def write_app(message, outputs=()):
+        """Write a single message to every file in outputs"""
+        for path in outputs:
+            with open(path, 'w') as fp:
+                print(message, file=fp)
+
+    to_write = [
+        File(Path(tmpdir) / 'output-0.txt'),
+        File(Path(tmpdir) / 'output-1.txt')
+    ]
+    write_app('Hello!', outputs=to_write).result()
+    for path in to_write:
+        with open(path) as fp:
+            assert fp.read() == 'Hello!\n'
+
+3. walltime: (int) This keyword argument places a limit on the app's
+   runtime in seconds. If the walltime is exceed, Parsl will raise an `parsl.app.errors.AppTimeout` exception.
+
+Outputs
++++++++
 
 A Python app returns an AppFuture (see :ref:`label-futures`) as a proxy for the results that will be returned by the
 app once it is executed. This future can be inspected to obtain task status; 
 and it can be used to wait for the result, and when complete, present the output Python object(s) returned by the app.
 In case of an error or app failure, the future holds the exception raised by the app.
 
+Options for Python Apps
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The :meth:`~parsl.app.app.python_app` decorator has a few options which controls how Parsl executes all tasks
+run with that application.
+For example, you can ensure that Parsl caches the results of the function and executes tasks on specific sites.
+
+.. code-block:: python
+
+    @python_app(cache=True, executors=['gpu'])
+    def expensive_gpu_function():
+        # ...
+        return
+
+See the Parsl documentation for full details.
+
 Limitations
 ^^^^^^^^^^^
 
-There are some limitations on the Python functions that can be converted to apps:
+To summarize, any Python function can be made a Python App with a few restrictions
 
 1. Functions should act only on defined input arguments. That is, they should not use script-level or global variables.
 2. Functions must explicitly import any required modules if they are defined in script which starts Parsl.
@@ -149,82 +283,65 @@ There are some limitations on the Python functions that can be converted to apps
 Bash Apps
 ---------
 
-A Parsl Bash app is used to execute an external application, script, or code written in another language.
-It is defined by a ``@bash_app`` decorator and the Python code that forms the body of the
-function must return a fragment of Bash shell code to be executed by Parsl.
-The Bash shell code executed by a Bash app can be arbitrarily long. 
-
-The following code snippet presents an example of a Bash app ``echo_hello``,
-which returns the bash command ``'echo "Hello World!"'`` as a string. 
-This string will be executed by Parsl as a Bash command.
-
 .. code-block:: python
 
        @bash_app
-       def echo_hello(stderr='std.err', stdout='std.out'):
-           return 'echo "Hello World!"'
+       def echo(
+           name: str,
+           stdout=parsl.AUTO_LOGNAME  # Requests Parsl to return the stdout
+       ):
+           return f'echo "Hello, {name}!"'
 
-       # echo_hello() when called will execute the shell command and
-       # create a std.out file with the contents "Hello World!"
-       echo_hello()
+       future = echo('user')
+       future.result() # block until task has completed
+
+       with open(future.stdout, 'r') as f:
+           print(f.read())
 
 
-Unlike a Python app, a Bash app cannot return Python objects.
-Instead, Bash apps communicate with other apps via files.
-A decorated ``@bash_app`` exposes the ``inputs`` and ``outputs`` keyword arguments 
-described above for tracking input and output files.
-It also includes, as described below, keyword arguments for capturing the STDOUT and STDERR streams and recording
-them in files that are managed by Parsl.
+A Parsl Bash app executes an external application by making a command-line execution.
+Parsl will execute the string returned by the function as a command-line script on a remote worker.
 
-Special Keywords
-^^^^^^^^^^^^^^^^
+Rules for Function Contents
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Bash Apps follow the same rules :ref:`as Python Apps <function-rules>`.
+For example, imports may need to be inside functions and global variables will be inaccessible.
+
+Inputs and Outputs
+^^^^^^^^^^^^^^^^^^
+
+Bash Apps can use the same kinds of inputs as Python Apps, but only communicate results with Files.
+
+The Bash Apps, unlike Python Apps, can also return the content printed to the Standard Output and Error.
+
+Special Keywords Arguments
+++++++++++++++++++++++++++
 
 In addition to the ``inputs``, ``outputs``, and ``walltime`` keyword arguments
 described above, a Bash app can accept the following keywords:
 
 1. stdout: (string, tuple or ``parsl.AUTO_LOGNAME``) The path to a file to which standard output should be redirected. If set to ``parsl.AUTO_LOGNAME``, the log will be automatically named according to task id and saved under ``task_logs`` in the run directory. If set to a tuple ``(filename, mode)``, standard output will be redirected to the named file, opened with the specified mode as used by the Python `open <https://docs.python.org/3/library/functions.html#open>`_ function.
 2. stderr: (string or ``parsl.AUTO_LOGNAME``) Like stdout, but for the standard error stream.
-3. label: (string) If the app is invoked with ``stdout=parsl.AUTO_LOGNAME`` or ``stderr=parsl.AUTO_LOGNAME``, this arugment will be appended to the log name.
+3. label: (string) If the app is invoked with ``stdout=parsl.AUTO_LOGNAME`` or ``stderr=parsl.AUTO_LOGNAME``, this argument will be appended to the log name.
 
-A Bash app can construct the Bash command string to be executed from arguments passed
-to the decorated function.
-
-.. code-block:: python
-
-       @bash_app
-       def echo(arg, inputs=[], stderr=parsl.AUTO_LOGNAME, stdout=parsl.AUTO_LOGNAME):
-           return 'echo {} {} {}'.format(arg, inputs[0], inputs[1])
-
-       future = echo('Hello', inputs=['World', '!'])
-       future.result() # block until task has completed
-
-       with open(future.stdout, 'r') as f:
-           print(f.read()) # prints "Hello World !"
-
-
-Returns
-^^^^^^^
-
-A Bash app, like a Python app, returns an AppFuture, which can be used to obtain
-task status, determine when the app has completed (e.g., via ``future.result()`` as in the preceding code fragment), and access exceptions.
-As a Bash app can only return results via files specified via ``outputs``, ``stderr``, or ``stdout``; the value returned by the AppFuture has no meaning.
+Outputs
++++++++
 
 If the Bash app exits with Unix exit code 0, then the AppFuture will complete. If the Bash app
 exits with any other code, Parsl will treat this as a failure, and the AppFuture will instead
 contain an `BashExitFailure` exception. The Unix exit code can be accessed through the
 ``exitcode`` attribute of that `BashExitFailure`.
 
-Limitations
-^^^^^^^^^^^
 
-The following limitation applies to Bash apps:
+Execution Options
+^^^^^^^^^^^^^^^^^
 
-1. Environment variables are not supported.
-
+Bash Apps have the same execution options (e.g., pinning to specific sites) as the Python Apps.
 
 MPI Apps
---------
+^^^^^^^^
 
-Applications which employ MPI to span multiple nodes are a special case of Bash or Python apps,
+Applications which employ MPI to span multiple nodes are a special case of Bash apps,
 and require special modification of Parsl's `execution environment <execution.html>`_ to function.
 Support for MPI applications is described `in a later section <mpi_apps.html>`_.
