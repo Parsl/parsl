@@ -49,28 +49,28 @@ mypy: ## run mypy checks
 
 .PHONY: local_thread_test
 local_thread_test: ## run all tests with local_thread config
-	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/local_threads.py --random-order --durations 10
+	pytest parsl/tests/ -k "not cleannet and not test_radical_bulk and not test_radical_mpi" --config parsl/tests/configs/local_threads.py --random-order --durations 10
 
 .PHONY: htex_local_test
 htex_local_test: ## run all tests with htex_local config
 	pip3 install .
-	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local.py --random-order --durations 10
+	pytest parsl/tests/ -k "not cleannet and not test_radical_bulk and not test_radical_mpi" --config parsl/tests/configs/htex_local.py --random-order --durations 10
 
 .PHONY: htex_local_alternate_test
 htex_local_alternate_test: ## run all tests with htex_local config
 	pip3 install ".[monitoring]"
-	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --random-order --durations 10
+	pytest parsl/tests/ -k "not cleannet and not test_radical_bulk and not test_radical_mpi" --config parsl/tests/configs/htex_local_alternate.py --random-order --durations 10
 
 $(CCTOOLS_INSTALL):	#CCtools contains both taskvine and workqueue so install only once
 	parsl/executors/taskvine/install-taskvine.sh
  
 .PHONY: vineex_local_test
 vineex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with taskvine_ex config
-	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/taskvine_ex.py --random-order --durations 10
+	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363 and not test_radical_bulk and not test_radical_mpi" --config parsl/tests/configs/taskvine_ex.py --random-order --durations 10
 
 .PHONY: wqex_local_test
 wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with workqueue_ex config
-	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --random-order --durations 10
+	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363 and not test_radical_bulk and not test_radical_mpi" --config parsl/tests/configs/workqueue_ex.py --random-order --durations 10
 
 .PHONY: radical_ex_test
 radical_ex_test:
@@ -81,7 +81,7 @@ radical_ex_test:
 .PHONY: config_local_test
 config_local_test:
 	pip3 install ".[monitoring,visualization,proxystore]"
-	pytest parsl/tests/ -k "not cleannet" --config local --random-order --durations 10
+	pytest parsl/tests/ -k "not cleannet and not test_radical_bulk and not test_radical_mpi" --config local --random-order --durations 10
 
 .PHONY: site_test
 site_test:
