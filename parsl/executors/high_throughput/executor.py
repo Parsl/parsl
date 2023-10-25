@@ -730,3 +730,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         logger.info("Attempting HighThroughputExecutor shutdown")
         self.interchange_proc.terminate()
         logger.info("Finished HighThroughputExecutor shutdown attempt")
+
+    def monitor_resources(self):
+        return False
