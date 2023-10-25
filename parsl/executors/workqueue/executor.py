@@ -738,7 +738,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                             result = deserialize(f_in.read())
                     except Exception as e:
                         logger.error(f'Cannot load result from result file {task_report.result_file}. Exception: {e}')
-                        future.set_exception(WorkQueueTaskFailure('Cannot load result from result file', None))
+                        ex = WorkQueueTaskFailure('Cannot load result from result file', None)
+                        ex.__cause__ = e
+                        future.set_exception(ex)
                     else:
                         if isinstance(result, Exception):
                             ex = WorkQueueTaskFailure('Task execution raises an exception', result)
@@ -749,7 +751,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 else:
                     # If there are no results, then the task failed according to one of
                     # work queue modes, such as resource exhaustion.
-                    ex = WorkQueueTaskFailure(task_report.reason, Exception(task_report.reason))
+                    ex = WorkQueueTaskFailure(task_report.reason, None)
                     future.set_exception(ex)
         finally:
             logger.debug("Marking all outstanding tasks as failed")
