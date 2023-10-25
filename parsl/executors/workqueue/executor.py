@@ -737,7 +737,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                         with open(task_report.result_file, 'rb') as f_in:
                             result = deserialize(f_in.read())
                     except Exception as e:
-                        logger.debug(f'Cannot load result from result file {task_report.result_file}. Exception: {e}')
+                        logger.error(f'Cannot load result from result file {task_report.result_file}. Exception: {e}')
                         future.set_exception(WorkQueueTaskFailure('Cannot load result from result file', None))
                     else:
                         if isinstance(result, Exception):
