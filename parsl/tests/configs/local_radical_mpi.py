@@ -11,11 +11,12 @@ rpex_cfg.pilot_env_setup.append(parsl_src)
 
 
 def fresh_config():
+    rpex_cfg.worker_type = "MPI"
 
     return Config(
             executors=[
                 RadicalPilotExecutor(
-                    label='RPEXBulk',
+                    label='RPEXMPI',
                     rpex_cfg=rpex_cfg.get_cfg_file(),
                     bulk_mode=True,
                     resource='local.localhost',
