@@ -741,7 +741,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                         future.set_exception(WorkQueueTaskFailure('Cannot load result from result file', None))
                     else:
                         if isinstance(result, Exception):
-                            future.set_exception(result)
+                            ex = WorkQueueTaskFailure(f'Task execution raises an exception', result)
+                            ex.__cause__ = result
+                            future.set_exception(ex)
                         else:
                             future.set_result(result)
                 else:
