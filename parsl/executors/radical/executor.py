@@ -187,13 +187,13 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         logger.info(f"RPEX session is created: {0}".format(self.sesson.path))
 
         pd_init = {'gpus': self.gpus,
-                    'cores': self.cores,
-                    'exit_on_error': True,
-                    'queue': self.partition,
-                    'project': self.project,
-                    'runtime': self.walltime,
-                    'resource': self.resource,
-                    'access_schema': self.access_schema}
+                   'cores': self.cores,
+                   'exit_on_error': True,
+                   'queue': self.partition,
+                   'project': self.project,
+                   'runtime': self.walltime,
+                   'resource': self.resource,
+                   'access_schema': self.access_schema}
 
         # move the agent sandbox in the workdir mainly for tests purposes
         if not self.resource or 'local' in self.resource:
