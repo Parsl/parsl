@@ -26,7 +26,9 @@ from parsl.executors.base import ParslExecutor
 RPEX = 'RPEX'
 BASH = 'bash'
 PYTHON = 'python'
+
 os.environ["RADICAL_REPORT"] = "False"
+os.environ["RADICAL_LOG_LVL"] = "DEBUG"
 
 logger = logging.getLogger(__name__)
 
