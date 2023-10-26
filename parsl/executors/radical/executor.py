@@ -184,7 +184,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         self.session = rp.Session(cfg={'base': self.run_dir},
                                   uid=ru.generate_id('rpex.session',
                                                      mode=ru.ID_PRIVATE))
-        logger.info(f"RPEX session is created: {0}".format(self.sesson.path))
+        logger.info(f"RPEX session is created: {0}".format(self.session.path))
 
         pd_init = {'gpus': self.gpus,
                    'cores': self.cores,
