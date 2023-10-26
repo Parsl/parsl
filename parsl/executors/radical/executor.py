@@ -181,21 +181,24 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         logger.info("starting RadicalPilotExecutor")
         logger.info('Parsl: {0}'.format(parsl.__version__))
         logger.info('RADICAL pilot: {0}'.format(rp.version))
-        self.session = rp.Session(uid=ru.generate_id('rpex.session',
+        self.session = rp.Session(cfg={'base': self.run_dir},
+                                  uid=ru.generate_id('rpex.session',
                                                      mode=ru.ID_PRIVATE))
+        logger.info(f"RPEX session is created: {0}".format(self.sesson.path))
 
-        if self.resource is None:
-            logger.error("specify remote or local resource")
+        pd_init = {'gpus': self.gpus,
+                    'cores': self.cores,
+                    'exit_on_error': True,
+                    'queue': self.partition,
+                    'project': self.project,
+                    'runtime': self.walltime,
+                    'resource': self.resource,
+                    'access_schema': self.access_schema}
 
-        else:
-            pd_init = {'gpus': self.gpus,
-                       'cores': self.cores,
-                       'exit_on_error': True,
-                       'queue': self.partition,
-                       'project': self.project,
-                       'runtime': self.walltime,
-                       'resource': self.resource,
-                       'access_schema': self.access_schema}
+        # move the agent sandbox in the workdir mainly for tests purposes
+        if not self.resource or 'local' in self.resource:
+            pd_init['sandbox'] = self.run_dir
+            logger.info("RPEX will be running in the local mode")
 
         pd = rp.PilotDescription(pd_init)
 
