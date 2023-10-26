@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Definitions for the @App decorator and the App classes.
 
 The App class encapsulates a generic leaf task that can be executed asynchronously.
@@ -8,7 +10,7 @@ from abc import ABCMeta, abstractmethod
 from inspect import signature
 from typing import List, Optional, Union
 
-from parsl.dataflow.dflow import DataFlowKernel
+import parsl.dataflow.dflow as dflow
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +72,7 @@ class AppBase(metaclass=ABCMeta):
 
 @typeguard.typechecked
 def python_app(function=None,
-               data_flow_kernel: Optional[DataFlowKernel] = None,
+               data_flow_kernel: Optional[dflow.DataFlowKernel] = None,
                cache: bool = False,
                executors: Union[List[str], str] = 'all',
                ignore_for_cache: Optional[List[str]] = None):
@@ -111,7 +113,7 @@ def python_app(function=None,
 
 @typeguard.typechecked
 def join_app(function=None,
-             data_flow_kernel: Optional[DataFlowKernel] = None,
+             data_flow_kernel: Optional[dflow.DataFlowKernel] = None,
              cache: bool = False,
              ignore_for_cache: Optional[List[str]] = None):
     """Decorator function for making join apps
@@ -149,7 +151,7 @@ def join_app(function=None,
 
 @typeguard.typechecked
 def bash_app(function=None,
-             data_flow_kernel: Optional[DataFlowKernel] = None,
+             data_flow_kernel: Optional[dflow.DataFlowKernel] = None,
              cache: bool = False,
              executors: Union[List[str], str] = 'all',
              ignore_for_cache: Optional[List[str]] = None):

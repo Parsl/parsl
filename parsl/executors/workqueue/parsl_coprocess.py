@@ -2,7 +2,6 @@
 
 import sys
 from parsl.app.errors import RemoteExceptionWrapper
-import parsl.executors.workqueue.exec_parsl_function as epf
 
 import socket
 import json

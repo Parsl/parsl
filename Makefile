@@ -7,7 +7,7 @@ CCTOOLS_INSTALL := /tmp/cctools
 MPICH=mpich
 OPENMPI=openmpi
 export PATH := $(CCTOOLS_INSTALL)/bin/:$(PATH)
-export CCTOOLS_VERSION=7.7.0
+export CCTOOLS_VERSION=7.7.1
 export HYDRA_LAUNCHER=fork
 export OMPI_MCA_rmaps_base_oversubscribe=yes
 MPI=$(MPICH)
@@ -79,9 +79,9 @@ workqueue_mon_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex con
 
 
 .PHONY: config_local_test
-config_local_test:   # TODO: this doesn't check workqueue is installed -- because that's done in a different 'make' run, and there is nothing to cache that fact between runs in the current make impl (eg looking for a particular file to be there...)
-	pip3 install ".[monitoring,proxystore]"
-	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages pytest parsl/tests/ -k "not cleannet and not site" --config local --random-order
+config_local_test:
+	pip3 install ".[monitoring,visualization,proxystore]"
+	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages pytest parsl/tests/ -k "not cleannet and not site" --config local --random-order --durations 10
 
 .PHONY: site_test
 site_test:

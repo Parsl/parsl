@@ -23,7 +23,7 @@ import shutil
 import itertools
 
 from parsl.trace import event, span_bind_sub, Span
-from parsl.serialize import pack_apply_message
+from parsl.serialize import pack_apply_message, deserialize
 import parsl.utils as putils
 from parsl.executors.errors import ExecutorError
 from parsl.data_provider.files import File
@@ -69,11 +69,10 @@ ParslTaskToWq = namedtuple('ParslTaskToWq',
 
 # Support structure to communicate final status of work queue tasks to parsl
 # if result_received is True:
-#   result is the result
+#   result_file is the path to the file containing the result.
 # if result_received is False:
 #   reason and status are only valid if result_received is False
-#   result is either None or an exception raised while looking for a result
-WqTaskToParsl = namedtuple('WqTaskToParsl', 'id wq_id result_received result reason status')
+WqTaskToParsl = namedtuple('WqTaskToParsl', 'id wq_id result_received result_file reason status')
 
 # Support structure to report parsl filenames to work queue.
 # parsl_name is the local_name or filepath attribute of a parsl file object.
@@ -813,14 +812,29 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 with self.tasks_lock:
                     future = self.tasks.pop(task_report.id)
                 logger.debug("Updating Future for executor task {}".format(task_report.id))
+                # If result_received, then there's a result file. The object inside the file
+                # may be a valid result or an exception caused within the function invocation.
+                # Otherwise there's no result file, implying errors from WorkQueue.
                 if task_report.result_received:
-                    future.set_result(task_report.result)
+                    try:
+                        with open(task_report.result_file, 'rb') as f_in:
+                            result = deserialize(f_in.read())
+                    except Exception as e:
+                        logger.error(f'Cannot load result from result file {task_report.result_file}. Exception: {e}')
+                        ex = WorkQueueTaskFailure('Cannot load result from result file', None)
+                        ex.__cause__ = e
+                        future.set_exception(ex)
+                    else:
+                        if isinstance(result, Exception):
+                            ex = WorkQueueTaskFailure('Task execution raises an exception', result)
+                            ex.__cause__ = result
+                            future.set_exception(ex)
+                        else:
+                            future.set_result(result)
                 else:
                     # If there are no results, then the task failed according to one of
                     # work queue modes, such as resource exhaustion.
-                    ex = WorkQueueTaskFailure(task_report.reason, task_report.result)
-                    if task_report.result is not None:
-                        ex.__cause__ = task_report.result
+                    ex = WorkQueueTaskFailure(task_report.reason, None)
                     future.set_exception(ex)
         finally:
             logger.debug("Marking all outstanding tasks as failed")
@@ -968,7 +982,7 @@ def _work_queue_submit_wait(*,
                 collector_queue.put_nowait(WqTaskToParsl(id=task.id,
                                                          wq_id=-1,
                                                          result_received=False,
-                                                         result=None,
+                                                         result_file=None,
                                                          reason="task could not be created by work queue",
                                                          status=-1))
                 continue
@@ -1031,7 +1045,7 @@ def _work_queue_submit_wait(*,
                 collector_queue.put_nowait(WqTaskToParsl(id=task.id,
                                                          wq_id=-1,
                                                          result_received=False,
-                                                         result=None,
+                                                         result_file=None,
                                                          reason="task could not be submited to work queue",
                                                          status=-1))
                 continue
@@ -1051,25 +1065,21 @@ def _work_queue_submit_wait(*,
                 logger.info("Completed Work Queue task {}, executor task {}".format(t.id, t.tag))
                 result_file = result_file_of_task_id.pop(t.tag)
 
-                # A tasks completes 'succesfully' if it has result file,
-                # and it can be loaded. This may mean that the 'success' is
-                # an exception.
+                # A tasks completes 'succesfully' if it has result file.
+                # The check whether this file can load a serialized Python object
+                # happens later in the collector thread of the executor process.
                 logger.debug("Looking for result in {}".format(result_file))
-                try:
-                    with open(result_file, "rb") as f_in:
-                        result = pickle.load(f_in)
+                if os.path.exists(result_file):
                     logger.debug("Found result in {}".format(result_file))
                     collector_queue.put_nowait(WqTaskToParsl(id=executor_task_id,
                                                              wq_id=t.id,
                                                              result_received=True,
-                                                             result=result,
+                                                             result_file=result_file,
                                                              reason=None,
                                                              status=t.return_status))
                 # If a result file could not be generated, explain the
-                # failure according to work queue error codes. We generate
-                # an exception and wrap it with RemoteExceptionWrapper, to
-                # match the positive case.
-                except Exception as e:
+                # failure according to work queue error codes.
+                else:
                     reason = _explain_work_queue_result(t)
                     logger.debug("Did not find result in {}".format(result_file))
                     logger.debug("Wrapper Script status: {}\nWorkQueue Status: {}"
@@ -1079,7 +1089,7 @@ def _work_queue_submit_wait(*,
                     collector_queue.put_nowait(WqTaskToParsl(id=executor_task_id,
                                                              wq_id=-1,
                                                              result_received=False,
-                                                             result=e,
+                                                             result_file=None,
                                                              reason=reason,
                                                              status=t.return_status))
     logger.debug("Exiting WorkQueue Monitoring Process")

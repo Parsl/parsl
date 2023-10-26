@@ -5,11 +5,14 @@ import datetime
 from typing_extensions import TypedDict
 from concurrent.futures import Future
 
+
 # only for type checking:
 from typing import Any, Callable, Dict, Optional, List, Sequence, TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
     from parsl.dataflow.futures import AppFuture
+
+import parsl.dataflow.dflow as dflow
 
 from parsl.dataflow.states import States
 from parsl.trace import Span
@@ -17,6 +20,10 @@ from parsl.trace import Span
 
 class TaskRecord(TypedDict, total=False):
     """This stores most information about a Parsl task"""
+
+    dfk: dflow.DataFlowKernel
+    """The DataFlowKernel which is managing this task.
+    """
 
     func_name: str
 
