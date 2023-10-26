@@ -6,7 +6,7 @@ from parsl.tests.configs.local_threads_ftp_in_task import fresh_config as local_
 
 
 @python_app
-def sort_strings(inputs=[], outputs=[]):
+def sort_strings(inputs=(), outputs=()):
     with open(inputs[0].filepath, 'r') as u:
         strs = u.readlines()
         strs.sort()

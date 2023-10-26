@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 @bash_app
-def touch(filename, inputs=[], outputs=[]):
+def touch(filename, inputs=(), outputs=()):
     return "touch {}".format(filename)
 
 
