@@ -220,6 +220,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     # TODO: this should be configurable: there's no definite preference for
     # results radio vs filesystem mode.
     # radio_mode = "results"
+    # radio_mode = "filesystem"
 
     @typeguard.typechecked
     def __init__(self,
