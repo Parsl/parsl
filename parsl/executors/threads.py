@@ -18,7 +18,7 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
 
     Parameters
     ----------
-    max_threads : int
+    max_threads : Optional[int]
         Number of threads. Default is 2.
     thread_name_prefix : string
         Thread name prefix
@@ -27,7 +27,7 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
     """
 
     @typeguard.typechecked
-    def __init__(self, label: str = 'threads', max_threads: int = 2,
+    def __init__(self, label: str = 'threads', max_threads: Optional[int] = 2,
                  thread_name_prefix: str = '', storage_access: Optional[List[Staging]] = None,
                  working_dir: Optional[str] = None):
         ParslExecutor.__init__(self)
@@ -58,28 +58,6 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
             raise UnsupportedFeatureError('resource specification', 'ThreadPool Executor', None)
 
         return self.executor.submit(func, *args, **kwargs)
-
-    def scale_out(self, workers=1):
-        """Scales out the number of active workers by 1.
-
-        This method is notImplemented for threads and will raise the error if called.
-
-        Raises:
-             NotImplemented exception
-        """
-
-        raise NotImplementedError
-
-    def scale_in(self, blocks):
-        """Scale in the number of active blocks by specified amount.
-
-        This method is not implemented for threads and will raise the error if called.
-
-        Raises:
-             NotImplemented exception
-        """
-
-        raise NotImplementedError
 
     def shutdown(self, block=True):
         """Shutdown the ThreadPool. The underlying concurrent.futures thread pool

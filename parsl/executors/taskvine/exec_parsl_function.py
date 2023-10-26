@@ -1,19 +1,22 @@
+import traceback
+import sys
+
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.files import File
 from parsl.utils import get_std_fname_mode
-import traceback
-import sys
-import pickle
+from parsl.serialize import deserialize, serialize
 
-# This scripts executes a parsl function which is pickled in 3 files:
+# This scripts executes a parsl function which is pickled in 4 files:
 #
-# exec_parsl_function.py map_file function_file result_file
+# exec_parsl_function.py map_file function_file argument_file result_file
 #
 # map_file: Contains a pickled dictionary that indicates which local_paths the
 #           parsl Files should take.
 #
 # function_file: Contains a pickle parsl function. Function might be serialized in advance.
 # See @parsl.serialize.concretes.py
+#
+# argument_file: Contains the serialized arguments to the function call.
 #
 # result_file: A file path, whose content will contain the result of the function, including any
 #              exception generated. Exceptions will be wrapped with RemoteExceptionWrapper.
@@ -26,16 +29,10 @@ import pickle
 #
 
 
-def load_pickled_file(filename: str):
-    """ Load a pickled file and return its pickled object."""
-    with open(filename, "rb") as f_in:
-        return pickle.load(f_in)
-
-
-def dump_result_to_file(result_file: str, result_package):
+def dump_result_to_file(result_file: str, result):
     """ Dump a result to the given result file."""
     with open(result_file, "wb") as f_out:
-        pickle.dump(result_package, f_out)
+        f_out.write(serialize(result))
 
 
 def remap_location(mapping, parsl_file):
@@ -78,9 +75,9 @@ def remap_all_files(mapping, fn_args, fn_kwargs):
             remap_location(mapping, maybe_file)
 
 
-def unpack_object(serialized_obj, user_namespace):
-    from parsl.serialize import deserialize
-    obj = deserialize(serialized_obj)
+def unpack_object_from_file(path):
+    with open(path, 'rb') as f:
+        obj = deserialize(f.read())
     return obj
 
 
@@ -115,25 +112,22 @@ def encode_byte_code_function(user_namespace, fn, fn_name, args_name, kwargs_nam
 def load_function(map_file, function_file, argument_file):
     # Decodes the function and its file arguments to be executed into
     # function_code, and updates a user namespace with the function name and
-    # the variable named result_name. When the function is executed, its result
+    # the variable named `result_name`. When the function is executed, its result
     # will be stored in this variable in the user namespace.
     # Returns (namespace, function_code, result_name)
 
-    # Create the namespace to isolate the function execution.
-    user_ns = locals()
-    user_ns.update({'__builtins__': __builtins__})
-
-    packed_function = load_pickled_file(function_file)
-    packed_argument = load_pickled_file(argument_file)
-
-    fn = unpack_object(packed_function, user_ns)
-    args_dict = unpack_object(packed_argument, user_ns)
+    fn = unpack_object_from_file(function_file)
+    args_dict = unpack_object_from_file(argument_file)
     fn_args = args_dict['args']
     fn_kwargs = args_dict['kwargs']
     fn_name = 'parsl_tmp_func_name'
 
-    mapping = load_pickled_file(map_file)
+    mapping = unpack_object_from_file(map_file)
     remap_all_files(mapping, fn_args, fn_kwargs)
+
+    # Create the namespace to isolate the function execution.
+    user_ns = locals()
+    user_ns.update({'__builtins__': __builtins__})
 
     (code, result_name) = encode_function(user_ns, fn, fn_name, fn_args, fn_kwargs)
 

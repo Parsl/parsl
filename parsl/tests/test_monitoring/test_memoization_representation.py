@@ -41,9 +41,9 @@ def test_hashsum():
     f4 = this_app(4)
     assert f4.result() == 5
 
-    assert f1.task_def['hashsum'] == f3.task_def['hashsum']
-    assert f1.task_def['hashsum'] == f4.task_def['hashsum']
-    assert f1.task_def['hashsum'] != f2.task_def['hashsum']
+    assert f1.task_record['hashsum'] == f3.task_record['hashsum']
+    assert f1.task_record['hashsum'] == f4.task_record['hashsum']
+    assert f1.task_record['hashsum'] != f2.task_record['hashsum']
 
     logger.info("cleaning up parsl")
     parsl.dfk().cleanup()
@@ -62,11 +62,11 @@ def test_hashsum():
         assert task_count == 4
 
         # this will check that the number of task rows for each hashsum matches the above app invocations
-        result = connection.execute(text(f"SELECT COUNT(task_hashsum) FROM task WHERE task_hashsum='{f1.task_def['hashsum']}'"))
+        result = connection.execute(text(f"SELECT COUNT(task_hashsum) FROM task WHERE task_hashsum='{f1.task_record['hashsum']}'"))
         (hashsum_count, ) = result.first()
         assert hashsum_count == 3
 
-        result = connection.execute(text(f"SELECT COUNT(task_hashsum) FROM task WHERE task_hashsum='{f2.task_def['hashsum']}'"))
+        result = connection.execute(text(f"SELECT COUNT(task_hashsum) FROM task WHERE task_hashsum='{f2.task_record['hashsum']}'"))
         (hashsum_count, ) = result.first()
         assert hashsum_count == 1
 

@@ -16,7 +16,9 @@ User guide
    monitoring
    workflow
    modularizing
+   lifted_ops
    joins
    usage_tracking
    plugins
+   parsl_perf
    performance

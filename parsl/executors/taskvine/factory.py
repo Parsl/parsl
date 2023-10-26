@@ -1,16 +1,24 @@
 import logging
-import time
 
 from parsl.process_loggers import wrap_with_logs
 from parsl.executors.taskvine.errors import TaskVineFactoryFailure
 
-from ndcctools.taskvine import Factory
+# This try except clause prevents import errors
+# when TaskVine is not used in Parsl.
+try:
+    from ndcctools.taskvine import Factory
+    taskvine_available = True
+except ImportError:
+    taskvine_available = False
 
 logger = logging.getLogger(__name__)
 
 
 @wrap_with_logs
 def _taskvine_factory(should_stop, factory_config):
+    if not taskvine_available:
+        logger.debug("TaskVine package cannot be found. Please install the ndcctools package.")
+        return
     logger.debug("Starting TaskVine factory process")
 
     try:
@@ -54,11 +62,8 @@ def _taskvine_factory(should_stop, factory_config):
     if factory_config.batch_options:
         factory.batch_options = factory_config.batch_options
 
-    # setup factory context and sleep for a second in every loop to
-    # avoid wasting CPU
+    # run factory through Python context and wait for signal to stop.
     with factory:
-        while not should_stop.value:
-            time.sleep(1)
+        should_stop.wait()
 
     logger.debug("Exiting TaskVine factory process")
-    return 0
