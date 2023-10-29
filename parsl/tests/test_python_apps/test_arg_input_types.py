@@ -7,12 +7,12 @@ from parsl import python_app
 
 
 @python_app
-def take_a_value(inputs=[]):
+def take_a_value(inputs=()):
     return str(inputs[0])
 
 
 @python_app
-def add_two_values(inputs=[]):
+def add_two_values(inputs=()):
     return inputs[0] + inputs[1]
 
 

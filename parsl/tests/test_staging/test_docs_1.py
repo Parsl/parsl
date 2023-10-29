@@ -4,7 +4,7 @@ from parsl import python_app, File
 
 
 @python_app
-def convert(inputs=[], outputs=[]):
+def convert(inputs=(), outputs=()):
     with open(inputs[0].filepath, 'r') as inp:
         content = inp.read()
         with open(outputs[0].filepath, 'w') as out:

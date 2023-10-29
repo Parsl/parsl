@@ -17,7 +17,7 @@ def observe_input_local_path(f):
 
 
 @python_app
-def wait_and_create(outputs=[]):
+def wait_and_create(outputs=()):
     # for test purposes, this doesn't actually need to create the output
     # file as nothing ever touches file content - the test only deals with
     # names and Futures.

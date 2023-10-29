@@ -18,7 +18,7 @@ def generate(limit):
 
 
 @bash_app
-def save(message, outputs=[]):
+def save(message, outputs=()):
     return 'echo {m} &> {o}'.format(m=message, o=outputs[0])
 
 

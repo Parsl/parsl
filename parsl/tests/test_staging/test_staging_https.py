@@ -11,7 +11,7 @@ from parsl.tests.configs.htex_local import fresh_config as local_config
 
 
 @python_app
-def sort_strings(inputs=[], outputs=[]):
+def sort_strings(inputs=(), outputs=()):
     with open(inputs[0].filepath, 'r') as u:
         strs = u.readlines()
         strs.sort()
@@ -39,7 +39,7 @@ def test_staging_https():
 
 
 @python_app
-def sort_strings_kw(x=None, outputs=[]):
+def sort_strings_kw(x=None, outputs=()):
     with open(x.filepath, 'r') as u:
         strs = u.readlines()
         strs.sort()
@@ -63,7 +63,7 @@ def test_staging_https_kwargs():
 
 
 @python_app
-def sort_strings_arg(x, outputs=[]):
+def sort_strings_arg(x, outputs=()):
     with open(x.filepath, 'r') as u:
         strs = u.readlines()
         strs.sort()
@@ -87,7 +87,7 @@ def test_staging_https_args():
 
 
 @python_app(executors=['other'])
-def sort_strings_additional_executor(inputs=[], outputs=[]):
+def sort_strings_additional_executor(inputs=(), outputs=()):
     with open(inputs[0].filepath, 'r') as u:
         strs = u.readlines()
         strs.sort()

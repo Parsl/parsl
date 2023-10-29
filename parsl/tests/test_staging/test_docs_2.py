@@ -4,7 +4,7 @@ from parsl.tests.configs.local_threads import fresh_config as local_config
 
 
 @bash_app
-def cat(inputs=[], stdout='stdout.txt'):
+def cat(inputs=(), stdout='stdout.txt'):
     return 'cat %s' % (inputs[0])
 
 

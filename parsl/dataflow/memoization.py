@@ -146,7 +146,7 @@ class Memoizer:
 
     """
 
-    def __init__(self, dfk: DataFlowKernel, memoize: bool = True, checkpoint: Dict[str, Future[Any]] = {}):
+    def __init__(self, dfk: DataFlowKernel, memoize: bool = True, *, checkpoint: Dict[str, Future[Any]]):
         """Initialize the memoizer.
 
         Args:

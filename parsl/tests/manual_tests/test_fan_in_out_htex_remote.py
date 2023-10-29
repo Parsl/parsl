@@ -56,7 +56,7 @@ def inc(x):
 
 
 @python_app
-def add_inc(inputs=[]):
+def add_inc(inputs=()):
     import time
     start = time.time()
     sleep_duration = 30.0

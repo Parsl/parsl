@@ -11,7 +11,7 @@ local_config = config
 
 
 @bash_app
-def echo_slow_message(msg, sleep=0, fu=None, outputs=[], stderr='std.err', stdout='std.out'):
+def echo_slow_message(msg, sleep=0, fu=None, outputs=(), stderr='std.err', stdout='std.out'):
     cmd_line = 'sleep {sleep}; echo {0} > {outputs[0]}'
     return cmd_line
 

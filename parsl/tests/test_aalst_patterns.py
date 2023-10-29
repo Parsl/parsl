@@ -77,7 +77,7 @@ def slow_increment(x, dur=1):
 
 
 @python_app
-def join(inputs=[]):
+def join(inputs=()):
     return sum(inputs)
 
 
@@ -96,7 +96,7 @@ def sleep_square(x):
 
 
 @python_app
-def sum_results(x=[]):
+def sum_results(x=()):
     total = 0
     for r in x:
         total += r.result()
@@ -109,12 +109,12 @@ def add(x, y):
 
 
 @python_app
-def sum_list(x=[]):
+def sum_list(x=()):
     return sum(x)
 
 
 @python_app
-def sum_lists(x=[], y=[], z=[]):
+def sum_lists(x=(), y=(), z=()):
     total = 0
     for i in range(len(x)):
         total += x[i].result()
@@ -126,7 +126,7 @@ def sum_lists(x=[], y=[], z=[]):
 
 
 @python_app
-def sum_elements(x=[], y=[], z=[]):
+def sum_elements(x=(), y=(), z=()):
     total = 0
     for i in range(len(x)):
         total += x[i].result()
