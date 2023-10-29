@@ -643,14 +643,22 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                         with open(task_report.result_file, 'rb') as f_in:
                             result = deserialize(f_in.read())
                     except Exception as e:
-                        logger.debug(f'Cannot load result from result file {task_report.result_file}. Exception: {e}')
-                        future.set_exception(TaskVineTaskFailure('Cannot load result from result file', None))
+                        logger.error(f'Cannot load result from result file {task_report.result_file}. Exception: {e}')
+                        ex = TaskVineTaskFailure('Cannot load result from result file', None)
+                        ex.__cause__ = e
+                        future.set_exception(ex)
                     else:
-                        future.set_result(result)
+                        if isinstance(result, Exception):
+                            ex = TaskVineTaskFailure('Task execution raises an exception', result)
+                            ex.__cause__ = result
+                            future.set_exception(ex)
+                        else:
+                            future.set_result(result)
                 else:
                     # If there are no results, then the task failed according to one of
                     # taskvine modes, such as resource exhaustion.
-                    future.set_exception(TaskVineTaskFailure(task_report.reason, None))
+                    ex = TaskVineTaskFailure(task_report.reason, None)
+                    future.set_exception(ex)
 
                 # decrement outstanding task counter
                 with self._outstanding_tasks_lock:
