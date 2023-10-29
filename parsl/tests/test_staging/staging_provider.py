@@ -61,7 +61,7 @@ def make_stage_out_app(executor, dfk):
     return python_app(executors=[executor], data_flow_kernel=dfk)(stage_out_noop)
 
 
-def stage_out_noop(app_fu, inputs=[], _parsl_staging_inhibit=True):
+def stage_out_noop(app_fu, inputs=(), _parsl_staging_inhibit=True):
     import time
     import logging
     logger = logging.getLogger(__name__)
@@ -74,7 +74,7 @@ def make_stage_in_app(executor, dfk):
     return python_app(executors=[executor], data_flow_kernel=dfk)(stage_in_noop)
 
 
-def stage_in_noop(parent_fut=None, outputs=[], _parsl_staging_inhibit=True):
+def stage_in_noop(parent_fut=None, outputs=(), _parsl_staging_inhibit=True):
     import time
     import logging
     logger = logging.getLogger(__name__)

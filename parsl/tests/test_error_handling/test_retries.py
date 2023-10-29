@@ -14,7 +14,7 @@ def local_config():
 
 
 @python_app
-def sleep_then_fail(inputs=[], sleep_dur=0.1):
+def sleep_then_fail(inputs=(), sleep_dur=0.1):
     import time
     import math
     time.sleep(sleep_dur)
