@@ -11,7 +11,7 @@ local_config = config
 
 
 @bash_app
-def sim_mol_dyn(i, dur, outputs=[], stdout=None, stderr=None):
+def sim_mol_dyn(i, dur, outputs=(), stdout=None, stderr=None):
     # The bash app function, requires that the bash script is assigned to the special variable
     # cmd_line. Positional and Keyword args to the fn() are formatted into the cmd_line string
     cmd_line = """echo "{0}" > {outputs[0]}

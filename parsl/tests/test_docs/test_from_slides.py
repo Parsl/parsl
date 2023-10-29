@@ -5,12 +5,12 @@ import os
 
 
 @bash_app
-def echo(message, outputs=[]):
+def echo(message, outputs=()):
     return 'echo {m} &> {o}'.format(m=message, o=outputs[0])
 
 
 @python_app
-def cat(inputs=[]):
+def cat(inputs=()):
     with open(inputs[0].filepath) as f:
         return f.readlines()
 

@@ -3,7 +3,7 @@ from parsl import python_app
 
 
 @python_app
-def cpu_stress(inputs=[], outputs=[]):
+def cpu_stress(inputs=(), outputs=()):
     s = 0
     for i in range(10**8):
         s += i

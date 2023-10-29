@@ -14,7 +14,7 @@ def local_config():
 
 
 @python_app
-def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
+def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=()):
     import time
     import random
 
