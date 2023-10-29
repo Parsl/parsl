@@ -22,7 +22,7 @@ def load_dfk_from_config(filename):
 
 
 @parsl.python_app
-def app(parsl_resource_specification={}):
+def app(*, parsl_resource_specification):
     return 7
 
 
