@@ -35,9 +35,10 @@ jobs:
         make deps
         make clean_coverage
 
-    - name: make test
+    - name: make radical_local_test
+      timeout-minutes: 20
       run: |
-        make test
+        make radical_local_test
 
     - name: Documentation checks
       run: |
