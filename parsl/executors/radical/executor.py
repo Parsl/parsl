@@ -26,9 +26,7 @@ from parsl.executors.base import ParslExecutor
 RPEX = 'RPEX'
 BASH = 'bash'
 PYTHON = 'python'
-
 os.environ["RADICAL_REPORT"] = "False"
-os.environ["RADICAL_LOG_LVL"] = "DEBUG"
 
 logger = logging.getLogger(__name__)
 
@@ -195,9 +193,14 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                    'resource': self.resource,
                    'access_schema': self.access_schema}
 
-        # move the agent sandbox in the workdir mainly for tests purposes
         if not self.resource or 'local' in self.resource:
-            pd_init['sandbox'] = self.run_dir
+            # move the agent sandbox to the workdir mainly
+            # for debugging purposes. This will allow parsl
+            # to include the agent sandbox with the ci artifacts.
+            if os.environ.get("LOCAL_SANDBOX"):
+                pd_init['sandbox'] = self.run_dir
+                os.environ["RADICAL_LOG_LVL"] = "DEBUG"
+
             logger.info("RPEX will be running in the local mode")
 
         pd = rp.PilotDescription(pd_init)
