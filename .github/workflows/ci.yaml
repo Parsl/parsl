@@ -36,7 +36,7 @@ jobs:
         make clean_coverage
 
     - name: make radical_local_test
-      timeout-minutes: 20
+      timeout-minutes: 10
       run: |
         make radical_local_test
 
