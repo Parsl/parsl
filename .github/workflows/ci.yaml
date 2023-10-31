@@ -12,7 +12,7 @@ jobs:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11"]
     runs-on: ubuntu-20.04
-    timeout-minutes: 360
+    timeout-minutes: 60
 
     steps:
     - uses: actions/checkout@master
@@ -38,10 +38,9 @@ jobs:
         make deps
         make clean_coverage
 
-    - name: make radical_local_test
-      timeout-minutes: 10
+    - name: make test
       run: |
-        make radical_local_test
+        make test
 
     - name: Documentation checks
       run: |
