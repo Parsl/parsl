@@ -7,7 +7,7 @@ from parsl.executors.radical.rpex_resources import ResourceConfig as rpex_cfg
 # This is temporary; once everything is merged, we will use Parsl instead of
 # this fork.
 parsl_src = "pip install git+https://github.com/AymenFJA/parsl.git"
-rpex_cfg.pilot_env_setup.append(parsl_src)
+rpex_cfg.pilot_env_setup.extend([parsl_src, "pytest"])
 
 
 def fresh_config():
