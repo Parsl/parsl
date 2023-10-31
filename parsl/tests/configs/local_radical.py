@@ -1,8 +1,8 @@
 import os
 
 from parsl.config import Config
-from parsl.executors import RadicalPilotExecutor
-from parsl.executors.radical.rpex_resources import ResourceConfig as rpex_cfg
+from parsl.executors.radical import RadicalPilotExecutor
+from parsl.executors.radical import ResourceConfig as rpex_cfg
 
 # This is temporary; once everything is merged, we will use Parsl instead of
 # this fork.
