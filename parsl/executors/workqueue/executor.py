@@ -707,7 +707,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.collector_thread.join()
 
         logger.debug("Work Queue shutdown completed")
-        return True
 
     @wrap_with_logs
     def _collect_work_queue_results(self):
