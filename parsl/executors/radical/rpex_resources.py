@@ -35,8 +35,8 @@ class ResourceConfig:
         The number of CPU cores a worker will operate on per node.
         Default is 4.
 
-    masters_per_node : int
-        The number of masters to be placed on every node.
+    cores_per_master : int
+        The number of cores a master will operate on per node.
         Default is 1.
 
     nodes_per_worker : int
@@ -79,7 +79,7 @@ class ResourceConfig:
     worker_gpus_per_node: int = 0
     worker_cores_per_node: int = 4
 
-    masters_per_node: int = 1
+    cores_per_master: int = 1
     nodes_per_worker: int = 1
 
     pilot_env_path: str = ""
@@ -103,7 +103,7 @@ class ResourceConfig:
             'n_workers': cls.workers,
             'gpus_per_node': cls.worker_gpus_per_node,
             'cores_per_node': cls.worker_cores_per_node,
-            'masters_per_node': cls.masters_per_node,
+            'cores_per_master': cls.cores_per_master,
             'nodes_per_worker': cls.nodes_per_worker,
 
             'pilot_env': {

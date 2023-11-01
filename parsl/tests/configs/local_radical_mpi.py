@@ -8,7 +8,7 @@ from parsl.executors.radical import ResourceConfig as rpex_cfg
 # this fork.
 parsl_src = "pip install git+https://github.com/AymenFJA/parsl.git"
 rpex_cfg.pilot_env_setup.extend([parsl_src, "pytest"])
-
+rpex_cfg.worker_cores_per_node = 7
 
 def fresh_config():
     rpex_cfg.worker_type = "MPI"
@@ -21,4 +21,4 @@ def fresh_config():
                     bulk_mode=True,
                     resource='local.localhost',
                     access_schema='local',
-                    walltime=30, cores=4)])
+                    walltime=30, cores=8)])

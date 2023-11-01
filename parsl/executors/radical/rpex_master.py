@@ -17,7 +17,7 @@ if __name__ == '__main__':
     cfg = ru.Config(cfg=ru.read_json(cfg_fname))
     cfg.rank = int(sys.argv[2])
 
-    descr = cfg.worker_descr
+    worker_descr = cfg.worker_descr
     n_workers = cfg.n_workers
     gpus_per_node = cfg.gpus_per_node
     cores_per_node = cfg.cores_per_node
@@ -29,10 +29,10 @@ if __name__ == '__main__':
 
     # insert `n` worker into the agent.  The agent will schedule (place)
     # those workers and execute them.
-    descr['ranks'] = nodes_per_worker * cores_per_node
-    descr['gpus_per_rank'] = nodes_per_worker * gpus_per_node
+    worker_descr['ranks'] = nodes_per_worker * cores_per_node
+    worker_descr['gpus_per_rank'] = nodes_per_worker * gpus_per_node
     worker_ids = master.submit_workers(
-                 [rp.TaskDescription(descr) for _ in range(n_workers)])
+                 [rp.TaskDescription(worker_descr) for _ in range(n_workers)])
 
     # wait for all workers
     master.wait_workers()
