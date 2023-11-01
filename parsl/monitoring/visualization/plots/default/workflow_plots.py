@@ -22,7 +22,7 @@ gantt_colors = {'unsched': 'rgb(240, 240, 240)',
                 'exec_done': 'rgb(0, 200, 0)',
                 'memo_done': 'rgb(64, 200, 64)',
                 'fail_retryable': 'rgb(200, 128,128)'
-               }
+                }
 
 
 def task_gantt_plot(df_task, df_status, time_completed=None):
@@ -50,7 +50,7 @@ def task_gantt_plot(df_task, df_status, time_completed=None):
                                    'Start': last_status['timestamp'],
                                    'Finish': status['timestamp'],
                                    'Resource': last_status['task_status_name']
-                                  }
+                                   }
                 parsl_tasks.extend([last_status_bar])
             last_status = status
 
@@ -60,7 +60,7 @@ def task_gantt_plot(df_task, df_status, time_completed=None):
                                'Start': last_status['timestamp'],
                                'Finish': time_completed,
                                'Resource': last_status['task_status_name']
-                              }
+                               }
             parsl_tasks.extend([last_status_bar])
 
     fig = ff.create_gantt(parsl_tasks,
@@ -205,7 +205,7 @@ dag_state_colors = {"unsched": (0, 'rgb(240, 240, 240)'),
                     "fail_retryable": (8, 'rgb(200, 128,128)'),
                     "joining": (9, 'rgb(128, 128, 255)'),
                     "running_ended": (10, 'rgb(64, 64, 255)')
-                   }
+                    }
 
 
 def workflow_dag_plot(df_tasks, group_by_apps=True):
