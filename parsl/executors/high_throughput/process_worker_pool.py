@@ -234,7 +234,7 @@ class Manager:
                'dir': os.getcwd(),
                'cpu_count': psutil.cpu_count(logical=False),
                'total_memory': psutil.virtual_memory().total,
-        }
+               }
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg
 
@@ -608,7 +608,7 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
             logger.exception("Caught exception while trying to pickle the result package")
             pkl_package = pickle.dumps({'type': 'result', 'task_id': tid,
                                         'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))
-            })
+                                        })
 
         result_queue.put(pkl_package)
         tasks_in_progress.pop(worker_id)

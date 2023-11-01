@@ -164,7 +164,7 @@ def worker_efficiency(task, node):
                              y=[total_workers] * (end - start + 1),
                              name='Total of workers in whole run',
                              )
-                 ],
+                  ],
             layout=go.Layout(xaxis=dict(autorange=True,
                                         title='Time (seconds)'),
                              yaxis=dict(title='Number of workers'),
@@ -230,7 +230,7 @@ def resource_efficiency(resource, node, label):
                              y=[total] * (end - start + 1),
                              name=name2,
                              )
-                 ],
+                  ],
             layout=go.Layout(xaxis=dict(autorange=True,
                                         title='Time (seconds)'),
                              yaxis=dict(title=yaxis),
