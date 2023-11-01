@@ -1,3 +1,5 @@
+from typing import Optional
+
 from parsl.errors import ParslError
 from parsl.app.errors import AppException
 
@@ -7,10 +9,10 @@ class WorkQueueTaskFailure(AppException):
 
     Contains:
     reason(string)
-    status(int)
+    status(optional exception)
     """
 
-    def __init__(self, reason, status):
+    def __init__(self, reason: str, status: Optional[Exception]):
         self.reason = reason
         self.status = status
 

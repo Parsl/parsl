@@ -151,7 +151,7 @@ be created (``hello.outputs[0].result()``).
       # This app echoes the input string to the first file specified in the
       # outputs list
       @bash_app
-      def echo(message, outputs=[]):
+      def echo(message, outputs=()):
           return 'echo {} &> {}'.format(message, outputs[0])
 
       # Call echo specifying the output file

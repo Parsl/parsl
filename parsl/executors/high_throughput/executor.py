@@ -482,10 +482,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                                     "heartbeat_threshold": self.heartbeat_threshold,
                                                     "poll_period": self.poll_period,
                                                     "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
-                                            },
+                                                    },
                                             daemon=True,
                                             name="HTEX-Interchange"
-        )
+                                            )
         self.interchange_proc.start()
         try:
             (self.worker_task_port, self.worker_result_port) = comm_q.get(block=True, timeout=120)

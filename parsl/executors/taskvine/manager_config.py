@@ -2,7 +2,12 @@ import socket
 from dataclasses import dataclass
 from typing import Optional
 
-from ndcctools.taskvine.cvine import VINE_DEFAULT_PORT
+# This try except clause prevents import errors
+# when TaskVine is not used in Parsl.
+try:
+    from ndcctools.taskvine.cvine import VINE_DEFAULT_PORT
+except ImportError:
+    VINE_DEFAULT_PORT = 0   # use any available port.
 
 
 @dataclass

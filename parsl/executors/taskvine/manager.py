@@ -2,7 +2,6 @@ import logging
 import hashlib
 import subprocess
 import os
-import pickle
 import queue
 import shutil
 import uuid
@@ -106,6 +105,8 @@ def _prepare_environment_regular(m, manager_config, t, task, poncho_env_to_file,
                 env_tarball = str(uuid.uuid4()) + '.tar.gz'
                 logger.debug(f'Creating a poncho environment at {env_tarball} from conda environment {manager_config.env_pack}')
                 subprocess.run([poncho_create_script, manager_config.env_pack, env_tarball], stdout=subprocess.DEVNULL, check=True)
+            else:
+                env_tarball = manager_config.env_pack
             poncho_env_file = m.declare_poncho(env_tarball, cache=True, peer_transfer=True)
             poncho_env_to_file[manager_config.env_pack] = poncho_env_file
         else:
@@ -194,15 +195,15 @@ def _taskvine_submit_wait(ready_task_queue=None,
 
     logger.debug("Entering main loop of TaskVine manager")
 
-    while not should_stop.value:
-        # Monitor the task queue
+    while not should_stop.is_set():
+        # Check if executor process is still running
         ppid = os.getppid()
         if ppid != orig_ppid:
-            logger.debug("new Process")
+            logger.debug("Executor process is detected to have exited. Exiting..")
             break
 
         # Submit tasks
-        while ready_task_queue.qsize() > 0 and not should_stop.value:
+        while ready_task_queue.qsize() > 0 and not should_stop.is_set():
             # Obtain task from ready_task_queue
             try:
                 task = ready_task_queue.get(timeout=1)
@@ -227,7 +228,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
                     logger.error("Unable to create executor task (mode:regular): {}".format(e))
                     finished_task_queue.put_nowait(VineTaskToParsl(executor_id=task.executor_id,
                                                                    result_received=False,
-                                                                   result=None,
+                                                                   result_file=None,
                                                                    reason="task could not be created by taskvine",
                                                                    status=-1))
                     continue
@@ -266,7 +267,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
                     logger.error("Unable to create executor task (mode:serverless): {}".format(e))
                     finished_task_queue.put_nowait(VineTaskToParsl(executor_id=task.executor_id,
                                                                    result_received=False,
-                                                                   result=None,
+                                                                   result_file=None,
                                                                    reason="task could not be created by taskvine",
                                                                    status=-1))
             else:
@@ -367,7 +368,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
                 logger.error("Unable to submit task to taskvine: {}".format(e))
                 finished_task_queue.put_nowait(VineTaskToParsl(executor_id=task.executor_id,
                                                                result_received=False,
-                                                               result=None,
+                                                               result_file=None,
                                                                reason="task could not be submited to taskvine",
                                                                status=-1))
                 continue
@@ -377,7 +378,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
         # If the queue is not empty wait on the TaskVine queue for a task
         task_found = True
         if not m.empty():
-            while task_found and not should_stop.value:
+            while task_found and not should_stop.is_set():
                 # Obtain the task from the queue
                 t = m.wait(1)
                 if t is None:
@@ -392,24 +393,21 @@ def _taskvine_submit_wait(ready_task_queue=None,
 
                 logger.debug(f"completed executor task info: {executor_task_id}, {t.category}, {t.command}, {t.std_output}")
 
-                # A tasks completes 'succesfully' if it has result file,
-                # and it can be loaded. This may mean that the 'success' is
-                # an exception.
+                # A tasks completes 'succesfully' if it has result file.
+                # A check whether the Python object represented using this file can be
+                # deserialized happens later in the collector thread of the executor
+                # process.
                 logger.debug("Looking for result in {}".format(result_file))
-                try:
-                    with open(result_file, "rb") as f_in:
-                        result = pickle.load(f_in)
+                if os.path.exists(result_file):
                     logger.debug("Found result in {}".format(result_file))
                     finished_task_queue.put_nowait(VineTaskToParsl(executor_id=executor_task_id,
                                                                    result_received=True,
-                                                                   result=result,
+                                                                   result_file=result_file,
                                                                    reason=None,
                                                                    status=t.exit_code))
                 # If a result file could not be generated, explain the
-                # failure according to taskvine error codes. We generate
-                # an exception and wrap it with RemoteExceptionWrapper, to
-                # match the positive case.
-                except Exception as e:
+                # failure according to taskvine error codes.
+                else:
                     reason = _explain_taskvine_result(t)
                     logger.debug("Did not find result in {}".format(result_file))
                     logger.debug("Wrapper Script status: {}\nTaskVine Status: {}"
@@ -418,7 +416,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
                                  .format(executor_task_id, t.id, reason))
                     finished_task_queue.put_nowait(VineTaskToParsl(executor_id=executor_task_id,
                                                                    result_received=False,
-                                                                   result=e,
+                                                                   result_file=None,
                                                                    reason=reason,
                                                                    status=t.exit_code))
 

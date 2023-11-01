@@ -1,5 +1,4 @@
 [flake8]
-# E124: closing bracket does not match visual indentation
 # E126: continuation line over-indented for hanging indent
 # This one is bad. Sometimes ordering matters, conditional imports
 # setting env vars necessary etc.
@@ -8,7 +7,7 @@
 # https://github.com/PyCQA/pycodestyle/issues/386
 # W504: line break after binary operator
 #       (Raised by flake8 even when it is followed)
-ignore = E124, E126, E402, E129, W504
+ignore = E126, E402, E129, W504
 max-line-length = 158
 exclude = test_import_fail.py,
   parsl/executors/workqueue/parsl_coprocess.py

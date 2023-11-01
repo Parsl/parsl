@@ -7,7 +7,7 @@ CCTOOLS_INSTALL := /tmp/cctools
 MPICH=mpich
 OPENMPI=openmpi
 export PATH := $(CCTOOLS_INSTALL)/bin/:$(PATH)
-export CCTOOLS_VERSION=7.5.4
+export CCTOOLS_VERSION=7.7.1
 export HYDRA_LAUNCHER=fork
 export OMPI_MCA_rmaps_base_oversubscribe=yes
 MPI=$(MPICH)
@@ -74,7 +74,7 @@ wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with workqueue_ex config
 
 .PHONY: config_local_test
 config_local_test:
-	pip3 install ".[monitoring,proxystore,serializer_demos]"
+	pip3 install ".[monitoring,visualization,proxystore,serializer_demos]"
 	pytest parsl/tests/ -k "not cleannet" --config local --random-order --durations 10
 
 .PHONY: site_test

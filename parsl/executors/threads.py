@@ -18,7 +18,7 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
 
     Parameters
     ----------
-    max_threads : int
+    max_threads : Optional[int]
         Number of threads. Default is 2.
     thread_name_prefix : string
         Thread name prefix
@@ -27,7 +27,7 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
     """
 
     @typeguard.typechecked
-    def __init__(self, label: str = 'threads', max_threads: int = 2,
+    def __init__(self, label: str = 'threads', max_threads: Optional[int] = 2,
                  thread_name_prefix: str = '', storage_access: Optional[List[Staging]] = None,
                  working_dir: Optional[str] = None):
         ParslExecutor.__init__(self)
