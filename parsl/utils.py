@@ -7,7 +7,7 @@ import threading
 import time
 from contextlib import contextmanager
 from types import TracebackType
-from typing import Any, Callable, List, Tuple, Union, Generator, IO, AnyStr, Dict, Optional
+from typing import Any, Callable, List, Sequence, Tuple, Union, Generator, IO, AnyStr, Dict, Optional
 
 import typeguard
 from typing_extensions import Type
@@ -47,7 +47,7 @@ def get_version() -> str:
 
 
 @typeguard.typechecked
-def get_all_checkpoints(rundir: str = "runinfo") -> List[str]:
+def get_all_checkpoints(rundir: str = "runinfo") -> Sequence[str]:
     """Finds the checkpoints from all runs in the rundir.
 
     Kwargs:
@@ -76,7 +76,7 @@ def get_all_checkpoints(rundir: str = "runinfo") -> List[str]:
 
 
 @typeguard.typechecked
-def get_last_checkpoint(rundir: str = "runinfo") -> List[str]:
+def get_last_checkpoint(rundir: str = "runinfo") -> Sequence[str]:
     """Finds the checkpoint from the last run, if one exists.
 
     Note that checkpoints are incremental, and this helper will not find
