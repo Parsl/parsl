@@ -93,7 +93,6 @@ def test_returns_a_class_instance_no_underscores():
         returns_a_class_instance()._nosuchattribute.result()
 
 
-@pytest.mark.skip("returning classes is not supported in WorkQueue or Task Vine - see issue #2908")
 def test_returns_a_class():
 
     # precondition that returns_a_class behaves
