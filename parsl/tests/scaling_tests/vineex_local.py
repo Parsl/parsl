@@ -7,5 +7,5 @@ config = Config(
     executors=[TaskVineExecutor(label='VineExec',
                                 worker_launch_method='factory',
                                 manager_config=TaskVineManagerConfig(port=50055),
-        )]
+                                )]
 )
