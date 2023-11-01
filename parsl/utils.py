@@ -128,7 +128,7 @@ def get_std_fname_mode(
 
 @contextmanager
 def wait_for_file(path: str, seconds: int = 10) -> Generator[None, None, None]:
-    for i in range(0, int(seconds * 100)):
+    for _ in range(0, int(seconds * 100)):
         time.sleep(seconds / 100.)
         if os.path.exists(path):
             break

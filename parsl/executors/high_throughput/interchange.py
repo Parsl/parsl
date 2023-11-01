@@ -205,7 +205,7 @@ class Interchange:
             eg. [{'task_id':<x>, 'buffer':<buf>} ... ]
         """
         tasks = []
-        for i in range(0, count):
+        for _ in range(0, count):
             try:
                 x = self.pending_task_queue.get(block=False)
             except queue.Empty:
@@ -518,7 +518,7 @@ class Interchange:
 
                 got_result = False
                 m = self._ready_managers[manager_id]
-                for (b_message, r) in b_messages:
+                for (_, r) in b_messages:
                     assert 'type' in r, f"Message is missing type entry: {r}"
                     if r['type'] == 'result':
                         got_result = True
