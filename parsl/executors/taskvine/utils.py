@@ -12,6 +12,7 @@ class ParslTaskToVine:
                  output_files: list,               # list of output files to this function
                  map_file: Optional[str],          # pickled file containing mapping of local to remote names of files
                  function_file: Optional[str],     # pickled file containing the function information
+                 argument_file: Optional[str],     # pickled file containing the arguments to the function call
                  result_file: Optional[str],       # path to the pickled result object of the function execution
                  cores: Optional[float],           # number of cores to allocate
                  memory: Optional[int],            # amount of memory in MBs to allocate
@@ -26,6 +27,7 @@ class ParslTaskToVine:
         self.category = category
         self.map_file = map_file
         self.function_file = function_file
+        self.argument_file = argument_file
         self.result_file = result_file
         self.input_files = input_files
         self.output_files = output_files
@@ -40,20 +42,20 @@ class ParslTaskToVine:
 
 class VineTaskToParsl:
     """
-    Support structure to communicate final status of TaskVine tasks to Parsl
-    result is only valid if result_received is True
-    reason and status are only valid if result_received is False
+    Support structure to communicate final status of TaskVine tasks to Parsl.
+    result_file is only valid if result_received is True.
+    Reason and status are only valid if result_received is False.
     """
     def __init__(self,
                  executor_id: int,          # executor id of task
                  result_received: bool,     # whether result is received or not
-                 result,                    # result object if available
+                 result_file: Optional[str],    # path to file that contains the serialized result object
                  reason: Optional[str],     # string describing why execution fails
                  status: Optional[int]      # exit code of execution of task
                  ):
         self.executor_id = executor_id
         self.result_received = result_received
-        self.result = result
+        self.result_file = result_file
         self.reason = reason
         self.status = status
 
@@ -73,3 +75,11 @@ class ParslFileToVine:
         self.parsl_name = parsl_name
         self.stage = stage
         self.cache = cache
+
+
+def run_parsl_function(map_file, function_file, argument_file, result_file):
+    """
+    Wrapper function to deploy with FunctionCall as serverless tasks.
+    """
+    from parsl.executors.taskvine.exec_parsl_function import run
+    run(map_file, function_file, argument_file, result_file)

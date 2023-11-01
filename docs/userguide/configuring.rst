@@ -17,8 +17,8 @@ supercomputer at TACC.
 This config uses the `parsl.executors.HighThroughputExecutor` to submit
 tasks from a login node (`parsl.channels.LocalChannel`). It requests an allocation of
 128 nodes, deploying 1 worker for each of the 56 cores per node, from the normal partition.
-The config uses the `address_by_hostname()` helper function to determine
-the login node's IP address.
+To limit network connections to just the internal network the config specifies the address
+used by the infiniband interface with ``address_by_interface('ib0')``
 
 .. code-block:: python
 
@@ -27,13 +27,13 @@ the login node's IP address.
     from parsl.providers import SlurmProvider
     from parsl.executors import HighThroughputExecutor
     from parsl.launchers import SrunLauncher
-    from parsl.addresses import address_by_hostname
+    from parsl.addresses import address_by_interface
 
     config = Config(
         executors=[
             HighThroughputExecutor(
                 label="frontera_htex",
-                address=address_by_hostname(),
+                address=address_by_interface('ib0'),
                 max_workers=56,
                 provider=SlurmProvider(
                     channel=LocalChannel(),
@@ -48,12 +48,45 @@ the login node's IP address.
 
 .. contents:: Configuration How-To and Examples:
 
-.. note::
-   All configuration examples below must be customized for the user's 
-   allocation, Python environment, file system, etc.
+
+Creating and Using Config Objects
+---------------------------------
+
+:class:`~parsl.config.Config` objects are loaded to define the "Data Flow Kernel" (DFK) that will manage tasks.
+All Parsl applications start by creating or importing a configuration then calling the load function.
+
+.. code-block:: python
+
+    from parsl.configs.htex_local import config
+    import parsl
+
+    parsl.load(config)
+
+The ``load`` statement can happen after Apps are defined but must occur before tasks are started.
+
+The :class:`~parsl.config.Config` object may not be used again after loaded.
+Consider a configuration function if the application will shut down and re-launch the DFK.
+
+.. code-block:: python
+
+    from parsl.config import Config
+    import parsl
+
+    def make_config() -> Config:
+        return Config(...)
+
+    parsl.load(make_config())
+    parsl.clear()  # Stops Parsl
+    parsl.load(make_config())  # Re-launches with a fresh configuration
+
 
 How to Configure
 ----------------
+
+.. note::
+   All configuration examples below must be customized for the user's
+   allocation, Python environment, file system, etc.
+
 
 The configuration specifies what, and how, resources are to be used for executing
 the Parsl program and its apps.

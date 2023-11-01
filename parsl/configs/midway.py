@@ -2,11 +2,13 @@ from parsl.config import Config
 from parsl.providers import SlurmProvider
 from parsl.launchers import SrunLauncher
 from parsl.executors import HighThroughputExecutor
+from parsl.addresses import address_by_interface
 
 config = Config(
     executors=[
         HighThroughputExecutor(
             label='Midway_HTEX_multinode',
+            address=address_by_interface('bond0'),
             worker_debug=False,
             max_workers=2,
             provider=SlurmProvider(

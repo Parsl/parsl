@@ -323,7 +323,7 @@ class MonitoringHub(RepresentationMixin):
 def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]", run_dir: str) -> None:
     logger = start_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
                                name="monitoring_filesystem_radio",
-                               level=logging.DEBUG)
+                               level=logging.INFO)
 
     logger.info("Starting filesystem radio receiver")
     setproctitle("parsl: monitoring filesystem receiver")
@@ -336,7 +336,7 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]
     os.makedirs(new_dir, exist_ok=True)
 
     while True:  # this loop will end on process termination
-        logger.info("Start filesystem radio receiver loop")
+        logger.debug("Start filesystem radio receiver loop")
 
         # iterate over files in new_dir
         for filename in os.listdir(new_dir):
@@ -345,7 +345,7 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]
                 full_path_filename = f"{new_dir}/{filename}"
                 with open(full_path_filename, "rb") as f:
                     message = deserialize(f.read())
-                logger.info(f"Message received is: {message}")
+                logger.debug(f"Message received is: {message}")
                 assert isinstance(message, tuple)
                 q.put(cast(AddressedMonitoringMessage, message))
                 os.remove(full_path_filename)
@@ -472,7 +472,12 @@ class MonitoringRouter:
                             if 'exit_now' in msg[1] and msg[1]['exit_now']:
                                 router_keep_going = False
                         else:
-                            self.logger.error(f"Discarding message from interchange with unknown type {msg[0].value}")
+                            # There is a type: ignore here because if msg[0]
+                            # is of the correct type, this code is unreachable,
+                            # but there is no verification that the message
+                            # received from ic_channel.recv_pyobj() is actually
+                            # of that type.
+                            self.logger.error(f"Discarding message from interchange with unknown type {msg[0].value}")  # type: ignore[unreachable]
                 except zmq.Again:
                     pass
                 except Exception:
