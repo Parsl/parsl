@@ -984,6 +984,7 @@ class DataFlowKernel:
                        'joins': None,
                        'try_id': 0,
                        'id': task_id,
+                       'task_launch_lock': threading.Lock(),
                        'time_invoked': datetime.datetime.now(),
                        'time_returned': None,
                        'try_time_launched': None,
@@ -1028,8 +1029,6 @@ class DataFlowKernel:
         logger.info("Task {} submitted for App {}, {}".format(task_id,
                                                               task_record['func_name'],
                                                               waiting_message))
-
-        task_record['task_launch_lock'] = threading.Lock()
 
         app_fu.add_done_callback(partial(self.handle_app_update, task_record))
         self.update_task_state(task_record, States.pending)
