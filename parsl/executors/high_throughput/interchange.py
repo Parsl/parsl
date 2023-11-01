@@ -433,11 +433,10 @@ class Interchange:
                     else:
                         logger.info("Manager {!r} has compatible Parsl version {}".format(manager_id, msg['parsl_v']))
                         logger.info("Manager {!r} has compatible Python version {}".format(manager_id,
-                                                                                         msg['python_v'].rsplit(".", 1)[0]))
+                                                                                           msg['python_v'].rsplit(".", 1)[0]))
                 else:
                     # Registration has failed.
-                    logger.debug("Suppressing bad registration from manager: {!r}".format(
-                        manager_id))
+                    logger.debug("Suppressing bad registration from manager: {!r}".format(manager_id))
 
             else:
                 tasks_requested = int.from_bytes(message[1], "little")
