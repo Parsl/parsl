@@ -79,7 +79,7 @@ class Interchange:
                  logdir: str = ".",
                  logging_level: int = logging.INFO,
                  poll_period: int = 10,
-             ) -> None:
+                 ) -> None:
         """
         Parameters
         ----------
