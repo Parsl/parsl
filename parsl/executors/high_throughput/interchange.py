@@ -426,7 +426,7 @@ class Interchange:
                                                                         self.current_platform['parsl_v']),
                                             "py.v={} parsl.v={}".format(msg['python_v'].rsplit(".", 1)[0],
                                                                         msg['parsl_v'])
-                        )
+                                            )
                         result_package = {'type': 'result', 'task_id': -1, 'exception': serialize_object(e)}
                         pkl_package = pickle.dumps(result_package)
                         self.results_outgoing.send(pkl_package)
