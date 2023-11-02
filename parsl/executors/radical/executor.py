@@ -360,7 +360,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         task.gpus_per_rank = kwargs.get('gpus_per_rank', 0)
         task.gpu_type = kwargs.get('gpu_type', '')
         task.mem_per_rank = kwargs.get('mem_per_rank', 0)
-        stderr_stdout = ['stdout' , 'stderr']
+        stderr_stdout = ['stdout', 'stderr']
         for k in stderr_stdout:
             k_val = kwargs.get(k, '')
             if k_val:
