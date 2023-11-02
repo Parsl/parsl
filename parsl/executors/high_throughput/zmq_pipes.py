@@ -119,7 +119,10 @@ class TasksOutgoing:
                 return
             else:
                 timeout_ms *= 2
-                logger.debug("Not sending due to non-ready zmq pipe, timeout: {} ms".format(timeout_ms))
+                logger.error("Not sending due to non-ready zmq pipe, timeout: {} ms".format(timeout_ms))
+                if timeout_ms >= 10000:
+                    logger.error("Hit big timeout, raising exception")
+                    raise RuntimeError("BENC: hit big timeout for pipe put - failing rather than trying forever")
 
     def close(self):
         self.zmq_socket.close()
