@@ -74,7 +74,7 @@ wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with workqueue_ex config
 
 .PHONY: radical_local_test
 radical_local_test:
-	LOCAL_SANDBOX=True, pytest parsl/tests/ -k "not cleannet and not dynamically_loaded_module and not test_check_importlib_file_function and not test_apptimeout and not test_parallel_for" --config parsl/tests/configs/local_radical.py --random-order --durations 10
+	LOCAL_SANDBOX=True pytest parsl/tests/ -k "not cleannet and not dynamically_loaded_module and not test_check_importlib_file_function and not test_apptimeout and not test_parallel_for" --config parsl/tests/configs/local_radical.py --random-order --durations 10
 
 .PHONY: config_local_test
 config_local_test:
