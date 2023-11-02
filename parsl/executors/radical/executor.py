@@ -19,9 +19,9 @@ from concurrent.futures import Future
 from .rpex_resources import ResourceConfig
 
 from radical.pilot import PythonTask
-from parsl.app.errors import AppException
 from parsl.utils import RepresentationMixin
 from parsl.executors.base import ParslExecutor
+from parsl.app.errors import AppException, BashExitFailure
 
 RPEX = 'RPEX'
 BASH = 'bash'
@@ -116,9 +116,9 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                  label: str = RPEX,
                  bulk_mode: bool = False,
                  project: Optional[str] = None,
-                 rpex_cfg: Optional[str] = None,
                  partition: Optional[str] = None,
-                 access_schema: Optional[str] = None):
+                 access_schema: Optional[str] = None,
+                 rpex_cfg: Optional[ResourceConfig] = None):
 
         super().__init__()
         self._uid = RPEX.lower()
@@ -140,16 +140,10 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         if rpex_cfg:
             self.rpex_cfg = rpex_cfg
         elif not rpex_cfg and 'local' in resource:
-            self.rpex_cfg = ResourceConfig.get_cfg_file()
+            self.rpex_cfg = ResourceConfig()
         else:
             raise ValueError('Resource config file must be '
                              'specified for a non-local execution')
-
-        cfg = ru.Config(cfg=ru.read_json(self.rpex_cfg))
-
-        self.master = cfg.master_descr
-        self.n_masters = cfg.n_masters
-        self.pilot_env = cfg.pilot_env
 
     def task_state_cb(self, task, state):
         """
@@ -163,7 +157,6 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                 if task.description['mode'] in [rp.TASK_EXEC,
                                                 rp.TASK_EXECUTABLE]:
                     parsl_task.set_result(int(task.exit_code))
-
                 else:
                     parsl_task.set_result(task.return_value)
 
@@ -171,7 +164,12 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                 parsl_task.set_exception(AppException(rp.CANCELED))
 
             elif state == rp.FAILED:
-                parsl_task.set_exception(AppException(task.stderr))
+                if task.description['mode'] in [rp.TASK_EXEC,
+                                                rp.TASK_EXECUTABLE]:
+                    parsl_task.set_exception(BashExitFailure(task.name,
+                                                             task.exit_code))
+                else:
+                    parsl_task.set_exception(AppException(task.stderr))
 
     def start(self):
         """Create the Pilot component and pass it.
@@ -202,6 +200,13 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                 os.environ["RADICAL_LOG_LVL"] = "DEBUG"
 
             logger.info("RPEX will be running in the local mode")
+
+        self.rpex_cfg = self.rpex_cfg._get_cfg_file(path=self.run_dir)
+        cfg = ru.Config(cfg=ru.read_json(self.rpex_cfg))
+
+        self.master = cfg.master_descr
+        self.n_masters = cfg.n_masters
+        self.pilot_env = cfg.pilot_env
 
         pd = rp.PilotDescription(pd_init)
 
@@ -348,14 +353,21 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
             task.raptor_id = 'master.%06d' % (tid % self.n_masters)
             task.function = PythonTask(func, *args, **kwargs)
 
+        task.name = func.__name__
         task.ranks = kwargs.get('ranks', 1)
         task.cores_per_rank = kwargs.get('cores_per_rank', 1)
         task.threading_type = kwargs.get('threading_type', '')
         task.gpus_per_rank = kwargs.get('gpus_per_rank', 0)
         task.gpu_type = kwargs.get('gpu_type', '')
         task.mem_per_rank = kwargs.get('mem_per_rank', 0)
-        task.stdout = kwargs.get('stdout', '')
-        task.stderr = kwargs.get('stderr', '')
+        stderr_stdout = ['stdout' , 'stderr']
+        for k in stderr_stdout:
+            k_val = kwargs.get(k, '')
+            if k_val:
+                out_err = k_val.split('/')
+                setattr(task, k, out_err[-1])
+                task.sandbox = '/'.join(out_err[:-1])
+
         task.timeout = kwargs.get('walltime', 0.0)
 
         return task

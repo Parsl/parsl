@@ -93,7 +93,7 @@ class ResourceConfig:
     worker_type: str = "DefaultWorker"
 
     @classmethod
-    def get_cfg_file(cls):
+    def _get_cfg_file(cls, path=None):
         if "mpi" in cls.worker_type.lower() and \
            "mpi4py" not in cls.pilot_env_setup:
             cls.pilot_env_setup.append("mpi4py")
@@ -130,6 +130,8 @@ class ResourceConfig:
 
         # Convert the class instance to a cfg file.
         config_path = 'rpex.cfg'
-        with open('rpex.cfg', 'w') as f:
+        if path:
+            config_path = path + '/' + config_path
+        with open(config_path, 'w') as f:
             json.dump(cfg, f, indent=4)
         return config_path
