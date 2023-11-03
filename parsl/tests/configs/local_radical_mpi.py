@@ -10,10 +10,10 @@ parsl_src = "pip install git+https://github.com/AymenFJA/parsl.git"
 rpex_cfg = ResourceConfig()
 rpex_cfg.pilot_env_setup.extend([parsl_src, "pytest"])
 rpex_cfg.worker_cores_per_node = 7
+rpex_cfg.worker_type = "MPI"
 
 
 def fresh_config():
-    rpex_cfg.worker_type = "MPI"
 
     return Config(
             executors=[

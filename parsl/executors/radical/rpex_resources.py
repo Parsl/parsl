@@ -92,7 +92,6 @@ class ResourceConfig:
     python_v: str = f'{sys.version_info[0]}.{sys.version_info[1]}'
     worker_type: str = "DefaultWorker"
 
-    @classmethod
     def _get_cfg_file(cls, path=None):
         if "mpi" in cls.worker_type.lower() and \
            "mpi4py" not in cls.pilot_env_setup:

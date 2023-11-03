@@ -19,6 +19,7 @@ from concurrent.futures import Future
 from .rpex_resources import ResourceConfig
 
 from radical.pilot import PythonTask
+from parsl.data_provider.files import File
 from parsl.utils import RepresentationMixin
 from parsl.executors.base import ParslExecutor
 from parsl.app.errors import AppException, BashExitFailure
@@ -360,6 +361,11 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         task.gpus_per_rank = kwargs.get('gpus_per_rank', 0)
         task.gpu_type = kwargs.get('gpu_type', '')
         task.mem_per_rank = kwargs.get('mem_per_rank', 0)
+        task.input_staging = self._stage_files(kwargs.get("inputs", []),
+                                               mode='in')
+        task.output_staging = self._stage_files(kwargs.get("outputs", []),
+                                                mode='out')
+
         stderr_stdout = ['stdout', 'stderr']
         for k in stderr_stdout:
             k_val = kwargs.get(k, '')
@@ -371,6 +377,27 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         task.timeout = kwargs.get('walltime', 0.0)
 
         return task
+
+    def _stage_files(self, files, mode):
+        """
+        a function to stage input/output a
+        list of files between two locations.
+        """
+        to_stage = []
+        files = [f for f in files if isinstance(f, File)]
+        for file in files:
+            if mode == 'in':
+                f = {'source': file.url,
+                     'action': rp.TRANSFER}
+            elif mode == 'out':
+                f = {'source': file.filename,
+                     'target': file.url,
+                     'action': rp.TRANSFER}
+            else:
+                raise ValueError('unknown staging mode')
+
+            to_stage.append(f)
+        return to_stage
 
     def _bulk_collector(self):
 
