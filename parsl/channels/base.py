@@ -4,33 +4,21 @@ from typing import Dict, Tuple
 
 
 class Channel(metaclass=ABCMeta):
-    """For certain resources such as campus clusters or supercomputers at
+    """Channels are abstractions that enable ExecutionProviders to talk to
+    resource managers of remote compute facilities.
+
+    For certain resources such as campus clusters or supercomputers at
     research laboratories, resource requirements may require authentication.
     For instance some resources may allow access to their job schedulers from
-    only their login-nodes which require you to authenticate on through SSH,
-    GSI-SSH and sometimes even require two factor authentication. Channels are
-    simple abstractions that enable the ExecutionProvider component to talk to
-    the resource managers of compute facilities. The simplest Channel,
-    *LocalChannel*, simply executes commands locally on a shell, while the
-    *SshChannel* authenticates you to remote systems.
+    only their login-nodes which require you to authenticate through SSH, or
+    require two factor authentication.
 
-    Channels are usually called via the execute_wait function.
-    For channels that execute remotely, a push_file function allows you to copy over files.
+    The simplest Channel, *LocalChannel*, executes commands locally in a
+    shell, while the *SSHChannel* authenticates you to remote systems.
 
-    .. code:: python
-
-                                +------------------
-                                |
-          cmd, wtime    ------->|  execute_wait
-          (ec, stdout, stderr)<-|---+
-                                |
-          src, dst_dir  ------->|  push_file
-             dst_path  <--------|----+
-                                |
-          dst_script_dir <------|  script_dir
-                                |
-                                +-------------------
-
+    Channels provide the ability to execute commands remotely, using the
+    execute_wait method, and manipulate the remote file system using methods
+    such as push_file, pull_file and makedirs.
 
     Channels should ensure that each launched command runs in a new process
     group, so that providers (such as AdHocProvider and LocalProvider) which

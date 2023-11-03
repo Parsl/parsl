@@ -30,7 +30,7 @@ def _taskvine_factory(should_stop, factory_config):
         else:
             factory = Factory(batch_type=factory_config.batch_type,
                               manager_host_port=f"{factory_config._project_address}:{factory_config._project_port}",
-                             )
+                              )
     except Exception as e:
         raise TaskVineFactoryFailure(f'Cannot create factory with exception {e}')
 
