@@ -317,8 +317,8 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                     task_type = PYTHON
                 else:
                     task_type = ''
-        except Exception:
-            logger.exception('failed to obtain task type')
+        except Exception as e:
+            raise Exception('failed to obtain task type: {0}'.format(e))
 
         return func, args, task_type
 
@@ -380,8 +380,8 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
     def _stage_files(self, files, mode):
         """
-        a function to stage input/output a
-        list of files between two locations.
+        a function to stage list of input/output a
+        files between two locations.
         """
         to_stage = []
         files = [f for f in files if isinstance(f, File)]
