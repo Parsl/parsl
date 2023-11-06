@@ -8,7 +8,7 @@ from parsl.executors.radical import ResourceConfig
 # this fork.
 parsl_src = "pip install git+https://github.com/AymenFJA/parsl.git"
 rpex_cfg = ResourceConfig()
-rpex_cfg.pilot_env_setup.append(parsl_src)
+rpex_cfg.pilot_env_setup.extend([parsl_src, "pytest", "pandas"])
 
 
 def fresh_config():

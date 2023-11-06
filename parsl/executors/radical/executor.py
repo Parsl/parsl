@@ -14,6 +14,7 @@ import radical.utils as ru
 
 from functools import partial
 from typing import Optional, Dict
+from pathlib import Path, PosixPath
 from concurrent.futures import Future
 
 from .rpex_resources import ResourceConfig
@@ -26,8 +27,10 @@ from parsl.app.errors import AppException, BashExitFailure
 
 RPEX = 'RPEX'
 BASH = 'bash'
+CWD = os.getcwd()
 PYTHON = 'python'
 os.environ["RADICAL_REPORT"] = "False"
+PWD = os.path.abspath(os.path.dirname(__file__))
 
 logger = logging.getLogger(__name__)
 
@@ -167,10 +170,15 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
             elif state == rp.FAILED:
                 if task.description['mode'] in [rp.TASK_EXEC,
                                                 rp.TASK_EXECUTABLE]:
-                    parsl_task.set_exception(BashExitFailure(task.name,
-                                                             task.exit_code))
+                    # for some reason RP sometimes report a
+                    # task with exit code 0 as FAILED
+                    if task.exit_code == 0:
+                        parsl_task.set_result(int(task.exit_code))
+                    else:
+                        parsl_task.set_exception(BashExitFailure(task.name,
+                                                                 task.exit_code))
                 else:
-                    parsl_task.set_exception(AppException(task.stderr))
+                    parsl_task.set_exception(eval(task.exception))
 
     def start(self):
         """Create the Pilot component and pass it.
@@ -212,25 +220,18 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         pd = rp.PilotDescription(pd_init)
 
         tds = list()
-        executor_path = os.path.abspath(os.path.dirname(__file__))
-        master_path = '{0}/rpex_master.py'.format(executor_path)
+        master_path = '{0}/rpex_master.py'.format(PWD)
 
         for i in range(self.n_masters):
             td = rp.TaskDescription(self.master)
             td.mode = rp.RAPTOR_MASTER
             td.uid = ru.generate_id('master.%(item_counter)06d', ru.ID_CUSTOM,
                                     ns=self.session.uid)
-            td.arguments = [self.rpex_cfg, i]
             td.ranks = 1
             td.cores_per_rank = 1
-            td.input_staging = [{'source': master_path,
-                                 'target': 'rpex_master.py',
-                                 'action': rp.TRANSFER,
-                                 'flags': rp.DEFAULT_FLAGS},
-                                {'source': self.rpex_cfg,
-                                 'target': os.path.basename(self.rpex_cfg),
-                                 'action': rp.TRANSFER,
-                                 'flags': rp.DEFAULT_FLAGS}]
+            td.arguments = [self.rpex_cfg, i]
+            td.input_staging = self._stage_files([File(master_path),
+                                                  File(self.rpex_cfg)], mode='in')
             tds.append(td)
 
         self.pmgr = rp.PilotManager(session=self.session)
@@ -343,9 +344,14 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                     raise Exception("failed to obtain bash app cmd") from e
 
                 task.mode = rp.TASK_EXECUTABLE
-                task.executable = '/bin/bash'
-                task.arguments = ['-c', bash_app]
 
+                # workaround for the difference between
+                # RP execution of executables (bashapps)
+                # and Parsl execution.
+                bashapp_file = self._map_bash_app_to_file(bash_app, tid)
+                task.executable = '/bin/bash'
+                task.arguments = [bashapp_file]
+                task.input_staging = [bashapp_file]
                 # specifying pre_exec is only for executables
                 task.pre_exec = kwargs.get('pre_exec', [])
 
@@ -366,17 +372,51 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         task.output_staging = self._stage_files(kwargs.get("outputs", []),
                                                 mode='out')
 
-        stderr_stdout = ['stdout', 'stderr']
-        for k in stderr_stdout:
-            k_val = kwargs.get(k, '')
-            if k_val:
-                out_err = k_val.split('/')
-                setattr(task, k, out_err[-1])
-                task.sandbox = '/'.join(out_err[:-1])
+        self._set_stdout_stderr(task, kwargs)
 
         task.timeout = kwargs.get('walltime', 0.0)
 
         return task
+
+    def _map_bash_app_to_file(self, bash_app, bash_app_id):
+        """
+        This function writes the command of
+        a bash_app in a file and pass it to
+        RP as an executable to fix:
+        https://github.com/Parsl/parsl/pull/2923#issuecomment-1790895266
+        """
+        file_path = f"{self.run_dir}/{bash_app_id}.sh"
+        shell_script = f"""
+        #/bin/bash
+        {bash_app}
+        """
+        with open(file_path, 'w') as f:
+            f.write(shell_script)
+        return file_path
+
+    def _set_stdout_stderr(self, task, kwargs):
+        """
+        set the stdout and stderr of a task
+        """
+        for k in ['stdout', 'stderr']:
+            k_val = kwargs.get(k, '')
+            if k_val:
+                # check the type of the stderr/out
+                if isinstance(k_val, File):
+                    k_val = k_val.filepath
+                elif isinstance(k_val, PosixPath):
+                    k_val = k_val.__str__()
+
+                # if the stderr/out has no path
+                # then we consider it local and
+                # we just set the path to the cwd
+                if '/' not in k_val:
+                    k_val = CWD + '/' + k_val
+
+                # finally set the stderr/out to
+                # the desired name by the user
+                setattr(task, k, k_val)
+                task.sandbox = Path(k_val).parent.__str__()
 
     def _stage_files(self, files, mode):
         """
