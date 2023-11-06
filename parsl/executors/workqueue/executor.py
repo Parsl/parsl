@@ -449,7 +449,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         input_files = []
         output_files = []
 
-        # Determine the input and output files that will exist at the workes:
+        # Determine the input and output files that will exist at the workers:
         input_files += [self._register_file(f) for f in kwargs.get("inputs", []) if isinstance(f, File)]
         output_files += [self._register_file(f) for f in kwargs.get("outputs", []) if isinstance(f, File)]
 
