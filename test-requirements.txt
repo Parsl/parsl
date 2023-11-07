@@ -1,10 +1,6 @@
 flake8==6.1.0
 ipyparallel
-
-# previously removed because it seems to want to build with now-removed distutils
-# ... but as python 3.12 has progressed, maybe we can bring it back?
 pandas
-
 pytest>=7.4.0,<8
 pytest-cov
 pytest-random-order
@@ -31,4 +27,4 @@ wheel
 # parsl/tests/test_regression/test_1653.py
 # This has previously been imported transitively via pandas
 # but should be explicit about it.
-numpy>=1.24
+# numpy>=1.24
