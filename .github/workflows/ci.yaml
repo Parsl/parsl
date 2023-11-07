@@ -34,16 +34,16 @@ jobs:
 
         # force a greenlet version, as released versions don't build with
         # python 3.12
-        pip install 'greenlet @ git+https://github.com/mdboom/greenlet@python-312'
+        # pip install 'greenlet @ git+https://github.com/mdboom/greenlet@python-312'
 
         # numpy releases (<=1.25 at time of writing) don't build with python 3.12
         # due to distutils disappearing. See https://github.com/numpy/numpy/issues/23808
-        sudo apt-get install -y libopenblas-dev 
+        # sudo apt-get install -y libopenblas-dev 
 
         # pandas latest release doesn't build with python 3.12. trying github.
         # see, for example, https://github.com/pandas-dev/pandas/pull/53743
 
-        pip install 'numpy @ git+https://github.com/numpy/numpy' 'pandas @ git+https://github.com/pandas-dev/pandas'
+        # pip install 'numpy @ git+https://github.com/numpy/numpy' 'pandas @ git+https://github.com/pandas-dev/pandas'
 
     - name: make deps clean_coverage
       run: |
