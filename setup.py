@@ -8,7 +8,9 @@ with open('requirements.txt') as f:
 
 extras_require = {
     'monitoring' : [
-        'sqlalchemy>=1.4,<2',
+        'sqlalchemy>=1.4,<2'
+    ],
+    'visualization' : [
         'pydot',
 
         # these versions of networkx does not work with numpy>=2 because:

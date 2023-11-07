@@ -74,7 +74,6 @@ def test_div_0(test_fn=div_0):
     print(os.listdir('.'))
     os.remove('std.err')
     os.remove('std.out')
-    return True
 
 
 @pytest.mark.issue363
