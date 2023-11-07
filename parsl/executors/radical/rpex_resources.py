@@ -123,6 +123,7 @@ class ResourceConfig:
             'worker_descr': {
                 "mode": "raptor.worker",
                 "named_env": cls.pilot_env_name,
+                "raptor_file": "./rpex_worker.py",
                 "raptor_class": cls.worker_type if
                 cls.worker_type.lower() != "mpi" else "MPIWorker",
             }}

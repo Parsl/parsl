@@ -162,6 +162,11 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                                                 rp.TASK_EXECUTABLE]:
                     parsl_task.set_result(int(task.exit_code))
                 else:
+                    # we do not support MPI function output
+                    # serialization. TODO: To be fixed soon.
+                    if not task.description.get('use_mpi'):
+                        return_value = rp.utils.deserialize_obj(eval(task.return_value))
+                        parsl_task.set_result(return_value)
                     parsl_task.set_result(task.return_value)
 
             elif state == rp.CANCELED:
@@ -221,6 +226,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
         tds = list()
         master_path = '{0}/rpex_master.py'.format(PWD)
+        worker_path = '{0}/rpex_worker.py'.format(PWD)
 
         for i in range(self.n_masters):
             td = rp.TaskDescription(self.master)
@@ -231,6 +237,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
             td.cores_per_rank = 1
             td.arguments = [self.rpex_cfg, i]
             td.input_staging = self._stage_files([File(master_path),
+                                                  File(worker_path),
                                                   File(self.rpex_cfg)], mode='in')
             tds.append(td)
 
