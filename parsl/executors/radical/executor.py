@@ -6,6 +6,7 @@ import parsl
 import queue
 import logging
 import inspect
+import requests
 import typeguard
 import threading as mt
 
@@ -14,22 +15,27 @@ import radical.utils as ru
 
 from functools import partial
 from typing import Optional, Dict
+from globus_sdk import GlobusError  # noqa: F401
 from pathlib import Path, PosixPath
 from concurrent.futures import Future
 
-from .rpex_resources import ResourceConfig
-
+from parsl.app.errors import *  # noqa: F403
+from parsl.dataflow.errors import *  # noqa: F403
+from parsl.executors.errors import *  # noqa: F403
 from radical.pilot import PythonTask
+from .rpex_resources import ResourceConfig
 from parsl.data_provider.files import File
 from parsl.utils import RepresentationMixin
 from parsl.executors.base import ParslExecutor
-from parsl.app.errors import AppException, BashExitFailure
+
 
 RPEX = 'RPEX'
 BASH = 'bash'
-CWD = os.getcwd()
 PYTHON = 'python'
+
 os.environ["RADICAL_REPORT"] = "False"
+
+CWD = os.getcwd()
 PWD = os.path.abspath(os.path.dirname(__file__))
 
 logger = logging.getLogger(__name__)
@@ -108,6 +114,9 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
     project : Optional[str]
         The project name for resource allocation. Default is None.
 
+    working_dir : str
+        The working dir to be used by the executor.
+
     For more information: https://radicalpilot.readthedocs.io/en/stable/
     """
 
@@ -121,6 +130,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                  bulk_mode: bool = False,
                  project: Optional[str] = None,
                  partition: Optional[str] = None,
+                 working_dir: Optional[str] = None,
                  access_schema: Optional[str] = None,
                  rpex_cfg: Optional[ResourceConfig] = None):
 
@@ -134,6 +144,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         self.walltime = walltime
         self.label = label
         self.future_tasks: Dict[str, Future] = {}
+        self.working_dir = working_dir
         self.cores = cores
         self.gpus = gpus
         self.run_dir = '.'
@@ -167,10 +178,11 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                     if not task.description.get('use_mpi'):
                         return_value = rp.utils.deserialize_obj(eval(task.return_value))
                         parsl_task.set_result(return_value)
-                    parsl_task.set_result(task.return_value)
+                    else:
+                        parsl_task.set_result(task.return_value)
 
             elif state == rp.CANCELED:
-                parsl_task.set_exception(AppException(rp.CANCELED))
+                parsl_task.cancel()
 
             elif state == rp.FAILED:
                 if task.description['mode'] in [rp.TASK_EXEC,
@@ -180,10 +192,13 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                     if task.exit_code == 0:
                         parsl_task.set_result(int(task.exit_code))
                     else:
-                        parsl_task.set_exception(BashExitFailure(task.name,
+                        parsl_task.set_exception(BashExitFailure(task.name,  # noqa: F405
                                                                  task.exit_code))
                 else:
-                    parsl_task.set_exception(eval(task.exception))
+                    if task.exception:
+                        parsl_task.set_exception(eval(task.exception))
+                    else:
+                        parsl_task.set_exception('unknow failure for this task')
 
     def start(self):
         """Create the Pilot component and pass it.
@@ -379,6 +394,8 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         task.output_staging = self._stage_files(kwargs.get("outputs", []),
                                                 mode='out')
 
+        task.input_staging.extend(self._stage_files(list(args), mode='in'))
+
         self._set_stdout_stderr(task, kwargs)
 
         task.timeout = kwargs.get('walltime', 0.0)
@@ -427,23 +444,40 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
     def _stage_files(self, files, mode):
         """
-        a function to stage list of input/output a
+        a function to stage list of input/output
         files between two locations.
         """
         to_stage = []
         files = [f for f in files if isinstance(f, File)]
         for file in files:
             if mode == 'in':
+                # a workaround RP not supportting
+                # staging https file
+                if file.scheme == 'https':
+                    r = requests.get(file.url)
+                    p = CWD + '/' + file.filename
+                    with open(p, 'wb') as ff:
+                        ff.write(r.content)
+                    file = File(p)
+
                 f = {'source': file.url,
                      'action': rp.TRANSFER}
+                to_stage.append(f)
+
             elif mode == 'out':
-                f = {'source': file.filename,
-                     'target': file.url,
-                     'action': rp.TRANSFER}
+                # this indicates that the user
+                # did not provided a specific
+                # output file and RP will stage out
+                # the task.output from pilot://task_folder
+                # to the CWD
+                if '/' not in file.url:
+                    f = {'source': file.filename,
+                         'target': file.url,
+                         'action': rp.TRANSFER}
+                    to_stage.append(f)
             else:
                 raise ValueError('unknown staging mode')
 
-            to_stage.append(f)
         return to_stage
 
     def _bulk_collector(self):

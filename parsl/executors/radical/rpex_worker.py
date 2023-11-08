@@ -1,8 +1,6 @@
 import radical.pilot as rp
 
 
-# ------------------------------------------------------------------------------
-#
 class DefaultWorker(rp.raptor.DefaultWorker):
 
     def _dispatch_func(self, task):
@@ -13,8 +11,6 @@ class DefaultWorker(rp.raptor.DefaultWorker):
         return out, err, ret, str(ser_val), exc
 
 
-# ------------------------------------------------------------------------------
-#
 class MPIWorker(rp.raptor.MPIWorker):
 
     def _dispatch_func(self, task):
