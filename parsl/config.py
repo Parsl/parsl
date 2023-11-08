@@ -129,6 +129,10 @@ class Config(RepresentationMixin):
         return self._executors
 
     def _validate_executors(self, executors: Sequence[ParslExecutor]) -> None:
+
+        if len(executors) == 0:
+            raise ConfigurationError('At least one executor must be specified')
+
         labels = [e.label for e in executors]
         duplicates = [e for n, e in enumerate(labels) if e in labels[:n]]
         if len(duplicates) > 0:
