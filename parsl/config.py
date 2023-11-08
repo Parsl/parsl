@@ -93,12 +93,11 @@ class Config(RepresentationMixin):
                  usage_tracking: bool = False,
                  initialize_logging: bool = True) -> None:
 
+        executors = tuple(executors or [])
         if not executors:
             executors = (ThreadPoolExecutor(),)
 
-        self._executors: Sequence[ParslExecutor]
-        self._executors = tuple(executors)
-
+        self._executors: Sequence[ParslExecutor] = executors
         self._validate_executors()
 
         self.app_cache = app_cache
