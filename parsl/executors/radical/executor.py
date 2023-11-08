@@ -469,7 +469,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                 # did not provided a specific
                 # output file and RP will stage out
                 # the task.output from pilot://task_folder
-                # to the CWD
+                # to the CWD or file.url
                 if '/' not in file.url:
                     f = {'source': file.filename,
                          'target': file.url,
