@@ -15,19 +15,18 @@ import radical.utils as ru
 
 from functools import partial
 from typing import Optional, Dict
-from globus_sdk import GlobusError  # noqa: F401
 from pathlib import Path, PosixPath
 from concurrent.futures import Future
 
-from parsl.app.errors import *  # noqa: F403
-from parsl.dataflow.errors import *  # noqa: F403
-from parsl.executors.errors import *  # noqa: F403
-from radical.pilot import PythonTask
+
 from .rpex_resources import ResourceConfig
 from parsl.data_provider.files import File
 from parsl.utils import RepresentationMixin
+from parsl.app.errors import BashExitFailure
 from parsl.executors.base import ParslExecutor
-
+from parsl.app.errors import RemoteExceptionWrapper
+from parsl.serialize import pack_apply_message, deserialize
+from parsl.serialize.errors import SerializationError, DeserializationError
 
 RPEX = 'RPEX'
 BASH = 'bash'
@@ -176,8 +175,8 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                     # we do not support MPI function output
                     # serialization. TODO: To be fixed soon.
                     if not task.description.get('use_mpi'):
-                        return_value = rp.utils.deserialize_obj(eval(task.return_value))
-                        parsl_task.set_result(return_value)
+                        result = deserialize(eval(task.return_value))
+                        parsl_task.set_result(result)
                     else:
                         parsl_task.set_result(task.return_value)
 
@@ -196,9 +195,22 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                                                                  task.exit_code))
                 else:
                     if task.exception:
-                        parsl_task.set_exception(eval(task.exception))
+                        try:
+                            s = rp.utils.deserialize_bson(task.exception)
+                            if isinstance(s, RemoteExceptionWrapper):
+                                try:
+                                    s.reraise()
+                                except Exception as e:
+                                    parsl_task.set_exception(e)
+                            elif isinstance(s, Exception):
+                                parsl_task.set_exception(s)
+                            else:
+                                raise ValueError("Unknown exception-like type received: {}".format(type(s)))
+                        except Exception as e:
+                            parsl_task.set_exception(
+                                DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
                     else:
-                        parsl_task.set_exception('unknow failure for this task')
+                        parsl_task.set_exception('Unknow failure for this task')
 
     def start(self):
         """Create the Pilot component and pass it.
@@ -351,6 +363,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         """
 
         task = rp.TaskDescription()
+        task.name = func.__name__
         func, args, task_type = self.unwrap(func, args)
 
         if BASH in task_type:
@@ -380,9 +393,13 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         elif PYTHON in task_type or not task_type:
             task.mode = rp.TASK_FUNCTION
             task.raptor_id = 'master.%06d' % (tid % self.n_masters)
-            task.function = PythonTask(func, *args, **kwargs)
+            try:
+                buffer = pack_apply_message(func, args, kwargs,
+                                            buffer_threshold=1024 * 1024)
+                task.function = rp.utils.serialize_bson(buffer)
+            except TypeError:
+                raise SerializationError(task.name)
 
-        task.name = func.__name__
         task.ranks = kwargs.get('ranks', 1)
         task.cores_per_rank = kwargs.get('cores_per_rank', 1)
         task.threading_type = kwargs.get('threading_type', '')
