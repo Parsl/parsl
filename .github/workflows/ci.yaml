@@ -35,6 +35,12 @@ jobs:
 
     - name: make deps clean_coverage
       run: |
+        make virtualenv
+
+        # I think this will not get carried across to subsequent
+        # run: blocks, but I'll try it out.
+        source .venv/bin/activate
+
         make deps
         make clean_coverage
 
