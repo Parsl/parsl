@@ -18,7 +18,8 @@ class DefaultWorker(rp.raptor.DefaultWorker):
             ret = 0
             out = None
             err = None
-        except Exception:
+        except Exception as e:
+            self._log.debug('Caught an exception: {}'.format(e))
             val = None
             exc = (rp.utils.serialize_bson(RemoteExceptionWrapper(*sys.exc_info())), None)
             ret = 1

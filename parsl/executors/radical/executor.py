@@ -18,7 +18,7 @@ from typing import Optional, Dict
 from pathlib import Path, PosixPath
 from concurrent.futures import Future
 
-
+from parsl.app.python import timeout
 from .rpex_resources import ResourceConfig
 from parsl.data_provider.files import File
 from parsl.utils import RepresentationMixin
@@ -364,6 +364,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
         task = rp.TaskDescription()
         task.name = func.__name__
+        task.timeout = kwargs.get('walltime', 0.0)
         func, args, task_type = self.unwrap(func, args)
 
         if BASH in task_type:
@@ -383,16 +384,22 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                 # workaround for the difference between
                 # RP execution of executables (bashapps)
                 # and Parsl execution.
+                # TODO: maybe switch to rp.PROC instead of
+                # RP.EXECUTABLE
                 bashapp_file = self._map_bash_app_to_file(bash_app, tid)
                 task.executable = '/bin/bash'
                 task.arguments = [bashapp_file]
                 task.input_staging = [bashapp_file]
-                # specifying pre_exec is only for executables
                 task.pre_exec = kwargs.get('pre_exec', [])
 
         elif PYTHON in task_type or not task_type:
             task.mode = rp.TASK_FUNCTION
             task.raptor_id = 'master.%06d' % (tid % self.n_masters)
+            if task.timeout:
+                func = timeout(func, task.timeout)
+                # reset RP's task timeout, otherwise RP will
+                # handle the Timeout Exception
+                task.timeout = 0
             try:
                 buffer = pack_apply_message(func, args, kwargs,
                                             buffer_threshold=1024 * 1024)
@@ -401,11 +408,12 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                 raise SerializationError(task.name)
 
         task.ranks = kwargs.get('ranks', 1)
-        task.cores_per_rank = kwargs.get('cores_per_rank', 1)
-        task.threading_type = kwargs.get('threading_type', '')
-        task.gpus_per_rank = kwargs.get('gpus_per_rank', 0)
         task.gpu_type = kwargs.get('gpu_type', '')
         task.mem_per_rank = kwargs.get('mem_per_rank', 0)
+        task.gpus_per_rank = kwargs.get('gpus_per_rank', 0)
+        task.cores_per_rank = kwargs.get('cores_per_rank', 1)
+        task.threading_type = kwargs.get('threading_type', '')
+
         task.input_staging = self._stage_files(kwargs.get("inputs", []),
                                                mode='in')
         task.output_staging = self._stage_files(kwargs.get("outputs", []),
@@ -414,8 +422,6 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         task.input_staging.extend(self._stage_files(list(args), mode='in'))
 
         self._set_stdout_stderr(task, kwargs)
-
-        task.timeout = kwargs.get('walltime', 0.0)
 
         return task
 
