@@ -359,7 +359,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
     def task_translate(self, tid, func, args, kwargs):
         """
-        Convert parsl function to RADICAL-Pilot Task-Description
+        Convert parsl function to RADICAL-Pilot rp.TaskDescription
         """
 
         task = rp.TaskDescription()
@@ -400,12 +400,17 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                 # reset RP's task timeout, otherwise RP will
                 # handle the Timeout Exception
                 task.timeout = 0
-            try:
-                buffer = pack_apply_message(func, args, kwargs,
-                                            buffer_threshold=1024 * 1024)
-                task.function = rp.utils.serialize_bson(buffer)
-            except TypeError:
-                raise SerializationError(task.name)
+
+            # we process MPI function differently
+            if task.ranks > 1 or 'comm' in kwargs:
+                task.function = rp.PythonTask(func, *args, **kwargs)
+            else:
+                try:
+                    buffer = pack_apply_message(func, args, kwargs,
+                                                buffer_threshold=1024 * 1024)
+                    task.function = rp.utils.serialize_bson(buffer)
+                except TypeError:
+                    raise SerializationError(task.name)
 
         task.ranks = kwargs.get('ranks', 1)
         task.gpu_type = kwargs.get('gpu_type', '')
@@ -535,7 +540,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
     def submit(self, func, *args, **kwargs):
         """
         Submits tasks in stream mode or bulks (bulk mode)
-        to RADICAL-Pilot rp.TASK_MANAGER.
+        to RADICAL-Pilot rp.TaskManager.
         """
         rp_tid = ru.generate_id('task.%(item_counter)06d', ru.ID_CUSTOM,
                                 ns=self.session.uid)
