@@ -1,6 +1,7 @@
 """RadicalPilotExecutor builds on the RADICAL-Pilot/Parsl
 """
 import os
+import sys
 import time
 import parsl
 import queue
@@ -221,7 +222,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         self.session = rp.Session(cfg={'base': self.run_dir},
                                   uid=ru.generate_id('rpex.session',
                                                      mode=ru.ID_PRIVATE))
-        logger.info(f"RPEX session is created: {0}".format(self.session.path))
+        logger.info("RPEX session is created: {0}".format(self.session.path))
 
         pd_init = {'gpus': self.gpus,
                    'cores': self.cores,
@@ -247,7 +248,6 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
         self.master = cfg.master_descr
         self.n_masters = cfg.n_masters
-        self.pilot_env = cfg.pilot_env
 
         pd = rp.PilotDescription(pd_init)
 
@@ -275,14 +275,14 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         pilot = self.pmgr.submit_pilots(pd)
         self.tmgr.submit_tasks(tds)
 
-        logger.info("setting up the executor environment")
-        pilot.prepare_env(env_name=self.pilot_env.get('name'),
-                          env_spec={'type': self.pilot_env.get('type'),
-                                    'path': self.pilot_env.get('path'),
-                                    'setup': self.pilot_env.get('setup'),
-                                    'version': self.pilot_env.get('version'),
-                                    'pre_exec': self.pilot_env.get('pre_exec')
-                                    })
+        # prepare or use the current env for the agent/pilot side environment
+        if cfg.pilot_env_mode != 'client':
+            logger.info("creating {0} environment for the executor".format(cfg.pilot_env.name))
+            pilot.prepare_env(env_name=cfg.pilot_env.name,
+                              env_spec=cfg.pilot_env.as_dict())
+        else:
+            client_env = sys.prefix.split
+            logger.info("reusing ({0}) environment for the executor".format(client_env))
 
         self.tmgr.add_pilots(pilot)
         self.tmgr.register_callback(self.task_state_cb)

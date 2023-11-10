@@ -5,6 +5,13 @@ import radical.utils as ru
 
 from typing import List
 
+MPI = "mpi"
+RP_ENV = "rp"
+CLIENT = "client"
+RPEX_ENV = "ve_rpex"
+MPI_WORKER = "MPIWorker"
+DEFAULT_WORKER = "DefaultWorker"
+
 
 class ResourceConfig:
     """
@@ -82,18 +89,29 @@ class ResourceConfig:
     cores_per_master: int = 1
     nodes_per_worker: int = 1
 
+    pilot_env_mode: str = CLIENT
     pilot_env_path: str = ""
     pilot_env_type: str = "venv"
-    pilot_env_name: str = "ve_rpex"
+    pilot_env_name: str = RP_ENV
     pilot_env_pre_exec: List[str] = []
     pilot_env_setup: List[str] = [rp.sdist_path,
                                   ru.sdist_path]
 
     python_v: str = f'{sys.version_info[0]}.{sys.version_info[1]}'
-    worker_type: str = "DefaultWorker"
+    worker_type: str = DEFAULT_WORKER
 
     def _get_cfg_file(cls, path=None):
-        if "mpi" in cls.worker_type.lower() and \
+
+        # Default ENV mode for RP is to reuse
+        # the client side. If this is not the case,
+        # then RP will create a new env named ve_rpex
+        # The user need to make sure that under:
+        # $HOME/.radical/pilot/configs/*_resource.json
+        # that virtenv_mode = local
+        if cls.pilot_env_mode != CLIENT:
+            cls.pilot_env_name = RPEX_ENV
+
+        if MPI in cls.worker_type.lower() and \
            "mpi4py" not in cls.pilot_env_setup:
             cls.pilot_env_setup.append("mpi4py")
 
@@ -114,18 +132,20 @@ class ResourceConfig:
                 "pre_exec": cls.pilot_env_pre_exec
             },
 
+            'pilot_env_mode': cls.pilot_env_mode,
+
             'master_descr': {
-                "mode": "raptor.master",
+                "mode": rp.RAPTOR_MASTER,
                 "named_env": cls.pilot_env_name,
                 "executable": "python3 rpex_master.py",
             },
 
             'worker_descr': {
-                "mode": "raptor.worker",
+                "mode": rp.RAPTOR_WORKER,
                 "named_env": cls.pilot_env_name,
                 "raptor_file": "./rpex_worker.py",
                 "raptor_class": cls.worker_type if
-                cls.worker_type.lower() != "mpi" else "MPIWorker",
+                cls.worker_type.lower() != MPI else MPI_WORKER,
             }}
 
         # Convert the class instance to a cfg file.
