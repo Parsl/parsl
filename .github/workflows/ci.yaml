@@ -33,14 +33,14 @@ jobs:
         # mpi is required by the radical executor
         sudo apt install -y mpich
 
-    - name: make deps clean_coverage
+    - name: setup virtual env
       run: |
         make virtualenv
-
-        # I think this will not get carried across to subsequent
-        # run: blocks, but I'll try it out.
         source .venv/bin/activate
+        echo PATH=$PATH >> $GITHUB_ENV
 
+    - name: make deps clean_coverage
+      run: |
         make deps
         make clean_coverage
 
