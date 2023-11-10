@@ -23,4 +23,4 @@ def fresh_config():
                     hub_port=55055,
                     resource_monitoring_interval=3,
                 )
-         )
+                )

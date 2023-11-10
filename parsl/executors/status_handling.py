@@ -198,7 +198,7 @@ class BlockProviderExecutor(ParslExecutor):
             raise ScalingFailed(self, "No execution provider available")
         block_ids = []
         logger.info(f"Scaling out by {blocks} blocks")
-        for i in range(blocks):
+        for _ in range(blocks):
             block_id = str(self._block_id_counter.get_id())
             logger.info(f"Allocated block ID {block_id}")
             try:

@@ -18,13 +18,15 @@ def simple_app():
 
 
 @pytest.mark.local
-@pytest.mark.skip("not expected to pass - demonstrates hanging htex with missing interchange")
+# @pytest.mark.skip("not expected to pass - demonstrates hanging htex with missing interchange - issue 2755")
 @pytest.mark.parametrize("sig", [signal.SIGINT, signal.SIGTERM, signal.SIGKILL])  # are we expecting SIGKILL resilience here? Ideally yes
 def test_kill_router(sig):
-    """This tests that we can kill a monitoring process and still have successful shutdown.
-    This emulates behaviour when ctrl-C is pressed: that all of the processes receive a
+    """This tests that we can kill the interchange process (in different ways) and still have successful shutdown.
+    One of these signals emulates behaviour when ctrl-C is pressed: that all of the processes receive a
     termination signal  - SIGINT for ctrl-C - at once, and so specifically we should be
-    tolerant to monitoring processes going away.
+    tolerant to interchange processes going away.
+
+    see issue https://github.com/Parsl/parsl/issues/2755
     """
 
     # what is the time limit for the interchange shutting down?

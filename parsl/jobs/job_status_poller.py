@@ -111,8 +111,8 @@ class JobStatusPoller(Timer):
         # becuase of a mypy bug, perhaps deliberately. but as this feature, lazy-imports,
         # is likely to go away, I'm not going to investigate too hard.
 
-        self._strategy = Strategy(strategy=dfk.config.strategy,          # type: ignore[has-type]
-                                  max_idletime=dfk.config.max_idletime)  # type: ignore[has-type]
+        self._strategy = Strategy(strategy=dfk.config.strategy,
+                                  max_idletime=dfk.config.max_idletime)
         super().__init__(self.poll, interval=5, name="JobStatusPoller")
 
     @wrap_with_logs

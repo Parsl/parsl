@@ -18,8 +18,8 @@ def fresh_config():
                                            hub_port=55055,
                                            monitoring_debug=True,
                                            resource_monitoring_interval=1,
-                                          )
-                 )
+                                           )
+                  )
 
 
 config = fresh_config()

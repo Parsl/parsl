@@ -176,7 +176,7 @@ class MonitoringHub(RepresentationMixin):
         # documentation and perhaps later re-specialisation.
         # The other queues defined here are attributes on self, not local
         # variables, and so apparently typeguard 4.0.0 checks them less hard.
-        # comm_q: Queue[Union[Tuple[int, int], Exception]]
+        # comm_q: Queue[Union[Tuple[int, int], str]]
         comm_q: Queue
         comm_q = SizedQueue(maxsize=10)
 
@@ -203,10 +203,10 @@ class MonitoringHub(RepresentationMixin):
                                                "logdir": self.logdir,
                                                "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                                "run_id": run_id
-                                       },
+                                               },
                                        name="Monitoring-Router-Process",
                                        daemon=True,
-        )
+                                       )
         self.router_proc.start()
 
         self.dbm_proc = ForkProcess(target=dbm_starter,
@@ -214,10 +214,10 @@ class MonitoringHub(RepresentationMixin):
                                     kwargs={"logdir": self.logdir,
                                             "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                             "db_url": self.logging_endpoint,
-                                    },
+                                            },
                                     name="Monitoring-DBM-Process",
                                     daemon=True,
-        )
+                                    )
         self.dbm_proc.start()
         self.logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
@@ -225,7 +225,7 @@ class MonitoringHub(RepresentationMixin):
                                        args=(self.logdir, self.resource_msgs, run_dir),
                                        name="Monitoring-Filesystem-Process",
                                        daemon=True
-        )
+                                       )
         self.filesystem_proc.start()
         self.logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
 
@@ -235,12 +235,9 @@ class MonitoringHub(RepresentationMixin):
             self.logger.error("Hub has not completed initialization in 120s. Aborting")
             raise Exception("Hub failed to start")
 
-        if isinstance(comm_q_result, Exception):
+        if isinstance(comm_q_result, str):
             self.logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
-            re = RuntimeError("Monitoring router failed to start")
-            re.__cause__ = comm_q_result
-            re.__suppress_context__ = False
-            raise re
+            raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
 
         udp_port, ic_port = comm_q_result
 
@@ -377,7 +374,7 @@ class MonitoringRouter:
                  run_id: str,
                  logging_level: int = logging.INFO,
                  atexit_timeout: int = 3    # in seconds
-                ):
+                 ):
         """ Initializes a monitoring configuration class.
 
         Parameters
@@ -514,7 +511,7 @@ class MonitoringRouter:
 
 
 @wrap_with_logs
-def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], Exception]]",
+def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    exception_q: "queue.Queue[Tuple[str, str]]",
                    priority_msgs: "queue.Queue[AddressedMonitoringMessage]",
                    node_msgs: "queue.Queue[AddressedMonitoringMessage]",
@@ -538,7 +535,7 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], Exception]]",
                                   run_id=run_id)
     except Exception as e:
         logger.error("MonitoringRouter construction failed.", exc_info=True)
-        comm_q.put(e)
+        comm_q.put(f"Monitoring router construction failed: {e}")
     else:
         comm_q.put((router.hub_port, router.ic_port))
 
