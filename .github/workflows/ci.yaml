@@ -35,7 +35,6 @@ jobs:
 
     - name: setup virtual env
       run: |
-        source .venv/bin/activate
         make virtualenv
         source .venv/bin/activate
 
