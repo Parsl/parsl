@@ -281,7 +281,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
             pilot.prepare_env(env_name=cfg.pilot_env.name,
                               env_spec=cfg.pilot_env.as_dict())
         else:
-            client_env = sys.prefix.split
+            client_env = sys.prefix
             logger.info("reusing ({0}) environment for the executor".format(client_env))
 
         self.tmgr.add_pilots(pilot)
