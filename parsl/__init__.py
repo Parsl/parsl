@@ -29,6 +29,7 @@ from parsl.log_utils import set_file_logger
 from parsl.monitoring import MonitoringHub
 
 from parsl.data_provider.files import File
+from parsl.data_provider.directories import Directory
 
 from parsl.dataflow.dflow import DataFlowKernel, DataFlowKernelLoader
 
@@ -52,6 +53,7 @@ __all__ = [
     'Config',
     'DataFlowKernel',
     'File',
+    'Directory',
 
     # logging
     'set_stream_logger',
