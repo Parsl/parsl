@@ -64,10 +64,9 @@ class MissingOutputs(ParslError):
 
     Contains:
     reason(string)
-    outputs(List of strings/files..)
+    outputs(List of files)
     """
-
-    def __init__(self, reason: str, outputs: List[Union[str, File]]) -> None:
+    def __init__(self, reason: str, outputs: List[File]) -> None:
         super().__init__(reason, outputs)
         self.reason = reason
         self.outputs = outputs

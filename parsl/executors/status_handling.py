@@ -193,7 +193,7 @@ class BlockProviderExecutor(ParslExecutor):
             raise ScalingFailed(self, "No execution provider available")
         block_ids = []
         logger.info(f"Scaling out by {blocks} blocks")
-        for i in range(blocks):
+        for _ in range(blocks):
             block_id = str(self._block_id_counter.get_id())
             logger.info(f"Allocated block ID {block_id}")
             try:
@@ -205,6 +205,20 @@ class BlockProviderExecutor(ParslExecutor):
                 self._fail_job_async(block_id,
                                      "Failed to start block {}: {}".format(block_id, ex))
         return block_ids
+
+    @abstractmethod
+    def scale_in(self, blocks: int) -> List[str]:
+        """Scale in method.
+
+        Cause the executor to reduce the number of blocks by count.
+
+        We should have the scale in method simply take resource object
+        which will have the scaling methods, scale_in itself should be a coroutine, since
+        scaling tasks can be slow.
+
+        :return: A list of block ids corresponding to the blocks that were removed.
+        """
+        pass
 
     def _launch_block(self, block_id: str) -> Any:
         launch_cmd = self._get_launch_command(block_id)

@@ -4,6 +4,7 @@ from parsl.utils import get_std_fname_mode
 import traceback
 import sys
 import pickle
+from parsl.serialize import serialize
 
 # This scripts executes a parsl function which is pickled in a file:
 #
@@ -32,7 +33,7 @@ def load_pickled_file(filename):
 
 def dump_result_to_file(result_file, result_package):
     with open(result_file, "wb") as f_out:
-        pickle.dump(result_package, f_out)
+        f_out.write(serialize(result_package))
 
 
 def remap_location(mapping, parsl_file):

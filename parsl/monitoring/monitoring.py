@@ -194,10 +194,10 @@ class MonitoringHub(RepresentationMixin):
                                                "logdir": self.logdir,
                                                "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                                "run_id": run_id
-                                       },
+                                               },
                                        name="Monitoring-Router-Process",
                                        daemon=True,
-        )
+                                       )
         self.router_proc.start()
 
         self.dbm_proc = ForkProcess(target=dbm_starter,
@@ -205,10 +205,10 @@ class MonitoringHub(RepresentationMixin):
                                     kwargs={"logdir": self.logdir,
                                             "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                             "db_url": self.logging_endpoint,
-                                    },
+                                            },
                                     name="Monitoring-DBM-Process",
                                     daemon=True,
-        )
+                                    )
         self.dbm_proc.start()
         self.logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
@@ -216,7 +216,7 @@ class MonitoringHub(RepresentationMixin):
                                        args=(self.logdir, self.resource_msgs, run_dir),
                                        name="Monitoring-Filesystem-Process",
                                        daemon=True
-        )
+                                       )
         self.filesystem_proc.start()
         self.logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
 
@@ -359,7 +359,7 @@ class MonitoringRouter:
                  run_id: str,
                  logging_level: int = logging.INFO,
                  atexit_timeout: int = 3    # in seconds
-                ):
+                 ):
         """ Initializes a monitoring configuration class.
 
         Parameters
@@ -463,7 +463,12 @@ class MonitoringRouter:
                             if 'exit_now' in msg[1] and msg[1]['exit_now']:
                                 router_keep_going = False
                         else:
-                            self.logger.error(f"Discarding message from interchange with unknown type {msg[0].value}")
+                            # There is a type: ignore here because if msg[0]
+                            # is of the correct type, this code is unreachable,
+                            # but there is no verification that the message
+                            # received from ic_channel.recv_pyobj() is actually
+                            # of that type.
+                            self.logger.error(f"Discarding message from interchange with unknown type {msg[0].value}")  # type: ignore[unreachable]
                 except zmq.Again:
                     pass
                 except Exception:

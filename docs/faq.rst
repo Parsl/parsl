@@ -44,7 +44,7 @@ How can I make an App dependent on multiple inputs?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You can pass any number of futures in to a single App either as positional arguments
-or as a list of futures via the special keyword ``inputs=[]``.
+or as a list of futures via the special keyword ``inputs=()``.
 The App will wait for all inputs to be satisfied before execution.
 
 

@@ -74,29 +74,7 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def scale_out(self, blocks: int) -> List[str]:
-        """Scale out method.
-
-        :return: A list of block ids corresponding to the blocks that were added.
-        """
-        pass
-
-    @abstractmethod
-    def scale_in(self, blocks: int) -> List[str]:
-        """Scale in method.
-
-        Cause the executor to reduce the number of blocks by count.
-
-        We should have the scale in method simply take resource object
-        which will have the scaling methods, scale_in itself should be a coroutine, since
-        scaling tasks can be slow.
-
-        :return: A list of block ids corresponding to the blocks that were removed.
-        """
-        pass
-
-    @abstractmethod
-    def shutdown(self) -> bool:
+    def shutdown(self) -> None:
         """Shutdown the executor.
 
         This includes all attached resources such as workers and controllers.

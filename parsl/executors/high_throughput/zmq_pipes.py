@@ -53,7 +53,7 @@ class CommandClient:
         """
         reply = '__PARSL_ZMQ_PIPES_MAGIC__'
         with self._lock:
-            for i in range(max_retries):
+            for _ in range(max_retries):
                 try:
                     self.zmq_socket.send_pyobj(message, copy=True)
                     reply = self.zmq_socket.recv_pyobj()

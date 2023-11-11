@@ -334,11 +334,11 @@ The following code snippet shows how apps can specify suitable executors in the 
 
      # A mock molecular dynamics simulation app
      @bash_app(executors=["Theta.Phi"])
-     def MD_Sim(arg, outputs=[]):
+     def MD_Sim(arg, outputs=()):
          return "MD_simulate {} -o {}".format(arg, outputs[0])
 
      # Visualize results from the mock MD simulation app
      @bash_app(executors=["Cooley.GPU"])
-     def visualize(inputs=[], outputs=[]):
+     def visualize(inputs=(), outputs=()):
          bash_array = " ".join(inputs)
          return "viz {} -o {}".format(bash_array, outputs[0])
