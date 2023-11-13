@@ -9,7 +9,6 @@ import typeguard
 from abc import ABCMeta, abstractmethod
 from inspect import signature
 from typing import List, Optional, Sequence, Union
-from typing_extensions import Literal
 
 import parsl.dataflow.dflow as dflow
 
