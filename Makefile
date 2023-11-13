@@ -80,7 +80,7 @@ workqueue_mon_test: $(CCTOOLS_INSTALL)  ## run all tests with workqueue_ex confi
 	echo "Contents of runinfo:"
 	date
 	ls -l runinfo/ || true
-	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/test_python_apps/test_basic.py::test_parallel_for -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_monitoring_config.py --cov=parsl --cov-append --cov-report= 
+	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/test_python_apps/test_basic.py -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_monitoring_config.py --cov=parsl --cov-append --cov-report= 
 
 
 .PHONY: config_local_test
