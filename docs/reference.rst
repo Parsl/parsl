@@ -78,6 +78,7 @@ Executors
     parsl.executors.WorkQueueExecutor
     parsl.executors.taskvine.TaskVineExecutor
     parsl.executors.FluxExecutor
+    parsl.executors.RadicalPilotExecutor
 
 Launchers
 =========
