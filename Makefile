@@ -73,7 +73,7 @@ wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with workqueue_ex config
 	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --random-order --durations 10
 
 .PHONY: workqueue_mon_test
-workqueue_mon_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
+workqueue_mon_test: $(CCTOOLS_INSTALL)  ## run all tests with workqueue_ex config
 	pip3 install ".[monitoring]"
 	echo "Process table:"
 	ps ax
@@ -127,4 +127,4 @@ coverage: ## show the coverage report
 
 .PHONY: clean
 clean: ## clean up the environment by deleting the .venv, dist, eggs, mypy caches, coverage info, etc
-	rm -rf .venv $(DEPS) dist *.egg-info .mypy_cache build .pytest_cache .coverage runinfo_* $(WORKQUEUE_INSTALL)
+	rm -rf .venv $(DEPS) dist *.egg-info .mypy_cache build .pytest_cache .coverage runinfo_* $(CCTOOLS_INSTALL)
