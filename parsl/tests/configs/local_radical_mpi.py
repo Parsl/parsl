@@ -1,16 +1,14 @@
 import os
-
 from parsl.config import Config
-from parsl.executors.radical import RadicalPilotExecutor
-from parsl.executors.radical import ResourceConfig
-
-
-rpex_cfg = ResourceConfig()
-rpex_cfg.worker_type = "MPI"
-rpex_cfg.worker_cores_per_node = 7
 
 
 def fresh_config():
+    from parsl.executors.radical import ResourceConfig
+    from parsl.executors.radical import RadicalPilotExecutor
+
+    rpex_cfg = ResourceConfig()
+    rpex_cfg.worker_type = "MPI"
+    rpex_cfg.worker_cores_per_node = 7
 
     return Config(
             executors=[
