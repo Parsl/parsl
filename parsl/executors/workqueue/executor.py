@@ -242,7 +242,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  autolabel_window: int = 1,
                  autocategory: bool = True,
                  enable_monitoring: bool = False,
-                 max_retries: int = 1,
+                 max_retries: int = 0,
                  init_command: str = "",
                  worker_options: str = "",
                  full_debug: bool = True,
