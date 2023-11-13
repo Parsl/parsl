@@ -555,7 +555,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         worker_command = self.worker_executable
         worker_command += " --debug=all"
         if self.coprocess:
-            worker_command += " --coprocess parsl_coprocess.py"
+            worker_command += " --coprocess wrap_parsl_coprocess.py"
         if self.project_password_file:
             worker_command += ' --password {}'.format(self.project_password_file)
         if self.worker_options:
