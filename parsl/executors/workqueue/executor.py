@@ -818,8 +818,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 # may be a valid result or an exception caused within the function invocation.
                 # Otherwise there's no result file, implying errors from WorkQueue.
 
-                logger.info(f"Task stdout from wq: {t.std_output}")
-
                 if task_report.result_received:
                     try:
                         with open(task_report.result_file, 'rb') as f_in:
@@ -1068,6 +1066,8 @@ def _work_queue_submit_wait(*,
                 # When a task is found:
                 executor_task_id = t.tag
                 logger.info("Completed Work Queue task {}, executor task {}".format(t.id, t.tag))
+                logger.info(f"Task stdout from wq: {t.std_output}")
+
                 result_file = result_file_of_task_id.pop(t.tag)
 
                 # A tasks completes 'succesfully' if it has result file.

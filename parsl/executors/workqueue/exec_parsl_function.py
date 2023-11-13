@@ -49,7 +49,6 @@ t_postimport = time.time()
 
 
 def load_pickled_file(filename, logfile):
-    print(f"BENC: load pickled file {filename}")
     print(f"{time.time()} LOADPICKLED_OPEN", file=logfile)
     with open(filename, "rb") as f_in:
         print(f"{time.time()} LOADPICKLED_LOAD", file=logfile)
@@ -180,7 +179,6 @@ def load_function(map_file, function_file, logfile):
     function_info = load_pickled_file(function_file, logfile)
 
     print(f"{time.time()} LOADFUNCTION_UNPACK", file=logfile)
-    print(f"BENC: function_info: {function_info}")
     (fn, fn_name, fn_args, fn_kwargs) = unpack_function(function_info, user_ns)
 
     print(f"{time.time()} LOADFUNCTION_LOAD_PICKLED_MAPPING", file=logfile)
