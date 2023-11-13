@@ -10,8 +10,8 @@ from parsl.monitoring import MonitoringHub
 
 
 def fresh_config():
-    return Config(strategy='simple', coprocess=True,
-                  executors=[WorkQueueExecutor(port=9000,
+    return Config(strategy='simple',
+                  executors=[WorkQueueExecutor(port=9000, coprocess=True,
                                                provider=LocalProvider(init_blocks=0),
                                                storage_access=[FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging()])],
                   monitoring=MonitoringHub(hub_address="localhost",
