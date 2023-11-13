@@ -62,7 +62,7 @@ jobs:
     - name: Checking parsl-visualize
       run: |
         sudo apt-get install -y graphviz
-        pip install .[monitoring]
+        pip install .[monitoring,visualization]
         parsl/tests/test-viz.sh
 
     - name: clear runinfo from all previous steps
