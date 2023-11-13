@@ -76,7 +76,7 @@ wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with workqueue_ex config
 workqueue_mon_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
 	pip3 install ".[monitoring]"
 	echo "Process table:"
-	ps
+	ps ax
 	echo "Contents of runinfo:"
 	date
 	ls -l runinfo/
