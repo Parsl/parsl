@@ -83,6 +83,7 @@ jobs:
       if: ${{ always() }}
       run: |
         ls -lt runinfo
+        ls -lt runinfo/004
 
     - name: Archive runinfo logs
       if: ${{ always() }}
