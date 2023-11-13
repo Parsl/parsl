@@ -39,9 +39,11 @@ jobs:
         if git tag --contains HEAD | grep -e '^[0-9]\{4\}\.[0-9]\{2\}\.[0-9]\{2\}$' ; then exit 1 ; fi
 
     - name: Set up Python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
-        python-version: '3.x'
+        # The release process needs distusils - see Parsl issue #2934
+        # which was removed from Python 3.12
+        python-version: '3.11'
 
     - name: Set version info
       id: version_setter
