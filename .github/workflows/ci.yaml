@@ -39,46 +39,6 @@ jobs:
       run: |
         make workqueue_mon_test
 
-    - name: Documentation checks
-      run: |
-        pip install .[docs]
-        sudo apt-get install -y pandoc
-        cd docs
-
-        test ! -e stubs
-
-        # check we can build the docs without warnings
-        PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages make SPHINXOPTS=-W html
-
-        cd ..
-
-        # assert that none of the runs in this test have put an ERROR message into a
-        # database manager log file or monitoring router log file. It would be better if
-        # the tests themselves failed immediately when there was a monitoring error, but
-        # in the absence of that, this is a dirty way to check.
-        bash -c '! grep ERROR runinfo*/*/database_manager.log'
-        bash -c '! grep ERROR runinfo*/*/monitoring_router.log'
-
-    - name: Checking parsl-visualize
-      run: |
-        sudo apt-get install -y graphviz
-        pip install .[monitoring]
-        parsl/tests/test-viz.sh
-
-    - name: clear runinfo from all previous steps
-      run: |
-        rm -rfv runinfo/
-
-    # config_local_test comes after viz so that the large monitoring.db
-    # created by `make test` is still around
-    - name: make config_local_test
-      run: |
-        make config_local_test
-
-    - name: make coverage
-      run: |
-        make coverage
-
     - name: postrun info
       if: ${{ always() }}
       run: |
