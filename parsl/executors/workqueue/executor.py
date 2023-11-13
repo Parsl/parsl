@@ -595,6 +595,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                                              super_span=span)}
 
         event("WQEX_SUBMIT_SERIALIZE_OPEN", span)
+        # fn_path shouldn't exist, because this is meant to be a clean directory...
         with open(fn_path, "wb") as f_out:
             event("WQEX_SUBMIT_SERIALIZE_PICKLEDUMP", span)
             pickle.dump(function_info, f_out)
