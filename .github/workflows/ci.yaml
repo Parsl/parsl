@@ -35,9 +35,9 @@ jobs:
         make deps
         make clean_coverage
 
-    - name: make test
+    - name: make workqueue_mon_test
       run: |
-        make test
+        make workqueue_mon_test
 
     - name: Documentation checks
       run: |
@@ -79,11 +79,14 @@ jobs:
       run: |
         make coverage
 
-    - name: make coverage
+    - name: postrun info
       if: ${{ always() }}
       run: |
+        echo runinfo top level
         ls -lt runinfo
-        ls -lt runinfo/004
+
+        echo find of runinfo/004
+        find runinfo/004
 
     - name: Archive runinfo logs
       if: ${{ always() }}
