@@ -33,8 +33,6 @@ RPEX = 'RPEX'
 BASH = 'bash'
 PYTHON = 'python'
 
-os.environ["RADICAL_REPORT"] = "False"
-
 CWD = os.getcwd()
 PWD = os.path.abspath(os.path.dirname(__file__))
 
@@ -571,13 +569,3 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         self.session.close(download=True)
 
         return True
-
-    @property
-    def scaling_enabled(self) -> bool:
-        return False
-
-    def scale_in(self, blocks: int):
-        raise NotImplementedError
-
-    def scale_out(self, blocks: int):
-        raise NotImplementedError
