@@ -41,7 +41,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        # The release process needs distusils - see Parsl issue #2934
+        # The release process needs distutils - see Parsl issue #2934
         # which was removed from Python 3.12
         python-version: '3.11'
 
