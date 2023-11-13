@@ -817,6 +817,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 # If result_received, then there's a result file. The object inside the file
                 # may be a valid result or an exception caused within the function invocation.
                 # Otherwise there's no result file, implying errors from WorkQueue.
+
+                logger.info(f"Task stdout from wq: {t.std_output}")
+
                 if task_report.result_received:
                     try:
                         with open(task_report.result_file, 'rb') as f_in:
