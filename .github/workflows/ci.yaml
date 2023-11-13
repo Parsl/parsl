@@ -83,10 +83,10 @@ jobs:
       if: ${{ always() }}
       run: |
         echo runinfo top level
-        ls -lt runinfo
+        ls -lt runinfo || true
 
         echo find of runinfo/004
-        find runinfo/004
+        find runinfo/004 || true
 
     - name: Archive runinfo logs
       if: ${{ always() }}
