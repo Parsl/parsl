@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 class FalconStaging(Staging, RepresentationMixin):
-
+    """
+    In this function the File object is used to represent the directory being tranfered
+    """
     def can_stage_in(self, directory):
         """
         Returns True if the input directory can be staged in, False otherwise.
