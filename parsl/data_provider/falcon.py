@@ -97,4 +97,4 @@ class FalconStaging(Staging, RepresentationMixin):
 def _falcon_stage_in(provider, executor, parent_fut=None, outputs=[], _parsl_staging_inhibit=True):
     # Initialize the transfer
     directory = outputs[0]
-    provider.initialize_transfer(executor.working_dir ,directory)
+    provider.initialize_transfer(executor.working_dir, directory)
