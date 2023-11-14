@@ -11,9 +11,6 @@ import requests
 import typeguard
 import threading as mt
 
-import radical.pilot as rp
-import radical.utils as ru
-
 from functools import partial
 from typing import Optional, Dict
 from pathlib import Path, PosixPath
@@ -28,6 +25,15 @@ from parsl.executors.base import ParslExecutor
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.serialize import pack_apply_message, deserialize
 from parsl.serialize.errors import SerializationError, DeserializationError
+
+try:
+    import radical.pilot as rp
+    import radical.utils as ru
+except ImportError:
+    _rp_enabled = False
+else:
+    _rp_enabled = True
+
 
 RPEX = 'RPEX'
 BASH = 'bash'

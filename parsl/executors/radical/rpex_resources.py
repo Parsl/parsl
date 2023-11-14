@@ -1,9 +1,17 @@
 import sys
 import json
-import radical.pilot as rp
-import radical.utils as ru
 
 from typing import List
+
+try:
+    import radical.pilot as rp
+    import radical.utils as ru
+except ImportError:
+    _setup_paths: List[str] = []
+else:
+    _setup_paths: List[str] = [rp.sdist_path,
+                               ru.sdist_path]
+
 
 MPI = "mpi"
 RP_ENV = "rp"
@@ -94,8 +102,7 @@ class ResourceConfig:
     pilot_env_type: str = "venv"
     pilot_env_name: str = RP_ENV
     pilot_env_pre_exec: List[str] = []
-    pilot_env_setup: List[str] = [rp.sdist_path,
-                                  ru.sdist_path]
+    pilot_env_setup: List[str] = _setup_paths
 
     python_v: str = f'{sys.version_info[0]}.{sys.version_info[1]}'
     worker_type: str = DEFAULT_WORKER
