@@ -45,8 +45,8 @@ Channels
     parsl.channels.OAuthSSHChannel
     parsl.channels.SSHInteractiveLoginChannel
 
-Data management
-===============
+File Staging
+============
 
 .. autosummary::
     :toctree: stubs
