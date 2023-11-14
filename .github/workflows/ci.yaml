@@ -30,17 +30,25 @@ jobs:
         # this is to make the workqueue binary installer happy
         sudo apt-get install -y libpython3.5
 
+    - name: setup virtual env
+      run: |
+        make virtualenv
+        source .venv/bin/activate
+
     - name: make deps clean_coverage
       run: |
+        source .venv/bin/activate
         make deps
         make clean_coverage
 
     - name: make test
       run: |
+        source .venv/bin/activate
         make test
 
     - name: Documentation checks
       run: |
+        source .venv/bin/activate
         pip install .[docs]
         sudo apt-get install -y pandoc
         cd docs
@@ -61,12 +69,14 @@ jobs:
 
     - name: Checking parsl-visualize
       run: |
+        source .venv/bin/activate
         sudo apt-get install -y graphviz
         pip install .[monitoring]
         parsl/tests/test-viz.sh
 
     - name: make coverage
       run: |
+        source .venv/bin/activate
         make coverage
 
     - name: Archive runinfo logs
