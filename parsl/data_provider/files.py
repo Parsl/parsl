@@ -65,7 +65,8 @@ class File:
                   f"scheme={self.scheme} " \
                   f"netloc={self.netloc} " \
                   f"path={self.path} " \
-                  f"filename={self.filename}"
+                  f"filename={self.filename}" \
+                  f"query={self.query}"
         if self.local_path is not None:
             content += f" local_path={self.local_path}"
 
