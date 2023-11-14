@@ -30,6 +30,10 @@ jobs:
         # this is to make the workqueue binary installer happy
         sudo apt-get install -y libpython3.5
 
+
+        # mpi is required by the radical executor
+        sudo apt install -y mpich
+
     - name: setup virtual env
       run: |
         make virtualenv
