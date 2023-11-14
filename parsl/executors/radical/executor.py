@@ -54,15 +54,15 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
     .. code:: python
 
-    ---------------------------------------------------------------------------
-             Parsl Data Flow Kernel        |   Task Translator |  Task-Manager
-    ---------------------------------------|-------------------|---------------
-                                           |                   |
-    -> Dep. check ------> Parsl_tasks{} <--+--> Parsl Task     |
-     Data management          +dfk.submit  |        |          |
-                                           |        v          |
-                                           |    RP Task(s) ->  | submit(task)
-    ---------------------------------------------------------------------------
+      ---------------------------------------------------------------------------
+               Parsl Data Flow Kernel        |   Task Translator |  Task-Manager
+      ---------------------------------------|-------------------|---------------
+                                             |                   |
+      -> Dep. check ------> Parsl_tasks{} <--+--> Parsl Task     |
+       Data management          +dfk.submit  |        |          |
+                                             |        v          |
+                                             |    RP Task(s) ->  | submit(task)
+      ---------------------------------------------------------------------------
 
     The RadicalPilotExecutor creates a ``SESSION OBJECT``, ``TASK_MANAGER``,
     and ``PILOT_MANAGER``. The executor receives the tasks from the DFK and
@@ -78,7 +78,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
     Parameters
     ----------
-    rpex_cfg : :class: `~parsl.executors.rpex_resources.ResourceConfig
+    rpex_cfg : :class: `~parsl.executors.rpex_resources.ResourceConfig`
         a dataclass specifying resource configuration.
         Default is ResourceConfig instance.
 
