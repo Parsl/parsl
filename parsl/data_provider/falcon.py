@@ -89,9 +89,9 @@ class FalconStaging(Staging, RepresentationMixin):
         try:
             subprocess.run(sender_command, check=True)
         except subprocess.CalledProcessError as e:
-            logger.debug(f"Command failed with exit code {e.returncode}: {e.stderr}")
+            raise Exception(f"Command failed with exit code {e.returncode}: {e.stderr}")
         except FileNotFoundError:
-            logger.debug("The 'falcon' command was not found. Make sure it's installed and in your system's PATH.")
+            raise Exception("The 'falcon' command was not found. Make sure it's installed and in your system's PATH.")
 
 
 def _falcon_stage_in(provider, executor, parent_fut=None, outputs=[], _parsl_staging_inhibit=True):
