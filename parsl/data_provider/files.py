@@ -45,6 +45,7 @@ class File:
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
+        self.query = parsed_url.query
         self.local_path: Optional[str] = None
 
     def cleancopy(self) -> "File":
