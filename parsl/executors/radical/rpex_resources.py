@@ -3,14 +3,15 @@ import json
 
 from typing import List
 
+_setup_paths: List[str]
 try:
     import radical.pilot as rp
     import radical.utils as ru
 except ImportError:
-    _setup_paths: List[str] = []
+    _setup_paths = []
 else:
-    _setup_paths: List[str] = [rp.sdist_path,
-                               ru.sdist_path]
+    _setup_paths = [rp.sdist_path,
+                    ru.sdist_path]
 
 
 MPI = "mpi"
