@@ -10,7 +10,7 @@ from parsl.executors.threads import ThreadPoolExecutor
 #          (i.e., user_opts['swan']['username'] -> 'your_username')
 from .user_opts import user_opts
 
-storage_access = default_staging + [GlobusStaging(
+storage_access = list(default_staging) + [GlobusStaging(
                 endpoint_uuid=user_opts['globus']['endpoint'],
                 endpoint_path=user_opts['globus']['path']
             )]

@@ -223,7 +223,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
                  interchange_port_range: Optional[Tuple[int, int]] = (55000, 56000),
-                 storage_access: Optional[List[Staging]] = None,
+                 storage_access: Optional[Sequence[Staging]] = None,
                  working_dir: Optional[str] = None,
                  worker_debug: bool = False,
                  cores_per_worker: float = 1.0,

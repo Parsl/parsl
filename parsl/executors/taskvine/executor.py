@@ -17,7 +17,7 @@ import shutil
 import itertools
 import uuid
 from concurrent.futures import Future
-from typing import List, Optional, Union, Literal
+from typing import Optional, Sequence, Union, Literal
 
 # Import Parsl constructs
 import parsl.utils as putils
@@ -91,7 +91,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             The Parsl provider that will spawn worker processes.
             Default to spawning one local vine worker process.
 
-        storage_access: List[Staging]
+        storage_access: Sequence[Staging]
             Define Parsl file staging providers for this executor.
             Default is None.
     """
@@ -106,7 +106,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  factory_config: TaskVineFactoryConfig = TaskVineFactoryConfig(),
                  provider: Optional[ExecutionProvider] = LocalProvider(init_blocks=1),
-                 storage_access: Optional[List[Staging]] = None):
+                 storage_access: Optional[Sequence[Staging]] = None):
 
         # Set worker launch option for this executor
         if worker_launch_method == 'factory' or worker_launch_method == 'manual':
