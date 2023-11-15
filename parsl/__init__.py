@@ -127,6 +127,7 @@ __all__ = [
     'ThreadPoolExecutor',
     'HighThroughputExecutor',
     'WorkQueueExecutor',
+    'RadicalPilotExecutor',
 
     # monitoring
     'MonitoringHub',

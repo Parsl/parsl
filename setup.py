@@ -29,6 +29,7 @@ extras_require = {
     'workqueue': ['work_queue'],
     'flux': ['pyyaml', 'cffi', 'jsonschema'],
     'proxystore': ['proxystore'],
+    'radical-pilot': ['radical.pilot'],
     # Disabling psi-j since github direct links are not allowed by pypi
     # 'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
 }
