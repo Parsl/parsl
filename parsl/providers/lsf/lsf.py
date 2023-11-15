@@ -16,6 +16,7 @@ translate_table = {
     'PEND': JobState.PENDING,
     'RUN': JobState.RUNNING,
     'DONE': JobState.COMPLETED,
+    'TERM_RUNLIMIT': JobState.COMPLETED,
     'EXIT': JobState.FAILED,  # (failed),
     'PSUSP': JobState.CANCELLED,
     'USUSP': JobState.CANCELLED,
