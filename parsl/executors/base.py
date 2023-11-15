@@ -5,8 +5,6 @@ from typing_extensions import Literal, Self
 
 from parsl.jobs.states import JobStatus
 
-import parsl  # noqa F401
-
 
 class ParslExecutor(metaclass=ABCMeta):
     """Executors are abstractions that represent available compute resources
