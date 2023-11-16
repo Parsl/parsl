@@ -57,7 +57,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
       1. "start"    :creating the RADICAL-executor session and pilot.
       2. "translate":unwrap/identify/ out of parsl task and construct RP task.
-      3. "submit"   :translating and submiting Parsl tasks to Radical Pilot.
+      3. "submit"   :translating and submitting Parsl tasks to Radical Pilot.
       4. "shut_down":shutting down the RADICAL-executor components.
 
     Here is a diagram
@@ -97,7 +97,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         Default is "RPEX".
 
     bulk_mode : bool
-        Enable bulk mode submssion and execution. Default is False (stream).
+        Enable bulk mode submission and execution. Default is False (stream).
 
     resource : Optional[str]
         The resource name of the targeted HPC machine or cluster.
@@ -222,7 +222,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                         else:
                             parsl_task.set_exception(eval(task.exception))
                     else:
-                        parsl_task.set_exception('Task failed for unknow reason')
+                        parsl_task.set_exception('Task failed for an unknown reason')
 
     def start(self):
         """Create the Pilot component and pass it.
@@ -298,7 +298,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         self.tmgr.add_pilots(pilot)
         self.tmgr.register_callback(self.task_state_cb)
 
-        # create a bulking thread to run the actual task submittion
+        # create a bulking thread to run the actual task submission
         # to RP in bulks
         if self.bulk_mode:
             self._max_bulk_size = 1024
@@ -373,7 +373,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         task.timeout = kwargs.get('walltime', 0.0)
 
         if parsl_resource_specification and isinstance(parsl_resource_specification, dict):
-            logger.debug('mapping parsl resource sepcfications >> rp resource sepcfications')
+            logger.debug('mapping parsl resource specifications >> rp resource specifications')
             for key, val in parsl_resource_specification.items():
                 if key not in task.as_dict():
                     key = PARSL_RP_RESOURCE_MAP.get(key, None)
@@ -493,7 +493,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         files = [f for f in files if isinstance(f, File)]
         for file in files:
             if mode == 'in':
-                # a workaround RP not supportting
+                # a workaround RP not supporting
                 # staging https file
                 if file.scheme == 'https':
                     r = requests.get(file.url)
