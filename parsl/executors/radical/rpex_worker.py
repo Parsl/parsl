@@ -6,8 +6,7 @@ from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.process_worker_pool import execute_task
 
 
-class DefaultWorker(rp.raptor.DefaultWorker):
-
+class ParslWorker:
     def _dispatch_func(self, task):
 
         try:
@@ -18,8 +17,7 @@ class DefaultWorker(rp.raptor.DefaultWorker):
             ret = 0
             out = None
             err = None
-        except Exception as e:
-            self._log.debug('Caught an exception: {}'.format(e))
+        except Exception:
             val = None
             exc = (rp.utils.serialize_bson(RemoteExceptionWrapper(*sys.exc_info())), None)
             ret = 1
@@ -30,7 +28,10 @@ class DefaultWorker(rp.raptor.DefaultWorker):
 
 
 class MPIWorker(rp.raptor.MPIWorker):
-
     def _dispatch_func(self, task):
-
         return super()._dispatch_func(task)
+
+
+class DefaultWorker(rp.raptor.DefaultWorker):
+    def _dispatch_func(self, task):
+        return ParslWorker()._dispatch_func(task)
