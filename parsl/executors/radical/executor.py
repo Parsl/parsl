@@ -378,7 +378,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                 if key not in task.as_dict():
                     key = PARSL_RP_RESOURCE_MAP.get(key, None)
                     if not key:
-                        logger.warning('ignoring task {0} as it is not supported by RP'.format(key))
+                        logger.warning('ignoring "{0}" key from task resource specification as it is not supported by RP'.format(key))
                         continue
                 setattr(task, key, val)
 
