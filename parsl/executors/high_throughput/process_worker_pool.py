@@ -490,6 +490,8 @@ class Manager:
                 self.cpu_affinity,
                 self.available_accelerators[worker_id] if self.accelerators_available else None,
                 self.block_id,
+                self.heartbeat_period,
+                os.getpid(),
                 args.logdir,
                 args.debug,
             ),
@@ -541,6 +543,8 @@ def worker(
     cpu_affinity: Union[str, bool],
     accelerator: Optional[str],
     block_id: str,
+    task_queue_timeout: int,
+    manager_pid: int,
     logdir: str,
     debug: bool,
 ):
@@ -611,18 +615,37 @@ def worker(
 
         logger.info(f'Pinned worker to accelerator: {accelerator}')
 
-    while True:
-        with ready_worker_count.get_lock():
-            ready_worker_count.value += 1
+    def manager_is_alive():
+        try:
+            # This does not kill the process, but instead raises
+            # an exception if the process doesn't exist
+            os.kill(manager_pid, 0)
+        except OSError:
+            logger.critical(f"Manager ({manager_pid}) died; worker {worker_id} shutting down")
+            return False
+        else:
+            return True
 
-        # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
-        req = task_queue.get()
+    worker_enqueued = False
+    while manager_is_alive():
+        if not worker_enqueued:
+            with ready_worker_count.get_lock():
+                ready_worker_count.value += 1
+            worker_enqueued = True
+
+        try:
+            # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
+            req = task_queue.get(timeout=task_queue_timeout)
+        except queue.Empty:
+            continue
+
         tasks_in_progress[worker_id] = req
         tid = req['task_id']
         logger.info("Received executor task {}".format(tid))
 
         with ready_worker_count.get_lock():
             ready_worker_count.value -= 1
+        worker_enqueued = False
 
         try:
             result = execute_task(req['buffer'])
