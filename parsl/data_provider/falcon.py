@@ -14,7 +14,19 @@ logger = logging.getLogger(__name__)
 
 class FalconStaging(Staging, RepresentationMixin):
     """
-    In this function the File object is used to represent the directory being tranfered
+    Specification for accessing data on a remote executor via Falcon.
+    In this function the File object is used to represent the directory being transferred.
+    FalconStaging requires the declaration of working_dir
+
+    Parameters
+    ----------
+    host_ip : str
+        The IP address for the host running this instance (destination host IP address)
+
+    URL
+    ----------
+    A falcon url should look something like:
+    "falcon:{source_host_IP}{path_to_directory_wanted_to_be_transferred}?{port_for_falcon_transfer}"
     """
     def can_stage_in(self, directory):
         """
@@ -62,6 +74,19 @@ class FalconStaging(Staging, RepresentationMixin):
         return python_app(executors=['_parsl_internal'], data_flow_kernel=dfk)(f)
 
     def initialize_transfer(self, working_dir, directory):
+        """
+        All communication through Falcon requires a sender instance to be running
+        on the sender host, the sender receives the required argument for falcon
+        sender which are populated in the JSON variable data, the sender instance
+        needs to:
+        - accept a JSON object from a zmq on port 5555, this JSON object will include:
+            - host: host IP
+            - port: port number for the falcon transfer
+            - directory_path: Path to the director for the transfer
+        - run the command "falcon sender --host 'host' --port 'port' --data_dir
+        'directory_path' --method probe"
+        - sleep for 0.1 seconds (in order for the receiver instance to run before sender instance)
+        """
         zmq_context = zmq.Context()
 
         # Initialize a REQ socket and connect to the specified netloc
