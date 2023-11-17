@@ -196,7 +196,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                     if task.exit_code == 0:
                         parsl_task.set_result(int(task.exit_code))
                     else:
-                        parsl_task.set_exception(BashExitFailure(task.name,  # noqa: F405
+                        parsl_task.set_exception(BashExitFailure(task.name,
                                                                  task.exit_code))
                 else:
                     if task.exception:

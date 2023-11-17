@@ -8,7 +8,7 @@ import datetime
 import pickle
 import warnings
 from multiprocessing import Queue
-from typing import Dict, Sequence  # noqa F401 (used in type annotation)
+from typing import Dict, Sequence
 from typing import List, Optional, Tuple, Union, Callable
 import math
 
