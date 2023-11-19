@@ -77,6 +77,8 @@ class PythonApp(AppBase):
         def effgen(*args, **kwargs):
             yield ("P", func, args, kwargs)  # TODO: make this a "code effect"
 
+        effgen.__name__ = func.__name__   # TODO: coroutine name wrapping that might be better off as a more explicit field rather than being so implicit in wrapped objects?
+
         app_fut = dfk.submit(effgen, app_args=args,
                              executors=self.executors,
                              cache=self.cache,

@@ -124,10 +124,13 @@ class BashApp(AppBase):
         self.wrapped_remote_function = wrap_error(func)
 
         def effgen(*args, **kwargs):  # coroutine not function
+            stdout = kwargs.get("stdout")
+            stderr = kwargs.get("stderr")
             commandline = self.wrapped_remote_function(*args, **kwargs)
-            yield ("B", commandline)  # TODO: wrap in an effect object
+            yield ("B", commandline, stdout, stderr)  # TODO: wrap in an effect object
 
         self.effgen = effgen 
+        self.effgen.__name__ = func.__name__  # this is what wraps is meant to do but i'm not sure how that will work with coroutine/generators
 
     def __call__(self, *args, **kwargs):
         """Handle the call to a Bash app.

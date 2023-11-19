@@ -1,6 +1,7 @@
 import logging
 import typeguard
 import concurrent.futures as cf
+import os
 import subprocess
 
 import parsl.app.errors as pe
@@ -71,9 +72,22 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
                 return r[1](*r[2], **r[3])
             elif r[0] == "B":
                 # python code to generate commandline has already been run in the generator
-                # - note that is different than 
+                # - different from "P" mode, because in "P" mode the Python code to run is exposed to
+                # the executor as an effect, but in "B" mode it runs in the generator, with a "B" effect resulting.
                 assert isinstance(r[1], str)
-                proc = subprocess.Popen(r[1], shell=True, executable='/bin/bash', close_fds=False)
+                if r[2]:
+                  if os.path.dirname(r[2]):
+                    os.makedirs(os.path.dirname(r[2]), exist_ok=True)
+                  stdout_fd = open(r[2], "w")
+                else: 
+                  stdout_fd = None  # or some other default, whatever existing bashapp behaviour is
+                if r[3]:
+                  if os.path.dirname(r[3]):
+                    os.makedirs(os.path.dirname(r[3]), exist_ok=True)
+                  stderr_fd = open(r[3], "w")
+                else:
+                  stderr_fd = None
+                proc = subprocess.Popen(r[1], shell=True, executable='/bin/bash', close_fds=False, stdout=stdout_fd, stderr=stderr_fd)
                 proc.wait()
                 returncode = proc.returncode
                 
