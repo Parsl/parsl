@@ -32,6 +32,7 @@ from parsl.multiprocessing import SizedQueue as mpQueue
 
 from parsl.serialize import unpack_apply_message, serialize
 
+
 HEARTBEAT_CODE = (2 ** 32) - 1
 
 
@@ -503,7 +504,12 @@ def execute_task(bufs):
     code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
                                            argname, kwargname)
     exec(code, user_ns, user_ns)
-    return user_ns.get(resultname)
+    r = next(user_ns.get(resultname))
+    if r[0] == "P":
+      return r[1](*r[2], **r[3])
+    else:
+      raise RuntimeError(f"Unknown app effect type {r[0]}")
+    return r
 
 
 @wrap_with_logs(target="worker_log")

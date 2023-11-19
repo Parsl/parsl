@@ -1,6 +1,9 @@
 import logging
 import typeguard
 import concurrent.futures as cf
+import subprocess
+
+import parsl.app.errors as pe
 
 from typing import List, Optional
 
@@ -57,7 +60,33 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
                          "Parsl resource specification is not supported in ThreadPool Executor.")
             raise UnsupportedFeatureError('resource specification', 'ThreadPool Executor', None)
 
-        return self.executor.submit(func, *args, **kwargs)
+        def runme():
+            generator = func(*args, **kwargs)
+            r = next(generator)
+
+            # TODO: note the similarities and differences here vs process_worker_pool
+            # especially in the potential for how MPI would be handled.
+            if r[0] == "P":
+                # we're given pure python code to run
+                return r[1](*r[2], **r[3])
+            elif r[0] == "B":
+                # python code to generate commandline has already been run in the generator
+                # - note that is different than 
+                assert isinstance(r[1], str)
+                proc = subprocess.Popen(r[1], shell=True, executable='/bin/bash', close_fds=False)
+                proc.wait()
+                returncode = proc.returncode
+                
+                if returncode != 0:
+                    raise pe.BashExitFailure("TODO", proc.returncode)
+
+                return 0
+
+            else:
+                raise RuntimeError(f"Unknown app effect type {r[0]}")
+
+
+        return self.executor.submit(runme)
 
     def shutdown(self, block=True):
         """Shutdown the ThreadPool. The underlying concurrent.futures thread pool

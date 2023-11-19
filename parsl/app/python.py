@@ -73,7 +73,11 @@ class PythonApp(AppBase):
         else:
             func = self.func
 
-        app_fut = dfk.submit(func, app_args=args,
+        # coroutine, not function
+        def effgen(*args, **kwargs):
+            yield ("P", func, args, kwargs)  # TODO: make this a "code effect"
+
+        app_fut = dfk.submit(effgen, app_args=args,
                              executors=self.executors,
                              cache=self.cache,
                              ignore_for_cache=self.ignore_for_cache,

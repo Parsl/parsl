@@ -119,9 +119,15 @@ class BashApp(AppBase):
         # partial is used to attach the first arg the "func" to the remote_side_bash_executor
         # this is done to avoid passing a function type in the args which parsl.serializer
         # doesn't support
-        remote_fn = partial(update_wrapper(remote_side_bash_executor, self.func), self.func)
-        remote_fn.__name__ = self.func.__name__
-        self.wrapped_remote_function = wrap_error(remote_fn)
+        # remote_fn = partial(update_wrapper(remote_side_bash_executor, self.func), self.func)
+        # remote_fn.__name__ = self.func.__name__
+        self.wrapped_remote_function = wrap_error(func)
+
+        def effgen(*args, **kwargs):  # coroutine not function
+            commandline = self.wrapped_remote_function(*args, **kwargs)
+            yield ("B", commandline)  # TODO: wrap in an effect object
+
+        self.effgen = effgen 
 
     def __call__(self, *args, **kwargs):
         """Handle the call to a Bash app.
@@ -145,7 +151,7 @@ class BashApp(AppBase):
         else:
             dfk = self.data_flow_kernel
 
-        app_fut = dfk.submit(self.wrapped_remote_function,
+        app_fut = dfk.submit(self.effgen,
                              app_args=args,
                              executors=self.executors,
                              cache=self.cache,
