@@ -49,14 +49,13 @@ class ExecutionProvider(metaclass=ABCMeta):
         self._mem_per_node: Optional[float] = None
         pass
 
-    # TODO: how about make this always return a job ID and must raise an exception on
-    # failure? Potentially it could make failure path handling simpler? because right now, you
-    # should catch an exception or look for None and handle them both the same?
     @abstractmethod
     def submit(self, command: str, tasks_per_node: int, job_name: str = "parsl.auto") -> object:
         ''' The submit method takes the command string to be executed upon
         instantiation of a resource most often to start a pilot (such as for
         HighThroughputExecutor or WorkQueueExecutor).
+
+        If submission fails, an appropriate exception should be raised.
 
         Args :
              - command (str) : The bash command string to be executed
@@ -66,13 +65,7 @@ class ExecutionProvider(metaclass=ABCMeta):
              - job_name (str) : Human friendly name to be assigned to the job request
 
         Returns:
-             - A job identifier, this could be an integer, string etc
-               or None or any other object that evaluates to boolean false
-               if submission failed but an exception isn't thrown.
-
-        Raises:
-             - ExecutionProviderException or its subclasses
-             ^ is this true? I think we can raise anything...
+             - A job identifier, of any type.
         '''
 
         pass
