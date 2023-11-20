@@ -138,7 +138,7 @@ class TasksOutgoing:
                     timeout_ms = max(timeout_ms, 1)
                     timeout_ms *= 2
                     logger.error("Not sending due to non-ready zmq pipe, timeout: {} ms".format(timeout_ms))
-                    if timeout_ms == 10000:
+                    if timeout_ms >= 10000:
                         logger.error("Hit big timeout, raising exception")
                         raise RuntimeError("BENC: hit big timeout for pipe put - failing rather than trying forever")
 

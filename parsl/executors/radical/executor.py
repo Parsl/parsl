@@ -42,6 +42,10 @@ PYTHON = 'python'
 CWD = os.getcwd()
 PWD = os.path.abspath(os.path.dirname(__file__))
 
+PARSL_RP_RESOURCE_MAP = {'cores': 'ranks',
+                         'disk': 'lfs_per_rank',
+                         'memory': 'mem_per_rank'}
+
 logger = logging.getLogger(__name__)
 
 
@@ -53,7 +57,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
       1. "start"    :creating the RADICAL-executor session and pilot.
       2. "translate":unwrap/identify/ out of parsl task and construct RP task.
-      3. "submit"   :translating and submiting Parsl tasks to Radical Pilot.
+      3. "submit"   :translating and submitting Parsl tasks to Radical Pilot.
       4. "shut_down":shutting down the RADICAL-executor components.
 
     Here is a diagram
@@ -93,7 +97,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         Default is "RPEX".
 
     bulk_mode : bool
-        Enable bulk mode submssion and execution. Default is False (stream).
+        Enable bulk mode submission and execution. Default is False (stream).
 
     resource : Optional[str]
         The resource name of the targeted HPC machine or cluster.
@@ -196,26 +200,29 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                     if task.exit_code == 0:
                         parsl_task.set_result(int(task.exit_code))
                     else:
-                        parsl_task.set_exception(BashExitFailure(task.name,  # noqa: F405
+                        parsl_task.set_exception(BashExitFailure(task.name,
                                                                  task.exit_code))
                 else:
                     if task.exception:
-                        try:
-                            s = rp.utils.deserialize_bson(task.exception)
-                            if isinstance(s, RemoteExceptionWrapper):
-                                try:
-                                    s.reraise()
-                                except Exception as e:
-                                    parsl_task.set_exception(e)
-                            elif isinstance(s, Exception):
-                                parsl_task.set_exception(s)
-                            else:
-                                raise ValueError("Unknown exception-like type received: {}".format(type(s)))
-                        except Exception as e:
-                            parsl_task.set_exception(
-                                DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
+                        if not task.description.get('use_mpi'):
+                            try:
+                                s = rp.utils.deserialize_bson(task.exception)
+                                if isinstance(s, RemoteExceptionWrapper):
+                                    try:
+                                        s.reraise()
+                                    except Exception as e:
+                                        parsl_task.set_exception(e)
+                                elif isinstance(s, Exception):
+                                    parsl_task.set_exception(s)
+                                else:
+                                    raise ValueError("Unknown exception-like type received: {}".format(type(s)))
+                            except Exception as e:
+                                parsl_task.set_exception(
+                                    DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
+                        else:
+                            parsl_task.set_exception(eval(task.exception))
                     else:
-                        parsl_task.set_exception('Unknow failure for this task')
+                        parsl_task.set_exception('Task failed for an unknown reason')
 
     def start(self):
         """Create the Pilot component and pass it.
@@ -291,7 +298,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         self.tmgr.add_pilots(pilot)
         self.tmgr.register_callback(self.task_state_cb)
 
-        # create a bulking thread to run the actual task submittion
+        # create a bulking thread to run the actual task submission
         # to RP in bulks
         if self.bulk_mode:
             self._max_bulk_size = 1024
@@ -327,11 +334,6 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
         task_type = ''
 
-        # ignore the resource dict from Parsl
-        new_args = list(args)
-        new_args.pop(0)
-        args = tuple(new_args)
-
         while hasattr(func, '__wrapped__'):
             func = func.__wrapped__
 
@@ -361,7 +363,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
         return func, args, task_type
 
-    def task_translate(self, tid, func, args, kwargs):
+    def task_translate(self, tid, func, parsl_resource_specification, args, kwargs):
         """
         Convert parsl function to RADICAL-Pilot rp.TaskDescription
         """
@@ -369,6 +371,17 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         task = rp.TaskDescription()
         task.name = func.__name__
         task.timeout = kwargs.get('walltime', 0.0)
+
+        if parsl_resource_specification and isinstance(parsl_resource_specification, dict):
+            logger.debug('mapping parsl resource specifications >> rp resource specifications')
+            for key, val in parsl_resource_specification.items():
+                if key not in task.as_dict():
+                    key = PARSL_RP_RESOURCE_MAP.get(key, None)
+                    if not key:
+                        logger.warning('ignoring "{0}" key from task resource specification as it is not supported by RP'.format(key))
+                        continue
+                setattr(task, key, val)
+
         func, args, task_type = self.unwrap(func, args)
 
         if BASH in task_type:
@@ -394,7 +407,6 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                 task.executable = '/bin/bash'
                 task.arguments = [bashapp_file]
                 task.input_staging = [bashapp_file]
-                task.pre_exec = kwargs.get('pre_exec', [])
 
         elif PYTHON in task_type or not task_type:
             task.mode = rp.TASK_FUNCTION
@@ -406,7 +418,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                 task.timeout = 0
 
             # we process MPI function differently
-            if task.ranks > 1 or 'comm' in kwargs:
+            if 'comm' in kwargs:
                 task.function = rp.PythonTask(func, *args, **kwargs)
             else:
                 try:
@@ -416,13 +428,6 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                 except TypeError:
                     raise SerializationError(task.name)
 
-        task.ranks = kwargs.get('ranks', 1)
-        task.gpu_type = kwargs.get('gpu_type', '')
-        task.mem_per_rank = kwargs.get('mem_per_rank', 0)
-        task.gpus_per_rank = kwargs.get('gpus_per_rank', 0)
-        task.cores_per_rank = kwargs.get('cores_per_rank', 1)
-        task.threading_type = kwargs.get('threading_type', '')
-
         task.input_staging = self._stage_files(kwargs.get("inputs", []),
                                                mode='in')
         task.output_staging = self._stage_files(kwargs.get("outputs", []),
@@ -431,6 +436,11 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         task.input_staging.extend(self._stage_files(list(args), mode='in'))
 
         self._set_stdout_stderr(task, kwargs)
+
+        try:
+            task.verify()
+        except ru.typeddict.TDKeyError as e:
+            raise Exception(f'{e}. Please check Radical.Pilot TaskDescription documentation')
 
         return task
 
@@ -483,7 +493,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         files = [f for f in files if isinstance(f, File)]
         for file in files:
             if mode == 'in':
-                # a workaround RP not supportting
+                # a workaround RP not supporting
                 # staging https file
                 if file.scheme == 'https':
                     r = requests.get(file.url)
@@ -541,7 +551,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                 self.tmgr.submit_tasks(bulk)
                 bulk = list()
 
-    def submit(self, func, *args, **kwargs):
+    def submit(self, func, resource_specification, *args, **kwargs):
         """
         Submits tasks in stream mode or bulks (bulk mode)
         to RADICAL-Pilot rp.TaskManager.
@@ -551,7 +561,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         parsl_tid = int(rp_tid.split('task.')[1])
 
         logger.debug("got Task {0} from parsl-dfk".format(parsl_tid))
-        task = self.task_translate(parsl_tid, func, args, kwargs)
+        task = self.task_translate(parsl_tid, func, resource_specification, args, kwargs)
 
         # assign task id for rp task
         task.uid = rp_tid

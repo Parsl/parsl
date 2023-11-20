@@ -6,7 +6,6 @@ from abc import abstractmethod, abstractproperty
 from concurrent.futures import Future
 from typing import List, Any, Dict, Optional, Tuple, Union, Callable
 
-import parsl  # noqa F401
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
 from parsl.jobs.states import JobStatus, JobState

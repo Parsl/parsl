@@ -1,9 +1,8 @@
 import logging
-import parsl  # noqa F401 (used in string type annotation)
+import parsl
 import time
 import zmq
-from typing import Dict, Sequence
-from typing import List  # noqa F401 (used in type annotation)
+from typing import Dict, List, Sequence
 
 from parsl.jobs.states import JobStatus, JobState
 from parsl.jobs.strategy import Strategy
