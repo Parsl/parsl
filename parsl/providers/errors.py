@@ -1,3 +1,5 @@
+from typing import Optional
+
 from parsl.errors import ParslError
 
 import warnings
@@ -51,7 +53,7 @@ class SubmitException(ExecutionProviderException):
     '''Raised by the submit() method of a provider if there is an error in launching a job.
     '''
 
-    def __init__(self, job_name, message, stdout=None, stderr=None, retcode=None):
+    def __init__(self, job_name: str, message: str, stdout: Optional[str] = None, stderr: Optional[str] = None, retcode: Optional[int] = None):
         self.job_name = job_name
         self.message = message
         self.stdout = stdout
