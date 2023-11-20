@@ -65,11 +65,18 @@ class CommandClient:
             for i in range(max_retries):
                 logger.debug(f"try {i} for command {message}")
                 try:
+                    logger.debug("waiting for command client to be ready")
+                    r = self.zmq_socket.poll(timeout=30000)   # TODO: don't hardcode this timeout
+                    if r == 0:  # timeout
+                        raise RuntimeError("CommandClient poll-before-command timed out")
+                    # TODO: what other values of r are correct?
+                    logger.debug("Sending command client command")
                     self.zmq_socket.send_pyobj(message, copy=True)
                     logger.debug(f"waiting for response from command {message}")
                     r = self.zmq_socket.poll(timeout=30000)   # TODO: don't hardcode this timeout
                     if r == 0:  # timeout
-                        raise RuntimeError("CommandClient poll timed out")
+                        raise RuntimeError("CommandClient poll-before-result timed out")
+                    # TODO: what other values of r are correct?
 
                     reply = self.zmq_socket.recv_pyobj(flags=zmq.NOBLOCK)
                     # Don't block here: we know there's a message because
@@ -140,7 +147,9 @@ class TasksOutgoing:
                 socks = dict(self.poller.poll(timeout=timeout_ms))
                 if self.zmq_socket in socks and socks[self.zmq_socket] == zmq.POLLOUT:
                     # The copy option adds latency but reduces the risk of ZMQ overflow
+                    logger.debug("Sending TasksOutgoing message")
                     self.zmq_socket.send_pyobj(message, copy=True)
+                    logger.debug("Sent TasksOutgoing message")
                     return
                 else:
                     timeout_ms = max(timeout_ms, 1)
@@ -180,8 +189,12 @@ class ResultsIncoming:
         self._lock = threading.Lock()
 
     def get(self):
+        logger.debug("Waiting for ResultsIncoming lock")
         with self._lock:
-            return self.results_receiver.recv_multipart()
+            logger.debug("Waiting for ResultsIncoming message")
+            m = self.results_receiver.recv_multipart()
+            logger.debug("Received ResultsIncoming message")
+            return m
 
     def close(self):
         with self._lock:
