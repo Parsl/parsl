@@ -47,7 +47,6 @@ class CommandClient:
         """ This function needs to be fast at the same time aware of the possibility of
         ZMQ pipes overflowing.
 
-        The timeout increases slowly if contention is detected on ZMQ pipes.
         We could set copy=False and get slightly better latency but this results
         in ZMQ sockets reaching a broken state once there are ~10k tasks in flight.
         This issue can be magnified if each the serialized buffer itself is larger.
@@ -68,7 +67,16 @@ class CommandClient:
                 try:
                     self.zmq_socket.send_pyobj(message, copy=True)
                     logger.debug(f"waiting for response from command {message}")
-                    reply = self.zmq_socket.recv_pyobj()
+                    r = self.zmq_socket.poll(timeout=30000)   # TODO: don't hardcode this timeout
+                    if r == 0:  # timeout
+                        raise RuntimeError("CommandClient poll timed out")
+
+                    reply = self.zmq_socket.recv_pyobj(flags=zmq.NOBLOCK)
+                    # Don't block here: we know there's a message because
+                    # of the successful poll... if that happens to be not
+                    # true, raise an exception rather than hanging. However
+                    # that's a bug in the code, not an expected occurence.
+
                     logger.debug(f"got response from command {message}")
                 except zmq.ZMQError:
                     logger.exception("Potential ZMQ REQ-REP deadlock caught")
