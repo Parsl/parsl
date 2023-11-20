@@ -17,4 +17,4 @@ def fresh_config():
                     rpex_cfg=rpex_cfg,
                     bulk_mode=True,
                     resource='local.localhost',
-                    walltime=30, cores=4)])
+                    runtime=30, cores=4)])
