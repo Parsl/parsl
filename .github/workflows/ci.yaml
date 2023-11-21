@@ -176,3 +176,14 @@ jobs:
                 (eups list gen3_workflow) 2>&1 | grep -v "Unknown tag"
                 cd tests
                 pytest test_query_workflow.py test_bps_restart.py
+
+
+            - name: Archive test logs
+              if: ${{ always() }}
+              uses: actions/upload-artifact@v2
+              with:
+                name: testinfo-${{ matrix.python-version }}
+                path: gen3_workflow/
+
+
+
