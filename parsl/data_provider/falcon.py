@@ -26,23 +26,23 @@ To run Falcon data_provider
         - run the command "falcon sender --host 'host' --port 'port' --data_dir
           'directory_path' --method probe"
         - sleep for 0.1 seconds (in order for the receiver instance to run before sender instance)
-        e.g. 
+        e.g.
             zmq_context = zmq.Context()
             zmq_socket = zmq_context.socket(zmq.REP)
             zmq_socket.bind("tcp://*:5555")
-            
+
             # Wait for the next request from the client
             json_data = zmq_socket.recv_string()
             print("Received JSON data:", json_data)
-            
+
             # Parse the JSON data
             data = json.loads(json_data)
-            
+
             # Extract the message and host from the data
             host = data.get("host", "No host provided")
             port = data.get("port", "No port provided")
             file_path = data.get("file_path", "No file path provided")
-            
+
             # Start the sender
             sender_command = ["falcon", "sender", "--host", host, "--port", port, "--data_dir",
                               file_path, "--method", "probe"]
@@ -54,13 +54,13 @@ To run Falcon data_provider
                 print(f"Command failed with exit code {e.returncode}: {e.stderr}")
             except FileNotFoundError:
                 print("The 'falcon' command was not found. Make sure it's installed and in your system's PATH.")
-            
+
             # Send the response back to the client
             zmq_socket.send_string("Received")
-            
+
             zmq_socket.close()
             zmq_context.term()
-            
+
 You can learn about Falcon and how it runs here: https://pypi.org/project/falcon-datamover/
 """
 
