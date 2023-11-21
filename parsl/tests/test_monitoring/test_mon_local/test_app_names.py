@@ -53,7 +53,7 @@ def test_regular_decorated_app():
 
         result = connection.execute("SELECT COUNT(*) FROM task")
         (c, ) = result.first()
-        assert c == 1 
+        assert c == 1
 
         result = connection.execute("SELECT COUNT(*) FROM try")
         (c, ) = result.first()
@@ -105,7 +105,7 @@ def test_for_decoration_later():
 
         result = connection.execute("SELECT COUNT(*) FROM task")
         (c, ) = result.first()
-        assert c == 1 
+        assert c == 1
 
         result = connection.execute("SELECT COUNT(*) FROM try")
         (c, ) = result.first()
@@ -159,7 +159,7 @@ def test_decorated_closure():
 
         result = connection.execute("SELECT COUNT(*) FROM task")
         (c, ) = result.first()
-        assert c == 1 
+        assert c == 1
 
         result = connection.execute("SELECT COUNT(*) FROM try")
         (c, ) = result.first()
@@ -170,4 +170,3 @@ def test_decorated_closure():
         assert c == "inner_function"
 
     logger.info("all done")
-

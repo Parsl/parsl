@@ -119,30 +119,35 @@ jobs:
 
         steps:
             - uses: actions/checkout@v2
+              with:
+                  repository: https://github.com/LSSTDESC/gen3_workflow
+                  path: ./gen3-repo
+
+            - uses: actions/checkout@master
+              with:
+                  path: ./parsl-repo
 
             - name: Setup conda
               uses: conda-incubator/setup-miniconda@v2
               with:
                   activate-environment: stack
                   python-version: "3.11"
-                  condarc-file: etc/.condarc
+                  condarc-file: ./gen3-repo/etc/.condarc
 
             - name: Install conda deps
               run: |
                 conda info
                 conda list
                 conda install -y mamba
-                mamba install -y --file conda_requirements.txt
+                mamba install -y --file ./gen3-repo/conda_requirements.txt
                 conda info
                 conda list
 
             
-            - uses: actions/checkout@master
-
             - name: Install workflow packages
               run: |
                 # pip install -U --no-deps 'parsl[monitoring,workqueue] @ git+https://github.com/parsl/parsl@desc'
-                pip install -U --no-deps '.[monitoring,workqueue]'
+                pip install -U --no-deps './parsl-repo[monitoring,workqueue]'
                 pip install typeguard tblib paramiko dill pyzmq globus-sdk sqlalchemy_utils
                 conda install -c conda-forge ndcctools=7.6.1=py311h689c632_0 --no-deps
 
