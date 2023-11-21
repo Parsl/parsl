@@ -288,12 +288,7 @@ class Manager:
                 tasks = pickle.loads(pkl_msg)
                 last_interchange_contact = time.time()
 
-                if tasks == 'STOP':
-                    logger.critical("Received stop request")
-                    kill_event.set()
-                    break
-
-                elif tasks == HEARTBEAT_CODE:
+                if tasks == HEARTBEAT_CODE:
                     logger.debug("Got heartbeat from interchange")
 
                 else:
