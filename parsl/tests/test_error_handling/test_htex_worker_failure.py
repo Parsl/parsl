@@ -19,7 +19,8 @@ def kill_worker():
 
 
 @pytest.mark.local
-def test_htex_worker_failure():
-    with pytest.raises(WorkerLost):
-        f = kill_worker()
-        f.result()
+def test_htex_worker_failures():
+    for _ in range(3):
+        with pytest.raises(WorkerLost):
+            f = kill_worker()
+            f.result()
