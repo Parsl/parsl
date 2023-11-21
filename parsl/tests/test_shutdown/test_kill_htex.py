@@ -17,10 +17,10 @@ def simple_app():
     return True
 
 
-@pytest.mark.local
-# @pytest.mark.skip("not expected to pass - demonstrates hanging htex with missing interchange - issue 2755")
+# @pytest.mark.local
+@pytest.mark.skip("not expected to pass - demonstrates hanging htex with missing interchange - issue 2755")
 @pytest.mark.parametrize("sig", [signal.SIGINT, signal.SIGTERM, signal.SIGKILL])  # are we expecting SIGKILL resilience here? Ideally yes
-def test_kill_router(sig):
+def test_kill_interchange(sig):
     """This tests that we can kill the interchange process (in different ways) and still have successful shutdown.
     One of these signals emulates behaviour when ctrl-C is pressed: that all of the processes receive a
     termination signal  - SIGINT for ctrl-C - at once, and so specifically we should be

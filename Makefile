@@ -76,7 +76,7 @@ wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with workqueue_ex config
 radical_local_test:
 	pip3 install ".[radical-pilot]"
 	mkdir -p ~/.radical/pilot/configs && echo '{"localhost": {"virtenv_mode": "local"}}' > ~/.radical/pilot/configs/resource_local.json
-	pytest parsl/tests/ -k "not cleannet and not issue363 and not test_apptimeout" --config parsl/tests/configs/local_radical.py --random-order --durations 10
+	pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/local_radical.py --random-order --durations 10
 
 .PHONY: workqueue_mon_test
 workqueue_mon_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
