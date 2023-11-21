@@ -120,7 +120,7 @@ jobs:
         steps:
             - uses: actions/checkout@v2
               with:
-                  repository: https://github.com/LSSTDESC/gen3_workflow
+                  repository: LSSTDESC/gen3_workflow
                   path: ./gen3-repo
 
             - uses: actions/checkout@master
