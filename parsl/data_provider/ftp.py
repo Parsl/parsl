@@ -50,15 +50,20 @@ class FTPInTaskStaging(Staging, RepresentationMixin):
         return in_task_transfer_wrapper(f, file, working_dir)
 
 
-def in_task_transfer_wrapper(func, file, working_dir):
+def in_task_transfer_wrapper(func, file, working_dir, secure_ftp=False):
     def wrapper(*args, **kwargs):
         import ftplib
         if working_dir:
             os.makedirs(working_dir, exist_ok=True)
 
         with open(file.local_path, 'wb') as f:
-            ftp = ftplib.FTP(file.netloc)
-            ftp.login()
+            if secure_ftp:
+                ftp = ftplib.FTP_TLS(file.netloc)
+                ftp.login()
+                ftp.prot_p()
+            else:
+                ftp = ftplib.FTP(file.netloc)
+                ftp.login()
             ftp.cwd(os.path.dirname(file.path))
             ftp.retrbinary('RETR {}'.format(file.filename), f.write)
             ftp.quit()
@@ -68,13 +73,18 @@ def in_task_transfer_wrapper(func, file, working_dir):
     return wrapper
 
 
-def _ftp_stage_in(working_dir, parent_fut=None, outputs=[], _parsl_staging_inhibit=True):
+def _ftp_stage_in(working_dir, parent_fut=None, outputs=[], _parsl_staging_inhibit=True, secure_ftp=False):
     file = outputs[0]
     if working_dir:
         os.makedirs(working_dir, exist_ok=True)
     with open(file.local_path, 'wb') as f:
-        ftp = ftplib.FTP(file.netloc)
-        ftp.login()
+        if secure_ftp:
+            ftp = ftplib.FTP_TLS(file.netloc)
+            ftp.login()
+            ftp.prot_p()
+        else:
+            ftp = ftplib.FTP(file.netloc)
+            ftp.login()
         ftp.cwd(os.path.dirname(file.path))
         ftp.retrbinary('RETR {}'.format(file.filename), f.write)
         ftp.quit()
