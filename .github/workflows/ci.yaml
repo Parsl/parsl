@@ -151,11 +151,21 @@ jobs:
                 pip install typeguard tblib paramiko dill pyzmq globus-sdk sqlalchemy_utils
                 conda install -c conda-forge ndcctools=7.6.1=py311h689c632_0 --no-deps
 
-            - name: Clone the package and checkout the branch
+            - name: Clone gen3_workflow checkout the branch
               shell: bash -l {0}
               run: |
+                echo pwd
+                pwd 
+
+                echo ls
+                ls
+
+                echo Cloning gen3_workflow repo
                 git clone https://github.com/LSSTDESC/gen3_workflow
+
+                echo declaring gen3_workflow to eups
                 eups declare gen3_workflow -r ${PWD}/gen3_workflow -t current
+
                 cd gen3_workflow
                 git fetch origin ${GITHUB_REF}:TESTING
                 git checkout TESTING
