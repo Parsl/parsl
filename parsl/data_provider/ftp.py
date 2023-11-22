@@ -31,6 +31,8 @@ class FTPSeparateTaskStaging(Staging, RepresentationMixin):
 
 class FTPInTaskStaging(Staging, RepresentationMixin):
     """Performs FTP staging as a wrapper around the application task."""
+    def __init__(self, secure_ftp=False):
+        self.secure_ftp = secure_ftp
 
     def can_stage_in(self, file):
         logger.debug("FTPInTaskStaging checking file {}".format(file.__repr__()))
@@ -47,10 +49,10 @@ class FTPInTaskStaging(Staging, RepresentationMixin):
 
     def replace_task(self, dm, executor, file, f):
         working_dir = dm.dfk.executors[executor].working_dir
-        return in_task_transfer_wrapper(f, file, working_dir)
+        return in_task_transfer_wrapper(f, file, working_dir, self.secure_ftp)
 
 
-def in_task_transfer_wrapper(func, file, working_dir, secure_ftp=False):
+def in_task_transfer_wrapper(func, file, working_dir, secure_ftp):
     def wrapper(*args, **kwargs):
         import ftplib
         if working_dir:
