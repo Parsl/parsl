@@ -291,12 +291,7 @@ class Manager:
                 last_interchange_contact = time.time()
                 logger.debug("Updating time of last heartbeat from interchange at {}".format(last_interchange_contact))
 
-                if tasks == 'STOP':
-                    logger.critical("Received stop request")
-                    kill_event.set()
-                    break
-
-                elif tasks == HEARTBEAT_CODE:
+                if tasks == HEARTBEAT_CODE:
                     logger.debug("Got heartbeat from interchange")
 
                 else:
@@ -411,15 +406,7 @@ class Manager:
                     except KeyError:
                         logger.info("Worker {} was not busy when it died".format(worker_id))
 
-                    p = self.mpProcess(target=worker, args=(worker_id,
-                                                            self.uid,
-                                                            self.worker_count,
-                                                            self.pending_task_queue,
-                                                            self.pending_result_queue,
-                                                            self.ready_worker_queue,
-                                                            self._tasks_in_progress,
-                                                            self.cpu_affinity),
-                                       name="HTEX-Worker-{}".format(worker_id))
+                    p = self._start_worker(worker_id)
                     self.procs[worker_id] = p
                     logger.info("Worker {} has been restarted".format(worker_id))
 
@@ -436,18 +423,7 @@ class Manager:
 
         self.procs = {}
         for worker_id in range(self.worker_count):
-            p = self.mpProcess(target=worker,
-                               args=(worker_id,
-                                     self.uid,
-                                     self.worker_count,
-                                     self.pending_task_queue,
-                                     self.pending_result_queue,
-                                     self.ready_worker_queue,
-                                     self._tasks_in_progress,
-                                     self.cpu_affinity,
-                                     self.available_accelerators[worker_id] if self.accelerators_available else None),
-                               name="HTEX-Worker-{}".format(worker_id))
-            p.start()
+            p = self._start_worker(worker_id)
             self.procs[worker_id] = p
 
         logger.debug("Workers started")
@@ -488,6 +464,25 @@ class Manager:
         delta = time.time() - start
         logger.info("process_worker_pool ran for {} seconds".format(delta))
         return
+
+    def _start_worker(self, worker_id: int):
+        p = self.mpProcess(
+            target=worker,
+            args=(
+                worker_id,
+                self.uid,
+                self.worker_count,
+                self.pending_task_queue,
+                self.pending_result_queue,
+                self.ready_worker_queue,
+                self._tasks_in_progress,
+                self.cpu_affinity,
+                self.available_accelerators[worker_id] if self.accelerators_available else None,
+            ),
+            name="HTEX-Worker-{}".format(worker_id),
+        )
+        p.start()
+        return p
 
 
 def execute_task(bufs):
