@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 class FTPSeparateTaskStaging(Staging, RepresentationMixin):
     """Performs FTP staging as a separate parsl level task."""
+    def __init__(self, secure_ftp=False):
+        self.secure_ftp = secure_ftp
 
     def can_stage_in(self, file):
         logger.debug("FTPSeparateTaskStaging checking file {}".format(repr(file)))
@@ -25,7 +27,7 @@ class FTPSeparateTaskStaging(Staging, RepresentationMixin):
         else:
             file.local_path = file.filename
         stage_in_app = _ftp_stage_in_app(dm, executor=executor)
-        app_fut = stage_in_app(working_dir, outputs=[file], _parsl_staging_inhibit=True, parent_fut=parent_fut)
+        app_fut = stage_in_app(working_dir, self.secure_ftp, outputs=[file], _parsl_staging_inhibit=True, parent_fut=parent_fut)
         return app_fut._outputs[0]
 
 
@@ -75,7 +77,7 @@ def in_task_transfer_wrapper(func, file, working_dir, secure_ftp):
     return wrapper
 
 
-def _ftp_stage_in(working_dir, parent_fut=None, outputs=[], _parsl_staging_inhibit=True, secure_ftp=False):
+def _ftp_stage_in(working_dir, secure_ftp, parent_fut=None, outputs=[], _parsl_staging_inhibit=True):
     file = outputs[0]
     if working_dir:
         os.makedirs(working_dir, exist_ok=True)
