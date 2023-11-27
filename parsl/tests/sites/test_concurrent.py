@@ -9,7 +9,7 @@ def f(x):
     return x + 1
 
 
-def make_config(run_dir):
+def make_config():
     return Config(
         executors=[
             HighThroughputExecutor(
@@ -20,13 +20,12 @@ def make_config(run_dir):
             )
         ],
         strategy='none',
-        run_dir=str(run_dir)
     )
 
 
 @mark.local
 def test_executor(tmpdir):
-    my_config = make_config(tmpdir)
+    my_config = make_config()
 
     with ParslPoolExecutor(my_config) as exc:
         # Test a single submit
@@ -45,4 +44,4 @@ def test_executor(tmpdir):
         assert exc.app_count == 1
 
     with warns(UserWarning):
-        ParslPoolExecutor(make_config(tmpdir)).shutdown(False, cancel_futures=True)
+        ParslPoolExecutor(make_config()).shutdown(False, cancel_futures=True)
