@@ -168,7 +168,7 @@ class FalconStaging(Staging, RepresentationMixin):
         zmq_context.term()
 
         receiver_command = ["falcon", "receiver", "--host", self.host_ip, "--port", directory.query, "--data_dir",
-                          working_dir]
+                            working_dir]
 
         try:
             subprocess.run(receiver_command, check=True)
