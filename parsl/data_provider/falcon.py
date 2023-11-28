@@ -170,7 +170,6 @@ class FalconStaging(Staging, RepresentationMixin):
         receiver_command = ["falcon", "receiver", "--host", self.host_ip, "--port", directory.query, "--data_dir",
                           working_dir]
 
-        if working_dir
         try:
             subprocess.run(receiver_command, check=True)
         except subprocess.CalledProcessError as e:
