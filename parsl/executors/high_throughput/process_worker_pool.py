@@ -623,7 +623,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true',
-                        help="Count of apps to launch")
+                        help="Enable logging at DEBUG level")
     parser.add_argument("-a", "--addresses", default='',
                         help="Comma separated list of addresses at which the interchange could be reached")
     parser.add_argument("-l", "--logdir", default="process_worker_pool_logs",
