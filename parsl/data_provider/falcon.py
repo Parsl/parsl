@@ -3,6 +3,7 @@ from functools import partial
 import subprocess
 import zmq
 import json
+import os
 
 from parsl.app.app import python_app
 from parsl.data_provider.staging import Staging
@@ -16,7 +17,7 @@ To run Falcon data_provider
 - Setup your virtual environments on both source and destination server
   and install required python packages.
 - On the destination server, you can stage data files using FalconStaging.
-  The following example shows creation of a Flacon-accessible file
+  The following example shows creation of a Falcon-accessible file
   e.g. File('falcon://192.168.10.11/parsl/data/file.txt/?8080')
 - On the source server(s), you need to run a sender which:
         - accept a JSON object from a zmq on port 5555, this JSON object will include:
@@ -27,6 +28,11 @@ To run Falcon data_provider
           'directory_path' --method probe"
         - sleep for 0.1 seconds (in order for the receiver instance to run before sender instance)
         e.g.
+            import zmq
+            import subprocess
+            import json
+            import time
+
             zmq_context = zmq.Context()
             zmq_socket = zmq_context.socket(zmq.REP)
             zmq_socket.bind("tcp://*:5555")
@@ -161,11 +167,12 @@ class FalconStaging(Staging, RepresentationMixin):
         zmq_socket.close()
         zmq_context.term()
 
-        sender_command = ["falcon", "receiver", "--host", self.host_ip, "--port", directory.query, "--data_dir",
+        receiver_command = ["falcon", "receiver", "--host", self.host_ip, "--port", directory.query, "--data_dir",
                           working_dir]
 
+        if working_dir
         try:
-            subprocess.run(sender_command, check=True)
+            subprocess.run(receiver_command, check=True)
         except subprocess.CalledProcessError as e:
             raise Exception(f"Command failed with exit code {e.returncode}: {e.stderr}")
         except FileNotFoundError:
@@ -174,5 +181,9 @@ class FalconStaging(Staging, RepresentationMixin):
 
 def _falcon_stage_in(provider, executor, parent_fut=None, outputs=[], _parsl_staging_inhibit=True):
     # Initialize the transfer
+    if executor.working_dir:
+        working_dir = os.path.normpath(executor.working_dir)
+    else:
+        raise ValueError("executor working_dir must be specified for FalconStaging")
     directory = outputs[0]
-    provider.initialize_transfer(executor.working_dir, directory)
+    provider.initialize_transfer(working_dir, directory)
