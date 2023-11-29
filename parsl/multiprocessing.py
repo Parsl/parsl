@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 # maybe ForkProcess should be: Callable[..., Process] so as to make
 # it clear that it returns a Process always to the type checker?
 ForkProcess: Type = multiprocessing.get_context('fork').Process
-SpawnProcess: Type = multiprocessing.get_context('spawn').Process
 
 
 class MacSafeQueue(multiprocessing.queues.Queue):
