@@ -10,7 +10,7 @@ import pickle
 import time
 import queue
 import uuid
-from typing import Sequence, Optional
+from typing import Sequence, Optional, Union
 
 import zmq
 import math
@@ -18,7 +18,7 @@ import json
 import psutil
 import multiprocessing
 from multiprocessing.managers import DictProxy
-from multiprocessing.sharedctypes import SynchronizedBase
+from multiprocessing.sharedctypes import Synchronized
 
 from parsl.process_loggers import wrap_with_logs
 
@@ -174,9 +174,9 @@ class Manager:
         if mem_per_worker and mem_per_worker > 0:
             mem_slots = math.floor(available_mem_on_node / mem_per_worker)
 
-        self.worker_count = min(max_workers,
-                                mem_slots,
-                                math.floor(cores_on_node / cores_per_worker))
+        self.worker_count: int = min(max_workers,
+                                     mem_slots,
+                                     math.floor(cores_on_node / cores_per_worker))
 
         self.pending_task_queue = SpawnContext.Queue()
         self.pending_result_queue = SpawnContext.Queue()
@@ -492,12 +492,12 @@ def execute_task(bufs):
 def worker(
     worker_id: int,
     pool_id: str,
-    pool_size: float,
+    pool_size: int,
     task_queue: multiprocessing.Queue,
     result_queue: multiprocessing.Queue,
-    ready_worker_count: SynchronizedBase,
+    ready_worker_count: Synchronized,
     tasks_in_progress: DictProxy,
-    cpu_affinity: bool,
+    cpu_affinity: Union[str, bool],
     accelerator: Optional[str],
     block_id: str,
     logdir: str,

@@ -3,6 +3,7 @@
 # then be acquired by any other code running in
 # a worker context - specifically the monitoring
 # wrapper code.
-from typing import Optional
+import multiprocessing
+from typing import Optional, Union
 from queue import Queue
-result_queue: Optional[Queue] = None
+result_queue: Optional[Union[Queue, multiprocessing.Queue]] = None
