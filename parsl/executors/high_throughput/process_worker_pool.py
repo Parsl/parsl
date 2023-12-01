@@ -255,7 +255,7 @@ class Manager:
                 pending_task_count = self.pending_task_queue.qsize()
             except NotImplementedError:
                 # Ref: https://github.com/python/cpython/blob/6d5e0dc0e330f4009e8dc3d1642e46b129788877/Lib/multiprocessing/queues.py#L125
-                pending_task_count = f"sem_getvalue() is not supported on {platform.system()}"
+                pending_task_count = f"pending task count is not available on {platform.system()}"
 
             logger.debug("ready workers: {}, pending tasks: {}".format(self.ready_worker_count.value,
                                                                        pending_task_count))
