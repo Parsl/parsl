@@ -14,7 +14,7 @@ def convert(inputs=[], outputs=[]):
 @pytest.mark.cleannet
 def test():
     # create an remote Parsl file
-    inp = File('ftp://www.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
+    inp = File('ftp://ftp.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
 
     # create a local Parsl file
     out = File('file:///tmp/ARIN-STATS-FORMAT-CHANGE.txt')
