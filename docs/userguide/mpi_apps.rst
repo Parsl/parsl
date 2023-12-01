@@ -75,7 +75,6 @@ is below.
             HighThroughputExecutor(
                 label='mpiapps',
                 address=address_by_hostname(),
-                start_method="fork",  # Needed to avoid interactions between MPI and os.fork
                 max_workers=tasks_per_block,
                 cores_per_worker=1e-6, # Prevents
                 provider=PBSProProvider(

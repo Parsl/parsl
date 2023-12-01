@@ -55,6 +55,7 @@ setup(
                'parsl/executors/workqueue/parsl_coprocess.py',
                'parsl/monitoring/node_reporter.py',
                'parsl/monitoring/davidadams_reporter.py',
+               'parsl/monitoring/allprocs.py',
     ],
 
     extras_require=extras_require,
