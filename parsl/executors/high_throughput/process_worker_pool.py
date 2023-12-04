@@ -178,6 +178,9 @@ class Manager:
                                      mem_slots,
                                      math.floor(cores_on_node / cores_per_worker))
 
+        self._mp_manager = SpawnContext.Manager()  # Starts a server process
+
+        self.monitoring_queue = self._mp_manager.Queue()
         self.pending_task_queue = SpawnContext.Queue()
         self.pending_result_queue = SpawnContext.Queue()
         self.ready_worker_count = SpawnContext.Value("i", 0)
@@ -383,6 +386,28 @@ class Manager:
 
         logger.critical("Exiting")
 
+    @wrap_with_logs
+    def handle_monitoring_messages(self, kill_event: threading.Event):
+        """Transfer messages from the managed monitoring queue to the result queue.
+
+        We separate the queues so that the result queue does not rely on a manager
+        process, which adds overhead that causes slower queue operations but enables
+        use across processes started in fork and spawn contexts.
+
+        We transfer the messages to the result queue to reuse the ZMQ connection between
+        the manager and the interchange.
+        """
+        logger.debug("Starting monitoring messages thread")
+
+        while not kill_event.is_set():
+            logger.debug("Starting monitor_queue.get")
+            msg = self.monitoring_queue.get()
+            logger.debug("Got a monitoring message")
+            self.pending_result_queue.put(msg)
+            logger.debug("Put monitoring message on result queue")
+
+        logger.critical("Exiting")
+
     def start(self):
         """ Start the worker processes.
 
@@ -390,7 +415,7 @@ class Manager:
         """
         start = time.time()
         self._kill_event = threading.Event()
-        self._tasks_in_progress = SpawnContext.Manager().dict()
+        self._tasks_in_progress = self._mp_manager.dict()
 
         self.procs = {}
         for worker_id in range(self.worker_count):
@@ -408,9 +433,14 @@ class Manager:
         self._worker_watchdog_thread = threading.Thread(target=self.worker_watchdog,
                                                         args=(self._kill_event,),
                                                         name="worker-watchdog")
+        self._monitoring_handler_thread = threading.Thread(target=self.handle_monitoring_messages,
+                                                           args=(self._kill_event,),
+                                                           name="Monitoring-Handler")
+
         self._task_puller_thread.start()
         self._result_pusher_thread.start()
         self._worker_watchdog_thread.start()
+        self._monitoring_handler_thread.start()
 
         logger.info("Loop start")
 
@@ -422,6 +452,7 @@ class Manager:
         self._task_puller_thread.join()
         self._result_pusher_thread.join()
         self._worker_watchdog_thread.join()
+        self._monitoring_handler_thread.join()
         for proc_id in self.procs:
             self.procs[proc_id].terminate()
             logger.critical("Terminating worker {}: is_alive()={}".format(self.procs[proc_id],
@@ -445,6 +476,7 @@ class Manager:
                 self.worker_count,
                 self.pending_task_queue,
                 self.pending_result_queue,
+                self.monitoring_queue,
                 self.ready_worker_count,
                 self._tasks_in_progress,
                 self.cpu_affinity,
@@ -495,6 +527,7 @@ def worker(
     pool_size: int,
     task_queue: multiprocessing.Queue,
     result_queue: multiprocessing.Queue,
+    monitoring_queue: queue.Queue,
     ready_worker_count: Synchronized,
     tasks_in_progress: DictProxy,
     cpu_affinity: Union[str, bool],
@@ -525,9 +558,8 @@ def worker(
     os.environ['PARSL_WORKER_POOL_ID'] = str(pool_id)
     os.environ['PARSL_WORKER_BLOCK_ID'] = str(block_id)
 
-    # share the result queue with monitoring code so it too can send results down that channel
     import parsl.executors.high_throughput.monitoring_info as mi
-    mi.result_queue = result_queue
+    mi.result_queue = monitoring_queue
 
     logger.info('Worker {} started'.format(worker_id))
     if debug:
