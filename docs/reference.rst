@@ -121,6 +121,18 @@ Providers
     parsl.providers.base.ExecutionProvider
     parsl.providers.cluster_provider.ClusterProvider
 
+Batch jobs
+==========
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.jobs.states.JobState
+    parsl.jobs.states.JobStatus
+    parsl.jobs.error_handlers.noop_error_handler
+    parsl.jobs.error_handlers.simple_error_handler
+    parsl.jobs.error_handlers.windowed_error_handler
 
 Exceptions
 ==========

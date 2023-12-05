@@ -1,12 +1,14 @@
 import sys
 import radical.pilot as rp
 
-from parsl.serialize import serialize
-from parsl.app.errors import RemoteExceptionWrapper
+import parsl.app.errors as pe
+from parsl.app.bash import remote_side_bash_executor
+from parsl.serialize import unpack_apply_message, serialize
 from parsl.executors.high_throughput.process_worker_pool import execute_task
 
 
 class ParslWorker:
+
     def _dispatch_func(self, task):
 
         try:
@@ -19,7 +21,26 @@ class ParslWorker:
             err = None
         except Exception:
             val = None
-            exc = (rp.utils.serialize_bson(RemoteExceptionWrapper(*sys.exc_info())), None)
+            exc = (rp.utils.serialize_bson(pe.RemoteExceptionWrapper(*sys.exc_info())), None)
+            ret = 1
+            out = None
+            err = None
+
+        return out, err, ret, val, exc
+
+    def _dispatch_proc(self, task):
+
+        try:
+            buffer = rp.utils.deserialize_bson(task['description']['executable'])
+            func, args, kwargs = unpack_apply_message(buffer, {}, copy=False)
+            ret = remote_side_bash_executor(func, *args, **kwargs)
+            exc = (None, None)
+            val = None
+            out = None
+            err = None
+        except Exception:
+            val = None
+            exc = (rp.utils.serialize_bson(pe.RemoteExceptionWrapper(*sys.exc_info())), None)
             ret = 1
             out = None
             err = None
@@ -35,3 +56,6 @@ class MPIWorker(rp.raptor.MPIWorker):
 class DefaultWorker(rp.raptor.DefaultWorker):
     def _dispatch_func(self, task):
         return ParslWorker()._dispatch_func(task)
+
+    def _dispatch_proc(self, task):
+        return ParslWorker()._dispatch_proc(task)

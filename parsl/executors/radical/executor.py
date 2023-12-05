@@ -64,21 +64,21 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
     .. code:: python
 
-      ---------------------------------------------------------------------------
-               Parsl Data Flow Kernel        |   Task Translator |  Task-Manager
-      ---------------------------------------|-------------------|---------------
+      ----------------------------------------------------------------------------
+               Parsl Data Flow Kernel        |   Task Translator |  rp.TaskManager
+      ---------------------------------------|-------------------|----------------
                                              |                   |
       -> Dep. check ------> Parsl_tasks{} <--+--> Parsl Task     |
        Data management          +dfk.submit  |        |          |
                                              |        v          |
                                              |    RP Task(s) ->  | submit(task)
-      ---------------------------------------------------------------------------
+      ----------------------------------------------------------------------------
 
-    The RadicalPilotExecutor creates a ``SESSION OBJECT``, ``TASK_MANAGER``,
-    and ``PILOT_MANAGER``. The executor receives the tasks from the DFK and
-    translates these tasks (in-memory) into ``RP.TASK_DESCRIPTION`` object to
-    be passed to the ``TASK_MANAGER``. This executor has two submission
-    mechanisms:
+    The RadicalPilotExecutor creates a ``rp.Session``, ``rp.TaskManager``,
+    and ``rp.PilotManager``. The executor receives the parsl apps from the
+    DFK and translates these apps (in-memory) into ``rp.TaskDescription``
+    object to be passed to the ``rp.TaskManager``. This executor has two
+    submission mechanisms:
 
     1. Default_mode: where the executor submits the tasks directly to
        RADICAL-Pilot.
@@ -103,62 +103,38 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         The resource name of the targeted HPC machine or cluster.
         Default is local.localhost (user local machine).
 
-    access_schema : Optional[str]
-        The key of an access mechanism to use. Default local.
-
-    walltime : int
-        The maximum walltime for the entire job in minutes.
+    runtime : int
+        The maximum runtime for the entire job in minutes.
         Default is 30.
-
-    cores : int
-        The number of CPU cores to allocate per job (pilot). Default is 2.
-
-    gpus : int
-        The number of GPUs to allocate per job (pilot). Default is 0.
-
-    partition : Optional[str]
-        The resource partition (queue) for the job (pilot). Default is None.
-
-    project : Optional[str]
-        The project name for resource allocation. Default is None.
 
     working_dir : str
         The working dir to be used by the executor.
+
+    rpex_pilot_kwargs: Dict of kwargs that are passed directly to the rp.PilotDescription object.
 
     For more information: https://radicalpilot.readthedocs.io/en/stable/
     """
 
     @typeguard.typechecked
     def __init__(self,
-                 cores: int,
-                 walltime: int,
                  resource: str,
-                 gpus: int = 0,
                  label: str = RPEX,
                  bulk_mode: bool = False,
-                 project: Optional[str] = None,
-                 partition: Optional[str] = None,
                  working_dir: Optional[str] = None,
-                 access_schema: Optional[str] = None,
-                 rpex_cfg: Optional[ResourceConfig] = None):
+                 rpex_cfg: Optional[ResourceConfig] = None, **rpex_pilot_kwargs):
 
         super().__init__()
-        self._uid = RPEX.lower()
-        self.project = project
-        self.bulk_mode = bulk_mode
-        self.resource = resource
-        self.access_schema = access_schema
-        self.partition = partition
-        self.walltime = walltime
-        self.label = label
-        self.future_tasks: Dict[str, Future] = {}
-        self.working_dir = working_dir
-        self.cores = cores
-        self.gpus = gpus
-        self.run_dir = '.'
-        self.session = None
         self.pmgr = None
         self.tmgr = None
+        self.run_dir = '.'
+        self.label = label
+        self.session = None
+        self.resource = resource
+        self._uid = RPEX.lower()
+        self.bulk_mode = bulk_mode
+        self.working_dir = working_dir
+        self.pilot_kwargs = rpex_pilot_kwargs
+        self.future_tasks: Dict[str, Future] = {}
 
         if rpex_cfg:
             self.rpex_cfg = rpex_cfg
@@ -178,6 +154,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
             if state == rp.DONE:
                 if task.description['mode'] in [rp.TASK_EXEC,
+                                                rp.TASK_PROC,
                                                 rp.TASK_EXECUTABLE]:
                     parsl_task.set_result(int(task.exit_code))
                 else:
@@ -195,30 +172,14 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
             elif state == rp.FAILED:
                 if task.description['mode'] in [rp.TASK_EXEC,
                                                 rp.TASK_EXECUTABLE]:
-                    # for some reason RP sometimes report a
-                    # task with exit code 0 as FAILED
-                    if task.exit_code == 0:
-                        parsl_task.set_result(int(task.exit_code))
-                    else:
-                        parsl_task.set_exception(BashExitFailure(task.name,
-                                                                 task.exit_code))
+                    parsl_task.set_exception(BashExitFailure(task.name,
+                                                             task.exit_code))
                 else:
                     if task.exception:
-                        if not task.description.get('use_mpi'):
-                            try:
-                                s = rp.utils.deserialize_bson(task.exception)
-                                if isinstance(s, RemoteExceptionWrapper):
-                                    try:
-                                        s.reraise()
-                                    except Exception as e:
-                                        parsl_task.set_exception(e)
-                                elif isinstance(s, Exception):
-                                    parsl_task.set_exception(s)
-                                else:
-                                    raise ValueError("Unknown exception-like type received: {}".format(type(s)))
-                            except Exception as e:
-                                parsl_task.set_exception(
-                                    DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
+                        # unpack a serialized exception
+                        if not task.description.get('use_mpi') or task.description['mode'] == rp.TASK_PROC:
+                            self._unpack_and_set_parsl_exception(parsl_task, task.exception)
+                        # we do not serialize mpi function exception
                         else:
                             parsl_task.set_exception(eval(task.exception))
                     else:
@@ -235,17 +196,12 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                                                      mode=ru.ID_PRIVATE))
         logger.info("RPEX session is created: {0}".format(self.session.path))
 
-        pd_init = {'gpus': self.gpus,
-                   'cores': self.cores,
+        pd_init = {**self.pilot_kwargs,
                    'exit_on_error': True,
-                   'queue': self.partition,
-                   'project': self.project,
-                   'runtime': self.walltime,
-                   'resource': self.resource,
-                   'access_schema': self.access_schema}
+                   'resource': self.resource}
 
         if not self.resource or 'local' in self.resource:
-            # move the agent sandbox to the workdir mainly
+            # move the agent sandbox to the working dir mainly
             # for debugging purposes. This will allow parsl
             # to include the agent sandbox with the ci artifacts.
             if os.environ.get("LOCAL_SANDBOX"):
@@ -254,13 +210,14 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
             logger.info("RPEX will be running in the local mode")
 
+        pd = rp.PilotDescription(pd_init)
+        pd.verify()
+
         self.rpex_cfg = self.rpex_cfg._get_cfg_file(path=self.run_dir)
         cfg = ru.Config(cfg=ru.read_json(self.rpex_cfg))
 
         self.master = cfg.master_descr
         self.n_masters = cfg.n_masters
-
-        pd = rp.PilotDescription(pd_init)
 
         tds = list()
         master_path = '{0}/rpex_master.py'.format(PWD)
@@ -284,6 +241,9 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
         # submit pilot(s)
         pilot = self.pmgr.submit_pilots(pd)
+        if not pilot.description.get('cores'):
+            logger.warning('no "cores" per pilot was set, using default resources {0}'.format(pilot.resources))
+
         self.tmgr.submit_tasks(tds)
 
         # prepare or use the current env for the agent/pilot side environment
@@ -370,7 +330,6 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
         task = rp.TaskDescription()
         task.name = func.__name__
-        task.timeout = kwargs.get('walltime', 0.0)
 
         if parsl_resource_specification and isinstance(parsl_resource_specification, dict):
             logger.debug('mapping parsl resource specifications >> rp resource specifications')
@@ -386,47 +345,41 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
         if BASH in task_type:
             if callable(func):
-                # These lines of code are from parsl/app/bash.py
-                try:
-                    # Execute the func to get the command
-                    bash_app = func(*args, **kwargs)
-                    if not isinstance(bash_app, str):
-                        raise ValueError("Expected a str for bash_app cmd,"
-                                         "got: {0}".format(type(bash_app)))
-                except AttributeError as e:
-                    raise Exception("failed to obtain bash app cmd") from e
+                # if the user specifies the executable mode then we expect the
+                # a code in a file that need to be executed in an isolated env.
+                if parsl_resource_specification.get('mode') == rp.TASK_EXECUTABLE:
+                    # These lines of code are from parsl/app/bash.py
+                    try:
+                        # Execute the func to get the command
+                        bash_app = func(*args, **kwargs)
+                        if not isinstance(bash_app, str):
+                            raise ValueError("Expected a str for bash_app cmd,"
+                                             "got: {0}".format(type(bash_app)))
+                    except AttributeError as e:
+                        raise Exception("failed to obtain bash app cmd") from e
 
-                task.mode = rp.TASK_EXECUTABLE
+                    task.executable = bash_app
+                    task.mode = rp.TASK_EXECUTABLE
 
-                # workaround for the difference between
-                # RP execution of executables (bashapps)
-                # and Parsl execution.
-                # TODO: maybe switch to rp.PROC instead of
-                # RP.EXECUTABLE
-                bashapp_file = self._map_bash_app_to_file(bash_app, tid)
-                task.executable = '/bin/bash'
-                task.arguments = [bashapp_file]
-                task.input_staging = [bashapp_file]
+                # This is the default mode where the bash_app will be executed as
+                # as a single core process by RP. For cores > 1 the user must use
+                # above or use MPI functions if their code is Python.
+                else:
+                    task.mode = rp.TASK_PROC
+                    task.raptor_id = 'master.%06d' % (tid % self.n_masters)
+                    task.executable = self._pack_and_apply_message(func, args, kwargs)
 
         elif PYTHON in task_type or not task_type:
             task.mode = rp.TASK_FUNCTION
             task.raptor_id = 'master.%06d' % (tid % self.n_masters)
-            if task.timeout:
-                func = timeout(func, task.timeout)
-                # reset RP's task timeout, otherwise RP will
-                # handle the Timeout Exception
-                task.timeout = 0
+            if kwargs.get('walltime'):
+                func = timeout(func, kwargs['walltime'])
 
             # we process MPI function differently
             if 'comm' in kwargs:
                 task.function = rp.PythonTask(func, *args, **kwargs)
             else:
-                try:
-                    buffer = pack_apply_message(func, args, kwargs,
-                                                buffer_threshold=1024 * 1024)
-                    task.function = rp.utils.serialize_bson(buffer)
-                except TypeError:
-                    raise SerializationError(task.name)
+                task.function = self._pack_and_apply_message(func, args, kwargs)
 
         task.input_staging = self._stage_files(kwargs.get("inputs", []),
                                                mode='in')
@@ -444,21 +397,31 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
         return task
 
-    def _map_bash_app_to_file(self, bash_app, bash_app_id):
-        """
-        This function writes the command of
-        a bash_app in a file and pass it to
-        RP as an executable to fix:
-        https://github.com/Parsl/parsl/pull/2923#issuecomment-1790895266
-        """
-        file_path = f"{self.run_dir}/{bash_app_id}.sh"
-        shell_script = f"""
-        #/bin/bash
-        {bash_app}
-        """
-        with open(file_path, 'w') as f:
-            f.write(shell_script)
-        return file_path
+    def _pack_and_apply_message(self, func, args, kwargs):
+        try:
+            buffer = pack_apply_message(func, args, kwargs,
+                                        buffer_threshold=1024 * 1024)
+            task_func = rp.utils.serialize_bson(buffer)
+        except TypeError:
+            raise SerializationError(func.__name__)
+
+        return task_func
+
+    def _unpack_and_set_parsl_exception(self, parsl_task, exception):
+        try:
+            s = rp.utils.deserialize_bson(exception)
+            if isinstance(s, RemoteExceptionWrapper):
+                try:
+                    s.reraise()
+                except Exception as e:
+                    parsl_task.set_exception(e)
+            elif isinstance(s, Exception):
+                parsl_task.set_exception(s)
+            else:
+                raise ValueError("Unknown exception-like type received: {}".format(type(s)))
+        except Exception as e:
+            parsl_task.set_exception(
+                DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
 
     def _set_stdout_stderr(self, task, kwargs):
         """
