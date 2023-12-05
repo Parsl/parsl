@@ -6,7 +6,7 @@ import numpy as np
 from parsl import python_app, HighThroughputExecutor, Config
 import parsl
 
-parsl.load(Config(executors=[HighThroughputExecutor(label='htex_spawn', max_workers=1, start_method='spawn', address='127.0.0.1')]))
+parsl.load(Config(executors=[HighThroughputExecutor(label='htex_spawn', max_workers=1, address='127.0.0.1')]))
 
 
 # Part 1: Explain imports
