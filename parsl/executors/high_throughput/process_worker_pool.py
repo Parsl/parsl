@@ -397,14 +397,22 @@ class Manager:
         We transfer the messages to the result queue to reuse the ZMQ connection between
         the manager and the interchange.
         """
-        logger.debug("Starting monitoring messages thread")
+        logger.debug("Starting monitoring handler thread")
+
+        poll_period_s = max(10, self.poll_period) / 1000    # Must be at least 10 ms
 
         while not kill_event.is_set():
-            logger.debug("Starting monitor_queue.get")
-            msg = self.monitoring_queue.get()
-            logger.debug("Got a monitoring message")
-            self.pending_result_queue.put(msg)
-            logger.debug("Put monitoring message on result queue")
+            try:
+                logger.debug("Starting monitor_queue.get()")
+                msg = self.monitoring_queue.get(block=True, timeout=poll_period_s)
+            except queue.Empty:
+                logger.debug("monitoring_queue.get() has timed out")
+            except Exception as e:
+                logger.exception(f"Got an exception: {e}")
+            else:
+                logger.debug("Got a monitoring message")
+                self.pending_result_queue.put(msg)
+                logger.debug("Put monitoring message on pending_result_queue")
 
         logger.critical("Exiting")
 
