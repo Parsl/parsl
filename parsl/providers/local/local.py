@@ -29,7 +29,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         scaling where as many resources as possible are used; parallelism close to 0 represents
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
     move_files : Optional[Bool]
-        Should files be moved? by default, Parsl will try to figure this out itself (= None).
+        Should files be moved? By default, Parsl will try to figure this out itself (= None).
         If True, then will always move. If False, will never move.
     worker_init : str
         Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
