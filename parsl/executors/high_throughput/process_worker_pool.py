@@ -576,7 +576,7 @@ def worker(
     # If desired, set process affinity
     if cpu_affinity != "none":
         # Count the number of cores per worker
-        avail_cores = sorted(os.sched_getaffinity(0))  # Get the available processors
+        avail_cores = sorted(os.sched_getaffinity(0))  # Get the available threads
         cores_per_worker = len(avail_cores) // pool_size
         assert cores_per_worker > 0, "Affinity does not work if there are more workers than cores"
 
@@ -588,6 +588,23 @@ def worker(
             my_cores = avail_cores[cores_per_worker * cpu_worker_id:cores_per_worker * (cpu_worker_id + 1)]
         elif cpu_affinity == "alternating":
             my_cores = avail_cores[worker_id::pool_size]
+        elif cpu_affinity[0:4] == "list":
+            thread_ranks = cpu_affinity.split(":")[1:]
+            if len(thread_ranks) != pool_size:
+                raise ValueError("Affinity list {} has wrong number of thread ranks".format(cpu_affinity))
+            threads = thread_ranks[worker_id]
+            thread_list = threads.split(",")
+            my_cores = []
+            for tl in thread_list:
+                thread_range = tl.split("-")
+                if len(thread_range) == 1:
+                    my_cores.append(int(thread_range[0]))
+                elif len(thread_range) == 2:
+                    start_thread = int(thread_range[0])
+                    end_thread = int(thread_range[1]) + 1
+                    my_cores += list(range(start_thread,end_thread))
+                else:
+                    raise ValueError("Affinity list formatting is not expected {}".format(cpu_affinity))
         else:
             raise ValueError("Affinity strategy {} is not supported".format(cpu_affinity))
 
