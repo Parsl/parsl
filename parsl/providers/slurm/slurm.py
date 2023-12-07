@@ -92,6 +92,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     def __init__(self,
                  partition: Optional[str] = None,
                  account: Optional[str] = None,
+                 queue: Optional[str] = None,
+                 constraint: Optional[str] = None,
                  channel: Channel = LocalChannel(),
                  nodes_per_block: int = 1,
                  cores_per_node: Optional[int] = None,
@@ -133,6 +135,11 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             self.scheduler_options += "#SBATCH --partition={}\n".format(partition)
         if account:
             self.scheduler_options += "#SBATCH --account={}\n".format(account)
+        if queue:
+            self.scheduler_options += "#SBATCH --queue={}\n".format(queue)
+        if constraint:
+            self.scheduler_options += "#SBATCH --constraint={}\n".format(constraint)
+
         self.regex_job_id = regex_job_id
         self.worker_init = worker_init + '\n'
 
