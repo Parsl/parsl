@@ -47,6 +47,10 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     account : str
         Slurm account to which to charge resources used by the job. If unspecified or ``None``, the job will use the
         user's default account.
+    queue : str
+        Slurm queue to place job in. If unspecified or ``None``, no queue slurm directive will be specified.
+    constraint : str
+        Slurm job constraint, often used to choose cpu or gpu type. If unspecified or ``None``, no constraint slurm directive will be added.
     channel : Channel
         Channel for accessing this provider. Possible channels include
         :class:`~parsl.channels.LocalChannel` (the default),
