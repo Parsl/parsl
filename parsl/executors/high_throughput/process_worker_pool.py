@@ -10,13 +10,15 @@ import pickle
 import time
 import queue
 import uuid
-from typing import Sequence, Optional
+from typing import Sequence, Optional, Union
 
 import zmq
 import math
 import json
 import psutil
 import multiprocessing
+from multiprocessing.managers import DictProxy
+from multiprocessing.sharedctypes import Synchronized
 
 from parsl.process_loggers import wrap_with_logs
 
@@ -24,10 +26,7 @@ from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.probe import probe_addresses
-from parsl.multiprocessing import ForkProcess as mpProcess
-
-from parsl.multiprocessing import SizedQueue as mpQueue
-
+from parsl.multiprocessing import SpawnContext
 from parsl.serialize import unpack_apply_message, serialize
 
 HEARTBEAT_CODE = (2 ** 32) - 1
@@ -160,7 +159,7 @@ class Manager:
         if os.environ.get('PARSL_CORES'):
             cores_on_node = int(os.environ['PARSL_CORES'])
         else:
-            cores_on_node = multiprocessing.cpu_count()
+            cores_on_node = SpawnContext.cpu_count()
 
         if os.environ.get('PARSL_MEMORY_GB'):
             available_mem_on_node = float(os.environ['PARSL_MEMORY_GB'])
@@ -175,13 +174,16 @@ class Manager:
         if mem_per_worker and mem_per_worker > 0:
             mem_slots = math.floor(available_mem_on_node / mem_per_worker)
 
-        self.worker_count = min(max_workers,
-                                mem_slots,
-                                math.floor(cores_on_node / cores_per_worker))
+        self.worker_count: int = min(max_workers,
+                                     mem_slots,
+                                     math.floor(cores_on_node / cores_per_worker))
 
-        self.pending_task_queue = mpQueue()
-        self.pending_result_queue = mpQueue()
-        self.ready_worker_queue = mpQueue()
+        self._mp_manager = SpawnContext.Manager()  # Starts a server process
+
+        self.monitoring_queue = self._mp_manager.Queue()
+        self.pending_task_queue = SpawnContext.Queue()
+        self.pending_result_queue = SpawnContext.Queue()
+        self.ready_worker_count = SpawnContext.Value("i", 0)
 
         self.max_queue_size = self.prefetch_capacity + self.worker_count
 
@@ -252,10 +254,13 @@ class Manager:
         poll_timer = self.poll_period
 
         while not kill_event.is_set():
-            ready_worker_count = self.ready_worker_queue.qsize()
-            pending_task_count = self.pending_task_queue.qsize()
+            try:
+                pending_task_count = self.pending_task_queue.qsize()
+            except NotImplementedError:
+                # Ref: https://github.com/python/cpython/blob/6d5e0dc0e330f4009e8dc3d1642e46b129788877/Lib/multiprocessing/queues.py#L125
+                pending_task_count = f"pending task count is not available on {platform.system()}"
 
-            logger.debug("ready workers: {}, pending tasks: {}".format(ready_worker_count,
+            logger.debug("ready workers: {}, pending tasks: {}".format(self.ready_worker_count.value,
                                                                        pending_task_count))
 
             if time.time() > last_beat + self.heartbeat_period:
@@ -381,6 +386,36 @@ class Manager:
 
         logger.critical("Exiting")
 
+    @wrap_with_logs
+    def handle_monitoring_messages(self, kill_event: threading.Event):
+        """Transfer messages from the managed monitoring queue to the result queue.
+
+        We separate the queues so that the result queue does not rely on a manager
+        process, which adds overhead that causes slower queue operations but enables
+        use across processes started in fork and spawn contexts.
+
+        We transfer the messages to the result queue to reuse the ZMQ connection between
+        the manager and the interchange.
+        """
+        logger.debug("Starting monitoring handler thread")
+
+        poll_period_s = max(10, self.poll_period) / 1000    # Must be at least 10 ms
+
+        while not kill_event.is_set():
+            try:
+                logger.debug("Starting monitor_queue.get()")
+                msg = self.monitoring_queue.get(block=True, timeout=poll_period_s)
+            except queue.Empty:
+                logger.debug("monitoring_queue.get() has timed out")
+            except Exception as e:
+                logger.exception(f"Got an exception: {e}")
+            else:
+                logger.debug("Got a monitoring message")
+                self.pending_result_queue.put(msg)
+                logger.debug("Put monitoring message on pending_result_queue")
+
+        logger.critical("Exiting")
+
     def start(self):
         """ Start the worker processes.
 
@@ -388,7 +423,7 @@ class Manager:
         """
         start = time.time()
         self._kill_event = threading.Event()
-        self._tasks_in_progress = multiprocessing.Manager().dict()
+        self._tasks_in_progress = self._mp_manager.dict()
 
         self.procs = {}
         for worker_id in range(self.worker_count):
@@ -406,9 +441,14 @@ class Manager:
         self._worker_watchdog_thread = threading.Thread(target=self.worker_watchdog,
                                                         args=(self._kill_event,),
                                                         name="worker-watchdog")
+        self._monitoring_handler_thread = threading.Thread(target=self.handle_monitoring_messages,
+                                                           args=(self._kill_event,),
+                                                           name="Monitoring-Handler")
+
         self._task_puller_thread.start()
         self._result_pusher_thread.start()
         self._worker_watchdog_thread.start()
+        self._monitoring_handler_thread.start()
 
         logger.info("Loop start")
 
@@ -420,6 +460,7 @@ class Manager:
         self._task_puller_thread.join()
         self._result_pusher_thread.join()
         self._worker_watchdog_thread.join()
+        self._monitoring_handler_thread.join()
         for proc_id in self.procs:
             self.procs[proc_id].terminate()
             logger.critical("Terminating worker {}: is_alive()={}".format(self.procs[proc_id],
@@ -435,7 +476,7 @@ class Manager:
         return
 
     def _start_worker(self, worker_id: int):
-        p = mpProcess(
+        p = SpawnContext.Process(
             target=worker,
             args=(
                 worker_id,
@@ -443,10 +484,14 @@ class Manager:
                 self.worker_count,
                 self.pending_task_queue,
                 self.pending_result_queue,
-                self.ready_worker_queue,
+                self.monitoring_queue,
+                self.ready_worker_count,
                 self._tasks_in_progress,
                 self.cpu_affinity,
                 self.available_accelerators[worker_id] if self.accelerators_available else None,
+                self.block_id,
+                args.logdir,
+                args.debug,
             ),
             name="HTEX-Worker-{}".format(worker_id),
         )
@@ -484,7 +529,21 @@ def execute_task(bufs):
 
 
 @wrap_with_logs(target="worker_log")
-def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue, tasks_in_progress, cpu_affinity, accelerator: Optional[str]):
+def worker(
+    worker_id: int,
+    pool_id: str,
+    pool_size: int,
+    task_queue: multiprocessing.Queue,
+    result_queue: multiprocessing.Queue,
+    monitoring_queue: queue.Queue,
+    ready_worker_count: Synchronized,
+    tasks_in_progress: DictProxy,
+    cpu_affinity: Union[str, bool],
+    accelerator: Optional[str],
+    block_id: str,
+    logdir: str,
+    debug: bool,
+):
     """
 
     Put request token into queue
@@ -496,23 +555,22 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
     # override the global logger inherited from the __main__ process (which
     # usually logs to manager.log) with one specific to this worker.
     global logger
-    logger = start_file_logger('{}/block-{}/{}/worker_{}.log'.format(args.logdir, args.block_id, pool_id, worker_id),
+    logger = start_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
                                worker_id,
                                name="worker_log",
-                               level=logging.DEBUG if args.debug else logging.INFO)
+                               level=logging.DEBUG if debug else logging.INFO)
 
     # Store worker ID as an environment variable
     os.environ['PARSL_WORKER_RANK'] = str(worker_id)
     os.environ['PARSL_WORKER_COUNT'] = str(pool_size)
     os.environ['PARSL_WORKER_POOL_ID'] = str(pool_id)
-    os.environ['PARSL_WORKER_BLOCK_ID'] = str(args.block_id)
+    os.environ['PARSL_WORKER_BLOCK_ID'] = str(block_id)
 
-    # share the result queue with monitoring code so it too can send results down that channel
     import parsl.executors.high_throughput.monitoring_info as mi
-    mi.result_queue = result_queue
+    mi.result_queue = monitoring_queue
 
     logger.info('Worker {} started'.format(worker_id))
-    if args.debug:
+    if debug:
         logger.debug("Debug logging enabled")
 
     # If desired, set process affinity
@@ -554,7 +612,8 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         logger.info(f'Pinned worker to accelerator: {accelerator}')
 
     while True:
-        worker_queue.put(worker_id)
+        with ready_worker_count.get_lock():
+            ready_worker_count.value += 1
 
         # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
         req = task_queue.get()
@@ -562,11 +621,8 @@ def worker(worker_id, pool_id, pool_size, task_queue, result_queue, worker_queue
         tid = req['task_id']
         logger.info("Received executor task {}".format(tid))
 
-        try:
-            worker_queue.get()
-        except queue.Empty:
-            logger.warning("Worker ID: {} failed to remove itself from ready_worker_queue".format(worker_id))
-            pass
+        with ready_worker_count.get_lock():
+            ready_worker_count.value -= 1
 
         try:
             result = execute_task(req['buffer'])
