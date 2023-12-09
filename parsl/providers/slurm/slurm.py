@@ -47,7 +47,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     account : str
         Slurm account to which to charge resources used by the job. If unspecified or ``None``, the job will use the
         user's default account.
-    queue : str
+    qos : str
         Slurm queue to place job in. If unspecified or ``None``, no queue slurm directive will be specified.
     constraint : str
         Slurm job constraint, often used to choose cpu or gpu type. If unspecified or ``None``, no constraint slurm directive will be added.
@@ -96,7 +96,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     def __init__(self,
                  partition: Optional[str] = None,
                  account: Optional[str] = None,
-                 queue: Optional[str] = None,
+                 qos: Optional[str] = None,
                  constraint: Optional[str] = None,
                  channel: Channel = LocalChannel(),
                  nodes_per_block: int = 1,
@@ -139,7 +139,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             self.scheduler_options += "#SBATCH --partition={}\n".format(partition)
         if account:
             self.scheduler_options += "#SBATCH --account={}\n".format(account)
-        if queue:
+        if qos:
             self.scheduler_options += "#SBATCH --qos={}\n".format(queue)
         if constraint:
             self.scheduler_options += "#SBATCH --constraint={}\n".format(constraint)
