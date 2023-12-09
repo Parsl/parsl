@@ -140,7 +140,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         if account:
             self.scheduler_options += "#SBATCH --account={}\n".format(account)
         if qos:
-            self.scheduler_options += "#SBATCH --qos={}\n".format(queue)
+            self.scheduler_options += "#SBATCH --qos={}\n".format(qos)
         if constraint:
             self.scheduler_options += "#SBATCH --constraint={}\n".format(constraint)
 
