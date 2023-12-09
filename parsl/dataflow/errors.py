@@ -36,7 +36,9 @@ class DependencyError(DataFlowException):
        in a dependency.
 
     Args:
-         - dependent_exceptions_tids: List of dependency task IDs which failed
+         - dependent_exceptions_tids: List of exceptions and identifiers for
+           dependencies which failed. The identifier might be a task ID or
+           the repr of a non-DFK Future.
          - task_id: Task ID of the task that failed because of the dependency error
     """
 
@@ -45,8 +47,9 @@ class DependencyError(DataFlowException):
         self.task_id = task_id
 
     def __str__(self) -> str:
-        dep_tids = [tid for (exception, tid) in self.dependent_exceptions_tids]
-        return "Dependency failure for task {} with failed dependencies from tasks {}".format(self.task_id, dep_tids)
+        dep_ids = [tid for (exception, tid) in self.dependent_exceptions_tids]
+        deps = ", ".join(dep_ids)
+        return f"Dependency failure for task {self.task_id} with failed dependencies from {deps}"
 
 
 class JoinError(DataFlowException):
