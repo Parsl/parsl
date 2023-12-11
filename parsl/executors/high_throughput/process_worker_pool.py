@@ -732,7 +732,7 @@ if __name__ == "__main__":
         if s[0:4] == "list":
             return s
     
-    parser.add_argument("--cpu-affinity", type=strategyorlist, #choices=["none", "block", "alternating", "block-reverse"],
+    parser.add_argument("--cpu-affinity", type=strategyorlist,
                         help="Whether/how workers should control CPU affinity.")
     parser.add_argument("--available-accelerators", type=str, nargs="*",
                         help="Names of available accelerators")
