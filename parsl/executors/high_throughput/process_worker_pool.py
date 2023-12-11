@@ -725,7 +725,14 @@ if __name__ == "__main__":
                         help="Poll period used in milliseconds")
     parser.add_argument("-r", "--result_port", required=True,
                         help="REQUIRED: Result port for posting results to the interchange")
-    parser.add_argument("--cpu-affinity", type=str, choices=["none", "block", "alternating", "block-reverse"],
+
+    def strategyorlist(s):
+        if s in ["none", "block", "alternating", "block-reverse"]:
+            return s
+        if s[0:4] == "list":
+            return s
+    
+    parser.add_argument("--cpu-affinity", type=strategyorlist, #choices=["none", "block", "alternating", "block-reverse"],
                         help="Whether/how workers should control CPU affinity.")
     parser.add_argument("--available-accelerators", type=str, nargs="*",
                         help="Names of available accelerators")
