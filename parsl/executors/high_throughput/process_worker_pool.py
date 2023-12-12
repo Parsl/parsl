@@ -727,10 +727,13 @@ if __name__ == "__main__":
                         help="REQUIRED: Result port for posting results to the interchange")
 
     def strategyorlist(s: str):
-        if s in ["none", "block", "alternating", "block-reverse"]:
+        allowed_strategies = ["none", "block", "alternating", "block-reverse"]
+        if s in allowed_strategies:
             return s
-        if s[0:4] == "list":
+        elif s[0:4] == "list":
             return s
+        else:
+            raise argparse.ArgumentTypeError("cpu-affinity must be one of {} or a list format".format(allowed_strategies))
 
     parser.add_argument("--cpu-affinity", type=strategyorlist,
                         help="Whether/how workers should control CPU affinity.")
