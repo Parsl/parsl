@@ -33,4 +33,12 @@ def test_future_fail_dependency():
 
     plain_fut.set_exception(ValueError("Plain failure"))
 
-    assert isinstance(parsl_fut.exception(), DependencyError)
+    ex = parsl_fut.exception()
+
+    # check that what we got is a dependency error...
+    assert isinstance(ex, DependencyError)
+
+    # and that the dependency error string mentions the dependency
+    # Future, plain_fut, somewhere in its str
+
+    assert str(plain_fut) in str(ex)
