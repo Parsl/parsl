@@ -602,7 +602,7 @@ def worker(
                 elif len(thread_range) == 2:
                     start_thread = int(thread_range[0])
                     end_thread = int(thread_range[1]) + 1
-                    my_cores += list(range(start_thread,end_thread))
+                    my_cores += list(range(start_thread, end_thread))
                 else:
                     raise ValueError("Affinity list formatting is not expected {}".format(cpu_affinity))
         else:
@@ -731,7 +731,7 @@ if __name__ == "__main__":
             return s
         if s[0:4] == "list":
             return s
-    
+
     parser.add_argument("--cpu-affinity", type=strategyorlist,
                         help="Whether/how workers should control CPU affinity.")
     parser.add_argument("--available-accelerators", type=str, nargs="*",
