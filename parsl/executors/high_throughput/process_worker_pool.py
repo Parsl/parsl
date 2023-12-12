@@ -726,7 +726,7 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--result_port", required=True,
                         help="REQUIRED: Result port for posting results to the interchange")
 
-    def strategyorlist(s):
+    def strategyorlist(s: str):
         if s in ["none", "block", "alternating", "block-reverse"]:
             return s
         if s[0:4] == "list":
