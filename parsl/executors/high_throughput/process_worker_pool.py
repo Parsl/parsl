@@ -10,7 +10,7 @@ import pickle
 import time
 import queue
 import uuid
-from typing import Sequence, Optional, Union
+from typing import Sequence, Optional
 
 import zmq
 import math
@@ -62,7 +62,7 @@ class Manager:
                  heartbeat_threshold=120,
                  heartbeat_period=30,
                  poll_period=10,
-                 cpu_affinity=False,
+                 cpu_affinity=False, # BAD - should go away in PR 2973.
                  available_accelerators: Sequence[str] = ()):
         """
         Parameters
@@ -540,7 +540,7 @@ def worker(
     monitoring_queue: queue.Queue,
     ready_worker_count: Synchronized,
     tasks_in_progress: DictProxy,
-    cpu_affinity: Union[str, bool],
+    cpu_affinity: str,
     accelerator: Optional[str],
     block_id: str,
     task_queue_timeout: int,
@@ -732,6 +732,7 @@ if __name__ == "__main__":
     parser.add_argument("-r", "--result_port", required=True,
                         help="REQUIRED: Result port for posting results to the interchange")
     parser.add_argument("--cpu-affinity", type=str, choices=["none", "block", "alternating", "block-reverse"],
+                        required=True,
                         help="Whether/how workers should control CPU affinity.")
     parser.add_argument("--available-accelerators", type=str, nargs="*",
                         help="Names of available accelerators")
