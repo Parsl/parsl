@@ -10,7 +10,7 @@ import pickle
 import time
 import queue
 import uuid
-from typing import Sequence, Optional, Union
+from typing import Sequence, Optional
 
 import zmq
 import math
@@ -48,22 +48,22 @@ class Manager:
                 |                          |                IPC-Qeueues
 
     """
-    def __init__(self,
-                 addresses="127.0.0.1",
-                 address_probe_timeout=30,
-                 task_port="50097",
-                 result_port="50098",
-                 cores_per_worker=1,
-                 mem_per_worker=None,
-                 max_workers=float('inf'),
-                 prefetch_capacity=0,
-                 uid=None,
-                 block_id=None,
-                 heartbeat_threshold=120,
-                 heartbeat_period=30,
-                 poll_period=10,
-                 cpu_affinity=False,
-                 available_accelerators: Sequence[str] = ()):
+    def __init__(self, *,
+                 addresses,
+                 address_probe_timeout,
+                 task_port,
+                 result_port,
+                 cores_per_worker,
+                 mem_per_worker,
+                 max_workers,
+                 prefetch_capacity,
+                 uid,
+                 block_id,
+                 heartbeat_threshold,
+                 heartbeat_period,
+                 poll_period,
+                 cpu_affinity,
+                 available_accelerators: Sequence[str]):
         """
         Parameters
         ----------
@@ -72,7 +72,7 @@ class Manager:
 
         address_probe_timeout : int
              Timeout in seconds for the address probe to detect viable addresses
-             to the interchange. Default : 30s
+             to the interchange.
 
         uid : str
              string unique identifier
@@ -82,43 +82,41 @@ class Manager:
 
         cores_per_worker : float
              cores to be assigned to each worker. Oversubscription is possible
-             by setting cores_per_worker < 1.0. Default=1
+             by setting cores_per_worker < 1.0.
 
         mem_per_worker : float
              GB of memory required per worker. If this option is specified, the node manager
              will check the available memory at startup and limit the number of workers such that
              the there's sufficient memory for each worker. If set to None, memory on node is not
              considered in the determination of workers to be launched on node by the manager.
-             Default: None
 
         max_workers : int
              caps the maximum number of workers that can be launched.
-             default: infinity
 
         prefetch_capacity : int
              Number of tasks that could be prefetched over available worker capacity.
              When there are a few tasks (<100) or when tasks are long running, this option should
-             be set to 0 for better load balancing. Default is 0.
+             be set to 0 for better load balancing.
 
         heartbeat_threshold : int
              Seconds since the last message from the interchange after which the
-             interchange is assumed to be un-available, and the manager initiates shutdown. Default:120s
+             interchange is assumed to be un-available, and the manager initiates shutdown.
 
              Number of seconds since the last message from the interchange after which the worker
-             assumes that the interchange is lost and the manager shuts down. Default:120
+             assumes that the interchange is lost and the manager shuts down.
 
         heartbeat_period : int
              Number of seconds after which a heartbeat message is sent to the interchange, and workers
              are checked for liveness.
 
         poll_period : int
-             Timeout period used by the manager in milliseconds. Default: 10ms
+             Timeout period used by the manager in milliseconds.
 
         cpu_affinity : str
              Whether or how each worker should force its affinity to different CPUs
 
         available_accelerators: list of str
-            List of accelerators available to the workers. Default: Empty list
+            List of accelerators available to the workers.
 
         """
 
@@ -490,6 +488,8 @@ class Manager:
                 self.cpu_affinity,
                 self.available_accelerators[worker_id] if self.accelerators_available else None,
                 self.block_id,
+                self.heartbeat_period,
+                os.getpid(),
                 args.logdir,
                 args.debug,
             ),
@@ -538,9 +538,11 @@ def worker(
     monitoring_queue: queue.Queue,
     ready_worker_count: Synchronized,
     tasks_in_progress: DictProxy,
-    cpu_affinity: Union[str, bool],
+    cpu_affinity: str,
     accelerator: Optional[str],
     block_id: str,
+    task_queue_timeout: int,
+    manager_pid: int,
     logdir: str,
     debug: bool,
 ):
@@ -628,18 +630,37 @@ def worker(
 
         logger.info(f'Pinned worker to accelerator: {accelerator}')
 
-    while True:
-        with ready_worker_count.get_lock():
-            ready_worker_count.value += 1
+    def manager_is_alive():
+        try:
+            # This does not kill the process, but instead raises
+            # an exception if the process doesn't exist
+            os.kill(manager_pid, 0)
+        except OSError:
+            logger.critical(f"Manager ({manager_pid}) died; worker {worker_id} shutting down")
+            return False
+        else:
+            return True
 
-        # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
-        req = task_queue.get()
+    worker_enqueued = False
+    while manager_is_alive():
+        if not worker_enqueued:
+            with ready_worker_count.get_lock():
+                ready_worker_count.value += 1
+            worker_enqueued = True
+
+        try:
+            # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
+            req = task_queue.get(timeout=task_queue_timeout)
+        except queue.Empty:
+            continue
+
         tasks_in_progress[worker_id] = req
         tid = req['task_id']
         logger.info("Received executor task {}".format(tid))
 
         with ready_worker_count.get_lock():
             ready_worker_count.value -= 1
+        worker_enqueued = False
 
         try:
             result = execute_task(req['buffer'])
@@ -736,6 +757,7 @@ if __name__ == "__main__":
             raise argparse.ArgumentTypeError("cpu-affinity must be one of {} or a list format".format(allowed_strategies))
 
     parser.add_argument("--cpu-affinity", type=strategyorlist,
+                        required=True,
                         help="Whether/how workers should control CPU affinity.")
     parser.add_argument("--available-accelerators", type=str, nargs="*",
                         help="Names of available accelerators")
