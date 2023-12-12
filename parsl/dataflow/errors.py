@@ -47,8 +47,7 @@ class DependencyError(DataFlowException):
         self.task_id = task_id
 
     def __str__(self) -> str:
-        dep_ids = [tid for (exception, tid) in self.dependent_exceptions_tids]
-        deps = ", ".join(dep_ids)
+        deps = ", ".join(tid for _exc, tid in self.dependent_exceptions_tids)
         return f"Dependency failure for task {self.task_id} with failed dependencies from {deps}"
 
 
