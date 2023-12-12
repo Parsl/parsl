@@ -248,6 +248,22 @@ def _taskvine_submit_wait(ready_task_queue=None,
                                                                      poncho_env=poncho_env_path,
                                                                      init_command=manager_config.init_command,
                                                                      add_env=add_env)
+
+                    # Configure the library if provided
+                    if manager_config.library_config:
+                        lib_cores = manager_config.library_config.get('cores', None)
+                        lib_memory = manager_config.library_config.get('memory', None)
+                        lib_disk = manager_config.library_config.get('disk', None)
+                        lib_slots = manager_config.library_config.get('num_slots', None)
+                        if lib_cores:
+                            serverless_lib.set_cores(lib_cores)
+                        if lib_memory:
+                            serverless_lib.set_memory(lib_memory)
+                        if lib_disk:
+                            serverless_lib.set_disk(lib_disk)
+                        if lib_slots:
+                            serverless_lib.set_function_slots(lib_slots)
+
                     if poncho_env_path:
                         serverless_lib_env_file = m.declare_poncho(poncho_env_path, cache=True, peer_transfer=True)
                         serverless_lib.add_environment(serverless_lib_env_file)
