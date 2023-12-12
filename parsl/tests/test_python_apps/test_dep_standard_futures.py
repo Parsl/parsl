@@ -41,4 +41,4 @@ def test_future_fail_dependency():
     # and that the dependency error string mentions the dependency
     # Future, plain_fut, somewhere in its str
 
-    assert str(plain_fut) in str(ex)
+    assert repr(plain_fut) in str(ex)
