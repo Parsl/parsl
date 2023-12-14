@@ -20,6 +20,7 @@ import _pytest.runner as runner
 
 import parsl
 from parsl.dataflow.dflow import DataFlowKernelLoader
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +127,8 @@ def load_dfk_session(request, pytestconfig):
     load_dfk_local_module for module-level configuration management.
     """
 
+    RepresentationMixin._validate_repr = True
+
     config = pytestconfig.getoption('config')[0]
 
     if config != 'local':
@@ -165,6 +168,7 @@ def load_dfk_local_module(request, pytestconfig):
     be used to perform more interesting DFK initialisation not possible with
     local_config.
     """
+    RepresentationMixin._validate_repr = True
 
     config = pytestconfig.getoption('config')[0]
 
