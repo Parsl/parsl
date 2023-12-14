@@ -221,11 +221,13 @@ class RepresentationMixin:
                                 f'attribute')
                     raise AttributeError(template)
 
+        default = "<unrecorded>"
+
         if len(defaults) != 0:
-            args = [getattr(self, a, "<unrecorded>") for a in argspec.args[1:-len(defaults)]]
+            args = [getattr(self, a, default) for a in argspec.args[1:-len(defaults)]]
         else:
-            args = [getattr(self, a, "<unrecorded>") for a in argspec.args[1:]]
-        kwargs = {key: getattr(self, key, "<unrecorded>") for key in defaults}
+            args = [getattr(self, a, default) for a in argspec.args[1:]]
+        kwargs = {key: getattr(self, key, default) for key in defaults}
 
         def assemble_multiline(args: List[str], kwargs: Dict[str, object]) -> str:
             def indent(text: str) -> str:
