@@ -132,6 +132,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         self.exclusive = exclusive
         self.move_files = move_files
         self.account = account
+        self.qos = qos
+        self.constraint = constraint
         self.scheduler_options = scheduler_options + '\n'
         if exclusive:
             self.scheduler_options += "#SBATCH --exclusive\n"
