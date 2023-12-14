@@ -191,6 +191,8 @@ class RepresentationMixin:
     """
     __max_width__ = 80
 
+    _validate_repr = False
+
     def __repr__(self) -> str:
         init = self.__init__  # type: ignore[misc]
 
@@ -211,12 +213,13 @@ class RepresentationMixin:
         else:
             defaults = {}
 
-        for arg in argspec.args[1:]:
-            if not hasattr(self, arg):
-                template = (f'class {self.__class__.__name__} uses {arg} in the'
-                            f' constructor, but does not define it as an '
-                            f'attribute')
-                raise AttributeError(template)
+        if _validate_repr:
+            for arg in argspec.args[1:]:
+                if not hasattr(self, arg):
+                    template = (f'class {self.__class__.__name__} uses {arg} in the'
+                                f' constructor, but does not define it as an '
+                                f'attribute')
+                    raise AttributeError(template)
 
         if len(defaults) != 0:
             args = [getattr(self, a) for a in argspec.args[1:-len(defaults)]]
