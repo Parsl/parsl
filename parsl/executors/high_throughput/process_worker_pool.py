@@ -27,7 +27,7 @@ from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.probe import probe_addresses
 from parsl.multiprocessing import SpawnContext
-from parsl.serialize import unpack_apply_message, serialize
+from parsl.serialize import unpack_res_spec_apply_message, serialize
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 
@@ -507,7 +507,7 @@ def execute_task(bufs):
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})
 
-    f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
+    f, args, kwargs, resource_spec = unpack_res_spec_apply_message(bufs, user_ns, copy=False)
 
     # We might need to look into callability of the function from itself
     # since we change it's name in the new namespace
