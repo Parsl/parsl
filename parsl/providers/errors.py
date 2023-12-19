@@ -46,18 +46,18 @@ class ScriptPathError(ExecutionProviderException):
 
 
 class SubmitException(ExecutionProviderException):
-    '''Raised by the submit() method of a provider if there is an error in launching a task.
+    '''Raised by the submit() method of a provider if there is an error in launching a job.
     '''
 
-    def __init__(self, task_name, message, stdout=None, stderr=None):
-        self.task_name = task_name
+    def __init__(self, job_name, message, stdout=None, stderr=None):
+        self.job_name = job_name
         self.message = message
         self.stdout = stdout
         self.stderr = stderr
 
     def __str__(self):
         # TODO: make this more user-friendly
-        return "Cannot launch task {0}: {1}; stdout={2}, stderr={3}".format(self.task_name,
-                                                                            self.message,
-                                                                            self.stdout,
-                                                                            self.stderr)
+        return "Cannot launch job {0}: {1}; stdout={2}, stderr={3}".format(self.job_name,
+                                                                           self.message,
+                                                                           self.stdout,
+                                                                           self.stderr)
