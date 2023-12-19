@@ -12,12 +12,7 @@ extras_require = {
     ],
     'visualization' : [
         'pydot',
-
-        # these versions of networkx does not work with numpy>=2 because:
-        # E           AttributeError: `np.float_` was removed in the NumPy 2.0 release. Use `np.float64` instead.. Did you mean: 'float16'?
         'networkx>=2.5,<2.6',
-
-
         'Flask>=1.0.2',
         'flask_sqlalchemy',
         'pandas<3',
