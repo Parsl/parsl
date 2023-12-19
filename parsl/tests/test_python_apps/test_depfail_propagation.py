@@ -21,6 +21,10 @@ def test_depfail_once():
     assert not isinstance(f1.exception(), DependencyError)
     assert isinstance(f2.exception(), DependencyError)
 
+    # check that the task ID of the failing task is mentioned
+    # in the DependencyError message
+    assert ("task " + str(f1.task_record['id'])) in str(f2.exception())
+
 
 def test_depfail_chain():
     """Test that dependency failures chain"""

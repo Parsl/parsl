@@ -854,10 +854,13 @@ class DataFlowKernel:
                 try:
                     new_args.extend([dep.result()])
                 except Exception as e:
-                    if hasattr(dep, 'task_record'):
-                        tid = dep.task_record['id']
+                    # If this Future is associated with a task inside this DFK,
+                    # then refer to the task ID.
+                    # Otherwise make a repr of the Future object.
+                    if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
+                        tid = "task " + repr(dep.task_record['id'])
                     else:
-                        tid = None
+                        tid = repr(dep)
                     dep_failures.extend([(e, tid)])
             else:
                 new_args.extend([dep])
@@ -1090,7 +1093,14 @@ class DataFlowKernel:
         """
         run_dir = self.run_dir
         if channel.script_dir is None:
-            channel.script_dir = os.path.join(run_dir, 'submit_scripts')
+
+            # This case will be detected as unreachable by mypy, because of
+            # the type of script_dir, which is str, not Optional[str].
+            # The type system doesn't represent the initialized/uninitialized
+            # state of a channel so cannot represent that a channel needs
+            # its script directory set or not.
+
+            channel.script_dir = os.path.join(run_dir, 'submit_scripts')  # type: ignore[unreachable]
 
             # Only create dirs if we aren't on a shared-fs
             if not channel.isdir(run_dir):
