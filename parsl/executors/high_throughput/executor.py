@@ -20,6 +20,7 @@ from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
     BadMessage, ScalingFailed,
 )
+from parsl.executors.high_throughput.mpi_prefix_composer import VALID_LAUNCHERS
 
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.base import ExecutionProvider
@@ -173,6 +174,16 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     worker_logdir_root : string
         In case of a remote file system, specify the path to where logs will be kept.
+
+    enable_mpi_mode: bool
+        If enabled, MPI launch prefixes will be composed for the batch scheduler based on
+        the nodes available in each batch job and the resource_specification dict passed
+        from the app
+
+    mpi_launcher: str
+        This field is only used if enable_mpi_mode is set. Select one from the
+        list of supported MPI launchers = ("srun", "aprun", "mpiexec").
+        default: "mpiexec"
     """
 
     @typeguard.typechecked
@@ -198,6 +209,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  poll_period: int = 10,
                  address_probe_timeout: Optional[int] = None,
                  worker_logdir_root: Optional[str] = None,
+                 enable_mpi_mode: bool = False,
+                 mpi_launcher: str = "mpiexec",
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True):
 
         logger.debug("Initializing HighThroughputExecutor")
@@ -257,6 +270,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.worker_logdir_root = worker_logdir_root
         self.cpu_affinity = cpu_affinity
 
+        self.enable_mpi_mode = enable_mpi_mode
+        assert mpi_launcher in VALID_LAUNCHERS, \
+            f"mpi_launcher must be set to one of {VALID_LAUNCHERS}"
+        self.mpi_launcher = mpi_launcher
+
         if not launch_cmd:
             self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
                                "-a {addresses} "
@@ -272,6 +290,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                "{address_probe_timeout_string} "
                                "--hb_threshold={heartbeat_threshold} "
                                "--cpu-affinity {cpu_affinity} "
+                               "{enable_mpi_mode} "
+                               "--mpi-launcher={mpi_launcher} "
                                "--available-accelerators {accelerators}")
 
     radio_mode = "htex"
@@ -281,6 +301,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """
         debug_opts = "--debug" if self.worker_debug else ""
         max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
+        enable_mpi_opts = "--enable_mpi_mode " if self.enable_mpi_mode else ""
 
         address_probe_timeout_string = ""
         if self.address_probe_timeout:
@@ -304,6 +325,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                        poll_period=self.poll_period,
                                        logdir=worker_logdir,
                                        cpu_affinity=self.cpu_affinity,
+                                       enable_mpi_mode=enable_mpi_opts,
+                                       mpi_launcher=self.mpi_launcher,
                                        accelerators=" ".join(self.available_accelerators))
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
