@@ -47,6 +47,10 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     account : str
         Slurm account to which to charge resources used by the job. If unspecified or ``None``, the job will use the
         user's default account.
+    qos : str
+        Slurm queue to place job in. If unspecified or ``None``, no queue slurm directive will be specified.
+    constraint : str
+        Slurm job constraint, often used to choose cpu or gpu type. If unspecified or ``None``, no constraint slurm directive will be added.
     channel : Channel
         Channel for accessing this provider. Possible channels include
         :class:`~parsl.channels.LocalChannel` (the default),
@@ -92,6 +96,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     def __init__(self,
                  partition: Optional[str] = None,
                  account: Optional[str] = None,
+                 qos: Optional[str] = None,
+                 constraint: Optional[str] = None,
                  channel: Channel = LocalChannel(),
                  nodes_per_block: int = 1,
                  cores_per_node: Optional[int] = None,
@@ -126,6 +132,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         self.exclusive = exclusive
         self.move_files = move_files
         self.account = account
+        self.qos = qos
+        self.constraint = constraint
         self.scheduler_options = scheduler_options + '\n'
         if exclusive:
             self.scheduler_options += "#SBATCH --exclusive\n"
@@ -133,6 +141,11 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             self.scheduler_options += "#SBATCH --partition={}\n".format(partition)
         if account:
             self.scheduler_options += "#SBATCH --account={}\n".format(account)
+        if qos:
+            self.scheduler_options += "#SBATCH --qos={}\n".format(qos)
+        if constraint:
+            self.scheduler_options += "#SBATCH --constraint={}\n".format(constraint)
+
         self.regex_job_id = regex_job_id
         self.worker_init = worker_init + '\n'
 

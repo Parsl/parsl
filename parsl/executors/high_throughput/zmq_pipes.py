@@ -54,8 +54,11 @@ class CommandClient:
         with self._lock:
             for _ in range(max_retries):
                 try:
+                    logger.debug("Sending command client command")
                     self.zmq_socket.send_pyobj(message, copy=True)
+                    logger.debug("Waiting for command client response")
                     reply = self.zmq_socket.recv_pyobj()
+                    logger.debug("Received command client response")
                 except zmq.ZMQError:
                     logger.exception("Potential ZMQ REQ-REP deadlock caught")
                     logger.info("Trying to reestablish context")
@@ -114,7 +117,9 @@ class TasksOutgoing:
             socks = dict(self.poller.poll(timeout=timeout_ms))
             if self.zmq_socket in socks and socks[self.zmq_socket] == zmq.POLLOUT:
                 # The copy option adds latency but reduces the risk of ZMQ overflow
+                logger.debug("Sending TasksOutgoing message")
                 self.zmq_socket.send_pyobj(message, copy=True)
+                logger.debug("Sent TasksOutgoing message")
                 return
             else:
                 timeout_ms *= 2
@@ -148,7 +153,10 @@ class ResultsIncoming:
                                                               max_port=port_range[1])
 
     def get(self):
-        return self.results_receiver.recv_multipart()
+        logger.debug("Waiting for ResultsIncoming message")
+        m = self.results_receiver.recv_multipart()
+        logger.debug("Received ResultsIncoming message")
+        return m
 
     def close(self):
         self.results_receiver.close()
