@@ -53,12 +53,13 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
     """Executor is designed for executing heterogeneous tasks
        in terms of type/resource.
 
-    The RadicalPilotExecutor system has the following components:
+    The RadicalPilotExecutor system has the following main components:
 
-      1. "start"    :creating the RADICAL-executor session and pilot.
-      2. "translate":unwrap/identify/ out of parsl task and construct RP task.
-      3. "submit"   :translating and submitting Parsl tasks to Radical Pilot.
-      4. "shut_down":shutting down the RADICAL-executor components.
+      1. "start": Create and start the RADICAL-Pilot runtime components ``rp.Session``,
+          ``rp.PilotManager`` and ``rp.TaskManager``.
+      2. "translate": Unwrap, identify, and parse Parsl ``apps`` into ``rp.TaskDescription``.
+      3. "submit": Submit Parsl apps to ``rp.TaskManager``.
+      4. "shut_down": Shut down the RADICAL-Pilot runtime and all associated components.
 
     Here is a diagram
 
@@ -75,7 +76,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
       ----------------------------------------------------------------------------
 
     The RadicalPilotExecutor creates a ``rp.Session``, ``rp.TaskManager``,
-    and ``rp.PilotManager``. The executor receives the parsl apps from the
+    and ``rp.PilotManager``. The executor receives the Parsl apps from the
     DFK and translates these apps (in-memory) into ``rp.TaskDescription``
     object to be passed to the ``rp.TaskManager``. This executor has two
     submission mechanisms:
@@ -146,7 +147,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
     def task_state_cb(self, task, state):
         """
-        Update the state of Parsl Future tasks
+        Update the state of Parsl Future apps
         Based on RP task state callbacks.
         """
         if not task.uid.startswith('master'):
@@ -275,7 +276,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
     def unwrap(self, func, args):
         """
-        Unwrap a parsl app and its args for further processing.
+        Unwrap a Parsl app and its args for further processing.
 
         Parameters
         ----------
@@ -325,14 +326,14 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
     def task_translate(self, tid, func, parsl_resource_specification, args, kwargs):
         """
-        Convert parsl function to RADICAL-Pilot rp.TaskDescription
+        Convert Parsl function to RADICAL-Pilot rp.TaskDescription
         """
 
         task = rp.TaskDescription()
         task.name = func.__name__
 
         if parsl_resource_specification and isinstance(parsl_resource_specification, dict):
-            logger.debug('mapping parsl resource specifications >> rp resource specifications')
+            logger.debug('mapping Parsl resource specifications >> RP resource specifications')
             for key, val in parsl_resource_specification.items():
                 if key not in task.as_dict():
                     key = PARSL_RP_RESOURCE_MAP.get(key, None)
@@ -523,7 +524,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                                 ns=self.session.uid)
         parsl_tid = int(rp_tid.split('task.')[1])
 
-        logger.debug("got Task {0} from parsl-dfk".format(parsl_tid))
+        logger.debug("got Task {0} from Parsl-dfk".format(parsl_tid))
         task = self.task_translate(parsl_tid, func, resource_specification, args, kwargs)
 
         # assign task id for rp task
