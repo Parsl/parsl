@@ -118,7 +118,7 @@ def pytest_configure(config):
 
 
 @pytest.fixture(autouse=True, scope='session')
-def load_dfk_session(request, pytestconfig):
+def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
     """Load a dfk around entire test suite, except in local mode.
 
     The special path `local` indicates that configuration will not come
@@ -137,11 +137,18 @@ def load_dfk_session(request, pytestconfig):
             raise RuntimeError("DFK didn't start as None - there was a DFK from somewhere already")
 
         if hasattr(module, 'config'):
-            dfk = parsl.load(module.config)
+            parsl_conf = module.config
         elif hasattr(module, 'fresh_config'):
-            dfk = parsl.load(module.fresh_config())
+            parsl_conf = module.fresh_config()
         else:
             raise RuntimeError("Config module does not define config or fresh_config")
+
+        if parsl_conf.run_dir == "runinfo":  # the default
+            parsl_conf.run_dir = tmpd_cwd_session / parsl_conf.run_dir
+        dfk = parsl.load(parsl_conf)
+
+        for ex in dfk.executors.values():
+            ex.working_dir = tmpd_cwd_session
 
         yield
 
@@ -154,7 +161,7 @@ def load_dfk_session(request, pytestconfig):
 
 
 @pytest.fixture(autouse=True, scope='module')
-def load_dfk_local_module(request, pytestconfig):
+def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
     """Load the dfk around test modules, in local mode.
 
     If local_config is specified in the test module, it will be loaded using
@@ -177,7 +184,14 @@ def load_dfk_local_module(request, pytestconfig):
             assert callable(local_config)
             c = local_config()
             assert isinstance(c, parsl.Config)
+
+            if c.run_dir == "runinfo":  # the default
+                c.run_dir = tmpd_cwd_session / c.run_dir
+
             dfk = parsl.load(c)
+
+            for ex in dfk.executors.values():
+                ex.working_dir = tmpd_cwd_session
 
         if callable(local_setup):
             local_setup()
