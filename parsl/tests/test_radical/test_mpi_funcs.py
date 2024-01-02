@@ -17,6 +17,7 @@ apps = []
 
 
 @pytest.mark.local
+@pytest.mark.radical
 def test_radical_mpi(n=7):
     # rank size should be > 1 for the
     # radical runtime system to run this function in MPI env
