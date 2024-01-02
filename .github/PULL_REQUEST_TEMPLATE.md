@@ -18,4 +18,4 @@ Choose which options apply, and delete the ones which do not apply.
 - Bug fix
 - New feature
 - Update to human readable text: Documentation/error messages/comments
-- Code maintentance/cleanup
+- Code maintenance/cleanup
