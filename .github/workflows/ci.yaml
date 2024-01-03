@@ -13,23 +13,22 @@ jobs:
   main-test-suite:
     strategy:
       matrix:
-        python-version: ["3.8", "3.9"]
-#        , "3.10", "3.11", "3.12"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
         test-name: [
-            "lint"
-            "flake8"
-            "mypy"
-#            "local_thread_test"
-#            "htex_local_test"
-#            "htex_local_alternate_test"
-#            "wqex_local_test"
-#            "vineex_local_test"
-#            "radical_local_test"
-#            "config_local_test"
-#            "perf_test"
+            "lint",
+            "flake8",
+            "mypy",
+            "local_thread_test",
+            "htex_local_test",
+            "htex_local_alternate_test",
+            "wqex_local_test",
+            "vineex_local_test",
+            "radical_local_test",
+            "config_local_test",
+            "perf_test"
         ]
     runs-on: ubuntu-20.04
-    timeout-minutes: 60
+    timeout-minutes: 25
 
     steps:
     - uses: actions/checkout@master
@@ -88,16 +87,12 @@ jobs:
         bash -c '! grep ERROR runinfo*/*/monitoring_router.log'
 
     - name: Checking parsl-visualize
+      if: ${{ matrix.test-name == 'htex_local_test' }}
       run: |
         source .venv/bin/activate
         sudo apt-get install -y graphviz
         pip install .[monitoring]
         parsl/tests/test-viz.sh
-
-    - name: make coverage
-      run: |
-        source .venv/bin/activate
-        make coverage
 
     - name: Archive runinfo logs
       if: ${{ always() }}
