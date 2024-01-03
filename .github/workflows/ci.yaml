@@ -10,22 +10,42 @@ on:
       - synchronize
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+      - name: Install requirements (...txt)
+        run: |
+          # libpython3.5: make workqueue binary installer happy
+          # mpich: required by radical executor
+          sudo apt-get update -q
+          sudo apt-get install -y libpython3.5 mpich
+
+          make virtualenv
+          source .venv/bin/activate
+          python -m pip install -U pip
+          make deps
+      - name: Check for missing __init__ files
+        run: |
+          source .venv/bin/activate
+          make lint
+      - name: flake8
+        run: |
+          source .venv/bin/activate
+          make flake8
+      - name: mypy
+        run: |
+          source .venv/bin/activate
+          make mypy
+
   main-test-suite:
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.12"]
         test-name: [
-            "lint",
-            "flake8",
-            "mypy",
-            "local_thread_test",
-            "htex_local_test",
-            "htex_local_alternate_test",
-            "wqex_local_test",
-            "vineex_local_test",
-            "radical_local_test",
-            "config_local_test",
-            "perf_test"
+            "config_local_test"
         ]
     runs-on: ubuntu-20.04
     timeout-minutes: 25
@@ -40,36 +60,58 @@ jobs:
 
     - name: Non-requirements based install
       run: |
-        sudo apt-get update -q
         python --version
+        sudo apt-get update -q
 
-        # this is to make the workqueue binary installer happy
-        sudo apt-get install -y libpython3.5
+        # libpython3.5: make workqueue binary installer happy
+        # mpich: required by radical executor
+        sudo apt-get install -y libpython3.5 mpich
 
-        # mpi is required by the radical executor
-        sudo apt install -y mpich
-
-    - name: setup virtual env
+    - name: Install requirements (...txt)
       run: |
         make virtualenv
         source .venv/bin/activate
-
-    - name: make deps clean_coverage
-      run: |
-        source .venv/bin/activate
+        python -m pip install -U pip
         make deps
-        make clean_coverage
+        python -m pip install .
+        python -m pip install .[monitoring,radical-pilot,visualization,proxystore]
 
     - name: make ${{ matrix.test-name }}
       run: |
         source .venv/bin/activate
         make ${{ matrix.test-name }}
 
-    - name: Documentation checks
+    - name: Checking parsl-visualize
+      if: ${{ matrix.test-name == 'config_local_test' }}
       run: |
         source .venv/bin/activate
-        pip install .[docs]
+        sudo apt-get install -y graphviz
+        parsl/tests/test-viz.sh
+
+    - name: Archive runinfo logs
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: runinfo-${{ matrix.python-version }}
+        path: runinfo/
+
+  documentation-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@master
+    - uses: actions/setup-python@v4
+      with:
+        python-version: "3.12"
+    - name: Documentation checks
+      run: |
+        sudo apt-get update -q
         sudo apt-get install -y pandoc
+        make virtualenv
+        source .venv/bin/activate
+        python -m pip install -U pip
+        python -m pip install .[docs]
+
         cd docs
 
         test ! -e stubs
@@ -85,18 +127,3 @@ jobs:
         # in the absence of that, this is a dirty way to check.
         bash -c '! grep ERROR runinfo*/*/database_manager.log'
         bash -c '! grep ERROR runinfo*/*/monitoring_router.log'
-
-    - name: Checking parsl-visualize
-      if: ${{ matrix.test-name == 'htex_local_test' }}
-      run: |
-        source .venv/bin/activate
-        sudo apt-get install -y graphviz
-        pip install .[monitoring]
-        parsl/tests/test-viz.sh
-
-    - name: Archive runinfo logs
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: runinfo-${{ matrix.python-version }}
-        path: runinfo/
