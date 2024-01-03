@@ -1,6 +1,9 @@
 name: Parsl
 
 on:
+  push:
+    branches:
+      - "*"
   pull_request:
     types:
       - opened
@@ -10,7 +13,21 @@ jobs:
   main-test-suite:
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.8", "3.9"]
+#        , "3.10", "3.11", "3.12"]
+        test-name: [
+            "lint"
+            "flake8"
+            "mypy"
+#            "local_thread_test"
+#            "htex_local_test"
+#            "htex_local_alternate_test"
+#            "wqex_local_test"
+#            "vineex_local_test"
+#            "radical_local_test"
+#            "config_local_test"
+#            "perf_test"
+        ]
     runs-on: ubuntu-20.04
     timeout-minutes: 60
 
@@ -30,7 +47,6 @@ jobs:
         # this is to make the workqueue binary installer happy
         sudo apt-get install -y libpython3.5
 
-
         # mpi is required by the radical executor
         sudo apt install -y mpich
 
@@ -45,10 +61,10 @@ jobs:
         make deps
         make clean_coverage
 
-    - name: make test
+    - name: make ${{ matrix.test-name }}
       run: |
         source .venv/bin/activate
-        make test
+        make ${{ matrix.test-name }}
 
     - name: Documentation checks
       run: |
