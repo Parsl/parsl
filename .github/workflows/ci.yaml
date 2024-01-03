@@ -79,7 +79,7 @@ jobs:
     - name: make ${{ matrix.test-name }}
       run: |
         source .venv/bin/activate
-        make ${{ matrix.test-name }}
+        make local_thread_test htex_local_test htex_local_alternate_test wqex_local_test vineex_local_test radical_local_test config_local_test
 
     - name: Checking parsl-visualize
       if: ${{ matrix.test-name == 'config_local_test' }}
