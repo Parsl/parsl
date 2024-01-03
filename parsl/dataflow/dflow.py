@@ -526,9 +526,7 @@ class DataFlowKernel:
         # or do nothing?
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint(tasks=[task_record])
-        elif self.checkpoint_mode == 'manual' or \
-                self.checkpoint_mode == 'periodic' or \
-                self.checkpoint_mode == 'dfk_exit':
+        elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
             with self.checkpoint_lock:
                 self.checkpointable_tasks.append(task_record)
         elif self.checkpoint_mode is None:
@@ -1298,11 +1296,7 @@ class DataFlowKernel:
                         hashsum = task_record['hashsum']
                         if not hashsum:
                             continue
-                        t = {'hash': hashsum,
-                             'exception': None,
-                             'result': None}
-
-                        t['result'] = app_fu.result()
+                        t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
 
                         # We are using pickle here since pickle dumps to a file in 'ab'
                         # mode behave like a incremental log.
