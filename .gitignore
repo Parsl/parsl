@@ -62,6 +62,7 @@ htmlcov/
 coverage.xml
 *.cover
 .hypothesis/
+/.pytest/
 
 # Translations
 *.mo

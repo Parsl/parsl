@@ -3,6 +3,8 @@ import itertools
 import logging
 import os
 import pathlib
+import re
+import shutil
 import time
 import types
 import signal
@@ -44,17 +46,46 @@ def pytest_sessionstart(session):
 
 
 @pytest.fixture(scope="session")
-def tmpd_cwd_session():
-    n = datetime.now().strftime('%Y%m%d.%H%I%S')
-    with tempfile.TemporaryDirectory(dir=os.getcwd(), prefix=f".pytest-{n}-") as tmpd:
-        yield pathlib.Path(tmpd)
+def tmpd_cwd_session(pytestconfig):
+    config = re.sub(r"[^A-z0-9_-]+", "_", pytestconfig.getoption('config')[0])
+    cwd = pathlib.Path(os.getcwd())
+    pytest_dir = cwd / ".pytest"
+    pytest_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+
+    test_dir_prefix = "parsltest-"
+    link = pytest_dir / f"{test_dir_prefix}current"
+    link.unlink(missing_ok=True)
+    n = datetime.now().strftime('%Y%m%d.%H%M%S')
+    tmpd = tempfile.mkdtemp(dir=pytest_dir, prefix=f"{test_dir_prefix}{n}-{config}-")
+    tmpd = pathlib.Path(tmpd)
+    link.symlink_to(tmpd.name)
+    yield link
+
+    try:
+        preserve = int(os.getenv("PARSL_TEST_PRESERVE_NUM_RUNS", "3"))
+    except Exception:
+        preserve = 3
+
+    test_runs = sorted(
+        d for d in pytest_dir.glob(f"{test_dir_prefix}*")
+        if d.is_dir() and not d.is_symlink()
+    )
+    for run_to_remove in test_runs[:-preserve]:
+        run_to_remove.chmod(0o700)
+        for root, subdirnames, fnames in os.walk(run_to_remove):
+            rpath = pathlib.Path(root)
+            for d in subdirnames:
+                (rpath / d).lchmod(0o700)
+            for f in fnames:
+                (rpath / f).lchmod(0o600)
+        shutil.rmtree(run_to_remove)
 
 
 @pytest.fixture
 def tmpd_cwd(tmpd_cwd_session, request):
     prefix = f"{request.node.name}-"
-    with tempfile.TemporaryDirectory(dir=tmpd_cwd_session, prefix=prefix) as tmpd:
-        yield pathlib.Path(tmpd)
+    tmpd = tempfile.mkdtemp(dir=tmpd_cwd_session, prefix=prefix)
+    yield pathlib.Path(tmpd)
 
 
 def pytest_addoption(parser):
