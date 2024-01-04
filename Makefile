@@ -72,14 +72,17 @@ vineex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with taskvine_ex config
 wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with workqueue_ex config
 	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --random-order --durations 10
 
-.PHONY: radical_local_test
-radical_local_test:
+.PHONY: radical_setup
+radical_setup:
 	pip3 install ".[radical-pilot]"
 	mkdir -p ~/.radical/pilot/configs && echo '{"localhost": {"virtenv_mode": "local"}}' > ~/.radical/pilot/configs/resource_local.json
+
+.PHONY: radical_local_test
+radical_local_test: radical_setup
 	pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/local_radical.py --random-order --durations 10
 
 .PHONY: config_local_test
-config_local_test:
+config_local_test: radical_setup
 	pip3 install ".[monitoring,visualization,proxystore]"
 	pytest parsl/tests/ -k "not cleannet" --config local --random-order --durations 10
 
