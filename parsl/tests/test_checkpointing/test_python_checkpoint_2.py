@@ -23,29 +23,20 @@ def parsl_configured(run_dir, **kw):
 
 
 @python_app(cache=True)
-def random_app(i):
-    import random
-    return random.randint(i, 100000)
-
-
-def launch_n_random(n=2):
-    """1. Launch a few apps and write the checkpoint once a few have completed
-    """
-    d = [random_app(i) for i in range(0, n)]
-    return [i.result() for i in d]
+def uuid_app():
+    import uuid
+    return uuid.uuid4()
 
 
 @pytest.mark.local
-def test_loading_checkpoint(tmpd_cwd, n=4):
+def test_loading_checkpoint(tmpd_cwd):
     """Load memoization table from previous checkpoint
     """
     with parsl_configured(tmpd_cwd, checkpoint_mode="task_exit"):
         checkpoint_files = [os.path.join(parsl.dfk().run_dir, "checkpoint")]
-        results = launch_n_random(n)
+        result = uuid_app().result()
 
     with parsl_configured(tmpd_cwd, checkpoint_files=checkpoint_files):
-        relaunched = launch_n_random(n)
+        relaunched = uuid_app().result()
 
-    assert len(relaunched) == len(results) == n, "Expected all results to have n items"
-    for i in range(n):
-        assert relaunched[i] == results[i], "Expect relaunch to find cached results"
+    assert result == relaunched, "Expected following call to uuid_app to return cached uuid"
