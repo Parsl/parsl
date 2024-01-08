@@ -136,7 +136,7 @@ def test_bash_app_using_resource_spec():
 
 
 @python_app
-def mock_app(sleep_dur: float = 0.0, parsl_resource_specification: Dict = {}) -> Dict:
+def mock_app(sleep_dur: float = 0.0, parsl_resource_specification: Dict = {}):
     import os
     import time
     time.sleep(sleep_dur)

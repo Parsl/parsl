@@ -103,10 +103,13 @@ class MPITaskScheduler(NoopScheduler):
         super().__init__(pending_task_q, pending_result_q)
         self.scheduler = identify_scheduler()
         # PriorityQueue is threadsafe
-        self._backlog_queue: multiprocessing.Queue = queue.PriorityQueue()
+        self._backlog_queue: queue.PriorityQueue = queue.PriorityQueue()
         self._map_tasks_to_nodes: Dict[str, List[str]] = {}
         self.available_nodes = get_nodes_in_batchjob(self.scheduler)
-        self._free_node_counter: multiprocessing.Value = SpawnContext.Value("i", len(self.available_nodes))
+        self._free_node_counter = SpawnContext.Value("i", len(self.available_nodes))
+        # mp.Value has issues with mypy
+        # issue https://github.com/python/typeshed/issues/8799
+        # from mypy 0.981 onwards
         self.nodes_q = SpawnContext.Queue()
         for node in self.available_nodes:
             self.nodes_q.put(node)
@@ -121,11 +124,11 @@ class MPITaskScheduler(NoopScheduler):
         )
         acquired_nodes = []
         with self._free_node_counter.get_lock():
-            if num_nodes <= self._free_node_counter.value:
-                self._free_node_counter.value -= num_nodes
+            if num_nodes <= self._free_node_counter.value:  # type: ignore[attr-defined]
+                self._free_node_counter.value -= num_nodes  # type: ignore[attr-defined]
             else:
                 raise MPIResourceUnavailable(
-                    requested=num_nodes, available=self._free_node_counter.value
+                    requested=num_nodes, available=self._free_node_counter.value  # type: ignore[attr-defined]
                 )
 
             for i in range(num_nodes):
@@ -137,7 +140,7 @@ class MPITaskScheduler(NoopScheduler):
         for node in nodes:
             self.nodes_q.put(node)
         with self._free_node_counter.get_lock():
-            self._free_node_counter.value += len(nodes)
+            self._free_node_counter.value += len(nodes)  # type: ignore[attr-defined]
 
     def put_task(self, task_package: dict):
         user_ns = locals()

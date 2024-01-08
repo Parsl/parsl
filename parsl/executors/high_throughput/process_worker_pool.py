@@ -199,6 +199,7 @@ class Manager:
         self.monitoring_queue = self._mp_manager.Queue()
         self.pending_task_queue = SpawnContext.Queue()
         self.pending_result_queue = SpawnContext.Queue()
+        self.task_scheduler: NoopScheduler
         if self.enable_mpi_mode:
             self.task_scheduler = MPITaskScheduler(
                 self.pending_task_queue,
@@ -550,6 +551,7 @@ def execute_task(bufs, mpi_launcher: Optional[str] = None):
         worker_id = os.environ['PARSL_WORKER_RANK']
         nodes_for_task = resource_spec["MPI_NODELIST"].split(',')
         logger.info(f"Launching task on provisioned nodes: {nodes_for_task}")
+        assert mpi_launcher
         update_resource_spec_env_vars(mpi_launcher,
                                       resource_spec=resource_spec,
                                       node_info=nodes_for_task)
