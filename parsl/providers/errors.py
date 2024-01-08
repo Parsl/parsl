@@ -1,5 +1,7 @@
 from parsl.errors import ParslError
 
+import warnings
+
 
 class ExecutionProviderException(ParslError):
     """ Base class for all exceptions
@@ -54,6 +56,11 @@ class SubmitException(ExecutionProviderException):
         self.message = message
         self.stdout = stdout
         self.stderr = stderr
+
+    @property
+    def task_name(self) -> str:
+        warnings.warn("task_name is deprecated; use .job_name instead. This will be removed after 2024-06.", DeprecationWarning)
+        return self.job_name
 
     def __str__(self):
         # TODO: make this more user-friendly
