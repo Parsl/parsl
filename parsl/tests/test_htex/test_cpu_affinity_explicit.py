@@ -2,6 +2,7 @@ import logging
 import os
 import parsl
 import pytest
+import random
 from parsl.tests.configs.htex_local import fresh_config
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ def test_cpu_affinity_explicit():
 
     cores_as_list = list(available_cores)
 
-    single_core = cores_as_list[0]
+    single_core = random.choice(cores_as_list)
     affinity = f"list:{single_core}"
 
     logger.debug(f"Will test with affinity for one worker, one core: {affinity}")
