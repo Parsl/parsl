@@ -37,12 +37,15 @@ def test_cpu_affinity_explicit():
 
     logger.debug(f"config: {config}")
     # TODO: is there a `with` style for this, to properly deal with exceptions?
+
     parsl.load(config)
+    try:
 
-    worker_affinity = my_affinity().result()
-    logger.debug(f"worker reported this affinity: {worker_affinity}")
-    assert len(worker_affinity) == 1
-    assert worker_affinity == set((single_core,))
+        worker_affinity = my_affinity().result()
+        logger.debug(f"worker reported this affinity: {worker_affinity}")
+        assert len(worker_affinity) == 1
+        assert worker_affinity == set((single_core,))
 
-    parsl.dfk().cleanup()
-    parsl.clear()
+    finally:
+        parsl.dfk().cleanup()
+        parsl.clear()
