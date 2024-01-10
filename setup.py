@@ -15,7 +15,7 @@ extras_require = {
         'networkx>=2.5,<2.6',
         'Flask>=1.0.2',
         'flask_sqlalchemy',
-        'pandas<2',
+        'pandas<3',
         'plotly',
         'python-daemon'
     ],
@@ -29,6 +29,7 @@ extras_require = {
     'workqueue': ['work_queue'],
     'flux': ['pyyaml', 'cffi', 'jsonschema'],
     'proxystore': ['proxystore'],
+    'radical-pilot': ['radical.pilot'],
     # Disabling psi-j since github direct links are not allowed by pypi
     # 'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
 }
@@ -67,6 +68,7 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
     ],
     keywords=['Workflows', 'Scientific computing'],
     entry_points={'console_scripts':

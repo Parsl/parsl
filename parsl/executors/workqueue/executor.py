@@ -449,7 +449,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         input_files = []
         output_files = []
 
-        # Determine the input and output files that will exist at the workes:
+        # Determine the input and output files that will exist at the workers:
         input_files += [self._register_file(f) for f in kwargs.get("inputs", []) if isinstance(f, File)]
         output_files += [self._register_file(f) for f in kwargs.get("outputs", []) if isinstance(f, File)]
 
@@ -707,7 +707,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.collector_thread.join()
 
         logger.debug("Work Queue shutdown completed")
-        return True
 
     @wrap_with_logs
     def _collect_work_queue_results(self):
@@ -960,43 +959,42 @@ def _work_queue_submit_wait(*,
 
         # If the queue is not empty wait on the WorkQueue queue for a task
         task_found = True
-        if not q.empty():
-            while task_found and not should_stop.value:
-                # Obtain the task from the queue
-                t = q.wait(1)
-                if t is None:
-                    task_found = False
-                    continue
-                # When a task is found:
-                executor_task_id = t.tag
-                logger.debug("Completed Work Queue task {}, executor task {}".format(t.id, t.tag))
-                result_file = result_file_of_task_id.pop(t.tag)
+        while not q.empty() and task_found and not should_stop.value:
+            # Obtain the task from the queue
+            t = q.wait(1)
+            if t is None:
+                task_found = False
+                continue
+            # When a task is found:
+            executor_task_id = t.tag
+            logger.debug("Completed Work Queue task {}, executor task {}".format(t.id, t.tag))
+            result_file = result_file_of_task_id.pop(t.tag)
 
-                # A tasks completes 'succesfully' if it has result file.
-                # The check whether this file can load a serialized Python object
-                # happens later in the collector thread of the executor process.
-                logger.debug("Looking for result in {}".format(result_file))
-                if os.path.exists(result_file):
-                    logger.debug("Found result in {}".format(result_file))
-                    collector_queue.put_nowait(WqTaskToParsl(id=executor_task_id,
-                                                             result_received=True,
-                                                             result_file=result_file,
-                                                             reason=None,
-                                                             status=t.return_status))
-                # If a result file could not be generated, explain the
-                # failure according to work queue error codes.
-                else:
-                    reason = _explain_work_queue_result(t)
-                    logger.debug("Did not find result in {}".format(result_file))
-                    logger.debug("Wrapper Script status: {}\nWorkQueue Status: {}"
-                                 .format(t.return_status, t.result))
-                    logger.debug("Task with executor id {} / Work Queue id {} failed because:\n{}"
-                                 .format(executor_task_id, t.id, reason))
-                    collector_queue.put_nowait(WqTaskToParsl(id=executor_task_id,
-                                                             result_received=False,
-                                                             result_file=None,
-                                                             reason=reason,
-                                                             status=t.return_status))
+            # A tasks completes 'succesfully' if it has result file.
+            # The check whether this file can load a serialized Python object
+            # happens later in the collector thread of the executor process.
+            logger.debug("Looking for result in {}".format(result_file))
+            if os.path.exists(result_file):
+                logger.debug("Found result in {}".format(result_file))
+                collector_queue.put_nowait(WqTaskToParsl(id=executor_task_id,
+                                                         result_received=True,
+                                                         result_file=result_file,
+                                                         reason=None,
+                                                         status=t.return_status))
+            # If a result file could not be generated, explain the
+            # failure according to work queue error codes.
+            else:
+                reason = _explain_work_queue_result(t)
+                logger.debug("Did not find result in {}".format(result_file))
+                logger.debug("Wrapper Script status: {}\nWorkQueue Status: {}"
+                             .format(t.return_status, t.result))
+                logger.debug("Task with executor id {} / Work Queue id {} failed because:\n{}"
+                             .format(executor_task_id, t.id, reason))
+                collector_queue.put_nowait(WqTaskToParsl(id=executor_task_id,
+                                                         result_received=False,
+                                                         result_file=None,
+                                                         reason=reason,
+                                                         status=t.return_status))
     logger.debug("Exiting WorkQueue Monitoring Process")
     return 0
 

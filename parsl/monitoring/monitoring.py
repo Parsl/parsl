@@ -203,10 +203,10 @@ class MonitoringHub(RepresentationMixin):
                                                "logdir": self.logdir,
                                                "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                                "run_id": run_id
-                                       },
+                                               },
                                        name="Monitoring-Router-Process",
                                        daemon=True,
-        )
+                                       )
         self.router_proc.start()
 
         self.dbm_proc = ForkProcess(target=dbm_starter,
@@ -214,10 +214,10 @@ class MonitoringHub(RepresentationMixin):
                                     kwargs={"logdir": self.logdir,
                                             "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                             "db_url": self.logging_endpoint,
-                                    },
+                                            },
                                     name="Monitoring-DBM-Process",
                                     daemon=True,
-        )
+                                    )
         self.dbm_proc.start()
         self.logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
@@ -225,7 +225,7 @@ class MonitoringHub(RepresentationMixin):
                                        args=(self.logdir, self.resource_msgs, run_dir),
                                        name="Monitoring-Filesystem-Process",
                                        daemon=True
-        )
+                                       )
         self.filesystem_proc.start()
         self.logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
 
@@ -368,7 +368,7 @@ class MonitoringRouter:
                  run_id: str,
                  logging_level: int = logging.INFO,
                  atexit_timeout: int = 3    # in seconds
-                ):
+                 ):
         """ Initializes a monitoring configuration class.
 
         Parameters

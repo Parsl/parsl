@@ -3,14 +3,19 @@
 Please include a summary of the change and (optionally) which issue is fixed. Please also include
 relevant motivation and context.
 
+# Changed Behaviour
+
+Which existing user workflows or functionality will behave differently after this PR?
+
+# Fixes
+
 Fixes # (issue)
 
 ## Type of change
 
 Choose which options apply, and delete the ones which do not apply.
 
-- Bug fix (non-breaking change that fixes an issue)
-- New feature (non-breaking change that adds functionality)
-- Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- Documentation update
-- Code maintentance/cleanup
+- Bug fix
+- New feature
+- Update to human readable text: Documentation/error messages/comments
+- Code maintenance/cleanup

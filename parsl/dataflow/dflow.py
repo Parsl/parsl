@@ -262,9 +262,8 @@ class DataFlowKernel:
         """
         count = 0
         for dep in depends:
-            if isinstance(dep, Future):
-                if not dep.done():
-                    count += 1
+            if not dep.done():
+                count += 1
 
         return count
 
@@ -527,9 +526,7 @@ class DataFlowKernel:
         # or do nothing?
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint(tasks=[task_record])
-        elif self.checkpoint_mode == 'manual' or \
-                self.checkpoint_mode == 'periodic' or \
-                self.checkpoint_mode == 'dfk_exit':
+        elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
             with self.checkpoint_lock:
                 self.checkpointable_tasks.append(task_record)
         elif self.checkpoint_mode is None:
@@ -854,10 +851,13 @@ class DataFlowKernel:
                 try:
                     new_args.extend([dep.result()])
                 except Exception as e:
-                    if hasattr(dep, 'task_record'):
-                        tid = dep.task_record['id']
+                    # If this Future is associated with a task inside this DFK,
+                    # then refer to the task ID.
+                    # Otherwise make a repr of the Future object.
+                    if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
+                        tid = "task " + repr(dep.task_record['id'])
                     else:
-                        tid = None
+                        tid = repr(dep)
                     dep_failures.extend([(e, tid)])
             else:
                 new_args.extend([dep])
@@ -918,7 +918,7 @@ class DataFlowKernel:
             - executors (list or string) : List of executors this call could go to.
                     Default='all'
             - cache (Bool) : To enable memoization or not
-            - ignore_for_cache (list) : List of kwargs to be ignored for memoization/checkpointing
+            - ignore_for_cache (sequence) : List of kwargs to be ignored for memoization/checkpointing
             - app_kwargs (dict) : Rest of the kwargs to the fn passed as dict.
 
         Returns:
@@ -984,6 +984,7 @@ class DataFlowKernel:
                        'joins': None,
                        'try_id': 0,
                        'id': task_id,
+                       'task_launch_lock': threading.Lock(),
                        'time_invoked': datetime.datetime.now(),
                        'time_returned': None,
                        'try_time_launched': None,
@@ -1028,8 +1029,6 @@ class DataFlowKernel:
         logger.info("Task {} submitted for App {}, {}".format(task_id,
                                                               task_record['func_name'],
                                                               waiting_message))
-
-        task_record['task_launch_lock'] = threading.Lock()
 
         app_fu.add_done_callback(partial(self.handle_app_update, task_record))
         self.update_task_state(task_record, States.pending)
@@ -1091,7 +1090,14 @@ class DataFlowKernel:
         """
         run_dir = self.run_dir
         if channel.script_dir is None:
-            channel.script_dir = os.path.join(run_dir, 'submit_scripts')
+
+            # This case will be detected as unreachable by mypy, because of
+            # the type of script_dir, which is str, not Optional[str].
+            # The type system doesn't represent the initialized/uninitialized
+            # state of a channel so cannot represent that a channel needs
+            # its script directory set or not.
+
+            channel.script_dir = os.path.join(run_dir, 'submit_scripts')  # type: ignore[unreachable]
 
             # Only create dirs if we aren't on a shared-fs
             if not channel.isdir(run_dir):
@@ -1290,11 +1296,7 @@ class DataFlowKernel:
                         hashsum = task_record['hashsum']
                         if not hashsum:
                             continue
-                        t = {'hash': hashsum,
-                             'exception': None,
-                             'result': None}
-
-                        t['result'] = app_fu.result()
+                        t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
 
                         # We are using pickle here since pickle dumps to a file in 'ab'
                         # mode behave like a incremental log.

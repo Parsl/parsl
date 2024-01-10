@@ -9,8 +9,8 @@ user_opts = {'adhoc':
              {'username': 'YOUR_USERNAME',
               'script_dir': 'YOUR_SCRIPT_DIR',
               'remote_hostnames': ['REMOTE_HOST_URL_1', 'REMOTE_HOST_URL_2']
+              }
              }
-}
 
 
 config = Config(
@@ -26,7 +26,7 @@ config = Config(
                 channels=[SSHChannel(hostname=m,
                                      username=user_opts['adhoc']['username'],
                                      script_dir=user_opts['adhoc']['script_dir'],
-                ) for m in user_opts['adhoc']['remote_hostnames']]
+                                     ) for m in user_opts['adhoc']['remote_hostnames']]
             )
         )
     ],
