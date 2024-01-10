@@ -178,7 +178,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     enable_mpi_mode: bool
         If enabled, MPI launch prefixes will be composed for the batch scheduler based on
         the nodes available in each batch job and the resource_specification dict passed
-        from the app
+        from the app. This is an experimental feature, please refer to the following doc section
+        before use:  https://parsl.readthedocs.io/en/stable/userguide/mpi_apps.html
 
     mpi_launcher: str
         This field is only used if enable_mpi_mode is set. Select one from the
