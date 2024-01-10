@@ -3,7 +3,7 @@ import os
 import mock
 import pytest
 import pickle
-from parsl.executors.high_throughput.mpi_resource_management import NoopScheduler, MPITaskScheduler
+from parsl.executors.high_throughput.mpi_resource_management import TaskScheduler, MPITaskScheduler
 from parsl.multiprocessing import SpawnContext
 from parsl.serialize import pack_res_spec_apply_message, unpack_res_spec_apply_message
 
@@ -19,7 +19,7 @@ def set_pbs_nodefile_envvars():
 @pytest.mark.local
 def test_NoopScheduler():
     task_q, result_q = SpawnContext.Queue(), SpawnContext.Queue()
-    scheduler = NoopScheduler(task_q, result_q)
+    scheduler = TaskScheduler(task_q, result_q)
 
     scheduler.put_task("TaskFoo")
     assert task_q.get() == "TaskFoo"

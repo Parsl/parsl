@@ -29,7 +29,7 @@ from parsl.executors.high_throughput.probe import probe_addresses
 from parsl.multiprocessing import SpawnContext
 from parsl.serialize import unpack_res_spec_apply_message, serialize
 from parsl.executors.high_throughput.mpi_resource_management import (
-    NoopScheduler,
+    TaskScheduler,
     MPITaskScheduler
 )
 
@@ -199,14 +199,14 @@ class Manager:
         self.monitoring_queue = self._mp_manager.Queue()
         self.pending_task_queue = SpawnContext.Queue()
         self.pending_result_queue = SpawnContext.Queue()
-        self.task_scheduler: NoopScheduler
+        self.task_scheduler: TaskScheduler
         if self.enable_mpi_mode:
             self.task_scheduler = MPITaskScheduler(
                 self.pending_task_queue,
                 self.pending_result_queue,
             )
         else:
-            self.task_scheduler = NoopScheduler(
+            self.task_scheduler = TaskScheduler(
                 self.pending_task_queue,
                 self.pending_result_queue
             )

@@ -75,7 +75,7 @@ class MPIResourceUnavailable(Exception):
         return f"MPIResourceUnavailable(requested={self.requested} available={self.available}"
 
 
-class NoopScheduler:
+class TaskScheduler:
     def __init__(
         self,
         pending_task_q: multiprocessing.Queue,
@@ -94,7 +94,7 @@ class NoopScheduler:
         return self.pending_result_q.put(result)
 
 
-class MPITaskScheduler(NoopScheduler):
+class MPITaskScheduler(TaskScheduler):
     def __init__(
         self,
         pending_task_q: multiprocessing.Queue,
