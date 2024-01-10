@@ -110,7 +110,7 @@ class MPITaskScheduler(TaskScheduler):
         # mp.Value has issues with mypy
         # issue https://github.com/python/typeshed/issues/8799
         # from mypy 0.981 onwards
-        self.nodes_q = SpawnContext.Queue()
+        self.nodes_q: queue.Queue = queue.Queue()
         for node in self.available_nodes:
             self.nodes_q.put(node)
 
