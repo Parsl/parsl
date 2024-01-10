@@ -1,11 +1,6 @@
-import concurrent.futures
 import contextlib
 import logging
-import multiprocessing
 import os
-import queue
-import random
-import time
 import typing
 
 
@@ -14,7 +9,6 @@ import unittest
 
 import parsl
 from parsl.app.app import python_app
-from parsl.multiprocessing import SpawnContext
 from parsl.tests.configs.htex_local import fresh_config
 from typing import Dict
 from parsl.executors.high_throughput.mpi_resource_management import (
@@ -23,7 +17,10 @@ from parsl.executors.high_throughput.mpi_resource_management import (
     get_nodes_in_batchjob,
     identify_scheduler,
 )
-from parsl.executors.high_throughput.mpi_resource_management import MPIResourceUnavailable
+from parsl.executors.high_throughput.mpi_prefix_composer import (
+    validate_resource_spec,
+    InvalidResourceSpecification
+)
 
 EXECUTOR_LABEL = "MPI_TEST"
 
@@ -127,3 +124,22 @@ def test_top_level():
         scheduler = identify_scheduler()
         nodelist = get_nodes_in_batchjob(scheduler)
         assert len(nodelist) > 0
+
+
+@pytest.mark.local
+@pytest.mark.parametrize(
+    "resource_spec, exception",
+    (
+        ({"NUM_NODES": 2, "RANKS_PER_NODE": 1}, None),
+        ({"LAUNCHER_OPTIONS": "--debug_foo"}, None),
+        ({"NUM_NODES": 2, "BAD_OPT": 1}, InvalidResourceSpecification),
+        ({}, None),
+    )
+)
+def test_resource_spec(resource_spec: Dict, exception):
+    if exception:
+        with pytest.raises(exception):
+            validate_resource_spec(resource_spec)
+    else:
+        result = validate_resource_spec(resource_spec)
+        assert result

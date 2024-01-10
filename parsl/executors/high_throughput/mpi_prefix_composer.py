@@ -1,11 +1,35 @@
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Set
 
 logger = logging.getLogger(__name__)
 
 VALID_LAUNCHERS = ('srun',
                    'aprun',
                    'mpiexec')
+
+
+class InvalidResourceSpecification(Exception):
+    """Exception raised when Invalid keys are supplied via resource specification"""
+    def __init__(self, invalid_keys: Set[str]):
+        self.invalid_keys = invalid_keys
+
+    def __repr__(self):
+        return f"Invalid resource specification options supplied: {self.invalid_keys}"
+
+    def __str__(self):
+        return self.__repr__()
+
+
+def validate_resource_spec(resource_spec: Dict[str, str]) -> bool:
+    user_keys = set(resource_spec.keys())
+    legal_keys = set(("RANKS_PER_NODE",
+                      "NUM_NODES",
+                      "LAUNCHER_OPTIONS",
+                      ))
+    invalid_keys = user_keys - legal_keys
+    if invalid_keys:
+        raise InvalidResourceSpecification(invalid_keys)
+    return True
 
 
 def compose_mpiexec_launch_cmd(

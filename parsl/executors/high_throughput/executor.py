@@ -20,7 +20,10 @@ from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
     BadMessage, ScalingFailed,
 )
-from parsl.executors.high_throughput.mpi_prefix_composer import VALID_LAUNCHERS
+from parsl.executors.high_throughput.mpi_prefix_composer import (
+    VALID_LAUNCHERS,
+    validate_resource_spec
+)
 
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.base import ExecutionProvider
@@ -568,6 +571,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         Returns:
               Future
         """
+        validate_resource_spec(resource_specification)
 
         if self.bad_state_is_set:
             raise self.executor_exception
