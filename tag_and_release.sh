@@ -2,7 +2,7 @@
 set -euf -o pipefail
 
 create_tag () {
-    if [ -z "$1" ]
+    if [[ -z "$1" ]]
       then
         VERSION="unknown"
       else
@@ -25,30 +25,6 @@ create_tag () {
     echo "Pushing tag"
     git push origin --tags
 
-}
-
-package() {
-
-    rm -f dist/*
-
-    echo "======================================================================="
-    echo "Starting clean builds"
-    echo "======================================================================="
-    python3 setup.py sdist
-    python3 setup.py bdist_wheel
-
-    echo "======================================================================="
-    echo "Done with builds"
-    echo "======================================================================="
-
-
-}
-
-release () {
-    echo "======================================================================="
-    echo "Push to PyPi. This will require your username and password"
-    echo "======================================================================="
-    twine upload dist/*
 }
 
 update_version () {

@@ -1,6 +1,9 @@
 name: Parsl
 
 on:
+  push:
+    branches:
+      - "*"
   pull_request:
     types:
       - opened
@@ -45,12 +48,8 @@ jobs:
       run: |
         make virtualenv
         source .venv/bin/activate
-
-    - name: make deps clean_coverage
-      run: |
-        source .venv/bin/activate
-        make deps
-        make clean_coverage
+        pip install -U pip
+        pip install flake8 tox
 
     - name: make test
       run: |
