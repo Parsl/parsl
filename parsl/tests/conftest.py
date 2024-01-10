@@ -48,6 +48,12 @@ def pytest_sessionstart(session):
 
 @pytest.fixture(scope="session")
 def tmpd_cwd_session(pytestconfig):
+    def _chmod(path: pathlib.Path, mode: int):
+        try:
+            path.lchmod(mode)  # support BSD and derivatives
+        except NotImplementedError:
+            path.chmod(mode)
+
     config = re.sub(r"[^A-z0-9_-]+", "_", pytestconfig.getoption('config')[0])
     cwd = pathlib.Path(os.getcwd())
     pytest_dir = cwd / ".pytest"
@@ -76,9 +82,10 @@ def tmpd_cwd_session(pytestconfig):
         for root, subdirnames, fnames in os.walk(run_to_remove):
             rpath = pathlib.Path(root)
             for d in subdirnames:
-                (rpath / d).lchmod(0o700)
+                _chmod(rpath / d, 0o700)
             for f in fnames:
-                (rpath / f).lchmod(0o600)
+                _chmod(rpath / f, 0o600)
+
         shutil.rmtree(run_to_remove)
 
 
