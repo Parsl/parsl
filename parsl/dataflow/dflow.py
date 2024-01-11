@@ -177,7 +177,9 @@ class DataFlowKernel:
 
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.
-        self.job_status_poller = JobStatusPoller(self)
+        self.job_status_poller = JobStatusPoller(strategy=self.config.strategy,
+                                                 max_idletime=self.config.max_idletime,
+                                                 dfk=self)
 
         self.executors: Dict[str, ParslExecutor] = {}
 
