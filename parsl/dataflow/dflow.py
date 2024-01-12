@@ -177,7 +177,9 @@ class DataFlowKernel:
 
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.
-        self.job_status_poller = JobStatusPoller(self)
+        self.job_status_poller = JobStatusPoller(strategy=self.config.strategy,
+                                                 max_idletime=self.config.max_idletime,
+                                                 dfk=self)
 
         self.executors: Dict[str, ParslExecutor] = {}
 
@@ -262,9 +264,8 @@ class DataFlowKernel:
         """
         count = 0
         for dep in depends:
-            if isinstance(dep, Future):
-                if not dep.done():
-                    count += 1
+            if not dep.done():
+                count += 1
 
         return count
 
@@ -527,9 +528,7 @@ class DataFlowKernel:
         # or do nothing?
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint(tasks=[task_record])
-        elif self.checkpoint_mode == 'manual' or \
-                self.checkpoint_mode == 'periodic' or \
-                self.checkpoint_mode == 'dfk_exit':
+        elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
             with self.checkpoint_lock:
                 self.checkpointable_tasks.append(task_record)
         elif self.checkpoint_mode is None:
@@ -854,10 +853,13 @@ class DataFlowKernel:
                 try:
                     new_args.extend([dep.result()])
                 except Exception as e:
-                    if hasattr(dep, 'task_record'):
-                        tid = dep.task_record['id']
+                    # If this Future is associated with a task inside this DFK,
+                    # then refer to the task ID.
+                    # Otherwise make a repr of the Future object.
+                    if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
+                        tid = "task " + repr(dep.task_record['id'])
                     else:
-                        tid = None
+                        tid = repr(dep)
                     dep_failures.extend([(e, tid)])
             else:
                 new_args.extend([dep])
@@ -1296,11 +1298,7 @@ class DataFlowKernel:
                         hashsum = task_record['hashsum']
                         if not hashsum:
                             continue
-                        t = {'hash': hashsum,
-                             'exception': None,
-                             'result': None}
-
-                        t['result'] = app_fu.result()
+                        t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
 
                         # We are using pickle here since pickle dumps to a file in 'ab'
                         # mode behave like a incremental log.
