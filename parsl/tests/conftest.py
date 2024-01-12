@@ -3,6 +3,8 @@ import itertools
 import logging
 import os
 import pathlib
+import re
+import shutil
 import time
 import types
 import signal
@@ -45,17 +47,46 @@ def pytest_sessionstart(session):
 
 
 @pytest.fixture(scope="session")
-def tmpd_cwd_session():
-    n = datetime.now().strftime('%Y%m%d.%H%I%S')
-    with tempfile.TemporaryDirectory(dir=os.getcwd(), prefix=f".pytest-{n}-") as tmpd:
-        yield pathlib.Path(tmpd)
+def tmpd_cwd_session(pytestconfig):
+    config = re.sub(r"[^A-z0-9_-]+", "_", pytestconfig.getoption('config')[0])
+    cwd = pathlib.Path(os.getcwd())
+    pytest_dir = cwd / ".pytest"
+    pytest_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+
+    test_dir_prefix = "parsltest-"
+    link = pytest_dir / f"{test_dir_prefix}current"
+    link.unlink(missing_ok=True)
+    n = datetime.now().strftime('%Y%m%d.%H%M%S')
+    tmpd = tempfile.mkdtemp(dir=pytest_dir, prefix=f"{test_dir_prefix}{n}-{config}-")
+    tmpd = pathlib.Path(tmpd)
+    link.symlink_to(tmpd.name)
+    yield link
+
+    try:
+        preserve = int(os.getenv("PARSL_TEST_PRESERVE_NUM_RUNS", "3"))
+    except Exception:
+        preserve = 3
+
+    test_runs = sorted(
+        d for d in pytest_dir.glob(f"{test_dir_prefix}*")
+        if d.is_dir() and not d.is_symlink()
+    )
+    for run_to_remove in test_runs[:-preserve]:
+        run_to_remove.chmod(0o700)
+        for root, subdirnames, fnames in os.walk(run_to_remove):
+            rpath = pathlib.Path(root)
+            for d in subdirnames:
+                (rpath / d).lchmod(0o700)
+            for f in fnames:
+                (rpath / f).lchmod(0o600)
+        shutil.rmtree(run_to_remove)
 
 
 @pytest.fixture
 def tmpd_cwd(tmpd_cwd_session, request):
     prefix = f"{request.node.name}-"
-    with tempfile.TemporaryDirectory(dir=tmpd_cwd_session, prefix=prefix) as tmpd:
-        yield pathlib.Path(tmpd)
+    tmpd = tempfile.mkdtemp(dir=tmpd_cwd_session, prefix=prefix)
+    yield pathlib.Path(tmpd)
 
 
 def pytest_addoption(parser):
@@ -119,7 +150,7 @@ def pytest_configure(config):
 
 
 @pytest.fixture(autouse=True, scope='session')
-def load_dfk_session(request, pytestconfig):
+def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
     """Load a dfk around entire test suite, except in local mode.
 
     The special path `local` indicates that configuration will not come
@@ -140,11 +171,18 @@ def load_dfk_session(request, pytestconfig):
             raise RuntimeError("DFK didn't start as None - there was a DFK from somewhere already")
 
         if hasattr(module, 'config'):
-            dfk = parsl.load(module.config)
+            parsl_conf = module.config
         elif hasattr(module, 'fresh_config'):
-            dfk = parsl.load(module.fresh_config())
+            parsl_conf = module.fresh_config()
         else:
             raise RuntimeError("Config module does not define config or fresh_config")
+
+        if parsl_conf.run_dir == "runinfo":  # the default
+            parsl_conf.run_dir = tmpd_cwd_session / parsl_conf.run_dir
+        dfk = parsl.load(parsl_conf)
+
+        for ex in dfk.executors.values():
+            ex.working_dir = tmpd_cwd_session
 
         yield
 
@@ -157,7 +195,7 @@ def load_dfk_session(request, pytestconfig):
 
 
 @pytest.fixture(autouse=True, scope='module')
-def load_dfk_local_module(request, pytestconfig):
+def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
     """Load the dfk around test modules, in local mode.
 
     If local_config is specified in the test module, it will be loaded using
@@ -181,7 +219,14 @@ def load_dfk_local_module(request, pytestconfig):
             assert callable(local_config)
             c = local_config()
             assert isinstance(c, parsl.Config)
+
+            if c.run_dir == "runinfo":  # the default
+                c.run_dir = tmpd_cwd_session / c.run_dir
+
             dfk = parsl.load(c)
+
+            for ex in dfk.executors.values():
+                ex.working_dir = tmpd_cwd_session
 
         if callable(local_setup):
             local_setup()
