@@ -3,14 +3,25 @@ from setuptools import setup, find_packages
 with open('parsl/version.py') as f:
     exec(f.read())
 
-with open('requirements.txt') as f:
-    install_requires = f.readlines()
+install_requires = [
+    "pyzmq>=17.1.2",
+    "typeguard>=2.10,<3",
+    "typing-extensions>=4.6,<5",
+    "six",
+    "globus-sdk",
+    "dill",
+    "tblib",
+    "requests",
+    "paramiko",
+    "psutil>=5.5.1",
+    "setproctitle",
+]
 
 extras_require = {
-    'monitoring' : [
+    'monitoring': [
         'sqlalchemy>=1.4,<2'
     ],
-    'visualization' : [
+    'visualization': [
         'pydot',
         'networkx>=2.5,<2.6',
         'Flask>=1.0.2',
@@ -19,17 +30,37 @@ extras_require = {
         'plotly',
         'python-daemon'
     ],
-    'aws' : ['boto3'],
-    'kubernetes' : ['kubernetes'],
-    'oauth_ssh' : ['oauth-ssh>=0.9'],
-    'docs' : ['nbsphinx', 'sphinx_rtd_theme', 'ipython<=8.6.0'],
-    'google_cloud' : ['google-auth', 'google-api-python-client'],
-    'gssapi' : ['python-gssapi'],
-    'azure' : ['azure<=4', 'msrestazure'],
+    'aws': ['boto3'],
+    'kubernetes': ['kubernetes'],
+    'oauth_ssh': ['oauth-ssh>=0.9'],
+    'docs': ['nbsphinx', 'sphinx_rtd_theme', 'ipython<=8.6.0'],
+    'google_cloud': ['google-auth', 'google-api-python-client'],
+    'gssapi': ['python-gssapi'],
+    'azure': ['azure<=4', 'msrestazure'],
     'workqueue': ['work_queue'],
     'flux': ['pyyaml', 'cffi', 'jsonschema'],
     'proxystore': ['proxystore'],
     'radical-pilot': ['radical.pilot'],
+    'test': [
+        'flake8==6.1.0',
+        'ipyparallel',
+        'pandas',
+        'pytest>=7.4.0,<8',
+        'pytest-cov',
+        'pytest-random-order',
+        'mock>=1.0.0',
+        'mpi4py',
+        'nbsphinx',
+        'sphinx_rtd_theme',
+        'mypy==1.5.1',
+        'types-python-dateutil',
+        'types-requests',
+        'types-six',
+        'types-paramiko',
+        'Sphinx==4.5.0',
+        'wheel',
+    ],
+
     # Disabling psi-j since github direct links are not allowed by pypi
     # 'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
 }
