@@ -849,7 +849,7 @@ def _work_queue_submit_wait(*,
             break
 
         # Submit tasks
-        while task_queue.qsize() > 0 and not should_stop.value:
+        while task_queue.qsize() > 0 or q.empty() and not should_stop.value:
             # Obtain task from task_queue
             try:
                 task = task_queue.get(timeout=1)
