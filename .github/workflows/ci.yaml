@@ -53,6 +53,16 @@ jobs:
 
     - name: make test
       run: |
+        echo BENC ROOT
+        ls -l /
+
+        echo PROC LS
+        ls -l /proc
+
+        echo BENC ATTEMPT TO MOUNT PROC
+
+        sudo mount -t proc proc /proc
+
         source .venv/bin/activate
 
         # temporary; until test-matrixification
