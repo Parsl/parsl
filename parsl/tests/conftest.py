@@ -71,11 +71,16 @@ def tmpd_cwd_session(pytestconfig):
         d for d in pytest_dir.glob(f"{test_dir_prefix}*")
         if d.is_dir() and not d.is_symlink()
     )
+    logger.info(f"BENC: test_runs: {test_runs}")
     for run_to_remove in test_runs[:-preserve]:
+        logger.info(f"BENC: run to remove {run_to_remove}")
         run_to_remove.chmod(0o700)
         for root, subdirnames, fnames in os.walk(run_to_remove):
+            logger.info(f"BENC:     root, subdirnames, fnames = {(root, subdirnames, fnames)}")
             rpath = pathlib.Path(root)
+            logger.info(f"BENC:     rpath = {rpath}")
             for d in subdirnames:
+                logger.info(f"BENC:         d = {d}")
                 (rpath / d).lchmod(0o700)
             for f in fnames:
                 (rpath / f).lchmod(0o600)
