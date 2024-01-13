@@ -72,7 +72,6 @@ def tmpd_cwd_session(pytestconfig):
     logger.info(f"BENC: exec prefix = {sys.exec_prefix}")
 
     logger.info(f"BENC: python executable {sys.executable}")
-    import pathlib
     logger.info(f"BENC: resolved python executable {pathlib.Path(sys.executable).resolve()}")
 
     test_runs = sorted(
