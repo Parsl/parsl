@@ -67,6 +67,17 @@ def tmpd_cwd_session(pytestconfig):
     except Exception:
         preserve = 3
 
+    logger.info("BENC: python info")
+    import sys
+    logger.info(f"BENC: exec prefix = {sys.exec_prefix}")
+
+    e = sys.executable
+
+    logger.info(f"BENC: python executable {sys.executable}")
+    import pathlib
+    logger.info(f"BENC: resolved python executable {pathlib.Path(sys.executable).resolve()}")
+    
+
     test_runs = sorted(
         d for d in pytest_dir.glob(f"{test_dir_prefix}*")
         if d.is_dir() and not d.is_symlink()
