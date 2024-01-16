@@ -11,12 +11,12 @@ export HYDRA_LAUNCHER=fork
 export OMPI_MCA_rmaps_base_oversubscribe=yes
 MPI=$(MPICH)
 
-TOX_TARGETS= mypy local_thread_test htex_local_test htex_local_alternate_test radical_local_test config_local_test site_test_selector site_test_local perf_test
+SIMPLE_TOX_TARGETS= mypy local_thread_test htex_local_test htex_local_alternate_test config_local_test site_test_selector site_test_local perf_test
 
 .PHONY: help
 help: ## me
 	@grep -E '^[0-9a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
-	@/bin/echo -e "Additionally, the main test targets are:\n  $(TOX_TARGETS)"
+	@/bin/echo -e "Additionally, the main test targets are:\n  $(SIMPLE_TOX_TARGETS)"
 
 VENV = .venv
 .PHONY: virtualenv
@@ -32,12 +32,17 @@ lint: ## run linter script
 flake8:  ## run flake
 	flake8 parsl/
 
-.PHONY: $(TOX_TARGETS)
-$(TOX_TARGETS):  ## Run set of tests
+.PHONY: SIMPLE_TOX_TARGETS
+$(SIMPLE_TOX_TARGETS):  ## Run set of tests
 	tox -e $@
 
 $(CCTOOLS_INSTALL):	#CCtools contains both taskvine and workqueue so install only once
 	parsl/executors/taskvine/install-taskvine.sh
+
+.PHONY: radical_local_test
+radical_local_test:
+	mkdir -p ~/.radical/pilot/configs && echo '{"localhost": {"virtenv_mode": "local"}}' > ~/.radical/pilot/configs/resource_local.json
+	tox -e $@
 
 .PHONY: wqex_local_test vineex_local_test
 wqex_local_test vineex_local_test: $(CCTOOLS_INSTALL)

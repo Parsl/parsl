@@ -65,9 +65,6 @@ extras_require = {
         'Sphinx==4.5.0',
         'wheel',
     ],
-
-    # Disabling psi-j since github direct links are not allowed by pypi
-    # 'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
 }
 extras_require['all'] = sum(extras_require.values(), [])
 
