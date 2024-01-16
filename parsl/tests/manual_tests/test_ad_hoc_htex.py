@@ -15,6 +15,7 @@ config = Config(
             label='AdHoc',
             max_workers=2,
             worker_logdir_root="/scratch/midway2/yadunand/parsl_scripts",
+            encrypted=True,
             provider=AdHocProvider(
                 worker_init="source /scratch/midway2/yadunand/parsl_env_setup.sh",
                 channels=[SSHChannel(hostname=m,

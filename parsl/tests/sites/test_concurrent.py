@@ -17,6 +17,7 @@ def make_config():
                 max_workers=2,
                 heartbeat_period=2,
                 heartbeat_threshold=4,
+                encrypted=True,
             )
         ],
         strategy='none',
