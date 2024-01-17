@@ -83,8 +83,9 @@ def tmpd_cwd_session(pytestconfig):
 
 
 @pytest.fixture
-def tmpd_cwd(tmpd_cwd_session, request):
-    prefix = f"{request.node.name}-"
+def tmpd_cwd(tmpd_cwd_session, request: pytest.FixtureRequest):
+    node_name = re.sub(r'[^\w\s-]', '_', request.node.name)
+    prefix = f"{node_name}-"
     tmpd = tempfile.mkdtemp(dir=tmpd_cwd_session, prefix=prefix)
     yield pathlib.Path(tmpd)
 
