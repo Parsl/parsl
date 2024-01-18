@@ -45,6 +45,7 @@ class File:
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
+        self.query = parsed_url.query
         self.local_path: Optional[str] = None
 
     def cleancopy(self) -> "File":
@@ -65,7 +66,8 @@ class File:
                   f"scheme={self.scheme} " \
                   f"netloc={self.netloc} " \
                   f"path={self.path} " \
-                  f"filename={self.filename}"
+                  f"filename={self.filename} " \
+                  f"query={self.query}"
         if self.local_path is not None:
             content += f" local_path={self.local_path}"
 
