@@ -1,3 +1,4 @@
+import concurrent.futures
 import logging
 from functools import partial
 import subprocess
@@ -47,19 +48,17 @@ To run Falcon data_provider
             # Extract the message and host from the data
             host = data.get("host", "No host provided")
             port = data.get("port", "No port provided")
-            file_path = data.get("file_path", "No file path provided")
+            directory_path = data.get("directory_path", "No file path provided")
 
             # Start the sender
             sender_command = ["falcon", "sender", "--host", host, "--port", port, "--data_dir",
-                              file_path, "--method", "probe"]
-            print(sender_command)
-            time.sleep(0.1)
+                              directory_path, "--method", "probe"]
             try:
                 subprocess.run(sender_command, check=True)
             except subprocess.CalledProcessError as e:
-                print(f"Command failed with exit code {e.returncode}: {e.stderr}")
+                raise Exception(f"Command failed with exit code {e.returncode}: {e.stderr}")
             except FileNotFoundError:
-                print("The 'falcon' command was not found. Make sure it's installed and in your system's PATH.")
+                raise Exception("The 'falcon' command was not found. Make sure it's installed and in your system's PATH.")
 
             # Send the response back to the client
             zmq_socket.send_string("Received")
@@ -146,36 +145,66 @@ class FalconStaging(Staging, RepresentationMixin):
         'directory_path' --method probe"
         - sleep for 0.1 seconds (in order for the receiver instance to run before sender instance)
         """
-        zmq_context = zmq.Context()
-
-        # Initialize a REQ socket and connect to the specified netloc
-        zmq_socket = zmq_context.socket(zmq.REQ)
-        zmq_socket.connect("tcp://" + directory.netloc + ":5555")
-
-        # Define the data to send
-        data = {
-            "host": self.host_ip,
-            "port": directory.query,
-            "directory_path": directory.path
-        }
-
-        # Convert the data to a JSON string
-        json_data = json.dumps(data)
-
-        # Send the JSON data
-        zmq_socket.send_string(json_data)
-        zmq_socket.close()
-        zmq_context.term()
-
         receiver_command = ["falcon", "receiver", "--host", self.host_ip, "--port", directory.query, "--data_dir",
                             working_dir]
 
-        try:
-            subprocess.run(receiver_command, check=True)
-        except subprocess.CalledProcessError as e:
-            raise Exception(f"Command failed with exit code {e.returncode}: {e.stderr}")
-        except FileNotFoundError:
-            raise Exception("The 'falcon' command was not found. Make sure it's installed and in your system's PATH.")
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Submit the run_sender_command function with the sender_command as an argument
+            future = executor.submit(run_receiver_command, receiver_command)
+
+            zmq_context = zmq.Context()
+
+            # Initialize a REQ socket and connect to the specified netloc
+            zmq_socket = zmq_context.socket(zmq.REQ)
+            zmq_socket.connect("tcp://" + directory.netloc + ":5555")
+
+            # Define the data to send
+            data = {
+                "host": self.host_ip,
+                "port": directory.query,
+                "directory_path": directory.path
+            }
+
+            # Convert the data to a JSON string
+            json_data = json.dumps(data)
+
+            # Send the JSON data
+            zmq_socket.send_string(json_data)
+            zmq_socket.close()
+            zmq_context.term()
+
+            try:
+                # Wait for the command to finish
+                future.result()
+            except Exception as e:
+                # Raise error encountered during the execution of the command
+                logger.exception(f"Error during Falcon transfer initialization: {e}")
+                raise
+
+def run_receiver_command(receiver_command):
+    """
+    Run a command using subprocess.run and return the result.
+
+    Parameters:
+    - receiver_command (list): The command to be run as a list of strings.
+
+    Returns:
+    - CompletedProcess: An object representing the result of the command execution.
+
+    Raises:
+    - subprocess.CalledProcessError: If the command returns a non-zero exit code and check=True.
+    - Exception: If any other exception occurs during the command execution.
+    """
+    try:
+        result = subprocess.run(receiver_command, check=True)
+        return result
+    except subprocess.CalledProcessError as e:
+        raise Exception(f"Command failed with exit code {e.returncode}: {e.stderr}")
+    except FileNotFoundError:
+        raise Exception("The 'falcon' command was not found. Make sure it's installed and in your system's PATH.")
+    except Exception as e:
+        # Handle other exceptions if needed
+        raise
 
 
 def _falcon_stage_in(provider, executor, parent_fut=None, outputs=[], _parsl_staging_inhibit=True):
