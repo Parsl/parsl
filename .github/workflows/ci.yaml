@@ -10,7 +10,7 @@ jobs:
   main-test-suite:
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
     runs-on: ubuntu-20.04
     timeout-minutes: 60
 
@@ -18,7 +18,7 @@ jobs:
     - uses: actions/checkout@master
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -85,7 +85,7 @@ jobs:
 
     - name: Archive runinfo logs
       if: ${{ always() }}
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: runinfo-${{ matrix.python-version }}
         path: runinfo/
