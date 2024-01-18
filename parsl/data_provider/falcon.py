@@ -180,7 +180,6 @@ class FalconStaging(Staging, RepresentationMixin):
                 # Raise error encountered during the execution of the command
                 logger.exception(f"Error during Falcon transfer initialization: {e}")
                 raise
-
 def run_receiver_command(receiver_command):
     """
     Run a command using subprocess.run and return the result.
@@ -202,7 +201,7 @@ def run_receiver_command(receiver_command):
         raise Exception(f"Command failed with exit code {e.returncode}: {e.stderr}")
     except FileNotFoundError:
         raise Exception("The 'falcon' command was not found. Make sure it's installed and in your system's PATH.")
-    except Exception as e:
+    except Exception:
         # Handle other exceptions if needed
         raise
 
