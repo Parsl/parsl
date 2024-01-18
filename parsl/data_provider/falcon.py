@@ -181,6 +181,7 @@ class FalconStaging(Staging, RepresentationMixin):
                 logger.exception(f"Error during Falcon transfer initialization: {e}")
                 raise
 
+
 def run_receiver_command(receiver_command):
     """
     Run a command using subprocess.run and return the result.
