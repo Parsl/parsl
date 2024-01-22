@@ -22,6 +22,7 @@ import _pytest.runner as runner
 
 import parsl
 from parsl.dataflow.dflow import DataFlowKernelLoader
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
@@ -82,8 +83,9 @@ def tmpd_cwd_session(pytestconfig):
 
 
 @pytest.fixture
-def tmpd_cwd(tmpd_cwd_session, request):
-    prefix = f"{request.node.name}-"
+def tmpd_cwd(tmpd_cwd_session, request: pytest.FixtureRequest):
+    node_name = re.sub(r'[^\w\s-]', '_', request.node.name)
+    prefix = f"{node_name}-"
     tmpd = tempfile.mkdtemp(dir=tmpd_cwd_session, prefix=prefix)
     yield pathlib.Path(tmpd)
 
@@ -161,6 +163,8 @@ def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
     load_dfk_local_module for module-level configuration management.
     """
 
+    RepresentationMixin._validate_repr = True
+
     config = pytestconfig.getoption('config')[0]
 
     if config != 'local':
@@ -207,6 +211,7 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
     be used to perform more interesting DFK initialisation not possible with
     local_config.
     """
+    RepresentationMixin._validate_repr = True
 
     config = pytestconfig.getoption('config')[0]
 
