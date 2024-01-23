@@ -22,6 +22,7 @@ class Scheduler(Enum):
 
 
 def get_slurm_hosts_list() -> List[str]:
+    """Get list of slurm hosts from scontrol"""
     cmd = "scontrol show hostname $SLURM_NODELIST"
     b_output = subprocess.check_output(
         cmd, stderr=subprocess.STDOUT, shell=True
@@ -31,18 +32,21 @@ def get_slurm_hosts_list() -> List[str]:
 
 
 def get_pbs_hosts_list() -> List[str]:
+    """Get list of PBS hosts from envvar: PBS_NODEFILE"""
     nodefile_name = os.environ["PBS_NODEFILE"]
     with open(nodefile_name) as f:
         return [line.strip() for line in f.readlines()]
 
 
 def get_cobalt_hosts_list() -> List[str]:
+    """Get list of COBALT hosts from envvar: COBALT_NODEFILE"""
     nodefile_name = os.environ["COBALT_NODEFILE"]
     with open(nodefile_name) as f:
         return [line.strip() for line in f.readlines()]
 
 
 def get_nodes_in_batchjob(scheduler: Scheduler) -> List[str]:
+    """Get nodelist from all supported schedulers"""
     nodelist = []
     if scheduler == Scheduler.Slurm:
         nodelist = get_slurm_hosts_list()
@@ -54,6 +58,7 @@ def get_nodes_in_batchjob(scheduler: Scheduler) -> List[str]:
 
 
 def identify_scheduler() -> Scheduler:
+    """Use envvars to determine batch scheduler"""
     if os.environ.get("SLURM_NODELIST"):
         return Scheduler.Slurm
     elif os.environ.get("PBS_NODEFILE"):
@@ -76,6 +81,11 @@ class MPIResourceUnavailable(Exception):
 
 
 class TaskScheduler:
+    """Default TaskScheduler that does no taskscheduling
+
+    This class simply acts as an abstraction over the task_q and result_q
+    that can be extended to implement more complex task scheduling logic
+    """
     def __init__(
         self,
         pending_task_q: multiprocessing.Queue,
@@ -95,6 +105,18 @@ class TaskScheduler:
 
 
 class MPITaskScheduler(TaskScheduler):
+    """Extends TaskScheduler to schedule MPI functions over provisioned nodes
+    The MPITaskScheduler runs on a Manager on the lead node of a batch job, as
+    such it is expected to control task placement over this single batch job.
+
+    The MPITaskScheduler adds the following functionality:
+    1) Determine list of nodes attached to current batch job
+    2) put_task for execution onto workers:
+        a) if resources are available attach resource list
+        b) if unavailable place tasks into backlog
+    3) get_result will fetch a result and relinquish nodes,
+       and attempt to schedule tasks in backlog if any.
+    """
     def __init__(
         self,
         pending_task_q: multiprocessing.Queue,
@@ -118,7 +140,12 @@ class MPITaskScheduler(TaskScheduler):
             f"Starting MPITaskScheduler with {len(self.available_nodes)}"
         )
 
-    def _get_nodes(self, num_nodes: int):
+    def _get_nodes(self, num_nodes: int) -> List[str]:
+        """Thread safe method to acquire num_nodes from free resources
+
+        Raises: MPIResourceUnavailable if there aren't enough resources
+        Returns: List of nodenames:str
+        """
         logger.debug(
             f"Requesting : {num_nodes=} we have {self._free_node_counter}"
         )
@@ -137,12 +164,14 @@ class MPITaskScheduler(TaskScheduler):
         return acquired_nodes
 
     def _return_nodes(self, nodes: List[str]) -> None:
+        """Threadsafe method to return a list of nodes"""
         for node in nodes:
             self.nodes_q.put(node)
         with self._free_node_counter.get_lock():
             self._free_node_counter.value += len(nodes)  # type: ignore[attr-defined]
 
     def put_task(self, task_package: dict):
+        """Schedule task if resources are available otherwise backlog the task"""
         user_ns = locals()
         user_ns.update({"__builtins__": __builtins__})
         _f, _args, _kwargs, resource_spec = unpack_res_spec_apply_message(
@@ -166,6 +195,7 @@ class MPITaskScheduler(TaskScheduler):
         self.pending_task_q.put(task_package)
 
     def _schedule_backlog_tasks(self):
+        """Attempt to schedule backlogged tasks"""
         try:
             _nodes_requested, task_package = self._backlog_queue.get(block=False)
             self.put_task(task_package)
@@ -180,6 +210,7 @@ class MPITaskScheduler(TaskScheduler):
             self._schedule_backlog_tasks()
 
     def get_result(self, block: bool, timeout: float):
+        """Return result and relinquish provisioned nodes"""
         result_pkl = self.pending_result_q.get(block, timeout=timeout)
         result_dict = pickle.loads(result_pkl)
         if result_dict["type"] == "result":

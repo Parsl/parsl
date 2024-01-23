@@ -10,17 +10,20 @@ VALID_LAUNCHERS = ('srun',
 
 class InvalidResourceSpecification(Exception):
     """Exception raised when Invalid keys are supplied via resource specification"""
+
     def __init__(self, invalid_keys: Set[str]):
         self.invalid_keys = invalid_keys
 
-    def __repr__(self):
+    def __str__(self):
         return f"Invalid resource specification options supplied: {self.invalid_keys}"
 
-    def __str__(self):
-        return self.__repr__()
 
+def validate_resource_spec(resource_spec: Dict[str, str]):
+    """Basic validation of keys in the resource_spec
 
-def validate_resource_spec(resource_spec: Dict[str, str]) -> bool:
+    Raises: InvalidResourceSpecification if the resource_spec
+        is invalid (e.g, contains invalid keys)
+    """
     user_keys = set(resource_spec.keys())
     legal_keys = set(("RANKS_PER_NODE",
                       "NUM_NODES",
@@ -29,12 +32,14 @@ def validate_resource_spec(resource_spec: Dict[str, str]) -> bool:
     invalid_keys = user_keys - legal_keys
     if invalid_keys:
         raise InvalidResourceSpecification(invalid_keys)
-    return True
+    return
 
 
 def compose_mpiexec_launch_cmd(
     resource_spec: Dict, node_hostnames: List[str]
 ) -> Tuple[str, str]:
+    """Compose mpiexec launch command prefix"""
+
     node_str = ",".join(node_hostnames)
     num_ranks = resource_spec["RANKS_PER_NODE"] * len(node_hostnames)
     args = [
@@ -54,6 +59,7 @@ def compose_mpiexec_launch_cmd(
 def compose_srun_launch_cmd(
     resource_spec: Dict, node_hostnames: List[str]
 ) -> Tuple[str, str]:
+    """Compose srun launch command prefix"""
 
     num_ranks = resource_spec["RANKS_PER_NODE"] * len(node_hostnames)
     num_nodes = str(len(node_hostnames))
@@ -77,6 +83,7 @@ def compose_srun_launch_cmd(
 def compose_aprun_launch_cmd(
     resource_spec: Dict, node_hostnames: List[str]
 ) -> Tuple[str, str]:
+    """Compose aprun launch command prefix"""
 
     num_ranks = resource_spec["RANKS_PER_NODE"] * len(node_hostnames)
     node_str = ",".join(node_hostnames)
@@ -97,6 +104,8 @@ def compose_aprun_launch_cmd(
 def compose_all(
     mpi_launcher: str, resource_spec: Dict, node_hostnames: List[str]
 ) -> Dict[str, str]:
+    """Compose all launch command prefixes and set the default"""
+
     all_prefixes = {}
     composers = [
         compose_aprun_launch_cmd,

@@ -165,17 +165,17 @@ shared with the app via environment variables.
     def echo_hello(n: int, stderr='std.err', stdout='std.out', parsl_resource_specification: Dict):
         return f'$PARSL_MPI_PREFIX hostname'
 
+    # The following app will echo the hostname from several MPI ranks
     # Alternatively, you could also use the resource_specification to compose a launch
     # command using env vars set by Parsl from the resource_specification like this:
     @bash_app
-    def echo_something(n: int, stderr='std.err', stdout='std.out', parsl_resource_specification: Dict):
+    def echo_hostname(n: int, stderr='std.err', stdout='std.out', parsl_resource_specification: Dict):
         total_ranks = os.environ("")
-        return f'aprun -N $PARSL_RANKS_PER_NODE -n hostname'
+        return f'aprun -N $PARSL_RANKS_PER_NODE -n {total_ranks} /bin/hostname'
 
 
-All key-value pairs set in the resource_specification are exported to the application via env vars, for eg.
-``parsl_resource_specification = {'MY_ENV_VAR': 'MY_ENV_VALUE'} `` will set the env var ``MY_ENV_VAR`` to
-``MY_ENV_VALUE`` in the application's env.
+All valid key-value pairs set in the resource_specification are exported to the application via env vars,
+for eg. ``parsl_resource_specification = {'RANKS_PER_NODE': 4} `` will set the env var ``PARSL_RANKS_PER_NODE``
 
 However, the following options are **required** for MPI applications :
 
@@ -197,6 +197,9 @@ When the above are supplied, the following launch command prefixes are set:
     PARSL_SRUN_PREFIX: srun launch command for Slurm based clusters
     PARSL_APRUN_PREFIX: aprun launch command prefix for some Cray machines
     PARSL_MPI_PREFIX: Parsl sets the MPI prefix to match the mpi_launcher specified to `HighThroughputExecutor`
+    PARSL_MPI_NODELIST: List of assigned nodes separated by commas (Eg, NODE1,NODE2)
+    PARSL_WORKER_POOL_ID: Alphanumeric string identifier for the worker pool
+    PARSL_WORKER_BLOCK_ID: Batch job ID that the worker belongs to
 
 
 Example Application: CosmicTagger
