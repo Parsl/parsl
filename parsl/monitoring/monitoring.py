@@ -125,7 +125,10 @@ class MonitoringHub(RepresentationMixin):
              This will include environment information such as start time, hostname and block id,
              along with periodic resource usage of each task. Default: True
         resource_monitoring_interval : float
-             The time interval, in seconds, at which the monitoring records the resource usage of each task. Default: 30 seconds
+             The time interval, in seconds, at which the monitoring records the resource usage of each task.
+             If set to 0, only start and end information will be logged, and no periodic monitoring will
+             be made.
+             Default: 30 seconds
         """
 
         self.logger = logger
