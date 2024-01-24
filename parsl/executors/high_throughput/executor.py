@@ -11,6 +11,7 @@ from typing import Dict, Sequence
 from typing import List, Optional, Tuple, Union, Callable
 import math
 
+import parsl.launchers
 from parsl.serialize import pack_res_spec_apply_message, deserialize
 from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
@@ -277,6 +278,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.enable_mpi_mode = enable_mpi_mode
         assert mpi_launcher in VALID_LAUNCHERS, \
             f"mpi_launcher must be set to one of {VALID_LAUNCHERS}"
+        if self.enable_mpi_mode:
+            assert isinstance(self.provider.launcher, parsl.launchers.SingleNodeLauncher), \
+                "mpi_mode requires the provider to be configured to use a SingleNodeLauncher"
+
         self.mpi_launcher = mpi_launcher
 
         if not launch_cmd:

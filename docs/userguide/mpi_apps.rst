@@ -23,7 +23,7 @@ The broad strokes of a complete solution involves the following components:
 2. Specify an MPI Launcher from one of the supported launchers ("aprun", "srun", "mpiexec") for the
    :class:`~parsl.executors.high_throughput.executor.HighThroughputExecutor` with: ``mpi_launcher="srun"``
 3. Specify the provider that matches your cluster, (eg. user ``SlurmProvider`` for Slurm clusters)
-4. Set the non-mpi launcher to :class:`~parsl.launchers.SimpleLauncher`
+4. Set the non-mpi launcher to :class:`~parsl.launchers.SingleNodeLauncher`
 5. Specify resources required by the application via ``resource_specification`` as shown below:
 
 
@@ -61,7 +61,7 @@ Configuring the Provider
 
 Parsl must be configured to deploy workers on exactly one node per block. This part is
 simple. Instead of defining a launcher which will place an executor on each node in the
-block, simply use the :class:`~parsl.launchers.SimpleLauncher`.
+block, simply use the :class:`~parsl.launchers.SingleNodeLauncher`.
 The MPI Launcher that the application will use is to be specified via ``HighThroughputExecutor(mpi_launcher="LAUNCHER")``
 
 It is also necessary to specify the desired number of blocks for the executor.
@@ -96,8 +96,6 @@ Here's an example configuration which runs MPI tasks on ALCF's Polaris Supercomp
     from parsl.providers import PBSProProvider
     # The high throughput executor is for scaling to HPC systems:
     from parsl.executors import HighThroughputExecutor
-    # You can use the MPI launcher, but may want the Gnu Parallel launcher, see below
-    from parsl.launchers import MpiExecLauncher, GnuParallelLauncher, SimpleLauncher
     # address_by_interface is needed for the HighThroughputExecutor:
     from parsl.addresses import address_by_interface
     # For checkpointing:
@@ -126,7 +124,6 @@ Here's an example configuration which runs MPI tasks on ALCF's Polaris Supercomp
                     cores_per_worker=user_opts["cores_per_worker"],
                     address=address_by_interface("bond0"),
                     provider=PBSProProvider(
-                        launcher=SimpleLauncher(),
                         account=user_opts["account"],
                         queue=user_opts["queue"],
                         # PBS directives (header lines): for array jobs pass '-J' option
