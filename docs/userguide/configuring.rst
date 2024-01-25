@@ -348,10 +348,15 @@ Multi-Threaded Applications
 
 Workflows which launch multiple workers on a single node which perform multi-threaded tasks (e.g., NumPy, Tensorflow operations) may run into thread contention issues.
 Each worker may try to use the same hardware threads, which leads to performance penalties.
-Use the ``cpu_affinity`` feature of the :class:`~parsl.executors.HighThroughputExecutor` to assign workers to specific cores.
-Parsl provides a 'block' or 'alternate' option on how cores are pinned to each worker (ex: 4 cores are grouped (0, 1) and (2, 3) for block,
-(0, 2) and (1, 3) for alternate).
-Select the best blocking strategy for processor's cache hierarchy (choose 'alternate' if in doubt) to ensure workers to not compete for cores.
+Use the ``cpu_affinity`` feature of the :class:`~parsl.executors.HighThroughputExecutor` to assign workers to specific threads.  Users can pin threads to 
+workers either with a strategy method or an explicit list.
+
+The strategy methods will auto assign all detected hardware threads to workers.  
+Allowed strategies that can be assigned to ``cpu_affinity`` are ``block``, ``block-reverse``, and ``alternate``.  
+The ``block`` method pins threads to workers in sequential order (ex: 4 threads are grouped (0, 1) and (2, 3) on two workers);
+``block-reverse`` pins threads in reverse sequential order (ex: (3, 2) and (1, 0)); and ``alternate`` alternates threads among workers (ex: (0, 2) and (1, 3)).
+
+Select the best blocking strategy for processor's cache hierarchy (choose ``alternate`` if in doubt) to ensure workers to not compete for cores.
 
 .. code-block:: python
 
@@ -370,6 +375,26 @@ Select the best blocking strategy for processor's cache hierarchy (choose 'alter
         ],
         strategy='none',
     )
+
+Users can also use ``cpu_affinity`` to assign explicitly threads to workers with a string that has the format of 
+``cpu_affinity="list:<worker1_threads>:<worker2_threads>:<worker3_threads>"``.
+
+Each worker's threads can be specified as a comma separated list or a hyphenated range:
+``thread1,thread2,thread3``
+or
+``thread_start-thread_end``.
+
+An example for 12 workers on a node with 208 threads is:
+
+.. code-block:: python
+
+    cpu_affinity="list:0-7,104-111:8-15,112-119:16-23,120-127:24-31,128-135:32-39,136-143:40-47,144-151:52-59,156-163:60-67,164-171:68-75,172-179:76-83,180-187:84-91,188-195:92-99,196-203"
+
+This example assigns 16 threads each to 12 workers. Note that in this example there are threads that are skipped.  
+If a thread is not explicitly assigned to a worker, it will be left idle.
+The number of thread "ranks" (colon separated thread lists/ranges) must match the total number of workers on the node; otherwise an exception will be raised.
+
+
 
 Thread affinity is accomplished in two ways.
 Each worker first sets the affinity for the Python process using `the affinity mask <https://docs.python.org/3/library/os.html#os.sched_setaffinity>`_,
