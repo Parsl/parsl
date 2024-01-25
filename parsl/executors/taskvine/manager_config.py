@@ -84,6 +84,19 @@ class TaskVineManagerConfig:
         forever.
         Default is 1.
 
+    library_config: Optional[dict]
+        Only and must specify when functions are executed in the serverless mode.
+        Configure the number of function slots and amount of resources
+        a library task can run. A library task is a stateful object that executes
+        functions in the serverless way. Accept the following keywords:
+        'num_slots', 'cores', 'memory (MBs)', 'disk (MBs)'.
+        Default is {'num_slots': 1, 'cores': None, 'memory': None, 'disk': None},
+        which will take all resources of a worker node and run at most 1 function
+        invocation at any given time.
+        E.g., {'num_slots': 4, 'cores': 16, 'memory': 16000, 'disk': 16000} will
+        reserve those resources to the library task to run at most 4 function
+        invocations.
+
     shared_fs: bool
         Whether workers will use a shared filesystem or not. If so, TaskVine
         will not track and transfer files for execution, in exchange for
@@ -159,6 +172,7 @@ class TaskVineManagerConfig:
     app_pack: bool = False
     extra_pkgs: Optional[list] = None
     max_retries: int = 1
+    library_config: Optional[dict] = None
 
     # Performance-specific settings
     shared_fs: bool = False
