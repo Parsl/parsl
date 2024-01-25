@@ -547,6 +547,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """
         return self.command_client.run("MANAGERS")
 
+    def connected_blocks(self) -> List[str]:
+        """List of connected block ids"""
+        return self.command_client.run("CONNECTED_BLOCKS")
+
     def _hold_block(self, block_id):
         """ Sends hold command to all managers which are in a specific block
 
