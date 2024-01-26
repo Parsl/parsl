@@ -69,15 +69,15 @@ def identify_scheduler() -> Scheduler:
         return Scheduler.Unknown
 
 
-class MPIResourceUnavailable(Exception):
-    """Raised if there are no free resources available for an MPI request"""
+class MPINodesUnavailable(Exception):
+    """Raised if there are no free nodes available for an MPI request"""
 
     def __init__(self, requested: int, available: int):
         self.requested = requested
         self.available = available
 
     def __str__(self):
-        return f"MPIResourceUnavailable(requested={self.requested} available={self.available}"
+        return f"MPINodesUnavailable(requested={self.requested} available={self.available})"
 
 
 class TaskScheduler:
@@ -143,7 +143,7 @@ class MPITaskScheduler(TaskScheduler):
     def _get_nodes(self, num_nodes: int) -> List[str]:
         """Thread safe method to acquire num_nodes from free resources
 
-        Raises: MPIResourceUnavailable if there aren't enough resources
+        Raises: MPINodesUnavailable if there aren't enough resources
         Returns: List of nodenames:str
         """
         logger.debug(
@@ -154,7 +154,7 @@ class MPITaskScheduler(TaskScheduler):
             if num_nodes <= self._free_node_counter.value:  # type: ignore[attr-defined]
                 self._free_node_counter.value -= num_nodes  # type: ignore[attr-defined]
             else:
-                raise MPIResourceUnavailable(
+                raise MPINodesUnavailable(
                     requested=num_nodes, available=self._free_node_counter.value  # type: ignore[attr-defined]
                 )
 
@@ -182,7 +182,7 @@ class MPITaskScheduler(TaskScheduler):
         if nodes_needed:
             try:
                 allocated_nodes = self._get_nodes(nodes_needed)
-            except MPIResourceUnavailable:
+            except MPINodesUnavailable:
                 logger.warning("Not enough resources, placing task into backlog")
                 self._backlog_queue.put((nodes_needed, task_package))
                 return
@@ -201,8 +201,8 @@ class MPITaskScheduler(TaskScheduler):
             self.put_task(task_package)
         except queue.Empty:
             return
-        except MPIResourceUnavailable:
-            logger.debug("MPIResourceUnavailable: Popping task back onto backlog_queue")
+        except MPINodesUnavailable:
+            logger.debug("MPINodesUnavailable: Popping task back onto backlog_queue")
             self._backlog_queue.put((_nodes_requested, task_package))
             return
         else:

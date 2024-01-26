@@ -300,7 +300,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                 "--hb_threshold={heartbeat_threshold} "
                 "--cpu-affinity {cpu_affinity} "
                 "{enable_mpi_mode} "
-                "--mpi-launcher={mpi_launcher} "              
+                "--mpi-launcher={mpi_launcher} "
                 "--available-accelerators {accelerators}"
             )
 

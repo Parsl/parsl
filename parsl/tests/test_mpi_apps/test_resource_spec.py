@@ -142,4 +142,4 @@ def test_resource_spec(resource_spec: Dict, exception):
             validate_resource_spec(resource_spec)
     else:
         result = validate_resource_spec(resource_spec)
-        assert result
+        assert result is None
