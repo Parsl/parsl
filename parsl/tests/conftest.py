@@ -22,6 +22,7 @@ import _pytest.runner as runner
 
 import parsl
 from parsl.dataflow.dflow import DataFlowKernelLoader
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,12 @@ def pytest_sessionstart(session):
 
 @pytest.fixture(scope="session")
 def tmpd_cwd_session(pytestconfig):
+    def _chmod(path: pathlib.Path, mode: int):
+        try:
+            path.lchmod(mode)  # support BSD and derivatives
+        except NotImplementedError:
+            path.chmod(mode)
+
     config = re.sub(r"[^A-z0-9_-]+", "_", pytestconfig.getoption('config')[0])
     cwd = pathlib.Path(os.getcwd())
     pytest_dir = cwd / ".pytest"
@@ -75,15 +82,16 @@ def tmpd_cwd_session(pytestconfig):
         for root, subdirnames, fnames in os.walk(run_to_remove):
             rpath = pathlib.Path(root)
             for d in subdirnames:
-                (rpath / d).lchmod(0o700)
+                _chmod(rpath / d, 0o700)
             for f in fnames:
-                (rpath / f).lchmod(0o600)
+                _chmod(rpath / f, 0o600)
         shutil.rmtree(run_to_remove)
 
 
 @pytest.fixture
-def tmpd_cwd(tmpd_cwd_session, request):
-    prefix = f"{request.node.name}-"
+def tmpd_cwd(tmpd_cwd_session, request: pytest.FixtureRequest):
+    node_name = re.sub(r'[^\w\s-]', '_', request.node.name)
+    prefix = f"{node_name}-"
     tmpd = tempfile.mkdtemp(dir=tmpd_cwd_session, prefix=prefix)
     yield pathlib.Path(tmpd)
 
@@ -146,6 +154,10 @@ def pytest_configure(config):
         'markers',
         'sshd_required: Marks tests that require a SSHD'
     )
+    config.addinivalue_line(
+        'markers',
+        'multiple_cores_required: Marks tests that require multiple cores, such as htex affinity'
+    )
 
 
 @pytest.fixture(autouse=True, scope='session')
@@ -156,6 +168,8 @@ def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
     from a pytest managed configuration file; in that case, see
     load_dfk_local_module for module-level configuration management.
     """
+
+    RepresentationMixin._validate_repr = True
 
     config = pytestconfig.getoption('config')[0]
 
@@ -203,6 +217,7 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
     be used to perform more interesting DFK initialisation not possible with
     local_config.
     """
+    RepresentationMixin._validate_repr = True
 
     config = pytestconfig.getoption('config')[0]
 

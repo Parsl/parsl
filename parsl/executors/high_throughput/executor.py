@@ -222,7 +222,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         BlockProviderExecutor.__init__(self, provider=provider, block_error_handler=block_error_handler)
         self.label = label
-        self.launch_cmd = launch_cmd
         self.worker_debug = worker_debug
         self.storage_access = storage_access
         self.working_dir = working_dir
@@ -285,23 +284,27 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.mpi_launcher = mpi_launcher
 
         if not launch_cmd:
-            self.launch_cmd = ("process_worker_pool.py {debug} {max_workers} "
-                               "-a {addresses} "
-                               "-p {prefetch_capacity} "
-                               "-c {cores_per_worker} "
-                               "-m {mem_per_worker} "
-                               "--poll {poll_period} "
-                               "--task_port={task_port} "
-                               "--result_port={result_port} "
-                               "--logdir={logdir} "
-                               "--block_id={{block_id}} "
-                               "--hb_period={heartbeat_period} "
-                               "{address_probe_timeout_string} "
-                               "--hb_threshold={heartbeat_threshold} "
-                               "--cpu-affinity {cpu_affinity} "
-                               "{enable_mpi_mode} "
-                               "--mpi-launcher={mpi_launcher} "
-                               "--available-accelerators {accelerators}")
+            launch_cmd = (
+                "process_worker_pool.py {debug} {max_workers} "
+                "-a {addresses} "
+                "-p {prefetch_capacity} "
+                "-c {cores_per_worker} "
+                "-m {mem_per_worker} "
+                "--poll {poll_period} "
+                "--task_port={task_port} "
+                "--result_port={result_port} "
+                "--logdir={logdir} "
+                "--block_id={{block_id}} "
+                "--hb_period={heartbeat_period} "
+                "{address_probe_timeout_string} "
+                "--hb_threshold={heartbeat_threshold} "
+                "--cpu-affinity {cpu_affinity} "
+                "{enable_mpi_mode} "
+                "--mpi-launcher={mpi_launcher} "              
+                "--available-accelerators {accelerators}"
+            )
+
+        self.launch_cmd = launch_cmd
 
     radio_mode = "htex"
 

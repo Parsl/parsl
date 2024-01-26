@@ -625,7 +625,7 @@ def worker(
     # If desired, set process affinity
     if cpu_affinity != "none":
         # Count the number of cores per worker
-        avail_cores = sorted(os.sched_getaffinity(0))  # Get the available processors
+        avail_cores = sorted(os.sched_getaffinity(0))  # Get the available threads
         cores_per_worker = len(avail_cores) // pool_size
         assert cores_per_worker > 0, "Affinity does not work if there are more workers than cores"
 
@@ -637,6 +637,23 @@ def worker(
             my_cores = avail_cores[cores_per_worker * cpu_worker_id:cores_per_worker * (cpu_worker_id + 1)]
         elif cpu_affinity == "alternating":
             my_cores = avail_cores[worker_id::pool_size]
+        elif cpu_affinity[0:4] == "list":
+            thread_ranks = cpu_affinity.split(":")[1:]
+            if len(thread_ranks) != pool_size:
+                raise ValueError("Affinity list {} has wrong number of thread ranks".format(cpu_affinity))
+            threads = thread_ranks[worker_id]
+            thread_list = threads.split(",")
+            my_cores = []
+            for tl in thread_list:
+                thread_range = tl.split("-")
+                if len(thread_range) == 1:
+                    my_cores.append(int(thread_range[0]))
+                elif len(thread_range) == 2:
+                    start_thread = int(thread_range[0])
+                    end_thread = int(thread_range[1]) + 1
+                    my_cores += list(range(start_thread, end_thread))
+                else:
+                    raise ValueError("Affinity list formatting is not expected {}".format(cpu_affinity))
         else:
             raise ValueError("Affinity strategy {} is not supported".format(cpu_affinity))
 
@@ -776,7 +793,17 @@ if __name__ == "__main__":
                         help="Poll period used in milliseconds")
     parser.add_argument("-r", "--result_port", required=True,
                         help="REQUIRED: Result port for posting results to the interchange")
-    parser.add_argument("--cpu-affinity", type=str, choices=["none", "block", "alternating", "block-reverse"],
+
+    def strategyorlist(s: str):
+        allowed_strategies = ["none", "block", "alternating", "block-reverse"]
+        if s in allowed_strategies:
+            return s
+        elif s[0:4] == "list":
+            return s
+        else:
+            raise argparse.ArgumentTypeError("cpu-affinity must be one of {} or a list format".format(allowed_strategies))
+
+    parser.add_argument("--cpu-affinity", type=strategyorlist,
                         required=True,
                         help="Whether/how workers should control CPU affinity.")
     parser.add_argument("--available-accelerators", type=str, nargs="*",
