@@ -6,17 +6,6 @@ from types import TracebackType
 import logging
 from tblib import Traceback
 
-def reraise(tp, value, tb=None):
-    try:
-        if value is None:
-            value = tp()
-        if value.__traceback__ is not tb:
-            raise value.with_traceback(tb)
-        raise value
-    finally:
-        value = None
-        tb = None
-
 from parsl.data_provider.files import File
 from parsl.errors import ParslError
 
@@ -128,7 +117,12 @@ class RemoteExceptionWrapper:
 
         v = self.get_exception()
 
-        reraise(t, v, v.__traceback__)
+        try:
+            if v.__traceback__ is not t:
+                raise v.with_traceback(t)
+            raise v
+        finally:
+            v = None
 
     def get_exception(self) -> BaseException:
         v = self.e_value
