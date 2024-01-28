@@ -26,6 +26,7 @@ from parsl.channels import Channel
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
+from parsl.dataflow.defer import DeferredCallbackManager
 from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
@@ -202,6 +203,8 @@ class DataFlowKernel:
         self.task_count = 0
         self.tasks: Dict[int, TaskRecord] = {}
         self.submitter_lock = threading.Lock()
+
+        self.callback_manager = DeferredCallbackManager()
 
         atexit.register(self.atexit_cleanup)
 
@@ -381,7 +384,7 @@ class DataFlowKernel:
                         task_record['joins'] = joinable
                         task_record['join_lock'] = threading.Lock()
                         self._send_task_log_info(task_record)
-                        joinable.add_done_callback(partial(self.handle_join_update, task_record))
+                        joinable.add_done_callback(self.callback_manager.defer(partial(self.handle_join_update, task_record)))
                     elif joinable == []:  # got a list, but it had no entries, and specifically, no Futures.
                         self.update_task_state(task_record, States.joining)
                         task_record['joins'] = joinable
@@ -394,7 +397,7 @@ class DataFlowKernel:
                         task_record['join_lock'] = threading.Lock()
                         self._send_task_log_info(task_record)
                         for inner_future in joinable:
-                            inner_future.add_done_callback(partial(self.handle_join_update, task_record))
+                            inner_future.add_done_callback(self.callback_manager.defer(partial(self.handle_join_update, task_record)))
                     else:
                         task_record['time_returned'] = datetime.datetime.now()
                         self.update_task_state(task_record, States.failed)
@@ -652,7 +655,7 @@ class DataFlowKernel:
         if exec_fu:
             assert isinstance(exec_fu, Future)
             try:
-                exec_fu.add_done_callback(partial(self.handle_exec_update, task_record))
+                exec_fu.add_done_callback(self.callback_manager.defer(partial(self.handle_exec_update, task_record)))
             except Exception:
                 # this exception is ignored here because it is assumed that exception
                 # comes from directly executing handle_exec_update (because exec_fu is
@@ -1032,7 +1035,7 @@ class DataFlowKernel:
                                                               task_record['func_name'],
                                                               waiting_message))
 
-        app_fu.add_done_callback(partial(self.handle_app_update, task_record))
+        app_fu.add_done_callback(self.callback_manager.defer(partial(self.handle_app_update, task_record)))
         self.update_task_state(task_record, States.pending)
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_record['app_fu']))
 
@@ -1056,7 +1059,7 @@ class DataFlowKernel:
                 self.launch_if_ready(task_record)
 
             try:
-                d.add_done_callback(callback_adapter)
+                d.add_done_callback(self.callback_manager.defer(callback_adapter))
             except Exception as e:
                 logger.error("add_done_callback got an exception {} which will be ignored".format(e))
 
