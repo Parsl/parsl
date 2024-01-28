@@ -107,8 +107,6 @@ class RemoteExceptionWrapper:
 
     def reraise(self) -> None:
 
-        t = self.e_type
-
         # the type is logged here before deserialising v and tb
         # because occasionally there are problems deserialising the
         # value (see #785, #548) and the fix is related to the
