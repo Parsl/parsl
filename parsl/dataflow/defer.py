@@ -24,15 +24,39 @@ global thread.
 
 import logging
 
+from queue import SimpleQueue
+from threading import Thread
+
+from parsl.process_loggers import wrap_with_logs
+
 logger = logging.getLogger(__name__)
 
 
 class DeferredCallbackManager:
     def __init__(self):
-        self.queue = []  # TODO: some threading queue would be better
+        self._queue = SimpleQueue()  # can this overflow like a stack or is it more heap constrained which allows it to grow bigger?
+        self._thread = Thread(target=self._deferred_callback_thread, name="Deferred-Callback-Manager", daemon=True)
+        self._thread.start()
 
     def defer(self, func):
         def cb(*args, **kwargs):
-            # TODO error handling
-            func(*args, **kwargs)  # fake-deferral
+            logger.debug(f"Putting callback {func} into queue with args {args}")
+            self._queue.put((func, args, kwargs))
+            # queues this call:
+            #    func(*args, **kwargs)
+            # to happen later
         return cb
+
+    @wrap_with_logs
+    def _deferred_callback_thread(self):
+        # TODO: this needs to shutdown with the DFK... which is going to need awkward polling behaviour?
+
+        while True:
+            logger.debug("Waiting for a callback")
+            (func, args, kwargs) = self._queue.get()
+            logger.debug(f"Pulled callback {func} from queue with args {args}")
+            # TODO: error handling
+            try:
+                func(*args, **kwargs)
+            except Exception:
+                logger.error("deferred callback got an exception which will be ignored", exc_info=True)
