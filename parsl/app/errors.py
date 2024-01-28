@@ -118,11 +118,9 @@ class RemoteExceptionWrapper:
         v = self.get_exception()
 
         try:
-            if v.__traceback__ is not t:
-                raise v.with_traceback(t)
             raise v
         finally:
-            v = None
+            pass
 
     def get_exception(self) -> BaseException:
         v = self.e_value
