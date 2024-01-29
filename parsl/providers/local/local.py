@@ -72,6 +72,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
             - List of status codes.
 
         '''
+        raise RuntimeError("BENC broken status")
 
         for job_id in self.resources:
             # This job dict should really be a class on its own

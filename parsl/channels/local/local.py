@@ -55,6 +55,7 @@ class LocalChannel(Channel, RepresentationMixin):
         current_env.update(envs)
 
         try:
+            logger.debug(f"local channel launching: {cmd}")
             proc = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
@@ -64,8 +65,10 @@ class LocalChannel(Channel, RepresentationMixin):
                 shell=True,
                 preexec_fn=os.setpgrp
             )
+            logger.debug("local channel communicating")
             (stdout, stderr) = proc.communicate(timeout=walltime)
             retcode = proc.returncode
+            logger.debug(f"local channel ended with return code {retcode}")
 
         except Exception as e:
             logger.warning("Execution of command '{}' failed due to \n{}".format(cmd, e))
