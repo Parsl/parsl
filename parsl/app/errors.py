@@ -115,10 +115,7 @@ class RemoteExceptionWrapper:
 
         v = self.get_exception()
 
-        try:
-            raise v
-        finally:
-            pass
+        raise v
 
     def get_exception(self) -> BaseException:
         v = self.e_value
