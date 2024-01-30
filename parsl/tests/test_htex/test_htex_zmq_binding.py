@@ -7,11 +7,13 @@ import zmq
 from parsl.executors.high_throughput.interchange import Interchange
 
 
+@pytest.mark.local
 def test_interchange_binding_no_address():
     ix = Interchange()
     assert ix.interchange_address == "*"
 
 
+@pytest.mark.local
 def test_interchange_binding_with_address():
     # Using loopback address
     address = "127.0.0.1"
@@ -19,6 +21,7 @@ def test_interchange_binding_with_address():
     assert ix.interchange_address == address
 
 
+@pytest.mark.local
 def test_interchange_binding_with_non_ipv4_address():
     # Confirm that a ipv4 address is required
     address = "localhost"
@@ -26,6 +29,7 @@ def test_interchange_binding_with_non_ipv4_address():
         Interchange(interchange_address=address)
 
 
+@pytest.mark.local
 def test_interchange_binding_bad_address():
     """ Confirm that we raise a ZMQError when a bad address is supplied"""
     address = "550.0.0.0"
@@ -33,6 +37,7 @@ def test_interchange_binding_bad_address():
         Interchange(interchange_address=address)
 
 
+@pytest.mark.local
 def test_limited_interface_binding():
     """ When address is specified the worker_port would be bound to it rather than to 0.0.0.0"""
     address = "127.0.0.1"
