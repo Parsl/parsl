@@ -312,7 +312,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
             if task.memory is not None:
                 t.set_memory(task.memory)
             if task.disk is not None:
-                t.set_disk(task.disk)
+                t.set_disk(0)
             if task.gpus is not None:
                 t.set_gpus(task.gpus)
             if task.priority is not None:

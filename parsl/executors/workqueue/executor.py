@@ -904,7 +904,7 @@ def _work_queue_submit_wait(*,
             if task.memory is not None:
                 t.specify_memory(task.memory)
             if task.disk is not None:
-                t.specify_disk(task.disk)
+                t.specify_disk(0)
             if task.gpus is not None:
                 t.specify_gpus(task.gpus)
             if task.priority is not None:
