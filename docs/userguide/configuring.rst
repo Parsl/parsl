@@ -352,11 +352,11 @@ Use the ``cpu_affinity`` feature of the :class:`~parsl.executors.HighThroughputE
 workers either with a strategy method or an explicit list.
 
 The strategy methods will auto assign all detected hardware threads to workers.  
-Allowed strategies that can be assigned to ``cpu_affinity`` are ``block``, ``block-reverse``, and ``alternate``.  
+Allowed strategies that can be assigned to ``cpu_affinity`` are ``block``, ``block-reverse``, and ``alternating``.  
 The ``block`` method pins threads to workers in sequential order (ex: 4 threads are grouped (0, 1) and (2, 3) on two workers);
-``block-reverse`` pins threads in reverse sequential order (ex: (3, 2) and (1, 0)); and ``alternate`` alternates threads among workers (ex: (0, 2) and (1, 3)).
+``block-reverse`` pins threads in reverse sequential order (ex: (3, 2) and (1, 0)); and ``alternating`` alternates threads among workers (ex: (0, 2) and (1, 3)).
 
-Select the best blocking strategy for processor's cache hierarchy (choose ``alternate`` if in doubt) to ensure workers to not compete for cores.
+Select the best blocking strategy for processor's cache hierarchy (choose ``alternating`` if in doubt) to ensure workers to not compete for cores.
 
 .. code-block:: python
 
@@ -365,7 +365,7 @@ Select the best blocking strategy for processor's cache hierarchy (choose ``alte
             HighThroughputExecutor(
                 label="htex_Local",
                 worker_debug=True,
-                cpu_affinity='alternate',
+                cpu_affinity='alternating',
                 provider=LocalProvider(
                     channel=LocalChannel(),
                     init_blocks=1,
