@@ -203,7 +203,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
             break
 
         # Submit tasks
-        while ready_task_queue.qsize() > 0  or m.empty() and not should_stop.is_set():
+        while ready_task_queue.qsize() > 0 or m.empty() and not should_stop.is_set():
             # Obtain task from ready_task_queue
             try:
                 task = ready_task_queue.get(timeout=1)
@@ -416,24 +416,22 @@ def _taskvine_submit_wait(ready_task_queue=None,
             if os.path.exists(result_file):
                 logger.debug("Found result in {}".format(result_file))
                 finished_task_queue.put_nowait(VineTaskToParsl(executor_id=executor_task_id,
-                                                                result_received=True,
-                                                                result_file=result_file,
-                                                                reason=None,
-                                                                status=t.exit_code))
+                                                               result_received=True,
+                                                               result_file=result_file,
+                                                               reason=None,
+                                                               status=t.exit_code))
             # If a result file could not be generated, explain the
             # failure according to taskvine error codes.
             else:
                 reason = _explain_taskvine_result(t)
                 logger.debug("Did not find result in {}".format(result_file))
-                logger.debug("Wrapper Script status: {}\nTaskVine Status: {}"
-                                .format(t.exit_code, t.result))
-                logger.debug("Task with executor id {} / vine id {} failed because:\n{}"
-                                .format(executor_task_id, t.id, reason))
+                logger.debug("Wrapper Script status: {}\nTaskVine Status: {}".format(t.exit_code, t.result))
+                logger.debug("Task with executor id {} / vine id {} failed because:\n{}".format(executor_task_id, t.id, reason))
                 finished_task_queue.put_nowait(VineTaskToParsl(executor_id=executor_task_id,
-                                                                result_received=False,
-                                                                result_file=None,
-                                                                reason=reason,
-                                                                status=t.exit_code))
+                                                               result_received=False,
+                                                               result_file=None,
+                                                               reason=reason,
+                                                               status=t.exit_code))
 
     logger.debug("Exiting TaskVine Monitoring Process")
     return 0
