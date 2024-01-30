@@ -42,10 +42,10 @@ def test_fut_case_1():
 
 
 @pytest.mark.staging_required
-def test_fut_case_2(tmp_path):
+def test_fut_case_2(tmpd_cwd):
     """Testing the behavior of DataFutures where there are no dependencies
     """
-    output_f = tmp_path / 'test_fut_case_2.txt'
+    output_f = tmpd_cwd / 'test_fut_case_2.txt'
     app_fu = delay_incr(1, delay=0.01, outputs=[File(str(output_f))])
     data_fu = app_fu.outputs[0]
 
@@ -69,13 +69,13 @@ def test_fut_case_3():
 
 
 @pytest.mark.staging_required
-def test_fut_case_4(tmp_path):
+def test_fut_case_4(tmpd_cwd):
     """Testing the behavior of DataFutures where there are dependencies
 
     The first call has a delay, and the second call depends on the first
     """
-    output_f1 = tmp_path / 'test_fut_case_4_f1.txt'
-    output_f2 = tmp_path / 'test_fut_case_4_f2.txt'
+    output_f1 = tmpd_cwd / 'test_fut_case_4_f1.txt'
+    output_f2 = tmpd_cwd / 'test_fut_case_4_f2.txt'
     app_1 = delay_incr(1, delay=0.01, outputs=[File(str(output_f1))])
     app_2 = delay_incr(app_1, delay=0.01, outputs=[File(str(output_f2))])
     data_2 = app_2.outputs[0]

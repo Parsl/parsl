@@ -19,7 +19,7 @@ def test_inputs():
     assert reduce_future.result() == 6
 
 
-def test_outputs(tmpdir):
+def test_outputs(tmpd_cwd):
     @python_app()
     def write_app(message, outputs=()):
         """Write a single message to every file in outputs"""
@@ -28,8 +28,8 @@ def test_outputs(tmpdir):
                 print(message, file=fp)
 
     to_write = [
-        File(Path(tmpdir) / 'output-0.txt'),
-        File(Path(tmpdir) / 'output-1.txt')
+        File(Path(tmpd_cwd) / 'output-0.txt'),
+        File(Path(tmpd_cwd) / 'output-1.txt')
     ]
     write_app('Hello!', outputs=to_write).result()
     for path in to_write:
