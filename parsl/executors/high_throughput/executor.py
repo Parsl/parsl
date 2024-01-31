@@ -705,7 +705,15 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             block_info[b_id]['tasks'] += manager['tasks']
             block_info[b_id]['idle'] = min(block_info[b_id]['idle'], manager['idle_duration'])
 
-        sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1]['idle'], item[1]['tasks']))
+        # This list should be sorted so that the most preferable blocks to
+        # scale in are at the start of the list.
+
+        # The most preferred blocks are blocks with the longest idle time, so
+        # the key here starts with the negative of idle time, making longer
+        # idle times be lower numbers, so sorting first.
+
+        sorted_blocks = sorted(block_info.items(), key=lambda item: (-item[1]['idle'], item[1]['tasks']))
+
         logger.debug(f"Scale in selecting from {len(sorted_blocks)} blocks")
         if max_idletime is None:
             block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
