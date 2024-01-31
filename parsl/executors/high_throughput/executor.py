@@ -15,7 +15,7 @@ import parsl.launchers
 from parsl.serialize import pack_res_spec_apply_message, deserialize
 from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
-from parsl.jobs.states import JobStatus, JobState
+from parsl.jobs.states import JobStatus, JobState, TERMINAL_STATES
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
@@ -694,8 +694,27 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         List of block IDs scaled in
         """
         logger.debug(f"Scale in called, blocks={blocks}")
-        managers = self.connected_managers()
         block_info = {}  # block id -> dict( "tasks", "idle" time in s)
+
+        # First populate the list of blocks with blocks know to the provider
+        # mechanism. Then update that list with information from the
+        # interchange which will include idle times and task counts. Blocks
+        # with no interchange registration (for example because they are still
+        # in a batch queue) will be regarded as idle for a long time (so will
+        # be preferred when killing most idle blocks) in preference to any
+        # blocks which have already registered.
+
+        provider_blocks = self.status()
+        for (b_id, job_status) in provider_blocks.items():
+
+            # skip blocks that have already finished
+            if job_status.state in TERMINAL_STATES:
+                continue
+
+            if b_id not in block_info:
+                block_info[b_id] = {"tasks": 0, "idle": float('inf')}
+
+        managers = self.connected_managers()
         for manager in managers:
             if not manager['active']:
                 continue
