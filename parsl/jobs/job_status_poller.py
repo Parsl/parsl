@@ -72,11 +72,13 @@ class PollItem:
     def executor(self) -> BlockProviderExecutor:
         return self._executor
 
-    def scale_in(self, n, force=True, max_idletime=None):
-        if force and not max_idletime:
+    def scale_in(self, n, max_idletime=None):
+
+        # this is a HighThroughputExecutor-specific interface violation
+        if max_idletime is None:
             block_ids = self._executor.scale_in(n)
         else:
-            block_ids = self._executor.scale_in(n, force=force, max_idletime=max_idletime)
+            block_ids = self._executor.scale_in(n, max_idletime=max_idletime)
         if block_ids is not None:
             new_status = {}
             for block_id in block_ids:
