@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import socket
 import time
@@ -11,7 +13,8 @@ import queue
 import parsl.monitoring.remote
 
 from parsl.multiprocessing import ForkProcess, SizedQueue
-from multiprocessing import Process, Queue
+from multiprocessing import Process
+from multiprocessing.queues import Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
@@ -172,9 +175,13 @@ class MonitoringHub(RepresentationMixin):
         self.monitoring_hub_active = True
 
         # This annotation is incompatible with typeguard 4.x instrumentation
-        # of local variables, because Queue is not a type: it's a method on
-        # multiprocessing.context.DefaultContext.
+        # of local variables: Queue is not subscriptable at runtime, as far
+        # as typeguard is concerned. The more general Queue annotation works,
+        # but does not restrict the contents of the Queue.
+
         # comm_q: Queue[Union[Tuple[int, int], str]]
+        comm_q: Queue
+
         comm_q = SizedQueue(maxsize=10)
 
         self.exception_q: Queue[Tuple[str, str]]
