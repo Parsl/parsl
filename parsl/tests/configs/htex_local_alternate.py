@@ -39,7 +39,7 @@ def fresh_config():
     return Config(
         executors=[
             HighThroughputExecutor(
-                address="127.0.0.1",
+                address="localhost",
                 label="htex_Local",
                 working_dir=working_dir,
                 storage_access=[FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging()],
