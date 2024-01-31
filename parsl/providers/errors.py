@@ -51,11 +51,12 @@ class SubmitException(ExecutionProviderException):
     '''Raised by the submit() method of a provider if there is an error in launching a job.
     '''
 
-    def __init__(self, job_name, message, stdout=None, stderr=None):
+    def __init__(self, job_name, message, stdout=None, stderr=None, retcode=None):
         self.job_name = job_name
         self.message = message
         self.stdout = stdout
         self.stderr = stderr
+        self.retcode = retcode
 
     @property
     def task_name(self) -> str:
@@ -64,7 +65,4 @@ class SubmitException(ExecutionProviderException):
 
     def __str__(self):
         # TODO: make this more user-friendly
-        return "Cannot launch job {0}: {1}; stdout={2}, stderr={3}".format(self.job_name,
-                                                                           self.message,
-                                                                           self.stdout,
-                                                                           self.stderr)
+        return f"Cannot launch job {self.job_name}: {self.messsage}; recode={self.retcode}, stdout={self.stdout}, stderr={self.stderr}"
