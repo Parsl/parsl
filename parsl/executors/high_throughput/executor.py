@@ -603,7 +603,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     def workers_per_node(self) -> Union[int, float]:
         return self._workers_per_node
 
-    def scale_in(self, blocks=None, force=True, max_idletime=None):
+    def scale_in(self, blocks, force=True, max_idletime=None):
         """Scale in the number of active blocks by specified amount.
 
         The scale in method here is very rude. It doesn't give the workers
