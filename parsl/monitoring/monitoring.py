@@ -23,7 +23,7 @@ from parsl.serialize import deserialize
 
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import AddressedMonitoringMessage, TaggedMonitoringMessage
-from typing import cast, Any, Callable, Dict, Optional, Sequence, Tuple, Union
+from typing import cast, Any, Callable, Dict, Optional, Sequence, Tuple, Union, TYPE_CHECKING
 
 _db_manager_excepts: Optional[Exception]
 
@@ -177,10 +177,15 @@ class MonitoringHub(RepresentationMixin):
         # This annotation is incompatible with typeguard 4.x instrumentation
         # of local variables: Queue is not subscriptable at runtime, as far
         # as typeguard is concerned. The more general Queue annotation works,
-        # but does not restrict the contents of the Queue.
+        # but does not restrict the contents of the Queue. Using TYPE_CHECKING
+        # here allows the stricter definition to be seen by mypy, and the
+        # simpler definition to be seen by typeguard. Hopefully at some point
+        # in the future, Queue will allow runtime subscripts.
 
-        # comm_q: Queue[Union[Tuple[int, int], str]]
-        comm_q: Queue
+        if TYPE_CHECKING:
+            comm_q: Queue[Union[Tuple[int, int], str]]
+        else:
+            comm_q: Queue
 
         comm_q = SizedQueue(maxsize=10)
 
