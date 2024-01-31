@@ -63,6 +63,6 @@ class SubmitException(ExecutionProviderException):
         warnings.warn("task_name is deprecated; use .job_name instead. This will be removed after 2024-06.", DeprecationWarning)
         return self.job_name
 
-    def __str__(self):
+    def __str__(self) -> str:
         # TODO: make this more user-friendly
-        return f"Cannot launch job {self.job_name}: {self.messsage}; recode={self.retcode}, stdout={self.stdout}, stderr={self.stderr}"
+        return f"Cannot launch job {self.job_name}: {self.message}; recode={self.retcode}, stdout={self.stdout}, stderr={self.stderr}"
