@@ -302,7 +302,7 @@ class DataFlowKernel:
             res = self._unwrap_remote_exception_wrapper(future)
 
         except Exception as e:
-            logger.debug("Task {} try {} failed".format(task_id, task_record['try_id']))
+            logger.info(f"Task {task_id} try {task_record['try_id']} failed with exception of type {type(e).__name__}")
             # We keep the history separately, since the future itself could be
             # tossed.
             task_record['fail_history'].append(repr(e))
