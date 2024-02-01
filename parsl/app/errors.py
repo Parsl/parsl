@@ -6,8 +6,6 @@ from types import TracebackType
 import logging
 from tblib import Traceback
 
-from six import reraise
-
 from parsl.data_provider.files import File
 from parsl.errors import ParslError
 
@@ -109,8 +107,6 @@ class RemoteExceptionWrapper:
 
     def reraise(self) -> None:
 
-        t = self.e_type
-
         # the type is logged here before deserialising v and tb
         # because occasionally there are problems deserialising the
         # value (see #785, #548) and the fix is related to the
@@ -119,7 +115,7 @@ class RemoteExceptionWrapper:
 
         v = self.get_exception()
 
-        reraise(t, v, v.__traceback__)
+        raise v
 
     def get_exception(self) -> BaseException:
         v = self.e_value

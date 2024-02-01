@@ -618,10 +618,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         force : Bool
              Used along with blocks to indicate whether blocks should be terminated by force.
+
              When force = True, we will kill blocks regardless of the blocks being busy
-             When force = False, Only idle blocks will be terminated.
-             If the # of ``idle_blocks`` < ``blocks``, the list of jobs marked for termination
-             will be in the range: 0 - ``blocks``.
+
+             When force = False, only idle blocks will be terminated.  If the
+             number of idle blocks < ``blocks``, then fewer than ``blocks``
+             blocks will be terminated.
 
         max_idletime: float
              A time to indicate how long a block can be idle.
@@ -632,7 +634,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         Returns
         -------
-        List of job_ids marked for termination
+        List of block IDs scaled in
         """
         logger.debug(f"Scale in called, blocks={blocks}, block_ids={block_ids}")
         if block_ids:

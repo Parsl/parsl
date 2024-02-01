@@ -43,7 +43,7 @@ def monitor_wrapper(f: Any,           # per app
                            radio_mode,
                            run_dir)
 
-        if monitor_resources:
+        if monitor_resources and sleep_dur > 0:
             # create the monitor process and start
             pp = ForkProcess(target=monitor,
                              args=(os.getpid(),
