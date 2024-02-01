@@ -14,6 +14,7 @@ def fresh_config():
                 # which compute nodes can communicate
                 # address=address_by_interface('bond0.144'),
                 max_workers=1,
+                encrypted=True,
                 provider=SlurmProvider(
                     user_opts['bridges']['partition'],  # Partition / QOS
                     nodes_per_block=2,

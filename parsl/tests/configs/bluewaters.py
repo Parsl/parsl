@@ -14,6 +14,7 @@ def fresh_config():
                 cores_per_worker=1,
                 worker_debug=False,
                 max_workers=1,
+                encrypted=True,
                 provider=TorqueProvider(
                     queue='normal',
                     launcher=AprunLauncher(overrides="-b -- bwpy-environ --"),

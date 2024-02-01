@@ -15,6 +15,7 @@ config = Config(
             label="htex_Local",
             worker_debug=True,
             cores_per_worker=1,
+            encrypted=True,
             provider=LocalProvider(
                 channel=LocalChannel(),
                 init_blocks=1,

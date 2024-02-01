@@ -18,6 +18,7 @@ def local_config():
                 max_workers=2,
                 cpu_affinity='block',
                 available_accelerators=2,
+                encrypted=True,
                 provider=LocalProvider(
                     channel=LocalChannel(),
                     init_blocks=1,

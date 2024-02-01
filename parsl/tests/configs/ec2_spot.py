@@ -15,6 +15,7 @@ config = Config(
         HighThroughputExecutor(
             label='ec2_single_node',
             address=user_opts['public_ip'],
+            encrypted=True,
             provider=AWSProvider(
                 user_opts['ec2']['image_id'],
                 region=user_opts['ec2']['region'],
