@@ -203,7 +203,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
             break
 
         # Submit tasks
-        while ready_task_queue.qsize() > 0 and not should_stop.is_set():
+        while ready_task_queue.qsize() > 0 or m.empty() and not should_stop.is_set():
             # Obtain task from ready_task_queue
             try:
                 task = ready_task_queue.get(timeout=1)
@@ -393,48 +393,45 @@ def _taskvine_submit_wait(ready_task_queue=None,
 
         # If the queue is not empty wait on the TaskVine queue for a task
         task_found = True
-        if not m.empty():
-            while task_found and not should_stop.is_set():
-                # Obtain the task from the queue
-                t = m.wait(1)
-                if t is None:
-                    task_found = False
-                    continue
-                logger.debug('Found a task')
-                executor_task_id = vine_id_to_executor_task_id[str(t.id)][0]
-                vine_id_to_executor_task_id.pop(str(t.id))
+        while not m.empty() and task_found and not should_stop.is_set():
+            # Obtain the task from the queue
+            t = m.wait(1)
+            if t is None:
+                task_found = False
+                continue
+            logger.debug('Found a task')
+            executor_task_id = vine_id_to_executor_task_id[str(t.id)][0]
+            vine_id_to_executor_task_id.pop(str(t.id))
 
-                # When a task is found
-                result_file = result_file_of_task_id.pop(executor_task_id)
+            # When a task is found
+            result_file = result_file_of_task_id.pop(executor_task_id)
 
-                logger.debug(f"completed executor task info: {executor_task_id}, {t.category}, {t.command}, {t.std_output}")
+            logger.debug(f"completed executor task info: {executor_task_id}, {t.category}, {t.command}, {t.std_output}")
 
-                # A tasks completes 'succesfully' if it has result file.
-                # A check whether the Python object represented using this file can be
-                # deserialized happens later in the collector thread of the executor
-                # process.
-                logger.debug("Looking for result in {}".format(result_file))
-                if os.path.exists(result_file):
-                    logger.debug("Found result in {}".format(result_file))
-                    finished_task_queue.put_nowait(VineTaskToParsl(executor_id=executor_task_id,
-                                                                   result_received=True,
-                                                                   result_file=result_file,
-                                                                   reason=None,
-                                                                   status=t.exit_code))
-                # If a result file could not be generated, explain the
-                # failure according to taskvine error codes.
-                else:
-                    reason = _explain_taskvine_result(t)
-                    logger.debug("Did not find result in {}".format(result_file))
-                    logger.debug("Wrapper Script status: {}\nTaskVine Status: {}"
-                                 .format(t.exit_code, t.result))
-                    logger.debug("Task with executor id {} / vine id {} failed because:\n{}"
-                                 .format(executor_task_id, t.id, reason))
-                    finished_task_queue.put_nowait(VineTaskToParsl(executor_id=executor_task_id,
-                                                                   result_received=False,
-                                                                   result_file=None,
-                                                                   reason=reason,
-                                                                   status=t.exit_code))
+            # A tasks completes 'succesfully' if it has result file.
+            # A check whether the Python object represented using this file can be
+            # deserialized happens later in the collector thread of the executor
+            # process.
+            logger.debug("Looking for result in {}".format(result_file))
+            if os.path.exists(result_file):
+                logger.debug("Found result in {}".format(result_file))
+                finished_task_queue.put_nowait(VineTaskToParsl(executor_id=executor_task_id,
+                                                               result_received=True,
+                                                               result_file=result_file,
+                                                               reason=None,
+                                                               status=t.exit_code))
+            # If a result file could not be generated, explain the
+            # failure according to taskvine error codes.
+            else:
+                reason = _explain_taskvine_result(t)
+                logger.debug("Did not find result in {}".format(result_file))
+                logger.debug("Wrapper Script status: {}\nTaskVine Status: {}".format(t.exit_code, t.result))
+                logger.debug("Task with executor id {} / vine id {} failed because:\n{}".format(executor_task_id, t.id, reason))
+                finished_task_queue.put_nowait(VineTaskToParsl(executor_id=executor_task_id,
+                                                               result_received=False,
+                                                               result_file=None,
+                                                               reason=reason,
+                                                               status=t.exit_code))
 
     logger.debug("Exiting TaskVine Monitoring Process")
     return 0

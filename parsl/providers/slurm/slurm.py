@@ -13,6 +13,7 @@ from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.launchers.base import Launcher
 from parsl.providers.cluster_provider import ClusterProvider
+from parsl.providers.errors import SubmitException
 from parsl.providers.slurm.template import template_string
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
@@ -194,7 +195,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             logger.debug("Updating missing job {} to completed status".format(missing_job))
             self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
 
-    def submit(self, command, tasks_per_node, job_name="parsl.slurm"):
+    def submit(self, command: str, tasks_per_node: int, job_name="parsl.slurm") -> str:
         """Submit the command as a slurm job.
 
         Parameters
@@ -207,8 +208,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             Name for the job
         Returns
         -------
-        None or str
-            If at capacity, returns None; otherwise, a string identifier for the job
+        job id : str
+            A string identifier for the job
         """
 
         scheduler_options = self.scheduler_options
@@ -254,21 +255,21 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         retcode, stdout, stderr = self.execute_wait("sbatch {0}".format(channel_script_path))
 
-        job_id = None
         if retcode == 0:
             for line in stdout.split('\n'):
                 match = re.match(self.regex_job_id, line)
                 if match:
                     job_id = match.group("id")
                     self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
-                    break
+                    return job_id
             else:
                 logger.error("Could not read job ID from submit command standard output.")
                 logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
+                raise SubmitException(job_name, "Could not read job ID from submit command standard output", stdout=stdout, stderr=stderr, retcode=retcode)
         else:
             logger.error("Submit command failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
-        return job_id
+            raise SubmitException(job_name, "Could not read job ID from submit command standard output", stdout=stdout, stderr=stderr, retcode=retcode)
 
     def cancel(self, job_ids):
         ''' Cancels the jobs specified by a list of job ids

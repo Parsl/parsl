@@ -25,7 +25,7 @@ def make_config():
 
 
 @mark.local
-def test_executor(tmpdir):
+def test_executor():
     my_config = make_config()
 
     with ParslPoolExecutor(my_config) as exc:
