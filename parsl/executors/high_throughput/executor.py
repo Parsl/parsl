@@ -634,7 +634,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         Returns
         -------
-        List of job_ids marked for termination
+        List of block IDs scaled in
         """
         logger.debug(f"Scale in called, blocks={blocks}, block_ids={block_ids}")
         if block_ids:
