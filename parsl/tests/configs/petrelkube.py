@@ -23,6 +23,7 @@ def fresh_config():
 
                 # Address for the pod worker to connect back
                 address=address_by_route(),
+                encrypted=True,
                 provider=KubernetesProvider(
                     namespace="dlhub-privileged",
 
