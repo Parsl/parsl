@@ -1,18 +1,11 @@
 #! /usr/bin/env python3
 
-import sys
-from parsl.app.errors import RemoteExceptionWrapper
-
 import socket
 import json
 import os
 import sys
-import threading
-import queue
 def remote_execute(func):
-    def remote_wrapper(event, q=None):
-        if q:
-            event = json.loads(event)
+    def remote_wrapper(event):
         kwargs = event["fn_kwargs"]
         args = event["fn_args"]
         try:
@@ -21,16 +14,14 @@ def remote_execute(func):
                 "StatusCode": 200
             }
         except Exception as e:
-            response = { 
+            response = {
                 "Result": str(e),
-                "StatusCode": 500 
+                "StatusCode": 500
             }
-        if not q:
-            return response
-        q.put(response)
+        return response
     return remote_wrapper
-    
-read, write = os.pipe() 
+
+read, write = os.pipe()
 def send_configuration(config):
     config_string = json.dumps(config)
     config_cmd = f"{len(config_string) + 1}\n{config_string}\n"
@@ -43,11 +34,11 @@ def main():
         s.bind(('localhost', 0))
     except Exception as e:
         s.close()
-        print(e)
-        exit(1)
+        print(e, file=sys.stderr)
+        sys.exit(1)
     # information to print to stdout for worker
     config = {
-            "name": name(),
+            "name": name(),  # noqa: F821
             "port": s.getsockname()[1],
             }
     send_configuration(config)
@@ -76,16 +67,8 @@ def main():
                     event = json.loads(event_str)
                     # see if the user specified an execution method
                     exec_method = event.get("remote_task_exec_method", None)
-                    print('Network function: recieved event: {}'.format(event), file=sys.stderr)
                     os.chdir(os.path.join(abs_working_dir, f't.{task_id}'))
-                    if exec_method == "thread":
-                        # create a forked process for function handler
-                        q = queue.Queue()
-                        p = threading.Thread(target=globals()[function_name], args=(event_str, q))
-                        p.start()
-                        p.join()
-                        response = json.dumps(q.get()).encode("utf-8")
-                    elif exec_method == "direct":
+                    if exec_method == "direct":
                         response = json.dumps(globals()[function_name](event)).encode("utf-8")
                     else:
                         p = os.fork()
@@ -94,19 +77,20 @@ def main():
                             os.write(write, json.dumps(response).encode("utf-8"))
                             os._exit(0)
                         elif p < 0:
-                            print('Network function: unable to fork', file=sys.stderr)
-                            response = { 
+                            print(f'Network function: unable to fork to execute {function_name}', file=sys.stderr)
+                            response = {
                                 "Result": "unable to fork",
-                                "StatusCode": 500 
+                                "StatusCode": 500
                             }
                         else:
-                            chunk = os.read(read, 65536).decode("utf-8")
+                            max_read = 65536
+                            chunk = os.read(read, max_read).decode("utf-8")
                             all_chunks = [chunk]
-                            while (len(chunk) >= 65536):
-                                chunk = os.read(read, 65536).decode("utf-8")
+                            while (len(chunk) >= max_read):
+                                chunk = os.read(read, max_read).decode("utf-8")
                                 all_chunks.append(chunk)
                             response = "".join(all_chunks).encode("utf-8")
-                            os.waitid(os.P_PID, p, os.WEXITED)
+                            os.waitpid(p, 0)
                     response_size = len(response)
                     size_msg = "{}\n".format(response_size)
                     # send the size of response
@@ -150,5 +134,5 @@ def run_parsl_task(a, b, c):
     epf.dump_result_to_file(result_file, result)
     return None
 if __name__ == "__main__":
-	main()
+    main()
 
