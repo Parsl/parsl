@@ -1,5 +1,12 @@
 pyzmq>=17.1.2
-typeguard>=2.10,<3
+
+# typeguard uses semantic versioning.
+# major v3 was a shortlived version that was rapidly replaced by major v4,
+# so this specification excludes it.
+# v2 and v4 are both seen in the wild with users in complex deployments.
+typeguard>=2.10,!=3.*,<5
+
+
 typing-extensions>=4.6,<5
 globus-sdk
 dill

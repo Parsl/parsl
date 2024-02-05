@@ -12,6 +12,7 @@ def fresh_config():
             HighThroughputExecutor(
                 label='cc_in2p3_htex',
                 max_workers=1,
+                encrypted=True,
                 provider=GridEngineProvider(
                     channel=LocalChannel(),
                     nodes_per_block=2,

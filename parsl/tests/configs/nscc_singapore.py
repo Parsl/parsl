@@ -17,6 +17,7 @@ def fresh_config():
                 worker_debug=False,
                 max_workers=1,
                 address=address_by_interface('ib0'),
+                encrypted=True,
                 provider=PBSProProvider(
                     launcher=MpiRunLauncher(),
                     # string to prepend to #PBS blocks in the submit

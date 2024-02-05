@@ -16,6 +16,7 @@ def local_setup():
                 label="theta_htex",
                 # worker_debug=True,
                 cores_per_worker=4,
+                encrypted=True,
                 provider=CobaltProvider(
                     queue='debug-flat-quad',
                     account='CSC249ADCD01',

@@ -22,6 +22,7 @@ from parsl.executors.errors import (
     UnsupportedFeatureError
 )
 
+from parsl import curvezmq
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.base import ExecutionProvider
 from parsl.data_provider.staging import Staging
@@ -174,6 +175,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     worker_logdir_root : string
         In case of a remote file system, specify the path to where logs will be kept.
+
+    encrypted : bool
+        Flag to enable/disable encryption (CurveZMQ). Default is False.
     """
 
     @typeguard.typechecked
@@ -199,7 +203,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  poll_period: int = 10,
                  address_probe_timeout: Optional[int] = None,
                  worker_logdir_root: Optional[str] = None,
-                 block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True):
+                 block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
+                 encrypted: bool = False):
 
         logger.debug("Initializing HighThroughputExecutor")
 
@@ -256,6 +261,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.run_dir = '.'
         self.worker_logdir_root = worker_logdir_root
         self.cpu_affinity = cpu_affinity
+        self.encrypted = encrypted
+        self.cert_dir = None
 
         if not launch_cmd:
             launch_cmd = (
@@ -267,6 +274,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                 "--poll {poll_period} "
                 "--task_port={task_port} "
                 "--result_port={result_port} "
+                "--cert_dir {cert_dir} "
                 "--logdir={logdir} "
                 "--block_id={{block_id}} "
                 "--hb_period={heartbeat_period} "
@@ -280,6 +288,16 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     radio_mode = "htex"
 
+    @property
+    def logdir(self):
+        return "{}/{}".format(self.run_dir, self.label)
+
+    @property
+    def worker_logdir(self):
+        if self.worker_logdir_root is not None:
+            return "{}/{}".format(self.worker_logdir_root, self.label)
+        return self.logdir
+
     def initialize_scaling(self):
         """Compose the launch command and scale out the initial blocks.
         """
@@ -289,9 +307,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         address_probe_timeout_string = ""
         if self.address_probe_timeout:
             address_probe_timeout_string = "--address_probe_timeout={}".format(self.address_probe_timeout)
-        worker_logdir = "{}/{}".format(self.run_dir, self.label)
-        if self.worker_logdir_root is not None:
-            worker_logdir = "{}/{}".format(self.worker_logdir_root, self.label)
 
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,
@@ -306,7 +321,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
                                        poll_period=self.poll_period,
-                                       logdir=worker_logdir,
+                                       cert_dir=self.cert_dir,
+                                       logdir=self.worker_logdir,
                                        cpu_affinity=self.cpu_affinity,
                                        accelerators=" ".join(self.available_accelerators))
         self.launch_cmd = l_cmd
@@ -327,9 +343,25 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     def start(self):
         """Create the Interchange process and connect to it.
         """
-        self.outgoing_q = zmq_pipes.TasksOutgoing("127.0.0.1", self.interchange_port_range)
-        self.incoming_q = zmq_pipes.ResultsIncoming("127.0.0.1", self.interchange_port_range)
-        self.command_client = zmq_pipes.CommandClient("127.0.0.1", self.interchange_port_range)
+        if self.encrypted and self.cert_dir is None:
+            logger.debug("Creating CurveZMQ certificates")
+            self.cert_dir = curvezmq.create_certificates(self.logdir)
+        elif not self.encrypted and self.cert_dir:
+            raise AttributeError(
+                "The certificates directory path attribute (cert_dir) is defined, but the "
+                "encrypted attribute is set to False. You must either change cert_dir to "
+                "None or encrypted to True."
+            )
+
+        self.outgoing_q = zmq_pipes.TasksOutgoing(
+            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+        )
+        self.incoming_q = zmq_pipes.ResultsIncoming(
+            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+        )
+        self.command_client = zmq_pipes.CommandClient(
+            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+        )
 
         self._queue_management_thread = None
         self._start_queue_management_thread()
@@ -450,10 +482,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                                     "worker_port_range": self.worker_port_range,
                                                     "hub_address": self.hub_address,
                                                     "hub_port": self.hub_port,
-                                                    "logdir": "{}/{}".format(self.run_dir, self.label),
+                                                    "logdir": self.logdir,
                                                     "heartbeat_threshold": self.heartbeat_threshold,
                                                     "poll_period": self.poll_period,
-                                                    "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
+                                                    "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
+                                                    "cert_dir": self.cert_dir,
                                                     },
                                             daemon=True,
                                             name="HTEX-Interchange"
@@ -618,10 +651,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         force : Bool
              Used along with blocks to indicate whether blocks should be terminated by force.
+
              When force = True, we will kill blocks regardless of the blocks being busy
-             When force = False, Only idle blocks will be terminated.
-             If the # of ``idle_blocks`` < ``blocks``, the list of jobs marked for termination
-             will be in the range: 0 - ``blocks``.
+
+             When force = False, only idle blocks will be terminated.  If the
+             number of idle blocks < ``blocks``, then fewer than ``blocks``
+             blocks will be terminated.
 
         max_idletime: float
              A time to indicate how long a block can be idle.
@@ -629,7 +664,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         Returns
         -------
-        List of job_ids marked for termination
+        List of block IDs scaled in
         """
         logger.debug(f"Scale in called, blocks={blocks}")
         managers = self.connected_managers()
