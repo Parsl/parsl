@@ -49,9 +49,6 @@ class BaseContext(metaclass=ABCMeta):
         self.cert_dir = cert_dir
         self._ctx = zmq.Context()
 
-    def __del__(self):
-        self.destroy()
-
     @property
     def encrypted(self):
         """Indicates whether encryption is enabled.
@@ -135,6 +132,12 @@ class ServerContext(BaseContext):
         self.auth_thread = None
         if self.encrypted:
             self.auth_thread = self._start_auth_thread()
+
+    def __del__(self):
+        # Avoid issues in which the auth_thread attr was
+        # previously deleted
+        if getattr(self, "auth_thread", None):
+            self.auth_thread.stop()
 
     def _start_auth_thread(self) -> ThreadAuthenticator:
         auth_thread = ThreadAuthenticator(self._ctx)
