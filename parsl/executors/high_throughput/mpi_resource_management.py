@@ -54,6 +54,8 @@ def get_nodes_in_batchjob(scheduler: Scheduler) -> List[str]:
         nodelist = get_pbs_hosts_list()
     elif scheduler == Scheduler.Cobalt:
         nodelist = get_cobalt_hosts_list()
+    else:
+        raise RuntimeError(f"mpi_mode does not support scheduler:{scheduler}")
     return nodelist
 
 
@@ -99,9 +101,6 @@ class TaskScheduler:
 
     def get_result(self, block: bool, timeout: float):
         return self.pending_result_q.get(block, timeout=timeout)
-
-    def put_result(self, result) -> None:
-        return self.pending_result_q.put(result)
 
 
 class MPITaskScheduler(TaskScheduler):
@@ -200,10 +199,6 @@ class MPITaskScheduler(TaskScheduler):
             _nodes_requested, task_package = self._backlog_queue.get(block=False)
             self.put_task(task_package)
         except queue.Empty:
-            return
-        except MPINodesUnavailable:
-            logger.debug("MPINodesUnavailable: Popping task back onto backlog_queue")
-            self._backlog_queue.put((_nodes_requested, task_package))
             return
         else:
             # Keep attempting to schedule tasks till we are out of resources

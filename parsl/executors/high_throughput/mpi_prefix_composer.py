@@ -129,7 +129,6 @@ def compose_all(
     elif mpi_launcher == "mpiexec":
         all_prefixes["PARSL_MPI_PREFIX"] = all_prefixes["PARSL_MPIEXEC_PREFIX"]
     else:
-        # When unsure, we choose mpiexec
-        all_prefixes["PARSL_MPI_PREFIX"] = all_prefixes["PARSL_MPIEXEC_PREFIX"]
+        raise RuntimeError(f"Unknown mpi_launcher:{mpi_launcher}")
 
     return all_prefixes

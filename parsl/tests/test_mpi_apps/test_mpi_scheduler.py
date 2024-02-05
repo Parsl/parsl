@@ -27,12 +27,6 @@ def test_NoopScheduler():
     result_q.put("Result1")
     assert scheduler.get_result(True, 1) == "Result1"
 
-    for i in range(5):
-        result = f"Result{i}"
-        scheduler.put_result(result)
-        got_result = scheduler.get_result(True, 1)
-        assert result == got_result
-
 
 @pytest.mark.local
 def test_MPISched_put_task():
