@@ -636,7 +636,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     def workers_per_node(self) -> Union[int, float]:
         return self._workers_per_node
 
-    def scale_in(self, blocks=None, block_ids=[], force=True, max_idletime=None):
+    def scale_in(self, blocks, force=True, max_idletime=None):
         """Scale in the number of active blocks by specified amount.
 
         The scale in method here is very rude. It doesn't give the workers
@@ -662,46 +662,40 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
              A time to indicate how long a block can be idle.
              Used along with force = False to kill blocks that have been idle for that long.
 
-        block_ids : list
-             List of specific block ids to terminate. Optional
-
         Returns
         -------
         List of block IDs scaled in
         """
-        logger.debug(f"Scale in called, blocks={blocks}, block_ids={block_ids}")
-        if block_ids:
-            block_ids_to_kill = block_ids
-        else:
-            managers = self.connected_managers()
-            block_info = {}  # block id -> list( tasks, idle duration )
-            for manager in managers:
-                if not manager['active']:
-                    continue
-                b_id = manager['block_id']
-                if b_id not in block_info:
-                    block_info[b_id] = [0, float('inf')]
-                block_info[b_id][0] += manager['tasks']
-                block_info[b_id][1] = min(block_info[b_id][1], manager['idle_duration'])
+        logger.debug(f"Scale in called, blocks={blocks}")
+        managers = self.connected_managers()
+        block_info = {}  # block id -> list( tasks, idle duration )
+        for manager in managers:
+            if not manager['active']:
+                continue
+            b_id = manager['block_id']
+            if b_id not in block_info:
+                block_info[b_id] = [0, float('inf')]
+            block_info[b_id][0] += manager['tasks']
+            block_info[b_id][1] = min(block_info[b_id][1], manager['idle_duration'])
 
-            sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1][1], item[1][0]))
-            logger.debug(f"Scale in selecting from {len(sorted_blocks)} blocks")
-            if force is True:
-                block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
+        sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1][1], item[1][0]))
+        logger.debug(f"Scale in selecting from {len(sorted_blocks)} blocks")
+        if force is True:
+            block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
+        else:
+            if not max_idletime:
+                block_ids_to_kill = [x[0] for x in sorted_blocks if x[1][0] == 0][:blocks]
             else:
-                if not max_idletime:
-                    block_ids_to_kill = [x[0] for x in sorted_blocks if x[1][0] == 0][:blocks]
-                else:
-                    block_ids_to_kill = []
-                    for x in sorted_blocks:
-                        if x[1][1] > max_idletime and x[1][0] == 0:
-                            block_ids_to_kill.append(x[0])
-                            if len(block_ids_to_kill) == blocks:
-                                break
-                logger.debug("Selected idle block ids to kill: {}".format(
-                    block_ids_to_kill))
-                if len(block_ids_to_kill) < blocks:
-                    logger.warning(f"Could not find enough blocks to kill: wanted {blocks} but only selected {len(block_ids_to_kill)}")
+                block_ids_to_kill = []
+                for x in sorted_blocks:
+                    if x[1][1] > max_idletime and x[1][0] == 0:
+                        block_ids_to_kill.append(x[0])
+                        if len(block_ids_to_kill) == blocks:
+                            break
+            logger.debug("Selected idle block ids to kill: {}".format(
+                block_ids_to_kill))
+            if len(block_ids_to_kill) < blocks:
+                logger.warning(f"Could not find enough blocks to kill: wanted {blocks} but only selected {len(block_ids_to_kill)}")
 
         # Hold the block
         for block_id in block_ids_to_kill:
