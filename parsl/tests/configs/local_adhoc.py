@@ -9,6 +9,7 @@ def fresh_config():
         executors=[
             HighThroughputExecutor(
                 label='AdHoc',
+                encrypted=True,
                 provider=AdHocProvider(
                     channels=[LocalChannel(), LocalChannel()]
                 )

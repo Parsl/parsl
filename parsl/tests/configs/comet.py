@@ -11,6 +11,7 @@ def fresh_config():
             HighThroughputExecutor(
                 label='Comet_HTEX_multinode',
                 max_workers=1,
+                encrypted=True,
                 provider=SlurmProvider(
                     'debug',
                     launcher=SrunLauncher(),
