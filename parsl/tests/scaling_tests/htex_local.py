@@ -10,6 +10,7 @@ config = Config(
             label="htex_local",
             cores_per_worker=1,
             max_workers=8,
+            encrypted=True,
             provider=LocalProvider(
                 channel=LocalChannel(),
                 init_blocks=1,

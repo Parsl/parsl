@@ -28,6 +28,7 @@ def test_simple(mem_per_worker):
                 mem_per_worker=mem_per_worker,
                 cores_per_worker=0.1,
                 suppress_failure=True,
+                encrypted=True,
                 provider=LocalProvider(
                     channel=LocalChannel(),
                     init_blocks=1,

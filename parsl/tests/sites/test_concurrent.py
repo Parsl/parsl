@@ -17,6 +17,7 @@ def make_config():
                 max_workers=2,
                 heartbeat_period=2,
                 heartbeat_threshold=4,
+                encrypted=True,
             )
         ],
         strategy='none',
@@ -24,7 +25,7 @@ def make_config():
 
 
 @mark.local
-def test_executor(tmpdir):
+def test_executor():
     my_config = make_config()
 
     with ParslPoolExecutor(my_config) as exc:

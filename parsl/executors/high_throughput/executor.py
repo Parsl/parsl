@@ -26,6 +26,7 @@ from parsl.executors.high_throughput.mpi_prefix_composer import (
     validate_resource_spec
 )
 
+from parsl import curvezmq
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.base import ExecutionProvider
 from parsl.data_provider.staging import Staging
@@ -189,6 +190,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         This field is only used if enable_mpi_mode is set. Select one from the
         list of supported MPI launchers = ("srun", "aprun", "mpiexec").
         default: "mpiexec"
+
+   encrypted : bool
+        Flag to enable/disable encryption (CurveZMQ). Default is False.
     """
 
     @typeguard.typechecked
@@ -217,6 +221,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  enable_mpi_mode: bool = False,
                  mpi_launcher: str = "mpiexec",
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True):
+                 encrypted: bool = False):
 
         logger.debug("Initializing HighThroughputExecutor")
 
@@ -273,6 +278,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.run_dir = '.'
         self.worker_logdir_root = worker_logdir_root
         self.cpu_affinity = cpu_affinity
+        self.encrypted = encrypted
+        self.cert_dir = None
 
         self.enable_mpi_mode = enable_mpi_mode
         assert mpi_launcher in VALID_LAUNCHERS, \
@@ -293,6 +300,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                 "--poll {poll_period} "
                 "--task_port={task_port} "
                 "--result_port={result_port} "
+                "--cert_dir {cert_dir} "
                 "--logdir={logdir} "
                 "--block_id={{block_id}} "
                 "--hb_period={heartbeat_period} "
@@ -308,6 +316,16 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     radio_mode = "htex"
 
+    @property
+    def logdir(self):
+        return "{}/{}".format(self.run_dir, self.label)
+
+    @property
+    def worker_logdir(self):
+        if self.worker_logdir_root is not None:
+            return "{}/{}".format(self.worker_logdir_root, self.label)
+        return self.logdir
+
     def initialize_scaling(self):
         """Compose the launch command and scale out the initial blocks.
         """
@@ -318,9 +336,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         address_probe_timeout_string = ""
         if self.address_probe_timeout:
             address_probe_timeout_string = "--address_probe_timeout={}".format(self.address_probe_timeout)
-        worker_logdir = "{}/{}".format(self.run_dir, self.label)
-        if self.worker_logdir_root is not None:
-            worker_logdir = "{}/{}".format(self.worker_logdir_root, self.label)
 
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,
@@ -335,7 +350,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
                                        poll_period=self.poll_period,
-                                       logdir=worker_logdir,
+                                       cert_dir=self.cert_dir,
+                                       logdir=self.worker_logdir,
                                        cpu_affinity=self.cpu_affinity,
                                        enable_mpi_mode=enable_mpi_opts,
                                        mpi_launcher=self.mpi_launcher,
@@ -358,9 +374,25 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     def start(self):
         """Create the Interchange process and connect to it.
         """
-        self.outgoing_q = zmq_pipes.TasksOutgoing("127.0.0.1", self.interchange_port_range)
-        self.incoming_q = zmq_pipes.ResultsIncoming("127.0.0.1", self.interchange_port_range)
-        self.command_client = zmq_pipes.CommandClient("127.0.0.1", self.interchange_port_range)
+        if self.encrypted and self.cert_dir is None:
+            logger.debug("Creating CurveZMQ certificates")
+            self.cert_dir = curvezmq.create_certificates(self.logdir)
+        elif not self.encrypted and self.cert_dir:
+            raise AttributeError(
+                "The certificates directory path attribute (cert_dir) is defined, but the "
+                "encrypted attribute is set to False. You must either change cert_dir to "
+                "None or encrypted to True."
+            )
+
+        self.outgoing_q = zmq_pipes.TasksOutgoing(
+            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+        )
+        self.incoming_q = zmq_pipes.ResultsIncoming(
+            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+        )
+        self.command_client = zmq_pipes.CommandClient(
+            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+        )
 
         self._queue_management_thread = None
         self._start_queue_management_thread()
@@ -481,10 +513,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                                     "worker_port_range": self.worker_port_range,
                                                     "hub_address": self.hub_address,
                                                     "hub_port": self.hub_port,
-                                                    "logdir": "{}/{}".format(self.run_dir, self.label),
+                                                    "logdir": self.logdir,
                                                     "heartbeat_threshold": self.heartbeat_threshold,
                                                     "poll_period": self.poll_period,
-                                                    "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
+                                                    "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
+                                                    "cert_dir": self.cert_dir,
                                                     },
                                             daemon=True,
                                             name="HTEX-Interchange"
@@ -632,7 +665,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     def workers_per_node(self) -> Union[int, float]:
         return self._workers_per_node
 
-    def scale_in(self, blocks=None, block_ids=[], force=True, max_idletime=None):
+    def scale_in(self, blocks, force=True, max_idletime=None):
         """Scale in the number of active blocks by specified amount.
 
         The scale in method here is very rude. It doesn't give the workers
@@ -647,55 +680,51 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         force : Bool
              Used along with blocks to indicate whether blocks should be terminated by force.
+
              When force = True, we will kill blocks regardless of the blocks being busy
-             When force = False, Only idle blocks will be terminated.
-             If the # of ``idle_blocks`` < ``blocks``, the list of jobs marked for termination
-             will be in the range: 0 - ``blocks``.
+
+             When force = False, only idle blocks will be terminated.  If the
+             number of idle blocks < ``blocks``, then fewer than ``blocks``
+             blocks will be terminated.
 
         max_idletime: float
              A time to indicate how long a block can be idle.
              Used along with force = False to kill blocks that have been idle for that long.
 
-        block_ids : list
-             List of specific block ids to terminate. Optional
-
         Returns
         -------
-        List of job_ids marked for termination
+        List of block IDs scaled in
         """
-        logger.debug(f"Scale in called, blocks={blocks}, block_ids={block_ids}")
-        if block_ids:
-            block_ids_to_kill = block_ids
-        else:
-            managers = self.connected_managers()
-            block_info = {}  # block id -> list( tasks, idle duration )
-            for manager in managers:
-                if not manager['active']:
-                    continue
-                b_id = manager['block_id']
-                if b_id not in block_info:
-                    block_info[b_id] = [0, float('inf')]
-                block_info[b_id][0] += manager['tasks']
-                block_info[b_id][1] = min(block_info[b_id][1], manager['idle_duration'])
+        logger.debug(f"Scale in called, blocks={blocks}")
+        managers = self.connected_managers()
+        block_info = {}  # block id -> list( tasks, idle duration )
+        for manager in managers:
+            if not manager['active']:
+                continue
+            b_id = manager['block_id']
+            if b_id not in block_info:
+                block_info[b_id] = [0, float('inf')]
+            block_info[b_id][0] += manager['tasks']
+            block_info[b_id][1] = min(block_info[b_id][1], manager['idle_duration'])
 
-            sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1][1], item[1][0]))
-            logger.debug(f"Scale in selecting from {len(sorted_blocks)} blocks")
-            if force is True:
-                block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
+        sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1][1], item[1][0]))
+        logger.debug(f"Scale in selecting from {len(sorted_blocks)} blocks")
+        if force is True:
+            block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
+        else:
+            if not max_idletime:
+                block_ids_to_kill = [x[0] for x in sorted_blocks if x[1][0] == 0][:blocks]
             else:
-                if not max_idletime:
-                    block_ids_to_kill = [x[0] for x in sorted_blocks if x[1][0] == 0][:blocks]
-                else:
-                    block_ids_to_kill = []
-                    for x in sorted_blocks:
-                        if x[1][1] > max_idletime and x[1][0] == 0:
-                            block_ids_to_kill.append(x[0])
-                            if len(block_ids_to_kill) == blocks:
-                                break
-                logger.debug("Selected idle block ids to kill: {}".format(
-                    block_ids_to_kill))
-                if len(block_ids_to_kill) < blocks:
-                    logger.warning(f"Could not find enough blocks to kill: wanted {blocks} but only selected {len(block_ids_to_kill)}")
+                block_ids_to_kill = []
+                for x in sorted_blocks:
+                    if x[1][1] > max_idletime and x[1][0] == 0:
+                        block_ids_to_kill.append(x[0])
+                        if len(block_ids_to_kill) == blocks:
+                            break
+            logger.debug("Selected idle block ids to kill: {}".format(
+                block_ids_to_kill))
+            if len(block_ids_to_kill) < blocks:
+                logger.warning(f"Could not find enough blocks to kill: wanted {blocks} but only selected {len(block_ids_to_kill)}")
 
         # Hold the block
         for block_id in block_ids_to_kill:

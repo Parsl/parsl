@@ -16,6 +16,7 @@ config = Config(
             worker_debug=True,
             cores_per_worker=1,
             working_dir="./rsync-workdir/",
+            encrypted=True,
             provider=LocalProvider(
                 channel=LocalChannel(),
                 init_blocks=1,

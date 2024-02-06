@@ -28,6 +28,7 @@ def local_config():
                 label="htex_local",
                 address="127.0.0.1",
                 max_workers=1,
+                encrypted=True,
                 provider=LocalProvider(
                     channel=LocalChannel(),
                     init_blocks=0,

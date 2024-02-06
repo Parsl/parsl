@@ -60,6 +60,7 @@ def test_dynamic_executor():
             label='htex_local',
             cores_per_worker=1,
             max_workers=5,
+            encrypted=True,
             provider=LocalProvider(
                 init_blocks=1,
                 max_blocks=1,

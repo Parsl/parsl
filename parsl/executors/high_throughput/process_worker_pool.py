@@ -20,8 +20,8 @@ import multiprocessing
 from multiprocessing.managers import DictProxy
 from multiprocessing.sharedctypes import Synchronized
 
+from parsl import curvezmq
 from parsl.process_loggers import wrap_with_logs
-
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
@@ -71,7 +71,8 @@ class Manager:
                  cpu_affinity,
                  enable_mpi_mode: bool = False,
                  mpi_launcher: str = "mpiexec",
-                 available_accelerators: Sequence[str]):
+                 available_accelerators: Sequence[str],
+                 cert_dir: Optional[str]):
         """
         Parameters
         ----------
@@ -133,6 +134,9 @@ class Manager:
 
         mpi_launcher: str
             Set to one of the supported MPI launchers: ("srun", "aprun", "mpiexec")
+
+        cert_dir : str | None
+            Path to the certificate directory.
         """
 
         logger.info("Manager started")
@@ -152,15 +156,16 @@ class Manager:
             print("Failed to find a viable address to connect to interchange. Exiting")
             exit(5)
 
-        self.context = zmq.Context()
-        self.task_incoming = self.context.socket(zmq.DEALER)
+        self.cert_dir = cert_dir
+        self.zmq_context = curvezmq.ClientContext(self.cert_dir)
+        self.task_incoming = self.zmq_context.socket(zmq.DEALER)
         self.task_incoming.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         # Linger is set to 0, so that the manager can exit even when there might be
         # messages in the pipe
         self.task_incoming.setsockopt(zmq.LINGER, 0)
         self.task_incoming.connect(task_q_url)
 
-        self.result_outgoing = self.context.socket(zmq.DEALER)
+        self.result_outgoing = self.zmq_context.socket(zmq.DEALER)
         self.result_outgoing.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         self.result_outgoing.setsockopt(zmq.LINGER, 0)
         self.result_outgoing.connect(result_q_url)
@@ -495,7 +500,7 @@ class Manager:
 
         self.task_incoming.close()
         self.result_outgoing.close()
-        self.context.term()
+        self.zmq_context.term()
         delta = time.time() - start
         logger.info("process_worker_pool ran for {} seconds".format(delta))
         return
@@ -767,6 +772,8 @@ if __name__ == "__main__":
                         help="Enable logging at DEBUG level")
     parser.add_argument("-a", "--addresses", default='',
                         help="Comma separated list of addresses at which the interchange could be reached")
+    parser.add_argument("--cert_dir", required=True,
+                        help="Path to certificate directory.")
     parser.add_argument("-l", "--logdir", default="process_worker_pool_logs",
                         help="Process worker pool log directory")
     parser.add_argument("-u", "--uid", default=str(uuid.uuid4()).split('-')[-1],
@@ -824,6 +831,7 @@ if __name__ == "__main__":
 
         logger.info("Python version: {}".format(sys.version))
         logger.info("Debug logging: {}".format(args.debug))
+        logger.info("Certificates dir: {}".format(args.cert_dir))
         logger.info("Log dir: {}".format(args.logdir))
         logger.info("Manager ID: {}".format(args.uid))
         logger.info("Block ID: {}".format(args.block_id))
@@ -859,7 +867,8 @@ if __name__ == "__main__":
                           cpu_affinity=args.cpu_affinity,
                           enable_mpi_mode=args.enable_mpi_mode,
                           mpi_launcher=args.mpi_launcher,
-                          available_accelerators=args.available_accelerators)
+                          available_accelerators=args.available_accelerators,
+                          cert_dir=None if args.cert_dir == "None" else args.cert_dir)
         manager.start()
 
     except Exception:
