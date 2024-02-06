@@ -14,7 +14,7 @@ import math
 from parsl.serialize import pack_apply_message, deserialize
 from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
-from parsl.jobs.states import JobStatus
+from parsl.jobs.states import JobStatus, JobState
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
@@ -723,6 +723,15 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             raise ScalingFailed(self, "No launch command")
         launch_cmd = self.launch_cmd.format(block_id=block_id)
         return launch_cmd
+
+    def status(self) -> Dict[str, JobStatus]:
+        job_status = super().status()
+        connected_blocks = self.connected_blocks()
+        for job_id in job_status:
+            job_info = job_status[job_id]
+            if job_info.terminal and job_id not in connected_blocks:
+                job_status[job_id].state = JobState.MISSING
+        return job_status
 
     def shutdown(self):
         """Shutdown the executor, including the interchange. This does not
