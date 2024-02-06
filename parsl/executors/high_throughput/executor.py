@@ -594,8 +594,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         # handle people sending blobs gracefully
         if logger.getEffectiveLevel() <= logging.DEBUG:
-            arg_repr = repr(arg)
-            args_to_print = tuple([arg if len(arg_repr) < 100 else (arg_repr[:100] + '...') for arg in args])
+            args_to_print = tuple([ar if len(ar := repr(arg)) < 100 else (ar[:100] + '...') for arg in args])
             logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
 
         fut = Future()
