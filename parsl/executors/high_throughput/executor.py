@@ -731,6 +731,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             job_info = job_status[job_id]
             if job_info.terminal and job_id not in connected_blocks:
                 job_status[job_id].state = JobState.MISSING
+                if job_status[job_id].message is None:
+                    job_status[job_id].message = (
+                        "Job is marked as MISSING since the workers failed to register"
+                        "to the executor. Check the stdout/stderr logs in the submit_scripts"
+                        "directory for more debug information"
+                    )
         return job_status
 
     def shutdown(self):
