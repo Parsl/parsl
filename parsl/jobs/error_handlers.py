@@ -33,7 +33,7 @@ def _count_jobs(status: Dict[str, JobStatus]) -> Tuple[int, int]:
     failed = 0
     for js in status.values():
         total += 1
-        if js.state == JobState.FAILED:
+        if js.state == JobState.FAILED or js.state == JobState.MISSING:
             failed += 1
     return total, failed
 
