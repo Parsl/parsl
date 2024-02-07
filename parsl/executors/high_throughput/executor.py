@@ -733,8 +733,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                 job_status[job_id].state = JobState.MISSING
                 if job_status[job_id].message is None:
                     job_status[job_id].message = (
-                        "Job is marked as MISSING since the workers failed to register"
-                        "to the executor. Check the stdout/stderr logs in the submit_scripts"
+                        "Job is marked as MISSING since the workers failed to register "
+                        "to the executor. Check the stdout/stderr logs in the submit_scripts "
                         "directory for more debug information"
                     )
         return job_status
