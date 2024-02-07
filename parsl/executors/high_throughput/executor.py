@@ -220,7 +220,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  worker_logdir_root: Optional[str] = None,
                  enable_mpi_mode: bool = False,
                  mpi_launcher: str = "mpiexec",
-                 block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True):
+                 block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
                  encrypted: bool = False):
 
         logger.debug("Initializing HighThroughputExecutor")
