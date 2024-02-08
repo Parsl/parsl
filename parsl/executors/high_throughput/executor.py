@@ -596,10 +596,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         task_id = self._task_counter
 
         # handle people sending blobs gracefully
-        args_to_print = args
-        if logger.getEffectiveLevel() >= logging.DEBUG:
-            args_to_print = tuple([arg if len(repr(arg)) < 100 else (repr(arg)[:100] + '...') for arg in args])
-        logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
+        if logger.getEffectiveLevel() <= logging.DEBUG:
+            args_to_print = tuple([ar if len(ar := repr(arg)) < 100 else (ar[:100] + '...') for arg in args])
+            logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
 
         fut = Future()
         fut.parsl_executor_task_id = task_id
