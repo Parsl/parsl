@@ -8,6 +8,7 @@ import queue
 import logging
 import inspect
 import requests
+import tempfile
 import typeguard
 import threading as mt
 
@@ -17,7 +18,7 @@ from pathlib import Path, PosixPath
 from concurrent.futures import Future
 
 from parsl.app.python import timeout
-from .rpex_resources import ResourceConfig
+from .rpex_resources import ResourceConfig, MPI, CLIENT
 from parsl.data_provider.files import File
 from parsl.utils import RepresentationMixin
 from parsl.app.errors import BashExitFailure
@@ -59,7 +60,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
           ``rp.PilotManager`` and ``rp.TaskManager``.
       2. "translate": Unwrap, identify, and parse Parsl ``apps`` into ``rp.TaskDescription``.
       3. "submit": Submit Parsl apps to ``rp.TaskManager``.
-      4. "shut_down": Shut down the RADICAL-Pilot runtime and all associated components.
+      4. "shutdown": Shut down the RADICAL-Pilot runtime and all associated components.
 
     Here is a diagram
 
@@ -138,19 +139,26 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         self.future_tasks: Dict[str, Future] = {}
 
         if rpex_cfg:
-            self.rpex_cfg = rpex_cfg
+            self.rpex_cfg = rpex_cfg.get_config()
         elif not rpex_cfg and 'local' in resource:
-            self.rpex_cfg = ResourceConfig()
+            self.rpex_cfg = ResourceConfig().get_config()
         else:
-            raise ValueError('Resource config file must be '
-                             'specified for a non-local execution')
+            raise ValueError('Resource config must be '
+                             'specified for a non-local resources')
 
     def task_state_cb(self, task, state):
         """
         Update the state of Parsl Future apps
         Based on RP task state callbacks.
         """
-        if not task.uid.startswith('master'):
+        # check the Master/Worker state
+        if task.mode in [rp.RAPTOR_MASTER, rp.RAPTOR_WORKER]:
+            if state == rp.FAILED:
+                exception = RuntimeError(f'{task.uid} failed with internal error: {task.stderr}')
+                self._fail_all_tasks(exception)
+
+        # check all other tasks state
+        else:
             parsl_task = self.future_tasks[task.uid]
 
             if state == rp.DONE:
@@ -186,6 +194,23 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                     else:
                         parsl_task.set_exception('Task failed for an unknown reason')
 
+    def _fail_all_tasks(self, exception):
+        """
+        Fail all outstanding tasks with the given exception.
+
+        This method iterates through all outstanding tasks in the
+        `_future_tasks` dictionary, which have not yet completed,
+        and sets the provided exception as their result, indicating
+        a failure.
+
+        Parameters:
+        - exception: The exception to be set as the result for all
+                     outstanding tasks.
+        """
+        for fut_task in self.future_tasks.values():
+            if not fut_task.done():
+                fut_task.set_exception(exception)
+
     def start(self):
         """Create the Pilot component and pass it.
         """
@@ -202,62 +227,66 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                    'resource': self.resource}
 
         if not self.resource or 'local' in self.resource:
-            # move the agent sandbox to the working dir mainly
-            # for debugging purposes. This will allow parsl
-            # to include the agent sandbox with the ci artifacts.
-            if os.environ.get("LOCAL_SANDBOX"):
-                pd_init['sandbox'] = self.run_dir
+            # set the agent dir to /temp as a fix for #3029
+            if os.environ.get("RADICAL_TEMP_SANDBOX"):
                 os.environ["RADICAL_LOG_LVL"] = "DEBUG"
-
-            logger.info("RPEX will be running in the local mode")
+                pd_init['sandbox'] = agent_dir = tempfile.gettempdir()
+                logger.debug(f'RPEX will be running in test mode, agent sandbox will be located in {agent_dir}')
+            else:
+                logger.info("RPEX will be running in local mode")
 
         pd = rp.PilotDescription(pd_init)
         pd.verify()
 
-        self.rpex_cfg = self.rpex_cfg._get_cfg_file(path=self.run_dir)
-        cfg = ru.Config(cfg=ru.read_json(self.rpex_cfg))
+        # start RP's main components TMGR, PMGR and Pilot
+        self.tmgr = rp.TaskManager(session=self.session)
+        self.pmgr = rp.PilotManager(session=self.session)
+        self.pilot = self.pmgr.submit_pilots(pd)
 
-        self.master = cfg.master_descr
-        self.n_masters = cfg.n_masters
+        if not self.pilot.description.get('cores') or not self.pilot.description.get('nodes'):
+            logger.warning('no "cores/nodes" per pilot were set, using default resources')
 
-        tds = list()
-        master_path = '{0}/rpex_master.py'.format(PWD)
+        self.tmgr.add_pilots(self.pilot)
+        self.tmgr.register_callback(self.task_state_cb)
+
         worker_path = '{0}/rpex_worker.py'.format(PWD)
 
-        for i in range(self.n_masters):
-            td = rp.TaskDescription(self.master)
-            td.mode = rp.RAPTOR_MASTER
-            td.uid = ru.generate_id('master.%(item_counter)06d', ru.ID_CUSTOM,
+        self.masters = []
+
+        logger.info(f'Starting {self.rpex_cfg.n_masters} masters and {self.rpex_cfg.n_workers} workers for each master')
+
+        # create N masters
+        for _ in range(self.rpex_cfg.n_masters):
+            md = rp.TaskDescription(self.rpex_cfg.master_descr)
+            md.uid = ru.generate_id('rpex.master.%(item_counter)06d', ru.ID_CUSTOM,
                                     ns=self.session.uid)
-            td.ranks = 1
-            td.cores_per_rank = 1
-            td.arguments = [self.rpex_cfg, i]
-            td.input_staging = self._stage_files([File(master_path),
-                                                  File(worker_path),
-                                                  File(self.rpex_cfg)], mode='in')
-            tds.append(td)
 
-        self.pmgr = rp.PilotManager(session=self.session)
-        self.tmgr = rp.TaskManager(session=self.session)
+            # submit the master to the TMGR
+            master = self.tmgr.submit_raptors(md)[0]
+            self.masters.append(master)
 
-        # submit pilot(s)
-        pilot = self.pmgr.submit_pilots(pd)
-        if not pilot.description.get('cores'):
-            logger.warning('no "cores" per pilot was set, using default resources {0}'.format(pilot.resources))
+            workers = []
+            # create N workers for each master and submit them to the TMGR
+            for _ in range(self.rpex_cfg.n_workers):
+                wd = rp.TaskDescription(self.rpex_cfg.worker_descr)
+                wd.uid = ru.generate_id('rpex.worker.%(item_counter)06d', ru.ID_CUSTOM,
+                                        ns=self.session.uid)
+                wd.raptor_id = master.uid
+                wd.input_staging = self._stage_files([File(worker_path)], mode='in')
+                workers.append(wd)
 
-        self.tmgr.submit_tasks(tds)
+            self.tmgr.submit_workers(workers)
+
+        self.select_master = self._cyclic_master_selector()
 
         # prepare or use the current env for the agent/pilot side environment
-        if cfg.pilot_env_mode != 'client':
-            logger.info("creating {0} environment for the executor".format(cfg.pilot_env.name))
-            pilot.prepare_env(env_name=cfg.pilot_env.name,
-                              env_spec=cfg.pilot_env.as_dict())
+        if self.rpex_cfg.pilot_env_mode != CLIENT:
+            logger.info("creating {0} environment for the executor".format(self.rpex_cfg.pilot_env.name))
+            self.pilot.prepare_env(env_name=self.rpex_cfg.pilot_env.name,
+                                   env_spec=self.rpex_cfg.pilot_env.as_dict())
         else:
             client_env = sys.prefix
             logger.info("reusing ({0}) environment for the executor".format(client_env))
-
-        self.tmgr.add_pilots(pilot)
-        self.tmgr.register_callback(self.task_state_cb)
 
         # create a bulking thread to run the actual task submission
         # to RP in bulks
@@ -272,7 +301,20 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
             self._bulk_thread.daemon = True
             self._bulk_thread.start()
 
+            logger.info('bulk mode is on, submitting tasks in bulks')
+
         return True
+
+    def _cyclic_master_selector(self):
+        """
+        Balance tasks submission across N masters and N workers
+        """
+        current_master = 0
+        masters_uids = [m.uid for m in self.masters]
+
+        while True:
+            yield masters_uids[current_master]
+            current_master = (current_master + 1) % len(self.masters)
 
     def unwrap(self, func, args):
         """
@@ -364,22 +406,25 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
                 # This is the default mode where the bash_app will be executed as
                 # as a single core process by RP. For cores > 1 the user must use
-                # above or use MPI functions if their code is Python.
+                # task.mode=rp.TASK_EXECUTABLE (above) or use MPI functions if their
+                # code is Python.
                 else:
                     task.mode = rp.TASK_PROC
-                    task.raptor_id = 'master.%06d' % (tid % self.n_masters)
+                    task.raptor_id = next(self.select_master)
                     task.executable = self._pack_and_apply_message(func, args, kwargs)
 
         elif PYTHON in task_type or not task_type:
             task.mode = rp.TASK_FUNCTION
-            task.raptor_id = 'master.%06d' % (tid % self.n_masters)
+            task.raptor_id = next(self.select_master)
             if kwargs.get('walltime'):
                 func = timeout(func, kwargs['walltime'])
 
-            # we process MPI function differently
-            if 'comm' in kwargs:
+            # Check how to serialize the function object
+            if MPI in self.rpex_cfg.worker_type.lower():
+                task.use_mpi = True
                 task.function = rp.PythonTask(func, *args, **kwargs)
             else:
+                task.use_mpi = False
                 task.function = self._pack_and_apply_message(func, args, kwargs)
 
         task.input_staging = self._stage_files(kwargs.get("inputs", []),
@@ -394,7 +439,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         try:
             task.verify()
         except ru.typeddict.TDKeyError as e:
-            raise Exception(f'{e}. Please check Radical.Pilot TaskDescription documentation')
+            raise Exception(f'{e}. Please check: https://radicalpilot.readthedocs.io/en/stable/ documentation')
 
         return task
 
@@ -545,7 +590,8 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
     def shutdown(self, hub=True, targets='all', block=False):
         """Shutdown the executor, including all RADICAL-Pilot components."""
-        logger.info("RadicalPilotExecutor shutdown")
+        logger.info("RadicalPilotExecutor is terminating...")
         self.session.close(download=True)
+        logger.info("RadicalPilotExecutor is terminated.")
 
         return True

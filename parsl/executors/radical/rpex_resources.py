@@ -108,7 +108,7 @@ class ResourceConfig:
     python_v: str = f'{sys.version_info[0]}.{sys.version_info[1]}'
     worker_type: str = DEFAULT_WORKER
 
-    def _get_cfg_file(cls, path=None):
+    def get_config(cls, path=None):
 
         # Default ENV mode for RP is to reuse
         # the client side. If this is not the case,
@@ -126,6 +126,7 @@ class ResourceConfig:
         cfg = {
             'n_masters': cls.masters,
             'n_workers': cls.workers,
+            'worker_type': cls.worker_type,
             'gpus_per_node': cls.worker_gpus_per_node,
             'cores_per_node': cls.worker_cores_per_node,
             'cores_per_master': cls.cores_per_master,
@@ -143,9 +144,10 @@ class ResourceConfig:
             'pilot_env_mode': cls.pilot_env_mode,
 
             'master_descr': {
+                "ranks": 1,
+                "cores_per_rank": 1,
                 "mode": rp.RAPTOR_MASTER,
                 "named_env": cls.pilot_env_name,
-                "executable": "python3 rpex_master.py",
             },
 
             'worker_descr': {
@@ -154,12 +156,16 @@ class ResourceConfig:
                 "raptor_file": "./rpex_worker.py",
                 "raptor_class": cls.worker_type if
                 cls.worker_type.lower() != MPI else MPI_WORKER,
+                "ranks": cls.nodes_per_worker * cls.worker_cores_per_node,
+                "gpus_per_rank": cls.nodes_per_worker * cls.worker_gpus_per_node,
             }}
 
-        # Convert the class instance to a cfg file.
-        config_path = 'rpex.cfg'
+        # Convert the class instance to a Json file or a Config dict.
         if path:
+            config_path = 'rpex.cfg'
             config_path = path + '/' + config_path
-        with open(config_path, 'w') as f:
-            json.dump(cfg, f, indent=4)
-        return config_path
+            with open(config_path, 'w') as f:
+                json.dump(cfg, f, indent=4)
+        else:
+            config_obj = ru.Config(from_dict=cfg)
+            return config_obj
