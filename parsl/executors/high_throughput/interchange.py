@@ -14,7 +14,7 @@ import queue
 import threading
 import json
 
-from typing import cast, Any, Dict, NoReturn, Sequence, Set, Optional, Tuple
+from typing import cast, Any, Dict, NoReturn, Sequence, Set, Optional, Tuple, List
 
 from parsl import curvezmq
 from parsl.utils import setproctitle
@@ -184,6 +184,7 @@ class Interchange:
             self.worker_task_port, self.worker_result_port))
 
         self._ready_managers: Dict[bytes, ManagerRecord] = {}
+        self.connected_block_history: List[str] = []
 
         self.heartbeat_threshold = heartbeat_threshold
 
@@ -285,6 +286,9 @@ class Interchange:
                     for manager in self._ready_managers.values():
                         outstanding += len(manager['tasks'])
                     reply = outstanding
+
+                elif command_req == "CONNECTED_BLOCKS":
+                    reply = self.connected_block_history
 
                 elif command_req == "WORKERS":
                     num_workers = 0
@@ -416,6 +420,7 @@ class Interchange:
                                                         'worker_count': 0,
                                                         'active': True,
                                                         'tasks': []}
+                    self.connected_block_history.append(msg['block_id'])
                 if reg_flag is True:
                     interesting_managers.add(manager_id)
                     logger.info("Adding manager: {!r} to ready queue".format(manager_id))

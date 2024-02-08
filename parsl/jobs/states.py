@@ -39,12 +39,19 @@ class JobState(IntEnum):
     HELD = 7
     """This job is held/suspended in the batch system"""
 
+    MISSING = 8
+    """This job has reached a terminal state without the resources(managers/workers)
+    launched in the job connecting back to the Executor. This state is set by HTEX
+    when it is able to infer that the block failed to start workers for eg due to
+    bad worker environment or network connectivity issues.
+    """
+
     def __str__(self) -> str:
         return self.__class__.__name__ + "." + self.name
 
 
 TERMINAL_STATES = [JobState.CANCELLED, JobState.COMPLETED, JobState.FAILED,
-                   JobState.TIMEOUT]
+                   JobState.TIMEOUT, JobState.MISSING]
 
 
 class JobStatus:
