@@ -327,12 +327,12 @@ WORKERCOUNT={task_blocks}
 
 path_cmd=$(dirname $SLURM_JOB_STDOUT)
 
-cat << SLURM_EOF > ${path_cmd}/cmd_$SLURM_JOB_NAME.sh
+cat << SLURM_EOF > $path_cmd/cmd_$SLURM_JOB_NAME.sh
 {command}
 SLURM_EOF
-chmod a+x ${path_cmd}/cmd_$SLURM_JOB_NAME.sh
+chmod a+x $path_cmd/cmd_$SLURM_JOB_NAME.sh
 
-srun --ntasks {task_blocks} -l {overrides} bash ${path_cmd}/cmd_$SLURM_JOB_NAME.sh
+srun --ntasks {task_blocks} -l {overrides} bash $path_cmd/cmd_$SLURM_JOB_NAME.sh
 
 [[ "{debug}" == "1" ]] && echo "Done"
 '''.format(command=command,
