@@ -325,12 +325,14 @@ export NODES=$SLURM_JOB_NUM_NODES
 [[ "{debug}" == "1" ]] && echo "Found nodes : $NODES"
 WORKERCOUNT={task_blocks}
 
-cat << SLURM_EOF > cmd_$SLURM_JOB_NAME.sh
+path_cmd=$(dirname $SLURM_JOB_STDOUT)
+
+cat << SLURM_EOF > ${path_cmd}/cmd_$SLURM_JOB_NAME.sh
 {command}
 SLURM_EOF
-chmod a+x cmd_$SLURM_JOB_NAME.sh
+chmod a+x ${path_cmd}/cmd_$SLURM_JOB_NAME.sh
 
-srun --ntasks {task_blocks} -l {overrides} bash cmd_$SLURM_JOB_NAME.sh
+srun --ntasks {task_blocks} -l {overrides} bash ${path_cmd}/cmd_$SLURM_JOB_NAME.sh
 
 [[ "{debug}" == "1" ]] && echo "Done"
 '''.format(command=command,
