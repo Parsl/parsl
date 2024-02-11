@@ -196,8 +196,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if self.manager_config.port == 0 and self.manager_config.project_name is None:
             self.manager_config.project_name = "parsl-vine-" + str(uuid.uuid4())
 
-        # guess the host name if the project name is not given
-        if not self.manager_config.project_name:
+        # guess the host name if the project name is not given and none has been supplied
+        # explicitly in the manager config.
+        if not self.manager_config.project_name and self.manager_config.address is None:
             self.manager_config.address = get_any_address()
 
         # Factory communication settings are overridden by manager communication settings.
