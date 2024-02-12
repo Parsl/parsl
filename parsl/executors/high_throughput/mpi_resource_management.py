@@ -177,7 +177,7 @@ class MPITaskScheduler(TaskScheduler):
             task_package["buffer"], user_ns, copy=False
         )
 
-        nodes_needed = resource_spec.get("NUM_NODES")
+        nodes_needed = resource_spec.get("num_nodes")
         if nodes_needed:
             try:
                 allocated_nodes = self._get_nodes(nodes_needed)
