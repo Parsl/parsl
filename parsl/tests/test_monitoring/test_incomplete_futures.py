@@ -25,7 +25,7 @@ def test_future_representation():
 
     # we're going to pass this TOKEN into an app via a pre-requisite Future,
     # and then expect to see it appear in the monitoring database.
-    TOKEN = random.randint()
+    TOKEN = random.randint(0,1000000)
 
     # make a Future that has no result yet
     # invoke a task that depends on it
