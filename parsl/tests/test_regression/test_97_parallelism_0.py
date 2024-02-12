@@ -15,6 +15,7 @@ def local_config() -> Config:
                 label="htex_local",
                 worker_debug=True,
                 cores_per_worker=1,
+                encrypted=True,
                 provider=LocalProvider(
                     init_blocks=0,
                     min_blocks=0,

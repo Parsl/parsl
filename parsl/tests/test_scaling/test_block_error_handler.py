@@ -11,7 +11,7 @@ from functools import partial
 @pytest.mark.local
 def test_block_error_handler_false():
     mock = Mock()
-    htex = HighThroughputExecutor(block_error_handler=False)
+    htex = HighThroughputExecutor(block_error_handler=False, encrypted=True)
     assert htex.block_error_handler is noop_error_handler
     htex.set_bad_state_and_fail_all = mock
 
@@ -27,7 +27,7 @@ def test_block_error_handler_false():
 @pytest.mark.local
 def test_block_error_handler_mock():
     handler_mock = Mock()
-    htex = HighThroughputExecutor(block_error_handler=handler_mock)
+    htex = HighThroughputExecutor(block_error_handler=handler_mock, encrypted=True)
     assert htex.block_error_handler is handler_mock
 
     bad_jobs = {'1': JobStatus(JobState.FAILED),
@@ -43,6 +43,7 @@ def test_block_error_handler_mock():
 @pytest.mark.local
 def test_simple_error_handler():
     htex = HighThroughputExecutor(block_error_handler=simple_error_handler,
+                                  encrypted=True,
                                   provider=LocalProvider(init_blocks=3))
 
     assert htex.block_error_handler is simple_error_handler
@@ -76,7 +77,7 @@ def test_simple_error_handler():
 
 @pytest.mark.local
 def test_windowed_error_handler():
-    htex = HighThroughputExecutor(block_error_handler=windowed_error_handler)
+    htex = HighThroughputExecutor(block_error_handler=windowed_error_handler, encrypted=True)
     assert htex.block_error_handler is windowed_error_handler
 
     bad_state_mock = Mock()
@@ -110,7 +111,7 @@ def test_windowed_error_handler():
 
 @pytest.mark.local
 def test_windowed_error_handler_sorting():
-    htex = HighThroughputExecutor(block_error_handler=windowed_error_handler)
+    htex = HighThroughputExecutor(block_error_handler=windowed_error_handler, encrypted=True)
     assert htex.block_error_handler is windowed_error_handler
 
     bad_state_mock = Mock()
@@ -136,7 +137,7 @@ def test_windowed_error_handler_sorting():
 @pytest.mark.local
 def test_windowed_error_handler_with_threshold():
     error_handler = partial(windowed_error_handler, threshold=2)
-    htex = HighThroughputExecutor(block_error_handler=error_handler)
+    htex = HighThroughputExecutor(block_error_handler=error_handler, encrypted=True)
     assert htex.block_error_handler is error_handler
 
     bad_state_mock = Mock()

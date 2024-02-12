@@ -13,6 +13,7 @@ def fresh_config():
                 label='Midway_HTEX_multinode',
                 worker_debug=False,
                 max_workers=1,
+                encrypted=True,
                 provider=SlurmProvider(
                     'broadwl',  # Partition name, e.g 'broadwl'
                     launcher=SrunLauncher(),

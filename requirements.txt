@@ -1,15 +1,13 @@
 pyzmq>=17.1.2
-typeguard==4.0.0
-# typeguard 4.0.1 just released as I write this message 
-# breaks with this error:
-#
-#    def __init__(self, config: Config = Config()) -> None:
-# parsl/config.py:80: in __init__
-#    Literal['task_exit'],
-# E   NameError: name 'task_exit' is not defined
- 
+
+# typeguard uses semantic versioning.
+# major v3 was a shortlived version that was rapidly replaced by major v4,
+# so this specification excludes it.
+# v2 and v4 are both seen in the wild with users in complex deployments.
+typeguard>=2.10,!=3.*,<5
+
+
 typing-extensions>=4.6,<5
-six
 globus-sdk
 dill
 tblib

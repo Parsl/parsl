@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import socket
 import time
@@ -11,7 +13,8 @@ import queue
 import parsl.monitoring.remote
 
 from parsl.multiprocessing import ForkProcess, SizedQueue
-from multiprocessing import Process, Queue
+from multiprocessing import Process
+from multiprocessing.queues import Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
@@ -20,7 +23,7 @@ from parsl.serialize import deserialize
 
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import AddressedMonitoringMessage, TaggedMonitoringMessage
-from typing import cast, Any, Callable, Dict, Optional, Sequence, Tuple, Union
+from typing import cast, Any, Callable, Dict, Optional, Sequence, Tuple, Union, TYPE_CHECKING
 
 _db_manager_excepts: Optional[Exception]
 
@@ -125,7 +128,10 @@ class MonitoringHub(RepresentationMixin):
              This will include environment information such as start time, hostname and block id,
              along with periodic resource usage of each task. Default: True
         resource_monitoring_interval : float
-             The time interval, in seconds, at which the monitoring records the resource usage of each task. Default: 30 seconds
+             The time interval, in seconds, at which the monitoring records the resource usage of each task.
+             If set to 0, only start and end information will be logged, and no periodic monitoring will
+             be made.
+             Default: 30 seconds
         """
 
         self.logger = logger
@@ -168,16 +174,19 @@ class MonitoringHub(RepresentationMixin):
         self.logger.debug("Initializing ZMQ Pipes to client")
         self.monitoring_hub_active = True
 
-        # Typechecking note:
-        # Queue is not a type at runtime - it's a method that looks like
-        # a type. mypy seems happy enough with this, but Python
-        # doesn't like subscripting a method like this, which is needed at
-        # runtime for typeguard 4.0.0. So this type is left here for
-        # documentation and perhaps later re-specialisation.
-        # The other queues defined here are attributes on self, not local
-        # variables, and so apparently typeguard 4.0.0 checks them less hard.
-        # comm_q: Queue[Union[Tuple[int, int], str]]
-        comm_q: Queue
+        # This annotation is incompatible with typeguard 4.x instrumentation
+        # of local variables: Queue is not subscriptable at runtime, as far
+        # as typeguard is concerned. The more general Queue annotation works,
+        # but does not restrict the contents of the Queue. Using TYPE_CHECKING
+        # here allows the stricter definition to be seen by mypy, and the
+        # simpler definition to be seen by typeguard. Hopefully at some point
+        # in the future, Queue will allow runtime subscripts.
+
+        if TYPE_CHECKING:
+            comm_q: Queue[Union[Tuple[int, int], str]]
+        else:
+            comm_q: Queue
+
         comm_q = SizedQueue(maxsize=10)
 
         self.exception_q: Queue[Tuple[str, str]]

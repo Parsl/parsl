@@ -50,6 +50,7 @@ def fresh_config():
                 heartbeat_period=2,
                 heartbeat_threshold=5,
                 poll_period=100,
+                encrypted=True,
                 provider=LocalProvider(
                     channel=LocalChannel(),
                     init_blocks=0,

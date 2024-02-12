@@ -12,6 +12,7 @@ def fresh_config():
             HighThroughputExecutor(
                 label='theta_local_htex_multinode',
                 max_workers=1,
+                encrypted=True,
                 provider=CobaltProvider(
                     queue=user_opts['theta']['queue'],
                     account=user_opts['theta']['account'],

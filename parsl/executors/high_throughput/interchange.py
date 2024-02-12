@@ -14,8 +14,9 @@ import queue
 import threading
 import json
 
-from typing import cast, Any, Dict, NoReturn, Sequence, Set, Optional, Tuple
+from typing import cast, Any, Dict, NoReturn, Sequence, Set, Optional, Tuple, List
 
+from parsl import curvezmq
 from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.serialize import serialize as serialize_object
@@ -79,6 +80,7 @@ class Interchange:
                  logdir: str = ".",
                  logging_level: int = logging.INFO,
                  poll_period: int = 10,
+                 cert_dir: Optional[str] = None,
                  ) -> None:
         """
         Parameters
@@ -120,7 +122,10 @@ class Interchange:
         poll_period : int
              The main thread polling period, in milliseconds. Default: 10ms
 
+        cert_dir : str | None
+            Path to the certificate directory. Default: None
         """
+        self.cert_dir = cert_dir
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
@@ -134,16 +139,15 @@ class Interchange:
 
         logger.info("Attempting connection to client at {} on ports: {},{},{}".format(
             client_address, client_ports[0], client_ports[1], client_ports[2]))
-        self.context = zmq.Context()
-        self.task_incoming = self.context.socket(zmq.DEALER)
+        self.zmq_context = curvezmq.ServerContext(self.cert_dir)
+        self.task_incoming = self.zmq_context.socket(zmq.DEALER)
         self.task_incoming.set_hwm(0)
         self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
-
-        self.results_outgoing = self.context.socket(zmq.DEALER)
+        self.results_outgoing = self.zmq_context.socket(zmq.DEALER)
         self.results_outgoing.set_hwm(0)
         self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
 
-        self.command_channel = self.context.socket(zmq.REP)
+        self.command_channel = self.zmq_context.socket(zmq.REP)
         self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
         logger.info("Connected to client")
 
@@ -156,9 +160,9 @@ class Interchange:
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
 
-        self.task_outgoing = self.context.socket(zmq.ROUTER)
+        self.task_outgoing = self.zmq_context.socket(zmq.ROUTER)
         self.task_outgoing.set_hwm(0)
-        self.results_incoming = self.context.socket(zmq.ROUTER)
+        self.results_incoming = self.zmq_context.socket(zmq.ROUTER)
         self.results_incoming.set_hwm(0)
 
         if self.worker_ports:
@@ -180,6 +184,7 @@ class Interchange:
             self.worker_task_port, self.worker_result_port))
 
         self._ready_managers: Dict[bytes, ManagerRecord] = {}
+        self.connected_block_history: List[str] = []
 
         self.heartbeat_threshold = heartbeat_threshold
 
@@ -242,7 +247,8 @@ class Interchange:
     def _create_monitoring_channel(self) -> Optional[zmq.Socket]:
         if self.hub_address and self.hub_port:
             logger.info("Connecting to monitoring")
-            hub_channel = self.context.socket(zmq.DEALER)
+            # This is a one-off because monitoring is unencrypted
+            hub_channel = zmq.Context().socket(zmq.DEALER)
             hub_channel.set_hwm(0)
             hub_channel.connect("tcp://{}:{}".format(self.hub_address, self.hub_port))
             logger.info("Monitoring enabled and connected to hub")
@@ -281,6 +287,9 @@ class Interchange:
                     for manager in self._ready_managers.values():
                         outstanding += len(manager['tasks'])
                     reply = outstanding
+
+                elif command_req == "CONNECTED_BLOCKS":
+                    reply = self.connected_block_history
 
                 elif command_req == "WORKERS":
                     num_workers = 0
@@ -349,18 +358,6 @@ class Interchange:
 
         poll_period = self.poll_period
 
-        # for my hacking:
-        # poll_period = 1000
-        # because the executor level poll period also changes the worker pool poll period setting, which I want to experiment with separately.
-        # This setting reduces the speed at which the interchange main loop
-        # iterates. It will iterate once per this tmie, or when two of the
-        # three queues that we need to check are interesting. which means that
-        # third queue (pending_task_queue) will only be dispatched on once
-        # every poll_period. although everythign waiting will be dispatched
-        # then. this will reduce speed of task dispatching some, but give
-        # much less log output. I wonder if it is possible to make this detectable
-        # using poll too (it's a python queue, not a zmq queue which the other poll is for)
-
         start = time.time()
 
         self._task_puller_thread = threading.Thread(target=self.task_puller,
@@ -393,6 +390,7 @@ class Interchange:
             self.expire_bad_managers(interesting_managers, hub_channel)
             self.process_tasks_to_send(interesting_managers)
 
+        self.zmq_context.destroy()
         delta = time.time() - start
         logger.info("Processed {} tasks in {} seconds".format(self.count, delta))
         logger.warning("Exiting")
@@ -423,6 +421,7 @@ class Interchange:
                                                         'worker_count': 0,
                                                         'active': True,
                                                         'tasks': []}
+                    self.connected_block_history.append(msg['block_id'])
                 if reg_flag is True:
                     interesting_managers.add(manager_id)
                     logger.info("Adding manager: {!r} to ready queue".format(manager_id))

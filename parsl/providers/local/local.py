@@ -28,8 +28,9 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
         scaling where as many resources as possible are used; parallelism close to 0 represents
         the opposite situation in which as few resources as possible (i.e., min_blocks) are used.
-    move_files : Optional[Bool]: should files be moved? by default, Parsl will try to figure
-        this out itself (= None). If True, then will always move. If False, will never move.
+    move_files : Optional[Bool]
+        Should files be moved? By default, Parsl will try to figure this out itself (= None).
+        If True, then will always move. If False, will never move.
     worker_init : str
         Command to be run before starting a worker, such as 'module load Anaconda; source activate env'.
     """
@@ -105,10 +106,8 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                     stdout_path = self._job_file_path(script_path, '.out')
                     stderr_path = self._job_file_path(script_path, '.err')
                     if ec == 0:
-                        logger.info("BENC: local provider exited with exit code 0, marking as COMPLETED")
                         state = JobState.COMPLETED
                     else:
-                        logger.info(f"BENC: local provider exited with exit code {ec}, marking as FAILED")
                         state = JobState.FAILED
                     status = JobStatus(state, exit_code=ec,
                                        stdout_path=stdout_path, stderr_path=stderr_path)

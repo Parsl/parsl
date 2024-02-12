@@ -2,7 +2,7 @@ import logging
 import parsl
 import time
 import zmq
-from typing import Dict, List, Sequence
+from typing import Dict, List, Sequence, Optional
 
 from parsl.jobs.states import JobStatus, JobState
 from parsl.jobs.strategy import Strategy
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class PollItem:
-    def __init__(self, executor: BlockProviderExecutor, dfk: "parsl.dataflow.dflow.DataFlowKernel"):
+    def __init__(self, executor: BlockProviderExecutor, dfk: Optional["parsl.dataflow.dflow.DataFlowKernel"] = None):
         self._executor = executor
         self._dfk = dfk
         self._interval = executor.status_polling_interval
@@ -27,7 +27,7 @@ class PollItem:
 
         # Create a ZMQ channel to send poll status to monitoring
         self.monitoring_enabled = False
-        if self._dfk.monitoring is not None:
+        if self._dfk and self._dfk.monitoring is not None:
             self.monitoring_enabled = True
             hub_address = self._dfk.hub_address
             hub_port = self._dfk.hub_interchange_port
@@ -101,17 +101,12 @@ class PollItem:
 
 
 class JobStatusPoller(Timer):
-    def __init__(self, dfk: "parsl.dataflow.dflow.DataFlowKernel") -> None:
+    def __init__(self, strategy: Optional[str] = None, max_idletime: float = 0.0,
+                 dfk: Optional["parsl.dataflow.dflow.DataFlowKernel"] = None) -> None:
         self._poll_items = []  # type: List[PollItem]
         self.dfk = dfk
-
-        # with conditional imports, Config does not get type annotated properly...
-        # which means the types of dfk.config.* are not known here... perhaps
-        # becuase of a mypy bug, perhaps deliberately. but as this feature, lazy-imports,
-        # is likely to go away, I'm not going to investigate too hard.
-
-        self._strategy = Strategy(strategy=dfk.config.strategy,
-                                  max_idletime=dfk.config.max_idletime)
+        self._strategy = Strategy(strategy=strategy,
+                                  max_idletime=max_idletime)
         super().__init__(self.poll, interval=5, name="JobStatusPoller")
 
     @wrap_with_logs

@@ -15,14 +15,19 @@ extras_require = {
         'networkx>=2.5,<2.6',
         'Flask>=1.0.2',
         'flask_sqlalchemy',
-        'pandas<2',
+        'pandas<2.2',
         'plotly',
         'python-daemon'
     ],
     'aws' : ['boto3'],
     'kubernetes' : ['kubernetes'],
     'oauth_ssh' : ['oauth-ssh>=0.9'],
-    'docs' : ['nbsphinx', 'sphinx_rtd_theme', 'ipython<=8.6.0'],
+    'docs' : [
+        'ipython<=8.6.0',
+        'nbsphinx',
+        'sphinx>=7.1,<7.2',  # 7.2 requires python 3.9+
+        'sphinx_rtd_theme'
+    ],
     'google_cloud' : ['google-auth', 'google-api-python-client'],
     'gssapi' : ['python-gssapi'],
     'azure' : ['azure<=4', 'msrestazure'],
@@ -71,6 +76,7 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
     ],
     keywords=['Workflows', 'Scientific computing'],
     entry_points={'console_scripts':

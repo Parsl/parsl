@@ -15,6 +15,5 @@ def fresh_config():
                 RadicalPilotExecutor(
                     label='RPEXBulk',
                     rpex_cfg=rpex_cfg,
-                    bulk_mode=True,
                     resource='local.localhost',
                     runtime=30, cores=4)])

@@ -14,7 +14,7 @@ import math
 from parsl.serialize import pack_apply_message, deserialize
 from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
-from parsl.jobs.states import JobStatus
+from parsl.jobs.states import JobStatus, JobState
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
@@ -22,6 +22,7 @@ from parsl.executors.errors import (
     UnsupportedFeatureError
 )
 
+from parsl import curvezmq
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.providers.base import ExecutionProvider
 from parsl.data_provider.staging import Staging
@@ -42,6 +43,7 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers} "
                       "--poll {poll_period} "
                       "--task_port={task_port} "
                       "--result_port={result_port} "
+                      "--cert_dir {cert_dir} "
                       "--logdir={logdir} "
                       "--block_id={{block_id}} "
                       "--hb_period={heartbeat_period} "
@@ -190,6 +192,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     worker_logdir_root : string
         In case of a remote file system, specify the path to where logs will be kept.
+
+    encrypted : bool
+        Flag to enable/disable encryption (CurveZMQ). Default is False.
     """
 
     @typeguard.typechecked
@@ -215,13 +220,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  poll_period: int = 10,
                  address_probe_timeout: Optional[int] = None,
                  worker_logdir_root: Optional[str] = None,
-                 block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True):
+                 block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
+                 encrypted: bool = False):
 
         logger.debug("Initializing HighThroughputExecutor")
 
         BlockProviderExecutor.__init__(self, provider=provider, block_error_handler=block_error_handler)
         self.label = label
-        self.launch_cmd = launch_cmd
         self.worker_debug = worker_debug
         self.storage_access = storage_access
         self.working_dir = working_dir
@@ -273,10 +278,24 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.run_dir = '.'
         self.worker_logdir_root = worker_logdir_root
         self.cpu_affinity = cpu_affinity
+        self.encrypted = encrypted
+        self.cert_dir = None
 
         if not launch_cmd:
-            self.launch_cmd = DEFAULT_LAUNCH_CMD
+            launch_cmd = DEFAULT_LAUNCH_CMD
+        self.launch_cmd = launch_cmd
+
         self.radio_mode = "htex"
+
+    @property
+    def logdir(self):
+        return "{}/{}".format(self.run_dir, self.label)
+
+    @property
+    def worker_logdir(self):
+        if self.worker_logdir_root is not None:
+            return "{}/{}".format(self.worker_logdir_root, self.label)
+        return self.logdir
 
     def initialize_scaling(self):
         """Compose the launch command and scale out the initial blocks.
@@ -287,9 +306,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         address_probe_timeout_string = ""
         if self.address_probe_timeout:
             address_probe_timeout_string = "--address_probe_timeout={}".format(self.address_probe_timeout)
-        worker_logdir = "{}/{}".format(self.run_dir, self.label)
-        if self.worker_logdir_root is not None:
-            worker_logdir = "{}/{}".format(self.worker_logdir_root, self.label)
 
         l_cmd = self.launch_cmd.format(debug=debug_opts,
                                        prefetch_capacity=self.prefetch_capacity,
@@ -304,7 +320,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
                                        poll_period=self.poll_period,
-                                       logdir=worker_logdir,
+                                       cert_dir=self.cert_dir,
+                                       logdir=self.worker_logdir,
                                        cpu_affinity=self.cpu_affinity,
                                        accelerators=" ".join(self.available_accelerators))
         self.launch_cmd = l_cmd
@@ -325,9 +342,25 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     def start(self):
         """Create the Interchange process and connect to it.
         """
-        self.outgoing_q = zmq_pipes.TasksOutgoing("127.0.0.1", self.interchange_port_range)
-        self.incoming_q = zmq_pipes.ResultsIncoming("127.0.0.1", self.interchange_port_range)
-        self.command_client = zmq_pipes.CommandClient("127.0.0.1", self.interchange_port_range)
+        if self.encrypted and self.cert_dir is None:
+            logger.debug("Creating CurveZMQ certificates")
+            self.cert_dir = curvezmq.create_certificates(self.logdir)
+        elif not self.encrypted and self.cert_dir:
+            raise AttributeError(
+                "The certificates directory path attribute (cert_dir) is defined, but the "
+                "encrypted attribute is set to False. You must either change cert_dir to "
+                "None or encrypted to True."
+            )
+
+        self.outgoing_q = zmq_pipes.TasksOutgoing(
+            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+        )
+        self.incoming_q = zmq_pipes.ResultsIncoming(
+            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+        )
+        self.command_client = zmq_pipes.CommandClient(
+            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+        )
 
         self._queue_management_thread = None
         self._start_queue_management_thread()
@@ -448,10 +481,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                                     "worker_port_range": self.worker_port_range,
                                                     "hub_address": self.hub_address,
                                                     "hub_port": self.hub_port,
-                                                    "logdir": "{}/{}".format(self.run_dir, self.label),
+                                                    "logdir": self.logdir,
                                                     "heartbeat_threshold": self.heartbeat_threshold,
                                                     "poll_period": self.poll_period,
-                                                    "logging_level": logging.DEBUG if self.worker_debug else logging.INFO
+                                                    "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
+                                                    "cert_dir": self.cert_dir,
                                                     },
                                             daemon=True,
                                             name="HTEX-Interchange"
@@ -512,6 +546,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """
         return self.command_client.run("MANAGERS")
 
+    def connected_blocks(self) -> List[str]:
+        """List of connected block ids"""
+        return self.command_client.run("CONNECTED_BLOCKS")
+
     def _hold_block(self, block_id):
         """ Sends hold command to all managers which are in a specific block
 
@@ -559,8 +597,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         # handle people sending blobs gracefully
         if logger.getEffectiveLevel() <= logging.DEBUG:
-            args_to_print = tuple([arg if len(repr(arg)) < 100 else (repr(arg)[:100] + '...') for arg in args])
-            logger.debug("Pushing htex task {} function {} to queue with args {}".format(task_id, func, args_to_print))
+            args_to_print = tuple([ar if len(ar := repr(arg)) < 100 else (ar[:100] + '...') for arg in args])
+            logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
 
         fut = Future()
         fut.parsl_executor_task_id = task_id
@@ -600,7 +638,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     def workers_per_node(self) -> Union[int, float]:
         return self._workers_per_node
 
-    def scale_in(self, blocks=None, block_ids=[], force=True, max_idletime=None):
+    def scale_in(self, blocks, force=True, max_idletime=None):
         """Scale in the number of active blocks by specified amount.
 
         The scale in method here is very rude. It doesn't give the workers
@@ -615,55 +653,51 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         force : Bool
              Used along with blocks to indicate whether blocks should be terminated by force.
+
              When force = True, we will kill blocks regardless of the blocks being busy
-             When force = False, Only idle blocks will be terminated.
-             If the # of ``idle_blocks`` < ``blocks``, the list of jobs marked for termination
-             will be in the range: 0 - ``blocks``.
+
+             When force = False, only idle blocks will be terminated.  If the
+             number of idle blocks < ``blocks``, then fewer than ``blocks``
+             blocks will be terminated.
 
         max_idletime: float
              A time to indicate how long a block can be idle.
              Used along with force = False to kill blocks that have been idle for that long.
 
-        block_ids : list
-             List of specific block ids to terminate. Optional
-
         Returns
         -------
-        List of job_ids marked for termination
+        List of block IDs scaled in
         """
-        logger.info(f"Scale in called, blocks={blocks}, block_ids={block_ids}")
-        if block_ids:
-            block_ids_to_kill = block_ids
-        else:
-            managers = self.connected_managers()
-            block_info = {}  # block id -> list( tasks, idle duration )
-            for manager in managers:
-                if not manager['active']:
-                    continue
-                b_id = manager['block_id']
-                if b_id not in block_info:
-                    block_info[b_id] = [0, float('inf')]
-                block_info[b_id][0] += manager['tasks']
-                block_info[b_id][1] = min(block_info[b_id][1], manager['idle_duration'])
+        logger.debug(f"Scale in called, blocks={blocks}")
+        managers = self.connected_managers()
+        block_info = {}  # block id -> list( tasks, idle duration )
+        for manager in managers:
+            if not manager['active']:
+                continue
+            b_id = manager['block_id']
+            if b_id not in block_info:
+                block_info[b_id] = [0, float('inf')]
+            block_info[b_id][0] += manager['tasks']
+            block_info[b_id][1] = min(block_info[b_id][1], manager['idle_duration'])
 
-            sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1][1], item[1][0]))
-            logger.debug(f"Scale in selecting from {len(sorted_blocks)} blocks")
-            if force is True:
-                block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
+        sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1][1], item[1][0]))
+        logger.debug(f"Scale in selecting from {len(sorted_blocks)} blocks")
+        if force is True:
+            block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
+        else:
+            if not max_idletime:
+                block_ids_to_kill = [x[0] for x in sorted_blocks if x[1][0] == 0][:blocks]
             else:
-                if not max_idletime:
-                    block_ids_to_kill = [x[0] for x in sorted_blocks if x[1][0] == 0][:blocks]
-                else:
-                    block_ids_to_kill = []
-                    for x in sorted_blocks:
-                        if x[1][1] > max_idletime and x[1][0] == 0:
-                            block_ids_to_kill.append(x[0])
-                            if len(block_ids_to_kill) == blocks:
-                                break
-                logger.debug("Selected idle block ids to kill: {}".format(
-                    block_ids_to_kill))
-                if len(block_ids_to_kill) < blocks:
-                    logger.warning(f"Could not find enough blocks to kill: wanted {blocks} but only selected {len(block_ids_to_kill)}")
+                block_ids_to_kill = []
+                for x in sorted_blocks:
+                    if x[1][1] > max_idletime and x[1][0] == 0:
+                        block_ids_to_kill.append(x[0])
+                        if len(block_ids_to_kill) == blocks:
+                            break
+            logger.debug("Selected idle block ids to kill: {}".format(
+                block_ids_to_kill))
+            if len(block_ids_to_kill) < blocks:
+                logger.warning(f"Could not find enough blocks to kill: wanted {blocks} but only selected {len(block_ids_to_kill)}")
 
         logger.info("Iterating over block IDs")
         # Hold the block
@@ -692,6 +726,21 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             raise ScalingFailed(self, "No launch command")
         launch_cmd = self.launch_cmd.format(block_id=block_id)
         return launch_cmd
+
+    def status(self) -> Dict[str, JobStatus]:
+        job_status = super().status()
+        connected_blocks = self.connected_blocks()
+        for job_id in job_status:
+            job_info = job_status[job_id]
+            if job_info.terminal and job_id not in connected_blocks:
+                job_status[job_id].state = JobState.MISSING
+                if job_status[job_id].message is None:
+                    job_status[job_id].message = (
+                        "Job is marked as MISSING since the workers failed to register "
+                        "to the executor. Check the stdout/stderr logs in the submit_scripts "
+                        "directory for more debug information"
+                    )
+        return job_status
 
     def shutdown(self):
         """Shutdown the executor, including the interchange. This does not

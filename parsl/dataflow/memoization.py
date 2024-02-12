@@ -266,8 +266,8 @@ class Memoizer:
         if not self.memoize or not task['memoize'] or 'hashsum' not in task:
             return
 
-        if 'hashsum' not in task or task['hashsum'] is None:
-            logger.error("Attempt to update memo for task {} with no hashsum".format(task_id))
+        if not isinstance(task['hashsum'], str):
+            logger.error("Attempting to update app cache entry but hashsum is not a string key")
             return
 
         if task['hashsum'] in self.memo_lookup_table:

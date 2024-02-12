@@ -21,6 +21,7 @@ def fresh_config():
                 # address=address_by_interface('ib0'),  # This assumes Parsl is running on login node
                 worker_port_range=(50000, 55000),
                 max_workers=1,
+                encrypted=True,
                 provider=LSFProvider(
                     launcher=JsrunLauncher(),
                     walltime="00:10:00",
