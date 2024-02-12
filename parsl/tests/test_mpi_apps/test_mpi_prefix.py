@@ -10,9 +10,13 @@ from parsl.executors.high_throughput.mpi_prefix_composer import (
 )
 
 
+resource_spec = {"num_nodes": 2,
+                 "num_ranks": 8,
+                 "ranks_per_node": 4}
+
+
 @pytest.mark.local
 def test_srun_launch_cmd():
-    resource_spec = {"NUM_NODES": 2, "RANKS_PER_NODE": 4}
     prefix_name, composed_prefix = compose_srun_launch_cmd(
         resource_spec=resource_spec, node_hostnames=["node1", "node2"]
     )
@@ -24,7 +28,6 @@ def test_srun_launch_cmd():
 
 @pytest.mark.local
 def test_aprun_launch_cmd():
-    resource_spec = {"NUM_NODES": 2, "RANKS_PER_NODE": 4}
     prefix_name, composed_prefix = compose_aprun_launch_cmd(
         resource_spec=resource_spec, node_hostnames=["node1", "node2"]
     )
@@ -35,7 +38,6 @@ def test_aprun_launch_cmd():
 
 @pytest.mark.local
 def test_mpiexec_launch_cmd():
-    resource_spec = {"NUM_NODES": 2, "RANKS_PER_NODE": 4}
     prefix_name, composed_prefix = compose_mpiexec_launch_cmd(
         resource_spec=resource_spec, node_hostnames=["node1", "node2"]
     )
@@ -46,7 +48,6 @@ def test_mpiexec_launch_cmd():
 
 @pytest.mark.local
 def test_slurm_launch_cmd():
-    resource_spec = {"NUM_NODES": 2, "RANKS_PER_NODE": 4}
     table = compose_all(
         mpi_launcher="srun",
         resource_spec=resource_spec,
@@ -59,7 +60,6 @@ def test_slurm_launch_cmd():
 
 @pytest.mark.local
 def test_default_launch_cmd():
-    resource_spec = {"NUM_NODES": 2, "RANKS_PER_NODE": 4}
     table = compose_all(
         mpi_launcher="srun",
         resource_spec=resource_spec,

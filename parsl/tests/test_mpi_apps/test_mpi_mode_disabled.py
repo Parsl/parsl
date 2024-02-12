@@ -1,3 +1,4 @@
+import logging
 from typing import Dict
 import pytest
 import parsl
@@ -36,8 +37,8 @@ def test_only_resource_specs_set():
     """Confirm that resource_spec env vars are set while launch prefixes are not
     when enable_mpi_mode = False"""
     resource_spec = {
-        "NUM_NODES": 4,
-        "RANKS_PER_NODE": 2,
+        "num_nodes": 4,
+        "ranks_per_node": 2,
     }
 
     future = get_env_vars(parsl_resource_specification=resource_spec)
@@ -46,5 +47,5 @@ def test_only_resource_specs_set():
     assert isinstance(result, Dict)
     assert "PARSL_DEFAULT_PREFIX" not in result
     assert "PARSL_SRUN_PREFIX" not in result
-    assert result["PARSL_NUM_NODES"] == str(resource_spec["NUM_NODES"])
-    assert result["PARSL_RANKS_PER_NODE"] == str(resource_spec["RANKS_PER_NODE"])
+    assert result["PARSL_NUM_NODES"] == str(resource_spec["num_nodes"])
+    assert result["PARSL_RANKS_PER_NODE"] == str(resource_spec["ranks_per_node"])
