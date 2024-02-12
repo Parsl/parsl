@@ -13,15 +13,19 @@ def this_app(inputs=()):
 
 
 @pytest.mark.local
-def test_future_representation():
+def test_future_representation(tmpd_cwd):
     import sqlalchemy
     from sqlalchemy import text
     from parsl.tests.configs.htex_local_alternate import fresh_config
 
-    if os.path.exists("runinfo/monitoring.db"):
-        os.remove("runinfo/monitoring.db")
+    monitoring_db = str(tmpd_cwd / "monitoring.db")
+    monitoring_url = "sqlite:///" + monitoring_db
 
-    parsl.load(fresh_config())
+    c = fresh_config()
+    # TODO: redirect runinfo
+    c.monitoring.logging_endpoint = monitoring_url
+
+    parsl.load(c)
 
     # we're going to pass this TOKEN into an app via a pre-requisite Future,
     # and then expect to see it appear in the monitoring database.
@@ -50,7 +54,7 @@ def test_future_representation():
     parsl.dfk().cleanup()
     parsl.clear()
 
-    engine = sqlalchemy.create_engine("sqlite:///runinfo/monitoring.db")
+    engine = sqlalchemy.create_engine(monitoring_url)
     with engine.begin() as connection:
         result = connection.execute(text("SELECT COUNT(*) FROM task"))
         (task_count, ) = result.first()
