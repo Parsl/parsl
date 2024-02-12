@@ -22,8 +22,8 @@ def test_future_representation(tmpd_cwd):
     monitoring_url = "sqlite:///" + monitoring_db
 
     c = fresh_config()
-    # TODO: redirect runinfo
     c.monitoring.logging_endpoint = monitoring_url
+    c.run_dir = tmpd_cwd
 
     parsl.load(c)
 
