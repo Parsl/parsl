@@ -65,6 +65,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     mem_per_node : int
         Specify the real memory to provision per node in GB. If set to None, no
         explicit request to the scheduler will be made. Default is None.
+    init_blocks : int
+        Number of blocks to provision at the start of the run. Default is 1.
     min_blocks : int
         Minimum number of blocks to maintain.
     max_blocks : int

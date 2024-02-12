@@ -22,11 +22,11 @@ def load_dfk_from_config(filename):
 
 
 @parsl.python_app
-def app(parsl_resource_specification={}):
+def app(extra_payload, parsl_resource_specification={}):
     return 7
 
 
-def performance(*, resources: dict, target_t: float):
+def performance(*, resources: dict, target_t: float, args_extra_size: int):
     n = 10
 
     delta_t: float
@@ -36,6 +36,8 @@ def performance(*, resources: dict, target_t: float):
 
     iteration = 1
 
+    args_extra_payload = "x" * args_extra_size
+
     while delta_t < threshold_t or iteration <= min_iterations:
         print(f"==== Iteration {iteration} ====")
         print(f"Will run {n} tasks to target {target_t} seconds runtime")
@@ -44,7 +46,7 @@ def performance(*, resources: dict, target_t: float):
         fs = []
         print("Submitting tasks / invoking apps")
         for _ in range(n):
-            fs.append(app(parsl_resource_specification=resources))
+            fs.append(app(args_extra_payload, parsl_resource_specification=resources))
 
         submitted_t = time.time()
         print(f"All {n} tasks submitted ... waiting for completion")
@@ -78,6 +80,7 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
     parser.add_argument("--config", required=True, help="path to Python file that defines a configuration")
     parser.add_argument("--resources", metavar="EXPR", help="parsl_resource_specification dictionary")
     parser.add_argument("--time", metavar="SECONDS", help="target number of seconds for an iteration", default=120, type=float)
+    parser.add_argument("--argsize", metavar="BYTES", help="extra bytes to add into app invocation arguments", default=0, type=int)
 
     args = parser.parse_args()
 
@@ -87,7 +90,7 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
         resources = {}
 
     load_dfk_from_config(args.config)
-    performance(resources=resources, target_t=args.time)
+    performance(resources=resources, target_t=args.time, args_extra_size=args.argsize)
     print("Cleaning up DFK")
     parsl.dfk().cleanup()
     print("The end")
