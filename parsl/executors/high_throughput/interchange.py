@@ -14,7 +14,7 @@ import queue
 import threading
 import json
 
-from typing import cast, Any, Dict, NoReturn, Sequence, Set, Optional, Tuple
+from typing import cast, Any, Dict, NoReturn, Sequence, Set, Optional, Tuple, List
 
 from parsl import curvezmq
 from parsl.utils import setproctitle
@@ -66,7 +66,6 @@ class Interchange:
     1. Asynchronously queue large volume of tasks (>100K)
     2. Allow for workers to join and leave the union
     3. Detect workers that have failed using heartbeats
-    4. Service single and batch requests from workers
     """
     def __init__(self,
                  client_address: str = "127.0.0.1",
@@ -184,6 +183,7 @@ class Interchange:
             self.worker_task_port, self.worker_result_port))
 
         self._ready_managers: Dict[bytes, ManagerRecord] = {}
+        self.connected_block_history: List[str] = []
 
         self.heartbeat_threshold = heartbeat_threshold
 
@@ -285,6 +285,9 @@ class Interchange:
                     for manager in self._ready_managers.values():
                         outstanding += len(manager['tasks'])
                     reply = outstanding
+
+                elif command_req == "CONNECTED_BLOCKS":
+                    reply = self.connected_block_history
 
                 elif command_req == "WORKERS":
                     num_workers = 0
@@ -391,7 +394,7 @@ class Interchange:
         logger.warning("Exiting")
 
     def process_task_outgoing_incoming(self, interesting_managers: Set[bytes], hub_channel: Optional[zmq.Socket], kill_event: threading.Event) -> None:
-        # Listen for requests for work
+        # Listen for registrations and heartbeats
         if self.task_outgoing in self.socks and self.socks[self.task_outgoing] == zmq.POLLIN:
             logger.debug("starting task_outgoing section")
             message = self.task_outgoing.recv_multipart()
@@ -416,6 +419,7 @@ class Interchange:
                                                         'worker_count': 0,
                                                         'active': True,
                                                         'tasks': []}
+                    self.connected_block_history.append(msg['block_id'])
                 if reg_flag is True:
                     interesting_managers.add(manager_id)
                     logger.info("Adding manager: {!r} to ready queue".format(manager_id))
@@ -447,9 +451,9 @@ class Interchange:
                     logger.debug("Suppressing bad registration from manager: {!r}".format(manager_id))
 
             else:
-                tasks_requested = int.from_bytes(message[1], "little")
+                heartbeat = int.from_bytes(message[1], "little")
                 self._ready_managers[manager_id]['last_heartbeat'] = time.time()
-                if tasks_requested == HEARTBEAT_CODE:
+                if heartbeat == HEARTBEAT_CODE:
                     logger.debug("Manager {!r} sent heartbeat via tasks connection".format(manager_id))
                     self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
                 else:
@@ -457,7 +461,7 @@ class Interchange:
             logger.debug("leaving task_outgoing section")
 
     def process_tasks_to_send(self, interesting_managers: Set[bytes]) -> None:
-        # If we had received any requests, check if there are tasks that could be passed
+        # Check if there are tasks that could be sent to managers
 
         logger.debug("Managers count (interesting/total): {interesting}/{total}".format(
             total=len(self._ready_managers),

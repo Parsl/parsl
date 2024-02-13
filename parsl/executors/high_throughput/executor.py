@@ -14,7 +14,7 @@ import math
 from parsl.serialize import pack_apply_message, deserialize
 from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
-from parsl.jobs.states import JobStatus
+from parsl.jobs.states import JobStatus, JobState
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
@@ -34,6 +34,23 @@ from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers} "
+                      "-a {addresses} "
+                      "-p {prefetch_capacity} "
+                      "-c {cores_per_worker} "
+                      "-m {mem_per_worker} "
+                      "--poll {poll_period} "
+                      "--task_port={task_port} "
+                      "--result_port={result_port} "
+                      "--cert_dir {cert_dir} "
+                      "--logdir={logdir} "
+                      "--block_id={{block_id}} "
+                      "--hb_period={heartbeat_period} "
+                      "{address_probe_timeout_string} "
+                      "--hb_threshold={heartbeat_threshold} "
+                      "--cpu-affinity {cpu_affinity} "
+                      "--available-accelerators {accelerators}")
 
 
 class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
@@ -265,25 +282,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.cert_dir = None
 
         if not launch_cmd:
-            launch_cmd = (
-                "process_worker_pool.py {debug} {max_workers} "
-                "-a {addresses} "
-                "-p {prefetch_capacity} "
-                "-c {cores_per_worker} "
-                "-m {mem_per_worker} "
-                "--poll {poll_period} "
-                "--task_port={task_port} "
-                "--result_port={result_port} "
-                "--cert_dir {cert_dir} "
-                "--logdir={logdir} "
-                "--block_id={{block_id}} "
-                "--hb_period={heartbeat_period} "
-                "{address_probe_timeout_string} "
-                "--hb_threshold={heartbeat_threshold} "
-                "--cpu-affinity {cpu_affinity} "
-                "--available-accelerators {accelerators}"
-            )
-
+            launch_cmd = DEFAULT_LAUNCH_CMD
         self.launch_cmd = launch_cmd
 
     radio_mode = "htex"
@@ -547,6 +546,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """
         return self.command_client.run("MANAGERS")
 
+    def connected_blocks(self) -> List[str]:
+        """List of connected block ids"""
+        return self.command_client.run("CONNECTED_BLOCKS")
+
     def _hold_block(self, block_id):
         """ Sends hold command to all managers which are in a specific block
 
@@ -593,10 +596,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         task_id = self._task_counter
 
         # handle people sending blobs gracefully
-        args_to_print = args
-        if logger.getEffectiveLevel() >= logging.DEBUG:
-            args_to_print = tuple([arg if len(repr(arg)) < 100 else (repr(arg)[:100] + '...') for arg in args])
-        logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
+        if logger.getEffectiveLevel() <= logging.DEBUG:
+            args_to_print = tuple([ar if len(ar := repr(arg)) < 100 else (ar[:100] + '...') for arg in args])
+            logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
 
         fut = Future()
         fut.parsl_executor_task_id = task_id
@@ -719,6 +721,21 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             raise ScalingFailed(self, "No launch command")
         launch_cmd = self.launch_cmd.format(block_id=block_id)
         return launch_cmd
+
+    def status(self) -> Dict[str, JobStatus]:
+        job_status = super().status()
+        connected_blocks = self.connected_blocks()
+        for job_id in job_status:
+            job_info = job_status[job_id]
+            if job_info.terminal and job_id not in connected_blocks:
+                job_status[job_id].state = JobState.MISSING
+                if job_status[job_id].message is None:
+                    job_status[job_id].message = (
+                        "Job is marked as MISSING since the workers failed to register "
+                        "to the executor. Check the stdout/stderr logs in the submit_scripts "
+                        "directory for more debug information"
+                    )
+        return job_status
 
     def shutdown(self):
         """Shutdown the executor, including the interchange. This does not
