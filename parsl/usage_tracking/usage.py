@@ -14,7 +14,8 @@ from parsl.version import VERSION as PARSL_VERSION
 
 logger = logging.getLogger(__name__)
 
-from typing import Callable, ParamSpec
+from typing import Callable
+from typing_extensions import ParamSpec
 
 P = ParamSpec("P")
 
