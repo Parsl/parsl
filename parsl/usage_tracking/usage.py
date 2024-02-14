@@ -195,9 +195,6 @@ class UsageTracker:
 
     def send_message(self) -> None:
         """Send message over UDP.
-
-        Returns:
-            time taken
         """
         if not self.initialized:
             message = self.construct_start_message()
