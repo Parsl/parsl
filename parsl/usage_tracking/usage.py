@@ -204,9 +204,6 @@ class UsageTracker:
 
     def send_message(self) -> float:
         """Send message over UDP.
-
-        Returns:
-            time taken
         """
         start = time.time()
         message = None
