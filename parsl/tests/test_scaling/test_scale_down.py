@@ -39,7 +39,7 @@ def local_config():
             )
         ],
         max_idletime=0.5,
-        strategy='htex_auto_scale',
+        strategy='simple',
     )
 
 
