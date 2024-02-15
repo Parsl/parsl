@@ -74,6 +74,8 @@ wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with workqueue_ex config
 
 .PHONY: radical_local_test
 radical_local_test:
+	pip3 install git+https://github.com/benclifford/radical.saga
+	pip3 install git+https://github.com/benclifford/radical.pilot
 	pip3 install ".[radical-pilot]"
 	mkdir -p ~/.radical/pilot/configs && echo '{"localhost": {"virtenv_mode": "local"}}' > ~/.radical/pilot/configs/resource_local.json
 	pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/local_radical.py --random-order --durations 10
