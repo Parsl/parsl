@@ -301,6 +301,7 @@ def setup_data(tmpd_cwd):
     (data_dir / "test2.txt").write_text("2\n")
     return data_dir
 
+
 @pytest.fixture(autouse=True, scope='function')
 def check_open_files():
     fds = os.listdir(f"/proc/{os.getpid()}/fd")
@@ -308,6 +309,7 @@ def check_open_files():
     yield
     fds = os.listdir(f"/proc/{os.getpid()}/fd")
     logger.error(f"Open files after test: {len(fds)}")
+
 
 @pytest.fixture(autouse=True, scope='function')
 def assert_no_outstanding_tasks(pytestconfig):
