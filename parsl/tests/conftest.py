@@ -316,6 +316,7 @@ def check_open_files():
 @pytest.fixture(autouse=True, scope='module')
 def assert_no_multiprocessing(pytestconfig):
     import multiprocessing
+    import threading
 
     yield
 
@@ -326,6 +327,8 @@ def assert_no_multiprocessing(pytestconfig):
 
     assert multiprocessing.active_children() == []
 
+    # only the main thread...
+    assert len(threading.enumerate()) == 1
 
 @pytest.fixture(autouse=True, scope='function')
 def assert_no_outstanding_tasks(pytestconfig):
