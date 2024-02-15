@@ -10,6 +10,7 @@ export PATH := $(CCTOOLS_INSTALL)/bin/:$(PATH)
 export CCTOOLS_VERSION=7.7.2
 export HYDRA_LAUNCHER=fork
 export OMPI_MCA_rmaps_base_oversubscribe=yes
+export RADICAL_TEMP_SANDBOX=True
 MPI=$(MPICH)
 
 .PHONY: help
