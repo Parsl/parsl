@@ -90,7 +90,7 @@ jobs:
       run: |
         source .venv/bin/activate
         sudo apt-get install -y graphviz
-        pip install .[monitoring]
+        pip install .[monitoring,visualization]
         parsl/tests/test-viz.sh
 
     - name: make coverage

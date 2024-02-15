@@ -43,7 +43,8 @@ class Manager:
 
                 |         zmq              |    Manager         |   Worker Processes
                 |                          |                    |
-                | <-----Request N task-----+--Count task reqs   |      Request task<--+
+                | <-----Register with -----+                    |      Request task<--+
+                |       N task capacity    |                    |          |          |
     Interchange | -------------------------+->Receive task batch|          |          |
                 |                          |  Distribute tasks--+----> Get(block) &   |
                 |                          |                    |      Execute task   |
