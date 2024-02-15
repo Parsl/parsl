@@ -1199,11 +1199,6 @@ class DataFlowKernel:
                 logger.info("Stopping checkpoint timer")
                 self._checkpoint_timer.close()
 
-        # TODO: temp hack to log usage locally for development
-        import parsl.usage_tracking.api as a
-        u = a.get_parsl_usage(self._config)
-        logger.info(f"Usage tracking: {u}")
-
         # Send final stats
         self.usage_tracker.send_message()
         self.usage_tracker.close()
