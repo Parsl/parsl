@@ -47,8 +47,8 @@ def test_only_resource_specs_set():
     """Confirm that resource_spec env vars are set while launch prefixes are not
     when enable_mpi_mode = False"""
     resource_spec = {
-        "NUM_NODES": 2,
-        "RANKS_PER_NODE": 2,
+        "num_nodes": 2,
+        "ranks_per_node": 2,
     }
 
     future = get_env_vars(parsl_resource_specification=resource_spec)
@@ -59,8 +59,9 @@ def test_only_resource_specs_set():
     assert "PARSL_MPI_PREFIX" in result
     assert "PARSL_MPIEXEC_PREFIX" in result
     assert result["PARSL_MPI_PREFIX"] == result["PARSL_MPIEXEC_PREFIX"]
-    assert result["PARSL_NUM_NODES"] == str(resource_spec["NUM_NODES"])
-    assert result["PARSL_RANKS_PER_NODE"] == str(resource_spec["RANKS_PER_NODE"])
+    assert result["PARSL_NUM_NODES"] == str(resource_spec["num_nodes"])
+    assert result["PARSL_RANKS_PER_NODE"] == str(resource_spec["ranks_per_node"])
+    assert result["PARSL_NUM_RANKS"] == str(resource_spec["ranks_per_node"] * resource_spec["num_nodes"])
 
 
 @bash_app
@@ -77,8 +78,8 @@ def test_bash_default_prefix_set():
     """Confirm that resource_spec env vars are set while launch prefixes are not
     when enable_mpi_mode = False"""
     resource_spec = {
-        "NUM_NODES": 2,
-        "RANKS_PER_NODE": 2,
+        "num_nodes": 2,
+        "ranks_per_node": 2,
     }
 
     future = echo_launch_cmd(parsl_resource_specification=resource_spec)
@@ -96,12 +97,12 @@ def test_bash_multiple_set():
     """Confirm that multiple apps can run without blocking each other out
     when enable_mpi_mode = False"""
     resource_spec = {
-        "NUM_NODES": 2,
-        "RANKS_PER_NODE": 2,
+        "num_nodes": 2,
+        "num_ranks": 4,
     }
     futures = []
     for i in range(4):
-        resource_spec["NUM_NODES"] = i + 1
+        resource_spec["num_nodes"] = i + 1
         future = echo_launch_cmd(parsl_resource_specification=resource_spec)
         futures.append(future)
 
@@ -116,7 +117,7 @@ def test_bash_multiple_set():
 @bash_app
 def bash_resource_spec(parsl_resource_specification=None, stdout=parsl.AUTO_LOGNAME):
     total_ranks = (
-        parsl_resource_specification["RANKS_PER_NODE"] * parsl_resource_specification["NUM_NODES"]
+        parsl_resource_specification["ranks_per_node"] * parsl_resource_specification["num_nodes"]
     )
     return f'echo "{total_ranks}"'
 
@@ -124,14 +125,14 @@ def bash_resource_spec(parsl_resource_specification=None, stdout=parsl.AUTO_LOGN
 @pytest.mark.local
 def test_bash_app_using_resource_spec():
     resource_spec = {
-        "NUM_NODES": 2,
-        "RANKS_PER_NODE": 2,
+        "num_nodes": 2,
+        "ranks_per_node": 2,
     }
     future = bash_resource_spec(parsl_resource_specification=resource_spec)
     assert future.result() == 0
     with open(future.stdout) as f:
         output = f.readlines()
-        total_ranks = resource_spec["NUM_NODES"] * resource_spec["RANKS_PER_NODE"]
+        total_ranks = resource_spec["num_nodes"] * resource_spec["ranks_per_node"]
         assert int(output[0].strip()) == total_ranks
 
 
@@ -157,8 +158,8 @@ def test_simulated_load(rounds: int = 100):
     futures = {}
     for i in range(rounds):
         resource_spec = {
-            "NUM_NODES": random.choice(node_choices),
-            "RANKS_PER_NODE": random.choice(ranks_per_node),
+            "num_nodes": random.choice(node_choices),
+            "ranks_per_node": random.choice(ranks_per_node),
         }
         future = mock_app(sleep_dur=random.choice(sleep_choices),
                           parsl_resource_specification=resource_spec)
@@ -166,5 +167,5 @@ def test_simulated_load(rounds: int = 100):
 
     for future in futures:
         total_ranks, nodes = future.result(timeout=10)
-        assert len(nodes) == futures[future]["NUM_NODES"]
-        assert total_ranks == futures[future]["NUM_NODES"] * futures[future]["RANKS_PER_NODE"]
+        assert len(nodes) == futures[future]["num_nodes"]
+        assert total_ranks == futures[future]["num_nodes"] * futures[future]["ranks_per_node"]

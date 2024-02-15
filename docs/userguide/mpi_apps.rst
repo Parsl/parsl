@@ -39,8 +39,9 @@ The broad strokes of a complete solution involves the following components:
     # Resources in terms of nodes and how ranks are to be distributed are set on a per app
     # basis via the resource_spec dictionary.
     resource_spec = {
-        "NUM_NODES" = 2,
-        "RANKS_PER_NODE" = 2,
+        "num_nodes" = 2,
+        "ranks_per_node" = 2,
+        "num_ranks" = 4,
     }
     future = lammps_mpi_application(File('in.file'), resource_specification=resource_spec)
 
@@ -179,12 +180,13 @@ However, the following options are **required** for MPI applications :
 .. code-block:: python
 
     resource_specification = {
-      'NUM_NODES': <int>,        # Number of nodes required for the application instance
-      'RANKS_PER_NODE': <int>,   # Number of Ranks / application elements to be launched per node
+      'num_nodes': <int>,        # Number of nodes required for the application instance
+      'ranks_per_node': <int>,   # Number of ranks / application elements to be launched per node
+      'num_ranks': <int>,        # Number of ranks in total
     }
 
     # The above are made available in the worker env vars:
-    # echo $PARSL_NUM_NODES, $PARSL_RANKS_PER_NODE
+    # echo $PARSL_NUM_NODES, $PARSL_RANKS_PER_NODE, $PARSL_NUM_RANKS
 
 When the above are supplied, the following launch command prefixes are set:
 
@@ -283,7 +285,7 @@ Next we define the CosmicTagger MPI application. TODO: Ask Khalid for help.
                       stdout=parsl.AUTO_LOGNAME,
                       stderr=parsl.AUTO_LOGNAME,
                       parsl_resource_specification:Dict={}):
-        NRANKS = parsl_resource_specification['NUM_NODES'] * parsl_resource_specification['RANKS_PER_NODE']
+        NRANKS = parsl_resource_specification['num_ranks']
 
         return f"""
         module purge
@@ -315,8 +317,9 @@ while launching the application over 2-4 nodes.
         for num_nodes in [2, 4]:
             for batchsize in [2, 4, 8]:
 
-                parsl_res_spec = {"NUM_NODES": num_nodes,
-                                  "RANKS_PER_NODE": 4}
+                parsl_res_spec = {"num_nodes": num_nodes,
+                                  "num_tasks": num_nodes * 4,
+                                  "ranks_per_node": 4}
                 future = cosmic_tagger(workdir="/home/yadunand/CosmicTagger",
                                        datatype="float32",
                                        batchsize=str(batchsize),

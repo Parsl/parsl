@@ -25,13 +25,19 @@ def validate_resource_spec(resource_spec: Dict[str, str]):
         is invalid (e.g, contains invalid keys)
     """
     user_keys = set(resource_spec.keys())
-    legal_keys = set(("RANKS_PER_NODE",
-                      "NUM_NODES",
-                      "LAUNCHER_OPTIONS",
+    legal_keys = set(("ranks_per_node",
+                      "num_nodes",
+                      "num_ranks",
+                      "launcher_options",
                       ))
     invalid_keys = user_keys - legal_keys
     if invalid_keys:
         raise InvalidResourceSpecification(invalid_keys)
+    if "num_nodes" in resource_spec:
+        if not resource_spec.get("num_ranks") and resource_spec.get("ranks_per_node"):
+            resource_spec["num_ranks"] = str(int(resource_spec["num_nodes"]) * int(resource_spec["ranks_per_node"]))
+        if not resource_spec.get("ranks_per_node") and resource_spec.get("num_ranks"):
+            resource_spec["ranks_per_node"] = str(int(resource_spec["num_ranks"]) / int(resource_spec["num_nodes"]))
     return
 
 
@@ -41,16 +47,15 @@ def compose_mpiexec_launch_cmd(
     """Compose mpiexec launch command prefix"""
 
     node_str = ",".join(node_hostnames)
-    num_ranks = resource_spec["RANKS_PER_NODE"] * len(node_hostnames)
     args = [
         "mpiexec",
         "-n",
-        num_ranks,
+        resource_spec.get("num_ranks"),
         "-ppn",
-        resource_spec.get("RANKS_PER_NODE"),
+        resource_spec.get("ranks_per_node"),
         "-hosts",
         node_str,
-        resource_spec.get("LAUNCHER_OPTIONS", ""),
+        resource_spec.get("launcher_options", ""),
     ]
     prefix = " ".join(str(arg) for arg in args)
     return "PARSL_MPIEXEC_PREFIX", prefix
@@ -61,19 +66,18 @@ def compose_srun_launch_cmd(
 ) -> Tuple[str, str]:
     """Compose srun launch command prefix"""
 
-    num_ranks = resource_spec["RANKS_PER_NODE"] * len(node_hostnames)
     num_nodes = str(len(node_hostnames))
     args = [
         "srun",
         "--ntasks",
-        num_ranks,
+        resource_spec.get("num_ranks"),
         "--ntasks-per-node",
-        resource_spec.get("RANKS_PER_NODE"),
+        resource_spec.get("ranks_per_node"),
         "--nodelist",
         ",".join(node_hostnames),
         "--nodes",
         num_nodes,
-        resource_spec.get("LAUNCHER_OPTIONS", ""),
+        resource_spec.get("launcher_options", ""),
     ]
 
     prefix = " ".join(str(arg) for arg in args)
@@ -85,17 +89,16 @@ def compose_aprun_launch_cmd(
 ) -> Tuple[str, str]:
     """Compose aprun launch command prefix"""
 
-    num_ranks = resource_spec["RANKS_PER_NODE"] * len(node_hostnames)
     node_str = ",".join(node_hostnames)
     args = [
         "aprun",
         "-n",
-        num_ranks,
+        resource_spec.get("num_ranks"),
         "-N",
-        resource_spec.get("RANKS_PER_NODE"),
+        resource_spec.get("ranks_per_node"),
         "-node-list",
         node_str,
-        resource_spec.get("LAUNCHER_OPTIONS", ""),
+        resource_spec.get("launcher_options", ""),
     ]
     prefix = " ".join(str(arg) for arg in args)
     return "PARSL_APRUN_PREFIX", prefix

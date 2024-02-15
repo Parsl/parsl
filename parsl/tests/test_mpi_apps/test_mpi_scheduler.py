@@ -40,8 +40,8 @@ def test_MPISched_put_task():
     mock_task_buffer = pack_res_spec_apply_message("func",
                                                    "args",
                                                    "kwargs",
-                                                   resource_specification={"NUM_NODES": 2,
-                                                                           "RANKS_PER_NODE": 2})
+                                                   resource_specification={"num_nodes": 2,
+                                                                           "ranks_per_node": 2})
     task_package = {"task_id": 1, "buffer": mock_task_buffer}
     scheduler.put_task(task_package)
 
@@ -83,8 +83,8 @@ def test_MPISched_roundtrip():
         mock_task_buffer = pack_res_spec_apply_message("func",
                                                        "args",
                                                        "kwargs",
-                                                       resource_specification={"NUM_NODES": round,
-                                                                               "RANKS_PER_NODE": 2})
+                                                       resource_specification={"num_nodes": round,
+                                                                               "ranks_per_node": 2})
         task_package = {"task_id": round, "buffer": mock_task_buffer}
         scheduler.put_task(task_package)
 
@@ -113,8 +113,8 @@ def test_MPISched_contention():
                                                    "args",
                                                    "kwargs",
                                                    resource_specification={
-                                                       "NUM_NODES": 8,
-                                                       "RANKS_PER_NODE": 2
+                                                       "num_nodes": 8,
+                                                       "ranks_per_node": 2
                                                    })
     task_package = {"task_id": 1, "buffer": mock_task_buffer}
     scheduler.put_task(task_package)
@@ -126,8 +126,8 @@ def test_MPISched_contention():
                                                    "args",
                                                    "kwargs",
                                                    resource_specification={
-                                                       "NUM_NODES": 8,
-                                                       "RANKS_PER_NODE": 2
+                                                       "num_nodes": 8,
+                                                       "ranks_per_node": 2
                                                    })
     task_package = {"task_id": 2, "buffer": mock_task_buffer}
     scheduler.put_task(task_package)
