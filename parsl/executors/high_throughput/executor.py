@@ -744,5 +744,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """
 
         logger.info("Attempting HighThroughputExecutor shutdown")
+        logger.info("Terminating interchange")
         self.interchange_proc.terminate()
+        logger.info("sent termination... now joining ")
+        self.interchange_proc.join()
+        logger.info(f"interchange joined, {self.interchange_proc}")
         logger.info("Finished HighThroughputExecutor shutdown attempt")

@@ -311,6 +311,22 @@ def check_open_files():
     logger.error(f"Open files after test: {len(fds)}")
 
 
+# this interplays with the auto config loading
+# this won't work in any mode other than --config local
+@pytest.fixture(autouse=True, scope='module')
+def assert_no_multiprocessing(pytestconfig):
+    import multiprocessing
+
+    yield
+
+    # skip if not local mode
+    config = pytestconfig.getoption('config')[0]
+    if config != 'local':
+        return
+
+    assert multiprocessing.active_children() == []
+
+
 @pytest.fixture(autouse=True, scope='function')
 def assert_no_outstanding_tasks(pytestconfig):
     """If we're in a config-file based mode, wait for task completion between
