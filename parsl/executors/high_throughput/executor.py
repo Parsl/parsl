@@ -191,7 +191,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         list of supported MPI launchers = ("srun", "aprun", "mpiexec").
         default: "mpiexec"
 
-   encrypted : bool
+    encrypted : bool
         Flag to enable/disable encryption (CurveZMQ). Default is False.
     """
 
