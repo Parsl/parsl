@@ -24,7 +24,7 @@ from parsl.executors.flux.flux_instance_manager import __file__ as _MANAGER_PATH
 from parsl.executors.errors import ScalingFailed
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
-from parsl.serialize import pack_apply_message, deserialize
+from parsl.serialize import deserialize, pack_res_spec_apply_message
 from parsl.serialize.errors import SerializationError
 from parsl.app.errors import AppException
 
@@ -284,8 +284,10 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
             infile = os.path.join(self.working_dir, f"{task_id}_in{os.extsep}pkl")
             outfile = os.path.join(self.working_dir, f"{task_id}_out{os.extsep}pkl")
             try:
-                fn_buf = pack_apply_message(
-                    func, args, kwargs, buffer_threshold=1024 * 1024
+                fn_buf = pack_res_spec_apply_message(
+                    func, args, kwargs,
+                    resource_specification={},
+                    buffer_threshold=1024 * 1024
                 )
             except TypeError:
                 raise SerializationError(func.__name__)
