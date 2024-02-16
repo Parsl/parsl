@@ -10,13 +10,31 @@ from parsl.multiprocessing import ForkProcess
 _MOCK_BASE = "parsl.executors.high_throughput.executor"
 
 
+@pytest.fixture
+def encrypted(request: pytest.FixtureRequest):
+    if hasattr(request, "param"):
+        return request.param
+    return True
+
+
+@pytest.fixture
+def htex(encrypted: bool):
+    htex = HighThroughputExecutor(encrypted=encrypted)
+
+    yield htex
+
+    htex.shutdown()
+
+
 @pytest.mark.local
-@pytest.mark.parametrize("encrypted", (True, False))
+@pytest.mark.parametrize("encrypted", (True, False), indirect=True)
 @pytest.mark.parametrize("cert_dir_provided", (True, False))
 def test_htex_start_encrypted(
-    encrypted: bool, cert_dir_provided: bool, tmpd_cwd: pathlib.Path
+    encrypted: bool,
+    cert_dir_provided: bool,
+    htex: HighThroughputExecutor,
+    tmpd_cwd: pathlib.Path,
 ):
-    htex = HighThroughputExecutor(encrypted=encrypted)
     htex.run_dir = str(tmpd_cwd)
     if cert_dir_provided:
         provided_base_dir = tmpd_cwd / "provided"
@@ -55,9 +73,11 @@ def test_htex_start_encrypted(
 @pytest.mark.parametrize("timeout_expires", (True, False))
 @mock.patch(f"{_MOCK_BASE}.logger")
 def test_htex_shutdown(
-    mock_logger: mock.MagicMock, started: bool, timeout_expires: bool
+    mock_logger: mock.MagicMock,
+    started: bool,
+    timeout_expires: bool,
+    htex: HighThroughputExecutor,
 ):
-    htex = HighThroughputExecutor()
     mock_ix_proc = mock.Mock(spec=ForkProcess)
 
     if started:
