@@ -1,9 +1,13 @@
 import pathlib
+from unittest import mock
 
 import pytest
 
 from parsl import curvezmq
 from parsl import HighThroughputExecutor
+from parsl.multiprocessing import ForkProcess
+
+_MOCK_BASE = "parsl.executors.high_throughput.executor"
 
 
 @pytest.mark.local
@@ -44,3 +48,42 @@ def test_htex_start_encrypted(
         assert htex.outgoing_q.zmq_context.cert_dir is None
         assert htex.incoming_q.zmq_context.cert_dir is None
         assert htex.command_client.zmq_context.cert_dir is None
+
+
+@pytest.mark.local
+@pytest.mark.parametrize("started", (True, False))
+@pytest.mark.parametrize("timeout_expires", (True, False))
+@mock.patch(f"{_MOCK_BASE}.logger")
+def test_htex_shutdown(
+    mock_logger: mock.MagicMock, started: bool, timeout_expires: bool
+):
+    htex = HighThroughputExecutor()
+    mock_ix_proc = mock.Mock(spec=ForkProcess)
+
+    if started:
+        htex.interchange_proc = mock_ix_proc
+        mock_ix_proc.is_alive.return_value = True
+
+    if not timeout_expires:
+        # Simulate termination of the Interchange process
+        def kill_interchange(*args, **kwargs):
+            mock_ix_proc.is_alive.return_value = False
+
+        mock_ix_proc.terminate.side_effect = kill_interchange
+
+    htex.shutdown()
+
+    mock_logs = mock_logger.info.call_args_list
+    if started:
+        assert mock_ix_proc.terminate.called
+        assert mock_ix_proc.join.called
+        assert {"timeout": 10} == mock_ix_proc.join.call_args[1]
+        if timeout_expires:
+            assert "Unable to terminate Interchange" in mock_logs[1][0][0]
+            assert mock_ix_proc.kill.called
+        assert "Attempting" in mock_logs[0][0][0]
+        assert "Finished" in mock_logs[-1][0][0]
+    else:
+        assert not mock_ix_proc.terminate.called
+        assert not mock_ix_proc.join.called
+        assert "has not started" in mock_logs[0][0][0]
