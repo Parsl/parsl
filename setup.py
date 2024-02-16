@@ -34,8 +34,8 @@ extras_require = {
     'workqueue': ['work_queue'],
     'flux': ['pyyaml', 'cffi', 'jsonschema'],
     'proxystore': ['proxystore'],
-    'radical-pilot': ['radical.pilot'],
-    # Disabling psi-j since github direct links are not allowed by pypi
+    'radical-pilot': ['radical.pilot', 'psij-python==0.9.3'],
+    # Disabling psi-j-parsl since github direct links are not allowed by pypi
     # 'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
 }
 extras_require['all'] = sum(extras_require.values(), [])
