@@ -7,7 +7,7 @@ import threading
 import time
 from contextlib import contextmanager
 from types import TracebackType
-from typing import Any, Callable, List, Sequence, Tuple, Union, Generator, IO, AnyStr, Dict, Optional
+from typing import Any, Callable, Iterator, List, Sequence, Tuple, Union, Generator, IO, Dict, Optional
 
 import typeguard
 from typing_extensions import Type
@@ -113,15 +113,14 @@ def get_std_fname_mode(
     fdname: str,
     stdfspec: Union[os.PathLike, str, Tuple[str, str], Tuple[os.PathLike, str]]
 ) -> Tuple[str, str]:
-    import parsl.app.errors as pe
     if isinstance(stdfspec, (str, os.PathLike)):
         fname = stdfspec
         mode = 'a+'
     elif isinstance(stdfspec, tuple):
-        if len(stdfspec) != 2:
-            msg = (f"std descriptor {fdname} has incorrect tuple length "
-                   f"{len(stdfspec)}")
-            raise pe.BadStdStreamFile(msg, TypeError('Bad Tuple Length'))
+        # mypy can detect that the tuple is length 2
+        # (when upgrading from 1.5.1 to 1.8.0 and Python 3.12 but can typeguard check that,
+        # which is what I want this check for...?)
+        # typeguard (at least 4.1.5, and 2.13.3) can detect tuple length
         fname, mode = stdfspec
     return str(fname), mode
 
@@ -135,8 +134,17 @@ def wait_for_file(path: str, seconds: int = 10) -> Generator[None, None, None]:
     yield
 
 
+# with upgrade from mypy 1.5.1 to 1.8.0
+# parsl/utils.py:137: error: Argument 1 to "contextmanager" has
+# incompatible type "Callable[[str, str, int], Generator[IO[AnyStr], None, None]]";
+# expected "Callable[[str, str, int], Iterator[IO[Never]]]"  [arg-type]
+# so it used to return             Generator[IO[AnyStr], None, None]
+# but mypy thins it should return  Iterator[IO[Never]]
+# except with that annotation the same mypy fails... with parsl/utils.py:142: error:
+# Invalid type argument value for "IO"  [type-var]
+
 @contextmanager
-def time_limited_open(path: str, mode: str, seconds: int = 1) -> Generator[IO[AnyStr], None, None]:
+def time_limited_open(path: str, mode: str, seconds: int = 1) -> Iterator[IO[Any]]:
     with wait_for_file(path, seconds):
         logger.debug("wait_for_file yielded")
     f = open(path, mode)

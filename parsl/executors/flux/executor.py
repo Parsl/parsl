@@ -227,7 +227,10 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
         # add a ``weakref.finalize()`` function for joining the executor thread
         weakref.finalize(
             self,
-            lambda x, y: x.set() or y.join(),
+            # can't use these here in a lambda because it gives a mypy error with mypy 1.8.0:
+            # mypy doesn't like None or None as a const value here. it's nto a "type error",
+            # more a "redundant calculation of definitely None"
+            lambda x, y: x.set() or y.join(),  # type: ignore[func-returns-value]
             self._stop_event,
             self._submission_thread,
         )
