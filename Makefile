@@ -45,7 +45,7 @@ clean_coverage:
 
 .PHONY: mypy
 mypy: ## run mypy checks
-	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/
+	PYTHONPATH=$(CWD)/mypy-plugins:$(PYTHONPATH) MYPYPATH=$(CWD)/mypy-stubs mypy --no-incremental parsl/ --show-traceback
 
 .PHONY: local_thread_test
 local_thread_test: ## run all tests with local_thread config

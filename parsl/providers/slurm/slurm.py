@@ -17,6 +17,8 @@ from parsl.providers.errors import SubmitException
 from parsl.providers.slurm.template import template_string
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
+from typing import Any, Dict
+
 logger = logging.getLogger(__name__)
 
 translate_table = {
@@ -231,6 +233,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         logger.debug("Requesting one block with {} nodes".format(self.nodes_per_block))
 
+        job_config: Dict[str, Any]
         job_config = {}
         job_config["submit_script_dir"] = self.channel.script_dir
         job_config["nodes"] = self.nodes_per_block

@@ -1,6 +1,7 @@
 import errno
 import logging
 import os
+import typeguard
 
 import paramiko
 from parsl.channels.base import Channel
@@ -9,11 +10,18 @@ from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
+from typing import Any, Dict, List, Tuple, Optional
+
 
 class NoAuthSSHClient(paramiko.SSHClient):
-    def _auth(self, username, *args):
-        self._transport.auth_none(username)
-        return
+    def _auth(self, username: str, *args: List[Any]) -> None:
+        # swapped _internal variable for get_transport accessor
+        # method that I'm assuming without checking does the
+        # same thing.
+        transport = self.get_transport()
+        if transport is None:
+            raise RuntimeError("Expected a transport to be available")
+        transport.auth_none(username)
 
 
 class SSHChannel(Channel, RepresentationMixin):
@@ -26,8 +34,18 @@ class SSHChannel(Channel, RepresentationMixin):
 
     '''
 
-    def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None,
-                 gssapi_auth=False, skip_auth=False, port=22, key_filename=None, host_keys_filename=None):
+    @typeguard.typechecked
+    def __init__(self,
+                 hostname: str,
+                 username: Optional[str] = None,
+                 password: Optional[str] = None,
+                 script_dir: Optional[str] = None,
+                 envs: Optional[Dict[str, str]] = None,
+                 gssapi_auth: bool = False,
+                 skip_auth: bool = False,
+                 port: int = 22,
+                 key_filename: Optional[str] = None,
+                 host_keys_filename: Optional[str] = None):
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -50,29 +68,39 @@ class SSHChannel(Channel, RepresentationMixin):
         self.username = username
         self.password = password
         self.port = port
-        self.script_dir = script_dir
+
+        # if script_dir is a `str`, which it is from Channel, then can't
+        # assign None to it. Here and the property accessors are changed
+        # in benc-mypy to raise an error ratehr than return a None,
+        # because Channel-using code assumes that script_dir will always
+        # return a string and not a None. That assumption is not otherwise
+        # guaranteed by the type-system...
+        self._script_dir = None
+        if script_dir:
+            self.script_dir = script_dir
+
         self.skip_auth = skip_auth
         self.gssapi_auth = gssapi_auth
         self.key_filename = key_filename
         self.host_keys_filename = host_keys_filename
 
         if self.skip_auth:
-            self.ssh_client = NoAuthSSHClient()
+            self.ssh_client: paramiko.SSHClient = NoAuthSSHClient()
         else:
             self.ssh_client = paramiko.SSHClient()
         self.ssh_client.load_system_host_keys(filename=host_keys_filename)
         self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.sftp_client = None
+        self.sftp_client: Optional[paramiko.SFTPClient] = None
 
-        self.envs = {}
+        self.envs = {}  # type: Dict[str, str]
         if envs is not None:
             self.envs = envs
 
-    def _is_connected(self):
+    def _is_connected(self) -> bool:
         transport = self.ssh_client.get_transport() if self.ssh_client else None
-        return transport and transport.is_active()
+        return bool(transport and transport.is_active())
 
-    def _connect(self):
+    def _connect(self) -> None:
         if not self._is_connected():
             logger.debug(f"connecting to {self.hostname}:{self.port}")
             try:
@@ -87,6 +115,8 @@ class SSHChannel(Channel, RepresentationMixin):
                     key_filename=self.key_filename
                 )
                 transport = self.ssh_client.get_transport()
+                if not transport:
+                    raise RuntimeError("SSH client transport is None, despite connecting")
                 self.sftp_client = paramiko.SFTPClient.from_transport(transport)
 
             except paramiko.BadHostKeyException as e:
@@ -101,15 +131,17 @@ class SSHChannel(Channel, RepresentationMixin):
             except Exception as e:
                 raise SSHException(e, self.hostname)
 
-    def _valid_sftp_client(self):
+    def _valid_sftp_client(self) -> paramiko.SFTPClient:
         self._connect()
+        if self.sftp_client is None:
+            raise RuntimeError("Internal consistency error: self.sftp_client should be valid but is not")
         return self.sftp_client
 
-    def _valid_ssh_client(self):
+    def _valid_ssh_client(self) -> paramiko.SSHClient:
         self._connect()
         return self.ssh_client
 
-    def prepend_envs(self, cmd, env={}):
+    def prepend_envs(self, cmd: str, env: Dict[str, str] = {}) -> str:
         env.update(self.envs)
 
         if len(env.keys()) > 0:
@@ -117,7 +149,7 @@ class SSHChannel(Channel, RepresentationMixin):
             return 'env {0} {1}'.format(env_vars, cmd)
         return cmd
 
-    def execute_wait(self, cmd, walltime=2, envs={}):
+    def execute_wait(self, cmd: str, walltime: int = 2, envs: Dict[str, str] = {}) -> Tuple[int, str, str]:
         ''' Synchronously execute a commandline string on the shell.
 
         Args:
@@ -144,7 +176,7 @@ class SSHChannel(Channel, RepresentationMixin):
         exit_status = stdout.channel.recv_exit_status()
         return exit_status, stdout.read().decode("utf-8"), stderr.read().decode("utf-8")
 
-    def push_file(self, local_source, remote_dir):
+    def push_file(self, local_source: str, remote_dir: str) -> str:
         ''' Transport a local file to a directory on a remote machine
 
         Args:
@@ -184,7 +216,7 @@ class SSHChannel(Channel, RepresentationMixin):
 
         return remote_dest
 
-    def pull_file(self, remote_source, local_dir):
+    def pull_file(self, remote_source: str, local_dir: str) -> str:
         ''' Transport file on the remote side to a local directory
 
         Args:
@@ -217,11 +249,12 @@ class SSHChannel(Channel, RepresentationMixin):
 
         return local_dest
 
-    def close(self):
+    def close(self) -> bool:
         if self._is_connected():
-            return self.ssh_client.close()
+            self.ssh_client.close()
+        return True
 
-    def isdir(self, path):
+    def isdir(self, path: str) -> bool:
         """Return true if the path refers to an existing directory.
 
         Parameters
@@ -237,7 +270,7 @@ class SSHChannel(Channel, RepresentationMixin):
 
         return result
 
-    def makedirs(self, path, mode=0o700, exist_ok=False):
+    def makedirs(self, path: str, mode: int = 0o700, exist_ok: bool = False) -> None:
         """Create a directory on the remote side.
 
         If intermediate directories do not exist, they will be created.
@@ -257,7 +290,7 @@ class SSHChannel(Channel, RepresentationMixin):
         self.execute_wait('mkdir -p {}'.format(path))
         self._valid_sftp_client().chmod(path, mode)
 
-    def abspath(self, path):
+    def abspath(self, path: str) -> str:
         """Return the absolute path on the remote side.
 
         Parameters
@@ -268,9 +301,12 @@ class SSHChannel(Channel, RepresentationMixin):
         return self._valid_sftp_client().normalize(path)
 
     @property
-    def script_dir(self):
-        return self._script_dir
+    def script_dir(self) -> str:
+        if self._script_dir:
+            return self._script_dir
+        else:
+            raise RuntimeError("scriptdir was not set")
 
     @script_dir.setter
-    def script_dir(self, value):
+    def script_dir(self, value: Optional[str]) -> None:
         self._script_dir = value

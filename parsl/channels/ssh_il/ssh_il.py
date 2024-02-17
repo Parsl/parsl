@@ -67,6 +67,8 @@ class SSHInteractiveLoginChannel(SSHChannel):
         '''
 
         transport = self.ssh_client.get_transport()
+        if transport is None:
+            raise RuntimeError("Expected transport to be available")
 
         il_password = getpass.getpass('Enter {0} Logon password :'.format(hostname))
         transport.auth_password(username, il_password)

@@ -4,7 +4,7 @@ from parsl.app.app import python_app
 
 
 @python_app
-def double(x):
+def double(x: float) -> float:
     return x * 2
 
 

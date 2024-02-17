@@ -6,7 +6,7 @@ import parsl
 import typeguard
 
 from functools import partial
-from typing import Optional
+from typing import Any, Optional
 from parsl.app.app import python_app
 from parsl.utils import RepresentationMixin
 from parsl.data_provider.staging import Staging
@@ -59,7 +59,10 @@ class Globus:
      - monitoring transfers.
     """
 
+    authorizer: Any
     authorizer = None
+
+    TOKEN_FILE: str
 
     @classmethod
     def init(cls):

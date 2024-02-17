@@ -7,11 +7,23 @@ from typing import Dict, List, Optional, Sequence, TypedDict
 
 import parsl.jobs.job_status_poller as jsp
 
+from typing import Callable
+
+# this is used for testing a class to decide how to
+# print a status line. That might be better done inside
+# the executor class (i..e put the class specific behaviour
+# inside the class, rather than testing class instance-ness
+# here)
+
+# smells: testing class instance; importing a specific instance
+# of a thing that should be generic
+
+
 from parsl.executors import HighThroughputExecutor
 from parsl.executors.base import ParslExecutor
-from parsl.executors.status_handling import BlockProviderExecutor
+from parsl.executors.base import HasWorkersPerNode, HasOutstanding
 from parsl.jobs.states import JobState
-from parsl.process_loggers import wrap_with_logs
+# from parsl.process_loggers import wrap_with_logs
 
 
 logger = logging.getLogger(__name__)
@@ -129,21 +141,30 @@ class Strategy:
         self.executors = {}
         self.max_idletime = max_idletime
 
+        self.strategies: Dict[Optional[str], Callable]
         self.strategies = {None: self._strategy_noop,
                            'none': self._strategy_noop,
                            'simple': self._strategy_simple,
-                           'htex_auto_scale': self._strategy_htex_auto_scale}
+                           'htex_auto_scale': self._strategy_htex_auto_scale
+                           }
 
         if strategy is None:
             warnings.warn("literal None for strategy choice is deprecated. Use string 'none' instead.",
                           DeprecationWarning)
 
+        # mypy note: with mypy 0.761, the type of self.strategize is
+        # correctly revealed inside this module, but isn't carried over
+        #  when Strategy is used in other modules unless this specific
+        # type annotation is used.
+
+        self.strategize: Callable
         self.strategize = self.strategies[strategy]
 
         logger.debug("Scaling strategy: {0}".format(strategy))
 
     def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         for executor in executors:
+            assert executor.label not in self.executors
             self.executors[executor.label] = {'idle_since': None}
 
     def _strategy_noop(self, status: List[jsp.PollItem]) -> None:
@@ -171,28 +192,33 @@ class Strategy:
         """
         self._general_strategy(status_list, strategy_type='htex')
 
-    @wrap_with_logs
-    def _general_strategy(self, status_list, *, strategy_type):
+    # can't do wrap with logs until I learn about paramspecs, because wrap_with_logs
+    # is not tightly typed enough to be allowed in this module yet.
+    # @wrap_with_logs
+    def _general_strategy(self, status_list: List[jsp.PollItem], strategy_type: str) -> None:
         logger.debug(f"general strategy starting with strategy_type {strategy_type} for {len(status_list)} executors")
 
         for exec_status in status_list:
             executor = exec_status.executor
             label = executor.label
-            if not isinstance(executor, BlockProviderExecutor):
-                logger.debug(f"Not strategizing for executor {label} because scaling not enabled")
-                continue
             logger.debug(f"Strategizing for executor {label}")
 
             # Tasks that are either pending completion
+            assert isinstance(executor, HasOutstanding)
             active_tasks = executor.outstanding
 
             status = exec_status.status
+
+            # The provider might not even be defined -- what's the behaviour in
+            # that case?
+            if executor.provider is None:
+                logger.error("Trying to strategize an executor that has no provider")
+                continue
 
             # FIXME we need to handle case where provider does not define these
             # FIXME probably more of this logic should be moved to the provider
             min_blocks = executor.provider.min_blocks
             max_blocks = executor.provider.max_blocks
-            tasks_per_node = executor.workers_per_node
 
             nodes_per_block = executor.provider.nodes_per_block
             parallelism = executor.provider.parallelism
@@ -200,16 +226,19 @@ class Strategy:
             running = sum([1 for x in status.values() if x.state == JobState.RUNNING])
             pending = sum([1 for x in status.values() if x.state == JobState.PENDING])
             active_blocks = running + pending
-            active_slots = active_blocks * tasks_per_node * nodes_per_block
 
-            logger.debug(f"Slot ratio calculation: active_slots = {active_slots}, active_tasks = {active_tasks}")
+            # TODO: if this isinstance doesn't fire, tasks_per_node and active_slots won't be
+            # set this iteration and either will be unset or will contain a previous executor's value.
+            # in both cases, this is wrong. but apparently mypy doesn't notice.
 
-            if hasattr(executor, 'connected_workers'):
-                logger.debug('Executor {} has {} active tasks, {}/{} running/pending blocks, and {} connected workers'.format(
-                    label, active_tasks, running, pending, executor.connected_workers))
-            else:
-                logger.debug('Executor {} has {} active tasks and {}/{} running/pending blocks'.format(
-                    label, active_tasks, running, pending))
+            if isinstance(executor, HasWorkersPerNode):
+                tasks_per_node = executor.workers_per_node
+
+                active_slots = active_blocks * tasks_per_node * nodes_per_block
+                logger.debug(f"Slot ratio calculation: active_slots = {active_slots}, active_tasks = {active_tasks}")
+
+            logger.debug('Executor {} has {} active tasks and {}/{} running/pending blocks'.format(
+                label, active_tasks, running, pending))
 
             # reset idle timer if executor has active tasks
 
@@ -236,9 +265,18 @@ class Strategy:
                         logger.debug(f"Starting idle timer for executor. If idle time exceeds {self.max_idletime}s, blocks will be scaled in")
                         self.executors[executor.label]['idle_since'] = time.time()
 
+                    # ... this could be None, type-wise. So why aren't we seeing errors here?
+                    # probably becaues usually if this is None, it will be because active_tasks>0,
+                    # (although I can't see a clear proof that this will always be the case:
+                    # could that setting to None have happened on a previous iteration?)
+
+                    # if idle_since is None, then that means not idle, which means should not
+                    # go down the scale_in path
                     idle_since = self.executors[executor.label]['idle_since']
-                    idle_duration = time.time() - idle_since
-                    if idle_duration > self.max_idletime:
+                    if idle_since is not None and (time.time() - idle_since) > self.max_idletime:
+                        # restored this separate calculation even though making a single one
+                        # ahead of time is better...
+                        idle_duration = time.time() - idle_since
                         # We have resources idle for the max duration,
                         # we have to scale_in now.
                         logger.debug(f"Idle time has reached {self.max_idletime}s for executor {label}; scaling in")
@@ -288,8 +326,8 @@ class Strategy:
                             excess_slots = math.ceil(active_slots - (active_tasks * parallelism))
                             excess_blocks = math.ceil(float(excess_slots) / (tasks_per_node * nodes_per_block))
                             excess_blocks = min(excess_blocks, active_blocks - min_blocks)
-                            logger.debug(f"Requesting scaling in by {excess_blocks} blocks")
-                            exec_status.scale_in(excess_blocks, force=False, max_idletime=self.max_idletime)
+                            logger.debug(f"Requesting scaling in by {excess_blocks} blocks with idle time {self.max_idletime}s")
+                            exec_status.scale_in(excess_blocks, max_idletime=self.max_idletime)
                     else:
                         logger.error("This strategy does not support scaling in except for HighThroughputExecutor - taking no action")
                 else:

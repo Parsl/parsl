@@ -14,8 +14,10 @@ EXPECTED_WORKERS = math.floor(CORES / CORES_PER_WORKER)
 from parsl.tests.manual_tests.htex_local import config
 
 from parsl.executors import HighThroughputExecutor
+from parsl.providers.base import ExecutionProvider
 assert isinstance(config.executors[0], HighThroughputExecutor)
 config.executors[0].cores_per_worker = CORES_PER_WORKER
+assert isinstance(config.executors[0].provider, ExecutionProvider)
 config.executors[0].provider.init_blocks = 1
 
 # from htex_midway import config

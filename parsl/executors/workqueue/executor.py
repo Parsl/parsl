@@ -6,7 +6,7 @@ high-throughput system for delegating Parsl tasks to thousands of remote machine
 import threading
 import multiprocessing
 import logging
-from concurrent.futures import Future
+from parsl.executors.base import FutureWithTaskID
 from ctypes import c_bool
 
 import tempfile
@@ -34,7 +34,7 @@ from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
 import typeguard
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Sequence, Set, Union
 from parsl.data_provider.staging import Staging
 
 from .errors import WorkQueueTaskFailure
@@ -228,7 +228,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  port: int = WORK_QUEUE_DEFAULT_PORT,
                  env: Optional[Dict] = None,
                  shared_fs: bool = False,
-                 storage_access: Optional[List[Staging]] = None,
+                 storage_access: Optional[Sequence[Staging]] = None,
                  use_cache: bool = False,
                  source: bool = False,
                  pack: bool = False,
@@ -279,6 +279,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.function_dir = function_dir
         self.coprocess = coprocess
 
+        self._port_mailbox: multiprocessing.Queue[int]
+        self._port_mailbox = multiprocessing.Queue()
+
         if not self.address:
             self.address = socket.gethostname()
 
@@ -294,6 +297,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.launch_cmd = ("{package_prefix}python3 exec_parsl_function.py {mapping} {function} {result}")
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
+
+        self.worker_command = self._construct_worker_command()
 
     def _get_launch_command(self, block_id):
         # this executor uses different terminology for worker/launch
@@ -322,8 +327,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         os.makedirs(self.package_dir)
 
         logger.debug("Starting WorkQueueExecutor")
-
-        self._port_mailbox = multiprocessing.Queue()
 
         # Create a Process to perform WorkQueue submissions
         submit_process_kwargs = {"task_queue": self.task_queue,
@@ -466,8 +469,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 input_files.append(self._register_file(maybe_file))
 
         # Create a Future object and have it be mapped from the task ID in the tasks dictionary
-        fu = Future()
-        fu.parsl_executor_task_id = executor_task_id
+        fu = FutureWithTaskID(str(executor_task_id))
         logger.debug("Getting tasks_lock to set WQ-level task entry")
         with self.tasks_lock:
             logger.debug("Got tasks_lock to set WQ-level task entry")
@@ -538,6 +540,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if isinstance(self.provider, CondorProvider):
             path_to_worker = shutil.which('work_queue_worker')
             self.worker_command = './' + self.worker_command
+            assert path_to_worker is not None
             self.provider.transfer_input_files.append(path_to_worker)
             if self.project_password_file:
                 self.provider.transfer_input_files.append(self.project_password_file)
@@ -619,6 +622,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         os.makedirs(pkg_dir, exist_ok=True)
         with tempfile.NamedTemporaryFile(suffix='.yaml') as spec:
             logger.info("Analyzing dependencies of %s", fn_name)
+            assert package_analyze_script is not None
             analyze_cmdline = [package_analyze_script, exec_parsl_function.__file__, '-', spec.name]
             for p in extra_pkgs:
                 analyze_cmdline += ["--extra-pkg", p]
@@ -635,6 +639,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             os.close(fd)
             logger.info("Creating dependency package for %s", fn_name)
             logger.debug("Writing deps for %s to %s", fn_name, tarball)
+            assert package_create_script is not None
             subprocess.run([package_create_script, spec.name, tarball], stdout=subprocess.DEVNULL, check=True)
             logger.debug("Done with conda-pack; moving %s to %s", tarball, pkg)
             os.rename(tarball, pkg)
@@ -648,15 +653,22 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """
         # Start scaling in/out
         logger.debug("Starting WorkQueueExecutor with provider: %s", self.provider)
-        self.worker_command = self._construct_worker_command()
         self._patch_providers()
 
-        if hasattr(self.provider, 'init_blocks'):
+        # self.provider always has init_blocks - this check only needs to
+        # check that there is actually a provider specified.
+        if self.provider is not None:
             try:
                 self.scale_out(blocks=self.provider.init_blocks)
             except Exception as e:
                 logger.error("Initial block scaling out failed: {}".format(e))
                 raise e
+        # if hasattr(self.provider, 'init_blocks'):
+        #    try:
+        #        self.scale_out(blocks=self.provider.init_blocks)
+        #    except Exception as e:
+        #        logger.error("Initial block scaling out failed: {}".format(e))
+        #        raise e
 
     @property
     def outstanding(self) -> int:
@@ -693,7 +705,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         collector thread, which shuts down the Work Queue system submission.
         """
         logger.debug("Work Queue shutdown started")
-        self.should_stop.value = True
+        self.should_stop.value = True  # type: ignore[attr-defined]
+        # issue https://github.com/python/typeshed/issues/8799
+        # from mypy 0.981 onwards
 
         # Remove the workers that are still going
         kill_ids = [self.blocks[block] for block in self.blocks.keys()]
@@ -714,7 +728,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """
         logger.debug("Starting Collector Thread")
         try:
-            while not self.should_stop.value:
+            while not self.should_stop.value:  # type: ignore[attr-defined]
+                # issue https://github.com/python/typeshed/issues/8799
+                # from mypy 0.981 onwards
                 if not self.submit_process.is_alive():
                     raise ExecutorError(self, "Workqueue Submit Process is not alive")
 
@@ -751,6 +767,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     # If there are no results, then the task failed according to one of
                     # work queue modes, such as resource exhaustion.
                     ex = WorkQueueTaskFailure(task_report.reason, None)
+                    if task_report.result is not None:
+                        ex.__cause__ = task_report.result
                     future.set_exception(ex)
         finally:
             logger.debug("Marking all outstanding tasks as failed")
@@ -1008,7 +1026,7 @@ def _explain_work_queue_result(wq_task):
     if wq_result == wq.WORK_QUEUE_RESULT_SUCCESS:
         reason += "succesful execution with exit code {}".format(wq_task.return_status)
     elif wq_result == wq.WORK_QUEUE_RESULT_OUTPUT_MISSING:
-        reason += "The result file was not transfered from the worker.\n"
+        reason += "A result file was not transfered from the worker.\n"
         reason += "This usually means that there is a problem with the python setup,\n"
         reason += "or the wrapper that executes the function."
         reason += "\nTrace:\n" + str(wq_task.output)

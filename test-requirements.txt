@@ -8,7 +8,7 @@ mock>=1.0.0
 types-mock
 nbsphinx
 sphinx_rtd_theme
-mypy==1.5.1
+mypy==1.8.0
 types-python-dateutil
 types-requests
 types-paramiko

@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 from parsl.channels.base import Channel
 from parsl.jobs.states import JobStatus
@@ -55,6 +55,8 @@ class ExecutionProvider(metaclass=ABCMeta):
         instantiation of a resource most often to start a pilot (such as for
         HighThroughputExecutor or WorkQueueExecutor).
 
+        If submission fails, an appropriate exception should be raised.
+
         Args :
              - command (str) : The bash command string to be executed
              - tasks_per_node (int) : command invocations to be launched per node
@@ -63,12 +65,7 @@ class ExecutionProvider(metaclass=ABCMeta):
              - job_name (str) : Human friendly name to be assigned to the job request
 
         Returns:
-             - A job identifier, this could be an integer, string etc
-               or None or any other object that evaluates to boolean false
-               if submission failed but an exception isn't thrown.
-
-        Raises:
-             - ExecutionProviderException or its subclasses
+             - A job identifier, of any type.
         '''
 
         pass
@@ -92,7 +89,7 @@ class ExecutionProvider(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def cancel(self, job_ids: List[object]) -> List[bool]:
+    def cancel(self, job_ids: Sequence[object]) -> Sequence[bool]:
         ''' Cancels the resources identified by the job_ids provided by the user.
 
         Args:
@@ -122,8 +119,14 @@ class ExecutionProvider(metaclass=ABCMeta):
 
         If this property is set, executors may use it to calculate how many tasks can
         run concurrently per node.
+
+        This property, and cores_per_node, might become a HasCoresMem protocol, on
+        the way to detangling what is optional?
         """
-        return self._mem_per_node
+        if hasattr(self, "_mem_per_node"):
+            return self._mem_per_node
+        else:
+            return None
 
     @mem_per_node.setter
     def mem_per_node(self, value: float) -> None:
@@ -140,7 +143,10 @@ class ExecutionProvider(metaclass=ABCMeta):
         If this property is set, executors may use it to calculate how many tasks can
         run concurrently per node.
         """
-        return self._cores_per_node
+        if hasattr(self, "_cores_per_node"):
+            return self._cores_per_node
+        else:
+            return None
 
     @cores_per_node.setter
     def cores_per_node(self, value: int) -> None:

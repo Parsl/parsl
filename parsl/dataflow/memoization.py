@@ -189,7 +189,11 @@ class Memoizer:
         logger.debug("Ignoring these kwargs for checkpointing: %s", ignore_list)
         for k in ignore_list:
             logger.debug("Ignoring kwarg %s", k)
-            del filtered_kw[k]
+            if k in filtered_kw:
+                del filtered_kw[k]
+            else:
+                # TODO make a parsl error?
+                raise ValueError(f"Cannot ignore keyword {k} which has not been supplied")
 
         if 'outputs' in task['kwargs']:
             outputs = task['kwargs']['outputs']
@@ -266,7 +270,7 @@ class Memoizer:
             return
 
         if not isinstance(task['hashsum'], str):
-            logger.error("Attempting to update app cache entry but hashsum is not a string key")
+            logger.error(f"Attempting to update app cache entry but hashsum is not a string key: {task['hashsum']}")
             return
 
         if task['hashsum'] in self.memo_lookup_table:
