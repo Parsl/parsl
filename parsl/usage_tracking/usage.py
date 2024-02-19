@@ -192,7 +192,17 @@ class UsageTracker:
 
         self.send_UDP_message(message)
 
-    def close(self) -> None:
-        """We terminate (SIGTERM) the processes added to the self.procs list """
+    def close(self, timeout: float = 10.0) -> None:
+        """First give each process one timeout period to finish what it is
+        doing, then kill it (SIGKILL). There's no softer SIGTERM step,
+        because that adds one join period of delay for what is almost
+        definitely either: going to behave broadly the same as to SIGKILL,
+        or won't respond to SIGTERM.
+        """
+        logger.error("BENC CLOSE1")
         for proc in self.procs:
-            proc.terminate()
+            proc.join(timeout=timeout)
+            if proc.is_alive():
+                logger.info("Usage tracking process did not end itself; sending SIGKILL")
+                proc.kill()
+        logger.error("BENC CLOSE2")
