@@ -1,6 +1,6 @@
 import logging
 import os
-import mock
+from unittest import mock
 import pytest
 import pickle
 from parsl.executors.high_throughput.mpi_resource_management import TaskScheduler, MPITaskScheduler
