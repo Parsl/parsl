@@ -4,8 +4,6 @@ pandas
 pytest>=7.4.0,<8
 pytest-cov
 pytest-random-order
-mock>=1.0.0
-types-mock
 nbsphinx
 sphinx_rtd_theme
 mypy==1.5.1
