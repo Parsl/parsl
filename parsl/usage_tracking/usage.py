@@ -199,10 +199,8 @@ class UsageTracker:
         definitely either: going to behave broadly the same as to SIGKILL,
         or won't respond to SIGTERM.
         """
-        logger.error("BENC CLOSE1")
         for proc in self.procs:
             proc.join(timeout=timeout)
             if proc.is_alive():
                 logger.info("Usage tracking process did not end itself; sending SIGKILL")
                 proc.kill()
-        logger.error("BENC CLOSE2")
