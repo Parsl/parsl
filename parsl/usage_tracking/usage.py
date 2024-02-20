@@ -32,7 +32,7 @@ def async_process(fn: Callable[P, None]) -> Callable[P, None]:
 
 
 @async_process
-def udp_messenger(domain_name: str, UDP_IP: str, UDP_PORT: int, sock_timeout: int, message: str) -> None:
+def udp_messenger(domain_name: str, UDP_PORT: int, sock_timeout: int, message: str) -> None:
     """Send UDP messages to usage tracker asynchronously
 
     This multiprocessing based messenger was written to overcome the limitations
@@ -40,7 +40,6 @@ def udp_messenger(domain_name: str, UDP_IP: str, UDP_PORT: int, sock_timeout: in
 
     Args:
           - domain_name (str) : Domain name string
-          - UDP_IP (str) : IP address YYY.YYY.YYY.YYY
           - UDP_PORT (int) : UDP port to send out on
           - sock_timeout (int) : Socket timeout
     """
@@ -49,15 +48,7 @@ def udp_messenger(domain_name: str, UDP_IP: str, UDP_PORT: int, sock_timeout: in
     try:
         encoded_message = bytes(message, "utf-8")
 
-        if domain_name:
-            try:
-                UDP_IP = socket.gethostbyname(domain_name)
-            except Exception:
-                # (False, "Domain lookup failed, defaulting to {0}".format(UDP_IP))
-                pass
-
-        if UDP_IP is None:
-            raise Exception("UDP_IP is None")
+        UDP_IP = socket.gethostbyname(domain_name)
 
         if UDP_PORT is None:
             raise Exception("UDP_PORT is None")
@@ -84,7 +75,7 @@ class UsageTracker:
 
     """
 
-    def __init__(self, dfk, ip='52.3.111.203', port=50077,
+    def __init__(self, dfk, port=50077,
                  domain_name='tracking.parsl-project.org'):
         """Initialize usage tracking unless the user has opted-out.
 
@@ -99,18 +90,15 @@ class UsageTracker:
              - dfk (DFK object) : Data Flow Kernel object
 
         KWargs:
-             - ip (string) : IP address
              - port (int) : Port number, Default:50077
              - domain_name (string) : Domain name, will override IP
                   Default: tracking.parsl-project.org
         """
 
         self.domain_name = domain_name
-        self.ip = ip
         # The sock timeout will only apply to UDP send and not domain resolution
         self.sock_timeout = 5
         self.UDP_PORT = port
-        self.UDP_IP = None
         self.procs = []
         self.dfk = dfk
         self.config = self.dfk.config
@@ -150,9 +138,6 @@ class UsageTracker:
               - Message dict dumped as json string, ready for UDP
         """
         message = {'uuid': self.uuid,
-                   'test': False,  # this field previously indicated if parsl
-                                   # was being run in test mode, and is
-                                   # retained for protocol compatibility
                    'parsl_v': self.parsl_version,
                    'python_v': self.python_version,
                    'os': platform.system(),
@@ -177,9 +162,7 @@ class UsageTracker:
                    'end': time.time(),
                    't_apps': app_count,
                    'sites': site_count,
-                   'c_time': None,
-                   'failed': app_fails,
-                   'test': False,  # see comment in construct_start_message
+                   'failed': app_fails
                    }
 
         return json.dumps(message)
@@ -188,7 +171,7 @@ class UsageTracker:
         """Send UDP message."""
         if self.tracking_enabled:
             try:
-                proc = udp_messenger(self.domain_name, self.UDP_IP, self.UDP_PORT, self.sock_timeout, message)
+                proc = udp_messenger(self.domain_name, self.UDP_PORT, self.sock_timeout, message)
                 self.procs.append(proc)
             except Exception as e:
                 logger.debug("Usage tracking failed: {}".format(e))
