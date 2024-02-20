@@ -6,7 +6,7 @@ import threading
 import queue
 import datetime
 import pickle
-from multiprocessing import Queue
+from multiprocessing import Process, Queue
 from typing import Dict, Sequence
 from typing import List, Optional, Tuple, Union, Callable
 import math
@@ -290,6 +290,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.hub_port = None  # set to the correct hub port in dfk
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
+        self.interchange_proc: Optional[Process] = None
         self.interchange_port_range = interchange_port_range
         self.heartbeat_threshold = heartbeat_threshold
         self.heartbeat_period = heartbeat_period
@@ -766,12 +767,28 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                     )
         return job_status
 
-    def shutdown(self):
+    def shutdown(self, timeout: float = 10.0):
         """Shutdown the executor, including the interchange. This does not
         shut down any workers directly - workers should be terminated by the
         scaling mechanism or by heartbeat timeout.
+
+        Parameters
+        ----------
+
+        timeout : float
+            Amount of time to wait for the Interchange process to terminate before
+            we forcefully kill it.
         """
+        if self.interchange_proc is None:
+            logger.info("HighThroughputExecutor has not started; skipping shutdown")
+            return
 
         logger.info("Attempting HighThroughputExecutor shutdown")
+
         self.interchange_proc.terminate()
+        self.interchange_proc.join(timeout=timeout)
+        if self.interchange_proc.is_alive():
+            logger.info("Unable to terminate Interchange process; sending SIGKILL")
+            self.interchange_proc.kill()
+
         logger.info("Finished HighThroughputExecutor shutdown attempt")
