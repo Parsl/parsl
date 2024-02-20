@@ -678,10 +678,10 @@ class DataFlowKernel:
             task_record : The task record
 
         Returns:
-            Future that tracks the execution of the submitted executable
+            Future that tracks the execution of the submitted function
         """
         task_id = task_record['id']
-        executable = task_record['func']
+        function = task_record['func']
         args = task_record['args']
         kwargs = task_record['kwargs']
 
@@ -706,17 +706,17 @@ class DataFlowKernel:
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
-            (executable, args, kwargs) = self.monitoring.monitor_wrapper(executable, args, kwargs, try_id, task_id,
-                                                                         self.monitoring.monitoring_hub_url,
-                                                                         self.run_id,
-                                                                         wrapper_logging_level,
-                                                                         self.monitoring.resource_monitoring_interval,
-                                                                         executor.radio_mode,
-                                                                         executor.monitor_resources(),
-                                                                         self.run_dir)
+            (function, args, kwargs) = self.monitoring.monitor_wrapper(function, args, kwargs, try_id, task_id,
+                                                                       self.monitoring.monitoring_hub_url,
+                                                                       self.run_id,
+                                                                       wrapper_logging_level,
+                                                                       self.monitoring.resource_monitoring_interval,
+                                                                       executor.radio_mode,
+                                                                       executor.monitor_resources(),
+                                                                       self.run_dir)
 
         with self.submitter_lock:
-            exec_fu = executor.submit(executable, task_record['resource_specification'], *args, **kwargs)
+            exec_fu = executor.submit(function, task_record['resource_specification'], *args, **kwargs)
         self.update_task_state(task_record, States.launched)
 
         self._send_task_log_info(task_record)
