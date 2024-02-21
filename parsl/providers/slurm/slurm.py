@@ -230,6 +230,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         job_name = "{0}.{1}".format(job_name, time.time())
 
+        assert self.script_dir, "Expected script_dir to be set"
         script_path = os.path.join(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
         job_stdout_path = script_path + ".stdout"
