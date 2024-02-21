@@ -519,16 +519,16 @@ visit the `CCTools documentation online <https://cctools.readthedocs.io/en/lates
 
 .. literalinclude::  ../../parsl/configs/wqex_local.py
 
-Comet (SDSC)
-------------
+Expanse (SDSC)
+--------------
 
-.. image:: https://ucsdnews.ucsd.edu/news_uploads/comet-logo.jpg
+.. image:: https://www.hpcwire.com/wp-content/uploads/2019/07/SDSC-Expanse-graphic-cropped.jpg
 
 The following snippet shows an example configuration for executing remotely on San Diego Supercomputer
-Center's **Comet** supercomputer. The example is designed to be executed on the login nodes, using the
+Center's **Expanse** supercomputer. The example is designed to be executed on the login nodes, using the
 `parsl.providers.SlurmProvider` to interface with the Slurm scheduler used by Comet and the `parsl.launchers.SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/comet.py
+.. literalinclude:: ../../parsl/configs/expanse.py
 
 
 Cooley (ALCF)
