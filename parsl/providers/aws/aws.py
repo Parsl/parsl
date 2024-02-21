@@ -2,7 +2,12 @@ import json
 import logging
 import os
 import time
+import io
 from string import Template
+from pathlib import Path
+
+from paramiko import SSHClient, AutoAddPolicy
+from scp import SCPClient
 
 from parsl.errors import ConfigurationError
 from parsl.jobs.states import JobState, JobStatus
@@ -111,6 +116,11 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
                  state_file=None,
                  walltime="01:00:00",
                  linger=False,
+
+                 upload_parsl=False,
+                 ssh_username=None,
+                 ssh_key_filename=None,
+
                  launcher=SingleNodeLauncher()):
         if not _boto_enabled:
             raise OptionalModuleMissing(['boto3'], "AWS Provider requires the boto3 module.")
@@ -139,6 +149,10 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         self.linger = linger
         self.resources = {}
         self.state_file = state_file if state_file is not None else 'awsproviderstate.json'
+
+        self.upload_parsl = upload_parsl
+        self.ssh_username = ssh_username
+        self.ssh_key_filename = ssh_key_filename
 
         env_specified = os.getenv("AWS_ACCESS_KEY_ID") is not None and os.getenv("AWS_SECRET_ACCESS_KEY") is not None
         if profile is None and key_file is None and not env_specified:
@@ -470,6 +484,7 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
         command = Template(template_string).substitute(jobname=job_name,
                                                        user_script=command,
                                                        linger=str(self.linger).lower(),
+                                                       upload_parsl=str(self.upload_parsl).lower(),
                                                        worker_init=self.worker_init)
         instance_type = self.instance_type
         ami_id = self.image_id
@@ -627,6 +642,52 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
 
         return all_states
 
+    def upload_local_parsl(self, instance):
+        parsl_root = Path(__file__).parent / '../..'
+        parsl_pip_dist = parsl_root / '../parsl-1.0.0.dist-info'
+
+        parsl_root_path = str(parsl_root.resolve())
+        parsl_pip_dist_path = str(parsl_pip_dist.resolve())
+        logger.debug("Local Parsl path: {0}".format(parsl_root_path))
+        logger.debug("Local Parsl dist-info path: {0}".format(parsl_pip_dist_path))
+
+        logger.debug("Waiting for EC2 instance to be in running state")
+
+        instance.wait_until_running()
+        instance.reload()
+        public_ip = instance.public_ip_address
+
+        logger.debug("EC2 instance in running state, waiting for instance to be SSH-capable")
+
+        # need to wait a bit after instance is running for SSH to work
+        time.sleep(15)
+
+        logger.debug("Uploading local Parsl via SCP to host: {0}".format(public_ip))
+
+        ssh = SSHClient()
+        ssh.set_missing_host_key_policy(AutoAddPolicy())
+        # ssh.load_system_host_keys()
+        ssh_connect_args = {'hostname': public_ip}
+        if self.ssh_username is not None:
+            ssh_connect_args['username'] = self.ssh_username
+        if self.ssh_key_filename is not None:
+            ssh_connect_args['key_filename'] = self.ssh_key_filename
+
+        ssh.connect(**ssh_connect_args)
+        scp = SCPClient(ssh.get_transport())
+        scp.put(parsl_root_path, recursive=True, remote_path='/tmp')
+        scp.put(parsl_pip_dist_path, recursive=True, remote_path='/tmp')
+
+        logger.debug("Parsl upload complete")
+
+        fl = io.BytesIO()
+        logger.debug("Uploading complete indicator")
+        
+        scp.putfo(fl, '/tmp/parsl_upload_complete')
+        scp.close()
+
+        logger.debug("Complete indicator uploaded")
+
     def submit(self, command='sleep 1', tasks_per_node=1, job_name="parsl.aws"):
         """Submit the command onto a freshly instantiated AWS EC2 instance.
 
@@ -666,6 +727,9 @@ class AWSProvider(ExecutionProvider, RepresentationMixin):
             "instance": instance,
             "status": JobStatus(state)
         }
+
+        if (self.upload_parsl):
+            self.upload_local_parsl(instance)
 
         return instance.instance_id
 
