@@ -44,7 +44,7 @@ def get_decorated_closure():
                           (get_for_decoration_later, "for_decoration_later", 77),
                           (get_decorated_closure, "decorated_closure", 53)
                           ])
-def test_app_name(get_app, expected_name, expected_result):
+def test_app_name(get_app, expected_name, expected_result, tmpd_cwd):
 
     # this is imported here rather than at module level because
     # it isn't available in a plain parsl install, so this module
@@ -52,10 +52,9 @@ def test_app_name(get_app, expected_name, expected_result):
     # run.
     import sqlalchemy
 
-    if os.path.exists("runinfo/monitoring.db"):
-        os.remove("runinfo/monitoring.db")
-
     c = fresh_config()
+    c.run_dir = tmpd_cwd
+    c.monitoring.logging_endpoint = f"sqlite:///{tmpd_cwd}/monitoring.db"
     parsl.load(c)
 
     app = get_app()
@@ -64,7 +63,7 @@ def test_app_name(get_app, expected_name, expected_result):
     parsl.dfk().cleanup()
     parsl.clear()
 
-    engine = sqlalchemy.create_engine("sqlite:///runinfo/monitoring.db")
+    engine = sqlalchemy.create_engine(c.monitoring.logging_endpoint)
     with engine.begin() as connection:
 
         # one workflow...
