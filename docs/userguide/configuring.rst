@@ -519,27 +519,16 @@ visit the `CCTools documentation online <https://cctools.readthedocs.io/en/lates
 
 .. literalinclude::  ../../parsl/configs/wqex_local.py
 
-Comet (SDSC)
-------------
+Expanse (SDSC)
+--------------
 
-.. image:: https://ucsdnews.ucsd.edu/news_uploads/comet-logo.jpg
+.. image:: https://www.hpcwire.com/wp-content/uploads/2019/07/SDSC-Expanse-graphic-cropped.jpg
 
 The following snippet shows an example configuration for executing remotely on San Diego Supercomputer
-Center's **Comet** supercomputer. The example is designed to be executed on the login nodes, using the
+Center's **Expanse** supercomputer. The example is designed to be executed on the login nodes, using the
 `parsl.providers.SlurmProvider` to interface with the Slurm scheduler used by Comet and the `parsl.launchers.SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/comet.py
-
-
-Cooley (ALCF)
--------------
-
-The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's
-**Cooley** analysis and visualization system.
-The example uses the `parsl.executors.HighThroughputExecutor` and connects to Cooley's Cobalt scheduler
-using the `parsl.providers.CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
-
-.. literalinclude:: ../../parsl/configs/cooley.py
+.. literalinclude:: ../../parsl/configs/expanse.py
 
 
 .. _configuring_nersc_cori:
@@ -626,18 +615,6 @@ The following snippet shows an example configuration for executing from the logi
 The example uses the `parsl.providers.LSFProvider` to provision compute nodes from the LSF cluster scheduler and the `parsl.launchers.JsrunLauncher` to launch workers across the compute nodes.
 
 .. literalinclude:: ../../parsl/configs/summit.py
-
-
-Theta (ALCF)
-------------
-
-.. image:: https://www.alcf.anl.gov/files/ALCF-Theta_111016-1000px.jpg
-
-The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's
-**Theta** supercomputer. This example uses the `parsl.executors.HighThroughputExecutor` and connects to Theta's Cobalt scheduler
-using the `parsl.providers.CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
-
-.. literalinclude:: ../../parsl/configs/theta.py
 
 
 TOSS3 (LLNL)
