@@ -66,20 +66,19 @@ def test_app_name(get_app, expected_name, expected_result, tmpd_cwd):
     engine = sqlalchemy.create_engine(c.monitoring.logging_endpoint)
     with engine.begin() as connection:
 
+        def count_rows(table: str):
+            result = connection.execute("SELECT COUNT(*) FROM workflow")
+            (c, ) = result.first()
+            return c
+
         # one workflow...
-        result = connection.execute("SELECT COUNT(*) FROM workflow")
-        (c, ) = result.first()
-        assert c == 1
+        assert count_rows("workflow") == 1
 
         # ... with one task ...
-        result = connection.execute("SELECT COUNT(*) FROM task")
-        (c, ) = result.first()
-        assert c == 1
+        assert count_rows("task") == 1
 
         # ... that was tried once ...
-        result = connection.execute("SELECT COUNT(*) FROM try")
-        (c, ) = result.first()
-        assert c == 1
+        assert count_rows("try") == 1
 
         # ... and has the expected name.
         result = connection.execute("SELECT task_func_name FROM task")
