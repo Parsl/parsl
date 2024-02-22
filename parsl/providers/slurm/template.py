@@ -1,8 +1,8 @@
 template_string = '''#!/bin/bash
 
 #SBATCH --job-name=${jobname}
-#SBATCH --output=${submit_script_dir}/${jobname}.submit.stdout
-#SBATCH --error=${submit_script_dir}/${jobname}.submit.stderr
+#SBATCH --output=${job_stdout_path}
+#SBATCH --error=${job_stderr_path}
 #SBATCH --nodes=${nodes}
 #SBATCH --time=${walltime}
 #SBATCH --ntasks-per-node=${tasks_per_node}

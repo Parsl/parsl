@@ -5,6 +5,8 @@ from parsl.app.app import python_app
 from parsl.config import Config
 from parsl.executors.errors import UnsupportedFeatureError, ExecutorError
 from parsl.executors import WorkQueueExecutor
+from parsl.executors.high_throughput.mpi_prefix_composer import InvalidResourceSpecification
+from parsl.executors.high_throughput.executor import HighThroughputExecutor
 
 
 @python_app
@@ -25,6 +27,8 @@ def test_resource(n=2):
     fut = double(n, parsl_resource_specification=spec)
     try:
         fut.result()
+    except InvalidResourceSpecification:
+        assert isinstance(executor, HighThroughputExecutor)
     except UnsupportedFeatureError:
         assert not isinstance(executor, WorkQueueExecutor)
     except Exception as e:
@@ -36,6 +40,8 @@ def test_resource(n=2):
     fut = double(n, parsl_resource_specification=spec)
     try:
         fut.result()
+    except InvalidResourceSpecification:
+        assert isinstance(executor, HighThroughputExecutor)
     except UnsupportedFeatureError:
         assert not isinstance(executor, WorkQueueExecutor)
     except Exception as e:

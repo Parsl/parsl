@@ -65,6 +65,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     mem_per_node : int
         Specify the real memory to provision per node in GB. If set to None, no
         explicit request to the scheduler will be made. Default is None.
+    init_blocks : int
+        Number of blocks to provision at the start of the run. Default is 1.
     min_blocks : int
         Minimum number of blocks to maintain.
     max_blocks : int
@@ -186,14 +188,18 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                 logger.warning(f"Slurm status {slurm_state} is not recognized")
             status = translate_table.get(slurm_state, JobState.UNKNOWN)
             logger.debug("Updating job {} with slurm status {} to parsl state {!s}".format(job_id, slurm_state, status))
-            self.resources[job_id]['status'] = JobStatus(status)
+            self.resources[job_id]['status'] = JobStatus(status,
+                                                         stdout_path=self.resources[job_id]['job_stdout_path'],
+                                                         stderr_path=self.resources[job_id]['job_stderr_path'])
             jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
             logger.debug("Updating missing job {} to completed status".format(missing_job))
-            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
+            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED,
+                                                              stdout_path=self.resources[missing_job]['job_stdout_path'],
+                                                              stderr_path=self.resources[missing_job]['job_stderr_path'])
 
     def submit(self, command: str, tasks_per_node: int, job_name="parsl.slurm") -> str:
         """Submit the command as a slurm job.
@@ -224,8 +230,11 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         job_name = "{0}.{1}".format(job_name, time.time())
 
-        script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
+        assert self.script_dir, "Expected script_dir to be set"
+        script_path = os.path.join(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
+        job_stdout_path = script_path + ".stdout"
+        job_stderr_path = script_path + ".stderr"
 
         logger.debug("Requesting one block with {} nodes".format(self.nodes_per_block))
 
@@ -237,6 +246,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         job_config["scheduler_options"] = scheduler_options
         job_config["worker_init"] = worker_init
         job_config["user_script"] = command
+        job_config["job_stdout_path"] = job_stdout_path
+        job_config["job_stderr_path"] = job_stderr_path
 
         # Wrap the command
         job_config["user_script"] = self.launcher(command,
@@ -260,7 +271,11 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                 match = re.match(self.regex_job_id, line)
                 if match:
                     job_id = match.group("id")
-                    self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
+                    self.resources[job_id] = {'job_id': job_id,
+                                              'status': JobStatus(JobState.PENDING),
+                                              'job_stdout_path': job_stdout_path,
+                                              'job_stderr_path': job_stderr_path,
+                                              }
                     return job_id
             else:
                 logger.error("Could not read job ID from submit command standard output.")

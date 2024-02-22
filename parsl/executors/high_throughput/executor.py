@@ -6,12 +6,13 @@ import threading
 import queue
 import datetime
 import pickle
-from multiprocessing import Queue
+from multiprocessing import Process, Queue
 from typing import Dict, Sequence
 from typing import List, Optional, Tuple, Union, Callable
 import math
 
-from parsl.serialize import pack_apply_message, deserialize
+import parsl.launchers
+from parsl.serialize import pack_res_spec_apply_message, deserialize
 from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.jobs.states import JobStatus, JobState
@@ -19,7 +20,10 @@ from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
     BadMessage, ScalingFailed,
-    UnsupportedFeatureError
+)
+from parsl.executors.high_throughput.mpi_prefix_composer import (
+    VALID_LAUNCHERS,
+    validate_resource_spec
 )
 
 from parsl import curvezmq
@@ -50,6 +54,8 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers} "
                       "{address_probe_timeout_string} "
                       "--hb_threshold={heartbeat_threshold} "
                       "--cpu-affinity {cpu_affinity} "
+                      "{enable_mpi_mode} "
+                      "--mpi-launcher={mpi_launcher} "
                       "--available-accelerators {accelerators}")
 
 
@@ -193,6 +199,17 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     worker_logdir_root : string
         In case of a remote file system, specify the path to where logs will be kept.
 
+    enable_mpi_mode: bool
+        If enabled, MPI launch prefixes will be composed for the batch scheduler based on
+        the nodes available in each batch job and the resource_specification dict passed
+        from the app. This is an experimental feature, please refer to the following doc section
+        before use:  https://parsl.readthedocs.io/en/stable/userguide/mpi_apps.html
+
+    mpi_launcher: str
+        This field is only used if enable_mpi_mode is set. Select one from the
+        list of supported MPI launchers = ("srun", "aprun", "mpiexec").
+        default: "mpiexec"
+
     encrypted : bool
         Flag to enable/disable encryption (CurveZMQ). Default is False.
     """
@@ -220,6 +237,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  poll_period: int = 10,
                  address_probe_timeout: Optional[int] = None,
                  worker_logdir_root: Optional[str] = None,
+                 enable_mpi_mode: bool = False,
+                 mpi_launcher: str = "mpiexec",
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
                  encrypted: bool = False):
 
@@ -271,6 +290,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.hub_port = None  # set to the correct hub port in dfk
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
+        self.interchange_proc: Optional[Process] = None
         self.interchange_port_range = interchange_port_range
         self.heartbeat_threshold = heartbeat_threshold
         self.heartbeat_period = heartbeat_period
@@ -280,6 +300,15 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.cpu_affinity = cpu_affinity
         self.encrypted = encrypted
         self.cert_dir = None
+
+        self.enable_mpi_mode = enable_mpi_mode
+        assert mpi_launcher in VALID_LAUNCHERS, \
+            f"mpi_launcher must be set to one of {VALID_LAUNCHERS}"
+        if self.enable_mpi_mode:
+            assert isinstance(self.provider.launcher, parsl.launchers.SingleNodeLauncher), \
+                "mpi_mode requires the provider to be configured to use a SingleNodeLauncher"
+
+        self.mpi_launcher = mpi_launcher
 
         if not launch_cmd:
             launch_cmd = DEFAULT_LAUNCH_CMD
@@ -302,6 +331,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """
         debug_opts = "--debug" if self.worker_debug else ""
         max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
+        enable_mpi_opts = "--enable_mpi_mode " if self.enable_mpi_mode else ""
 
         address_probe_timeout_string = ""
         if self.address_probe_timeout:
@@ -323,6 +353,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                        cert_dir=self.cert_dir,
                                        logdir=self.worker_logdir,
                                        cpu_affinity=self.cpu_affinity,
+                                       enable_mpi_mode=enable_mpi_opts,
+                                       mpi_launcher=self.mpi_launcher,
                                        accelerators=" ".join(self.available_accelerators))
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
@@ -584,10 +616,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         Returns:
               Future
         """
-        if resource_specification:
-            logger.error("Ignoring the call specification. "
-                         "Parsl call specification is not supported in HighThroughput Executor.")
-            raise UnsupportedFeatureError('resource specification', 'HighThroughput Executor', None)
+        validate_resource_spec(resource_specification)
 
         if self.bad_state_is_set:
             raise self.executor_exception
@@ -605,8 +634,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.tasks[task_id] = fut
 
         try:
-            fn_buf = pack_apply_message(func, args, kwargs,
-                                        buffer_threshold=1024 * 1024)
+            fn_buf = pack_res_spec_apply_message(func, args, kwargs,
+                                                 resource_specification=resource_specification,
+                                                 buffer_threshold=1024 * 1024)
         except TypeError:
             raise SerializationError(func.__name__)
 
@@ -742,12 +772,28 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                     )
         return job_status
 
-    def shutdown(self):
+    def shutdown(self, timeout: float = 10.0):
         """Shutdown the executor, including the interchange. This does not
         shut down any workers directly - workers should be terminated by the
         scaling mechanism or by heartbeat timeout.
+
+        Parameters
+        ----------
+
+        timeout : float
+            Amount of time to wait for the Interchange process to terminate before
+            we forcefully kill it.
         """
+        if self.interchange_proc is None:
+            logger.info("HighThroughputExecutor has not started; skipping shutdown")
+            return
 
         logger.info("Attempting HighThroughputExecutor shutdown")
+
         self.interchange_proc.terminate()
+        self.interchange_proc.join(timeout=timeout)
+        if self.interchange_proc.is_alive():
+            logger.info("Unable to terminate Interchange process; sending SIGKILL")
+            self.interchange_proc.kill()
+
         logger.info("Finished HighThroughputExecutor shutdown attempt")

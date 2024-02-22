@@ -7,11 +7,11 @@ from parsl.executors import HighThroughputExecutor
 config = Config(
     executors=[
         HighThroughputExecutor(
-            label='Comet_HTEX_multinode',
-            worker_logdir_root='YOUR_LOGDIR_ON_COMET',
-            max_workers=2,
+            label='Expanse_CPU_Multinode',
+            max_workers=32,
             provider=SlurmProvider(
-                'debug',
+                'compute',
+                account='YOUR_ALLOCATION_ON_EXPANSE',
                 launcher=SrunLauncher(),
                 # string to prepend to #SBATCH blocks in the submit
                 # script to the scheduler
@@ -19,7 +19,7 @@ config = Config(
                 # Command to be run before starting a worker, such as:
                 # 'module load Anaconda; source activate parsl_env'.
                 worker_init='',
-                walltime='00:10:00',
+                walltime='01:00:00',
                 init_blocks=1,
                 max_blocks=1,
                 nodes_per_block=2,
