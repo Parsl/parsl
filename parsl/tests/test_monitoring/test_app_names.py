@@ -1,15 +1,12 @@
 """Tests monitoring records app name under various decoration patterns.
 """
 
-import logging
 import os
 import parsl
 import pytest
 import time
 
 from parsl.tests.configs.htex_local_alternate import fresh_config
-
-logger = logging.getLogger(__name__)
 
 
 @parsl.python_app
@@ -56,23 +53,17 @@ def test_app_name(get_app, expected_name, expected_result):
     import sqlalchemy
 
     if os.path.exists("runinfo/monitoring.db"):
-        logger.info("Monitoring database already exists - deleting")
         os.remove("runinfo/monitoring.db")
 
-    logger.info("Generating fresh config")
     c = fresh_config()
-    logger.info("Loading parsl")
     parsl.load(c)
 
-    logger.info("invoking and waiting for result")
     app = get_app()
     assert app().result() == expected_result
 
-    logger.info("cleaning up parsl")
     parsl.dfk().cleanup()
     parsl.clear()
 
-    logger.info("checking database content")
     engine = sqlalchemy.create_engine("sqlite:///runinfo/monitoring.db")
     with engine.begin() as connection:
 
@@ -95,5 +86,3 @@ def test_app_name(get_app, expected_name, expected_result):
         result = connection.execute("SELECT task_func_name FROM task")
         (c, ) = result.first()
         assert c == expected_name
-
-    logger.info("all done")
