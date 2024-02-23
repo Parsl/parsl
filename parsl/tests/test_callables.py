@@ -5,9 +5,9 @@
 
 import importlib
 import pathlib
-import parsl
-
 from functools import partial
+
+import parsl
 
 
 @parsl.python_app

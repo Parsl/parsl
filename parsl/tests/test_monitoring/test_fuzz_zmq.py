@@ -1,9 +1,11 @@
 import logging
 import os
-import parsl
-import pytest
 import socket
 import time
+
+import pytest
+
+import parsl
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +17,10 @@ def this_app():
 
 @pytest.mark.local
 def test_row_counts():
-    from parsl.tests.configs.htex_local_alternate import fresh_config
     import sqlalchemy
     from sqlalchemy import text
+
+    from parsl.tests.configs.htex_local_alternate import fresh_config
 
     if os.path.exists("runinfo/monitoring.db"):
         logger.info("Monitoring database already exists - deleting")

@@ -1,12 +1,13 @@
 import logging
+import os
 import random
 from typing import Dict
-import pytest
-import parsl
-from parsl import python_app, bash_app
-from parsl.tests.configs.htex_local import fresh_config
 
-import os
+import pytest
+
+import parsl
+from parsl import bash_app, python_app
+from parsl.tests.configs.htex_local import fresh_config
 
 EXECUTOR_LABEL = "MPI_TEST"
 

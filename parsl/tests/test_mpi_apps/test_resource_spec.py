@@ -2,25 +2,19 @@ import contextlib
 import logging
 import os
 import typing
-
+import unittest
+from typing import Dict
 
 import pytest
-import unittest
 
 import parsl
 from parsl.app.app import python_app
-from parsl.tests.configs.htex_local import fresh_config
-from typing import Dict
-from parsl.executors.high_throughput.mpi_resource_management import (
-    get_pbs_hosts_list,
-    get_slurm_hosts_list,
-    get_nodes_in_batchjob,
-    identify_scheduler,
-)
 from parsl.executors.high_throughput.mpi_prefix_composer import (
-    validate_resource_spec,
-    InvalidResourceSpecification
-)
+    InvalidResourceSpecification, validate_resource_spec)
+from parsl.executors.high_throughput.mpi_resource_management import (
+    get_nodes_in_batchjob, get_pbs_hosts_list, get_slurm_hosts_list,
+    identify_scheduler)
+from parsl.tests.configs.htex_local import fresh_config
 
 EXECUTOR_LABEL = "MPI_TEST"
 

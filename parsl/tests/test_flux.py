@@ -1,14 +1,11 @@
-import os
 import concurrent.futures as cf
+import os
 
 import pytest
 
 from parsl.app.errors import AppException
-from parsl.executors.flux.executor import (
-    FluxExecutor,
-    FluxFutureWrapper,
-    _complete_future,
-)
+from parsl.executors.flux.executor import (FluxExecutor, FluxFutureWrapper,
+                                           _complete_future)
 
 try:
     import flux.job.executor  # noqa: F401

@@ -6,7 +6,6 @@ import pytest
 from parsl.app.app import python_app
 from parsl.tests.configs.local_threads import config
 
-
 pytestmark = pytest.mark.skip('not asserting anything')
 
 

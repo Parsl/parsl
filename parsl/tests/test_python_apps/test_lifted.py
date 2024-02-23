@@ -1,6 +1,7 @@
+from concurrent.futures import Future
+
 import pytest
 
-from concurrent.futures import Future
 from parsl import python_app
 
 

@@ -1,10 +1,11 @@
 import logging
 import os
-import parsl
-import pytest
 import random
-
 from concurrent.futures import Future
+
+import pytest
+
+import parsl
 
 
 @parsl.python_app
@@ -16,6 +17,7 @@ def this_app(inputs=()):
 def test_future_representation(tmpd_cwd):
     import sqlalchemy
     from sqlalchemy import text
+
     from parsl.tests.configs.htex_local_alternate import fresh_config
 
     monitoring_db = str(tmpd_cwd / "monitoring.db")

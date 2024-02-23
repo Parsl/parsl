@@ -62,8 +62,8 @@ def make_stage_out_app(executor, dfk):
 
 
 def stage_out_noop(app_fu, inputs=[], _parsl_staging_inhibit=True):
-    import time
     import logging
+    import time
     logger = logging.getLogger(__name__)
     logger.info("stage_out_noop")
     time.sleep(1)
@@ -75,8 +75,8 @@ def make_stage_in_app(executor, dfk):
 
 
 def stage_in_noop(parent_fut=None, outputs=[], _parsl_staging_inhibit=True):
-    import time
     import logging
+    import time
     logger = logging.getLogger(__name__)
     logger.info("stage_in_noop")
     time.sleep(1)

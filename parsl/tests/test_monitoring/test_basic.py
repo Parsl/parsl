@@ -1,8 +1,10 @@
 import logging
 import os
-import parsl
-import pytest
 import time
+
+import pytest
+
+import parsl
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,7 @@ def test_row_counts():
     # run.
     import sqlalchemy
     from sqlalchemy import text
+
     from parsl.tests.configs.htex_local_alternate import fresh_config
 
     if os.path.exists("runinfo/monitoring.db"):

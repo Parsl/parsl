@@ -11,8 +11,9 @@ Same applies to datafutures, and we need to know the behavior wrt.
 2. done() called on 1, vs 2
 
 """
-import pytest
 from os.path import basename
+
+import pytest
 
 from parsl.app.app import python_app
 from parsl.data_provider.files import File

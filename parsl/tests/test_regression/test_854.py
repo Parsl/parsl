@@ -1,8 +1,10 @@
-import time
 import multiprocessing
-import pytest
-from parsl.multiprocessing import MacSafeQueue
 import random
+import time
+
+import pytest
+
+from parsl.multiprocessing import MacSafeQueue
 
 
 def consumer(in_q, out_q, delay=0):

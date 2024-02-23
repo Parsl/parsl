@@ -1,9 +1,9 @@
-from parsl.providers import AdHocProvider
-from parsl.channels import SSHChannel
-from parsl.executors import HighThroughputExecutor
-from parsl.config import Config
-
 from typing import Any, Dict
+
+from parsl.channels import SSHChannel
+from parsl.config import Config
+from parsl.executors import HighThroughputExecutor
+from parsl.providers import AdHocProvider
 
 user_opts = {'adhoc':
              {'username': 'YOUR_USERNAME',

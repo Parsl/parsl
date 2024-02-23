@@ -1,9 +1,10 @@
+import logging
+
+import parsl
 from parsl import python_app
-from parsl.monitoring.monitoring import MonitoringHub
 from parsl.config import Config
 from parsl.executors import ThreadPoolExecutor
-import parsl
-import logging
+from parsl.monitoring.monitoring import MonitoringHub
 
 
 def local_setup():

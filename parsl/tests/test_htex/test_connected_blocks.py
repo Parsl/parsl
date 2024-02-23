@@ -1,7 +1,8 @@
-import parsl
 import pytest
-from parsl.executors import HighThroughputExecutor
+
+import parsl
 from parsl import Config
+from parsl.executors import HighThroughputExecutor
 from parsl.providers import LocalProvider
 
 

@@ -1,8 +1,8 @@
-from parsl.providers import LocalProvider
 from parsl.channels import LocalChannel
-
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
+from parsl.providers import LocalProvider
+
 # import os
 config = Config(
     executors=[

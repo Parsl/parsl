@@ -1,7 +1,7 @@
 """Functions used to explain kwargs"""
 from pathlib import Path
 
-from parsl import python_app, File
+from parsl import File, python_app
 
 
 def test_inputs():

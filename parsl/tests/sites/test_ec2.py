@@ -1,10 +1,11 @@
-import parsl
+import logging
+
 import pytest
 
+import parsl
 from parsl.app.app import python_app
 from parsl.tests.configs.ec2_single_node import config
 
-import logging
 logger = logging.getLogger(__name__)
 
 local_config = config

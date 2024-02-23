@@ -5,20 +5,20 @@ import os
 import pathlib
 import re
 import shutil
-import time
-import types
 import signal
 import sys
 import tempfile
 import threading
+import time
 import traceback
+import types
 import typing as t
 from datetime import datetime
 from glob import glob
 from itertools import chain
 
-import pytest
 import _pytest.runner as runner
+import pytest
 
 import parsl
 from parsl.dataflow.dflow import DataFlowKernelLoader

@@ -1,13 +1,11 @@
-from parsl.providers import LocalProvider
 from parsl.channels import LocalChannel
-from parsl.launchers import SimpleLauncher
-
-from parsl.data_provider.http import HTTPInTaskStaging
-from parsl.data_provider.ftp import FTPInTaskStaging
-from parsl.data_provider.file_noop import NoOpFileStaging
-
 from parsl.config import Config
+from parsl.data_provider.file_noop import NoOpFileStaging
+from parsl.data_provider.ftp import FTPInTaskStaging
+from parsl.data_provider.http import HTTPInTaskStaging
 from parsl.executors import HighThroughputExecutor
+from parsl.launchers import SimpleLauncher
+from parsl.providers import LocalProvider
 
 config = Config(
     executors=[

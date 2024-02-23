@@ -1,7 +1,7 @@
 from parsl.config import Config
-from parsl.providers import CobaltProvider
-from parsl.launchers import AprunLauncher
 from parsl.executors import HighThroughputExecutor
+from parsl.launchers import AprunLauncher
+from parsl.providers import CobaltProvider
 
 from .user_opts import user_opts
 
