@@ -64,6 +64,16 @@ def waiting_app(ident: int, outputs=(), inputs=()):
 def test_scale_out(tmpd_cwd, try_assert):
     dfk = parsl.dfk()
 
+    # reconfigure scaling strategy to run faster than usual. This allows
+    # this test to complete faster - at time of writing 27s with default
+    # 5s strategy, vs XXXX with 0.5s strategy.
+
+    # check this attribute still exists, in the presence of ongoing
+    # development, so we have some belief that setting it will not be
+    # setting a now-ignored parameter.
+    assert hasattr(dfk.job_status_poller, 'interval')
+    dfk.job_status_poller.interval = 0.1
+
     num_managers = len(dfk.executors['htex_local'].connected_managers())
 
     assert num_managers == 0, "Expected 0 managers at start"
@@ -78,9 +88,11 @@ def test_scale_out(tmpd_cwd, try_assert):
 
     futs = [waiting_app(i, outputs=outputs, inputs=inputs) for i in range(ntasks)]
 
-    while ready_path.read_text().count("\n") < _max_blocks:
-        time.sleep(0.5)
+    try_assert(lambda: ready_path.read_text().count("\n") == _max_blocks, "Wait for _max_blocks tasks to be running", timeout_ms=15000)
 
+    # This should be true immediately, because the previous try_assert should
+    # wait until there are max_blocks tasks running, and his test should be
+    # configured to use 1 worker per block.
     assert len(dfk.executors['htex_local'].connected_managers()) == _max_blocks
 
     finish_path.touch()  # Approximation of Event, via files
@@ -124,11 +136,11 @@ def test_scale_out(tmpd_cwd, try_assert):
 
     dfk.job_status_poller.callback = hook_cb
 
-    def check_strategy_runs():
-        return strategy_iterated.is_set()
+    # hack strategies to run more frequently. this allo
+    # dfk.job_status_poller.
 
     try_assert(
-        check_strategy_runs,
+        strategy_iterated.is_set,
         fail_msg="Expected strategy to have run within this period",
         timeout_ms=15000,
     )
