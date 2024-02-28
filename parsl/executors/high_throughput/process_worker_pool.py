@@ -140,7 +140,9 @@ class Manager:
             Path to the certificate directory.
         """
 
-        logger.info("Manager started")
+        logger.info("Manager initializing")
+
+        self._start_time = time.time()
 
         try:
             ix_address = probe_addresses(addresses.split(','), task_port, timeout=address_probe_timeout)
@@ -454,7 +456,6 @@ class Manager:
 
         TODO: Move task receiving to a thread
         """
-        start = time.time()
         self._kill_event = threading.Event()
         self._tasks_in_progress = self._mp_manager.dict()
 
@@ -504,7 +505,7 @@ class Manager:
         self.task_incoming.close()
         self.result_outgoing.close()
         self.zmq_context.term()
-        delta = time.time() - start
+        delta = time.time() - self._start_time
         logger.info("process_worker_pool ran for {} seconds".format(delta))
         return
 
