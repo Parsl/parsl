@@ -237,7 +237,8 @@ class Manager:
     def create_reg_message(self):
         """ Creates a registration message to identify the worker to the interchange
         """
-        msg = {'parsl_v': PARSL_VERSION,
+        msg = {'type': 'registration',
+               'parsl_v': PARSL_VERSION,
                'python_v': "{}.{}.{}".format(sys.version_info.major,
                                              sys.version_info.minor,
                                              sys.version_info.micro),
@@ -258,8 +259,9 @@ class Manager:
     def heartbeat_to_incoming(self):
         """ Send heartbeat to the incoming task queue
         """
-        heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
-        self.task_incoming.send(heartbeat)
+        msg = {'type': 'heartbeat'}
+        b_msg = json.dumps(msg).encode('utf-8')
+        self.task_incoming.send(b_msg)
         logger.debug("Sent heartbeat")
 
     @wrap_with_logs
