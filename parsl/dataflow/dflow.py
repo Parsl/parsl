@@ -870,7 +870,6 @@ class DataFlowKernel:
         for key in kwargs:
             dep = kwargs[key]
             try:
-                assert dep.done(), "trying to unwrap a dependency that is not done... misaligned gather/unwrap?"
                 kwargs[key] = traverse_to_unwrap(dep)
             except Exception as e:
                 if hasattr(dep, 'task_record'):
@@ -884,7 +883,6 @@ class DataFlowKernel:
             new_inputs = []
             for dep in kwargs['inputs']:
                 try:
-                    assert dep.done(), "trying to unwrap a dependency that is not done... misaligned gather/unwrap?"
                     new_inputs.extend([traverse_to_unwrap(dep)])
                 except Exception as e:
                     if hasattr(dep, 'task_record'):
