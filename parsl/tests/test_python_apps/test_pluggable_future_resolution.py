@@ -4,8 +4,8 @@ import pytest
 from parsl.tests.configs.local_threads import fresh_config as local_config
 
 from typing import Sequence
-
 from threading import Event
+
 
 @parsl.python_app
 def a(event):
@@ -39,4 +39,4 @@ def test_tuple_pos_arg():
     s = (a(e), )
     f_b = b_first(s)
     e.set()
-    assert b_first(s).result() == 8
+    assert f_b.result() == 8

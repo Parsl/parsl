@@ -809,7 +809,7 @@ class DataFlowKernel:
 
         def check_dep(d: Any) -> None:
             depends.extend(traverse_to_gather(d))
-             
+
         # Check the positional args
         for dep in args:
             check_dep(dep)
