@@ -140,7 +140,9 @@ class Manager:
             Path to the certificate directory.
         """
 
-        logger.info("Manager started")
+        logger.info("Manager initializing")
+
+        self._start_time = time.time()
 
         try:
             ix_address = probe_addresses(addresses.split(','), task_port, timeout=address_probe_timeout)
@@ -237,7 +239,8 @@ class Manager:
     def create_reg_message(self):
         """ Creates a registration message to identify the worker to the interchange
         """
-        msg = {'parsl_v': PARSL_VERSION,
+        msg = {'type': 'registration',
+               'parsl_v': PARSL_VERSION,
                'python_v': "{}.{}.{}".format(sys.version_info.major,
                                              sys.version_info.minor,
                                              sys.version_info.micro),
@@ -258,8 +261,9 @@ class Manager:
     def heartbeat_to_incoming(self):
         """ Send heartbeat to the incoming task queue
         """
-        heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
-        self.task_incoming.send(heartbeat)
+        msg = {'type': 'heartbeat'}
+        b_msg = json.dumps(msg).encode('utf-8')
+        self.task_incoming.send(b_msg)
         logger.debug("Sent heartbeat")
 
     @wrap_with_logs
@@ -452,7 +456,6 @@ class Manager:
 
         TODO: Move task receiving to a thread
         """
-        start = time.time()
         self._kill_event = threading.Event()
         self._tasks_in_progress = self._mp_manager.dict()
 
@@ -502,7 +505,7 @@ class Manager:
         self.task_incoming.close()
         self.result_outgoing.close()
         self.zmq_context.term()
-        delta = time.time() - start
+        delta = time.time() - self._start_time
         logger.info("process_worker_pool ran for {} seconds".format(delta))
         return
 
