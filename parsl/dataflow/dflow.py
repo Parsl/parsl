@@ -27,6 +27,7 @@ from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
+from parsl.dataflow.future_resolution import traverse_to_gather, traverse_to_unwrap
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
@@ -807,9 +808,8 @@ class DataFlowKernel:
         depends: List[Future] = []
 
         def check_dep(d: Any) -> None:
-            if isinstance(d, Future):
-                depends.extend([d])
-
+            depends.extend(traverse_to_gather(d))
+             
         # Check the positional args
         for dep in args:
             check_dep(dep)
@@ -849,27 +849,43 @@ class DataFlowKernel:
         # Replace item in args
         new_args = []
         for dep in args:
-            if isinstance(dep, Future):
-                try:
-                    new_args.extend([dep.result()])
-                except Exception as e:
-                    # If this Future is associated with a task inside this DFK,
-                    # then refer to the task ID.
-                    # Otherwise make a repr of the Future object.
-                    if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
-                        tid = "task " + repr(dep.task_record['id'])
-                    else:
-                        tid = repr(dep)
-                    dep_failures.extend([(e, tid)])
-            else:
-                new_args.extend([dep])
+            try:
+                new_args.extend([traverse_to_unwrap(dep)])
+                # with pluggable traversal, this is user facing so should be a proper test/exception, not an assert?
+                # assert dep.done(), "trying to unwrap a dependency that is not done... misaligned gather/unwrap?"
+                # new_args.extend([dep.result()])
+            except Exception as e:
+                # TODO: this error handling was assuming 'dep' is a Future and that raised errors here are dependency
+                # errors - that might not be the case any more, especially with user-pluggable traversal
+                # If this Future is associated with a task inside this DFK,
+                # then refer to the task ID.
+                # Otherwise make a repr of the Future object.
+                if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
+                    tid = "task " + repr(dep.task_record['id'])
+                else:
+                    tid = repr(dep)
+                dep_failures.extend([(e, tid)])
 
         # Check for explicit kwargs ex, fu_1=<fut>
         for key in kwargs:
             dep = kwargs[key]
-            if isinstance(dep, Future):
+            try:
+                assert dep.done(), "trying to unwrap a dependency that is not done... misaligned gather/unwrap?"
+                kwargs[key] = traverse_to_unwrap(dep)
+            except Exception as e:
+                if hasattr(dep, 'task_record'):
+                    tid = dep.task_record['id']
+                else:
+                    tid = None
+                dep_failures.extend([(e, tid)])
+
+        # Check for futures in inputs=[<fut>...]
+        if 'inputs' in kwargs:
+            new_inputs = []
+            for dep in kwargs['inputs']:
                 try:
-                    kwargs[key] = dep.result()
+                    assert dep.done(), "trying to unwrap a dependency that is not done... misaligned gather/unwrap?"
+                    new_inputs.extend([traverse_to_unwrap(dep)])
                 except Exception as e:
                     if hasattr(dep, 'task_record'):
                         tid = dep.task_record['id']
@@ -877,22 +893,6 @@ class DataFlowKernel:
                         tid = None
                     dep_failures.extend([(e, tid)])
 
-        # Check for futures in inputs=[<fut>...]
-        if 'inputs' in kwargs:
-            new_inputs = []
-            for dep in kwargs['inputs']:
-                if isinstance(dep, Future):
-                    try:
-                        new_inputs.extend([dep.result()])
-                    except Exception as e:
-                        if hasattr(dep, 'task_record'):
-                            tid = dep.task_record['id']
-                        else:
-                            tid = None
-                        dep_failures.extend([(e, tid)])
-
-                else:
-                    new_inputs.extend([dep])
             kwargs['inputs'] = new_inputs
 
         return new_args, kwargs, dep_failures
