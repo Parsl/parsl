@@ -110,7 +110,6 @@ def test_scale_out(tmpd_cwd, try_assert):
     try_assert(
         check_one_block,
         fail_msg="Expected 1 managers during a single long task",
-        timeout_ms=15000,
     )
 
     # the task should not have finished by the time we end up with 1 manager
@@ -140,7 +139,6 @@ def test_scale_out(tmpd_cwd, try_assert):
     try_assert(
         strategy_iterated.is_set,
         fail_msg="Expected strategy to have run within this period",
-        timeout_ms=15000,
     )
 
     assert check_one_block()
@@ -157,5 +155,4 @@ def test_scale_out(tmpd_cwd, try_assert):
     try_assert(
         check_min_blocks,
         fail_msg=f"Expected {_min_blocks} managers when no tasks (min_blocks)",
-        timeout_ms=15000,
     )
