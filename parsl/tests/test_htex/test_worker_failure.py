@@ -8,7 +8,7 @@ def local_config():
     from parsl.tests.configs.htex_local import fresh_config
     config = fresh_config()
     config.executors[0].poll_period = 1
-    config.executors[0].max_workers = 1
+    config.executors[0].max_workers_per_node = 1
     config.executors[0].heartbeat_period = 1
     return config
 

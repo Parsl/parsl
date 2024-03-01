@@ -10,6 +10,7 @@ from multiprocessing import Process, Queue
 from typing import Dict, Sequence
 from typing import List, Optional, Tuple, Union, Callable
 import math
+import warnings
 
 import parsl.launchers
 from parsl.serialize import pack_res_spec_apply_message, deserialize
@@ -39,7 +40,7 @@ from parsl.providers import LocalProvider
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers} "
+DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers_per_node} "
                       "-a {addresses} "
                       "-p {prefetch_capacity} "
                       "-c {cores_per_worker} "
@@ -154,7 +155,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         the there's sufficient memory for each worker. Default: None
 
     max_workers : int
-        Caps the number of workers launched per node. Default: infinity
+        Deprecated. Please use max_workers_per_node instead.
+
+    max_workers_per_node : int
+        Caps the number of workers launched per node. Default: None
 
     cpu_affinity: string
         Whether or how each worker process sets thread affinity. Options include "none" to forgo
@@ -228,7 +232,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  worker_debug: bool = False,
                  cores_per_worker: float = 1.0,
                  mem_per_worker: Optional[float] = None,
-                 max_workers: Union[int, float] = float('inf'),
+                 max_workers: Optional[Union[int, float]] = None,
+                 max_workers_per_node: Optional[Union[int, float]] = None,
                  cpu_affinity: str = 'none',
                  available_accelerators: Union[int, Sequence[str]] = (),
                  prefetch_capacity: int = 0,
@@ -251,7 +256,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.working_dir = working_dir
         self.cores_per_worker = cores_per_worker
         self.mem_per_worker = mem_per_worker
-        self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
         self.address = address
         self.address_probe_timeout = address_probe_timeout
@@ -260,8 +264,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         else:
             self.all_addresses = ','.join(get_all_addresses())
 
-        mem_slots = max_workers
-        cpu_slots = max_workers
+        if max_workers:
+            self._warn_deprecated("max_workers", "max_workers_per_node")
+        self.max_workers_per_node = max_workers_per_node or max_workers or float("inf")
+
+        mem_slots = self.max_workers_per_node
+        cpu_slots = self.max_workers_per_node
         if hasattr(self.provider, 'mem_per_node') and \
                 self.provider.mem_per_node is not None and \
                 mem_per_worker is not None and \
@@ -278,7 +286,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.available_accelerators = list(available_accelerators)
 
         # Determine the number of workers per node
-        self._workers_per_node = min(max_workers, mem_slots, cpu_slots)
+        self._workers_per_node = min(self.max_workers_per_node, mem_slots, cpu_slots)
         if len(self.available_accelerators) > 0:
             self._workers_per_node = min(self._workers_per_node, len(available_accelerators))
         if self._workers_per_node == float('inf'):
@@ -316,6 +324,24 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     radio_mode = "htex"
 
+    def _warn_deprecated(self, old: str, new: str):
+        warnings.warn(
+            f"{old} is deprecated and will be removed in a future release. "
+            "Please use {new} instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+
+    @property
+    def max_workers(self):
+        self._warn_deprecated("max_workers", "max_workers_per_node")
+        return self.max_workers_per_node
+
+    @max_workers.setter
+    def max_workers(self, val: Union[int, float]):
+        self._warn_deprecated("max_workers", "max_workers_per_node")
+        self.max_workers_per_node = val
+
     @property
     def logdir(self):
         return "{}/{}".format(self.run_dir, self.label)
@@ -330,7 +356,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """Compose the launch command and scale out the initial blocks.
         """
         debug_opts = "--debug" if self.worker_debug else ""
-        max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
+        max_workers_per_node = "" if self.max_workers_per_node == float('inf') else "--max_workers_per_node={}".format(self.max_workers_per_node)
         enable_mpi_opts = "--enable_mpi_mode " if self.enable_mpi_mode else ""
 
         address_probe_timeout_string = ""
@@ -345,7 +371,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                        result_port=self.worker_result_port,
                                        cores_per_worker=self.cores_per_worker,
                                        mem_per_worker=self.mem_per_worker,
-                                       max_workers=max_workers,
+                                       max_workers_per_node=max_workers_per_node,
                                        nodes_per_block=self.provider.nodes_per_block,
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
