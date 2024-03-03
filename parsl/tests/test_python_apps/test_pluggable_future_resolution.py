@@ -1,6 +1,6 @@
 from pathlib import Path
 from threading import Event
-from typing import Iterable
+from typing import Iterable, Sequence
 
 import pytest
 
@@ -30,7 +30,7 @@ def test_simple_pos_arg():
 
 
 @parsl.python_app
-def b_first(x: Iterable[int]):
+def b_first(x: Sequence[int]):
     return x[0] + 1
 
 
