@@ -50,7 +50,8 @@ def make_path(s: str):
 
 @parsl.python_app
 def append_paths(seq: Sequence[Path], end_str: str = "end"):
-    return [Path(s, end_str) for s in seq]
+    type_ = type(seq)
+    return type_([Path(s, end_str) for s in seq])
 
 
 @pytest.mark.local
