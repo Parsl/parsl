@@ -49,7 +49,7 @@ def make_path(s: str):
 
 
 @parsl.python_app
-def append_paths(iterable: Iterable[Path], end_str: str = "end"):
+def append_paths(iterable, end_str: str = "end"):
     type_ = type(iterable)
     return type_([Path(s, end_str) for s in iterable])
 
