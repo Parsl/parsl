@@ -30,7 +30,7 @@ def test_simple_pos_arg():
 
 
 @parsl.python_app
-def b_first(x: Sequence[int]):
+def b_first(x: Iterable[int]):
     return x[0] + 1
 
 
