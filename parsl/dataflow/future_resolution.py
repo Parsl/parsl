@@ -35,8 +35,7 @@ def _(iterable: Union[tuple, list, set]):
     # a "deep" traversal would instead recursively call traverse_to_gather
     # here to inspect whatever is inside the sequence
 
-    type_ = type(iterable)
-    return type_([v for v in iterable if isinstance(v, Future)])
+    return [v for v in iterable if isinstance(v, Future)]
 
 
 @traverse_to_unwrap.register
