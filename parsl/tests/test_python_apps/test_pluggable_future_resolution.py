@@ -1,6 +1,6 @@
 from pathlib import Path
 from threading import Event
-from typing import Sequence
+from typing import Iterable
 
 import pytest
 
@@ -49,9 +49,9 @@ def make_path(s: str):
 
 
 @parsl.python_app
-def append_paths(seq: Sequence[Path], end_str: str = "end"):
-    type_ = type(seq)
-    return type_([Path(s, end_str) for s in seq])
+def append_paths(iterable: Iterable[Path], end_str: str = "end"):
+    type_ = type(iterable)
+    return type_([Path(s, end_str) for s in iterable])
 
 
 @pytest.mark.local
