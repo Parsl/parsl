@@ -352,10 +352,7 @@ class Manager:
 
         logger.debug("Starting result push thread")
 
-        push_poll_period = max(10, self.poll_period) / 1000
-        # push_poll_period must be at least 10 ms [BENC: why? and why does
-        # this one have more of a restriction than any of the other timing
-        # parameters? That max statement enforces that. but why enforce it vs other timings?]
+        push_poll_period = max(10, self.poll_period) / 1000    # push_poll_period must be atleast 10 ms
         logger.debug("push poll period: {}".format(push_poll_period))
 
         last_beat = time.time()

@@ -194,7 +194,6 @@ class Memoizer:
         if 'outputs' in task['kwargs']:
             outputs = task['kwargs']['outputs']
             del filtered_kw['outputs']
-            t.append(b'outputs')
             t.append(id_for_memo(outputs, output_ref=True))
 
         t.extend(map(id_for_memo, (filtered_kw, task['func'], task['args'])))

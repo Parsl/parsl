@@ -101,12 +101,12 @@ class Interchange:
              This is overridden when the worker_ports option is set. Default: (54000, 55000)
 
         hub_address : str
-             The ip address at which the interchange can send info about managers to when monitoring is enabled.
-             This is passed via dfk and executor automatically. Default: None (meaning monitoring disabled)
+             The IP address at which the interchange can send info about managers to when monitoring is enabled.
+             Default: None (meaning monitoring disabled)
 
         hub_port : str
              The port at which the interchange can send info about managers to when monitoring is enabled.
-             This is passed via dfk and executor automatically. Default: None (meaning monitoring disabled)
+             Default: None (meaning monitoring disabled)
 
         heartbeat_threshold : int
              Number of seconds since the last heartbeat after which worker is considered lost.
@@ -244,19 +244,19 @@ class Interchange:
 
     def _create_monitoring_channel(self) -> Optional[zmq.Socket]:
         if self.hub_address and self.hub_port:
-            logger.info("Connecting to monitoring")
+            logger.info("Connecting to MonitoringHub")
             # This is a one-off because monitoring is unencrypted
             hub_channel = zmq.Context().socket(zmq.DEALER)
             hub_channel.set_hwm(0)
             hub_channel.connect("tcp://{}:{}".format(self.hub_address, self.hub_port))
-            logger.info("Monitoring enabled and connected to hub")
+            logger.info("Connected to MonitoringHub")
             return hub_channel
         else:
             return None
 
     def _send_monitoring_info(self, hub_channel: Optional[zmq.Socket], manager: ManagerRecord) -> None:
         if hub_channel:
-            logger.info("Sending message {} to hub".format(manager))
+            logger.info("Sending message {} to MonitoringHub".format(manager))
 
             d: Dict = cast(Dict, manager.copy())
             d['timestamp'] = datetime.datetime.now()
@@ -490,11 +490,6 @@ class Interchange:
                     tasks = self.get_tasks(real_capacity)
                     if tasks:
                         self.task_outgoing.send_multipart([manager_id, b'', pickle.dumps(tasks)])
-                        # after this point, we've sent a task to the manager, but we haven't
-                        # added it to the 'task' list for that manager, because we don't
-                        # do that for another 5 lines. That should be pretty fast, though?
-                        # but we shouldn't try removing it from the tasks list until we have
-                        # passed that point anyway?
                         task_count = len(tasks)
                         self.count += task_count
                         tids = [t['task_id'] for t in tasks]

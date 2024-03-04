@@ -30,7 +30,7 @@ class PollItem:
         if self._dfk and self._dfk.monitoring is not None:
             self.monitoring_enabled = True
             hub_address = self._dfk.hub_address
-            hub_port = self._dfk.hub_interchange_port
+            hub_port = self._dfk.hub_zmq_port
             context = zmq.Context()
             self.hub_channel = context.socket(zmq.DEALER)
             self.hub_channel.set_hwm(0)

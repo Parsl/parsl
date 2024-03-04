@@ -6,7 +6,6 @@ import pathlib
 import pickle
 import random
 import time
-import traceback
 import typeguard
 import inspect
 import threading
@@ -110,12 +109,12 @@ class DataFlowKernel:
 
         # hub address and port for interchange to connect
         self.hub_address = None  # type: Optional[str]
-        self.hub_interchange_port = None  # type: Optional[int]
+        self.hub_zmq_port = None  # type: Optional[int]
         if self.monitoring:
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
             self.hub_address = self.monitoring.hub_address
-            self.hub_interchange_port = self.monitoring.start(self.run_id, self.run_dir, self.config.run_dir)
+            self.hub_zmq_port = self.monitoring.start(self.run_id, self.run_dir, self.config.run_dir)
 
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
@@ -350,11 +349,8 @@ class DataFlowKernel:
                 logger.info("Task {} marked for retry".format(task_id))
 
             else:
-                logger.error("Task {} failed after {} retry attempts. Last exception was: {}: {}".format(task_id,
-                                                                                                         task_record['try_id'],
-                                                                                                         type(e).__name__,
-                                                                                                         e))
-                logger.debug("Task {} traceback: {}".format(task_id, traceback.format_tb(e.__traceback__)))
+                logger.exception("Task {} failed after {} retry attempts".format(task_id,
+                                                                                 task_record['try_id']))
                 task_record['time_returned'] = datetime.datetime.now()
                 self.update_task_state(task_record, States.failed)
                 task_record['time_returned'] = datetime.datetime.now()
@@ -1193,7 +1189,7 @@ class DataFlowKernel:
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
             executor.hub_address = self.hub_address
-            executor.hub_port = self.hub_interchange_port
+            executor.hub_port = self.hub_zmq_port
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
