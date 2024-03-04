@@ -15,7 +15,7 @@ def fresh_config():
                 heartbeat_period=15,
                 heartbeat_threshold=120,
                 worker_debug=False,
-                max_workers=1,
+                max_workers_per_node=1,
                 address=address_by_interface('ib0'),
                 encrypted=True,
                 provider=PBSProProvider(

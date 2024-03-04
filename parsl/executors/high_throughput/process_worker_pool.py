@@ -62,7 +62,7 @@ class Manager:
                  result_port,
                  cores_per_worker,
                  mem_per_worker,
-                 max_workers,
+                 max_workers_per_node,
                  prefetch_capacity,
                  uid,
                  block_id,
@@ -100,8 +100,8 @@ class Manager:
              the there's sufficient memory for each worker. If set to None, memory on node is not
              considered in the determination of workers to be launched on node by the manager.
 
-        max_workers : int
-             caps the maximum number of workers that can be launched.
+        max_workers_per_node : int | float
+             Caps the maximum number of workers that can be launched.
 
         prefetch_capacity : int
              Number of tasks that could be prefetched over available worker capacity.
@@ -190,15 +190,15 @@ class Manager:
         else:
             available_mem_on_node = round(psutil.virtual_memory().available / (2**30), 1)
 
-        self.max_workers = max_workers
+        self.max_workers_per_node = max_workers_per_node
         self.prefetch_capacity = prefetch_capacity
 
-        mem_slots = max_workers
+        mem_slots = max_workers_per_node
         # Avoid a divide by 0 error.
         if mem_per_worker and mem_per_worker > 0:
             mem_slots = math.floor(available_mem_on_node / mem_per_worker)
 
-        self.worker_count: int = min(max_workers,
+        self.worker_count: int = min(max_workers_per_node,
                                      mem_slots,
                                      math.floor(cores_on_node / cores_per_worker))
 
@@ -793,7 +793,7 @@ if __name__ == "__main__":
                         help="GB of memory assigned to each worker process. Default=0, no assignment")
     parser.add_argument("-t", "--task_port", required=True,
                         help="REQUIRED: Task port for receiving tasks from the interchange")
-    parser.add_argument("--max_workers", default=float('inf'),
+    parser.add_argument("--max_workers_per_node", default=float('inf'),
                         help="Caps the maximum workers that can be launched, default:infinity")
     parser.add_argument("-p", "--prefetch_capacity", default=0,
                         help="Number of tasks that can be prefetched to the manager. Default is 0.")
@@ -847,7 +847,7 @@ if __name__ == "__main__":
         logger.info("task_port: {}".format(args.task_port))
         logger.info("result_port: {}".format(args.result_port))
         logger.info("addresses: {}".format(args.addresses))
-        logger.info("max_workers: {}".format(args.max_workers))
+        logger.info("max_workers_per_node: {}".format(args.max_workers_per_node))
         logger.info("poll_period: {}".format(args.poll))
         logger.info("address_probe_timeout: {}".format(args.address_probe_timeout))
         logger.info("Prefetch capacity: {}".format(args.prefetch_capacity))
@@ -866,7 +866,7 @@ if __name__ == "__main__":
                           block_id=args.block_id,
                           cores_per_worker=float(args.cores_per_worker),
                           mem_per_worker=None if args.mem_per_worker == 'None' else float(args.mem_per_worker),
-                          max_workers=args.max_workers if args.max_workers == float('inf') else int(args.max_workers),
+                          max_workers_per_node=args.max_workers_per_node if args.max_workers_per_node == float('inf') else int(args.max_workers_per_node),
                           prefetch_capacity=int(args.prefetch_capacity),
                           heartbeat_threshold=int(args.hb_threshold),
                           heartbeat_period=int(args.hb_period),
