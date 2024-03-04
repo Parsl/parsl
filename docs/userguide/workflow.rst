@@ -241,3 +241,24 @@ Caching expensive initialisation between tasks
 Many tasks in workflows require a expensive "initialization" steps that, once performed, can be used across successive invocations for that task. For example, you may want to reuse a machine learning model for multiple interface tasks and avoid loading it onto GPUs more than once.
 
 `This ExaWorks tutorial <https://github.com/ExaWorks/warmable-function-calls>`_ gives examples of how to do this.
+
+Other useful patterns
+=====================
+
+This section is intended to list some patterns which are not to do with
+parallelism and concurrency, but still might be useful in parsl workflows
+
+Environment wrappers for bash_apps
+----------------------------------
+
+This usecase comes from DESC DRP v2.
+
+Sometimes a bash app command must be run in a particular environment, for
+example, inside a container started by shifter or singularity. [TODO URLs for
+those two]
+
+So although the app commandline might look like:
+
+.. code-block::
+
+    myscience input.txt 5 10

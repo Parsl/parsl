@@ -28,7 +28,7 @@ DEFAULT_FORMAT = (
 def set_stream_logger(name: str = 'parsl',
                       level: int = logging.DEBUG,
                       format_string: Optional[str] = None,
-                      stream: Optional[io.TextIOWrapper] = None) -> None:
+                      stream: Optional[io.TextIOWrapper] = None) -> logging.Logger:
     """Add a stream log handler.
 
     Args:
@@ -39,7 +39,7 @@ def set_stream_logger(name: str = 'parsl',
             If not specified, the default stream for logging.StreamHandler is used.
 
     Returns:
-         - None
+         - logger for specified name
     """
     if format_string is None:
         # format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
@@ -59,12 +59,14 @@ def set_stream_logger(name: str = 'parsl',
     futures_logger = logging.getLogger("concurrent.futures")
     futures_logger.addHandler(handler)
 
+    return logger
+
 
 @typeguard.typechecked
 def set_file_logger(filename: str,
                     name: str = 'parsl',
                     level: int = logging.DEBUG,
-                    format_string: Optional[str] = None) -> None:
+                    format_string: Optional[str] = None) -> logging.Logger:
     """Add a file log handler.
 
     Args:
@@ -74,7 +76,7 @@ def set_file_logger(filename: str,
         - format_string (string): Set the format string
 
     Returns:
-       -  None
+       - logger for specified name
     """
     if format_string is None:
         format_string = DEFAULT_FORMAT
@@ -91,3 +93,5 @@ def set_file_logger(filename: str,
     # concurrent.futures
     futures_logger = logging.getLogger("concurrent.futures")
     futures_logger.addHandler(handler)
+
+    return logger

@@ -250,6 +250,12 @@ class Database:
             'psutil_process_disk_write', Float, nullable=True)
         psutil_process_status = Column(
             'psutil_process_status', Text, nullable=True)
+        psutil_cpu_num = Column(
+            'psutil_cpu_num', Text, nullable=True)
+        psutil_process_num_ctx_switches_voluntary = Column(
+            'psutil_process_num_ctx_switches_voluntary', Float, nullable=True)
+        psutil_process_num_ctx_switches_involuntary = Column(
+            'psutil_process_num_ctx_switches_involuntary', Float, nullable=True)
         __table_args__ = (
             PrimaryKeyConstraint('try_id', 'task_id', 'run_id', 'timestamp'),
         )
@@ -505,6 +511,7 @@ class DatabaseManager:
                         "{} reprocessable as last messages".format(len(resource_messages),
                                                                    len(reprocessable_first_resource_messages),
                                                                    len(reprocessable_last_resource_messages)))
+                    logger.debug(f"BENC: resource messages are: {resource_messages}")
 
                     insert_resource_messages = []
                     for msg in resource_messages:

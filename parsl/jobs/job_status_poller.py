@@ -9,6 +9,7 @@ from parsl.jobs.strategy import Strategy
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.monitoring.message_type import MessageType
 
+from parsl.process_loggers import wrap_with_logs
 
 from parsl.utils import Timer
 
@@ -29,7 +30,7 @@ class PollItem:
         if self._dfk and self._dfk.monitoring is not None:
             self.monitoring_enabled = True
             hub_address = self._dfk.hub_address
-            hub_port = self._dfk.hub_interchange_port
+            hub_port = self._dfk.hub_zmq_port
             context = zmq.Context()
             self.hub_channel = context.socket(zmq.DEALER)
             self.hub_channel.set_hwm(0)
@@ -114,10 +115,15 @@ class JobStatusPoller(Timer):
                                   max_idletime=max_idletime)
         super().__init__(self.poll, interval=5, name="JobStatusPoller")
 
+    @wrap_with_logs
     def poll(self) -> None:
+        logger.info("POLL: update state")
         self._update_state()
+        logger.info("POLL: run error handlers")
         self._run_error_handlers(self._poll_items)
+        logger.info("POLL: strategize")
         self._strategy.strategize(self._poll_items)
+        logger.info("POLL: done")
 
     def _run_error_handlers(self, status: List[PollItem]) -> None:
         for es in status:

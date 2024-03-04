@@ -184,7 +184,9 @@ class Strategy:
             logger.debug(f"Strategizing for executor {label}")
 
             # Tasks that are either pending completion
+            logger.debug("getting outstanding (which looks like an attribute reference but is actually a network operation")
             active_tasks = executor.outstanding
+            logger.debug(f"got outstanding {active_tasks}")
 
             status = exec_status.status
 
@@ -216,6 +218,11 @@ class Strategy:
             if active_tasks > 0 and self.executors[executor.label]['idle_since']:
                 self.executors[executor.label]['idle_since'] = None
 
+            logger.debug(f"METRIC STRATEGY {executor.label} "
+                         f"active_tasks={active_tasks} "
+                         f"running_blocks={running} pending_blocks={pending} "
+                         f"active_blocks={active_blocks} active_slots={active_slots}")
+
             # Case 1
             # No tasks.
             if active_tasks == 0:
@@ -241,8 +248,9 @@ class Strategy:
                     if idle_duration > self.max_idletime:
                         # We have resources idle for the max duration,
                         # we have to scale_in now.
-                        logger.debug(f"Idle time has reached {self.max_idletime}s for executor {label}; scaling in")
+                        logger.info(f"Idle time has reached {self.max_idletime}s for executor {label}; scaling in with exec_status.scale_in")
                         exec_status.scale_in(active_blocks - min_blocks)
+                        logger.info("exec_status.scale_in returned")
 
                     else:
                         logger.debug(f"Idle time {idle_duration}s is less than max_idletime {self.max_idletime}s for executor {label}; not scaling in")
@@ -288,8 +296,9 @@ class Strategy:
                             excess_slots = math.ceil(active_slots - (active_tasks * parallelism))
                             excess_blocks = math.ceil(float(excess_slots) / (tasks_per_node * nodes_per_block))
                             excess_blocks = min(excess_blocks, active_blocks - min_blocks)
-                            logger.debug(f"Requesting scaling in by {excess_blocks} blocks with idle time {self.max_idletime}s")
+                            logger.info(f"Requesting scaling in by {excess_blocks} blocks with idle time {self.max_idletime}s")
                             exec_status.scale_in(excess_blocks, max_idletime=self.max_idletime)
+                            logger.info("exec_status.scale_in returned")
                     else:
                         logger.error("This strategy does not support scaling in except for HighThroughputExecutor - taking no action")
                 else:
