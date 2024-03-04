@@ -277,12 +277,8 @@ def monitor(pid: int,
 
         d["psutil_cpu_count"] = psutil.cpu_count()
 
-        # note that this will be the CPU of the base process, not anything launched by it
+        # note that this will be the CPU number of the base process, not anything launched by it
         d["psutil_cpu_num"] = pm.cpu_num()
-
-        # TODO: this is a structured tuple, so maybe it should be broken up, and the
-        # fields that make sense summed over children. This is a str() here because
-        # on the receiving side, sqalchemy can't turn a tuple into a text sql field...
 
         pctxsw = pm.num_ctx_switches()
 
@@ -345,7 +341,7 @@ def monitor(pid: int,
         d['psutil_process_time_system'] += total_children_system_time
         d['psutil_process_num_ctx_switches_voluntary'] += total_children_num_ctx_switches_voluntary
         d['psutil_process_num_ctx_switches_involuntary'] += total_children_num_ctx_switches_involuntary
-        logging.debug("returning dict from accumulate and prepare")
+        logging.debug("sending message")
         return d
 
     next_send = time.time()

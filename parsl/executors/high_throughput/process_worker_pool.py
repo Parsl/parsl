@@ -140,7 +140,9 @@ class Manager:
             Path to the certificate directory.
         """
 
-        logger.info("Manager started")
+        logger.info("Manager initializing")
+
+        self._start_time = time.time()
 
         try:
             ix_address = probe_addresses(addresses.split(','), task_port, timeout=address_probe_timeout)
@@ -237,7 +239,8 @@ class Manager:
     def create_reg_message(self):
         """ Creates a registration message to identify the worker to the interchange
         """
-        msg = {'parsl_v': PARSL_VERSION,
+        msg = {'type': 'registration',
+               'parsl_v': PARSL_VERSION,
                'python_v': "{}.{}.{}".format(sys.version_info.major,
                                              sys.version_info.minor,
                                              sys.version_info.micro),
@@ -258,8 +261,9 @@ class Manager:
     def heartbeat_to_incoming(self):
         """ Send heartbeat to the incoming task queue
         """
-        heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
-        self.task_incoming.send(heartbeat)
+        msg = {'type': 'heartbeat'}
+        b_msg = json.dumps(msg).encode('utf-8')
+        self.task_incoming.send(b_msg)
         logger.debug("Sent heartbeat")
 
     @wrap_with_logs
@@ -284,9 +288,17 @@ class Manager:
         last_interchange_contact = time.time()
         task_recv_counter = 0
 
-        poll_timer = self.poll_period
-
         while not kill_event.is_set():
+
+            # This loop will sit inside poller.poll until either a message
+            # arrives or one of these event times is reached. This code
+            # assumes that the event times won't change except on iteration
+            # of this loop - so will break if a different thread does
+            # anything to bring one of the event times earlier - and that the
+            # time here are correctly copy-pasted from the relevant if
+            # statements.
+            next_interesting_event_time = min(last_beat + self.heartbeat_period,
+                                              last_interchange_contact + self.heartbeat_threshold)
             try:
                 pending_task_count = self.pending_task_queue.qsize()
             except NotImplementedError:
@@ -296,14 +308,14 @@ class Manager:
             logger.debug("ready workers: {}, pending tasks: {}".format(self.ready_worker_count.value,
                                                                        pending_task_count))
 
-            if time.time() > last_beat + self.heartbeat_period:
+            if time.time() >= last_beat + self.heartbeat_period:
                 self.heartbeat_to_incoming()
                 last_beat = time.time()
 
-            socks = dict(poller.poll(timeout=poll_timer))
+            poll_duration_s = max(0, next_interesting_event_time - time.time())
+            socks = dict(poller.poll(timeout=poll_duration_s * 1000))
 
             if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
-                poll_timer = 0
                 _, pkl_msg = self.task_incoming.recv_multipart()
                 tasks = pickle.loads(pkl_msg)
                 last_interchange_contact = time.time()
@@ -320,14 +332,9 @@ class Manager:
 
             else:
                 logger.debug("No incoming tasks")
-                # Limit poll duration to heartbeat_period
-                # heartbeat_period is in s vs poll_timer in ms
-                if not poll_timer:
-                    poll_timer = self.poll_period
-                poll_timer = min(self.heartbeat_period * 1000, poll_timer * 2)
 
                 # Only check if no messages were received.
-                if time.time() > last_interchange_contact + self.heartbeat_threshold:
+                if time.time() >= last_interchange_contact + self.heartbeat_threshold:
                     logger.critical("Missing contact with interchange beyond heartbeat_threshold")
                     kill_event.set()
                     logger.critical("Exiting")
@@ -455,7 +462,6 @@ class Manager:
 
         TODO: Move task receiving to a thread
         """
-        start = time.time()
         self._kill_event = threading.Event()
         self._tasks_in_progress = self._mp_manager.dict()
 
@@ -505,7 +511,7 @@ class Manager:
         self.task_incoming.close()
         self.result_outgoing.close()
         self.zmq_context.term()
-        delta = time.time() - start
+        delta = time.time() - self._start_time
         logger.info("process_worker_pool ran for {} seconds".format(delta))
         return
 

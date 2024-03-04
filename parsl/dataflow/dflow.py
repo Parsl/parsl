@@ -115,7 +115,7 @@ class DataFlowKernel:
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
             self.hub_address = self.monitoring.hub_address
-            self.hub_interchange_port = self.monitoring.start(self.run_id, self.run_dir)
+            self.hub_interchange_port = self.monitoring.start(self.run_id, self.run_dir, self.config.run_dir)
 
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
