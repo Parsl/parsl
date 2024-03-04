@@ -371,7 +371,12 @@ class Manager:
                 logger.exception("Got an exception: {}".format(e))
 
             if time.time() > last_result_beat + self.heartbeat_period:
-                logger.info(f"Sending heartbeat via results connection: last_result_beat={last_result_beat} heartbeat_period={self.heartbeat_period} seconds")
+                logger.info(
+                    f"Sending heartbeat via results connection: "
+                    f"last_result_beat={last_result_beat} "
+                    f"heartbeat_period={self.heartbeat_period} seconds"
+                )
+
                 last_result_beat = time.time()
                 items.append(pickle.dumps({'type': 'heartbeat'}))
 
