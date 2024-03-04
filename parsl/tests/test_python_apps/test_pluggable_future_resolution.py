@@ -1,6 +1,6 @@
 from pathlib import Path
 from threading import Event
-from typing import Iterable, Sequence
+from typing import Sequence
 
 import pytest
 

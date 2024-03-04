@@ -1,6 +1,5 @@
 from concurrent.futures import Future
 from functools import singledispatch
-from typing import Union
 
 
 @singledispatch
