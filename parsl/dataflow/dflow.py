@@ -730,7 +730,8 @@ class DataFlowKernel:
 
         return exec_fu
 
-    def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable) -> Tuple[Sequence[Any], Dict[str, Any], Callable]:
+    def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable) -> Tuple[Sequence[Any], Dict[str, Any],
+                                                                                                                   Callable]:
         """Look for inputs of the app that are files. Give the data manager
         the opportunity to replace a file with a data future for that file,
         for example wrapping the result of a staging action.
