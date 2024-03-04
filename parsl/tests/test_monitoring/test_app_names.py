@@ -67,7 +67,7 @@ def test_app_name(get_app, expected_name, expected_result, tmpd_cwd):
     with engine.begin() as connection:
 
         def count_rows(table: str):
-            result = connection.execute("SELECT COUNT(*) FROM workflow")
+            result = connection.execute(f"SELECT COUNT(*) FROM {table}")
             (c, ) = result.first()
             return c
 
