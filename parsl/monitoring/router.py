@@ -26,8 +26,8 @@ class MonitoringRouter:
     def __init__(self,
                  *,
                  hub_address: str,
-                 hub_port: Optional[int] = None,
-                 hub_port_range: Tuple[int, int] = (55050, 56000),
+                 udp_port: Optional[int] = None,
+                 zmq_port_range: Tuple[int, int] = (55050, 56000),
 
                  monitoring_hub_address: str = "127.0.0.1",
                  logdir: str = ".",
@@ -41,11 +41,11 @@ class MonitoringRouter:
         ----------
         hub_address : str
              The ip address at which the workers will be able to reach the Hub.
-        hub_port : int
+        udp_port : int
              The specific port at which workers will be able to reach the Hub via UDP. Default: None
-        hub_port_range : tuple(int, int)
+        zmq_port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
-             This is overridden when the hub_port option is set. Default: (55050, 56000)
+             Default: (55050, 56000)
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         logging_level : int
@@ -67,32 +67,32 @@ class MonitoringRouter:
         self.loop_freq = 10.0  # milliseconds
 
         # Initialize the UDP socket
-        self.sock = socket.socket(socket.AF_INET,
-                                  socket.SOCK_DGRAM,
-                                  socket.IPPROTO_UDP)
+        self.udp_sock = socket.socket(socket.AF_INET,
+                                      socket.SOCK_DGRAM,
+                                      socket.IPPROTO_UDP)
 
         # We are trying to bind to all interfaces with 0.0.0.0
-        if not hub_port:
-            self.sock.bind(('0.0.0.0', 0))
-            self.hub_port = self.sock.getsockname()[1]
+        if not udp_port:
+            self.udp_sock.bind(('0.0.0.0', 0))
+            self.udp_port = self.udp_sock.getsockname()[1]
         else:
-            self.hub_port = hub_port
+            self.udp_port = udp_port
             try:
-                self.sock.bind(('0.0.0.0', self.hub_port))
+                self.udp_sock.bind(('0.0.0.0', self.udp_port))
             except Exception as e:
-                raise RuntimeError(f"Could not bind to hub_port {hub_port} because: {e}")
-        self.sock.settimeout(self.loop_freq / 1000)
-        self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.hub_port))
+                raise RuntimeError(f"Could not bind to udp_port {udp_port} because: {e}")
+        self.udp_sock.settimeout(self.loop_freq / 1000)
+        self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.udp_port))
 
         self._context = zmq.Context()
-        self.ic_channel = self._context.socket(zmq.DEALER)
-        self.ic_channel.setsockopt(zmq.LINGER, 0)
-        self.ic_channel.set_hwm(0)
-        self.ic_channel.RCVTIMEO = int(self.loop_freq)  # in milliseconds
-        self.logger.debug("hub_address: {}. hub_port_range {}".format(hub_address, hub_port_range))
-        self.ic_port = self.ic_channel.bind_to_random_port("tcp://*",
-                                                           min_port=hub_port_range[0],
-                                                           max_port=hub_port_range[1])
+        self.zmq_receiver_channel = self._context.socket(zmq.DEALER)
+        self.zmq_receiver_channel.setsockopt(zmq.LINGER, 0)
+        self.zmq_receiver_channel.set_hwm(0)
+        self.zmq_receiver_channel.RCVTIMEO = int(self.loop_freq)  # in milliseconds
+        self.logger.debug("hub_address: {}. zmq_port_range {}".format(hub_address, zmq_port_range))
+        self.zmq_receiver_port = self.zmq_receiver_channel.bind_to_random_port("tcp://*",
+                                                                               min_port=zmq_port_range[0],
+                                                                               max_port=zmq_port_range[1])
 
     def start(self,
               priority_msgs: "queue.Queue[AddressedMonitoringMessage]",
@@ -103,7 +103,7 @@ class MonitoringRouter:
             router_keep_going = True
             while router_keep_going:
                 try:
-                    data, addr = self.sock.recvfrom(2048)
+                    data, addr = self.udp_sock.recvfrom(2048)
                     resource_msg = pickle.loads(data)
                     self.logger.debug("Got UDP Message from {}: {}".format(addr, resource_msg))
                     resource_msgs.put((resource_msg, addr))
@@ -115,11 +115,11 @@ class MonitoringRouter:
                     while time.time() - dfk_loop_start < 1.0:  # TODO make configurable
                         # note that nothing checks that msg really is of the annotated type
                         msg: TaggedMonitoringMessage
-                        msg = self.ic_channel.recv_pyobj()
+                        msg = self.zmq_receiver_channel.recv_pyobj()
 
-                        assert isinstance(msg, tuple), "IC Channel expects only tuples, got {}".format(msg)
-                        assert len(msg) >= 1, "IC Channel expects tuples of length at least 1, got {}".format(msg)
-                        assert len(msg) == 2, "IC Channel expects message tuples of exactly length 2, got {}".format(msg)
+                        assert isinstance(msg, tuple), "ZMQ Receiver expects only tuples, got {}".format(msg)
+                        assert len(msg) >= 1, "ZMQ Receiver expects tuples of length at least 1, got {}".format(msg)
+                        assert len(msg) == 2, "ZMQ Receiver expects message tuples of exactly length 2, got {}".format(msg)
 
                         msg_0: AddressedMonitoringMessage
                         msg_0 = (msg, 0)
@@ -141,7 +141,7 @@ class MonitoringRouter:
                             # There is a type: ignore here because if msg[0]
                             # is of the correct type, this code is unreachable,
                             # but there is no verification that the message
-                            # received from ic_channel.recv_pyobj() is actually
+                            # received from zmq_receiver_channel.recv_pyobj() is actually
                             # of that type.
                             self.logger.error("Discarding message "  # type: ignore[unreachable]
                                               f"from interchange with unknown type {msg[0].value}")
@@ -158,7 +158,7 @@ class MonitoringRouter:
             last_msg_received_time = time.time()
             while time.time() - last_msg_received_time < self.atexit_timeout:
                 try:
-                    data, addr = self.sock.recvfrom(2048)
+                    data, addr = self.udp_sock.recvfrom(2048)
                     msg = pickle.loads(data)
                     self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
                     resource_msgs.put((msg, addr))
@@ -180,8 +180,8 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    resource_msgs: "queue.Queue[AddressedMonitoringMessage]",
 
                    hub_address: str,
-                   hub_port: Optional[int],
-                   hub_port_range: Tuple[int, int],
+                   udp_port: Optional[int],
+                   zmq_port_range: Tuple[int, int],
 
                    logdir: str,
                    logging_level: int,
@@ -189,8 +189,8 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
     setproctitle("parsl: monitoring router")
     try:
         router = MonitoringRouter(hub_address=hub_address,
-                                  hub_port=hub_port,
-                                  hub_port_range=hub_port_range,
+                                  udp_port=udp_port,
+                                  zmq_port_range=zmq_port_range,
                                   logdir=logdir,
                                   logging_level=logging_level,
                                   run_id=run_id)
@@ -198,7 +198,7 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
         logger.error("MonitoringRouter construction failed.", exc_info=True)
         comm_q.put(f"Monitoring router construction failed: {e}")
     else:
-        comm_q.put((router.hub_port, router.ic_port))
+        comm_q.put((router.udp_port, router.zmq_receiver_port))
 
         router.logger.info("Starting MonitoringRouter in router_starter")
         try:

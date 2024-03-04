@@ -163,8 +163,8 @@ class MonitoringHub(RepresentationMixin):
         self.router_proc = ForkProcess(target=router_starter,
                                        args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),
                                        kwargs={"hub_address": self.hub_address,
-                                               "hub_port": self.hub_port,
-                                               "hub_port_range": self.hub_port_range,
+                                               "udp_port": self.hub_port,
+                                               "zmq_port_range": self.hub_port_range,
                                                "logdir": self.logdir,
                                                "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                                "run_id": run_id
@@ -204,7 +204,7 @@ class MonitoringHub(RepresentationMixin):
             logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
             raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
 
-        udp_port, ic_port = comm_q_result
+        udp_port, zmq_port = comm_q_result
 
         self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
 
@@ -214,11 +214,11 @@ class MonitoringHub(RepresentationMixin):
         self._dfk_channel.setsockopt(zmq.LINGER, 0)
         self._dfk_channel.set_hwm(0)
         self._dfk_channel.setsockopt(zmq.SNDTIMEO, self.dfk_channel_timeout)
-        self._dfk_channel.connect("tcp://{}:{}".format(self.hub_address, ic_port))
+        self._dfk_channel.connect("tcp://{}:{}".format(self.hub_address, zmq_port))
 
         logger.info("Monitoring Hub initialized")
 
-        return ic_port
+        return zmq_port
 
     # TODO: tighten the Any message format
     def send(self, mtype: MessageType, message: Any) -> None:
