@@ -545,8 +545,8 @@ class DatabaseManager:
                     self._insert(table=STATUS, messages=reprocessable_last_resource_messages)
             except Exception:
                 logger.exception(
-                    "Exception in db loop: this might have been a malformed message,"
-                    "or some other error. monitoring data may have been lost"
+                    "Exception in db loop: this might have been a malformed message, "
+                    " or some other error. monitoring data may have been lost"
                 )
                 exception_happened = True
         if exception_happened:
