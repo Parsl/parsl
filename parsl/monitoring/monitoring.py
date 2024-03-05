@@ -290,8 +290,12 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.close()
             if exception_msgs:
                 for exception_msg in exception_msgs:
-                    self.logger.error("{} process delivered an exception: {}. Terminating all monitoring processes immediately.".format(exception_msg[0],
-                                      exception_msg[1]))
+                    self.logger.error(
+                        "{} process delivered an exception: {}. Terminating all monitoring processes immediately.".format(
+                            exception_msg[0],
+                            exception_msg[1]
+                        )
+                    )
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
                 self.filesystem_proc.terminate()
