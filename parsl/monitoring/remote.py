@@ -2,6 +2,7 @@ import os
 import time
 import logging
 import datetime
+import parsl.monitoring.radios as radios
 from functools import wraps
 
 from parsl.multiprocessing import ForkProcess
@@ -9,7 +10,6 @@ from multiprocessing import Event
 from parsl.process_loggers import wrap_with_logs
 
 from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.radios import MonitoringRadio, UDPRadio, HTEXRadio, FilesystemRadio
 from typing import Any, Callable, Dict, List, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
@@ -121,18 +121,8 @@ def send_first_last_message(try_id: int,
     import platform
     import os
 
-    radio: MonitoringRadio
-    if radio_mode == "udp":
-        radio = UDPRadio(monitoring_hub_url,
-                         source_id=task_id)
-    elif radio_mode == "htex":
-        radio = HTEXRadio(monitoring_hub_url,
-                          source_id=task_id)
-    elif radio_mode == "filesystem":
-        radio = FilesystemRadio(monitoring_url=monitoring_hub_url,
-                                source_id=task_id, run_dir=run_dir)
-    else:
-        raise RuntimeError(f"Unknown radio mode: {radio_mode}")
+    radio: radios.MonitoringRadio
+    radio = radios.get_monitoring_radio(monitoring_hub_url, task_id, radio_mode, run_dir)
 
     msg = (MessageType.RESOURCE_INFO,
            {'run_id': run_id,
@@ -177,18 +167,8 @@ def monitor(pid: int,
 
     setproctitle("parsl: task resource monitor")
 
-    radio: MonitoringRadio
-    if radio_mode == "udp":
-        radio = UDPRadio(monitoring_hub_url,
-                         source_id=task_id)
-    elif radio_mode == "htex":
-        radio = HTEXRadio(monitoring_hub_url,
-                          source_id=task_id)
-    elif radio_mode == "filesystem":
-        radio = FilesystemRadio(monitoring_url=monitoring_hub_url,
-                                source_id=task_id, run_dir=run_dir)
-    else:
-        raise RuntimeError(f"Unknown radio mode: {radio_mode}")
+    radio: radios.MonitoringRadio
+    radio = radios.get_monitoring_radio(monitoring_hub_url, task_id, radio_mode, run_dir)
 
     logging.debug("start of monitor")
 
