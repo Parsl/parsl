@@ -11,7 +11,7 @@ config = Config(
         HighThroughputExecutor(
             label='Stampede2_HTEX',
             address=address_by_interface('em3'),
-            max_workers=2,
+            max_workers_per_node=2,
             provider=SlurmProvider(
                 nodes_per_block=2,
                 init_blocks=1,

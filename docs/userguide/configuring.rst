@@ -34,7 +34,7 @@ used by the infiniband interface with ``address_by_interface('ib0')``
             HighThroughputExecutor(
                 label="frontera_htex",
                 address=address_by_interface('ib0'),
-                max_workers=56,
+                max_workers_per_node=56,
                 provider=SlurmProvider(
                     channel=LocalChannel(),
                     nodes_per_block=128,
