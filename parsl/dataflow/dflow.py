@@ -1409,8 +1409,12 @@ class DataFlowKernelLoader:
     def clear(cls) -> None:
         """Clear the active DataFlowKernel so that a new one can be loaded."""
         cls._dfk = None
+<<<<<<< HEAD
     self.cleanup()
 
+=======
+        self.cleanup()
+>>>>>>> c4f3087c (fix for 3104)
     @classmethod
     @typeguard.typechecked
     def load(cls, config: Optional[Config] = None) -> DataFlowKernel:
@@ -1448,4 +1452,8 @@ class DataFlowKernelLoader:
         if cls._dfk is None:
             raise NoDataFlowKernelError('Must first load config')
         return cls._dfk
+<<<<<<< HEAD
     self.cleanup()
+=======
+        self.cleanup()
+>>>>>>> c4f3087c (fix for 3104)
