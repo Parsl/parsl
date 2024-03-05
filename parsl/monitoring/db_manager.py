@@ -1,3 +1,4 @@
+
 import logging
 import threading
 import queue
@@ -544,7 +545,10 @@ class DatabaseManager:
                 if reprocessable_last_resource_messages:
                     self._insert(table=STATUS, messages=reprocessable_last_resource_messages)
             except Exception:
-                logger.exception("Exception in db loop: this might have been a malformed message, or some other error. monitoring data may have been lost")
+                logger.exception(
+                    "Exception in db loop: this might have been a malformed message,"
+                    "or some other error. monitoring data may have been lost"
+                )
                 exception_happened = True
         if exception_happened:
             raise RuntimeError("An exception happened sometime during database processing and should have been logged in database_manager.log")
