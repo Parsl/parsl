@@ -622,9 +622,11 @@ def start_file_logger(filename: str, level: int = logging.DEBUG, format_string: 
     """
     if format_string is None:
         format_string = (
+
             "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d "
             "%(processName)s(%(process)d) %(threadName)s "
             "%(funcName)s [%(levelname)s] %(message)s"
+
         )
 
     global logger

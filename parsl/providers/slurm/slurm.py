@@ -286,7 +286,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                     stdout=stdout,
                     stderr=stderr,
                     retcode=retcode
-                                    )
+
+                )
+
         else:
             logger.error("Submit command failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
