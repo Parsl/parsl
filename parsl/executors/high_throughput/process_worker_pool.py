@@ -869,7 +869,8 @@ if __name__ == "__main__":
                           block_id=args.block_id,
                           cores_per_worker=float(args.cores_per_worker),
                           mem_per_worker=None if args.mem_per_worker == 'None' else float(args.mem_per_worker),
-                          max_workers_per_node=args.max_workers_per_node if args.max_workers_per_node == float('inf') else int(args.max_workers_per_node),
+                          max_workers_per_node=(args.max_workers_per_node if args.max_workers_per_node == float('inf')
+                                                else int(args.max_workers_per_node)),
                           prefetch_capacity=int(args.prefetch_capacity),
                           heartbeat_threshold=int(args.hb_threshold),
                           heartbeat_period=int(args.hb_period),
