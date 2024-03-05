@@ -37,6 +37,7 @@ class ManagerLost(Exception):
     ''' Task lost due to manager loss. Manager is considered lost when multiple heartbeats
     have been missed.
     '''
+
     def __init__(self, manager_id: bytes, hostname: str) -> None:
         self.manager_id = manager_id
         self.tstamp = time.time()
@@ -49,6 +50,7 @@ class ManagerLost(Exception):
 class VersionMismatch(Exception):
     ''' Manager and Interchange versions do not match
     '''
+
     def __init__(self, interchange_version: str, manager_version: str):
         self.interchange_version = interchange_version
         self.manager_version = manager_version
@@ -66,6 +68,7 @@ class Interchange:
     2. Allow for workers to join and leave the union
     3. Detect workers that have failed using heartbeats
     """
+
     def __init__(self,
                  client_address: str = "127.0.0.1",
                  interchange_address: Optional[str] = None,
@@ -392,7 +395,8 @@ class Interchange:
         logger.info("Processed {} tasks in {} seconds".format(self.count, delta))
         logger.warning("Exiting")
 
-    def process_task_outgoing_incoming(self, interesting_managers: Set[bytes], hub_channel: Optional[zmq.Socket], kill_event: threading.Event) -> None:
+    def process_task_outgoing_incoming(self, interesting_managers:
+                                       Set[bytes], hub_channel: Optional[zmq.Socket], kill_event: threading.Event) -> None:
         """Process one message from manager on the task_outgoing channel.
         Note that this message flow is in contradiction to the name of the
         channel - it is not an outgoing message and it is not a task.
@@ -620,8 +624,13 @@ def start_file_logger(filename: str, level: int = logging.DEBUG, format_string: 
     -------
         None.
     """
+
     if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d %(processName)s(%(process)d) %(threadName)s %(funcName)s [%(levelname)s]  %(message)s"
+        format_string = (
+            "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d "
+            "%(processName)s(%(process)d) %(threadName)s "
+            "%(funcName)s [%(levelname)s] %(message)s"
+        )
 
     global logger
     logger = logging.getLogger(LOGGER_NAME)

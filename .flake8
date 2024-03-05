@@ -8,7 +8,7 @@
 # W504: line break after binary operator
 #       (Raised by flake8 even when it is followed)
 ignore = E126, E402, E129, W504
-max-line-length = 155
+max-line-length = 150
 exclude = test_import_fail.py,
   parsl/executors/workqueue/parsl_coprocess.py
 # E741 disallows ambiguous single letter names which look like numbers
@@ -22,4 +22,4 @@ per-file-ignores = parsl/monitoring/visualization/*:E741,
   # tests often import fresh_config into their namespace as local_config
   # but then do not use it directly, because tests/conftests.py
   # looks for it instead.
-  parsl/tests/**: F401
+  parsl/tests/**:F401

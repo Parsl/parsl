@@ -629,8 +629,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         The outgoing_q is an external process listens on this
         queue for new work. This method behaves like a
-        submit call as described here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
-
+        submit call as described here
+        `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
         Args:
             - func (callable) : Callable function
             - resource_specification (dict): Dictionary containing relevant info about task that is needed by underlying executors.
