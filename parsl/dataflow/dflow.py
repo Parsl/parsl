@@ -70,15 +70,14 @@ class DataFlowKernel:
     @typechecked
     def __init__(self, config: Config) -> None:
         """Initialize the DataFlowKernel.
-    # Consider adding 'self.cleanup()' here if this method allocates resources.
-
+        
         Parameters
         ----------
         config : Config
             A specification of all configuration options. For more details see the
             :class:~`parsl.config.Config` documentation.
         """
-
+        self.cleanup()
         # this will be used to check cleanup only happens once
         self.cleanup_called = False
 
@@ -125,7 +124,7 @@ class DataFlowKernel:
             self.workflow_name = self.monitoring.workflow_name
         else:
             for frame in inspect.stack():
-    # Consider implementing 'self.cleanup()' in this class for resource management.
+                self.cleanup()
                 logger.debug("Considering candidate for workflow name: {}".format(frame.filename))
                 fname = os.path.basename(str(frame.filename))
                 parsl_file_names = ['dflow.py', 'typeguard.py', '__init__.py']
@@ -205,7 +204,6 @@ class DataFlowKernel:
         self.submitter_lock = threading.Lock()
 
         
-
     def _send_task_log_info(self, task_record: TaskRecord) -> None:
         if self.monitoring:
             task_log_info = self._create_task_log_info(task_record)
@@ -1411,20 +1409,20 @@ class DataFlowKernelLoader:
     def clear(cls) -> None:
         """Clear the active DataFlowKernel so that a new one can be loaded."""
         cls._dfk = None
-    # Consider adding 'self.cleanup()' here if this method allocates resources.
+    self.cleanup()
 
     @classmethod
     @typeguard.typechecked
     def load(cls, config: Optional[Config] = None) -> DataFlowKernel:
         """Load a DataFlowKernel.
-    # Consider adding 'self.cleanup()' here if this method allocates resources.
-
+       
         Args:
             - config (Config) : Configuration to load. This config will be passed to a
               new DataFlowKernel instantiation which will be set as the active DataFlowKernel.
         Returns:
             - DataFlowKernel : The loaded DataFlowKernel object.
         """
+        self.cleanup()
         if cls._dfk is not None:
             raise ConfigurationError('Config has already been loaded')
 
@@ -1442,7 +1440,7 @@ class DataFlowKernelLoader:
         added after cleanup has started such as data stageout.
         """
         cls.dfk().wait_for_current_tasks()
-    # Consider adding 'self.cleanup()' here if this method allocates resources.
+    self.cleanup()
 
     @classmethod
     def dfk(cls) -> DataFlowKernel:
@@ -1450,4 +1448,4 @@ class DataFlowKernelLoader:
         if cls._dfk is None:
             raise NoDataFlowKernelError('Must first load config')
         return cls._dfk
-    # Consider adding 'self.cleanup()' here if this method allocates resources.
+    self.cleanup()
