@@ -14,7 +14,7 @@ def local_config():
                 heartbeat_threshold=2,
                 poll_period=100,
                 address="127.0.0.1",
-                max_workers=1,
+                max_workers_per_node=1,
                 provider=LocalProvider(
                     init_blocks=0,
                     max_blocks=2,

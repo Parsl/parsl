@@ -36,7 +36,7 @@ configuration. Here the `parsl.monitoring.MonitoringHub` is specified to use por
           HighThroughputExecutor(
               label="local_htex",
               cores_per_worker=1,
-              max_workers=4,
+              max_workers_per_node=4,
               address=address_by_hostname(),
           )
       ],
