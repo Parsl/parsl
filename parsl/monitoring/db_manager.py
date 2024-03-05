@@ -519,8 +519,8 @@ class DatabaseManager:
                             else:
                                 if task_try_id in deferred_resource_messages:
                                     logger.error(
-                                            "Task {} already has a deferred resource message.
-                                            Discarding previous message.".format(msg['task_id'])
+                                            "Task {} already has a deferred resource message."
+                                            "Discarding previous message.".format(msg['task_id'])
                                             )
                                 deferred_resource_messages[task_try_id] = msg
                         elif msg['last_msg']:
