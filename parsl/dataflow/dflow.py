@@ -1,5 +1,4 @@
 from __future__ import annotations
-import atexit
 import logging
 import os
 import pathlib
@@ -71,6 +70,7 @@ class DataFlowKernel:
     @typechecked
     def __init__(self, config: Config) -> None:
         """Initialize the DataFlowKernel.
+    # Consider adding 'self.cleanup()' here if this method allocates resources.
 
         Parameters
         ----------
@@ -125,6 +125,7 @@ class DataFlowKernel:
             self.workflow_name = self.monitoring.workflow_name
         else:
             for frame in inspect.stack():
+    # Consider implementing 'self.cleanup()' in this class for resource management.
                 logger.debug("Considering candidate for workflow name: {}".format(frame.filename))
                 fname = os.path.basename(str(frame.filename))
                 parsl_file_names = ['dflow.py', 'typeguard.py', '__init__.py']
@@ -203,7 +204,7 @@ class DataFlowKernel:
         self.tasks: Dict[int, TaskRecord] = {}
         self.submitter_lock = threading.Lock()
 
-        atexit.register(self.atexit_cleanup)
+        
 
     def _send_task_log_info(self, task_record: TaskRecord) -> None:
         if self.monitoring:
@@ -1410,11 +1411,13 @@ class DataFlowKernelLoader:
     def clear(cls) -> None:
         """Clear the active DataFlowKernel so that a new one can be loaded."""
         cls._dfk = None
+    # Consider adding 'self.cleanup()' here if this method allocates resources.
 
     @classmethod
     @typeguard.typechecked
     def load(cls, config: Optional[Config] = None) -> DataFlowKernel:
         """Load a DataFlowKernel.
+    # Consider adding 'self.cleanup()' here if this method allocates resources.
 
         Args:
             - config (Config) : Configuration to load. This config will be passed to a
@@ -1439,6 +1442,7 @@ class DataFlowKernelLoader:
         added after cleanup has started such as data stageout.
         """
         cls.dfk().wait_for_current_tasks()
+    # Consider adding 'self.cleanup()' here if this method allocates resources.
 
     @classmethod
     def dfk(cls) -> DataFlowKernel:
@@ -1446,3 +1450,4 @@ class DataFlowKernelLoader:
         if cls._dfk is None:
             raise NoDataFlowKernelError('Must first load config')
         return cls._dfk
+    # Consider adding 'self.cleanup()' here if this method allocates resources.
