@@ -8,7 +8,7 @@
 # W504: line break after binary operator
 #       (Raised by flake8 even when it is followed)
 ignore = E126, E402, E129, W504
-max-line-length = 155
+max-line-length = 154
 exclude = test_import_fail.py,
   parsl/executors/workqueue/parsl_coprocess.py
 # E741 disallows ambiguous single letter names which look like numbers
