@@ -1143,8 +1143,7 @@ class DataFlowKernel:
 
     def atexit_cleanup(self) -> None:
         if not self.cleanup_called:
-            logger.info("DFK cleanup because python process is exiting")
-            self.cleanup()
+            logger.warning("Parsl wasn't cleaned up. You should call parsl.dfk().cleanup() before exiting.")
         else:
             logger.info("python process is exiting, but DFK has already been cleaned up")
 
