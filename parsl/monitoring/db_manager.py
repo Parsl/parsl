@@ -250,6 +250,12 @@ class Database:
             'psutil_process_disk_write', Float, nullable=True)
         psutil_process_status = Column(
             'psutil_process_status', Text, nullable=True)
+        psutil_cpu_num = Column(
+            'psutil_cpu_num', Text, nullable=True)
+        psutil_process_num_ctx_switches_voluntary = Column(
+            'psutil_process_num_ctx_switches_voluntary', Float, nullable=True)
+        psutil_process_num_ctx_switches_involuntary = Column(
+            'psutil_process_num_ctx_switches_involuntary', Float, nullable=True)
         __table_args__ = (
             PrimaryKeyConstraint('try_id', 'task_id', 'run_id', 'timestamp'),
         )
