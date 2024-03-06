@@ -1,5 +1,5 @@
-from parsl.dataflow.memoization import id_for_memo
 from parsl.data_provider.files import File
+from parsl.dataflow.memoization import id_for_memo
 
 
 @id_for_memo.register(File)

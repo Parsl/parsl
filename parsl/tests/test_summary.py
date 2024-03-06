@@ -1,5 +1,6 @@
-import parsl
 import pytest
+
+import parsl
 from parsl.tests.configs.local_threads import fresh_config
 
 

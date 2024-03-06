@@ -7,9 +7,9 @@ from parsl.tests.configs.local_threads import fresh_config
 
 @python_app
 def worker_identify(x, sleep_dur=0.2):
-    import time
     import os
     import threading
+    import time
     time.sleep(sleep_dur)
     return {"pid": os.getpid(),
             "tid": threading.current_thread()}

@@ -1,8 +1,10 @@
 import argparse
 import logging
-import pytest
-import parsl
 import time
+
+import pytest
+
+import parsl
 from parsl.app.app import python_app  # , bash_app
 from parsl.jobs.states import JobState
 from parsl.tests.site_tests.site_config_selector import fresh_config

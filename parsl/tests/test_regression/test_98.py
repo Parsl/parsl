@@ -6,7 +6,6 @@ import argparse
 import pytest
 
 import parsl
-
 from parsl.dataflow.dflow import DataFlowKernel
 from parsl.tests.configs.local_threads import config
 

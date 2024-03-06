@@ -1,8 +1,8 @@
 import pytest
 
 from parsl import python_app
-from parsl.tests.configs.htex_local import fresh_config
 from parsl.serialize.errors import SerializationError
+from parsl.tests.configs.htex_local import fresh_config
 
 
 def local_config():

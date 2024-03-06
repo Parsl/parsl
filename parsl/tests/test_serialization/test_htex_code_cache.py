@@ -1,10 +1,9 @@
-import parsl
-import pytest
-
 from typing import Any
 
-from parsl.serialize.facade import methods_for_code
+import pytest
 
+import parsl
+from parsl.serialize.facade import methods_for_code
 from parsl.tests.configs.htex_local import fresh_config as local_config
 
 

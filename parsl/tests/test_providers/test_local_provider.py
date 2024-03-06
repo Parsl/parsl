@@ -1,7 +1,6 @@
 import logging
 import os
 import pathlib
-import pytest
 import random
 import shutil
 import socket
@@ -9,6 +8,8 @@ import subprocess
 import tempfile
 import threading
 import time
+
+import pytest
 
 from parsl.channels import LocalChannel, SSHChannel
 from parsl.jobs.states import JobState

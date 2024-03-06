@@ -1,5 +1,6 @@
 import pytest
-from parsl import bash_app, File
+
+from parsl import File, bash_app
 from parsl.tests.configs.local_threads import fresh_config as local_config
 
 

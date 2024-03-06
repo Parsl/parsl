@@ -1,6 +1,8 @@
 import argparse
-import parsl
 import logging
+
+import parsl
+
 parsl.load()
 
 from parsl import python_app

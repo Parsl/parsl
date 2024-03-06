@@ -1,5 +1,6 @@
 import pytest
-from parsl.serialize import serialize, deserialize
+
+from parsl.serialize import deserialize, serialize
 from parsl.serialize.concretes import DillSerializer, PickleSerializer
 
 

@@ -6,7 +6,6 @@ import pytest
 from parsl.app.app import bash_app, python_app
 from parsl.tests.configs.local_threads import config
 
-
 local_config = config
 
 

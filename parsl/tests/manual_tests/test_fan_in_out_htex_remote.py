@@ -1,12 +1,12 @@
+import logging
+
 import parsl
-from parsl.monitoring.monitoring import MonitoringHub
+from parsl.app.app import python_app
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import AprunLauncher
+from parsl.monitoring.monitoring import MonitoringHub
 from parsl.providers import CobaltProvider
-
-import logging
-from parsl.app.app import python_app
 
 
 def local_setup():

@@ -1,9 +1,10 @@
 import contextlib
 import os
+
 import pytest
+
 import parsl
 from parsl import python_app
-
 from parsl.tests.configs.local_threads_checkpoint import fresh_config
 
 

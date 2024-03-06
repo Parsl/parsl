@@ -1,6 +1,6 @@
 import pytest
 
-from parsl import python_app, File
+from parsl import File, python_app
 
 
 @python_app

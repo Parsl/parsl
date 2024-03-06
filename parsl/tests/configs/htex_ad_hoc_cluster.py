@@ -1,9 +1,7 @@
-from parsl.providers import AdHocProvider
 from parsl.channels import SSHChannel
-from parsl.executors import HighThroughputExecutor
-
 from parsl.config import Config
-
+from parsl.executors import HighThroughputExecutor
+from parsl.providers import AdHocProvider
 from parsl.tests.configs.user_opts import user_opts
 
 config = Config(

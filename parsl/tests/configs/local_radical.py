@@ -1,9 +1,7 @@
 import os
 
 from parsl.config import Config
-from parsl.executors.radical import RadicalPilotExecutor
-from parsl.executors.radical import ResourceConfig
-
+from parsl.executors.radical import RadicalPilotExecutor, ResourceConfig
 
 rpex_cfg = ResourceConfig()
 

@@ -1,8 +1,8 @@
 import pytest
 
 from parsl.app.app import bash_app
-from parsl.data_provider.files import File
 from parsl.app.futures import DataFuture
+from parsl.data_provider.files import File
 
 
 @bash_app

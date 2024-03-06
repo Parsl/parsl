@@ -1,7 +1,8 @@
+import time
+
 import pytest
 
 from parsl import DataFlowKernel, set_stream_logger
-import time
 from parsl.tests.configs.local_threads import config
 
 
