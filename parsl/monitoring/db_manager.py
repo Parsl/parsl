@@ -250,6 +250,12 @@ class Database:
             'psutil_process_disk_write', Float, nullable=True)
         psutil_process_status = Column(
             'psutil_process_status', Text, nullable=True)
+        psutil_cpu_num = Column(
+            'psutil_cpu_num', Text, nullable=True)
+        psutil_process_num_ctx_switches_voluntary = Column(
+            'psutil_process_num_ctx_switches_voluntary', Float, nullable=True)
+        psutil_process_num_ctx_switches_involuntary = Column(
+            'psutil_process_num_ctx_switches_involuntary', Float, nullable=True)
         __table_args__ = (
             PrimaryKeyConstraint('try_id', 'task_id', 'run_id', 'timestamp'),
         )
@@ -518,7 +524,10 @@ class DatabaseManager:
                                 reprocessable_first_resource_messages.append(msg)
                             else:
                                 if task_try_id in deferred_resource_messages:
-                                    logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
+                                    logger.error(
+                                        "Task {} already has a deferred resource message. "
+                                        "Discarding previous message.".format(msg['task_id'])
+                                    )
                                 deferred_resource_messages[task_try_id] = msg
                         elif msg['last_msg']:
                             # This assumes that the primary key has been added
@@ -544,7 +553,10 @@ class DatabaseManager:
                 if reprocessable_last_resource_messages:
                     self._insert(table=STATUS, messages=reprocessable_last_resource_messages)
             except Exception:
-                logger.exception("Exception in db loop: this might have been a malformed message, or some other error. monitoring data may have been lost")
+                logger.exception(
+                    "Exception in db loop: this might have been a malformed message, "
+                    "or some other error. monitoring data may have been lost"
+                )
                 exception_happened = True
         if exception_happened:
             raise RuntimeError("An exception happened sometime during database processing and should have been logged in database_manager.log")
