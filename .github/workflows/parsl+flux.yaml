@@ -35,6 +35,10 @@ jobs:
         run: |
           pip3 install . 
 
+      - name: Install pytest
+        run: |
+          pip3 install pytest
+
       - name: Verify Parsl Installation
         run: |
           pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/local_threads.py --random-order --durations 10
