@@ -1143,12 +1143,16 @@ class DataFlowKernel:
 
     def atexit_cleanup(self) -> None:
         if not self.cleanup_called:
-            logger.warning("Python is exiting with a DFK still running. "
-                           "You should call parsl.dfk().cleanup() before "
-                           "exiting to release any resources")
+            try:
+                logger.info("DFK cleanup because python process is exiting")
+                self.cleanup()
+            except Exception as e:
+                logger.error(f"An error occurred during cleanup: {e}")
+            finally:
+                self.cleanup_called = True
         else:
             logger.info("python process is exiting, but DFK has already been cleaned up")
-
+            
     def wait_for_current_tasks(self) -> None:
         """Waits for all tasks in the task list to be completed, by waiting for their
         AppFuture to be completed. This method will not necessarily wait for any tasks
