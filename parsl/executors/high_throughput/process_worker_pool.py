@@ -820,19 +820,33 @@ if __name__ == "__main__":
         else:
             raise argparse.ArgumentTypeError("cpu-affinity must be one of {} or a list format".format(allowed_strategies))
 
-    parser.add_argument("--cpu-affinity", type=strategyorlist,
-                        required=True,
-                        help="Whether/how workers should control CPU affinity.")
-    parser.add_argument("--available-accelerators", type=str, nargs="*",
-                        help="Names of available accelerators")
-    parser.add_argument("--enable_mpi_mode", action='store_true',
-                        help="Enable MPI mode")
-    parser.add_argument("--mpi-launcher", type=str, choices=VALID_LAUNCHERS,
-                        help="MPI launcher to use iff enable_mpi_mode=true")
+    parser.add_argument("--cpu-affinity", type=str, required=True,
+                        help="Specify whether/how workers should control CPU affinity.")
 
+    parser.add_argument("--available-accelerators", type=str, nargs="*",
+                        help="Specify the names of available accelerators. If not provided, it is assumed that there are no accelerators available.",
+                        default=[])
+
+    parser.add_argument("--enable-mpi-mode", action='store_true',
+                        help="Enable MPI mode.")
+
+    parser.add_argument("--mpi-launcher", type=str, choices=VALID_LAUNCHERS,
+                        help="Specify the MPI launcher to use if --enable-mpi-mode is true.")
+
+    # Parse the arguments
     args = parser.parse_args()
 
-    os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
+    # Ensure the validity of the MPI launcher if MPI mode is enabled
+    if args.enable_mpi_mode and not args.mpi_launcher:
+        parser.error("--mpi-launcher is required when --enable-mpi-mode is enabled.")
+
+    # Ensure correctness of CPU affinity specification
+    valid_cpu_affinities = ['none', 'auto', 'manual']  # Define valid values for CPU affinity
+    if args.cpu_affinity.lower() not in valid_cpu_affinities:
+        parser.error("--cpu-affinity must be one of: none, auto, manual.")
+
+    # Create necessary directories
+    os.makedirs(os.path.join(args.logdir, f"block-{args.block_id}", args.uid), exist_ok=True)
 
     try:
         logger = start_file_logger('{}/block-{}/{}/manager.log'.format(args.logdir, args.block_id, args.uid),
