@@ -446,16 +446,7 @@ The following snippet shows an example configuration for accessing NSCC's **ASPI
 .. literalinclude:: ../../parsl/configs/ASPIRE1.py
 
 
-Blue Waters (NCSA)
-------------------
 
-.. image:: https://www.cray.com/sites/default/files/images/Solutions_Images/bluewaters.png
-
-The following snippet shows an example configuration for executing remotely on Blue Waters, a flagship machine at the National Center for Supercomputing Applications.
-The configuration assumes the user is running on a login node and uses the `parsl.providers.TorqueProvider` to interface
-with the scheduler, and uses the `parsl.launchers.AprunLauncher` to launch workers.
-
-.. literalinclude:: ../../parsl/configs/bluewaters.py
 
 Illinois Campus Cluster (UIUC)
 ------------------------------
