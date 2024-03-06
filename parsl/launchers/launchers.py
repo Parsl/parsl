@@ -20,8 +20,12 @@ class SimpleLauncher(Launcher):
         - permit_multiple_nodes (bool): Whether to allow multiple nodes per block
         """
         if nodes_per_block > 1 and not permit_multiple_nodes:
+<<<<<<< HEAD
             logger.warning("SimpleLauncher only supports 1 node per blok. "
                            "Set permit_multiple_nodes=True to allow multiple nodes per block.")
+=======
+            raise ValueError("SimpleLauncher only supports 1 node per block. Set permit_multiple_nodes=True to allow multiple nodes per block.")
+>>>>>>> df761e26e0375ebaff18adb576ab020d547c1362
         return command
 
 
