@@ -518,7 +518,9 @@ class DatabaseManager:
                                 reprocessable_first_resource_messages.append(msg)
                             else:
                                 if task_try_id in deferred_resource_messages:
-                                    logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
+                                    error_message = ("Task {} already has a deferred resource message. "
+                                                     "Discarding previous message.").format(msg['task_id'])
+                                    logger.error(error_message)
                                 deferred_resource_messages[task_try_id] = msg
                         elif msg['last_msg']:
                             # This assumes that the primary key has been added
