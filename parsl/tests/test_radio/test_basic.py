@@ -17,15 +17,16 @@ def this_app():
 
     return 5
 
+
 @pytest.mark.local
-def test_energy_collection():
+def test_diaspora_radio():
     # this is imported here rather than at module level because
     # it isn't available in a plain parsl install, so this module
     # would otherwise fail to import and break even a basic test
     # run.
     import sqlalchemy
     from sqlalchemy import text
-    from parsl.tests.configs.htex_local_radio import fresh_config
+    from parsl.tests.configs.htex_local_alternate import fresh_config
 
     if os.path.exists("runinfo/monitoring.db"):
         logger.info("Monitoring database already exists - deleting")
@@ -42,6 +43,3 @@ def test_energy_collection():
     parsl.clear()
 
     logger.info("all done")
-
-if __name__ == "__main__":
-    test_energy_collection()

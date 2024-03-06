@@ -269,7 +269,7 @@ class MonitoringHub(RepresentationMixin):
 
     # TODO: tighten the Any message format
     def send(self, mtype: MessageType, message: Any) -> None:
-        self.logger.debug("Sending message type {}".format(mtype))
+        self.logger.debug("Sending message type {} content {}".format(mtype, message))
         try:
             self._dfk_channel.send_pyobj((mtype, message))
         except zmq.Again:

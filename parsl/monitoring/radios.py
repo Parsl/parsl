@@ -8,9 +8,8 @@ import logging
 
 from abc import ABCMeta, abstractmethod
 
-from typing import Optional
+from typing import Optional, Any
 
-from parsl.monitoring.message_type import MessageType
 from parsl.serialize import serialize
 
 _db_manager_excepts: Optional[Exception]
@@ -24,11 +23,13 @@ class MonitoringRadio(metaclass=ABCMeta):
     def send(self, message: object) -> None:
         pass
 
+
 class DateTimeEncoder(json.JSONEncoder):
-    def default(self, obj):
+    def default(self, obj: Any) -> Any:
         if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
             return obj.isoformat()
         return super(DateTimeEncoder, self).default(obj)
+
 
 class DiasporaRadio(MonitoringRadio):
     def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
@@ -38,21 +39,24 @@ class DiasporaRadio(MonitoringRadio):
         logger.info("Diaspora-based monitoring channel initializing")
 
     def send(self, message: object) -> None:
-        msg_type = message[0]
-        # TODO: make configurable
         topic = "radio-test"
-        if 'run_id' in message[1]:
-            key = message[1]['run_id'].encode("utf-8")
+        if isinstance(message, tuple):
+            # TODO: make configurable
+            if 'run_id' in message[1]:
+                key = message[1]['run_id'].encode("utf-8")
+            else:
+                logger.info("set key as init")
+                key = b"init"
+            # logger.info(f"Sending message of type {key}:{msg_type} to topic {topic}, content {message[1]}")
+            self.producer.send(topic=topic, key=key, value=message[1])
         else:
-            logger.info("set key as init")
-            key = b"init"
-        # logger.info(f"Sending message of type {key}:{msg_type} to topic {topic}, content {message[1]}")
-        self.producer.send(topic=topic, key=key, value=message[1])
-        logger.info(f"Sent message")
+            key = b"payload"
+            self.producer.send(topic=topic, key=key, value=message)
+        logger.info("Sent message")
         return
 
     @staticmethod
-    def serialize(value):
+    def serialize(value: Any) -> bytes:
         return json.dumps(value, cls=DateTimeEncoder).encode("utf-8")
 
 

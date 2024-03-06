@@ -323,7 +323,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             launch_cmd = DEFAULT_LAUNCH_CMD
         self.launch_cmd = launch_cmd
 
-    radio_mode = "diaspora"
+    radio_mode = "htex"
 
     def _warn_deprecated(self, old: str, new: str):
         warnings.warn(
