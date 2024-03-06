@@ -36,8 +36,8 @@ jobs:
           pip3 install . 
 
       - name: Verify Parsl Installation
-      run: |
-        pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/local_threads.py --random-order --durations 10
+        run: |
+          pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/local_threads.py --random-order --durations 10
 
       - name: Start Flux
         run: |
