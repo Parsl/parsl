@@ -1,6 +1,11 @@
 import logging
 import json
-import globus_sdk
+from parsl.errors import OptionalModuleMissing
+try:
+    import globus_sdk
+    _globus_sdk_enabled = True
+except ImportError:
+    _globus_sdk_enabled = False
 import os
 import parsl
 import typeguard
@@ -218,20 +223,28 @@ class GlobusStaging(Staging, RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self, endpoint_uuid: str, endpoint_path: Optional[str] = None, local_path: Optional[str] = None):
+        if not _globus_sdk_enabled:
+            raise OptionalModuleMissing(['globus_sdk'], "GlobusStaging requires globus_sdk module")
         self.endpoint_uuid = endpoint_uuid
         self.endpoint_path = endpoint_path
         self.local_path = local_path
         self.globus = None
 
     def _globus_stage_in_app(self, executor, dfk):
-        executor_obj = dfk.executors[executor]
-        f = partial(_globus_stage_in, self, executor_obj)
-        return python_app(executors=['_parsl_internal'], data_flow_kernel=dfk)(f)
+        if _globus_sdk_enabled:
+            executor_obj = dfk.executors[executor]
+            f = partial(_globus_stage_in, self, executor_obj)
+            return python_app(executors=['_parsl_internal'], data_flow_kernel=dfk)(f)
+        else:
+            raise RuntimeError("Globus SDK is not available")
 
     def _globus_stage_out_app(self, executor, dfk):
-        executor_obj = dfk.executors[executor]
-        f = partial(_globus_stage_out, self, executor_obj)
-        return python_app(executors=['_parsl_internal'], data_flow_kernel=dfk)(f)
+        if _globus_sdk_enabled:
+            executor_obj = dfk.executors[executor]
+            f = partial(_globus_stage_out, self, executor_obj)
+            return python_app(executors=['_parsl_internal'], data_flow_kernel=dfk)(f)
+        else:
+            raise RuntimeError("Globus SDK is not available")
 
     # could this happen at __init__ time?
     def initialize_globus(self):
