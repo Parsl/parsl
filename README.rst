@@ -96,7 +96,7 @@ For Developers
     $ make   # show all available makefile targets
     $ make virtualenv # create a virtual environment
     $ source .venv/bin/activate # activate the virtual environment
-    $ You may need to install ``mpich`` Run "sudo apt install mpich" # if you using ubuntu
+    $ You may need to install ``mpich`` Run "sudo apt install mpich" # for example, if you using ubuntu
     $ make deps # install python dependencies from test-requirements.txt
     $ make test # make (all) tests. Run "make config_local_test" for a faster, smaller test set.
     $ make clean # remove virtualenv and all test and build artifacts
