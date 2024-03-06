@@ -1,0 +1,43 @@
+name: Test Flux Scheduler
+on:
+  pull_request: []
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        container: ['fluxrm/flux-sched:focal']
+
+    container:
+      image: ${{ matrix.container }}
+      options: "--platform=linux/amd64 --user root -it --init"
+
+    name: ${{ matrix.container }}
+    steps:
+      - name: Make Space
+        run: |
+          rm -rf /usr/share/dotnet
+          rm -rf /opt/ghc
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Reframe
+        run: |
+          apt-get update && apt-get install -y python3-pip curl
+          /bin/bash ./bootstrap.sh
+          export PATH=$PWD/bin:$PATH
+          which reframe
+
+      # Any additional examples added here will be tested
+      - name: Start Flux and Run Test
+        run: |
+          export PATH=$PWD/bin:$PATH
+          which reframe
+          flux start reframe -c tutorials/flux -C tutorials/flux/settings.py -l
+          flux start reframe -c tutorials/flux -C tutorials/flux/settings.py --run
+          flux start python3 ./test_reframe.py --rfm-user-config=tutorials/flux/settings.py -vvvv
