@@ -414,7 +414,8 @@ class Manager:
                             raise WorkerLost(worker_id, platform.node())
                         except Exception:
                             logger.info("Putting exception for executor task {} in the pending result queue".format(task['task_id']))
-                            result_package = {'type': 'result', 'task_id': task['task_id'],
+                            result_package = {'type': 'result',
+                                              'task_id': task['task_id'],
                                               'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
                             pkl_package = pickle.dumps(result_package)
                             self.pending_result_queue.put(pkl_package)
@@ -869,8 +870,10 @@ if __name__ == "__main__":
                           block_id=args.block_id,
                           cores_per_worker=float(args.cores_per_worker),
                           mem_per_worker=None if args.mem_per_worker == 'None' else float(args.mem_per_worker),
-                          max_workers_per_node=args.max_workers_per_node
-                          if args.max_workers_per_node == float('inf') else int(args.max_workers_per_node),
+                          max_workers_per_node=(
+                              args.max_workers_per_node if args.max_workers_per_node == float('inf')
+                              else int(args.max_workers_per_node)
+                          ),
                           prefetch_capacity=int(args.prefetch_capacity),
                           heartbeat_threshold=int(args.hb_threshold),
                           heartbeat_period=int(args.hb_period),

@@ -280,8 +280,13 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             else:
                 logger.error("Could not read job ID from submit command standard output.")
                 logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
-                raise SubmitException(job_name, "Could not read job ID from submit command standard output",
-                                      stdout=stdout, stderr=stderr, retcode=retcode)
+                raise SubmitException(
+                    job_name,
+                    "Could not read job ID from submit command standard output",
+                    stdout=stdout,
+                    stderr=stderr,
+                    retcode=retcode
+                )
         else:
             logger.error("Submit command failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
