@@ -1,3 +1,0 @@
-
-export JOBNAME=$parsl.htex_local.block-0.1709724966.3278108
-process_worker_pool.py --debug  -a 127.0.0.1 -p 0 -c 1 -m None --poll 10 --task_port=54922 --result_port=54734 --cert_dir /home/work/Open-Source/parsl-fork/runinfo/000/htex_local/certificates --logdir=/home/work/Open-Source/parsl-fork/.pytest/parsltest-current/test_one_block-esg15pl8/htex_local --block_id=0 --hb_period=30  --hb_threshold=120 --cpu-affinity none  --mpi-launcher=mpiexec --available-accelerators 
