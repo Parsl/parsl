@@ -33,7 +33,7 @@ jobs:
 
       - name: Install Parsl
         run: |
-          pip3 install parsl
+          pip3 install . 
 
       - name: Start Flux
         run: |
