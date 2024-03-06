@@ -31,6 +31,10 @@ jobs:
         run: |
           apt-get update && apt-get install -y python3-pip curl
 
+      - name: Install Parsl
+        run: |
+          pip3 install parsl
+
       - name: Start Flux
         run: |
           flux start flux version
