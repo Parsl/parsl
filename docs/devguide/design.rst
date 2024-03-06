@@ -1,29 +1,3 @@
-Historical: Swift vs Parsl
---------------------------
-
-.. note::
-   This section describes comparisons between Parsl and an earlier workflow
-   system, Swift, as part of a justification for the early prototyping stages
-   of Parsl development. It is no longer relevant for modern Parsl users, but
-   remains of historical interest.
-
-The following text is not well structured, and is mostly a brain dump that needs to be organized.
-Moving from Swift to an established language (python) came with its own tradeoffs. We get the backing
-of a rich and very well known language to handle the language aspects as well as the libraries.
-However, we lose the parallel evaluation of every statement in a script. The thesis is that what we
-lose is minimal and will not affect 95% of our workflows. This is not yet substantiated.
-
-Please note that there are two Swift languages: `Swift/K <http://swift-lang.org/main/>`_
-and `Swift/T <http://swift-lang.org/Swift-T/index.php>`_ . These have diverged in syntax and behavior.
-Swift/K is designed for grids and clusters runs the java based
-`Karajan <https://wiki.cogkit.org/wiki/Karajan>`_ (hence, /K) execution framework.
-Swift/T is a completely new implementation of Swift/K for high-performance computing. Swift/T uses
-Turbine(hence, /T) and and
-`ADLB <http://www.mcs.anl.gov/project/adlb-asynchronous-dynamic-load-balancer>`_ runtime libraries for
-highly scalable dataflow processing over MPI,
-without single-node bottlenecks.
-
-
 Parallel Evaluation
 ^^^^^^^^^^^^^^^^^^^
 
