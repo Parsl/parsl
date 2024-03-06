@@ -9,7 +9,6 @@ Steps to release
 2. Check the following files to confirm new release information
    * ``parsl/setup.py``
    * ``requirements.txt``
-   * ``parsl/docs/devguide/changelog.rst``
    * ``parsl/README.rst``
 
 3. Commit and push the changes to github
