@@ -35,9 +35,9 @@ jobs:
         run: |
           pip3 install . 
 
-      - name: Install pytest and pytest-random-order
+      - name: Install Test Dependencies
         run: |
-          pip3 install pytest pytest-random-order
+          pip3 install -r test-requirements.txt
 
       - name: Verify Parsl Installation
         run: |
