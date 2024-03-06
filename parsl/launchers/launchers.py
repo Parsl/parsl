@@ -8,8 +8,9 @@ logger = logging.getLogger(__name__)
 class SimpleLauncher(Launcher):
     """ Does no wrapping. Just returns the command as-is
     """
-    def __init_(self, debug: bool = True) -> None:
+    def __init__(self, permit_multiple_nodes=False, debug: bool = True) -> None:
         super().__init__(debug=debug)
+        self.permit_multiple_nodes = permit_multiple_nodes
 
     def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int) -> str:
         """
@@ -18,6 +19,8 @@ class SimpleLauncher(Launcher):
         - task_block (string) : bash evaluated string.
 
         """
+        if not self.permit_multiple_nodes and nodes_per_block > 1:
+            raise ValueError("SimpleLauncher only supports one node per block.")
         return command
 
 
