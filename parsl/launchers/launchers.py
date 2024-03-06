@@ -15,7 +15,8 @@ class SimpleLauncher(Launcher):
     def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int) -> str:
         advanced_user_permit_multiple_nodes = self.permit_multiple_nodes
         if not advanced_user_permit_multiple_nodes and nodes_per_block > 1:
-            logger.warning("You can only use SimpleLauncher with 1 node per block")
+            logger.warning("SimpleLauncher supports only 1 node per block. "
+                           "To allow multiple nodes per block set permit_multiple_nodes=True ")
 
         """
         Args:
