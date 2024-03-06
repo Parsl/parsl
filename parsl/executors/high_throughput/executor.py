@@ -328,7 +328,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     def _warn_deprecated(self, old: str, new: str):
         warnings.warn(
             f"{old} is deprecated and will be removed in a future release. "
-            "Please use {new} instead.",
+            f"Please use {new} instead.",
             DeprecationWarning,
             stacklevel=2
         )
@@ -739,7 +739,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             block_info[b_id].tasks += manager['tasks']
             block_info[b_id].idle = min(block_info[b_id].idle, manager['idle_duration'])
 
-        sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1].idle, item[1].tasks))
+        # The scaling policy is that longest idle blocks should be scaled down
+        # in preference to least idle (most recently used) blocks.
+        # Other policies could be implemented here.
+
+        sorted_blocks = sorted(block_info.items(), key=lambda item: (-item[1].idle, item[1].tasks))
+
         logger.debug(f"Scale in selecting from {len(sorted_blocks)} blocks")
         if max_idletime is None:
             block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
