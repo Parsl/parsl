@@ -1,18 +1,3 @@
-Historical: Changelog
-=====================
-
-
-.. note::
-   After Parsl 1.2.0, releases moved to a lighter weight automated model.
-   This manual changelog is no longer updated and is now marked as
-   historical.
-
-   Change information is delivered as commit messages on individual pull
-   requests, which can be see using any relevant git history browser -
-   for example, on the web at https://github.com/Parsl/parsl/commits/master/
-   or on the commandline using using git log.
-
-
 Parsl 1.2.0
 -----------
 
@@ -1252,13 +1237,6 @@ Bug Fixes
 
 * Initial release, no listed bugs.
 
-
-Historical: Libsubmit Changelog
-===============================
-
-.. note::
-   As of Parsl 0.7.0 the libsubmit repository has been merged into Parsl
-   and nothing more will appear in this changelog.
 
 Libsubmit 0.4.1
 ---------------

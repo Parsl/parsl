@@ -1,17 +1,5 @@
 .. _label-performance:
 
-Historical: Performance and Scalability
-=======================================
-
-.. note::
-   This scalability review summarises results in a paper, Parsl: Pervasive
-   Parallel Programming in Python, which was published in 2019. The results
-   have not been updated since then. For that reason, this section is marked
-   as historical.
-
-Parsl is designed to scale from small to large systems .
-
-
 Scalability
 -----------
 We studied strong and weak scaling on the Blue Waters supercomputer. 
