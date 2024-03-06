@@ -26,18 +26,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-
-      - name: Install Dependencies
+      - name: Install Dependencies and Parsl
         run: |
           apt-get update && apt-get install -y python3-pip curl
-
-      - name: Install Parsl
-        run: |
-          pip3 install . 
-
-      - name: Install Test Dependencies
-        run: |
-          pip3 install -r test-requirements.txt
+          pip3 install . -r test-requirements.txt
 
       - name: Verify Parsl Installation
         run: |
