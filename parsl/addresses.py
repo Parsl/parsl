@@ -84,6 +84,7 @@ def address_by_interface(ifname: str) -> str:
     This is taken from a Stack Overflow answer:
     https://stackoverflow.com/questions/24196932/how-can-i-get-the-ip-address-of-eth0-in-python#24196955
 
+
     Parameters
     ----------
     ifname : str
