@@ -722,7 +722,10 @@ class DataFlowKernel:
         self._send_task_log_info(task_record)
 
         if hasattr(exec_fu, "parsl_executor_task_id"):
-            logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label} with executor id {exec_fu.parsl_executor_task_id}")
+            logger.info(
+                 f"Parsl task {task_id} try {try_id} launched on executor {executor.label} "
+                 f"with executor id {exec_fu.parsl_executor_task_id}"
+            )
         else:
             logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}")
 

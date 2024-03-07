@@ -52,7 +52,11 @@ user_opts = {
     #     'username': MIDWAY_USERNAME,
     #     'script_dir': '/scratch/midway2/{}/parsl_scripts'.format(MIDWAY_USERNAME),
     #     'scheduler_options': "",
-    #     'worker_init': 'cd /scratch/midway2/{}/parsl_scripts; module load Anaconda3/5.1.0; source activate parsl_testing;'.format(MIDWAY_USERNAME),
+    #     'worker_init': (
+    #         'cd /scratch/midway2/{}/parsl_scripts; '
+    #         'module load Anaconda3/5.1.0; '
+    #         'source activate parsl_testing;'
+    #      ).format(MIDWAY_USERNAME),
     # },
     # 'osg': {
     #     'username': OSG_USERNAME,
