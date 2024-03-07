@@ -245,7 +245,8 @@ class Strategy:
                         exec_status.scale_in(active_blocks - min_blocks)
 
                     else:
-                        logger.debug(f"Idle time {idle_duration}s is less than max_idletime {self.max_idletime}s for executor {label}; not scaling in")
+                        logger.debug(
+                                f"Idle time {idle_duration}s is less than max_idletime {self.max_idletime}s for executor {label}; not scaling in")
 
             # Case 2
             # More tasks than the available slots.
