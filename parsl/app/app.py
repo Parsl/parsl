@@ -2,14 +2,17 @@
 
 The App class encapsulates a generic leaf task that can be executed asynchronously.
 """
+from functools import cache
 import logging
 import typeguard
 from abc import ABCMeta, abstractmethod
 from inspect import signature
 from typing import List, Optional, Sequence, Union
 from typing_extensions import Literal
+from parsl import executors
+from parsl.app.bash import BashApp
 
-from parsl.dataflow.dflow import DataFlowKernel
+from parsl.dataflow.dflow import DataFlowKernel, DataFlowKernelLoader
 
 from typing import Any, Callable, Dict
 
@@ -183,16 +186,53 @@ def bash_app(function: Optional[Callable] = None,
     ignore_for_cache : (list|None)
         Names of arguments which will be ignored by the caching mechanism.
     """
-    from parsl.app.bash import BashApp
+from typing import Callable
 
-    def decorator(func: Callable) -> Callable:
-        def wrapper(f: Callable) -> BashApp:
-            return BashApp(f,
-                           data_flow_kernel=data_flow_kernel,
-                           cache=cache,
-                           executors=executors,
-                           ignore_for_cache=ignore_for_cache)
-        return wrapper(func)
+def decorator(func: Callable) -> Callable:
+    """
+    A decorator that wraps a function with the BashApp class, providing additional configurations.
+
+    Parameters:
+    - func (Callable): The function to be wrapped.
+
+    Returns:
+    - Callable: The wrapper function that instantiates a BashApp with specified parameters.
+
+    Usage:
+    @decorator
+    def my_function(*args, **kwargs):
+        # Function logic here
+
+    Note:
+    - Ensure that the wrapped function has the appropriate signature for BashApp instantiation.
+    - If the decorator is used without arguments, it can be applied directly to a function.
+
+    Example:
+    @decorator
+    def my_function(*args, **kwargs):
+        # Function logic here
+
+    @decorator(function)
+    def my_function(*args, **kwargs):
+        # Function logic here
+    """
+    def wrapper(f: Callable) -> BashApp:
+        """
+        Wrapper function that instantiates a BashApp with specified parameters.
+
+        Parameters:
+        - f (Callable): The function being wrapped.
+
+        Returns:
+        - BashApp: An instance of the BashApp class with specified configurations.
+        """
+        return BashApp(f,
+                       data_flow_kernel=DataFlowKernelLoader,
+                       cache=cache,
+                       executors=executors,
+                       ignore_for_cache = ignore_for_cache)
+    return wrapper(func)
     if function is not None:
         return decorator(function)
     return decorator
+
