@@ -33,11 +33,12 @@ jobs:
       - name: Install Parsl and Dependencies
         run: |
           apt-get update && apt-get install -y python3-pip curl
-          pip3 install -r requirements.txt
-          python3 setup.py install
+          pip3 install .
 
-      - name: Start Flux and Run Test
+      - name: Run Parsl local thread tests
         run: |
-          # Start Flux and run tests with Parsl
-          # Replace this section with actual commands to start Flux and test Parsl with it
-          echo "Starting Flux and running tests with Parsl..."
+          make local_thread_test
+
+      - name: Test Parsl with Flux
+        run: |
+          pytest parsl/tests/test_flux.py
