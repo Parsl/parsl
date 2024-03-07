@@ -1143,6 +1143,7 @@ class DataFlowKernel:
 
     def atexit_cleanup(self) -> None:
         if not self.cleanup_called:
+<<<<<<< HEAD
             logging.warning("Python is exiting with a DFK still running. "
                             "Cleaning up resources...")
             try:
@@ -1156,6 +1157,17 @@ class DataFlowKernel:
         else:
             logging.info("Python process is exiting, but DFK has already been cleaned up")
 
+=======
+            try:
+                logger.info("DFK cleanup because python process is exiting")
+                self.cleanup()
+            except Exception as e:
+                logger.error(f"An error occurred during cleanup: {e}")
+            finally:
+                self.cleanup_called = True
+        else:
+            logger.info("python process is exiting, but DFK has already been cleaned up")
+>>>>>>> 62753eadbba42d0a9bab00ac698f2b02892773e4
             
     def wait_for_current_tasks(self) -> None:
         """Waits for all tasks in the task list to be completed, by waiting for their
