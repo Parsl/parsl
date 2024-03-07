@@ -59,8 +59,7 @@ package_run_script = shutil.which("python_package_run")
 
 logger = logging.getLogger(__name__)
 
-
-# Define the ParslTaskToWq namedtuple with proper indentation and alignment
+# Support structure to communicate parsl tasks to the work queue submit thread.
 ParslTaskToWq = namedtuple(
     'ParslTaskToWq', [
         'id', 'category', 'cores', 'memory', 'disk', 'gpus', 'priority',
