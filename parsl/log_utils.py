@@ -10,18 +10,22 @@ provided for logging:
     This sets the logging to a file. This is ideal for reporting issues to the dev team.
 
 """
-import io
+# import io
+# I think this io import is not important as it is not used
 import logging
 import typeguard
 
 from typing import Optional
 
 
-DEFAULT_FORMAT = (
-    "%(created)f %(asctime)s %(processName)s-%(process)d "
-    "%(threadName)s-%(thread)d %(name)s:%(lineno)d %(funcName)s %(levelname)s: "
-    "%(message)s"
-)
+##DEFAULT_FORMAT = (
+    ##"%(created)f %(asctime)s %(processName)s-%(process)d "
+    ##"%(threadName)s-%(thread)d %(name)s:%(lineno)d %(funcName)s %(levelname)s: "
+    ##"%(message)s"
+#)
+DEFAULT_FORMAT = "%(asctime)s %(levelname)s: %(message)s"
+# Update the default format string to a simpler one.
+
 
 
 @typeguard.typechecked
