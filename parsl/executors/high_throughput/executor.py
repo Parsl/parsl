@@ -6,6 +6,7 @@ import threading
 import queue
 import datetime
 import pickle
+from dataclasses import dataclass
 from multiprocessing import Process, Queue
 from typing import Dict, Sequence
 from typing import List, Optional, Tuple, Union, Callable
@@ -327,7 +328,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     def _warn_deprecated(self, old: str, new: str):
         warnings.warn(
             f"{old} is deprecated and will be removed in a future release. "
-            "Please use {new} instead.",
+            f"Please use {new} instead.",
             DeprecationWarning,
             stacklevel=2
         )
@@ -628,8 +629,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """Submits work to the outgoing_q.
 
         The outgoing_q is an external process listens on this
-        queue for new work. This method behaves like a
-        submit call as described here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
+        queue for new work. This method behaves like a submit call as described here `Python docs: <https://docs.python.org/3/
+        library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
 
         Args:
             - func (callable) : Callable function
@@ -694,7 +695,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     def workers_per_node(self) -> Union[int, float]:
         return self._workers_per_node
 
-    def scale_in(self, blocks, max_idletime=None):
+    def scale_in(self, blocks: int, max_idletime: Optional[float] = None) -> List[str]:
         """Scale in the number of active blocks by specified amount.
 
         The scale in method here is very rude. It doesn't give the workers
@@ -721,25 +722,36 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         List of block IDs scaled in
         """
         logger.debug(f"Scale in called, blocks={blocks}")
+
+        @dataclass
+        class BlockInfo:
+            tasks: int  # sum of tasks in this block
+            idle: float  # shortest idle time of any manager in this block
+
         managers = self.connected_managers()
-        block_info = {}  # block id -> list( tasks, idle duration )
+        block_info: Dict[str, BlockInfo] = {}
         for manager in managers:
             if not manager['active']:
                 continue
             b_id = manager['block_id']
             if b_id not in block_info:
-                block_info[b_id] = [0, float('inf')]
-            block_info[b_id][0] += manager['tasks']
-            block_info[b_id][1] = min(block_info[b_id][1], manager['idle_duration'])
+                block_info[b_id] = BlockInfo(tasks=0, idle=float('inf'))
+            block_info[b_id].tasks += manager['tasks']
+            block_info[b_id].idle = min(block_info[b_id].idle, manager['idle_duration'])
 
-        sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1][1], item[1][0]))
+        # The scaling policy is that longest idle blocks should be scaled down
+        # in preference to least idle (most recently used) blocks.
+        # Other policies could be implemented here.
+
+        sorted_blocks = sorted(block_info.items(), key=lambda item: (-item[1].idle, item[1].tasks))
+
         logger.debug(f"Scale in selecting from {len(sorted_blocks)} blocks")
         if max_idletime is None:
             block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
         else:
             block_ids_to_kill = []
             for x in sorted_blocks:
-                if x[1][1] > max_idletime and x[1][0] == 0:
+                if x[1].idle > max_idletime and x[1].tasks == 0:
                     block_ids_to_kill.append(x[0])
                     if len(block_ids_to_kill) == blocks:
                         break
