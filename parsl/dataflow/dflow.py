@@ -1157,7 +1157,6 @@ class DataFlowKernel:
         else:
             logging.info("Python process is exiting, but DFK has already been cleaned up")
 
-
             try:
                 logger.info("DFK cleanup because python process is exiting")
                 self.cleanup()
@@ -1166,10 +1165,8 @@ class DataFlowKernel:
             finally:
                 self.cleanup_called = True
 
-           
         logger.info("python process is exiting, but DFK has already been cleaned up")
 
-            
     def wait_for_current_tasks(self) -> None:
         """Waits for all tasks in the task list to be completed, by waiting for their
         AppFuture to be completed. This method will not necessarily wait for any tasks

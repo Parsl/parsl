@@ -374,9 +374,8 @@ class Manager:
             if time.time() - last_result_beat > self.heartbeat_period:
                 heartbeat_message = f"last_result_beat={last_result_beat} heartbeat_period={self.heartbeat_period} seconds"
                 logger.info("Sending heartbeat via results connection: %s", heartbeat_message)
-                last_result_beat =current_time
+                last_result_beat = current_time
                 items.append(pickle.dumps({'type': 'heartbeat'}))
-                            
 
             if len(items) >= self.max_queue_size or time.time() > last_beat + push_poll_period:
                 last_beat = time.time()
