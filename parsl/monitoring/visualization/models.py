@@ -102,5 +102,12 @@ class Resource(db.Model):
         'psutil_process_disk_write', db.Float, nullable=True)
     psutil_process_status = db.Column(
         'psutil_process_status', db.Text, nullable=True)
+    psutil_cpu_num = db.Column(
+        'psutil_cpu_num', db.Text, nullable=True)
+    psutil_process_num_ctx_switches_voluntary = db.Column(
+        'psutil_process_num_ctx_switches_voluntary', db.Float, nullable=True)
+    psutil_process_num_ctx_switches_involuntary = db.Column(
+        'psutil_process_num_ctx_switches_involuntary', db.Float, nullable=True)
+
     __table_args__ = (
         db.PrimaryKeyConstraint('task_id', 'run_id', 'timestamp'),)
