@@ -722,7 +722,10 @@ class DataFlowKernel:
         self._send_task_log_info(task_record)
 
         if hasattr(exec_fu, "parsl_executor_task_id"):
-            logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label} with executor id {exec_fu.parsl_executor_task_id}")
+            logger.info(
+                 f"Parsl task {task_id} try {try_id} launched on executor {executor.label} "
+                 f"with executor id {exec_fu.parsl_executor_task_id}"
+            )
         else:
             logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}")
 
@@ -1143,8 +1146,9 @@ class DataFlowKernel:
 
     def atexit_cleanup(self) -> None:
         if not self.cleanup_called:
-            logger.info("DFK cleanup because python process is exiting")
-            self.cleanup()
+            logger.warning("Python is exiting with a DFK still running. "
+                           "You should call parsl.dfk().cleanup() before "
+                           "exiting to release any resources")
         else:
             logger.info("python process is exiting, but DFK has already been cleaned up")
 
