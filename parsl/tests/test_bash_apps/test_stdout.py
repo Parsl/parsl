@@ -1,3 +1,4 @@
+import logging
 import os
 
 import pytest
@@ -47,6 +48,9 @@ def non_writable_tmpdir(tmp_path):
 def test_write_to_non_writable_directory(non_writable_tmpdir):
     """Test attempting to write to a non-writable directory raises the expected exception."""
     stderr_path = non_writable_tmpdir / "test.err"
+
+    permissions = oct(non_writable_tmpdir.stat().st_mode)
+    logging.debug(f"Permissions of the directory before attempting to write: {permissions}")
 
     """ Attempt to write to the non-writable directory """
     fn = echo_to_streams("Hello world", stderr=str(stderr_path))
