@@ -35,7 +35,7 @@ extras_require = {
     'flux': ['pyyaml', 'cffi', 'jsonschema'],
     'proxystore': ['proxystore'],
     'radical-pilot': ['radical.pilot'],
-    'diaspora_radio': ['diaspora-event-skd'],
+    'diaspora_radio': ['diaspora-event-sdk[kafka-python]'],
     # Disabling psi-j since github direct links are not allowed by pypi
     # 'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
 }

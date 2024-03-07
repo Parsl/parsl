@@ -2,8 +2,24 @@ import logging
 import os
 import parsl
 import pytest
+import threading
+import time
+
+from diaspora_event_sdk import block_until_ready, KafkaConsumer
+assert block_until_ready()
+
 
 logger = logging.getLogger(__name__)
+
+
+def consumer_check(consumer):
+    start = time.time()
+    for record in consumer:
+        end = time.time()
+        if end - start > 60:
+            assert False, "No messages received"
+        if record:
+            break
 
 
 @parsl.python_app
@@ -20,6 +36,12 @@ def this_app():
 
 @pytest.mark.local
 def test_diaspora_radio():
+    topic = 'radio-test'
+    consumer = KafkaConsumer(topic)
+    # open a new thread for the consumer
+    consumer_thread = threading.Thread(target=consumer_check, args=(consumer,))
+    consumer_thread.start()
+
     # this is imported here rather than at module level because
     # it isn't available in a plain parsl install, so this module
     # would otherwise fail to import and break even a basic test
@@ -33,7 +55,9 @@ def test_diaspora_radio():
         os.remove("runinfo/monitoring.db")
 
     logger.info("loading parsl")
-    parsl.load(fresh_config())
+    c = fresh_config()
+    c.executors[0].radio_mode = "diaspora"
+    parsl.load(c)
 
     logger.info("invoking and waiting for result")
     assert this_app().result() == 5
@@ -41,5 +65,7 @@ def test_diaspora_radio():
     logger.info("cleaning up parsl")
     parsl.dfk().cleanup()
     parsl.clear()
+
+    consumer_thread.join()
 
     logger.info("all done")
