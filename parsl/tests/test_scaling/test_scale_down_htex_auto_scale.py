@@ -98,7 +98,8 @@ def test_scale_out(tmpd_cwd, try_assert):
 
     assert dfk.executors['htex_local'].outstanding == 0
 
-    # now we can launch one "long" task - and what should happen is that the connected_managers count "eventually" (?) converges to 1 and stays there.
+    # now we can launch one "long" task -
+    # and what should happen is that the connected_managers count "eventually" (?) converges to 1 and stays there.
 
     finish_path = tmpd_cwd / "stage2_workers_may_continue"
 
