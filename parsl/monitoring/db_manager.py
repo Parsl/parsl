@@ -103,7 +103,11 @@ class Database:
     def rollback(self) -> None:
         self.session.rollback()
 
-    def _generate_mappings(self, table: Table, columns: Optional[List[str]] = None, messages: List[MonitoringMessage] = []) -> List[Dict[str, Any]]:
+    def _generate_mappings(self,
+                           table: Table,
+                           columns: Optional[List[str]] = None,
+                           messages: List[MonitoringMessage] = []
+                           ) -> List[Dict[str, Any]]:
         mappings = []
         for msg in messages:
             m = {}
