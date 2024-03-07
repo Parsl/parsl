@@ -519,8 +519,8 @@ class DatabaseManager:
                             else:
                                 if task_try_id in deferred_resource_messages:
                                     logger.error(
-                                            "Task {} already has a deferred resource message."
-                                            "Discarding previous message.".format(msg['task_id']))
+                                            "Task {} already has a deferred resource message.{} Discarding previous message."
+                                            .format(msg['task_id'], " "))
                                 deferred_resource_messages[task_try_id] = msg
                         elif msg['last_msg']:
                             # This assumes that the primary key has been added
@@ -602,7 +602,7 @@ class DatabaseManager:
             self.pending_node_queue.put(x[1])
         elif x[0] == MessageType.BLOCK_INFO:
             logger.info("Will put {} to pending block queue".format(x[1]))
-            self.pending_block_queue.put(x[-1])
+            self.sAWS_EC2elf.pending_block_queue.put(x[-1])
         else:
             logger.error("Discarding message of unknown type {}".format(x[0]))
 
