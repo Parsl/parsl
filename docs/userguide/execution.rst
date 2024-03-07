@@ -39,7 +39,7 @@ parameters include access keys, instance type, and spot bid price
 Parsl currently supports the following providers:
 
 1. `parsl.providers.LocalProvider`: The provider allows you to run locally on your laptop or workstation.
-2. `parsl.providers.CobaltProvider`: This provider allows you to schedule resources via the Cobalt scheduler. This provider is DEPRECATED and will be removed by 2024.04
+2. `parsl.providers.CobaltProvider`: This provider allows you to schedule resources via the Cobalt scheduler. This provider is DEPRECATED, and will be removed by 2024.04
 3. `parsl.providers.SlurmProvider`: This provider allows you to schedule resources via the Slurm scheduler.
 4. `parsl.providers.CondorProvider`: This provider allows you to schedule resources via the Condor scheduler.
 5. `parsl.providers.GridEngineProvider`: This provider allows you to schedule resources via the GridEngine scheduler.
