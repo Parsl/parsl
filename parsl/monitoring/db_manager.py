@@ -103,7 +103,6 @@ class Database:
     def rollback(self) -> None:
         self.session.rollback()
 
-
     def _generate_mappings(
         self,
         table: Table,
