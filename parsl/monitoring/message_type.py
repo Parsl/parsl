@@ -1,8 +1,8 @@
-from enum import Enum
+from enum import IntEnum
 
 
-class MessageType(Enum):
-
+class MessageType(IntEnum):
+    """Enum for different types of messages."""
     # Reports any task related info such as launch, completion etc.
     TASK_INFO = 0
 
@@ -17,3 +17,4 @@ class MessageType(Enum):
 
     # Reports of the block info
     BLOCK_INFO = 4
+
