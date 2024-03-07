@@ -6,6 +6,7 @@ import threading
 import time
 
 from diaspora_event_sdk import KafkaConsumer
+from diaspora_event_sdk import Client as GlobusClient
 
 
 logger = logging.getLogger(__name__)
@@ -33,9 +34,10 @@ def this_app():
     return 5
 
 
-@pytest.mark.local
+@pytest.mark.skip(reason="requires diaspora login")
 def test_diaspora_radio():
-    topic = 'radio-test'
+    c = GlobusClient()
+    topic = "radio-test" + c.subject_openid[-12:]
     consumer = KafkaConsumer(topic)
     # open a new thread for the consumer
     consumer_thread = threading.Thread(target=consumer_check, args=(consumer,))

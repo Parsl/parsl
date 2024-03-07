@@ -6,6 +6,6 @@ which pytest does not support.
 from diaspora_event_sdk import Client as GlobusClient
 c = GlobusClient()
 print(c.retrieve_key())
-topic = "radio-test"
+topic = "radio-test" + c.subject_openid[-12:]
 print(c.register_topic(topic))
 print(c.list_topics())
