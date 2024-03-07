@@ -229,7 +229,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.factory_config.scratch_dir = self.manager_config.vine_log_dir
         logger.debug(f"Function data directory: {self._function_data_dir}, log directory: {log_dir}")
         logger.debug(
-            f"TaskVine manager log directory: {self.manager_config.vine_log_dir},"
+            f"TaskVine manager log directory: {self.manager_config.vine_log_dir}, "
             f"factory log directory: {self.factory_config.scratch_dir}"
         )
 
