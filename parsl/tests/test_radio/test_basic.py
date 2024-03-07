@@ -5,8 +5,7 @@ import pytest
 import threading
 import time
 
-from diaspora_event_sdk import block_until_ready, KafkaConsumer
-assert block_until_ready()
+from diaspora_event_sdk import KafkaConsumer
 
 
 logger = logging.getLogger(__name__)
