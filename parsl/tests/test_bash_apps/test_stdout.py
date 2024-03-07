@@ -7,6 +7,7 @@ import parsl.app.errors as perror
 from parsl.app.app import bash_app
 
 
+
 @bash_app
 def echo_to_streams(msg, stderr=None, stdout=None):
     return 'echo "{0}"; echo "{0}" >&2'.format(msg)
@@ -33,6 +34,25 @@ testids = [
     '1tuple',
     'bad_mode'
 ]
+
+@pytest.fixture
+def non_writable_tmpdir(tmp_path):
+    """This fixture provides a non-writable temporary directory."""
+    non_writable_dir = tmp_path / "this_is_a_non_writable_file"
+    non_writable_dir.mkdir()
+    """Make the directory non-writable"""
+    non_writable_dir.chmod(0o555)
+    return non_writable_dir
+
+def test_write_to_non_writable_directory(non_writable_tmpdir):
+    """Test attempting to write to a non-writable directory raises the expected exception."""
+    stderr_path = non_writable_tmpdir / "test.err"
+
+    """ Attempt to write to the non-writable directory """
+    fn = echo_to_streams("Hello world", stderr=str(stderr_path))
+
+    with pytest.raises(perror.BadStdStreamFile):
+        fn.result()
 
 
 @pytest.mark.issue363
