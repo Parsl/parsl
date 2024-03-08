@@ -35,6 +35,10 @@ jobs:
         run: |
           pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/local_threads.py --random-order --durations 10
 
+      - name: Test Parsl with Flux
+        run: |
+          pytest parsl/tests/test_flux.py
+
       - name: Start Flux
         run: |
           flux start flux version
