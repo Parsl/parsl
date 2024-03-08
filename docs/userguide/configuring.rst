@@ -512,7 +512,7 @@ This creates a Conda environment on your machine with all the necessary tools an
 The following snippet shows an example configuration for using the Parsl/TaskVine executor to run applications on the local machine.
 This examples uses the `parsl.executors.taskvine.TaskVineExecutor` to schedule tasks, and a local worker will be started automatically. 
 For more information on using TaskVine, including configurations for remote execution, visit the 
-`CCTools documentation online <https://cctools.readthedocs.io/en/latest/taskvine/#parsl>`_.
+`TaskVine/Parsl documentation online <https://cctools.readthedocs.io/en/latest/taskvine/#parsl>`_.
 
 .. literalinclude::  ../../parsl/configs/vineex_local.py
 
