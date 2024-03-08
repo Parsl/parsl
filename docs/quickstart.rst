@@ -134,7 +134,9 @@ Execution Providers
 
 Resource providers allow Parsl to gain access to computing power.
 For supercomputers, gaining resources often requires requesting them from a scheduler (e.g., Slurm).
-Parsl Providers write the requests to requisition **"Blocks"** (e.g., supercomputer nodes) on your behalf.
+Parsl Providers manage the process of requesting **"Blocks"** on your behalf, which, in the context of Slurm, 
+are equivalent to separate Slurm allocations. Each **"Block"** represents an individual allocation of resources,
+such as supercomputer nodes.
 Parsl comes pre-packaged with Providers compatible with most supercomputers and some cloud computing services.
 
 Another key role of Providers is defining how to start an Executor on a remote computer.
