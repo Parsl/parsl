@@ -494,7 +494,7 @@ This system uses Grid Engine which Parsl interfaces with using the `parsl.provid
 
 
 CCL (Notre Dame, TaskVine - Work Queue)
----------------------------------
+---------------------------------------
 
 .. image:: https://ccl.cse.nd.edu/software/taskvine/taskvine-logo.png
 
