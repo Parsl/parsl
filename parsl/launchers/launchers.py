@@ -8,8 +8,13 @@ logger = logging.getLogger(__name__)
 class SimpleLauncher(Launcher):
     """ Does no wrapping. Just returns the command as-is
     """
-    def __init_(self, debug: bool = True) -> None:
-        super().__init__(debug=debug)
+
+    def __init__(self, nodes_per_block=1, permit_multiple_nodes=False):
+        self.nodes_per_block = nodes_per_block
+        self.permit_multiple_nodes = permit_multiple_nodes
+
+        if not self.permit_multiple_nodes and self.nodes_per_block != 1:
+            raise Exception("SimpleLauncher only supports 1 node per block by default.")
 
     def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int) -> str:
         """
@@ -19,6 +24,27 @@ class SimpleLauncher(Launcher):
 
         """
         return command
+# Tests for SimpleLauncher class
+def test_single_node_per_block():
+    launcher = SimpleLauncher(nodes_per_block=1)
+    assert launcher.nodes_per_block == 1
+
+def test_exception_raised_for_multiple_nodes_per_block():
+    try:
+        launcher = SimpleLauncher(nodes_per_block=64)
+    except Exception as e:
+        assert str(e) == "SimpleLauncher only supports 1 node per block by default."
+    else:
+        assert False, "Expected an exception but none was raised."
+
+
+def test_permit_multiple_nodes():
+    try:
+        launcher = SimpleLauncher(nodes_per_block=64, permit_multiple_nodes=True)
+    except Exception as e:
+        assert False, f"Expected no exception but got: {str(e)}"
+    else:
+        assert launcher.nodes_per_block == 64
 
 
 class WrappedLauncher(Launcher):
