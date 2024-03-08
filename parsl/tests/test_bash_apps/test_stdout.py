@@ -1,4 +1,3 @@
-import logging
 import os
 
 import pytest
@@ -6,7 +5,6 @@ import typeguard
 
 import parsl.app.errors as perror
 from parsl.app.app import bash_app
-
 
 
 @bash_app
