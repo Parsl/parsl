@@ -22,5 +22,6 @@ Sphinx==4.5.0
 twine
 wheel
 
+botocore==1.29.125
 diaspora-event-sdk[kafka-python]
 cloudpickle
