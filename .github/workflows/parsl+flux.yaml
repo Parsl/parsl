@@ -35,14 +35,8 @@ jobs:
         run: |
           make local_thread_test
 
-      - name: Start Flux
+      - name: Start Flux and Test Parsl with Flux
         run: |
-          flux start --test-size=2
-          flux resource status
-          flux resource list
-
-      - name: Test Parsl with Flux
-        run: |
-          pytest parsl/tests/test_flux.py --config local
+          flux start --test-size=1 pytest parsl/tests/test_flux.py --config local
 
 
