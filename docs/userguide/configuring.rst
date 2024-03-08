@@ -493,8 +493,8 @@ This system uses Grid Engine which Parsl interfaces with using the `parsl.provid
 .. literalinclude:: ../../parsl/configs/cc_in2p3.py
 
 
-CCL (Notre Dame, TaskVine - Work Queue)
----------------------------------------
+CCL (Notre Dame, TaskVine)
+--------------------------
 
 .. image:: https://ccl.cse.nd.edu/software/taskvine/taskvine-logo.png
 
@@ -516,19 +516,8 @@ For more information on using TaskVine, including configurations for remote exec
 
 .. literalinclude::  ../../parsl/configs/vineex_local.py
 
-.. image:: http://ccl.cse.nd.edu/software/workqueue/WorkQueueLogoSmall.png
-
-To utilize Work Queue with Parsl, please install the full CCTools software package as described above.
-
-The following snippet shows an example configuration for using the Work Queue distributed framework to run applications on remote machines at large.
-This examples uses the `parsl.executors.WorkQueueExecutor` to schedule tasks locally,
-and assumes that Work Queue workers have been externally connected to the manager using the
-`work_queue_factory <https://cctools.readthedocs.io/en/latest/man_pages/work_queue_factory/>`_ or
-`condor_submit_workers <https://cctools.readthedocs.io/en/latest/man_pages/condor_submit_workers/>`_ command line utilities from CCTools.
-For more information on using Work Queue or to get help with running applications using CCTools,
-visit the `CCTools documentation online <https://cctools.readthedocs.io/en/latest/help/>`_.
-
-.. literalinclude::  ../../parsl/configs/wqex_local.py
+TaskVine's predecessor, WorkQueue, may continue to be used with Parsl.
+For more information on using WorkQueue visit the `CCTools documentation online <https://cctools.readthedocs.io/en/latest/help/>`_.
 
 Comet (SDSC)
 ------------
