@@ -1,0 +1,90 @@
+# This workflow will upload a Python Package using Twine when a release is created
+# For more information see: https://help.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#publishing-to-package-registries
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: Inhibit autorelease without core code changes
+
+on:
+  push:
+    branches: [ main ]  # Or your designated branch
+ 
+  schedule:
+    - cron: '42 22 * * MON' # Run every Monday at 22:42
+
+  workflow_dispatch:
+      inputs:
+        suffix:
+          description: 'Release Suffix to append to version info. For eg. devN, a0'
+          required: false
+          default: ''
+
+  permissions:
+    contents: write
+
+jobs:
+
+  deploy:
+  deploy:
+    # This action is intended to be invoked manually for debugging purposes
+    if : github.actor == 'yadudoc' || github.actor == 'benclifford'
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Check if release is warranted
+      uses: gr2m/release-check@v1.7.0  # Replace with latest version if needed
+      with:
+        protected-paths: '**/*.py'  # Adjust paths as needed
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        # The release process needs distutils - see Parsl issue #2934                                                               # which was removed from Python 3.12        
+        python-version: '3.11'
+
+    - name: Set version info (optional)
+      id: version_setter
+      run: echo "VERSION=$(date +'%Y.%m.%d')$SUFFIX" >> $GITHUB_OUTPUT
+      env:
+        SUFFIX: ${{ github.event.inputs.suffix }}  # Assuming suffix is an input
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip wheel
+        pip install build
+
+    - name: Build package
+      run: |
+        ./tag_and_release.sh update_version
+        ./tag_and_release.sh package
+      env:
+        VERSION: ${{ steps.version_setter.outputs.VERSION }}
+
+    - name: Publish package (if release is warranted)
+      run: |
+        if [[ ${{ steps.release_check.outputs.proceed }} == "true" ]]; then
+          # Your existing publish package step
+          echo "Publishing package..."
+          uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+          with:
+            user: __token__
+            password: ${{ secrets.PYPI_API_TOKEN }}
+        fi
+
+    - name: Mint a tag (if release is warranted)
+      run: |
+        if [[ ${{ steps.release_check.outputs.proceed }} == "true" ]]; then
+          # Your existing mint tag step
+          echo "Minting tag..."
+          uses: rickstaa/action-create-tag@v1
+          with:
+            tag: ${{ steps.version_setter.outputs.VERSION }}
+            message: "Release version: ${{ steps.version_setter.outputs.VERSION }}"
+        fi
+
