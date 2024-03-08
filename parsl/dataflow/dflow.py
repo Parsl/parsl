@@ -1170,7 +1170,9 @@ class DataFlowKernel:
             fut = task_record['app_fu']
             if not fut.done():
                 fut.exception()
-            # now app future is done, poll until DFK state is final: a DFK state being final and the app future being done do not imply each other.
+            # now app future is done, poll until DFK state is final:
+            # a DFK state being final and the app future being done
+            # do not imply each other.
             while task_record['status'] not in FINAL_STATES:
                 time.sleep(0.1)
 
