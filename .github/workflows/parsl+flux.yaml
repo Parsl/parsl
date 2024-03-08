@@ -11,6 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         container: ['fluxrm/flux-sched:focal']
+    timeout-minutes: 5
 
     container:
       image: ${{ matrix.container }}
@@ -37,6 +38,6 @@ jobs:
 
       - name: Start Flux and Test Parsl with Flux
         run: |
-          flux start pytest parsl/tests/test_flux.py --config local --random-order -vv
+          flux start pytest parsl/tests/test_flux.py --config local --random-order 
 
 
