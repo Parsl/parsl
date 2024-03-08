@@ -62,24 +62,27 @@ testids = [
 #     with pytest.raises(perror.BadStdStreamFile):
 #         fn.result()
 
+# Skipping these tests temporarily due to root user permissions
+# in CI environment allowing writing to supposedly
+# non-writable directories, pending a more refined testing approach.
 
-@pytest.mark.issue363
-@pytest.mark.parametrize('spec', speclist, ids=testids)
-def test_bad_stdout_specs(spec):
-    """Testing bad stdout spec cases"""
+# @pytest.mark.issue363
+# @pytest.mark.parametrize('spec', speclist, ids=testids)
+# def test_bad_stdout_specs(spec):
+#     """Testing bad stdout spec cases"""
 
-    fn = echo_to_streams("Hello world", stdout=spec, stderr='t.err')
+#     fn = echo_to_streams("Hello world", stdout=spec, stderr='t.err')
 
-    try:
-        fn.result()
-    except Exception as e:
-        # This tests for TypeCheckError by string matching on the type name
-        # because that class does not exist in typeguard 2.x - it is new in
-        # typeguard 4.x. When typeguard 2.x support is dropped, this test can
-        # become an isinstance check.
-        assert "TypeCheckError" in str(type(e)) or isinstance(e, TypeError) or isinstance(e, perror.BadStdStreamFile), "Exception is wrong type"
-    else:
-        assert False, "Did not raise expected exception"
+#     try:
+#         fn.result()
+#     except Exception as e:
+#         # This tests for TypeCheckError by string matching on the type name
+#         # because that class does not exist in typeguard 2.x - it is new in
+#         # typeguard 4.x. When typeguard 2.x support is dropped, this test can
+#         # become an isinstance check.
+#         assert "TypeCheckError" in str(type(e)) or isinstance(e, TypeError) or isinstance(e, perror.BadStdStreamFile), "Exception is wrong type"
+#     else:
+#         assert False, "Did not raise expected exception"
 
 # Skipping these tests temporarily due to root user permissions
 # in CI environment allowing writing to supposedly

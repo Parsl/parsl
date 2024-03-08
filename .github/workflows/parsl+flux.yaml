@@ -28,7 +28,7 @@ jobs:
 
       - name: Install Dependencies and Parsl
         run: |
-          apt-get update && apt-get install -y python3-pip curl python3-dev
+          apt-get update && apt-get install -y python3-pip curl
           pip3 install . -r test-requirements.txt
 
       - name: Verify Parsl Installation
