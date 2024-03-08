@@ -8,7 +8,11 @@ from parsl.monitoring.visualization.models import Workflow, Task, Status, db
 
 from parsl.monitoring.visualization.plots.default.workflow_plots import task_gantt_plot, task_per_app_plot, workflow_dag_plot
 from parsl.monitoring.visualization.plots.default.task_plots import time_series_memory_per_task_plot
-from parsl.monitoring.visualization.plots.default.workflow_resource_plots import resource_distribution_plot, resource_efficiency, worker_efficiency
+from parsl.monitoring.visualization.plots.default.workflow_resource_plots import (
+    resource_distribution_plot,
+    resource_efficiency,
+    worker_efficiency
+)
 
 dummy = True
 
