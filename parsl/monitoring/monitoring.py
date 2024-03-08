@@ -494,8 +494,7 @@ class MonitoringRouter:
                             # received from ic_channel.recv_pyobj() is actually
                             # of that type.
                             self.logger.error(
-                                f"Discarding message from interchange with unknown type {msg[0].value}"
-                                            )  # type: ignore[unreachable]
+                                f"Discarding message from interchange with unknown type {msg[0].value}")  # type: ignore[unreachable]
                 except zmq.Again:
                     pass
                 except Exception:
