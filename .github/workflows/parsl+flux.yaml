@@ -4,7 +4,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     permissions:
       packages: read
     strategy:
@@ -38,6 +38,4 @@ jobs:
 
       - name: Start Flux and Test Parsl with Flux
         run: |
-          flux start pytest parsl/tests/test_flux.py --config local --random-order -vvv
-
-
+          flux start pytest parsl/tests/test_flux.py --config local  --random-order
