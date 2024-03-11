@@ -103,7 +103,13 @@ class Database:
     def rollback(self) -> None:
         self.session.rollback()
 
-    def _generate_mappings(self, table: Table, columns: Optional[List[str]] = None, messages: List[MonitoringMessage] = []) -> List[Dict[str, Any]]:
+    def _generate_mappings(
+        self,
+        table: Table,
+        columns: Optional[List[str]] = None,
+        messages: List[MonitoringMessage] = [],
+    ) -> List[Dict[str, Any]]:
+
         mappings = []
         for msg in messages:
             m = {}
@@ -250,6 +256,12 @@ class Database:
             'psutil_process_disk_write', Float, nullable=True)
         psutil_process_status = Column(
             'psutil_process_status', Text, nullable=True)
+        psutil_cpu_num = Column(
+            'psutil_cpu_num', Text, nullable=True)
+        psutil_process_num_ctx_switches_voluntary = Column(
+            'psutil_process_num_ctx_switches_voluntary', Float, nullable=True)
+        psutil_process_num_ctx_switches_involuntary = Column(
+            'psutil_process_num_ctx_switches_involuntary', Float, nullable=True)
         __table_args__ = (
             PrimaryKeyConstraint('try_id', 'task_id', 'run_id', 'timestamp'),
         )
@@ -518,7 +530,10 @@ class DatabaseManager:
                                 reprocessable_first_resource_messages.append(msg)
                             else:
                                 if task_try_id in deferred_resource_messages:
-                                    logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
+                                    logger.error(
+                                        "Task {} already has a deferred resource message. "
+                                        "Discarding previous message.".format(msg['task_id'])
+                                    )
                                 deferred_resource_messages[task_try_id] = msg
                         elif msg['last_msg']:
                             # This assumes that the primary key has been added
@@ -574,8 +589,10 @@ class DatabaseManager:
                     self._dispatch_to_internal(x)
                 elif queue_tag == 'resource':
                     assert isinstance(x, tuple), "_migrate_logs_to_internal was expecting a tuple, got {}".format(x)
-                    assert x[0] == MessageType.RESOURCE_INFO, \
-                        "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue, got tag {}, message {}".format(x[0], x)
+                    assert x[0] == MessageType.RESOURCE_INFO, (
+                        "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue, "
+                        "got tag {}, message {}".format(x[0], x)
+                    )
                     self._dispatch_to_internal(x)
                 elif queue_tag == 'node':
                     assert len(x) == 2, "expected message tuple to have exactly two elements"
