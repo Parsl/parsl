@@ -830,7 +830,21 @@ if __name__ == "__main__":
     parser.add_argument("--mpi-launcher", type=str, choices=VALID_LAUNCHERS,
                         help="MPI launcher to use iff enable_mpi_mode=true")
 
+    parser = argparse.ArgumentParser(description='Process worker pool')
+    parser.add_argument('--cert_dir', required=True, help='Certificate directory')
+    parser.add_argument('--task_port', type=int, required=True, help='Task port')
+    parser.add_argument('--result_port', type=int, required=True, help='Result port')
+    parser.add_argument('--cpu-affinity', required=True, help='CPU affinity')
+    parser.add_argument('--available-accelerators', required=True, help='Available accelerators')    
+
     args = parser.parse_args()
+
+    # Validate --available-accelerators parameter
+    if not args.available_accelerators:
+        raise ValueError("The --available-accelerators parameter is mandatory. Please specify available accelerators.")
+
+    # Configure logging
+    logger = logging.getLogger(__name__)
 
     os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
 
@@ -857,7 +871,14 @@ if __name__ == "__main__":
         logger.info("Heartbeat threshold: {}".format(args.hb_threshold))
         logger.info("Heartbeat period: {}".format(args.hb_period))
         logger.info("CPU affinity: {}".format(args.cpu_affinity))
-        logger.info("Accelerators: {}".format(" ".join(args.available_accelerators)))
+        # Check if args.available_accelerators is iterable (eg. a list)
+        if isinstance(args.available_accelerators, list):
+            # If it's already iterable, join its elements
+            logger.info("Accelerators: {}".format(" ".join(args.available_accelerators)))
+        else:
+            # If it's not iterable, convert it to a list first and then join its elements
+            logger.info("Accelerators: {}".format(args.available_accelerators))
+        # logger.info("Accelerators: {}".format(" ".join(args.available_accelerators)))
         logger.info("enable_mpi_mode: {}".format(args.enable_mpi_mode))
         logger.info("mpi_launcher: {}".format(args.mpi_launcher))
 
