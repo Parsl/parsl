@@ -95,7 +95,7 @@ class DataFlowKernel:
         self.checkpoint_lock = threading.Lock()
 
         self.usage_tracker = UsageTracker(self)
-        self.usage_tracker.send_message()
+        self.usage_tracker.send_start_message()
 
         self.task_state_counts_lock = threading.Lock()
         self.task_state_counts = {state: 0 for state in States}
@@ -113,7 +113,7 @@ class DataFlowKernel:
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
             self.hub_address = self.monitoring.hub_address
-            self.hub_interchange_port = self.monitoring.start(self.run_id, self.run_dir)
+            self.hub_interchange_port = self.monitoring.start(self.run_id, self.run_dir, self.config.run_dir)
 
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
@@ -678,10 +678,10 @@ class DataFlowKernel:
             task_record : The task record
 
         Returns:
-            Future that tracks the execution of the submitted executable
+            Future that tracks the execution of the submitted function
         """
         task_id = task_record['id']
-        executable = task_record['func']
+        function = task_record['func']
         args = task_record['args']
         kwargs = task_record['kwargs']
 
@@ -706,23 +706,26 @@ class DataFlowKernel:
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
-            (executable, args, kwargs) = self.monitoring.monitor_wrapper(executable, args, kwargs, try_id, task_id,
-                                                                         self.monitoring.monitoring_hub_url,
-                                                                         self.run_id,
-                                                                         wrapper_logging_level,
-                                                                         self.monitoring.resource_monitoring_interval,
-                                                                         executor.radio_mode,
-                                                                         executor.monitor_resources(),
-                                                                         self.run_dir)
+            (function, args, kwargs) = self.monitoring.monitor_wrapper(function, args, kwargs, try_id, task_id,
+                                                                       self.monitoring.monitoring_hub_url,
+                                                                       self.run_id,
+                                                                       wrapper_logging_level,
+                                                                       self.monitoring.resource_monitoring_interval,
+                                                                       executor.radio_mode,
+                                                                       executor.monitor_resources(),
+                                                                       self.run_dir)
 
         with self.submitter_lock:
-            exec_fu = executor.submit(executable, task_record['resource_specification'], *args, **kwargs)
+            exec_fu = executor.submit(function, task_record['resource_specification'], *args, **kwargs)
         self.update_task_state(task_record, States.launched)
 
         self._send_task_log_info(task_record)
 
         if hasattr(exec_fu, "parsl_executor_task_id"):
-            logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label} with executor id {exec_fu.parsl_executor_task_id}")
+            logger.info(
+                f"Parsl task {task_id} try {try_id} launched on executor {executor.label} "
+                f"with executor id {exec_fu.parsl_executor_task_id}")
+
         else:
             logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}")
 
@@ -730,7 +733,8 @@ class DataFlowKernel:
 
         return exec_fu
 
-    def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable) -> Tuple[Sequence[Any], Dict[str, Any], Callable]:
+    def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable) -> Tuple[Sequence[Any], Dict[str, Any],
+                                                                                                                   Callable]:
         """Look for inputs of the app that are files. Give the data manager
         the opportunity to replace a file with a data future for that file,
         for example wrapping the result of a staging action.
@@ -1142,8 +1146,9 @@ class DataFlowKernel:
 
     def atexit_cleanup(self) -> None:
         if not self.cleanup_called:
-            logger.info("DFK cleanup because python process is exiting")
-            self.cleanup()
+            logger.warning("Python is exiting with a DFK still running. "
+                           "You should call parsl.dfk().cleanup() before "
+                           "exiting to release any resources")
         else:
             logger.info("python process is exiting, but DFK has already been cleaned up")
 
@@ -1200,7 +1205,7 @@ class DataFlowKernel:
                 self._checkpoint_timer.close()
 
         # Send final stats
-        self.usage_tracker.send_message()
+        self.usage_tracker.send_end_message()
         self.usage_tracker.close()
 
         logger.info("Closing job status poller")

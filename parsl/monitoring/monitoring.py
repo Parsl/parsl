@@ -84,7 +84,7 @@ class MonitoringHub(RepresentationMixin):
 
                  workflow_name: Optional[str] = None,
                  workflow_version: Optional[str] = None,
-                 logging_endpoint: str = 'sqlite:///runinfo/monitoring.db',
+                 logging_endpoint: Optional[str] = None,
                  logdir: Optional[str] = None,
                  monitoring_debug: bool = False,
                  resource_monitoring_enabled: bool = True,
@@ -118,7 +118,7 @@ class MonitoringHub(RepresentationMixin):
         logging_endpoint : str
              The database connection url for monitoring to log the information.
              These URLs follow RFC-1738, and can include username, password, hostname, database name.
-             Default: 'sqlite:///monitoring.db'
+             Default: sqlite, in the configured run_dir.
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         monitoring_debug : Bool
@@ -162,10 +162,13 @@ class MonitoringHub(RepresentationMixin):
         self.resource_monitoring_enabled = resource_monitoring_enabled
         self.resource_monitoring_interval = resource_monitoring_interval
 
-    def start(self, run_id: str, run_dir: str) -> int:
+    def start(self, run_id: str, dfk_run_dir: str, config_run_dir: Union[str, os.PathLike]) -> int:
 
         if self.logdir is None:
             self.logdir = "."
+
+        if self.logging_endpoint is None:
+            self.logging_endpoint = f"sqlite:///{os.fspath(config_run_dir)}/monitoring.db"
 
         os.makedirs(self.logdir, exist_ok=True)
 
@@ -231,7 +234,7 @@ class MonitoringHub(RepresentationMixin):
         self.logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
         self.filesystem_proc = Process(target=filesystem_receiver,
-                                       args=(self.logdir, self.resource_msgs, run_dir),
+                                       args=(self.logdir, self.resource_msgs, dfk_run_dir),
                                        name="Monitoring-Filesystem-Process",
                                        daemon=True
                                        )
@@ -287,8 +290,12 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.close()
             if exception_msgs:
                 for exception_msg in exception_msgs:
-                    self.logger.error("{} process delivered an exception: {}. Terminating all monitoring processes immediately.".format(exception_msg[0],
-                                      exception_msg[1]))
+                    self.logger.error(
+                        "{} process delivered an exception: {}. Terminating all monitoring processes immediately.".format(
+                            exception_msg[0],
+                            exception_msg[1]
+                        )
+                    )
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
                 self.filesystem_proc.terminate()

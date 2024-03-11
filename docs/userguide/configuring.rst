@@ -34,7 +34,7 @@ used by the infiniband interface with ``address_by_interface('ib0')``
             HighThroughputExecutor(
                 label="frontera_htex",
                 address=address_by_interface('ib0'),
-                max_workers=56,
+                max_workers_per_node=56,
                 provider=SlurmProvider(
                     channel=LocalChannel(),
                     nodes_per_block=128,
@@ -446,16 +446,7 @@ The following snippet shows an example configuration for accessing NSCC's **ASPI
 .. literalinclude:: ../../parsl/configs/ASPIRE1.py
 
 
-Blue Waters (NCSA)
-------------------
 
-.. image:: https://www.cray.com/sites/default/files/images/Solutions_Images/bluewaters.png
-
-The following snippet shows an example configuration for executing remotely on Blue Waters, a flagship machine at the National Center for Supercomputing Applications.
-The configuration assumes the user is running on a login node and uses the `parsl.providers.TorqueProvider` to interface
-with the scheduler, and uses the `parsl.launchers.AprunLauncher` to launch workers.
-
-.. literalinclude:: ../../parsl/configs/bluewaters.py
 
 Illinois Campus Cluster (UIUC)
 ------------------------------
@@ -519,27 +510,16 @@ For more information on using TaskVine, including configurations for remote exec
 TaskVine's predecessor, WorkQueue, may continue to be used with Parsl.
 For more information on using WorkQueue visit the `CCTools documentation online <https://cctools.readthedocs.io/en/latest/help/>`_.
 
-Comet (SDSC)
-------------
+Expanse (SDSC)
+--------------
 
-.. image:: https://ucsdnews.ucsd.edu/news_uploads/comet-logo.jpg
+.. image:: https://www.hpcwire.com/wp-content/uploads/2019/07/SDSC-Expanse-graphic-cropped.jpg
 
 The following snippet shows an example configuration for executing remotely on San Diego Supercomputer
-Center's **Comet** supercomputer. The example is designed to be executed on the login nodes, using the
+Center's **Expanse** supercomputer. The example is designed to be executed on the login nodes, using the
 `parsl.providers.SlurmProvider` to interface with the Slurm scheduler used by Comet and the `parsl.launchers.SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/comet.py
-
-
-Cooley (ALCF)
--------------
-
-The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's
-**Cooley** analysis and visualization system.
-The example uses the `parsl.executors.HighThroughputExecutor` and connects to Cooley's Cobalt scheduler
-using the `parsl.providers.CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
-
-.. literalinclude:: ../../parsl/configs/cooley.py
+.. literalinclude:: ../../parsl/configs/expanse.py
 
 
 .. _configuring_nersc_cori:
@@ -626,18 +606,6 @@ The following snippet shows an example configuration for executing from the logi
 The example uses the `parsl.providers.LSFProvider` to provision compute nodes from the LSF cluster scheduler and the `parsl.launchers.JsrunLauncher` to launch workers across the compute nodes.
 
 .. literalinclude:: ../../parsl/configs/summit.py
-
-
-Theta (ALCF)
-------------
-
-.. image:: https://www.alcf.anl.gov/files/ALCF-Theta_111016-1000px.jpg
-
-The following snippet shows an example configuration for executing on Argonne Leadership Computing Facility's
-**Theta** supercomputer. This example uses the `parsl.executors.HighThroughputExecutor` and connects to Theta's Cobalt scheduler
-using the `parsl.providers.CobaltProvider`. This configuration assumes that the script is being executed on the login nodes of Theta.
-
-.. literalinclude:: ../../parsl/configs/theta.py
 
 
 TOSS3 (LLNL)

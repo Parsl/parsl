@@ -39,12 +39,19 @@ class JobState(IntEnum):
     HELD = 7
     """This job is held/suspended in the batch system"""
 
+    MISSING = 8
+    """This job has reached a terminal state without the resources(managers/workers)
+    launched in the job connecting back to the Executor. This state is set by HTEX
+    when it is able to infer that the block failed to start workers for eg due to
+    bad worker environment or network connectivity issues.
+    """
+
     def __str__(self) -> str:
-        return self.__class__.__name__ + "." + self.name
+        return f"{self.__class__.__name__}.{self.name}"
 
 
 TERMINAL_STATES = [JobState.CANCELLED, JobState.COMPLETED, JobState.FAILED,
-                   JobState.TIMEOUT]
+                   JobState.TIMEOUT, JobState.MISSING]
 
 
 class JobStatus:
@@ -77,16 +84,16 @@ class JobStatus:
 
     def __repr__(self) -> str:
         if self.message is not None:
-            extra = f"state={self.state} message={self.message}".format(self.state, self.message)
+            extra = f"state={self.state} message={self.message}"
         else:
-            extra = f"state={self.state}".format(self.state)
+            extra = f"state={self.state}"
         return f"<{type(self).__module__}.{type(self).__qualname__} object at {hex(id(self))}, {extra}>"
 
     def __str__(self) -> str:
         if self.message is not None:
-            return "{} ({})".format(self.state, self.message)
+            return f"{self.state} ({self.message})"
         else:
-            return "{}".format(self.state)
+            return f"{self.state}"
 
     @property
     def stdout(self) -> Optional[str]:
