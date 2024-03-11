@@ -39,9 +39,11 @@ class DiasporaRadio(MonitoringRadio):
         logger.info("Diaspora-based monitoring channel initializing")
 
     def send(self, message: object) -> None:
+        # TODO: make configurable
         topic = "radio-test"
+        # intend to set run_id as key so diaspora consumer can process messages more conveniently
+        # message is likely to be a tuple of (msg_type, payload), but if not we'll just send the payload
         if isinstance(message, tuple):
-            # TODO: make configurable
             if 'run_id' in message[1]:
                 key = message[1]['run_id'].encode("utf-8")
             else:
