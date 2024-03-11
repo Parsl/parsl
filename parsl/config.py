@@ -10,11 +10,12 @@ from parsl.executors.threads import ThreadPoolExecutor
 from parsl.errors import ConfigurationError
 from parsl.dataflow.taskrecord import TaskRecord
 from parsl.monitoring import MonitoringHub
+from parsl.usage_tracking.api import UsageInformation
 
 logger = logging.getLogger(__name__)
 
 
-class Config(RepresentationMixin):
+class Config(RepresentationMixin, UsageInformation):
     """
     Specification of Parsl configuration options.
 
@@ -140,3 +141,6 @@ class Config(RepresentationMixin):
         if len(duplicates) > 0:
             raise ConfigurationError('Executors must have unique labels ({})'.format(
                 ', '.join(['label={}'.format(repr(d)) for d in duplicates])))
+
+    def get_usage_information(self):
+        return {"executors_len": len(self.executors)}

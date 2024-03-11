@@ -158,14 +158,11 @@ class UsageTracker:
         """
         app_count = self.dfk.task_count
 
-        site_count = len(self.dfk.config.executors)
-
         app_fails = self.dfk.task_state_counts[States.failed] + self.dfk.task_state_counts[States.dep_fail]
 
         message = {'correlator': self.correlator_uuid,
                    'end': int(time.time()),
                    't_apps': app_count,
-                   'sites': site_count,
                    'failed': app_fails,
                    'components': get_parsl_usage(self.dfk._config)}
         logger.debug(f"Usage tracking end message (unencoded): {message}")
