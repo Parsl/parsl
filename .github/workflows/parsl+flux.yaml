@@ -15,7 +15,7 @@ jobs:
 
     container:
       image: ${{ matrix.container }}
-      options: "--platform=linux/amd64 -it --init"
+      options: "--platform=linux/amd64 --user root -it --init"
 
     name: ${{ matrix.container }}
     steps:
@@ -31,6 +31,11 @@ jobs:
         run: |
           apt-get update && apt-get install -y python3-pip curl
           pip3 install . -r test-requirements.txt
+
+      - name: Create Non-Root User
+        run: |
+          useradd -m testuser
+          chown -R testuser:testuser .
 
       - name: Verify Parsl Installation
         run: |
