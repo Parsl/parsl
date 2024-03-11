@@ -20,6 +20,8 @@ def fresh_config():
                     max_blocks=1,
                     launcher=SimpleLauncher(),
                 ),
+                # Add available_accelerators parameter here
+                available_accelerators=["gpu"]  # Example accelerator type
             )
         ],
         strategy='none',
