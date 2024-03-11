@@ -2,3 +2,7 @@
 echo "Hello world"; echo "Hello world" >&2
 --> end executable <--
 Hello world
+--> executable follows <--
+echo "Hello world"; echo "Hello world" >&2
+--> end executable <--
+Hello world

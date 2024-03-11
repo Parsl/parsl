@@ -835,7 +835,7 @@ if __name__ == "__main__":
     parser.add_argument('--task_port', type=int, required=True, help='Task port')
     parser.add_argument('--result_port', type=int, required=True, help='Result port')
     parser.add_argument('--cpu-affinity', required=True, help='CPU affinity')
-    parser.add_argument('--available-accelerators', required=True, help='Available accelerators')    
+    parser.add_argument('--available-accelerators', required=True, help='Available accelerators')
 
     args = parser.parse_args()
 
