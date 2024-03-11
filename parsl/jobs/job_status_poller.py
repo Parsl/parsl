@@ -20,8 +20,6 @@ class PollItem:
     def __init__(self, executor: BlockProviderExecutor, dfk: Optional["parsl.dataflow.dflow.DataFlowKernel"] = None):
         self._executor = executor
         self._dfk = dfk
-        self._interval = executor.status_polling_interval
-        self._last_poll_time = 0.0
         self._status = {}  # type: Dict[str, JobStatus]
 
         # Create a ZMQ channel to send poll status to monitoring
@@ -36,22 +34,17 @@ class PollItem:
             self.hub_channel.connect("tcp://{}:{}".format(hub_address, hub_port))
             logger.info("Monitoring enabled on job status poller")
 
-    def _should_poll(self, now: float) -> bool:
-        return now >= self._last_poll_time + self._interval
-
     def poll(self, now: float) -> None:
-        if self._should_poll(now):
-            previous_status = self._status
-            self._status = self._executor.status()
-            self._last_poll_time = now
-            delta_status = {}
-            for block_id in self._status:
-                if block_id not in previous_status \
-                   or previous_status[block_id].state != self._status[block_id].state:
-                    delta_status[block_id] = self._status[block_id]
+        previous_status = self._status
+        self._status = self._executor.status()
+        delta_status = {}
+        for block_id in self._status:
+            if block_id not in previous_status \
+               or previous_status[block_id].state != self._status[block_id].state:
+                delta_status[block_id] = self._status[block_id]
 
-            if delta_status:
-                self.send_monitoring_info(delta_status)
+        if delta_status:
+            self.send_monitoring_info(delta_status)
 
     def send_monitoring_info(self, status: Dict) -> None:
         # Send monitoring info for HTEX when monitoring enabled
@@ -131,7 +124,7 @@ class JobStatusPoller(Timer):
 
     def add_executors(self, executors: Sequence[BlockProviderExecutor]) -> None:
         for executor in executors:
-            if executor.status_polling_interval > 0:
+            if executor.provider:
                 logger.debug("Adding executor {}".format(executor.label))
                 self._poll_items.append(PollItem(executor, self.dfk))
         self._strategy.add_executors(executors)

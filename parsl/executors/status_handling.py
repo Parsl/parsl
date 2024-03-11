@@ -1,6 +1,8 @@
 from __future__ import annotations
 import logging
+import math
 import threading
+import time
 from itertools import compress
 from abc import abstractmethod, abstractproperty
 from concurrent.futures import Future
@@ -65,6 +67,8 @@ class BlockProviderExecutor(ParslExecutor):
         self._executor_bad_state = threading.Event()
         self._executor_exception: Optional[Exception] = None
 
+        self._provider_status_cache: Tuple[float, List[JobStatus]] = (-math.inf, [])
+
         self._block_id_counter = AtomicIDCounter()
 
         self._tasks = {}  # type: Dict[object, Future]
@@ -87,21 +91,6 @@ class BlockProviderExecutor(ParslExecutor):
 
         return d
 
-    @property
-    def status_polling_interval(self):
-        """Returns the interval, in seconds, at which the status method should be called. The
-        assumption here is that, once initialized, an executor's polling interval is fixed.
-        In practice, at least given the current situation, the executor uses a single task provider
-        and this method is a delegate to the corresponding method in the provider.
-
-        :return: the number of seconds to wait between calls to status() or zero if no polling
-                 should be done
-        """
-        if self._provider is None:
-            return 0
-        else:
-            return self._provider.status_polling_interval
-
     def _fail_job_async(self, block_id: Any, message: str):
         """Marks a job that has failed to start but would not otherwise be included in status()
         as failed and report it in status()
@@ -120,12 +109,19 @@ class BlockProviderExecutor(ParslExecutor):
 
     def status(self) -> Dict[str, JobStatus]:
         """Return the status of all jobs/blocks currently known to this executor.
+        This method will cache results from the underlying provider until
+        a delay of provider.status_polling_interval has elapsed.
 
         :return: a dictionary mapping block ids (in string) to job status
         """
         if self._provider:
+
             block_ids, job_ids = self._get_block_and_job_ids()
-            status = self._make_status_dict(block_ids, self._provider.status(job_ids))
+
+            if self._provider_status_cache[0] + self._provider.status_polling_interval < time.time():
+                self._provider_status_cache = (time.time(), self._provider.status(job_ids))
+
+            status = self._make_status_dict(block_ids, self._provider_status_cache[1])
         else:
             status = {}
         status.update(self._simulated_status)
