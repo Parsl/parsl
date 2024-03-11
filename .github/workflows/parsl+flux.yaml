@@ -15,7 +15,7 @@ jobs:
 
     container:
       image: ${{ matrix.container }}
-      options: "--platform=linux/amd64 --user=1000 -it --init"
+      options: "--platform=linux/amd64 -it --init"
 
     name: ${{ matrix.container }}
     steps:
