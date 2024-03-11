@@ -91,7 +91,7 @@ class ClusterProvider(ExecutionProvider):
               - configs (dict) : configs that get pushed into the template
 
         Returns:
-              - True: on success
+              None
 
         Raises:
               SchedulerMissingArgs : If template is missing args
@@ -116,8 +116,6 @@ class ClusterProvider(ExecutionProvider):
             print("Kwargs : ", configs)
             logger.error("Uncategorized error: %s", e)
             raise e
-
-        return True
 
     @abstractmethod
     def _status(self):
