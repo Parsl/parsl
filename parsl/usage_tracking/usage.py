@@ -112,7 +112,6 @@ class UsageTracker:
                                                 sys.version_info.micro)
         self.tracking_enabled = self.check_tracking_enabled()
         logger.debug("Tracking status: {}".format(self.tracking_enabled))
-        self.initialized = False  # Once first message is sent this will be True
 
     def check_tracking_enabled(self):
         """Check if tracking is enabled.
@@ -186,15 +185,12 @@ class UsageTracker:
             except Exception as e:
                 logger.debug("Usage tracking failed: {}".format(e))
 
-    def send_message(self) -> None:
-        """Send message over UDP.
-        """
-        if not self.initialized:
-            message = self.construct_start_message()
-            self.initialized = True
-        else:
-            message = self.construct_end_message()
+    def send_start_message(self) -> None:
+        message = self.construct_start_message()
+        self.send_UDP_message(message)
 
+    def send_end_message(self) -> None:
+        message = self.construct_end_message()
         self.send_UDP_message(message)
 
     def close(self, timeout: float = 10.0) -> None:
