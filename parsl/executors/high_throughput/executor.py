@@ -203,11 +203,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         trades performance for cpu efficiency. Default: 10ms
 
     drain_period : int
-        Number of seconds after start, after which workers will drain and then exit. Set this to a
-        time that is slightly less than the maximum walltime of batch jobs to trade off not using
-        the full walltime vs tasks being killed as they are executing when the walltime expires.
-        The time set here should be something like the walltime minus some time needed for the
-        batch job to start the workers, minus the expected maximum length of an individual task.
+        The number of seconds after start when workers will begin to drain
+        and then exit. Set this to a time that is slightly less than the
+        maximum walltime of batch jobs to avoid killing tasks while they
+        execute. For example, you could set this to the walltime minus a grace
+        period for the batch job to start the workers, minus the expected
+        maximum length of an individual task.
 
     worker_logdir_root : string
         In case of a remote file system, specify the path to where logs will be kept.
