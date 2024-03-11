@@ -38,6 +38,6 @@ jobs:
 
       - name: Start Flux and Test Parsl with Flux
         run: |
-          flux start pytest parsl/tests/test_flux.py --config local  --random-order -vv
+          flux start pytest parsl/tests/test_flux.py --config local  --random-order
 
 
