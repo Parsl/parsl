@@ -160,11 +160,16 @@ class UsageTracker:
 
         app_fails = self.dfk.task_state_counts[States.failed] + self.dfk.task_state_counts[States.dep_fail]
 
+        # the DFK is tangled into this code as a god-object, so it is
+        # handled separately from the usual traversal code, but presenting
+        # the same protocol-level report.
+        dfk_component = {'c': type(self.dfk).__module__ + "." + type(self.dfk).__name__,
+                         'app_count': app_count,
+                         'app_fails': app_fails}
+
         message = {'correlator': self.correlator_uuid,
                    'end': int(time.time()),
-                   't_apps': app_count,
-                   'failed': app_fails,
-                   'components': get_parsl_usage(self.dfk._config)}
+                   'components': [dfk_component] + get_parsl_usage(self.dfk._config)}
         logger.debug(f"Usage tracking end message (unencoded): {message}")
 
         return self.encode_message(message)
