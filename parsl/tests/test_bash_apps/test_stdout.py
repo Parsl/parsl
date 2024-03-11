@@ -1,3 +1,4 @@
+import logging
 import os
 
 import pytest
@@ -38,70 +39,70 @@ testids = [
 # in CI environment allowing writing to supposedly
 # non-writable directories, pending a more refined testing approach
 
-# @pytest.fixture
-# def non_writable_tmpdir(tmp_path):
-#     """This fixture provides a non-writable temporary directory."""
-#     non_writable_dir = tmp_path / "this_is_a_non_writable_file"
-#     non_writable_dir.mkdir()
-#     """Make the directory non-writable"""
-#     non_writable_dir.chmod(0o555)
-#     return non_writable_dir
+@pytest.fixture
+def non_writable_tmpdir(tmp_path):
+    """This fixture provides a non-writable temporary directory."""
+    non_writable_dir = tmp_path / "this_is_a_non_writable_file"
+    non_writable_dir.mkdir()
+    """Make the directory non-writable"""
+    non_writable_dir.chmod(0o555)
+    return non_writable_dir
 
-# def test_write_to_non_writable_directory(non_writable_tmpdir):
-#     """Test attempting to write to a non-writable directory raises the expected exception."""
-#     stderr_path = non_writable_tmpdir / "test.err"
+def test_write_to_non_writable_directory(non_writable_tmpdir):
+    """Test attempting to write to a non-writable directory raises the expected exception."""
+    stderr_path = non_writable_tmpdir / "test.err"
 
-#     permissions = oct(non_writable_tmpdir.stat().st_mode)
-#     logging.debug(f"Permissions of the directory before attempting to write: {permissions}")
+    permissions = oct(non_writable_tmpdir.stat().st_mode)
+    logging.debug(f"Permissions of the directory before attempting to write: {permissions}")
 
-#     """ Attempt to write to the non-writable directory """
-#     fn = echo_to_streams("Hello world", stderr=str(stderr_path))
+    """ Attempt to write to the non-writable directory """
+    fn = echo_to_streams("Hello world", stderr=str(stderr_path))
 
-#     with pytest.raises(perror.BadStdStreamFile):
-#         fn.result()
+    with pytest.raises(perror.BadStdStreamFile):
+        fn.result()
 
 # Skipping these tests temporarily due to root user permissions
 # in CI environment allowing writing to supposedly
 # non-writable directories, pending a more refined testing approach.
 
-# @pytest.mark.issue363
-# @pytest.mark.parametrize('spec', speclist, ids=testids)
-# def test_bad_stdout_specs(spec):
-#     """Testing bad stdout spec cases"""
+@pytest.mark.issue363
+@pytest.mark.parametrize('spec', speclist, ids=testids)
+def test_bad_stdout_specs(spec):
+    """Testing bad stdout spec cases"""
 
-#     fn = echo_to_streams("Hello world", stdout=spec, stderr='t.err')
+    fn = echo_to_streams("Hello world", stdout=spec, stderr='t.err')
 
-#     try:
-#         fn.result()
-#     except Exception as e:
-#         # This tests for TypeCheckError by string matching on the type name
-#         # because that class does not exist in typeguard 2.x - it is new in
-#         # typeguard 4.x. When typeguard 2.x support is dropped, this test can
-#         # become an isinstance check.
-#         assert "TypeCheckError" in str(type(e)) or isinstance(e, TypeError) or isinstance(e, perror.BadStdStreamFile), "Exception is wrong type"
-#     else:
-#         assert False, "Did not raise expected exception"
+    try:
+        fn.result()
+    except Exception as e:
+        # This tests for TypeCheckError by string matching on the type name
+        # because that class does not exist in typeguard 2.x - it is new in
+        # typeguard 4.x. When typeguard 2.x support is dropped, this test can
+        # become an isinstance check.
+        assert "TypeCheckError" in str(type(e)) or isinstance(e, TypeError) or isinstance(e, perror.BadStdStreamFile), "Exception is wrong type"
+    else:
+        assert False, "Did not raise expected exception"
 
 # Skipping these tests temporarily due to root user permissions
 # in CI environment allowing writing to supposedly
 # non-writable directories, pending a more refined testing approach
 
-# @pytest.mark.issue363
-# def test_bad_stderr_file():
-#     """Testing bad stderr file"""
+@pytest.mark.issue363
+def test_bad_stderr_file():
+    """Testing bad stderr file"""
 
-#     err = "/bad/dir/t2.err"
+    err = "/bad/dir/t2.err"
 
-#     fn = echo_to_streams("Hello world", stderr=err)
+    fn = echo_to_streams("Hello world", stderr=err)
 
-#     try:
-#         fn.result()
-#     except perror.BadStdStreamFile:
-#         pass
-#     else:
-#         assert False, "Did not raise expected exception BadStdStreamFile"
+    try:
+        fn.result()
+    except perror.BadStdStreamFile:
+        pass
+    else:
+        assert False, "Did not raise expected exception BadStdStreamFile"
 
-#     return
+    return
 
 
 @pytest.mark.issue363

@@ -15,7 +15,7 @@ jobs:
 
     container:
       image: ${{ matrix.container }}
-      options: "--platform=linux/amd64 --user root -it --init"
+      options: "--platform=linux/amd64 --user=1000 -it --init"
 
     name: ${{ matrix.container }}
     steps:
@@ -38,6 +38,6 @@ jobs:
 
       - name: Start Flux and Test Parsl with Flux
         run: |
-          flux start /bin/bash -c "pytest parsl/tests/test_flux.py --config local   --random-order"
+          flux start /bin/bash -c "pytest parsl/tests/test_flux.py --config local   --random-order" 
 
 
