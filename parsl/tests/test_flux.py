@@ -1,5 +1,6 @@
 import os
 import concurrent.futures as cf
+import sys
 
 import pytest
 
@@ -42,6 +43,7 @@ def test_multiply():
             assert future.done()
             assert future.exception() is None
             assert isinstance(future, FluxFutureWrapper)
+    sys.stdout.flush()
 
 
 @require_flux
@@ -53,6 +55,7 @@ def test_except():
         with pytest.raises(ValueError, match=ERRMSG):
             future.result()
         assert isinstance(future.exception(), ValueError)
+    sys.stdout.flush()
 
 
 @require_flux
@@ -66,6 +69,7 @@ def test_affinity():
         executor.start()
         future = executor.submit(os.sched_getaffinity, {"cores_per_task": 2}, 0)
         assert len(future.result()) > 1
+    sys.stdout.flush()
 
 
 @require_flux
@@ -87,6 +91,7 @@ def test_cancel():
                 assert future.done()
                 assert not future.cancelled()
                 assert future.result() == i * 9
+    sys.stdout.flush()
 
 
 @pytest.mark.local
@@ -103,6 +108,7 @@ def test_future_cancel():
     assert wrapper_future.done()
     assert underlying_future.cancelled()
     assert underlying_future.done()
+    sys.stdout.flush()
 
 
 @pytest.mark.local
@@ -115,6 +121,7 @@ def test_future_running():
     assert not wrapper_future.running()
     wrapper_future._flux_future = underlying_future
     assert wrapper_future.running()
+    sys.stdout.flush()
 
 
 @pytest.mark.local
@@ -130,6 +137,7 @@ def test_future_callback_returncode():
     underlying_future.set_result(returncode)
     assert wrapper_future.done()
     assert isinstance(wrapper_future.exception(), AppException)
+    sys.stdout.flush()
 
 
 @pytest.mark.local
@@ -147,6 +155,7 @@ def test_future_callback_nofile():
     underlying_future.set_result(returncode)
     assert wrapper_future.done()
     assert isinstance(wrapper_future.exception(), FileNotFoundError)
+    sys.stdout.flush()
 
 
 @pytest.mark.local
@@ -160,6 +169,7 @@ def test_future_callback_flux_exception():
     underlying_future.set_exception(ValueError())
     assert wrapper_future.done()
     assert isinstance(wrapper_future.exception(), ValueError)
+    sys.stdout.flush()
 
 
 @pytest.mark.local
@@ -168,3 +178,4 @@ def test_future_cancel_no_underlying_future():
     assert wrapper_future.cancel()
     assert wrapper_future.cancelled()
     assert not wrapper_future.running()
+    sys.stdout.flush()
