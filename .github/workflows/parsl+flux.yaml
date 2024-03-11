@@ -32,17 +32,12 @@ jobs:
           apt-get update && apt-get install -y python3-pip curl
           pip3 install . -r test-requirements.txt
 
-      - name: Create Non-Root User
-        run: |
-          useradd -m testuser
-          chown -R testuser:testuser .
-
       - name: Verify Parsl Installation
         run: |
           make local_thread_test
 
       - name: Start Flux and Test Parsl with Flux
         run: |
-          flux start /bin/bash -c "pytest parsl/tests/test_flux.py --config local   --random-order" 
+          flux start pytest parsl/tests/test_flux.py --config local  --random-order -vv
 
 
