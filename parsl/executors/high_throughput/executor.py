@@ -328,7 +328,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     def _warn_deprecated(self, old: str, new: str):
         warnings.warn(
             f"{old} is deprecated and will be removed in a future release. "
-            "Please use {new} instead.",
+            f"Please use {new} instead.",
             DeprecationWarning,
             stacklevel=2
         )
@@ -629,9 +629,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """Submits work to the outgoing_q.
 
         The outgoing_q is an external process listens on this
-        queue for new work. This method behaves like a
-        submit call as described here
-        `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
+        queue for new work. This method behaves like a submit call as described here `Python docs: <https://docs.python.org/3/
+        library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
         Args:
             - func (callable) : Callable function
             - resource_specification (dict): Dictionary containing relevant info about task that is needed by underlying executors.
@@ -739,7 +738,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             block_info[b_id].tasks += manager['tasks']
             block_info[b_id].idle = min(block_info[b_id].idle, manager['idle_duration'])
 
-        sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1].idle, item[1].tasks))
+        # The scaling policy is that longest idle blocks should be scaled down
+        # in preference to least idle (most recently used) blocks.
+        # Other policies could be implemented here.
+
+        sorted_blocks = sorted(block_info.items(), key=lambda item: (-item[1].idle, item[1].tasks))
+
         logger.debug(f"Scale in selecting from {len(sorted_blocks)} blocks")
         if max_idletime is None:
             block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]

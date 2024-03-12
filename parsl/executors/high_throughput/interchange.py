@@ -395,8 +395,12 @@ class Interchange:
         logger.info("Processed {} tasks in {} seconds".format(self.count, delta))
         logger.warning("Exiting")
 
-    def process_task_outgoing_incoming(self, interesting_managers:
-                                       Set[bytes], hub_channel: Optional[zmq.Socket], kill_event: threading.Event) -> None:
+    def process_task_outgoing_incoming(
+            self,
+            interesting_managers: Set[bytes],
+            hub_channel: Optional[zmq.Socket],
+            kill_event: threading.Event
+    ) -> None:
         """Process one message from manager on the task_outgoing channel.
         Note that this message flow is in contradiction to the name of the
         channel - it is not an outgoing message and it is not a task.

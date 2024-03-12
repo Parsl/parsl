@@ -95,7 +95,7 @@ class DataFlowKernel:
         self.checkpoint_lock = threading.Lock()
 
         self.usage_tracker = UsageTracker(self)
-        self.usage_tracker.send_message()
+        self.usage_tracker.send_start_message()
 
         self.task_state_counts_lock = threading.Lock()
         self.task_state_counts = {state: 0 for state in States}
@@ -722,7 +722,10 @@ class DataFlowKernel:
         self._send_task_log_info(task_record)
 
         if hasattr(exec_fu, "parsl_executor_task_id"):
-            logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label} with executor id {exec_fu.parsl_executor_task_id}")
+            logger.info(
+                f"Parsl task {task_id} try {try_id} launched on executor {executor.label} "
+                f"with executor id {exec_fu.parsl_executor_task_id}")
+
         else:
             logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}")
 
@@ -1143,8 +1146,9 @@ class DataFlowKernel:
 
     def atexit_cleanup(self) -> None:
         if not self.cleanup_called:
-            logger.info("DFK cleanup because python process is exiting")
-            self.cleanup()
+            logger.warning("Python is exiting with a DFK still running. "
+                           "You should call parsl.dfk().cleanup() before "
+                           "exiting to release any resources")
         else:
             logger.info("python process is exiting, but DFK has already been cleaned up")
 
@@ -1201,7 +1205,7 @@ class DataFlowKernel:
                 self._checkpoint_timer.close()
 
         # Send final stats
-        self.usage_tracker.send_message()
+        self.usage_tracker.send_end_message()
         self.usage_tracker.close()
 
         logger.info("Closing job status poller")
