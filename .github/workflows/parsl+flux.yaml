@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        container: ['fluxrm/flux-sched:focal']
+        container: ['flux-sched:jammy']
     timeout-minutes: 5
 
     container:
@@ -39,5 +39,6 @@ jobs:
       - name: Start Flux and Test Parsl with Flux
         run: |
           flux start pytest parsl/tests/test_flux.py --config local  --random-order
+          flux start pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/flux_local.py --random-order --durations 10
 
 
