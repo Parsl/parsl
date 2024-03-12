@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        container: ['flux-sched:jammy']
+        container: ['fluxrm/flux-sched:jammy']
     timeout-minutes: 5
 
     container:
