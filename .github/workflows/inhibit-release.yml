@@ -10,7 +10,7 @@ name: Inhibit autorelease without core code changes
 
 on:
   push:
-    branches: [ main ]  # Or your designated branch
+    branches: [ releases ]  # Or your designated branch
  
   schedule:
     - cron: '42 22 * * MON' # Run every Monday at 22:42
