@@ -106,7 +106,7 @@ class PollItem:
 
 
 class JobStatusPoller(Timer):
-    def __init__(self, strategy: Optional[str] = None, max_idletime: float = 0.0,
+    def __init__(self, *, strategy: Optional[str], max_idletime: float,
                  dfk: Optional["parsl.dataflow.dflow.DataFlowKernel"] = None) -> None:
         self._poll_items = []  # type: List[PollItem]
         self.dfk = dfk
