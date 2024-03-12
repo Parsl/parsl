@@ -98,7 +98,7 @@ def id_for_memo_dict(denormalized_dict: dict, output_ref: bool = False) -> bytes
     if type(denormalized_dict) is not dict:
         raise ValueError("id_for_memo_dict cannot work on subclasses of dict")
 
-    # keys = sorted(denormalized_dict)  Line that sirosen commented on
+    # keys = sorted(denormalized_dict)  # Line that sirosen commented on
     # Proposed solution was to normalize the keys and then sort them
     keymap = {id_for_memo(k): k for k in denormalized_dict}
     normed_keys = sorted(keymap.values())

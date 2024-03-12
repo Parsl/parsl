@@ -10,7 +10,7 @@ class Foo(enum.Enum):
 
 
 # Test function demonstrating the issue with unstable sorting when keys
-# are hashable but not comparable.
+# are hashable but not compariable.
 
 
 def test_unstable_sorting():
@@ -21,7 +21,7 @@ def test_unstable_sorting():
     def bar():
         return 2
 
-    # Dictionary with problematic keys
+    # Dictionary with problematic keysii
     d = {foo: 1, bar: 2}
 
     # Sort the dictionary, it should raise a TypeError
