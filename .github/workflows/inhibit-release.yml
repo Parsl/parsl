@@ -24,9 +24,6 @@ on:
 
 jobs:
   deploy:
-    # This action is intended to be invoked manually for debugging purposes
-    if : github.actor == 'yadudoc' || github.actor == 'benclifford'
-
     runs-on: ubuntu-latest
 
     steps:
