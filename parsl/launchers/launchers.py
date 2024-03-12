@@ -18,6 +18,10 @@ class SimpleLauncher(Launcher):
         - task_block (string) : bash evaluated string.
 
         """
+        if nodes_per_block > 1:
+            logger.warning('Simple Launcher only supports single node per block. '
+                           f'Requested nodes: {nodes_per_block}. '
+                           'You may be getting fewer workers than expected')
         return command
 
 
