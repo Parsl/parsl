@@ -1,0 +1,79 @@
+# This workflow will upload a Python Package using Twine when a release is created
+# For more information see: https://help.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#publishing-to-package-registries
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: Upload Python Package
+
+on:
+  push:
+    branches: [releases]
+
+  workflow_dispatch:
+    inputs:
+      suffix:
+        description: 'Release Suffix to append to version info. For eg. devN, a0'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+
+  deploy:
+    # This action is intended to be invoked manually for debugging purposes
+    if : github.actor == 'yadudoc' || github.actor == 'benclifford'
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Check if this commit is already released
+      id: already_released
+      run: |
+        if git tag --contains HEAD | grep -e '^[0-9]\{4\}\.[0-9]\{2\}\.[0-9]\{2\}$' ; then exit 1 ; fi
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        # The release process needs distutils - see Parsl issue #2934
+        # which was removed from Python 3.12
+        python-version: '3.11'
+
+    - name: Set version info
+      id: version_setter
+      run: echo "VERSION=$(date +'%Y.%m.%d')$SUFFIX" >> $GITHUB_OUTPUT
+      env:
+        SUFFIX: ${{ inputs.suffix }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip wheel
+        pip install build
+    - name: Build package
+      run: |
+        ./tag_and_release.sh update_version
+        ./tag_and_release.sh package
+      env:
+        VERSION: ${{ steps.version_setter.outputs.VERSION }}
+
+    - name: Publish package
+      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+      with:
+        user: __token__
+        # Set the following to publish to TestPypi instead
+        # password: ${{ secrets.TESTPYPI_API_TOKEN }}
+        # repository_url: https://test.pypi.org/legacy/
+
+        password: ${{ secrets.PYPI_API_TOKEN }}
+
+    - name: Mint a tag
+      uses: rickstaa/action-create-tag@v1
+      with:
+        tag: ${{ steps.version_setter.outputs.VERSION }}
+        message: "Release version: ${{ steps.version_setter.outputs.VERSION }}"
