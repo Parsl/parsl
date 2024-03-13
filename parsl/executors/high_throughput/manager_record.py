@@ -9,6 +9,7 @@ class ManagerRecord(TypedDict, total=False):
     worker_count: int
     max_capacity: int
     active: bool
+    draining: bool
     hostname: str
     last_heartbeat: float
     idle_since: Optional[float]
