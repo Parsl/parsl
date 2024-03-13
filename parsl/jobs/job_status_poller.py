@@ -2,7 +2,7 @@ import logging
 import parsl
 import time
 import zmq
-from typing import Dict, List, Sequence, Optional
+from typing import Dict, List, Sequence, Optional, Union
 
 from parsl.jobs.states import JobStatus, JobState
 from parsl.jobs.strategy import Strategy
@@ -107,12 +107,13 @@ class PollItem:
 
 class JobStatusPoller(Timer):
     def __init__(self, *, strategy: Optional[str], max_idletime: float,
+                 strategy_period: Union[float, int],
                  dfk: Optional["parsl.dataflow.dflow.DataFlowKernel"] = None) -> None:
         self._poll_items = []  # type: List[PollItem]
         self.dfk = dfk
         self._strategy = Strategy(strategy=strategy,
                                   max_idletime=max_idletime)
-        super().__init__(self.poll, interval=5, name="JobStatusPoller")
+        super().__init__(self.poll, interval=strategy_period, name="JobStatusPoller")
 
     def poll(self) -> None:
         self._update_state()
