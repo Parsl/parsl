@@ -7,6 +7,7 @@ from parsl.data_provider.files import File
 from parsl.data_provider.file_noop import NoOpFileStaging
 from parsl.data_provider.ftp import FTPSeparateTaskStaging
 from parsl.data_provider.http import HTTPSeparateTaskStaging
+from parsl.data_provider.zip import ZipFileStaging
 from parsl.data_provider.staging import Staging
 
 if TYPE_CHECKING:
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 # these will be shared between all executors that do not explicitly
 # override, so should not contain executor-specific state
 default_staging: List[Staging]
-default_staging = [NoOpFileStaging(), FTPSeparateTaskStaging(), HTTPSeparateTaskStaging()]
+default_staging = [NoOpFileStaging(), FTPSeparateTaskStaging(), HTTPSeparateTaskStaging(), ZipFileStaging()]
 
 
 class DataManager:
