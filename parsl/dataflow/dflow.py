@@ -262,6 +262,12 @@ class DataFlowKernel:
                 stderr_name = ""
         else:
             stderr_name = ""
+            # TODO:
+            # When stdout_spec is a File, the above fails, but we can't then use str, because str for a File
+            # gives the localpath, which doesn't exist on the submit side for a non-file: File object.
+            # Reporting the stderr path here probably should be done differnetly for File objects, perhaps
+            # reporting the URL without using get_std_fname_mode which only makes sense in the case of
+            # shared filesystem stdout/stderrs?
 
         task_log_info['task_stdout'] = stdout_name
         task_log_info['task_stderr'] = stderr_name
@@ -774,6 +780,10 @@ class DataFlowKernel:
             (inputs[idx], func) = self.data_manager.optionally_stage_in(f, func, executor)
 
         for kwarg, f in kwargs.items():
+            # stdout and stderr files should not be staging in (they should be staged *out*
+            # in _add_output_deps
+            if kwarg in ['stdout', 'stderr']:
+                continue
             (kwargs[kwarg], func) = self.data_manager.optionally_stage_in(f, func, executor)
 
         newargs = list(args)
@@ -786,33 +796,56 @@ class DataFlowKernel:
         logger.debug("Adding output dependencies")
         outputs = kwargs.get('outputs', [])
         app_fut._outputs = []
-        for idx, f in enumerate(outputs):
-            if isinstance(f, File) and not self.check_staging_inhibited(kwargs):
+
+        # Pass over all possible outputs: the outputs kwarg, stdout and stderr
+        # and for each of those, perform possible stage-out. This can result in:
+        # a DataFuture to be exposed in app_fut to represent the completion of
+        # that stageout (sometimes backed by a new sub-workflow for separate-task
+        # stageout), a replacement # for the function to be executed (intended to
+        # be the original function wrapped with an in-task stageout wrapper), a
+        # rewritten File object to be passed to task to be executed
+
+        @typechecked
+        def stageout_one_file(file: File, rewritable_func: Callable):
+            if not self.check_staging_inhibited(kwargs):
                 # replace a File with a DataFuture - either completing when the stageout
                 # future completes, or if no stage out future is returned, then when the
                 # app itself completes.
 
                 # The staging code will get a clean copy which it is allowed to mutate,
                 # while the DataFuture-contained original will not be modified by any staging.
-                f_copy = f.cleancopy()
-                outputs[idx] = f_copy
+                f_copy = file.cleancopy()
 
-                logger.debug("Submitting stage out for output file {}".format(repr(f)))
+                logger.debug("Submitting stage out for output file {}".format(repr(file)))
                 stageout_fut = self.data_manager.stage_out(f_copy, executor, app_fut)
                 if stageout_fut:
-                    logger.debug("Adding a dependency on stageout future for {}".format(repr(f)))
-                    app_fut._outputs.append(DataFuture(stageout_fut, f, tid=app_fut.tid))
+                    logger.debug("Adding a dependency on stageout future for {}".format(repr(file)))
+                    df = DataFuture(stageout_fut, file, tid=app_fut.tid)
                 else:
-                    logger.debug("No stageout dependency for {}".format(repr(f)))
-                    app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
+                    logger.debug("No stageout dependency for {}".format(repr(file)))
+                    df = DataFuture(app_fut, file, tid=app_fut.tid)
 
                 # this is a hook for post-task stageout
                 # note that nothing depends on the output - which is maybe a bug
                 # in the not-very-tested stageout system?
-                func = self.data_manager.replace_task_stage_out(f_copy, func, executor)
+                rewritable_func = self.data_manager.replace_task_stage_out(f_copy, rewritable_func, executor)
+                return rewritable_func, f_copy, df
             else:
-                logger.debug("Not performing output staging for: {}".format(repr(f)))
-                app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
+                logger.debug("Not performing output staging for: {}".format(repr(file)))
+                return rewritable_func, file, DataFuture(app_fut, file, tid=app_fut.tid)
+
+        for idx, file in enumerate(outputs):
+            func, outputs[idx], o = stageout_one_file(file, func)
+            app_fut._outputs.append(o)
+
+        file = kwargs.get('stdout', None)
+        if isinstance(file, File):
+            func, kwargs['stdout'], app_fut._stdout_future = stageout_one_file(file, func)
+
+        file = kwargs.get('stderr', None)
+        if isinstance(file, File):
+            func, kwargs['stderr'], app_fut._stderr_future = stageout_one_file(file, func)
+
         return func
 
     def _gather_all_deps(self, args: Sequence[Any], kwargs: Dict[str, Any]) -> List[Future]:
@@ -1400,6 +1433,8 @@ class DataFlowKernel:
                 logger.info(f"{name} for task {tid} will be redirected to {target}")
             elif isinstance(target, tuple) and len(target) == 2:
                 logger.info(f"{name} for task {tid} will be redirected to {target[0]} with mode {target[1]}")
+            elif isinstance(target, DataFuture):
+                logger.info(f"{name} for task {tid} will staged to {target.file_obj.url}")
             else:
                 logger.error(f"{name} for task {tid} has unknown specification: {target!r}")
 

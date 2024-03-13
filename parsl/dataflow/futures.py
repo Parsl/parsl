@@ -3,7 +3,7 @@ from __future__ import annotations
 from concurrent.futures import Future
 import logging
 import threading
-from typing import Any, Optional, Sequence
+from typing import Any, Optional, Sequence, Union
 
 import parsl.app.app as app
 
@@ -70,13 +70,32 @@ class AppFuture(Future):
         self._outputs = []
         self.task_record = task_record
 
-    @property
-    def stdout(self) -> Optional[str]:
-        return self.task_record['kwargs'].get('stdout')
+        self._stdout_future: Optional[DataFuture] = None
+        self._stderr_future: Optional[DataFuture] = None
 
     @property
-    def stderr(self) -> Optional[str]:
-        return self.task_record['kwargs'].get('stderr')
+    def stdout(self) -> Union[None, str, DataFuture]:
+        """Return app stdout. If stdout was specified as a string, then this
+        property will return that string. If stdout was specified as a File,
+        then this property will return a DataFuture representing that file
+        stageout."""
+        if self._stdout_future:
+            return self._stdout_future
+        else:
+            # this covers the str and None cases
+            return self.task_record['kwargs'].get('stdout')
+
+    @property
+    def stderr(self) -> Union[None, str, DataFuture]:
+        """Return app stderr. If stdout was specified as a string, then this
+        property will return that string. If stdout was specified as a File,
+        then this property will return a DataFuture representing that file
+        stageout."""
+        if self._stderr_future:
+            return self._stderr_future
+        else:
+            # this covers the str and None cases
+            return self.task_record['kwargs'].get('stderr')
 
     @property
     def tid(self) -> int:
