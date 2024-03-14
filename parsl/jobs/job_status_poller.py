@@ -135,7 +135,9 @@ class JobStatusPoller(Timer):
                 logger.debug("Adding executor {}".format(executor.label))
                 self._poll_items.append(PollItem(executor, self.dfk))
 
-            if executor.provider.init_blocks < executor.provider.min_blocks:
-                logger.warning(f"init_blocks is less than min_blocks in {executor.provider} for executor labeled '{executor.label}'."
-                               " No scaling out to min_blocks on zero active tasks.")
+            provider = executor.provider
+            if provider:
+                if  provider.init_blocks < provider.min_blocks:
+                    logger.warning(f"init_blocks is less than min_blocks in {executor.provider} for executor labeled '{executor.label}'."
+                                " No scaling out to min_blocks on zero active tasks.")
         self._strategy.add_executors(executors)
