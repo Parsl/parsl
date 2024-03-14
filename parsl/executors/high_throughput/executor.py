@@ -226,6 +226,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
     encrypted : bool
         Flag to enable/disable encryption (CurveZMQ). Default is False.
+
+    radio_mode : str
+        The radio mode to use. Options include "htex" and "diaspora". Default is "htex".
     """
 
     @typeguard.typechecked
@@ -256,7 +259,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  enable_mpi_mode: bool = False,
                  mpi_launcher: str = "mpiexec",
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
-                 encrypted: bool = False):
+                 encrypted: bool = False,
+                 radio_mode: str = "htex"):
 
         logger.debug("Initializing HighThroughputExecutor")
 
@@ -319,6 +323,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.worker_logdir_root = worker_logdir_root
         self.cpu_affinity = cpu_affinity
         self.encrypted = encrypted
+        self.radio_mode = radio_mode
         self.cert_dir = None
 
         self.enable_mpi_mode = enable_mpi_mode
@@ -334,7 +339,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             launch_cmd = DEFAULT_LAUNCH_CMD
         self.launch_cmd = launch_cmd
 
-    radio_mode = "htex"
+    # radio_mode = "htex"
 
     def _warn_deprecated(self, old: str, new: str):
         warnings.warn(

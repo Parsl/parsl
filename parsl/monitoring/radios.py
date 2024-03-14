@@ -1,3 +1,5 @@
+import datetime
+import json
 import os
 import socket
 import pickle
@@ -6,7 +8,7 @@ import logging
 
 from abc import ABCMeta, abstractmethod
 
-from typing import Optional
+from typing import Optional, Any
 
 from parsl.serialize import serialize
 
@@ -20,6 +22,44 @@ class MonitoringRadio(metaclass=ABCMeta):
     @abstractmethod
     def send(self, message: object) -> None:
         pass
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj: Any) -> Any:
+        if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
+            return obj.isoformat()
+        return super(DateTimeEncoder, self).default(obj)
+
+
+class DiasporaRadio(MonitoringRadio):
+    def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
+        from diaspora_event_sdk import KafkaProducer
+        self.source_id = source_id
+        self.producer = KafkaProducer(value_serializer=DiasporaRadio.serialize)
+        logger.info("Diaspora-based monitoring channel initializing")
+
+    def send(self, message: object) -> None:
+        # TODO: make configurable
+        topic = "radio-test"
+        # intend to set run_id as key so diaspora consumer can process messages more conveniently
+        # message is likely to be a tuple of (msg_type, payload), but if not we'll just send the payload
+        if isinstance(message, tuple):
+            if 'run_id' in message[1]:
+                key = message[1]['run_id'].encode("utf-8")
+            else:
+                logger.info("set key as init")
+                key = b"init"
+            # logger.info(f"Sending message of type {key}:{msg_type} to topic {topic}, content {message[1]}")
+            self.producer.send(topic=topic, key=key, value=message[1])
+        else:
+            key = b"payload"
+            self.producer.send(topic=topic, key=key, value=message)
+        logger.info("Sent message")
+        return
+
+    @staticmethod
+    def serialize(value: Any) -> bytes:
+        return json.dumps(value, cls=DateTimeEncoder).encode("utf-8")
 
 
 class FilesystemRadio(MonitoringRadio):
@@ -173,3 +213,16 @@ class UDPRadio(MonitoringRadio):
             logging.error("Could not send message within timeout limit")
             return
         return
+
+
+def get_monitoring_radio(monitoring_url: str, source_id: int, radio_mode: str, run_dir: str) -> MonitoringRadio:
+    if radio_mode == "udp":
+        return UDPRadio(monitoring_url, source_id)
+    elif radio_mode == "htex":
+        return HTEXRadio(monitoring_url, source_id)
+    elif radio_mode == "filesystem":
+        return FilesystemRadio(monitoring_url=monitoring_url, source_id=source_id, run_dir=run_dir)
+    elif radio_mode == "diaspora":
+        return DiasporaRadio(monitoring_url, source_id)
+    else:
+        raise ValueError(f"Unknown radio mode {radio_mode}")
