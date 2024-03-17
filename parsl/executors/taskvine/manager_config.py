@@ -1,4 +1,3 @@
-import socket
 from dataclasses import dataclass
 from typing import Optional
 
@@ -23,9 +22,9 @@ class TaskVineManagerConfig:
         A value of 0 means TaskVine chooses any available port.
         Default is VINE_DEFAULT_PORT.
 
-    address: str
+    address: Optional[str]
         Address of the local machine.
-        Default is socket.gethostname().
+        If None, socket.gethostname() will be used to determine the address.
 
     project_name: Optional[str]
         If given, TaskVine will periodically report its status and performance
@@ -161,7 +160,7 @@ class TaskVineManagerConfig:
 
     # Connection and communication settings
     port: int = VINE_DEFAULT_PORT
-    address: str = socket.gethostname()
+    address: Optional[str] = None
     project_name: Optional[str] = None
     project_password_file: Optional[str] = None
 
