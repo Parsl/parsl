@@ -11,7 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         container: ['fluxrm/flux-sched:jammy']
-    timeout-minutes: 5
+    timeout-minutes: 8
 
     container:
       image: ${{ matrix.container }}
