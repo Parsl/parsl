@@ -3,9 +3,10 @@ import json
 from parsl.errors import OptionalModuleMissing
 try:
     import globus_sdk
-    _globus_sdk_enabled = True
 except ImportError:
     _globus_sdk_enabled = False
+else:
+    _globus_sdk_enabled = True
 import os
 import parsl
 import typeguard

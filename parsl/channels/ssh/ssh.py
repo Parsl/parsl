@@ -9,6 +9,8 @@ except ImportError:
     _paramiko_enabled = False
 except NameError:
     _paramiko_enabled = False
+else:
+    _paramiko_enabled = True
 
 from parsl.channels.base import Channel
 from parsl.channels.errors import BadHostKeyException, AuthException, SSHException, BadScriptPath, BadPermsScriptPath, FileCopyException

@@ -3,11 +3,12 @@ import logging
 
 try:
     import paramiko
-    _paramiko_enabled = True
 except ImportError:
     _paramiko_enabled = False
 except NameError:
     _paramiko_enabled = False
+else:
+    _paramiko_enabled = True
 from parsl.channels.ssh.ssh import SSHChannel
 from parsl.errors import OptionalModuleMissing
 

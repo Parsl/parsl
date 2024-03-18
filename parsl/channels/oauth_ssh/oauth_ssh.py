@@ -6,6 +6,9 @@ except ImportError:
     _paramiko_enabled = False
 except NameError:
     _paramiko_enabled = False
+else:
+    _paramiko_enabled = True
+
 import socket
 
 from parsl.errors import OptionalModuleMissing
@@ -14,9 +17,10 @@ from parsl.channels.ssh.ssh import SSHChannel
 try:
     from oauth_ssh.ssh_service import SSHService
     from oauth_ssh.oauth_ssh_token import find_access_token
-    _oauth_ssh_enabled = True
 except (ImportError, NameError):
     _oauth_ssh_enabled = False
+else:
+    _paramiko_enabled = True
 
 
 logger = logging.getLogger(__name__)
