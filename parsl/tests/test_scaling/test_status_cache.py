@@ -2,8 +2,11 @@ import parsl
 import pytest
 import time
 
+from parsl.channels import LocalChannel
+from parsl.config import Config
+from parsl.executors import HighThroughputExecutor
+from parsl.launchers import SimpleLauncher
 from parsl.providers import LocalProvider
-from parsl.tests.configs.htex_local import fresh_config
 
 T = 0.25  # time constant to adjust timings throughout this test, seconds
 
@@ -26,12 +29,19 @@ class TestProvider(LocalProvider):
 
 
 def local_setup():
-    config = fresh_config()  # TODO: explicit parsl config here rather than so many modifications
-    config.strategy = 'simple'
-    config.strategy_period = T
-    config.executors[0].poll_period = 1
-    config.executors[0].max_workers_per_node = 1
-    config.executors[0]._provider = TestProvider()
+
+    config = Config(
+            executors=[
+                HighThroughputExecutor(
+                    max_workers_per_node=1,
+                    label="htex_local",
+                    poll_period=1,
+                    provider=TestProvider(),
+                    worker_debug=True,
+                )
+            ],
+            strategy='simple',
+            strategy_period=T)
 
     parsl.load(config)
 
