@@ -36,6 +36,7 @@ from parsl.executors.high_throughput.mpi_resource_management import (
 from parsl.executors.high_throughput.mpi_prefix_composer import compose_all, VALID_LAUNCHERS
 
 HEARTBEAT_CODE = (2 ** 32) - 1
+DRAINED_CODE = (2 ** 32) - 2
 
 
 class Manager:
@@ -62,7 +63,7 @@ class Manager:
                  result_port,
                  cores_per_worker,
                  mem_per_worker,
-                 max_workers,
+                 max_workers_per_node,
                  prefetch_capacity,
                  uid,
                  block_id,
@@ -73,7 +74,8 @@ class Manager:
                  enable_mpi_mode: bool = False,
                  mpi_launcher: str = "mpiexec",
                  available_accelerators: Sequence[str],
-                 cert_dir: Optional[str]):
+                 cert_dir: Optional[str],
+                 drain_period: Optional[int]):
         """
         Parameters
         ----------
@@ -100,8 +102,8 @@ class Manager:
              the there's sufficient memory for each worker. If set to None, memory on node is not
              considered in the determination of workers to be launched on node by the manager.
 
-        max_workers : int
-             caps the maximum number of workers that can be launched.
+        max_workers_per_node : int | float
+             Caps the maximum number of workers that can be launched.
 
         prefetch_capacity : int
              Number of tasks that could be prefetched over available worker capacity.
@@ -138,6 +140,9 @@ class Manager:
 
         cert_dir : str | None
             Path to the certificate directory.
+
+        drain_period: int | None
+            Number of seconds to drain after  TODO: could be a nicer timespec involving m,s,h qualifiers for user friendliness?
         """
 
         logger.info("Manager initializing")
@@ -190,15 +195,15 @@ class Manager:
         else:
             available_mem_on_node = round(psutil.virtual_memory().available / (2**30), 1)
 
-        self.max_workers = max_workers
+        self.max_workers_per_node = max_workers_per_node
         self.prefetch_capacity = prefetch_capacity
 
-        mem_slots = max_workers
+        mem_slots = max_workers_per_node
         # Avoid a divide by 0 error.
         if mem_per_worker and mem_per_worker > 0:
             mem_slots = math.floor(available_mem_on_node / mem_per_worker)
 
-        self.worker_count: int = min(max_workers,
+        self.worker_count: int = min(max_workers_per_node,
                                      mem_slots,
                                      math.floor(cores_on_node / cores_per_worker))
 
@@ -227,6 +232,14 @@ class Manager:
         self.heartbeat_period = heartbeat_period
         self.heartbeat_threshold = heartbeat_threshold
         self.poll_period = poll_period
+
+        self.drain_time: float
+        if drain_period:
+            self.drain_time = self._start_time + drain_period
+            logger.info(f"Will request drain at {self.drain_time}")
+        else:
+            self.drain_time = float('inf')
+
         self.cpu_affinity = cpu_affinity
 
         # Define accelerator available, adjust worker count accordingly
@@ -262,9 +275,18 @@ class Manager:
         """ Send heartbeat to the incoming task queue
         """
         msg = {'type': 'heartbeat'}
+        # don't need to dumps and encode this every time - could do as a global on import?
         b_msg = json.dumps(msg).encode('utf-8')
         self.task_incoming.send(b_msg)
         logger.debug("Sent heartbeat")
+
+    def drain_to_incoming(self):
+        """ Send heartbeat to the incoming task queue
+        """
+        msg = {'type': 'drain'}
+        b_msg = json.dumps(msg).encode('utf-8')
+        self.task_incoming.send(b_msg)
+        logger.debug("Sent drain")
 
     @wrap_with_logs
     def pull_tasks(self, kill_event):
@@ -298,6 +320,7 @@ class Manager:
             # time here are correctly copy-pasted from the relevant if
             # statements.
             next_interesting_event_time = min(last_beat + self.heartbeat_period,
+                                              self.drain_time,
                                               last_interchange_contact + self.heartbeat_threshold)
             try:
                 pending_task_count = self.pending_task_queue.qsize()
@@ -312,6 +335,14 @@ class Manager:
                 self.heartbeat_to_incoming()
                 last_beat = time.time()
 
+            if self.drain_time and time.time() > self.drain_time:
+                logger.info("Requesting drain")
+                self.drain_to_incoming()
+                self.drain_time = None
+                # This will start the pool draining...
+                # Drained exit behaviour does not happen here. It will be
+                # driven by the interchange sending a DRAINED_CODE message.
+
             poll_duration_s = max(0, next_interesting_event_time - time.time())
             socks = dict(poller.poll(timeout=poll_duration_s * 1000))
 
@@ -322,7 +353,9 @@ class Manager:
 
                 if tasks == HEARTBEAT_CODE:
                     logger.debug("Got heartbeat from interchange")
-
+                elif tasks == DRAINED_CODE:
+                    logger.info("Got fulled drained message from interchange - setting kill flag")
+                    kill_event.set()
                 else:
                     task_recv_counter += len(tasks)
                     logger.debug("Got executor tasks: {}, cumulative count of tasks: {}".format([t['task_id'] for t in tasks], task_recv_counter))
@@ -371,7 +404,8 @@ class Manager:
                 logger.exception("Got an exception: {}".format(e))
 
             if time.time() > last_result_beat + self.heartbeat_period:
-                logger.info(f"Sending heartbeat via results connection: last_result_beat={last_result_beat} heartbeat_period={self.heartbeat_period} seconds")
+                heartbeat_message = f"last_result_beat={last_result_beat} heartbeat_period={self.heartbeat_period} seconds"
+                logger.info(f"Sending heartbeat via results connection: {heartbeat_message}")
                 last_result_beat = time.time()
                 items.append(pickle.dumps({'type': 'heartbeat'}))
 
@@ -412,7 +446,9 @@ class Manager:
                             raise WorkerLost(worker_id, platform.node())
                         except Exception:
                             logger.info("Putting exception for executor task {} in the pending result queue".format(task['task_id']))
-                            result_package = {'type': 'result', 'task_id': task['task_id'], 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
+                            result_package = {'type': 'result',
+                                              'task_id': task['task_id'],
+                                              'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
                             pkl_package = pickle.dumps(result_package)
                             self.pending_result_queue.put(pkl_package)
                     except KeyError:
@@ -487,9 +523,8 @@ class Manager:
         self._worker_watchdog_thread.start()
         self._monitoring_handler_thread.start()
 
-        logger.info("Loop start")
+        logger.info("Manager threads started")
 
-        # TODO : Add mechanism in this loop to stop the worker pool
         # This might need a multiprocessing event to signal back.
         self._kill_event.wait()
         logger.critical("Received kill event, terminating worker processes")
@@ -793,7 +828,7 @@ if __name__ == "__main__":
                         help="GB of memory assigned to each worker process. Default=0, no assignment")
     parser.add_argument("-t", "--task_port", required=True,
                         help="REQUIRED: Task port for receiving tasks from the interchange")
-    parser.add_argument("--max_workers", default=float('inf'),
+    parser.add_argument("--max_workers_per_node", default=float('inf'),
                         help="Caps the maximum workers that can be launched, default:infinity")
     parser.add_argument("-p", "--prefetch_capacity", default=0,
                         help="Number of tasks that can be prefetched to the manager. Default is 0.")
@@ -801,6 +836,8 @@ if __name__ == "__main__":
                         help="Heartbeat period in seconds. Uses manager default unless set")
     parser.add_argument("--hb_threshold", default=120,
                         help="Heartbeat threshold in seconds. Uses manager default unless set")
+    parser.add_argument("--drain_period", default=None,
+                        help="Drain this pool after specified number of seconds. By default, does not drain.")
     parser.add_argument("--address_probe_timeout", default=30,
                         help="Timeout to probe for viable address to interchange. Default: 30s")
     parser.add_argument("--poll", default=10,
@@ -821,7 +858,7 @@ if __name__ == "__main__":
                         required=True,
                         help="Whether/how workers should control CPU affinity.")
     parser.add_argument("--available-accelerators", type=str, nargs="*",
-                        help="Names of available accelerators")
+                        help="Names of available accelerators, if not given assumed to be zero accelerators available", default=[])
     parser.add_argument("--enable_mpi_mode", action='store_true',
                         help="Enable MPI mode")
     parser.add_argument("--mpi-launcher", type=str, choices=VALID_LAUNCHERS,
@@ -847,12 +884,13 @@ if __name__ == "__main__":
         logger.info("task_port: {}".format(args.task_port))
         logger.info("result_port: {}".format(args.result_port))
         logger.info("addresses: {}".format(args.addresses))
-        logger.info("max_workers: {}".format(args.max_workers))
+        logger.info("max_workers_per_node: {}".format(args.max_workers_per_node))
         logger.info("poll_period: {}".format(args.poll))
         logger.info("address_probe_timeout: {}".format(args.address_probe_timeout))
         logger.info("Prefetch capacity: {}".format(args.prefetch_capacity))
         logger.info("Heartbeat threshold: {}".format(args.hb_threshold))
         logger.info("Heartbeat period: {}".format(args.hb_period))
+        logger.info("Drain period: {}".format(args.drain_period))
         logger.info("CPU affinity: {}".format(args.cpu_affinity))
         logger.info("Accelerators: {}".format(" ".join(args.available_accelerators)))
         logger.info("enable_mpi_mode: {}".format(args.enable_mpi_mode))
@@ -866,10 +904,14 @@ if __name__ == "__main__":
                           block_id=args.block_id,
                           cores_per_worker=float(args.cores_per_worker),
                           mem_per_worker=None if args.mem_per_worker == 'None' else float(args.mem_per_worker),
-                          max_workers=args.max_workers if args.max_workers == float('inf') else int(args.max_workers),
+                          max_workers_per_node=(
+                              args.max_workers_per_node if args.max_workers_per_node == float('inf')
+                              else int(args.max_workers_per_node)
+                          ),
                           prefetch_capacity=int(args.prefetch_capacity),
                           heartbeat_threshold=int(args.hb_threshold),
                           heartbeat_period=int(args.hb_period),
+                          drain_period=None if args.drain_period == "None" else int(args.drain_period),
                           poll_period=int(args.poll),
                           cpu_affinity=args.cpu_affinity,
                           enable_mpi_mode=args.enable_mpi_mode,

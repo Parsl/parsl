@@ -13,7 +13,7 @@ def fresh_config():
                 label="bw_htex",
                 cores_per_worker=1,
                 worker_debug=False,
-                max_workers=1,
+                max_workers_per_node=1,
                 encrypted=True,
                 provider=TorqueProvider(
                     queue='normal',

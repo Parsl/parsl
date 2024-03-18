@@ -15,6 +15,7 @@ import parsl.monitoring.remote
 from parsl.multiprocessing import ForkProcess, SizedQueue
 from multiprocessing import Process
 from multiprocessing.queues import Queue
+from parsl.log_utils import set_file_logger
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
@@ -38,49 +39,12 @@ else:
 logger = logging.getLogger(__name__)
 
 
-def start_file_logger(filename: str, name: str = 'monitoring', level: int = logging.DEBUG, format_string: Optional[str] = None) -> logging.Logger:
-    """Add a stream log handler.
-
-    Parameters
-    ---------
-
-    filename: string
-        Name of the file to write logs to. Required.
-    name: string
-        Logger name.
-    level: logging.LEVEL
-        Set the logging level. Default=logging.DEBUG
-        - format_string (string): Set the format string
-    format_string: string
-        Format string to use.
-
-    Returns
-    -------
-        None.
-    """
-    if format_string is None:
-        format_string = "%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s]  %(message)s"
-
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    logger.propagate = False
-    handler = logging.FileHandler(filename)
-    handler.setLevel(level)
-    formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
-
-
 @typeguard.typechecked
 class MonitoringHub(RepresentationMixin):
     def __init__(self,
                  hub_address: str,
                  hub_port: Optional[int] = None,
                  hub_port_range: Tuple[int, int] = (55050, 56000),
-
-                 client_address: str = "127.0.0.1",
-                 client_port_range: Tuple[int, int] = (55000, 56000),
 
                  workflow_name: Optional[str] = None,
                  workflow_version: Optional[str] = None,
@@ -106,11 +70,6 @@ class MonitoringHub(RepresentationMixin):
              to deliver monitoring messages to the monitoring router.
              Note that despite the similar name, this is not related to hub_port.
              Default: (55050, 56000)
-        client_address : str
-             The ip address at which the dfk will be able to reach Hub. Default: "127.0.0.1"
-        client_port_range : tuple(int, int)
-             The MonitoringHub picks ports at random from the range which will be used by Hub.
-             Default: (55000, 56000)
         workflow_name : str
              The name for the workflow. Default to the name of the parsl script
         workflow_version : str
@@ -144,9 +103,6 @@ class MonitoringHub(RepresentationMixin):
 
         if _db_manager_excepts:
             raise _db_manager_excepts
-
-        self.client_address = client_address
-        self.client_port_range = client_port_range
 
         self.hub_address = hub_address
         self.hub_port = hub_port
@@ -290,8 +246,12 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.close()
             if exception_msgs:
                 for exception_msg in exception_msgs:
-                    self.logger.error("{} process delivered an exception: {}. Terminating all monitoring processes immediately.".format(exception_msg[0],
-                                      exception_msg[1]))
+                    self.logger.error(
+                        "{} process delivered an exception: {}. Terminating all monitoring processes immediately.".format(
+                            exception_msg[0],
+                            exception_msg[1]
+                        )
+                    )
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
                 self.filesystem_proc.terminate()
@@ -333,9 +293,9 @@ class MonitoringHub(RepresentationMixin):
 
 @wrap_with_logs
 def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]", run_dir: str) -> None:
-    logger = start_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
-                               name="monitoring_filesystem_radio",
-                               level=logging.INFO)
+    logger = set_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
+                             name="monitoring_filesystem_radio",
+                             level=logging.INFO)
 
     logger.info("Starting filesystem radio receiver")
     setproctitle("parsl: monitoring filesystem receiver")
@@ -401,9 +361,9 @@ class MonitoringRouter:
 
         """
         os.makedirs(logdir, exist_ok=True)
-        self.logger = start_file_logger("{}/monitoring_router.log".format(logdir),
-                                        name="monitoring_router",
-                                        level=logging_level)
+        self.logger = set_file_logger("{}/monitoring_router.log".format(logdir),
+                                      name="monitoring_router",
+                                      level=logging_level)
         self.logger.debug("Monitoring router starting")
 
         self.hub_address = hub_address

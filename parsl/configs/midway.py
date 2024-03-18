@@ -10,7 +10,7 @@ config = Config(
             label='Midway_HTEX_multinode',
             address=address_by_interface('bond0'),
             worker_debug=False,
-            max_workers=2,
+            max_workers_per_node=2,
             provider=SlurmProvider(
                 'YOUR_PARTITION',  # Partition name, e.g 'broadwl'
                 launcher=SrunLauncher(),

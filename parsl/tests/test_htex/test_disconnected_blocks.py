@@ -17,7 +17,7 @@ def local_config():
                 heartbeat_period=1,
                 heartbeat_threshold=2,
                 poll_period=100,
-                max_workers=1,
+                max_workers_per_node=1,
                 provider=LocalProvider(
                     worker_init="conda deactivate; export PATH=''; which python; exit 0",
                     init_blocks=0,
