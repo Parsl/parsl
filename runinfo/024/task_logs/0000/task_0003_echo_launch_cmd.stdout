@@ -1,0 +1,1 @@
+mpiexec -n 4 -ppn 4.0 -hosts node3,node4,node1,node2  hostname

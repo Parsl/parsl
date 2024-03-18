@@ -1,0 +1,3 @@
+--> executable follows <--
+echo "$PARSL_MPI_PREFIX hostname"
+--> end executable <--

@@ -1,0 +1,3 @@
+
+export JOBNAME=$parsl.htex_local.block-0.1709806651.3795574
+process_worker_pool.py --debug  -a 182.191.134.121,172.17.11.0,127.0.0.1,127.0.1.1 -p 0 -c 1 -m None --poll 10 --task_port=54877 --result_port=54305 --cert_dir /home/zakia/parsl/runinfo/031/htex_local/certificates --logdir=/home/zakia/parsl/runinfo/031/htex_local --block_id=0 --hb_period=30  --hb_threshold=120 --cpu-affinity none  --mpi-launcher=mpiexec --available-accelerators 
