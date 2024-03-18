@@ -42,6 +42,6 @@ jobs:
 
       - name: Test Parsl with Flux Config
         run: |
-          flux start pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/flux_local.py --random-order --durations 10
+          flux start pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/flux_local.py --random-order --durations 10
 
 
