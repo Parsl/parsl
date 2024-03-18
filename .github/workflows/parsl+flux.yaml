@@ -34,7 +34,7 @@ jobs:
 
       - name: Verify Parsl Installation
         run: |
-          make local_thread_test
+          pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/local_threads.py --random-order --durations 10
 
       - name: Start Flux and Test Parsl with Flux
         run: |
