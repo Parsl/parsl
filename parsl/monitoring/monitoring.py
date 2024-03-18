@@ -473,7 +473,6 @@ class MonitoringRouter:
 
                         msg_0: AddressedMonitoringMessage
                         msg_0 = (msg, 0)
-                        unknown_type_mg = f"Discarding message from interchange with unknown type {msg[0].value}"
 
                         if msg[0] == MessageType.NODE_INFO:
                             msg[1]['run_id'] = self.run_id
@@ -494,7 +493,8 @@ class MonitoringRouter:
                             # but there is no verification that the message
                             # received from ic_channel.recv_pyobj() is actually
                             # of that type.
-                            self.logger.error(unknown_type_mg)  # type: ignore[unreachable]
+                            self.logger.error(f"Discarding message"  # type: ignore[unreachable]
+                                              f"from interchange with unknown type {msg[0].value}")
                 except zmq.Again:
                     pass
                 except Exception:
