@@ -1,29 +1,28 @@
-"""This module implements DataFutures.
+"""
+This module implements DataFutures.
 """
 import logging
 import typeguard
 from concurrent.futures import Future
+from typing import Optional
 
 from parsl.data_provider.files import File
-
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 
 class DataFuture(Future):
-    """A datafuture points at an AppFuture.
+    """
+    A DataFuture points at an AppFuture.
 
-    We are simply wrapping a AppFuture, and adding the specific case where, if
-    the future is resolved i.e file exists, then the DataFuture is assumed to be
-    resolved.
+    We are simply wrapping an AppFuture and adding the specific case where,
+    if the future is resolved (i.e., the file exists), then the DataFuture is assumed to be resolved.
     """
 
     def parent_callback(self, parent_fu):
         """Callback from executor future to update the parent.
 
-        Updates the future with the result (the File object) or the parent future's
-        exception.
+        Updates the future with the result (the File object) or the parent future's exception.
 
         Args:
             - parent_fu (Future): Future returned by the executor along with callback
@@ -31,8 +30,7 @@ class DataFuture(Future):
         Returns:
             - None
         """
-
-        e = parent_fu._exception
+        e = parent_fu.exception()
         if e:
             self.set_exception(e)
         else:
@@ -42,14 +40,14 @@ class DataFuture(Future):
     def __init__(self, fut: Future, file_obj: File, tid: Optional[int] = None) -> None:
         """Construct the DataFuture object.
 
-        If the file_obj is a string convert to a File.
+        If the file_obj is a string, convert it to a File.
 
         Args:
-            - fut (AppFuture) : AppFuture that this DataFuture will track
-            - file_obj (string/File obj) : Something representing file(s)
+            - fut (Future): Future that this DataFuture will track
+            - file_obj (str/File): Something representing file(s)
 
         Kwargs:
-            - tid (task_id) : Task id that this DataFuture tracks
+            - tid (int): Task id that this DataFuture tracks
         """
         super().__init__()
         self._tid = tid
@@ -75,7 +73,7 @@ class DataFuture(Future):
 
     @property
     def filename(self):
-        """Filepath of the File object this datafuture represents."""
+        """Filename of the File object this datafuture represents."""
         return self.filepath
 
     def cancel(self):
