@@ -2,10 +2,8 @@ import parsl
 import pytest
 import time
 
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
-from parsl.launchers import SimpleLauncher
 from parsl.providers import LocalProvider
 
 T = 0.25  # time constant to adjust timings throughout this test, seconds
