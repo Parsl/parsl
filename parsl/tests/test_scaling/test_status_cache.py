@@ -7,7 +7,7 @@ from parsl.tests.configs.htex_local import fresh_config
 
 T = 0.25  # time constant to adjust timings throughout this test, seconds
 
-CACHE_PERIOD = T*3
+CACHE_PERIOD = T * 3
 
 
 class TestProvider(LocalProvider):
@@ -33,7 +33,7 @@ def local_setup():
     config.executors[0].max_workers_per_node = 1
     config.executors[0]._provider = TestProvider()
 
-    dfk = parsl.load(config)
+    parsl.load(config)
 
 
 def local_teardown():
@@ -62,7 +62,7 @@ def test_cache():
 
     c1 = provider.count
 
-    time.sleep(CACHE_PERIOD*K)
+    time.sleep(CACHE_PERIOD * K)
 
     c2 = provider.count
 
@@ -70,4 +70,4 @@ def test_cache():
     # times - it might be K-1 because over overlap/non-alignment
     # of the above time.sleep vs polling periods.
     assert c2 - c1 <= K, "Provider status was requested too many times"
-    assert c2 - c1 >= K-1, "Provider status was requested too few times"
+    assert c2 - c1 >= K - 1, "Provider status was requested too few times"
