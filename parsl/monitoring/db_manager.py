@@ -103,7 +103,13 @@ class Database:
     def rollback(self) -> None:
         self.session.rollback()
 
-    def _generate_mappings(self, table: Table, columns: Optional[List[str]] = None, messages: List[MonitoringMessage] = []) -> List[Dict[str, Any]]:
+    def _generate_mappings(
+        self,
+        table: Table,
+        columns: Optional[List[str]] = None,
+        messages: List[MonitoringMessage] = [],
+    ) -> List[Dict[str, Any]]:
+
         mappings = []
         for msg in messages:
             m = {}
@@ -583,8 +589,10 @@ class DatabaseManager:
                     self._dispatch_to_internal(x)
                 elif queue_tag == 'resource':
                     assert isinstance(x, tuple), "_migrate_logs_to_internal was expecting a tuple, got {}".format(x)
-                    assert x[0] == MessageType.RESOURCE_INFO, \
-                        "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue, got tag {}, message {}".format(x[0], x)
+                    assert x[0] == MessageType.RESOURCE_INFO, (
+                        "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue, "
+                        "got tag {}, message {}".format(x[0], x)
+                    )
                     self._dispatch_to_internal(x)
                 elif queue_tag == 'node':
                     assert len(x) == 2, "expected message tuple to have exactly two elements"
