@@ -45,3 +45,12 @@ jobs:
           flux start pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/flux_local.py --random-order --durations 10
 
 
+      - name: Archive runinfo logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: benc-flux-${{ matrix.python-version }}-${{ github.sha }}
+          path: |
+            runinfo/
+            .pytest/
+          compression-level: 9
