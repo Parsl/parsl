@@ -55,7 +55,6 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers_per_node} "
                       "--hb_period={heartbeat_period} "
                       "{address_probe_timeout_string} "
                       "--hb_threshold={heartbeat_threshold} "
-                      "--drain_period={drain_period} "
                       "--cpu-affinity {cpu_affinity} "
                       "{enable_mpi_mode} "
                       "--mpi-launcher={mpi_launcher} "
@@ -202,14 +201,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         Timeout period to be used by the executor components in milliseconds. Increasing poll_periods
         trades performance for cpu efficiency. Default: 10ms
 
-    drain_period : int
-        The number of seconds after start when workers will begin to drain
-        and then exit. Set this to a time that is slightly less than the
-        maximum walltime of batch jobs to avoid killing tasks while they
-        execute. For example, you could set this to the walltime minus a grace
-        period for the batch job to start the workers, minus the expected
-        maximum length of an individual task.
-
     worker_logdir_root : string
         In case of a remote file system, specify the path to where logs will be kept.
 
@@ -249,7 +240,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  prefetch_capacity: int = 0,
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
-                 drain_period: Optional[int] = None,
                  poll_period: int = 10,
                  address_probe_timeout: Optional[int] = None,
                  worker_logdir_root: Optional[str] = None,
@@ -313,7 +303,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.interchange_port_range = interchange_port_range
         self.heartbeat_threshold = heartbeat_threshold
         self.heartbeat_period = heartbeat_period
-        self.drain_period = drain_period
         self.poll_period = poll_period
         self.run_dir = '.'
         self.worker_logdir_root = worker_logdir_root
@@ -339,7 +328,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
     def _warn_deprecated(self, old: str, new: str):
         warnings.warn(
             f"{old} is deprecated and will be removed in a future release. "
-            f"Please use {new} instead.",
+            "Please use {new} instead.",
             DeprecationWarning,
             stacklevel=2
         )
@@ -387,7 +376,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                        nodes_per_block=self.provider.nodes_per_block,
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
-                                       drain_period=self.drain_period,
                                        poll_period=self.poll_period,
                                        cert_dir=self.cert_dir,
                                        logdir=self.worker_logdir,
@@ -641,9 +629,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """Submits work to the outgoing_q.
 
         The outgoing_q is an external process listens on this
-        queue for new work. This method behaves like a submit call as described here `Python docs: <https://docs.python.org/3/
-        library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
-
+        queue for new work. This method behaves like a
+        submit call as described here
+        `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
         Args:
             - func (callable) : Callable function
             - resource_specification (dict): Dictionary containing relevant info about task that is needed by underlying executors.
@@ -751,12 +739,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             block_info[b_id].tasks += manager['tasks']
             block_info[b_id].idle = min(block_info[b_id].idle, manager['idle_duration'])
 
-        # The scaling policy is that longest idle blocks should be scaled down
-        # in preference to least idle (most recently used) blocks.
-        # Other policies could be implemented here.
-
-        sorted_blocks = sorted(block_info.items(), key=lambda item: (-item[1].idle, item[1].tasks))
-
+        sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1].idle, item[1].tasks))
         logger.debug(f"Scale in selecting from {len(sorted_blocks)} blocks")
         if max_idletime is None:
             block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
