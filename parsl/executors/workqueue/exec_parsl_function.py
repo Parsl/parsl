@@ -1,3 +1,4 @@
+#! /usr/bin/env python3
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.files import File
 from parsl.utils import get_std_fname_mode
