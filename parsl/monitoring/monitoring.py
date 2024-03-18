@@ -79,9 +79,6 @@ class MonitoringHub(RepresentationMixin):
                  hub_port: Optional[int] = None,
                  hub_port_range: Tuple[int, int] = (55050, 56000),
 
-                 client_address: str = "127.0.0.1",
-                 client_port_range: Tuple[int, int] = (55000, 56000),
-
                  workflow_name: Optional[str] = None,
                  workflow_version: Optional[str] = None,
                  logging_endpoint: Optional[str] = None,
@@ -106,11 +103,6 @@ class MonitoringHub(RepresentationMixin):
              to deliver monitoring messages to the monitoring router.
              Note that despite the similar name, this is not related to hub_port.
              Default: (55050, 56000)
-        client_address : str
-             The ip address at which the dfk will be able to reach Hub. Default: "127.0.0.1"
-        client_port_range : tuple(int, int)
-             The MonitoringHub picks ports at random from the range which will be used by Hub.
-             Default: (55000, 56000)
         workflow_name : str
              The name for the workflow. Default to the name of the parsl script
         workflow_version : str
@@ -144,9 +136,6 @@ class MonitoringHub(RepresentationMixin):
 
         if _db_manager_excepts:
             raise _db_manager_excepts
-
-        self.client_address = client_address
-        self.client_port_range = client_port_range
 
         self.hub_address = hub_address
         self.hub_port = hub_port
