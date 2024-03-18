@@ -52,8 +52,24 @@ def linkcode_resolve(domain, info):
         return None
     if not info['module']:
         return None
-    filename = info['module'].replace('.', '/')
-    return "http://github.com/Parsl/parsl/blob/master/{}.py".format(filename)
+    
+    module = info['module']
+    fullname = info['fullname']
+    obj = sys.modules.get(module)
+    if obj is None:
+        return None
+
+    # Handle re-exported module names
+    if module.startswith('parsl.provider'):
+        module = 'parsl.provider.provider'
+
+    # Adjust module path if necessary
+    module = module.replace('.', '/')
+
+    # Construct GitHub URL
+    github_url = f"https://github.com/Parsl/parsl/blob/master/{module}.py"
+
+    return github_url
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
