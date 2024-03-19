@@ -11,11 +11,13 @@ class SimpleLauncher(Launcher):
     def __init__(self, debug: bool = True) -> None:
         super().__init__(debug=debug)
 
-    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int, permit_multiple_nodes: bool = False) -> str:
+    def __call__(self, command: str, tasks_per_node: int, nodes_per_block: int) -> str:
 
-        if nodes_per_block > 1 and not permit_multiple_nodes:
-            logger.warning("SimpleLauncher only supports 1 node per block. "
-                           "Set permit_multiple_nodes=True to allow multiple nodes per block.")
+        if nodes_per_block > 1:
+            logger.warning('Simple Launcher only supports single node per block. '
+                           f'Requested nodes: {nodes_per_block}. '
+                           'You may be getting fewer workers than expected')
+
         return command
 
 
