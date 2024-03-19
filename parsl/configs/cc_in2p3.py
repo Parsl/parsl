@@ -7,7 +7,7 @@ config = Config(
     executors=[
         HighThroughputExecutor(
             label='cc_in2p3_htex',
-            max_workers=2,
+            max_workers_per_node=2,
             provider=GridEngineProvider(
                 channel=LocalChannel(),
                 nodes_per_block=1,

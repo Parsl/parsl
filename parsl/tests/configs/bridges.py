@@ -13,7 +13,7 @@ def fresh_config():
                 # This is the network interface on the login node to
                 # which compute nodes can communicate
                 # address=address_by_interface('bond0.144'),
-                max_workers=1,
+                max_workers_per_node=1,
                 encrypted=True,
                 provider=SlurmProvider(
                     user_opts['bridges']['partition'],  # Partition / QOS

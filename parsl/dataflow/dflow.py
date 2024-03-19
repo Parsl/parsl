@@ -95,7 +95,7 @@ class DataFlowKernel:
         self.checkpoint_lock = threading.Lock()
 
         self.usage_tracker = UsageTracker(self)
-        self.usage_tracker.send_message()
+        self.usage_tracker.send_start_message()
 
         self.task_state_counts_lock = threading.Lock()
         self.task_state_counts = {state: 0 for state in States}
@@ -178,6 +178,7 @@ class DataFlowKernel:
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.
         self.job_status_poller = JobStatusPoller(strategy=self.config.strategy,
+                                                 strategy_period=self.config.strategy_period,
                                                  max_idletime=self.config.max_idletime,
                                                  dfk=self)
 
@@ -722,7 +723,10 @@ class DataFlowKernel:
         self._send_task_log_info(task_record)
 
         if hasattr(exec_fu, "parsl_executor_task_id"):
-            logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label} with executor id {exec_fu.parsl_executor_task_id}")
+            logger.info(
+                f"Parsl task {task_id} try {try_id} launched on executor {executor.label} "
+                f"with executor id {exec_fu.parsl_executor_task_id}")
+
         else:
             logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}")
 
@@ -730,7 +734,8 @@ class DataFlowKernel:
 
         return exec_fu
 
-    def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable) -> Tuple[Sequence[Any], Dict[str, Any], Callable]:
+    def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable) -> Tuple[Sequence[Any], Dict[str, Any],
+                                                                                                                   Callable]:
         """Look for inputs of the app that are files. Give the data manager
         the opportunity to replace a file with a data future for that file,
         for example wrapping the result of a staging action.
@@ -1142,8 +1147,9 @@ class DataFlowKernel:
 
     def atexit_cleanup(self) -> None:
         if not self.cleanup_called:
-            logger.info("DFK cleanup because python process is exiting")
-            self.cleanup()
+            logger.warning("Python is exiting with a DFK still running. "
+                           "You should call parsl.dfk().cleanup() before "
+                           "exiting to release any resources")
         else:
             logger.info("python process is exiting, but DFK has already been cleaned up")
 
@@ -1165,7 +1171,8 @@ class DataFlowKernel:
             fut = task_record['app_fu']
             if not fut.done():
                 fut.exception()
-            # now app future is done, poll until DFK state is final: a DFK state being final and the app future being done do not imply each other.
+            # now app future is done, poll until DFK state is final: a
+            # DFK state being final and the app future being done do not imply each other.
             while task_record['status'] not in FINAL_STATES:
                 time.sleep(0.1)
 
@@ -1200,7 +1207,7 @@ class DataFlowKernel:
                 self._checkpoint_timer.close()
 
         # Send final stats
-        self.usage_tracker.send_message()
+        self.usage_tracker.send_end_message()
         self.usage_tracker.close()
 
         logger.info("Closing job status poller")

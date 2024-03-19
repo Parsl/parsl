@@ -9,7 +9,7 @@ config = Config(
         HighThroughputExecutor(
             label="htex_local",
             cores_per_worker=1,
-            max_workers=8,
+            max_workers_per_node=8,
             encrypted=True,
             provider=LocalProvider(
                 channel=LocalChannel(),
