@@ -27,6 +27,3 @@ def test_unstable_sorting():
     # Sort the dictionary, it should raise a TypeError
     with pytest.raises(TypeError):
         sorted(d)
-
-    # Create a dictionary with enum keys
-    d_enum = {Foo.x: 1, Foo.y: 2}
