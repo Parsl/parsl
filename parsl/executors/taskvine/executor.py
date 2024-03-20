@@ -4,6 +4,7 @@ high-throughput system for delegating Parsl tasks to thousands of remote machine
 """
 
 # Import Python built-in libraries
+import atexit
 import threading
 import multiprocessing
 import logging
@@ -178,6 +179,13 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             self._poncho_available = False
         else:
             self._poncho_available = True
+
+        # register atexit handler to cleanup when Python shuts down
+        atexit.register(self.atexit_cleanup)
+
+    def atexit_cleanup(self):
+        # Calls this executor's shutdown method upon Python exiting the process.
+        self.shutdown()
 
     def _get_launch_command(self, block_id):
         # Implements BlockProviderExecutor's abstract method.
