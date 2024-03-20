@@ -172,7 +172,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Path to directory that holds all tasks' data and results.
         self._function_data_dir = ""
 
-        # helper scripts to prepare package tarballs for Parsl apps
+        # Helper scripts to prepare package tarballs for Parsl apps
         self._package_analyze_script = shutil.which("poncho_package_analyze")
         self._package_create_script = shutil.which("poncho_package_create")
         if self._package_analyze_script is None or self._package_create_script is None:
@@ -180,8 +180,13 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         else:
             self._poncho_available = True
 
-        # register atexit handler to cleanup when Python shuts down
+        # Register atexit handler to cleanup when Python shuts down
         atexit.register(self.atexit_cleanup)
+
+        # Attribute indicating whether this executor was started to shut it down properly.
+        # This safeguards cases where an object of this executor is created but
+        # the executor never starts, so it shouldn't be shutdowned.
+        self._started = False
 
     def atexit_cleanup(self):
         # Calls this executor's shutdown method upon Python exiting the process.
@@ -245,6 +250,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Create submit process and collector thread to create, send, and
         retrieve Parsl tasks within the TaskVine system.
         """
+        
+        # Mark this executor object as started
+        self._started = True
 
         # Synchronize connection and communication settings between the manager and factory
         self.__synchronize_manager_factory_comm_settings()
@@ -606,6 +614,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the TaskVine system submission.
         """
+        if not self._started:
+            # Don't shutdown if the executor never starts.
+            return
+
         logger.debug("TaskVine shutdown started")
         self._should_stop.set()
 
