@@ -1038,6 +1038,12 @@ class DataFlowKernel:
                                                               waiting_message))
 
         app_fu.add_done_callback(partial(self.handle_app_update, task_record))
+
+        if self.config.tc_logan:
+            logger.info(f"Invoking tc_logan with old task record {task_record}")
+            self.config.tc_logan(task_record)
+            logger.info(f"Post-tc_logan task record {task_record}")
+
         self.update_task_state(task_record, States.pending)
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_record['app_fu']))
 
