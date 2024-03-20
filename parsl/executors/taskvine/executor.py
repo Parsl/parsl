@@ -250,7 +250,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Create submit process and collector thread to create, send, and
         retrieve Parsl tasks within the TaskVine system.
         """
-        
+
         # Mark this executor object as started
         self._started = True
 
