@@ -92,8 +92,6 @@ class MonitoringHub(RepresentationMixin):
              Default: 30 seconds
         """
 
-        self.logger = logger
-
         # Any is used to disable typechecking on uses of _dfk_channel,
         # because it is used in the code as if it points to a channel, but
         # the static type is that it can also be None. The code relies on
@@ -129,7 +127,7 @@ class MonitoringHub(RepresentationMixin):
 
         # Initialize the ZMQ pipe to the Parsl Client
 
-        self.logger.debug("Initializing ZMQ Pipes to client")
+        logger.debug("Initializing ZMQ Pipes to client")
         self.monitoring_hub_active = True
 
         # This annotation is incompatible with typeguard 4.x instrumentation
@@ -165,8 +163,8 @@ class MonitoringHub(RepresentationMixin):
         self.router_proc = ForkProcess(target=router_starter,
                                        args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),
                                        kwargs={"hub_address": self.hub_address,
-                                               "hub_port": self.hub_port,
-                                               "hub_port_range": self.hub_port_range,
+                                               "udp_port": self.hub_port,
+                                               "zmq_port_range": self.hub_port_range,
                                                "logdir": self.logdir,
                                                "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                                "run_id": run_id
@@ -186,7 +184,7 @@ class MonitoringHub(RepresentationMixin):
                                     daemon=True,
                                     )
         self.dbm_proc.start()
-        self.logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
+        logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
         self.filesystem_proc = Process(target=filesystem_receiver,
                                        args=(self.logdir, self.resource_msgs, dfk_run_dir),
@@ -194,19 +192,19 @@ class MonitoringHub(RepresentationMixin):
                                        daemon=True
                                        )
         self.filesystem_proc.start()
-        self.logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
+        logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
 
         try:
             comm_q_result = comm_q.get(block=True, timeout=120)
         except queue.Empty:
-            self.logger.error("Hub has not completed initialization in 120s. Aborting")
+            logger.error("Hub has not completed initialization in 120s. Aborting")
             raise Exception("Hub failed to start")
 
         if isinstance(comm_q_result, str):
-            self.logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
+            logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
             raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
 
-        udp_port, ic_port = comm_q_result
+        udp_port, zmq_port = comm_q_result
 
         self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
 
@@ -216,28 +214,28 @@ class MonitoringHub(RepresentationMixin):
         self._dfk_channel.setsockopt(zmq.LINGER, 0)
         self._dfk_channel.set_hwm(0)
         self._dfk_channel.setsockopt(zmq.SNDTIMEO, self.dfk_channel_timeout)
-        self._dfk_channel.connect("tcp://{}:{}".format(self.hub_address, ic_port))
+        self._dfk_channel.connect("tcp://{}:{}".format(self.hub_address, zmq_port))
 
-        self.logger.info("Monitoring Hub initialized")
+        logger.info("Monitoring Hub initialized")
 
-        return ic_port
+        return zmq_port
 
     # TODO: tighten the Any message format
     def send(self, mtype: MessageType, message: Any) -> None:
-        self.logger.debug("Sending message type {}".format(mtype))
+        logger.debug("Sending message type {}".format(mtype))
         try:
             self._dfk_channel.send_pyobj((mtype, message))
         except zmq.Again:
-            self.logger.exception(
+            logger.exception(
                 "The monitoring message sent from DFK to router timed-out after {}ms".format(self.dfk_channel_timeout))
 
     def close(self) -> None:
-        self.logger.info("Terminating Monitoring Hub")
+        logger.info("Terminating Monitoring Hub")
         exception_msgs = []
         while True:
             try:
                 exception_msgs.append(self.exception_q.get(block=False))
-                self.logger.error("There was a queued exception (Either router or DBM process got exception much earlier?)")
+                logger.error("There was a queued exception (Either router or DBM process got exception much earlier?)")
             except queue.Empty:
                 break
         if self._dfk_channel and self.monitoring_hub_active:
@@ -245,7 +243,7 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.close()
             if exception_msgs:
                 for exception_msg in exception_msgs:
-                    self.logger.error(
+                    logger.error(
                         "{} process delivered an exception: {}. Terminating all monitoring processes immediately.".format(
                             exception_msg[0],
                             exception_msg[1]
@@ -254,21 +252,21 @@ class MonitoringHub(RepresentationMixin):
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
                 self.filesystem_proc.terminate()
-            self.logger.info("Waiting for router to terminate")
+            logger.info("Waiting for router to terminate")
             self.router_proc.join()
-            self.logger.debug("Finished waiting for router termination")
+            logger.debug("Finished waiting for router termination")
             if len(exception_msgs) == 0:
-                self.logger.debug("Sending STOP to DBM")
+                logger.debug("Sending STOP to DBM")
                 self.priority_msgs.put(("STOP", 0))
             else:
-                self.logger.debug("Not sending STOP to DBM, because there were DBM exceptions")
-            self.logger.debug("Waiting for DB termination")
+                logger.debug("Not sending STOP to DBM, because there were DBM exceptions")
+            logger.debug("Waiting for DB termination")
             self.dbm_proc.join()
-            self.logger.debug("Finished waiting for DBM termination")
+            logger.debug("Finished waiting for DBM termination")
 
             # should this be message based? it probably doesn't need to be if
             # we believe we've received all messages
-            self.logger.info("Terminating filesystem radio receiver process")
+            logger.info("Terminating filesystem radio receiver process")
             self.filesystem_proc.terminate()
             self.filesystem_proc.join()
 
