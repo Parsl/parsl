@@ -29,7 +29,7 @@ def test_no_kills():
 
 
 @pytest.mark.local
-@pytest.mark.parametrize("sig", [signal.SIGINT, signal.SIGTERM, signal.SIGKILL])  # are we expecting SIGKILL resilience here? Ideally yes
+@pytest.mark.parametrize("sig", [signal.SIGINT, signal.SIGTERM, signal.SIGKILL, signal.SIGQUIT])
 @pytest.mark.parametrize("process_attr", ["router_proc", "dbm_proc"])
 def test_kill_monitoring_helper_process(sig, process_attr, try_assert):
     """This tests that we can kill a monitoring process and still have successful shutdown.
