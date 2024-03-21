@@ -102,13 +102,10 @@ class BlockProviderExecutor(ParslExecutor):
         else:
             return self._provider.status_polling_interval
 
-    def _fail_job_async(self, block_id: Any, message: str):
+    def _fail_job_async(self, block_id: str, message: str):
         """Marks a job that has failed to start but would not otherwise be included in status()
         as failed and report it in status()
         """
-        if block_id is None:
-            block_id = str(self._block_id_counter.get_id())
-            logger.info(f"Allocated block ID {block_id} for simulated failure")
         self._simulated_status[block_id] = JobStatus(JobState.FAILED, message)
 
     @abstractproperty
