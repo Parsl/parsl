@@ -1254,6 +1254,8 @@ class DataFlowKernel:
             logger.info("Terminated monitoring")
 
         logger.info("DFK cleanup complete")
+        logger.info("Removing the reference of cleaned DFK")
+        DataFlowKernelLoader.clear()
 
     def checkpoint(self, tasks: Optional[Sequence[TaskRecord]] = None) -> str:
         """Checkpoint the dfk incrementally to a checkpoint file.
