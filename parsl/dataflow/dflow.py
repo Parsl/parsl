@@ -34,7 +34,6 @@ from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.taskrecord import TaskRecord
 from parsl.errors import ConfigurationError, InternalConsistencyError, NoDataFlowKernelError
 from parsl.jobs.job_status_poller import JobStatusPoller
-from parsl.jobs.states import JobStatus, JobState
 from parsl.usage_tracking.usage import UsageTracker
 from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
@@ -1216,22 +1215,21 @@ class DataFlowKernel:
 
         logger.info("Scaling in and shutting down executors")
 
+        for pi in self.job_status_poller._poll_items:
+            if not pi.executor.bad_state_is_set:
+                logger.info(f"Scaling in executor {pi.executor.label}")
+
+                # this code needs to be at least as many blocks as need
+                # cancelling, but it is safe to be more, as the scaling
+                # code will cope with being asked to cancel more blocks
+                # than exist.
+                block_count = len(pi.status)
+                pi.scale_in(block_count)
+
+            else:  # and bad_state_is_set
+                logger.warning(f"Not scaling in executor {pi.executor.label} because it is in bad state")
+
         for executor in self.executors.values():
-            if isinstance(executor, BlockProviderExecutor):
-                if not executor.bad_state_is_set:
-                    logger.info(f"Scaling in executor {executor.label}")
-                    if executor.provider:
-                        job_ids = executor.provider.resources.keys()
-                        block_ids = executor.scale_in(len(job_ids))
-                        if self.monitoring and block_ids:
-                            new_status = {}
-                            for bid in block_ids:
-                                new_status[bid] = JobStatus(JobState.CANCELLED)
-                            msg = executor.create_monitoring_info(new_status)
-                            logger.debug("Sending message {} to hub from DFK".format(msg))
-                            self.monitoring.send(MessageType.BLOCK_INFO, msg)
-                else:  # and bad_state_is_set
-                    logger.warning(f"Not scaling in executor {executor.label} because it is in bad state")
             logger.info(f"Shutting down executor {executor.label}")
             executor.shutdown()
             logger.info(f"Shut down executor {executor.label}")
