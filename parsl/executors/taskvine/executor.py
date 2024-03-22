@@ -623,7 +623,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if not self._is_started:
             # Don't shutdown if the executor never starts.
             return
-        
+
         if self._is_shutdown:
             # Don't shutdown this executor again.
             return
@@ -645,7 +645,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if self.worker_launch_method == 'factory':
             logger.debug("Joining on factory process")
             self._factory_process.join()
-        
+
         self._is_shutdown = True
         logger.debug("TaskVine shutdown completed")
 
