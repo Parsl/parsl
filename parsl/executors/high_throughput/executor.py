@@ -400,16 +400,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
 
-        # TODO: why is this a provider property?
-        block_ids = []
-        if hasattr(self.provider, 'init_blocks'):
-            try:
-                block_ids = self.scale_out(blocks=self.provider.init_blocks)
-            except Exception as e:
-                logger.error("Scaling out failed: {}".format(e))
-                raise e
-        return block_ids
-
     def start(self):
         """Create the Interchange process and connect to it.
         """
@@ -439,8 +429,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
-        block_ids = self.initialize_scaling()
-        return block_ids
+        self.initialize_scaling()
 
     @wrap_with_logs
     def _queue_management_worker(self):
