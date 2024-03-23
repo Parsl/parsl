@@ -42,7 +42,7 @@ class WrappedLauncher(Launcher):
         if nodes_per_block > 1:
             logger.warning('WrappedLauncher ignores the number of nodes per block. '
                            'You may be getting fewer workers than expected')
-        return "{0} {1}".format(self.prepend, command)
+        return f"{self.prepend} {command}"
 
 
 class SingleNodeLauncher(Launcher):
@@ -330,7 +330,7 @@ cat << SLURM_EOF > cmd_$SLURM_JOB_NAME.sh
 SLURM_EOF
 chmod a+x cmd_$SLURM_JOB_NAME.sh
 
-srun --ntasks {task_blocks} -l {overrides} bash cmd_$SLURM_JOB_NAME.sh
+srun --ntasks $NODES -l {overrides} bash cmd_$SLURM_JOB_NAME.sh
 
 [[ "{debug}" == "1" ]] && echo "Done"
 '''.format(command=command,
