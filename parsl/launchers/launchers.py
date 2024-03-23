@@ -330,7 +330,7 @@ cat << SLURM_EOF > cmd_$SLURM_JOB_NAME.sh
 SLURM_EOF
 chmod a+x cmd_$SLURM_JOB_NAME.sh
 
-srun --ntasks $NODES -l {overrides} bash cmd_$SLURM_JOB_NAME.sh
+srun --ntasks $((NODES - 1)) -l {overrides} bash cmd_$SLURM_JOB_NAME.sh
 
 [[ "{debug}" == "1" ]] && echo "Done"
 '''.format(command=command,
