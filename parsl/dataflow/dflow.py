@@ -1214,21 +1214,7 @@ class DataFlowKernel:
         self.job_status_poller.close()
         logger.info("Terminated job status poller")
 
-        logger.info("Scaling in and shutting down executors")
-
-        for ef in self.job_status_poller._executor_facades:
-            if not ef.executor.bad_state_is_set:
-                logger.info(f"Scaling in executor {ef.executor.label}")
-
-                # this code needs to be at least as many blocks as need
-                # cancelling, but it is safe to be more, as the scaling
-                # code will cope with being asked to cancel more blocks
-                # than exist.
-                block_count = len(ef.status)
-                ef.scale_in(block_count)
-
-            else:  # and bad_state_is_set
-                logger.warning(f"Not scaling in executor {ef.executor.label} because it is in bad state")
+        logger.info("Shutting down executors")
 
         for executor in self.executors.values():
             logger.info(f"Shutting down executor {executor.label}")
