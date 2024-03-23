@@ -29,7 +29,7 @@ class PollItem:
         if self._dfk and self._dfk.monitoring is not None:
             self.monitoring_enabled = True
             hub_address = self._dfk.hub_address
-            hub_port = self._dfk.hub_interchange_port
+            hub_port = self._dfk.hub_zmq_port
             context = zmq.Context()
             self.hub_channel = context.socket(zmq.DEALER)
             self.hub_channel.set_hwm(0)
@@ -72,7 +72,7 @@ class PollItem:
     def executor(self) -> BlockProviderExecutor:
         return self._executor
 
-    def scale_in(self, n, max_idletime=None):
+    def scale_in(self, n: int, max_idletime: Optional[float] = None) -> List[str]:
 
         if max_idletime is None:
             block_ids = self._executor.scale_in(n)
@@ -82,7 +82,7 @@ class PollItem:
             # scale_in method really does come from HighThroughputExecutor,
             # and so does have an extra max_idletime parameter not present
             # in the executor interface.
-            block_ids = self._executor.scale_in(n, max_idletime=max_idletime)
+            block_ids = self._executor.scale_in(n, max_idletime=max_idletime)  # type: ignore[call-arg]
         if block_ids is not None:
             new_status = {}
             for block_id in block_ids:
@@ -91,7 +91,7 @@ class PollItem:
             self.send_monitoring_info(new_status)
         return block_ids
 
-    def scale_out(self, n):
+    def scale_out(self, n: int) -> List[str]:
         block_ids = self._executor.scale_out(n)
         if block_ids is not None:
             new_status = {}
