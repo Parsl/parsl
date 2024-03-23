@@ -13,7 +13,7 @@ from parsl.executors import HighThroughputExecutor
 from parsl.monitoring import MonitoringHub
 
 
-def fresh_config(run_dir, strategy):
+def fresh_config(run_dir, strategy, db_url):
     return Config(
         run_dir=os.fspath(run_dir),
         executors=[
@@ -38,7 +38,7 @@ def fresh_config(run_dir, strategy):
         monitoring=MonitoringHub(
                         hub_address="localhost",
                         hub_port=55055,
-                        logging_endpoint=f"sqlite:///{run_dir}/monitoring.db"
+                        logging_endpoint=db_url
         )
     )
 
@@ -58,7 +58,8 @@ def test_row_counts(tmpd_cwd, strategy):
     import sqlalchemy
     from sqlalchemy import text
 
-    parsl.load(fresh_config(tmpd_cwd, strategy))
+    db_url = f"sqlite:///{tmpd_cwd}/monitoring.db"
+    parsl.load(fresh_config(tmpd_cwd, strategy, db_url))
 
     this_app().result()
 
@@ -67,7 +68,7 @@ def test_row_counts(tmpd_cwd, strategy):
 
     # at this point, we should find one row in the monitoring database.
 
-    engine = sqlalchemy.create_engine("sqlite:///runinfo/monitoring.db")
+    engine = sqlalchemy.create_engine(db_url)
     with engine.begin() as connection:
 
         # we should see a single block:
