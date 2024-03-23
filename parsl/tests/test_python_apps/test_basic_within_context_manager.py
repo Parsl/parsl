@@ -11,7 +11,7 @@ def square(x):
 
 @parsl.bash_app
 def foo(x, stdout='foo.stdout'):
-    return f"echo {x+1}"
+    return f"echo {x + 1}"
 
 
 def local_setup():
