@@ -66,22 +66,17 @@ def test_row_counts(tmpd_cwd, strategy):
     parsl.dfk().cleanup()
     parsl.clear()
 
-    # at this point, we should find one row in the monitoring database.
-
     engine = sqlalchemy.create_engine(db_url)
     with engine.begin() as connection:
 
-        # we should see a single block:
         result = connection.execute(text("SELECT COUNT(DISTINCT block_id) FROM block"))
         (c, ) = result.first()
-        assert c == 1
+        assert c == 1, "We should see a single block in this database"
 
-        # there should be a pending status
         result = connection.execute(text("SELECT COUNT(*) FROM block WHERE block_id = 0 AND status = 'PENDING'"))
         (c, ) = result.first()
-        assert c == 1
+        assert c == 1, "There should be a single pending status"
 
-        # there should be a cancelled status
         result = connection.execute(text("SELECT COUNT(*) FROM block WHERE block_id = 0 AND status = 'CANCELLED'"))
         (c, ) = result.first()
-        assert c == 1
+        assert c == 1, "There should be a single cancelled status"
