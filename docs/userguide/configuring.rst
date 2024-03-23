@@ -78,10 +78,10 @@ Consider a configuration function if the application will shut down and re-launc
         return Config(...)
 
     with parsl.load(make_config()):
-        pass
+        # Your workflow here
     parsl.clear()  # Stops Parsl
     with parsl.load(make_config()):  # Re-launches with a fresh configuration
-        pass
+        # Your workflow here
 
 
 How to Configure

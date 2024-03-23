@@ -10,8 +10,8 @@ def square(x):
 
 
 @parsl.bash_app
-def foo(x, y, z=30, stdout='foo.stdout', label=None):
-    return f"echo {x} {y} {z}"
+def foo(x, stdout='foo.stdout'):
+    return f"echo {x+1}"
 
 
 def local_setup():
@@ -28,11 +28,11 @@ def test_within_context_manger():
         py_future = square(2)
         assert py_future.result() == 4
 
-        bash_future = foo(10, 20)
+        bash_future = foo(1)
         assert bash_future.result() == 0
 
         with open('foo.stdout', 'r') as f:
-            assert f.read() == "10 20 30\n"
+            assert f.read() == "2\n"
 
     with pytest.raises(NoDataFlowKernelError) as excinfo:
         square(2).result()
