@@ -371,3 +371,4 @@ autodoc_default_options = {
     'members': True,
     'undoc-members': True
 }
+autodoc_preserve_defaults = True
