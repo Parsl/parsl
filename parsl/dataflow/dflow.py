@@ -210,7 +210,6 @@ class DataFlowKernel:
         pass
 
     def __exit__(self, exc_type, exc_value, traceback):
-        # clean up the dfk on exiting the resource block
         logger.debug("Exiting the context manager, calling cleanup for DFK")
         self.cleanup()
 

@@ -1,5 +1,5 @@
 import parsl
-from parsl.tests.configs.local_threads import config
+from parsl.tests.configs.local_threads import fresh_config
 import pytest
 from parsl.errors import NoDataFlowKernelError
 
@@ -24,6 +24,7 @@ def local_teardown():
 
 @pytest.mark.local
 def test_within_context_manger():
+    config = fresh_config()
     with parsl.load(config=config):
         py_future = square(2)
         assert py_future.result() == 4
