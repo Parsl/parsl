@@ -1,6 +1,6 @@
+from collections.abc import Mapping
 from concurrent.futures import Future
 from functools import singledispatch
-from collections.abc import Mapping
 
 
 @singledispatch
