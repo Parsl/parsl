@@ -206,6 +206,13 @@ class DataFlowKernel:
 
         atexit.register(self.atexit_cleanup)
 
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        logger.debug("Exiting the context manager, calling cleanup for DFK")
+        self.cleanup()
+
     def _send_task_log_info(self, task_record: TaskRecord) -> None:
         if self.monitoring:
             task_log_info = self._create_task_log_info(task_record)
@@ -1115,7 +1122,7 @@ class DataFlowKernel:
 
         channel.makedirs(channel.script_dir, exist_ok=True)
 
-    def add_executors(self, executors):
+    def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         for executor in executors:
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir

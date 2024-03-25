@@ -107,6 +107,16 @@ class ParslExecutor(metaclass=ABCMeta):
         self._run_dir = value
 
     @property
+    def run_id(self) -> Optional[str]:
+        """UUID for the enclosing DFK.
+        """
+        return self._run_id
+
+    @run_id.setter
+    def run_id(self, value: Optional[str]) -> None:
+        self._run_id = value
+
+    @property
     def hub_address(self) -> Optional[str]:
         """Address to the Hub for monitoring.
         """
