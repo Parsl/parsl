@@ -2,18 +2,29 @@ import errno
 import logging
 import os
 
-import paramiko
+try:
+    import paramiko
+    _paramiko_enabled = True
+except ImportError:
+    _paramiko_enabled = False
+except NameError:
+    _paramiko_enabled = False
+else:
+    _paramiko_enabled = True
+
 from parsl.channels.base import Channel
 from parsl.channels.errors import BadHostKeyException, AuthException, SSHException, BadScriptPath, BadPermsScriptPath, FileCopyException
 from parsl.utils import RepresentationMixin
+from parsl.errors import OptionalModuleMissing
 
 logger = logging.getLogger(__name__)
 
 
-class NoAuthSSHClient(paramiko.SSHClient):
-    def _auth(self, username, *args):
-        self._transport.auth_none(username)
-        return
+if _paramiko_enabled:
+    class NoAuthSSHClient(paramiko.SSHClient):
+        def _auth(self, username, *args):
+            self._transport.auth_none(username)
+            return
 
 
 class SSHChannel(Channel, RepresentationMixin):
@@ -28,6 +39,9 @@ class SSHChannel(Channel, RepresentationMixin):
 
     def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None,
                  gssapi_auth=False, skip_auth=False, port=22, key_filename=None, host_keys_filename=None):
+        if not _paramiko_enabled:
+            raise OptionalModuleMissing(['paramiko'],
+                                        "OAuthSSHChannel requires paramiko module.")
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -60,8 +74,9 @@ class SSHChannel(Channel, RepresentationMixin):
             self.ssh_client = NoAuthSSHClient()
         else:
             self.ssh_client = paramiko.SSHClient()
-        self.ssh_client.load_system_host_keys(filename=host_keys_filename)
-        self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            self.ssh_client.load_system_host_keys(filename=host_keys_filename)
+            self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
         self.sftp_client = None
 
         self.envs = {}

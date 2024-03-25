@@ -8,10 +8,8 @@ typeguard>=2.10,!=3.*,<5
 
 
 typing-extensions>=4.6,<5
-globus-sdk
 dill
 tblib
 requests
-paramiko
 psutil>=5.5.1
 setproctitle

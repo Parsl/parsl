@@ -1,8 +1,16 @@
 import getpass
 import logging
 
-import paramiko
+try:
+    import paramiko
+except ImportError:
+    _paramiko_enabled = False
+except NameError:
+    _paramiko_enabled = False
+else:
+    _paramiko_enabled = True
 from parsl.channels.ssh.ssh import SSHChannel
+from parsl.errors import OptionalModuleMissing
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +22,9 @@ class SSHInteractiveLoginChannel(SSHChannel):
     """
 
     def __init__(self, hostname, username=None, password=None, script_dir=None, envs=None):
+        if not _paramiko_enabled:
+            raise OptionalModuleMissing(['paramiko'],
+                                        "OAuthSSHChannel requires paramiko module.")
         ''' Initialize a persistent connection to the remote system.
         We should know at this point whether ssh connectivity is possible
 
@@ -33,9 +44,14 @@ class SSHInteractiveLoginChannel(SSHChannel):
         self.username = username
         self.password = password
 
-        self.ssh_client = paramiko.SSHClient()
-        self.ssh_client.load_system_host_keys()
-        self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        if _paramiko_enabled:
+            self.ssh_client = paramiko.SSHClient()
+        else:
+            self.ssh_client = None
+
+        if self.ssh_client:
+            self.ssh_client.load_system_host_keys()
+            self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         self.script_dir = script_dir
 
@@ -43,14 +59,14 @@ class SSHInteractiveLoginChannel(SSHChannel):
         if envs is not None:
             self.envs = envs
 
-        try:
-            self.ssh_client.connect(
-                hostname, username=username, password=password, allow_agent=True
-            )
-
-        except Exception:
-            logger.debug("Caught the SSHException in SSHInteractive")
-            pass
+        if self.ssh_client:
+            try:
+                self.ssh_client.connect(
+                    hostname, username=username, password=password, allow_agent=True
+                )
+            except Exception:
+                logger.debug("Caught the SSHException in SSHInteractive")
+                pass
         '''
         except paramiko.BadHostKeyException as e:
             raise BadHostKeyException(e, self.hostname)

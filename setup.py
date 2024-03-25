@@ -35,6 +35,8 @@ extras_require = {
     'flux': ['pyyaml', 'cffi', 'jsonschema'],
     'proxystore': ['proxystore'],
     'radical-pilot': ['radical.pilot'],
+    'ssh': ['paramiko'],
+    'globus': ['globus_sdk'],
     # Disabling psi-j since github direct links are not allowed by pypi
     # 'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
 }
