@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from concurrent.futures import Future
 from functools import singledispatch
 
@@ -55,3 +56,28 @@ def _(iterable):
 
     type_ = type(iterable)
     return type_(map(unwrap, iterable))
+
+
+@traverse_to_gather.register(Mapping)
+def _(dictionary):
+    futures = []
+    for key, value in dictionary.items():
+        if isinstance(key, Future):
+            futures.append(key)
+        if isinstance(value, Future):
+            futures.append(value)
+    return futures
+
+
+@traverse_to_unwrap.register(Mapping)
+def _(dictionary):
+    unwrapped_dict = {}
+    for key, value in dictionary.items():
+        if isinstance(key, Future):
+            assert key.done(), "key future should be done by now"
+            key = key.result()
+        if isinstance(value, Future):
+            assert value.done(), "value future should be done by now"
+            value = value.result()
+        unwrapped_dict[key] = value
+    return unwrapped_dict

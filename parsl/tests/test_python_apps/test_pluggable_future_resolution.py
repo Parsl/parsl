@@ -68,3 +68,16 @@ def test_resolving_iterables(type_):
     output2 = make_path("test2")
     output3 = append_paths(type_([output1, output2]), end_str="end")
     assert output3.result() == type_([Path("test1", "end"), Path("test2", "end")])
+
+
+@parsl.python_app
+def append_paths_dict(iterable: dict, end_str: str = "end"):
+    return {Path(k, end_str): Path(v, end_str) for k, v in iterable.items()}
+
+
+@pytest.mark.local
+def test_resolving_dict():
+    output1 = make_path("test1")
+    output2 = make_path("test2")
+    output3 = append_paths_dict({output1: output2}, end_str="end")
+    assert output3.result() == {Path("test1", "end"): Path("test2", "end")}

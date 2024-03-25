@@ -1,11 +1,6 @@
 from parsl.errors import ParslError
 from typing import Optional, Sequence, Tuple
 
-import logging
-
-
-logger = logging.getLogger(__name__)
-
 
 class DataFlowException(ParslError):
     """Base class for all exceptions.
