@@ -17,7 +17,7 @@ import parsl.launchers
 from parsl.serialize import pack_res_spec_apply_message, deserialize
 from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
-from parsl.jobs.states import JobStatus, JobState
+from parsl.jobs.states import JobStatus, JobState, TERMINAL_STATES
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
@@ -713,8 +713,22 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             tasks: int  # sum of tasks in this block
             idle: float  # shortest idle time of any manager in this block
 
+        # block_info will be populated from two sources:
+        # the Job Status Poller mutable block list, and the list of blocks
+        # which have connected to the interchange.
+
+        def new_block_info():
+            return BlockInfo(tasks=0, idle=float('inf'))
+
+        block_info: Dict[str, BlockInfo] = defaultdict(new_block_info)
+
+        for block_id, job_status in self._status.items():
+            if job_status.state not in TERMINAL_STATES:
+                # TODO: is there a nicer way to make block_info come into existence?
+                # can i write just the expression block_info[block_id] on its own?
+                block_info[block_id] = new_block_info()
+
         managers = self.connected_managers()
-        block_info: Dict[str, BlockInfo] = defaultdict(lambda: BlockInfo(tasks=0, idle=float('inf')))
         for manager in managers:
             if not manager['active']:
                 continue
