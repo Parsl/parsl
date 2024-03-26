@@ -26,6 +26,10 @@ class ExecutorState(TypedDict):
     If the executor is not idle, then None.
     """
 
+    first: bool
+    """Is this the first poll for this executor?
+    """
+
 
 class Strategy:
     """Scaling strategy.
@@ -144,17 +148,17 @@ class Strategy:
 
     def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         for executor in executors:
-            self.executors[executor.label] = {'idle_since': None}
+            self.executors[executor.label] = {'idle_since': None, 'first': True}
 
     def _strategy_init_only(self, executor_facades: List[jsp.PolledExecutorFacade]) -> None:
         """Scale up to init_blocks at the start, then nothing more.
         """
         for ef in executor_facades:
-            if ef.first:
-                executor = ef.executor
+            executor = ef.executor
+            if self.executors[executor.label]['first']:
                 logger.debug(f"strategy_init_only: scaling out {executor.provider.init_blocks} initial blocks for {executor.label}")
                 ef.scale_out(executor.provider.init_blocks)
-                ef.first = False
+                self.executors[executor.label]['first'] = False
             else:
                 logger.debug("strategy_init_only: doing nothing")
 
@@ -190,11 +194,11 @@ class Strategy:
                 continue
             logger.debug(f"Strategizing for executor {label}")
 
-            if ef.first:
+            if self.executors[label]['first']:
                 executor = ef.executor
                 logger.debug(f"Scaling out {executor.provider.init_blocks} initial blocks for {label}")
                 ef.scale_out(executor.provider.init_blocks)
-                ef.first = False
+                self.executors[label]['first'] = False
 
             # Tasks that are either pending completion
             active_tasks = executor.outstanding
