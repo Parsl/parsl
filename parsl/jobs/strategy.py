@@ -146,22 +146,22 @@ class Strategy:
         for executor in executors:
             self.executors[executor.label] = {'idle_since': None}
 
-    def _strategy_init_only(self, status_list: List[jsp.PollItem]) -> None:
+    def _strategy_init_only(self, executor_facades: List[jsp.PolledExecutorFacade]) -> None:
         """Scale up to init_blocks at the start, then nothing more.
         """
-        for exec_status in status_list:
-            if exec_status.first:
-                executor = exec_status.executor
+        for ef in executor_facades:
+            if ef.first:
+                executor = ef.executor
                 logger.debug(f"strategy_init_only: scaling out {executor.provider.init_blocks} initial blocks for {executor.label}")
-                exec_status.scale_out(executor.provider.init_blocks)
-                exec_status.first = False
+                ef.scale_out(executor.provider.init_blocks)
+                ef.first = False
             else:
                 logger.debug("strategy_init_only: doing nothing")
 
-    def _strategy_simple(self, status_list: List[jsp.PollItem]) -> None:
-        self._general_strategy(status_list, strategy_type='simple')
+    def _strategy_simple(self, executor_facades: List[jsp.PolledExecutorFacade]) -> None:
+        self._general_strategy(executor_facades, strategy_type='simple')
 
-    def _strategy_htex_auto_scale(self, status_list: List[jsp.PollItem]) -> None:
+    def _strategy_htex_auto_scale(self, executor_facades: List[jsp.PolledExecutorFacade]) -> None:
         """HTEX specific auto scaling strategy
 
         This strategy works only for HTEX. This strategy will scale out by
@@ -176,30 +176,30 @@ class Strategy:
         expected to scale in effectively only when # of workers, or tasks executing
         per block is close to 1.
         """
-        self._general_strategy(status_list, strategy_type='htex')
+        self._general_strategy(executor_facades, strategy_type='htex')
 
     @wrap_with_logs
-    def _general_strategy(self, status_list, *, strategy_type):
-        logger.debug(f"general strategy starting with strategy_type {strategy_type} for {len(status_list)} executors")
+    def _general_strategy(self, executor_facades, *, strategy_type):
+        logger.debug(f"general strategy starting with strategy_type {strategy_type} for {len(executor_facades)} executors")
 
-        for exec_status in status_list:
-            executor = exec_status.executor
+        for ef in executor_facades:
+            executor = ef.executor
             label = executor.label
             if not isinstance(executor, BlockProviderExecutor):
                 logger.debug(f"Not strategizing for executor {label} because scaling not enabled")
                 continue
             logger.debug(f"Strategizing for executor {label}")
 
-            if exec_status.first:
-                executor = exec_status.executor
+            if ef.first:
+                executor = ef.executor
                 logger.debug(f"Scaling out {executor.provider.init_blocks} initial blocks for {label}")
-                exec_status.scale_out(executor.provider.init_blocks)
-                exec_status.first = False
+                ef.scale_out(executor.provider.init_blocks)
+                ef.first = False
 
             # Tasks that are either pending completion
             active_tasks = executor.outstanding
 
-            status = exec_status.status
+            status = ef.status
 
             # FIXME we need to handle case where provider does not define these
             # FIXME probably more of this logic should be moved to the provider
@@ -255,7 +255,7 @@ class Strategy:
                         # We have resources idle for the max duration,
                         # we have to scale_in now.
                         logger.debug(f"Idle time has reached {self.max_idletime}s for executor {label}; scaling in")
-                        exec_status.scale_in(active_blocks - min_blocks)
+                        ef.scale_in(active_blocks - min_blocks)
 
                     else:
                         logger.debug(
@@ -278,7 +278,7 @@ class Strategy:
                     excess_blocks = math.ceil(float(excess_slots) / (tasks_per_node * nodes_per_block))
                     excess_blocks = min(excess_blocks, max_blocks - active_blocks)
                     logger.debug(f"Requesting {excess_blocks} more blocks")
-                    exec_status.scale_out(excess_blocks)
+                    ef.scale_out(excess_blocks)
 
             elif active_slots == 0 and active_tasks > 0:
                 logger.debug("Strategy case 4a: No active slots but some active tasks - could scale out by a single block")
@@ -287,7 +287,7 @@ class Strategy:
                 if active_blocks < max_blocks:
                     logger.debug("Requesting single block")
 
-                    exec_status.scale_out(1)
+                    ef.scale_out(1)
                 else:
                     logger.debug("Not requesting single block, because at maxblocks already")
 
@@ -303,7 +303,7 @@ class Strategy:
                             excess_blocks = math.ceil(float(excess_slots) / (tasks_per_node * nodes_per_block))
                             excess_blocks = min(excess_blocks, active_blocks - min_blocks)
                             logger.debug(f"Requesting scaling in by {excess_blocks} blocks with idle time {self.max_idletime}s")
-                            exec_status.scale_in(excess_blocks, max_idletime=self.max_idletime)
+                            ef.scale_in(excess_blocks, max_idletime=self.max_idletime)
                     else:
                         logger.error("This strategy does not support scaling in except for HighThroughputExecutor - taking no action")
                 else:
