@@ -23,9 +23,10 @@ class ZipAuthorityError(ParslError):
 
 
 class ZipFileStaging(Staging):
-    """A stage-out provider for zip files.
+    """A staging provider for zip files.
 
-    This provider will stage out files by writing them into the specified zip
+    This provider will stage in files by reading them from the specified zip
+    file, and stage out files by writing them into the specified zip
     file.
 
     The filename of both the zip file and the file contained in that zip are
