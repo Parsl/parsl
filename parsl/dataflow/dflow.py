@@ -1241,7 +1241,7 @@ class DataFlowKernel:
                             logger.debug("Sending message {} to hub from DFK".format(msg))
                             self.monitoring.send(MessageType.BLOCK_INFO, msg)
                 else:  # and bad_state_is_set
-                    logger.warning(f"Not shutting down executor {executor.label} because it is in bad state")
+                    logger.warning(f"Not scaling in executor {executor.label} because it is in bad state")
             logger.info(f"Shutting down executor {executor.label}")
             executor.shutdown()
             logger.info(f"Shut down executor {executor.label}")
