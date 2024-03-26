@@ -206,6 +206,13 @@ class DataFlowKernel:
 
         atexit.register(self.atexit_cleanup)
 
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        logger.debug("Exiting the context manager, calling cleanup for DFK")
+        self.cleanup()
+
     def _send_task_log_info(self, task_record: TaskRecord) -> None:
         if self.monitoring:
             task_log_info = self._create_task_log_info(task_record)
@@ -1115,7 +1122,7 @@ class DataFlowKernel:
 
         channel.makedirs(channel.script_dir, exist_ok=True)
 
-    def add_executors(self, executors):
+    def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         for executor in executors:
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
@@ -1231,7 +1238,7 @@ class DataFlowKernel:
                             logger.debug("Sending message {} to hub from DFK".format(msg))
                             self.monitoring.send(MessageType.BLOCK_INFO, msg)
                 else:  # and bad_state_is_set
-                    logger.warning(f"Not shutting down executor {executor.label} because it is in bad state")
+                    logger.warning(f"Not scaling in executor {executor.label} because it is in bad state")
             logger.info(f"Shutting down executor {executor.label}")
             executor.shutdown()
             logger.info(f"Shut down executor {executor.label}")
