@@ -1,4 +1,3 @@
-from collections.abc import Mapping
 from concurrent.futures import Future
 from functools import singledispatch
 
@@ -58,7 +57,7 @@ def _(iterable):
     return type_(map(unwrap, iterable))
 
 
-@traverse_to_gather.register(Mapping)
+@traverse_to_gather.register(dict)
 def _(dictionary):
     futures = []
     for key, value in dictionary.items():
@@ -69,7 +68,7 @@ def _(dictionary):
     return futures
 
 
-@traverse_to_unwrap.register(Mapping)
+@traverse_to_unwrap.register(dict)
 def _(dictionary):
     unwrapped_dict = {}
     for key, value in dictionary.items():
