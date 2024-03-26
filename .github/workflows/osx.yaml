@@ -35,3 +35,7 @@ jobs:
         echo "Workflow Attempt: ${{ github.run_attempt }}" >> ci_job_info.txt
         as_ascii="$(echo "${{ github.ref_name }}" | perl -pe "s/[^A-z0-9-]+/-/g; s/^-+|-+\$//g; s/--+/-/g;")"
         echo "as-ascii=$as_ascii" >> $GITHUB_OUTPUT
+
+    - name: Non-requirements based install
+      run: |
+        brew install mpich
