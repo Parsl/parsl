@@ -59,24 +59,27 @@ def test_row_counts(tmpd_cwd, strategy):
     from sqlalchemy import text
 
     db_url = f"sqlite:///{tmpd_cwd}/monitoring.db"
-    parsl.load(fresh_config(tmpd_cwd, strategy, db_url))
+    with parsl.load(fresh_config(tmpd_cwd, strategy, db_url)):
+        dfk = parsl.dfk()
+        run_id = dfk.run_id
 
-    this_app().result()
+        this_app().result()
 
-    parsl.dfk().cleanup()
     parsl.clear()
 
     engine = sqlalchemy.create_engine(db_url)
     with engine.begin() as connection:
 
-        result = connection.execute(text("SELECT COUNT(DISTINCT block_id) FROM block"))
+        binds = {"run_id": run_id}
+
+        result = connection.execute(text("SELECT COUNT(DISTINCT block_id) FROM block WHERE run_id = :run_id"), binds)
         (c, ) = result.first()
         assert c == 1, "We should see a single block in this database"
 
-        result = connection.execute(text("SELECT COUNT(*) FROM block WHERE block_id = 0 AND status = 'PENDING'"))
+        result = connection.execute(text("SELECT COUNT(*) FROM block WHERE block_id = 0 AND status = 'PENDING' AND run_id = :run_id"), binds)
         (c, ) = result.first()
         assert c == 1, "There should be a single pending status"
 
-        result = connection.execute(text("SELECT COUNT(*) FROM block WHERE block_id = 0 AND status = 'CANCELLED'"))
+        result = connection.execute(text("SELECT COUNT(*) FROM block WHERE block_id = 0 AND status = 'CANCELLED' AND run_id = :run_id"), binds)
         (c, ) = result.first()
         assert c == 1, "There should be a single cancelled status"
