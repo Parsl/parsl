@@ -97,6 +97,7 @@ For Developers
 
 2. Build and Test::
 
+    $ cd Parsl # navigate to the root directoty of the project
     $ make   # show all available makefile targets
     $ make virtualenv # create a virtual environment
     $ source .venv/bin/activate # activate the virtual environment
