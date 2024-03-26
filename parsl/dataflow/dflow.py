@@ -207,7 +207,7 @@ class DataFlowKernel:
         atexit.register(self.atexit_cleanup)
 
     def __enter__(self):
-       return self
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         logger.debug("Exiting the context manager, calling cleanup for DFK")
