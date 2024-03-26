@@ -39,3 +39,14 @@ jobs:
     - name: Non-requirements based install
       run: |
         brew install mpich
+
+    - name: setup virtual env
+      run: |
+        python -m venv .venv
+        source .venv/bin/activate
+
+    - name: Install Parsl and dependencies
+      run: |
+        source .venv/bin/activate
+        pip install -r requirements.txt
+        pip install -r test-requirements.txt
