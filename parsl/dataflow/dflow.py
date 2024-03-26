@@ -996,32 +996,16 @@ class DataFlowKernel:
         executor = random.choice(choices)
         logger.debug("Task {} will be sent to executor {}".format(task_id, executor))
 
-        # The below uses func.__name__ before it has been wrapped by any staging code.
-
-        label = app_kwargs.get('label')
-        for kw in ['stdout', 'stderr']:
-            if kw in app_kwargs:
-                if app_kwargs[kw] == parsl.AUTO_LOGNAME:
-                    if kw not in ignore_for_cache:
-                        ignore_for_cache += [kw]
-                    app_kwargs[kw] = os.path.join(
-                                self.run_dir,
-                                'task_logs',
-                                str(int(task_id / 10000)).zfill(4),  # limit logs to 10k entries per directory
-                                'task_{}_{}{}.{}'.format(
-                                    str(task_id).zfill(4),
-                                    func.__name__,
-                                    '' if label is None else '_{}'.format(label),
-                                    kw)
-                    )
-
         resource_specification = app_kwargs.get('parsl_resource_specification', {})
 
         task_record: TaskRecord
-        task_record = {'depends': [],
+        task_record = {'args': app_args,
+                       'depends': [],
                        'dfk': self,
                        'executor': executor,
+                       'func': func,
                        'func_name': func.__name__,
+                       'kwargs': app_kwargs,
                        'memoize': cache,
                        'hashsum': None,
                        'exec_fu': None,
@@ -1043,18 +1027,30 @@ class DataFlowKernel:
 
         self.update_task_state(task_record, States.unsched)
 
+        for kw in ['stdout', 'stderr']:
+            if kw in app_kwargs:
+                if app_kwargs[kw] == parsl.AUTO_LOGNAME:
+                    if kw not in ignore_for_cache:
+                        ignore_for_cache += [kw]
+                    if self.config.std_autopath is None:
+                        app_kwargs[kw] = self.default_std_autopath(task_record, kw)
+                    else:
+                        app_kwargs[kw] = self.config.std_autopath(task_record, kw)
+
         app_fu = AppFuture(task_record)
+        task_record['app_fu'] = app_fu
 
         # Transform remote input files to data futures
         app_args, app_kwargs, func = self._add_input_deps(executor, app_args, app_kwargs, func)
 
         func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func)
 
+        # Replace the function invocation in the TaskRecord with whatever file-staging
+        # substitutions have been made.
         task_record.update({
                     'args': app_args,
                     'func': func,
-                    'kwargs': app_kwargs,
-                    'app_fu': app_fu})
+                    'kwargs': app_kwargs})
 
         assert task_id not in self.tasks
 
@@ -1439,6 +1435,19 @@ class DataFlowKernel:
 
         log_std_stream("Standard out", task_record['app_fu'].stdout)
         log_std_stream("Standard error", task_record['app_fu'].stderr)
+
+    def default_std_autopath(self, taskrecord, kw):
+        label = taskrecord['kwargs'].get('label')
+        task_id = taskrecord['id']
+        return os.path.join(
+            self.run_dir,
+            'task_logs',
+            str(int(task_id / 10000)).zfill(4),  # limit logs to 10k entries per directory
+            'task_{}_{}{}.{}'.format(
+                str(task_id).zfill(4),
+                taskrecord['func_name'],
+                '' if label is None else '_{}'.format(label),
+                kw))
 
 
 class DataFlowKernelLoader:
