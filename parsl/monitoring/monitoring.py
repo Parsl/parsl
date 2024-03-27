@@ -117,6 +117,8 @@ class MonitoringHub(RepresentationMixin):
 
     def start(self, run_id: str, dfk_run_dir: str, config_run_dir: Union[str, os.PathLike]) -> int:
 
+        logger.debug("Starting MonitoringHub")
+
         if self.logdir is None:
             self.logdir = "."
 
@@ -125,9 +127,6 @@ class MonitoringHub(RepresentationMixin):
 
         os.makedirs(self.logdir, exist_ok=True)
 
-        # Initialize the ZMQ pipe to the Parsl Client
-
-        logger.debug("Initializing ZMQ Pipes to client")
         self.monitoring_hub_active = True
 
         # This annotation is incompatible with typeguard 4.x instrumentation

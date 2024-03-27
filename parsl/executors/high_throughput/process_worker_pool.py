@@ -335,13 +335,16 @@ class Manager:
                 self.heartbeat_to_incoming()
                 last_beat = time.time()
 
-            if self.drain_time and time.time() > self.drain_time:
+            if time.time() > self.drain_time:
                 logger.info("Requesting drain")
                 self.drain_to_incoming()
-                self.drain_time = None
                 # This will start the pool draining...
                 # Drained exit behaviour does not happen here. It will be
                 # driven by the interchange sending a DRAINED_CODE message.
+
+                # now set drain time to the far future so we don't send a drain
+                # message every iteration.
+                self.drain_time = float('inf')
 
             poll_duration_s = max(0, next_interesting_event_time - time.time())
             socks = dict(poller.poll(timeout=poll_duration_s * 1000))
