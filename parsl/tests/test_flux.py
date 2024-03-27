@@ -1,7 +1,11 @@
 import os
 import concurrent.futures as cf
 
+import logging
+
 import pytest
+
+logger = logging.getLogger(__name__)
 
 from parsl.app.errors import AppException
 from parsl.executors.flux.executor import (
@@ -62,10 +66,16 @@ def test_except():
     reason="Not Linux or too few CPUs",
 )
 def test_affinity():
+    logger.info("BENC: starting affinity test")
     with FluxExecutor() as executor:
+        logger.info("BENC: inside with block, starting executor")
         executor.start()
+        logger.info("BENC: started executor, submitting a task")
         future = executor.submit(os.sched_getaffinity, {"cores_per_task": 2}, 0)
+        logger.info("BENC: got future... asserting on result")
         assert len(future.result()) > 1
+        logger.info("BENC: asserted on result... ending with block")
+    logger.info("BENC: ending affinity test")
 
 
 @require_flux
