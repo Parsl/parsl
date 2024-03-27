@@ -586,13 +586,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self._worker_command = self._construct_worker_command()
         self._patch_providers()
 
-        if hasattr(self.provider, 'init_blocks'):
-            try:
-                self.scale_out(blocks=self.provider.init_blocks)
-            except Exception as e:
-                logger.error("Initial block scaling out failed: {}".format(e))
-                raise e
-
     @property
     def outstanding(self) -> int:
         """Count the number of outstanding tasks."""
