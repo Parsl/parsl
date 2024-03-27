@@ -305,7 +305,13 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Attribute indicating whether this executor was started to shut it down properly.
         # This safeguards cases where an object of this executor is created but
         # the executor never starts, so it shouldn't be shutdowned.
-        self.started = False
+        self.is_started = False
+
+        # Attribute indicating whether this executor was shutdown before.
+        # This safeguards cases where this object is automatically shut down (e.g.,
+        # via atexit) and the user also explicitly calls shut down. While this is
+        # permitted, the effect of an executor shutdown should happen only once.
+        self.is_shutdown = False
 
     def atexit_cleanup(self):
         # Calls this executor's shutdown method upon Python exiting the process.
@@ -321,7 +327,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         retrieve Parsl tasks within the Work Queue system.
         """
         # Mark this executor object as started
-        self.started = True
+        self.is_started = True
         self.tasks_lock = threading.Lock()
 
         # Create directories for data and results
@@ -703,8 +709,12 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the Work Queue system submission.
         """
-        if not self.started:
+        if not self.is_started:
             # Don't shutdown if the executor never starts.
+            return
+
+        if self.is_shutdown:
+            # Don't shutdown this executor again.
             return
 
         logger.debug("Work Queue shutdown started")
@@ -721,6 +731,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Joining on collector thread")
         self.collector_thread.join()
 
+        self.is_shutdown = True
         logger.debug("Work Queue shutdown completed")
 
     @wrap_with_logs

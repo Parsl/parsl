@@ -2,6 +2,7 @@ import parsl
 from parsl.tests.configs.local_threads import fresh_config
 import pytest
 from parsl.errors import NoDataFlowKernelError
+from parsl.dataflow.dflow import DataFlowKernel
 
 
 @parsl.python_app
@@ -25,9 +26,8 @@ def local_teardown():
 @pytest.mark.local
 def test_within_context_manger():
     config = fresh_config()
-    with parsl.load(config=config):
-        py_future = square(2)
-        assert py_future.result() == 4
+    with parsl.load(config=config) as dfk:
+        assert isinstance(dfk, DataFlowKernel)
 
         bash_future = foo(1)
         assert bash_future.result() == 0
