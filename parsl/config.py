@@ -88,6 +88,7 @@ class Config(RepresentationMixin):
                  internal_tasks_max_threads: int = 10,
                  retries: int = 0,
                  retry_handler: Optional[Callable[[Exception, TaskRecord], float]] = None,
+                 tc_logan: Optional[Callable[[TaskRecord], None]] = None,
                  run_dir: str = 'runinfo',
                  strategy: Optional[str] = 'simple',
                  strategy_period: Union[float, int] = 5,
@@ -122,6 +123,7 @@ class Config(RepresentationMixin):
         self.internal_tasks_max_threads = internal_tasks_max_threads
         self.retries = retries
         self.retry_handler = retry_handler
+        self.tc_logan = tc_logan
         self.run_dir = run_dir
         self.strategy = strategy
         self.strategy_period = strategy_period
