@@ -10,11 +10,12 @@ from __future__ import annotations
 from concurrent.futures import Future
 import logging
 import threading
-from typing import Any, Optional, Sequence
+from typing import Any, Optional, Sequence, Union
 
 import parsl.app.app as app
 
 from parsl.app.futures import DataFuture
+from parsl.data_provider.files import File
 from parsl.dataflow.taskrecord import TaskRecord
 
 logger = logging.getLogger(__name__)
@@ -77,12 +78,15 @@ class AppFuture(Future):
         self._outputs = []
         self.task_record = task_record
 
+        self.stdout_future: Optional[DataFuture] = None
+        self.stderr_future: Optional[DataFuture] = None
+
     @property
-    def stdout(self) -> Optional[str]:
+    def stdout(self) -> Optional[Union[str, File]]:
         return self.task_record['kwargs'].get('stdout')
 
     @property
-    def stderr(self) -> Optional[str]:
+    def stderr(self) -> Optional[Union[str, File]]:
         return self.task_record['kwargs'].get('stderr')
 
     @property

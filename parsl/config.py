@@ -89,6 +89,7 @@ class Config(RepresentationMixin):
                  retries: int = 0,
                  retry_handler: Optional[Callable[[Exception, TaskRecord], float]] = None,
                  run_dir: str = 'runinfo',
+                 std_uri: Optional[Callable] = None,
                  strategy: Optional[str] = 'simple',
                  strategy_period: Union[float, int] = 5,
                  max_idletime: float = 120.0,
@@ -129,6 +130,7 @@ class Config(RepresentationMixin):
         self.usage_tracking = usage_tracking
         self.initialize_logging = initialize_logging
         self.monitoring = monitoring
+        self.std_uri: Optional[Callable] = std_uri
 
     @property
     def executors(self) -> Sequence[ParslExecutor]:

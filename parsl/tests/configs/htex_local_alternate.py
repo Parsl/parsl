@@ -31,6 +31,7 @@ from parsl.executors import HighThroughputExecutor
 from parsl.data_provider.http import HTTPInTaskStaging
 from parsl.data_provider.ftp import FTPInTaskStaging
 from parsl.data_provider.file_noop import NoOpFileStaging
+from parsl.data_provider.zip import ZipFileStaging
 
 working_dir = os.getcwd() + "/" + "test_htex_alternate"
 
@@ -42,7 +43,7 @@ def fresh_config():
                 address="127.0.0.1",
                 label="htex_Local",
                 working_dir=working_dir,
-                storage_access=[FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging()],
+                storage_access=[FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging(), ZipFileStaging()],
                 worker_debug=True,
                 cores_per_worker=1,
                 heartbeat_period=2,
