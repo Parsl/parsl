@@ -39,6 +39,7 @@ from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.monitoring import MonitoringHub
+from parsl.monitoring.remote import monitor_wrapper
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints, Timer
@@ -713,14 +714,14 @@ class DataFlowKernel:
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
-            (function, args, kwargs) = self.monitoring.monitor_wrapper(function, args, kwargs, try_id, task_id,
-                                                                       self.monitoring.monitoring_hub_url,
-                                                                       self.run_id,
-                                                                       wrapper_logging_level,
-                                                                       self.monitoring.resource_monitoring_interval,
-                                                                       executor.radio_mode,
-                                                                       executor.monitor_resources(),
-                                                                       self.run_dir)
+            (function, args, kwargs) = monitor_wrapper(function, args, kwargs, try_id, task_id,
+                                                       self.monitoring.monitoring_hub_url,
+                                                       self.run_id,
+                                                       wrapper_logging_level,
+                                                       self.monitoring.resource_monitoring_interval,
+                                                       executor.radio_mode,
+                                                       executor.monitor_resources(),
+                                                       self.run_dir)
 
         with self.submitter_lock:
             exec_fu = executor.submit(function, task_record['resource_specification'], *args, **kwargs)
