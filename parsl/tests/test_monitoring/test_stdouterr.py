@@ -35,9 +35,7 @@ def fresh_config(run_dir):
         ],
         strategy='simple',
         strategy_period=0.1,
-        monitoring=MonitoringHub(
-                        hub_address="localhost",
-        )
+        monitoring=MonitoringHub(),
     )
 
 
