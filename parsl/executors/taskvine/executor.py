@@ -40,6 +40,7 @@ from parsl.executors.taskvine.factory_config import TaskVineFactoryConfig
 from parsl.executors.taskvine.manager import _taskvine_submit_wait
 from parsl.executors.taskvine.manager_config import TaskVineManagerConfig
 from parsl.executors.taskvine.utils import ParslFileToVine, ParslTaskToVine
+from parsl.monitoring.radios.base import RadioConfig
 from parsl.multiprocessing import SpawnContext
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import CondorProvider, LocalProvider
@@ -98,8 +99,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             Default is None.
     """
 
-    radio_mode = "filesystem"
-
     @typeguard.typechecked
     def __init__(self,
                  label: str = "TaskVineExecutor",
@@ -108,7 +107,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  factory_config: TaskVineFactoryConfig = TaskVineFactoryConfig(),
                  provider: Optional[ExecutionProvider] = LocalProvider(init_blocks=1),
-                 storage_access: Optional[List[Staging]] = None):
+                 storage_access: Optional[List[Staging]] = None,
+                 remote_monitoring_radio: Optional[RadioConfig] = None):
 
         # Set worker launch option for this executor
         if worker_launch_method == 'factory' or worker_launch_method == 'manual':
@@ -133,6 +133,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.manager_config = manager_config
         self.factory_config = factory_config
         self.storage_access = storage_access
+        self.remote_monitoring_radio = remote_monitoring_radio
 
         # Queue to send ready tasks from TaskVine executor process to TaskVine manager process
         self._ready_task_queue: multiprocessing.Queue = SpawnContext.Queue()

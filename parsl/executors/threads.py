@@ -7,6 +7,7 @@ import typeguard
 from parsl.data_provider.staging import Staging
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import InvalidResourceSpecification
+from parsl.monitoring.radios.base import RadioConfig
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
     @typeguard.typechecked
     def __init__(self, label: str = 'threads', max_threads: Optional[int] = 2,
                  thread_name_prefix: str = '', storage_access: Optional[List[Staging]] = None,
-                 working_dir: Optional[str] = None):
+                 working_dir: Optional[str] = None, remote_monitoring_radio: Optional[RadioConfig] = None):
         ParslExecutor.__init__(self)
         self.label = label
         self.max_threads = max_threads
@@ -39,6 +40,8 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
         # [] is a list with no storage access in it at all
         self.storage_access = storage_access
         self.working_dir = working_dir
+
+        self.remote_monitoring_radio = remote_monitoring_radio
 
     def start(self):
         self.executor = cf.ThreadPoolExecutor(max_workers=self.max_threads,
