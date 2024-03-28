@@ -5,10 +5,7 @@ on:
     types:
       - opened
       - synchronize
-    branches:
-      - master
-  
-
+    
 jobs:
   main-test-suite:
     strategy:
