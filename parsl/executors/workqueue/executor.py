@@ -255,7 +255,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.label = label
         self.task_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
         self.collector_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
-        self.blocks = {}  # type: Dict[str, str]
         self.address = address
         self.port = port
         self.executor_task_counter = -1
