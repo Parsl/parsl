@@ -15,6 +15,7 @@ from parsl.executors.high_throughput.mpi_prefix_composer import (
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import JobStatus
 from parsl.launchers import SimpleLauncher
+from parsl.monitoring.radios.base import RadioConfig
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
 
@@ -66,7 +67,8 @@ class MPIExecutor(HighThroughputExecutor):
                  worker_logdir_root: Optional[str] = None,
                  mpi_launcher: str = "mpiexec",
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
-                 encrypted: bool = False):
+                 encrypted: bool = False,
+                 remote_monitoring_radio_config: Optional[RadioConfig] = None):
         super().__init__(
             # Hard-coded settings
             cores_per_worker=1e-9,  # Ensures there will be at least an absurd number of workers
@@ -92,7 +94,15 @@ class MPIExecutor(HighThroughputExecutor):
             address_probe_timeout=address_probe_timeout,
             worker_logdir_root=worker_logdir_root,
             block_error_handler=block_error_handler,
-            encrypted=encrypted
+            encrypted=encrypted,
+
+            # TODO:
+            # worker-side monitoring in MPI-style code is probably going to be
+            # broken - resource monitoring won't see any worker processes
+            # most likely, as so perhaps it should have worker resource
+            # monitoring disabled like the thread pool executor has?
+            # (for related but different reasons...)
+            remote_monitoring_radio_config=remote_monitoring_radio_config
         )
         self.enable_mpi_mode = True
         self.mpi_launcher = mpi_launcher

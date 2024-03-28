@@ -1,22 +1,29 @@
 import logging
 import pickle
+from multiprocessing.queues import Queue
 
-from parsl.monitoring.radios.base import MonitoringRadioSender
+from parsl.monitoring.radios.base import MonitoringRadioSender, RadioConfig
 
 logger = logging.getLogger(__name__)
 
 
+class HTEXRadio(RadioConfig):
+    def create_sender(self) -> MonitoringRadioSender:
+        return HTEXRadioSender()
+
+    def create_receiver(self, *, ip: str, run_dir: str, resource_msgs: Queue) -> None:
+        pass
+
+
 class HTEXRadioSender(MonitoringRadioSender):
 
-    def __init__(self, monitoring_url: str, timeout: int = 10):
+    def __init__(self) -> None:
         """
         Parameters
         ----------
 
         monitoring_url : str
             URL of the form <scheme>://<IP>:<PORT>
-        timeout : int
-            timeout, default=10s
         """
         logger.info("htex-based monitoring channel initialising")
 

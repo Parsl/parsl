@@ -605,6 +605,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self._finished_task_queue.close()
         self._finished_task_queue.join_thread()
 
+        super().shutdown()
+
         logger.debug("TaskVine shutdown completed")
 
     @wrap_with_logs

@@ -2,10 +2,20 @@ import logging
 import os
 import pickle
 import uuid
+from multiprocessing import Queue
+from typing import Any
 
-from parsl.monitoring.radios.base import MonitoringRadioSender
+from parsl.monitoring.radios.base import MonitoringRadioSender, RadioConfig
 
 logger = logging.getLogger(__name__)
+
+
+class FilesystemRadio(RadioConfig):
+    def create_sender(self) -> MonitoringRadioSender:
+        return FilesystemRadioSender(run_dir=self.run_dir)
+
+    def create_receiver(self, *, ip: str, run_dir: str, resource_msgs: Queue) -> Any:
+        self.run_dir = run_dir
 
 
 class FilesystemRadioSender(MonitoringRadioSender):
@@ -26,7 +36,7 @@ class FilesystemRadioSender(MonitoringRadioSender):
     the UDP radio, but should be much more reliable.
     """
 
-    def __init__(self, *, monitoring_url: str, timeout: int = 10, run_dir: str):
+    def __init__(self, *, run_dir: str):
         logger.info("filesystem based monitoring channel initializing")
         self.base_path = f"{run_dir}/monitor-fs-radio/"
         self.tmp_path = f"{self.base_path}/tmp"
