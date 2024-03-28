@@ -259,6 +259,8 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
             dfk.cleanup()
             assert DataFlowKernelLoader._dfk is None
 
+        # assert [t for t in threading.enumerate() if "MainThread" not in t.name and "HTEX-Queue-Management-Thread" not in t.name] == []
+
     else:
         yield
 
