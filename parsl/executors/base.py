@@ -1,3 +1,4 @@
+import logging
 import os
 from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
@@ -6,8 +7,15 @@ from typing import Any, Callable, Dict, Optional
 
 from typing_extensions import Literal, Self
 
-from parsl.monitoring.radios.base import MonitoringRadioSender
+from parsl.monitoring.radios.base import (
+    MonitoringRadioReceiver,
+    MonitoringRadioSender,
+    RadioConfig,
+)
+from parsl.monitoring.radios.udp import UDPRadio
 from parsl.monitoring.types import TaggedMonitoringMessage
+
+logger = logging.getLogger(__name__)
 
 
 class ParslExecutor(metaclass=ABCMeta):
@@ -21,15 +29,13 @@ class ParslExecutor(metaclass=ABCMeta):
     no arguments and re-raises any thrown exception.
 
     In addition to the listed methods, a ParslExecutor instance must always
-    have a member field:
+    have these member fields:
 
        label: str - a human readable label for the executor, unique
               with respect to other executors.
 
-    Per-executor monitoring behaviour can be influenced by exposing:
-
-       radio_mode: str - a string describing which radio mode should be used to
-              send task resource data back to the submit side.
+       remote_monitoring_radio_config: RadioConfig describing how tasks on this executor
+              should report task resource status
 
     # TODO: document monitoring_msgs here
 
@@ -49,7 +55,6 @@ class ParslExecutor(metaclass=ABCMeta):
     """
 
     label: str = "undefined"
-    radio_mode: str = "udp"
 
     def __init__(
         self,
@@ -60,9 +65,18 @@ class ParslExecutor(metaclass=ABCMeta):
         run_id: Optional[str] = None,
     ):
         self.monitoring_messages = monitoring_messages
+
+        # these are parameters for the monitoring radio to be used on the remote side
+        # eg. in workers - to send results back, and they should end up encapsulated
+        # inside a RadioConfig.
         self.submit_monitoring_radio = submit_monitoring_radio
+        self.remote_monitoring_radio_config: RadioConfig = UDPRadio()
+
         self.run_dir = os.path.abspath(run_dir)
         self.run_id = run_id
+
+        # will be set externally later, which is pretty ugly
+        self.monitoring_receiver: Optional[MonitoringRadioReceiver] = None
 
     def __enter__(self) -> Self:
         return self
@@ -96,7 +110,13 @@ class ParslExecutor(metaclass=ABCMeta):
 
         This includes all attached resources such as workers and controllers.
         """
-        pass
+        logger.debug("Starting base executor shutdown")
+        # logger.error(f"BENC: monitoring receiver on {self} is {self.monitoring_receiver}")
+        if self.monitoring_receiver is not None:
+            logger.debug("Starting monitoring receiver shutdown")
+            self.monitoring_receiver.shutdown()
+            logger.debug("Done with monitoring receiver shutdown")
+        logger.debug("Done with base executor shutdown")
 
     def monitor_resources(self) -> bool:
         """Should resource monitoring happen for tasks on running on this executor?

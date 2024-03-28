@@ -2,10 +2,27 @@ import logging
 import os
 import pickle
 import uuid
+from multiprocessing import Event
+from multiprocessing.queues import Queue
 
-from parsl.monitoring.radios.base import MonitoringRadioSender
+from parsl.monitoring.radios.base import (
+    MonitoringRadioReceiver,
+    MonitoringRadioSender,
+    RadioConfig,
+)
+from parsl.monitoring.radios.filesystem_router import filesystem_router_starter
+from parsl.multiprocessing import ForkProcess
 
 logger = logging.getLogger(__name__)
+
+
+class FilesystemRadio(RadioConfig):
+    def create_sender(self) -> MonitoringRadioSender:
+        return FilesystemRadioSender(run_dir=self.run_dir)
+
+    def create_receiver(self, *, ip: str, run_dir: str, resource_msgs: Queue) -> MonitoringRadioReceiver:
+        self.run_dir = run_dir
+        return FilesystemRadioReceiver(resource_msgs, run_dir)
 
 
 class FilesystemRadioSender(MonitoringRadioSender):
@@ -26,7 +43,7 @@ class FilesystemRadioSender(MonitoringRadioSender):
     the UDP radio, but should be much more reliable.
     """
 
-    def __init__(self, *, monitoring_url: str, timeout: int = 10, run_dir: str):
+    def __init__(self, *, run_dir: str):
         logger.info("filesystem based monitoring channel initializing")
         self.base_path = f"{run_dir}/monitor-fs-radio/"
         self.tmp_path = f"{self.base_path}/tmp"
@@ -50,3 +67,20 @@ class FilesystemRadioSender(MonitoringRadioSender):
         with open(tmp_filename, "wb") as f:
             pickle.dump(buffer, f)
         os.rename(tmp_filename, new_filename)
+
+
+class FilesystemRadioReceiver(MonitoringRadioReceiver):
+    def __init__(self, resource_msgs: Queue, run_dir: str) -> None:
+        self.exit_event = Event()
+        self.filesystem_proc = ForkProcess(target=filesystem_router_starter,
+                                           kwargs={"q": resource_msgs, "run_dir": run_dir, "exit_event": self.exit_event},
+                                           name="Monitoring-Filesystem-Process",
+                                           daemon=True
+                                           )
+        self.filesystem_proc.start()
+        logger.info("Started filesystem radio receiver process %s", self.filesystem_proc.pid)
+
+    def shutdown(self) -> None:
+        self.filesystem_proc.terminate()
+        self.filesystem_proc.join()
+        self.filesystem_proc.close()
