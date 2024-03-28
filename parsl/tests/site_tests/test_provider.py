@@ -58,7 +58,7 @@ def test_provider():
     logger.info("Job in terminal state")
 
     _, current_jobs = executor._get_block_and_job_ids()
-    # PR 1952 stoped removing scale_in blocks from self.blocks
+    # PR 1952 stoped removing scale_in blocks from self.blocks_to_job_id
     # A new PR will handle removing blocks from self.block
     # this includes failed/completed/canceled blocks
     assert len(current_jobs) == 1, "Expected current_jobs == 1"
