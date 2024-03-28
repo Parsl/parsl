@@ -129,8 +129,8 @@ class Strategy:
         self.executors = {}
         self.max_idletime = max_idletime
 
-        self.strategies = {None: self._strategy_noop,
-                           'none': self._strategy_noop,
+        self.strategies = {None: self._strategy_init_only,
+                           'none': self._strategy_init_only,
                            'simple': self._strategy_simple,
                            'htex_auto_scale': self._strategy_htex_auto_scale}
 
@@ -146,10 +146,17 @@ class Strategy:
         for executor in executors:
             self.executors[executor.label] = {'idle_since': None}
 
-    def _strategy_noop(self, status: List[jsp.PollItem]) -> None:
-        """Do nothing.
+    def _strategy_init_only(self, status_list: List[jsp.PollItem]) -> None:
+        """Scale up to init_blocks at the start, then nothing more.
         """
-        logger.debug("strategy_noop: doing nothing")
+        for exec_status in status_list:
+            if exec_status.first:
+                executor = exec_status.executor
+                logger.debug(f"strategy_init_only: scaling out {executor.provider.init_blocks} initial blocks for {executor.label}")
+                exec_status.scale_out(executor.provider.init_blocks)
+                exec_status.first = False
+            else:
+                logger.debug("strategy_init_only: doing nothing")
 
     def _strategy_simple(self, status_list: List[jsp.PollItem]) -> None:
         self._general_strategy(status_list, strategy_type='simple')
@@ -182,6 +189,12 @@ class Strategy:
                 logger.debug(f"Not strategizing for executor {label} because scaling not enabled")
                 continue
             logger.debug(f"Strategizing for executor {label}")
+
+            if exec_status.first:
+                executor = exec_status.executor
+                logger.debug(f"Scaling out {executor.provider.init_blocks} initial blocks for {label}")
+                exec_status.scale_out(executor.provider.init_blocks)
+                exec_status.first = False
 
             # Tasks that are either pending completion
             active_tasks = executor.outstanding
