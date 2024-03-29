@@ -113,7 +113,6 @@ Providers
     parsl.providers.GridEngineProvider
     parsl.providers.LocalProvider
     parsl.providers.LSFProvider
-    parsl.providers.GridEngineProvider
     parsl.providers.SlurmProvider
     parsl.providers.TorqueProvider
     parsl.providers.KubernetesProvider
