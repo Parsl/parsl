@@ -50,3 +50,22 @@ jobs:
         source .venv/bin/activate
         pip install -r requirements.txt
         pip install -r test-requirements.txt
+
+    - name: make test
+      run: |
+        source .venv/bin/activate
+        export PARSL_TEST_PRESERVE_NUM_RUNS=7
+        make test
+
+    - name: Documentation checks
+      run: |
+        source .venv/bin/activate
+        pip install .[docs]
+        brew install pandoc
+        cd docs
+        test ! -e stubs
+        make SPHINXOPTS=-W html
+        cd ..
+        ! grep ERROR .pytest/parsltest-current/runinfo*/*/database_manager.log
+        ! grep ERROR .pytest/parsltest-current/runinfo*/*/monitoring_router.log
+        
