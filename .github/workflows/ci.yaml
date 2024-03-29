@@ -1,9 +1,10 @@
 name: Parsl
 
 on:
-  push:
-    branches:
-     - dev
+  pull_request:
+    types:
+      - opened
+      - synchronize
      
 jobs:
   main-test-suite:
