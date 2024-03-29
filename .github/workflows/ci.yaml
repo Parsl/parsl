@@ -1,4 +1,4 @@
-name: Parsl
+name: Parsl macosX
 
 on:
   pull_request:
