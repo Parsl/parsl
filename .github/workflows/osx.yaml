@@ -64,8 +64,9 @@ jobs:
         brew install pandoc
         cd docs
         test ! -e stubs
-        make SPHINXOPTS=-W html
+        PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages make SPHINXOPTS=-W html
         cd ..
         ! grep ERROR .pytest/parsltest-current/runinfo*/*/database_manager.log
         ! grep ERROR .pytest/parsltest-current/runinfo*/*/monitoring_router.log
+        rm -f .pytest/parsltest-current test_runinfo
         
