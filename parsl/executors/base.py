@@ -53,7 +53,7 @@ class ParslExecutor(metaclass=ABCMeta):
         return False
 
     @abstractmethod
-    def start(self) -> Optional[List[str]]:
+    def start(self) -> None:
         """Start the executor.
 
         Any spin-up operations (for example: starting thread pools) should be performed here.
@@ -105,6 +105,16 @@ class ParslExecutor(metaclass=ABCMeta):
     @run_dir.setter
     def run_dir(self, value: str) -> None:
         self._run_dir = value
+
+    @property
+    def run_id(self) -> Optional[str]:
+        """UUID for the enclosing DFK.
+        """
+        return self._run_id
+
+    @run_id.setter
+    def run_id(self, value: Optional[str]) -> None:
+        self._run_id = value
 
     @property
     def hub_address(self) -> Optional[str]:

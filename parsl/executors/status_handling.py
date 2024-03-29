@@ -61,15 +61,15 @@ class BlockProviderExecutor(ParslExecutor):
         # errors can happen during the submit call to the provider; this is used
         # to keep track of such errors so that they can be handled in one place
         # together with errors reported by status()
-        self._simulated_status: Dict[Any, JobStatus] = {}
+        self._simulated_status: Dict[str, JobStatus] = {}
         self._executor_bad_state = threading.Event()
         self._executor_exception: Optional[Exception] = None
 
         self._block_id_counter = AtomicIDCounter()
 
         self._tasks = {}  # type: Dict[object, Future]
-        self.blocks = {}  # type: Dict[str, str]
-        self.block_mapping = {}  # type: Dict[str, str]
+        self.blocks_to_job_id = {}  # type: Dict[str, str]
+        self.job_ids_to_block = {}  # type: Dict[str, str]
 
     def _make_status_dict(self, block_ids: List[str], status_list: List[JobStatus]) -> Dict[str, JobStatus]:
         """Given a list of block ids and a list of corresponding status strings,
@@ -102,13 +102,10 @@ class BlockProviderExecutor(ParslExecutor):
         else:
             return self._provider.status_polling_interval
 
-    def _fail_job_async(self, block_id: Any, message: str):
+    def _fail_job_async(self, block_id: str, message: str):
         """Marks a job that has failed to start but would not otherwise be included in status()
         as failed and report it in status()
         """
-        if block_id is None:
-            block_id = str(self._block_id_counter.get_id())
-            logger.info(f"Allocated block ID {block_id} for simulated failure")
         self._simulated_status[block_id] = JobStatus(JobState.FAILED, message)
 
     @abstractproperty
@@ -197,8 +194,8 @@ class BlockProviderExecutor(ParslExecutor):
             logger.info(f"Allocated block ID {block_id}")
             try:
                 job_id = self._launch_block(block_id)
-                self.blocks[block_id] = job_id
-                self.block_mapping[job_id] = block_id
+                self.blocks_to_job_id[block_id] = job_id
+                self.job_ids_to_block[job_id] = block_id
                 block_ids.append(block_id)
             except Exception as ex:
                 self._fail_job_async(block_id,
@@ -210,10 +207,6 @@ class BlockProviderExecutor(ParslExecutor):
         """Scale in method.
 
         Cause the executor to reduce the number of blocks by count.
-
-        We should have the scale in method simply take resource object
-        which will have the scaling methods, scale_in itself should be a coroutine, since
-        scaling tasks can be slow.
 
         :return: A list of block ids corresponding to the blocks that were removed.
         """
@@ -239,10 +232,10 @@ class BlockProviderExecutor(ParslExecutor):
         # Not using self.blocks.keys() and self.blocks.values() simultaneously
         # The dictionary may be changed during invoking this function
         # As scale_in and scale_out are invoked in multiple threads
-        block_ids = list(self.blocks.keys())
+        block_ids = list(self.blocks_to_job_id.keys())
         job_ids = []  # types: List[Any]
         for bid in block_ids:
-            job_ids.append(self.blocks[bid])
+            job_ids.append(self.blocks_to_job_id[bid])
         return block_ids, job_ids
 
     @abstractproperty
