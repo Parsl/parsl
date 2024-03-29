@@ -16,7 +16,7 @@ from parsl.utils import Timer
 logger = logging.getLogger(__name__)
 
 
-class PollItem:
+class PolledExecutorFacade:
     def __init__(self, executor: BlockProviderExecutor, dfk: Optional["parsl.dataflow.dflow.DataFlowKernel"] = None):
         self._executor = executor
         self._dfk = dfk
@@ -110,7 +110,7 @@ class JobStatusPoller(Timer):
     def __init__(self, *, strategy: Optional[str], max_idletime: float,
                  strategy_period: Union[float, int],
                  dfk: Optional["parsl.dataflow.dflow.DataFlowKernel"] = None) -> None:
-        self._poll_items = []  # type: List[PollItem]
+        self._executor_facades = []  # type: List[PolledExecutorFacade]
         self.dfk = dfk
         self._strategy = Strategy(strategy=strategy,
                                   max_idletime=max_idletime)
@@ -118,21 +118,21 @@ class JobStatusPoller(Timer):
 
     def poll(self) -> None:
         self._update_state()
-        self._run_error_handlers(self._poll_items)
-        self._strategy.strategize(self._poll_items)
+        self._run_error_handlers(self._executor_facades)
+        self._strategy.strategize(self._executor_facades)
 
-    def _run_error_handlers(self, status: List[PollItem]) -> None:
+    def _run_error_handlers(self, status: List[PolledExecutorFacade]) -> None:
         for es in status:
             es.executor.handle_errors(es.status)
 
     def _update_state(self) -> None:
         now = time.time()
-        for item in self._poll_items:
+        for item in self._executor_facades:
             item.poll(now)
 
     def add_executors(self, executors: Sequence[BlockProviderExecutor]) -> None:
         for executor in executors:
             if executor.status_polling_interval > 0:
                 logger.debug("Adding executor {}".format(executor.label))
-                self._poll_items.append(PollItem(executor, self.dfk))
+                self._executor_facades.append(PolledExecutorFacade(executor, self.dfk))
         self._strategy.add_executors(executors)
