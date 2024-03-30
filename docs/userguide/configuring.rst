@@ -60,9 +60,11 @@ All Parsl applications start by creating or importing a configuration then calli
     from parsl.configs.htex_local import config
     import parsl
 
-    parsl.load(config)
+    with parsl.load(config):
 
 The ``load`` statement can happen after Apps are defined but must occur before tasks are started.
+Loading the Config object within context manager like ``with`` is recommended
+for implicit cleaning of DFK on exiting the context manager  
 
 The :class:`~parsl.config.Config` object may not be used again after loaded.
 Consider a configuration function if the application will shut down and re-launch the DFK.
@@ -75,9 +77,11 @@ Consider a configuration function if the application will shut down and re-launc
     def make_config() -> Config:
         return Config(...)
 
-    parsl.load(make_config())
+    with parsl.load(make_config()):
+        # Your workflow here
     parsl.clear()  # Stops Parsl
-    parsl.load(make_config())  # Re-launches with a fresh configuration
+    with parsl.load(make_config()):  # Re-launches with a fresh configuration
+        # Your workflow here
 
 
 How to Configure
@@ -484,12 +488,12 @@ This system uses Grid Engine which Parsl interfaces with using the `parsl.provid
 .. literalinclude:: ../../parsl/configs/cc_in2p3.py
 
 
-CCL (Notre Dame, with Work Queue)
----------------------------------
+CCL (Notre Dame, TaskVine)
+--------------------------
 
-.. image:: http://ccl.cse.nd.edu/software/workqueue/WorkQueueLogoSmall.png
+.. image:: https://ccl.cse.nd.edu/software/taskvine/taskvine-logo.png
 
-To utilize Work Queue with Parsl, please install the full CCTools software package within an appropriate Anaconda or Miniconda environment
+To utilize TaskVine with Parsl, please install the full CCTools software package within an appropriate Anaconda or Miniconda environment
 (instructions for installing Miniconda can be found `in the Conda install guide <https://docs.conda.io/projects/conda/en/latest/user-guide/install/>`_):
 
 .. code-block:: bash
@@ -498,17 +502,17 @@ To utilize Work Queue with Parsl, please install the full CCTools software packa
    $ conda activate <environment>
    $ conda install -y -c conda-forge ndcctools parsl
 
-This creates a Conda environment on your machine with all the necessary tools and setup needed to utilize Work Queue with the Parsl library.
+This creates a Conda environment on your machine with all the necessary tools and setup needed to utilize TaskVine with the Parsl library.
 
-The following snippet shows an example configuration for using the Work Queue distributed framework to run applications on remote machines at large.
-This examples uses the `parsl.executors.WorkQueueExecutor` to schedule tasks locally,
-and assumes that Work Queue workers have been externally connected to the master using the
-`work_queue_factory <https://cctools.readthedocs.io/en/latest/man_pages/work_queue_factory/>`_ or
-`condor_submit_workers <https://cctools.readthedocs.io/en/latest/man_pages/condor_submit_workers/>`_ command line utilities from CCTools.
-For more information on using Work Queue or to get help with running applications using CCTools,
-visit the `CCTools documentation online <https://cctools.readthedocs.io/en/latest/help/>`_.
+The following snippet shows an example configuration for using the Parsl/TaskVine executor to run applications on the local machine.
+This examples uses the `parsl.executors.taskvine.TaskVineExecutor` to schedule tasks, and a local worker will be started automatically. 
+For more information on using TaskVine, including configurations for remote execution, visit the 
+`TaskVine/Parsl documentation online <https://cctools.readthedocs.io/en/latest/taskvine/#parsl>`_.
 
-.. literalinclude::  ../../parsl/configs/wqex_local.py
+.. literalinclude::  ../../parsl/configs/vineex_local.py
+
+TaskVine's predecessor, WorkQueue, may continue to be used with Parsl.
+For more information on using WorkQueue visit the `CCTools documentation online <https://cctools.readthedocs.io/en/latest/help/>`_.
 
 Expanse (SDSC)
 --------------
