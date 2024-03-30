@@ -16,20 +16,21 @@ from parsl.utils import Timer
 logger = logging.getLogger(__name__)
 
 
-class PollItem:
+class PolledExecutorFacade:
     def __init__(self, executor: BlockProviderExecutor, dfk: Optional["parsl.dataflow.dflow.DataFlowKernel"] = None):
         self._executor = executor
         self._dfk = dfk
         self._interval = executor.status_polling_interval
         self._last_poll_time = 0.0
         self._status = {}  # type: Dict[str, JobStatus]
+        self.first = True
 
         # Create a ZMQ channel to send poll status to monitoring
         self.monitoring_enabled = False
         if self._dfk and self._dfk.monitoring is not None:
             self.monitoring_enabled = True
             hub_address = self._dfk.hub_address
-            hub_port = self._dfk.hub_interchange_port
+            hub_port = self._dfk.hub_zmq_port
             context = zmq.Context()
             self.hub_channel = context.socket(zmq.DEALER)
             self.hub_channel.set_hwm(0)
@@ -72,7 +73,7 @@ class PollItem:
     def executor(self) -> BlockProviderExecutor:
         return self._executor
 
-    def scale_in(self, n, max_idletime=None):
+    def scale_in(self, n: int, max_idletime: Optional[float] = None) -> List[str]:
 
         if max_idletime is None:
             block_ids = self._executor.scale_in(n)
@@ -82,7 +83,7 @@ class PollItem:
             # scale_in method really does come from HighThroughputExecutor,
             # and so does have an extra max_idletime parameter not present
             # in the executor interface.
-            block_ids = self._executor.scale_in(n, max_idletime=max_idletime)
+            block_ids = self._executor.scale_in(n, max_idletime=max_idletime)  # type: ignore[call-arg]
         if block_ids is not None:
             new_status = {}
             for block_id in block_ids:
@@ -91,7 +92,7 @@ class PollItem:
             self.send_monitoring_info(new_status)
         return block_ids
 
-    def scale_out(self, n):
+    def scale_out(self, n: int) -> List[str]:
         block_ids = self._executor.scale_out(n)
         if block_ids is not None:
             new_status = {}
@@ -109,7 +110,7 @@ class JobStatusPoller(Timer):
     def __init__(self, *, strategy: Optional[str], max_idletime: float,
                  strategy_period: Union[float, int],
                  dfk: Optional["parsl.dataflow.dflow.DataFlowKernel"] = None) -> None:
-        self._poll_items = []  # type: List[PollItem]
+        self._executor_facades = []  # type: List[PolledExecutorFacade]
         self.dfk = dfk
         self._strategy = Strategy(strategy=strategy,
                                   max_idletime=max_idletime)
@@ -117,21 +118,21 @@ class JobStatusPoller(Timer):
 
     def poll(self) -> None:
         self._update_state()
-        self._run_error_handlers(self._poll_items)
-        self._strategy.strategize(self._poll_items)
+        self._run_error_handlers(self._executor_facades)
+        self._strategy.strategize(self._executor_facades)
 
-    def _run_error_handlers(self, status: List[PollItem]) -> None:
+    def _run_error_handlers(self, status: List[PolledExecutorFacade]) -> None:
         for es in status:
             es.executor.handle_errors(es.status)
 
     def _update_state(self) -> None:
         now = time.time()
-        for item in self._poll_items:
+        for item in self._executor_facades:
             item.poll(now)
 
     def add_executors(self, executors: Sequence[BlockProviderExecutor]) -> None:
         for executor in executors:
             if executor.status_polling_interval > 0:
                 logger.debug("Adding executor {}".format(executor.label))
-                self._poll_items.append(PollItem(executor, self.dfk))
+                self._executor_facades.append(PolledExecutorFacade(executor, self.dfk))
         self._strategy.add_executors(executors)

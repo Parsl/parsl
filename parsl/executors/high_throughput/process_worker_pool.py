@@ -335,13 +335,16 @@ class Manager:
                 self.heartbeat_to_incoming()
                 last_beat = time.time()
 
-            if self.drain_time and time.time() > self.drain_time:
+            if time.time() > self.drain_time:
                 logger.info("Requesting drain")
                 self.drain_to_incoming()
-                self.drain_time = None
                 # This will start the pool draining...
                 # Drained exit behaviour does not happen here. It will be
                 # driven by the interchange sending a DRAINED_CODE message.
+
+                # now set drain time to the far future so we don't send a drain
+                # message every iteration.
+                self.drain_time = float('inf')
 
             poll_duration_s = max(0, next_interesting_event_time - time.time())
             socks = dict(poller.poll(timeout=poll_duration_s * 1000))
@@ -858,7 +861,7 @@ if __name__ == "__main__":
                         required=True,
                         help="Whether/how workers should control CPU affinity.")
     parser.add_argument("--available-accelerators", type=str, nargs="*",
-                        help="Names of available accelerators")
+                        help="Names of available accelerators, if not given assumed to be zero accelerators available", default=[])
     parser.add_argument("--enable_mpi_mode", action='store_true',
                         help="Enable MPI mode")
     parser.add_argument("--mpi-launcher", type=str, choices=VALID_LAUNCHERS,

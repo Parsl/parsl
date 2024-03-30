@@ -4,6 +4,7 @@ high-throughput system for delegating Parsl tasks to thousands of remote machine
 """
 
 # Import Python built-in libraries
+import atexit
 import threading
 import multiprocessing
 import logging
@@ -171,13 +172,31 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Path to directory that holds all tasks' data and results.
         self._function_data_dir = ""
 
-        # helper scripts to prepare package tarballs for Parsl apps
+        # Helper scripts to prepare package tarballs for Parsl apps
         self._package_analyze_script = shutil.which("poncho_package_analyze")
         self._package_create_script = shutil.which("poncho_package_create")
         if self._package_analyze_script is None or self._package_create_script is None:
             self._poncho_available = False
         else:
             self._poncho_available = True
+
+        # Register atexit handler to cleanup when Python shuts down
+        atexit.register(self.atexit_cleanup)
+
+        # Attribute indicating whether this executor was started to shut it down properly.
+        # This safeguards cases where an object of this executor is created but
+        # the executor never starts, so it shouldn't be shutdowned.
+        self._is_started = False
+
+        # Attribute indicating whether this executor was shutdown before.
+        # This safeguards cases where this object is automatically shut down (e.g.,
+        # via atexit) and the user also explicitly calls shut down. While this is
+        # permitted, the effect of an executor shutdown should happen only once.
+        self._is_shutdown = False
+
+    def atexit_cleanup(self):
+        # Calls this executor's shutdown method upon Python exiting the process.
+        self.shutdown()
 
     def _get_launch_command(self, block_id):
         # Implements BlockProviderExecutor's abstract method.
@@ -237,6 +256,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Create submit process and collector thread to create, send, and
         retrieve Parsl tasks within the TaskVine system.
         """
+
+        # Mark this executor object as started
+        self._is_started = True
 
         # Synchronize connection and communication settings between the manager and factory
         self.__synchronize_manager_factory_comm_settings()
@@ -564,13 +586,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self._worker_command = self._construct_worker_command()
         self._patch_providers()
 
-        if hasattr(self.provider, 'init_blocks'):
-            try:
-                self.scale_out(blocks=self.provider.init_blocks)
-            except Exception as e:
-                logger.error("Initial block scaling out failed: {}".format(e))
-                raise e
-
     @property
     def outstanding(self) -> int:
         """Count the number of outstanding tasks."""
@@ -585,8 +600,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Scale in method. Cancel a given number of blocks
         """
         # Obtain list of blocks to kill
-        to_kill = list(self.blocks.keys())[:count]
-        kill_ids = [self.blocks[block] for block in to_kill]
+        to_kill = list(self.blocks_to_job_id.keys())[:count]
+        kill_ids = [self.blocks_to_job_id[block] for block in to_kill]
 
         # Cancel the blocks provisioned
         if self.provider:
@@ -598,11 +613,19 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the TaskVine system submission.
         """
+        if not self._is_started:
+            # Don't shutdown if the executor never starts.
+            return
+
+        if self._is_shutdown:
+            # Don't shutdown this executor again.
+            return
+
         logger.debug("TaskVine shutdown started")
         self._should_stop.set()
 
         # Remove the workers that are still going
-        kill_ids = [self.blocks[block] for block in self.blocks.keys()]
+        kill_ids = [self.blocks_to_job_id[block] for block in self.blocks_to_job_id.keys()]
         if self.provider:
             logger.debug("Cancelling blocks")
             self.provider.cancel(kill_ids)
@@ -616,6 +639,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             logger.debug("Joining on factory process")
             self._factory_process.join()
 
+        self._is_shutdown = True
         logger.debug("TaskVine shutdown completed")
 
     @wrap_with_logs

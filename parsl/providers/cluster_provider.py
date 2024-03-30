@@ -117,8 +117,6 @@ class ClusterProvider(ExecutionProvider):
             logger.error("Uncategorized error: %s", e)
             raise e
 
-        return
-
     @abstractmethod
     def _status(self):
         pass

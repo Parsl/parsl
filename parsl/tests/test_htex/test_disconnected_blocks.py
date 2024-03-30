@@ -26,7 +26,6 @@ def local_config():
                 ),
             )
         ],
-        run_dir="/tmp/test_htex",
         max_idletime=0.5,
         strategy='htex_auto_scale',
     )

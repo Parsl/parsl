@@ -60,10 +60,8 @@ user_opts = {
     #     'username': OSG_USERNAME,
     #     'script_dir': '/home/{}/parsl_scripts'.format(OSG_USERNAME),
     #     'scheduler_options': "",
-    # 'worker_init' : 'module load python/3.5.2;
-    #                   python3 -m venv parsl_env;
-    #                   source parsl_env/bin/activate;
-    #                   python3 -m pip install parsl==0.5.2'
+    #     'worker_init' : 'module load python/3.5.2; python3 -m venv parsl_env;
+    #                      source parsl_env/bin/activate; python3 -m pip install parsl==0.5.2'
     # },
     # 'swan': {
     #     'username': SWAN_USERNAME,
