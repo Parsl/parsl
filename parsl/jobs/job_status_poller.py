@@ -136,3 +136,19 @@ class JobStatusPoller(Timer):
                 logger.debug("Adding executor {}".format(executor.label))
                 self._executor_facades.append(PolledExecutorFacade(executor, self.dfk))
         self._strategy.add_executors(executors)
+
+    def close(self):
+        super().close()
+        for ef in self._executor_facades:
+            if not ef.executor.bad_state_is_set:
+                logger.info(f"Scaling in executor {ef.executor.label}")
+
+                # this code needs to be at least as many blocks as need
+                # cancelling, but it is safe to be more, as the scaling
+                # code will cope with being asked to cancel more blocks
+                # than exist.
+                block_count = len(ef.status)
+                ef.scale_in(block_count)
+
+            else:  # and bad_state_is_set
+                logger.warning(f"Not scaling in executor {ef.executor.label} because it is in bad state")
