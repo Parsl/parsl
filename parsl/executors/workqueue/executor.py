@@ -695,8 +695,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Scale in method.
         """
         # Obtain list of blocks to kill
-        to_kill = list(self.blocks.keys())[:count]
-        kill_ids = [self.blocks[block] for block in to_kill]
+        to_kill = list(self.blocks_to_job_id.keys())[:count]
+        kill_ids = [self.blocks_to_job_id[block] for block in to_kill]
 
         # Cancel the blocks provisioned
         if self.provider:
@@ -720,7 +720,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.should_stop.value = True
 
         # Remove the workers that are still going
-        kill_ids = [self.blocks[block] for block in self.blocks.keys()]
+        kill_ids = [self.blocks_to_job_id[block] for block in self.blocks_to_job_id.keys()]
         if self.provider:
             logger.debug("Cancelling blocks")
             self.provider.cancel(kill_ids)

@@ -714,14 +714,18 @@ class DataFlowKernel:
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
-            (function, args, kwargs) = monitor_wrapper(function, args, kwargs, try_id, task_id,
-                                                       self.monitoring.monitoring_hub_url,
-                                                       self.run_id,
-                                                       wrapper_logging_level,
-                                                       self.monitoring.resource_monitoring_interval,
-                                                       executor.radio_mode,
-                                                       executor.monitor_resources(),
-                                                       self.run_dir)
+            (function, args, kwargs) = monitor_wrapper(f=function,
+                                                       args=args,
+                                                       kwargs=kwargs,
+                                                       x_try_id=try_id,
+                                                       x_task_id=task_id,
+                                                       monitoring_hub_url=self.monitoring.monitoring_hub_url,
+                                                       run_id=self.run_id,
+                                                       logging_level=wrapper_logging_level,
+                                                       sleep_dur=self.monitoring.resource_monitoring_interval,
+                                                       radio_mode=executor.radio_mode,
+                                                       monitor_resources=executor.monitor_resources(),
+                                                       run_dir=self.run_dir)
 
         with self.submitter_lock:
             exec_fu = executor.submit(function, task_record['resource_specification'], *args, **kwargs)
