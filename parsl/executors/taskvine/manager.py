@@ -178,6 +178,8 @@ def _taskvine_submit_wait(ready_task_queue=None,
     # dict[str] -> vine File object
     parsl_file_name_to_vine_file = {}
 
+    parsl_file_possible_temp = {}
+
     # Mapping of tasks from vine id to parsl id
     # Dict[str] -> str
     vine_id_to_executor_task_id = {}
@@ -358,6 +360,8 @@ def _taskvine_submit_wait(ready_task_queue=None,
             # not staged by taskvine.
             # Files that share the same local path are assumed to be the same
             # and thus use the same Vine File object if detected.
+            temps = []
+            
             if not manager_config.shared_fs:
                 for spec in task.input_files:
                     if spec.stage:
@@ -366,14 +370,20 @@ def _taskvine_submit_wait(ready_task_queue=None,
                         else:
                             task_in_file = m.declare_file(spec.parsl_name, cache=spec.cache, peer_transfer=True)
                             parsl_file_name_to_vine_file[spec.parsl_name] = task_in_file
-                        t.add_input(task_in_file, spec.parsl_name)
+                        if task_in_file in temps:
+                            logger.debug("Adding strict input temp to TaskVine {}".format(task_in_file))
+                            t.add_input(task_in_file, spec.parsl_name, strict_input=True)
+                        else:
+                            t.add_input(task_in_file, spec.parsl_name)
 
                 for spec in task.output_files:
                     if spec.stage:
                         if spec.parsl_name in parsl_file_name_to_vine_file:
                             task_out_file = parsl_file_name_to_vine_file[spec.parsl_name]
                         else:
-                            task_out_file = m.declare_file(spec.parsl_name, cache=spec.cache, peer_transfer=True)
+                            task_out_file = m.declare_temp()
+                            #temps.append(task_out_file)
+#                            task_out_file = m.declare_file(spec.parsl_name, cache=spec.cache, peer_transfer=True)
                             parsl_file_name_to_vine_file[spec.parsl_name] = task_out_file
                         t.add_output(task_out_file, spec.parsl_name)
 
