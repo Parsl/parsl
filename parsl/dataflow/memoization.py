@@ -5,7 +5,7 @@ import logging
 import pickle
 from parsl.dataflow.taskrecord import TaskRecord
 
-from typing import Dict, Any, List, Optional, TYPE_CHECKING
+from typing import Dict, Any, List, Optional, TYPE_CHECKING  # avoid circular imports
 
 if TYPE_CHECKING:
     from parsl import DataFlowKernel  # import loop at runtime - needed for typechecking - TODO turn into "if typing:"
@@ -14,7 +14,9 @@ from concurrent.futures import Future
 
 import types
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)  # logger named name for logging purposes
+
+# memoization function with a single dispatch decorator
 
 
 @singledispatch
@@ -48,6 +50,8 @@ def id_for_memo(obj: object, output_ref: bool = False) -> bytes:
     """
     logger.error("id_for_memo attempted on unknown type {}".format(type(obj)))
     raise ValueError("unknown type for memoization: {}".format(type(obj)))
+
+# type specific implementations - handle how each type should be serialized for memoization
 
 
 @id_for_memo.register(str)
@@ -94,10 +98,13 @@ def id_for_memo_dict(denormalized_dict: dict, output_ref: bool = False) -> bytes
     if type(denormalized_dict) is not dict:
         raise ValueError("id_for_memo_dict cannot work on subclasses of dict")
 
-    keys = sorted(denormalized_dict)
+    # keys = sorted(denormalized_dict)  Line that sirosen commented on
+    # Proposed solution was to normalize the keys and then sort them
+    keymap = {id_for_memo(k): k for k in denormalized_dict}
+    normed_keys = sorted(keymap.values())
 
     normalized_list = []
-    for k in keys:
+    for k in normed_keys:
         normalized_list.append(id_for_memo(k))
         normalized_list.append(id_for_memo(denormalized_dict[k], output_ref=output_ref))
     return pickle.dumps(normalized_list)
