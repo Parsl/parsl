@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 class PolledExecutorFacade:
     def __init__(self, executor: BlockProviderExecutor, dfk: Optional["parsl.dataflow.dflow.DataFlowKernel"] = None):
         self._executor = executor
-        self._interval = executor.status_polling_interval
         self._last_poll_time = 0.0
         self._status = {}  # type: Dict[str, JobStatus]
 
@@ -36,7 +35,7 @@ class PolledExecutorFacade:
             logger.info("Monitoring enabled on job status poller")
 
     def _should_poll(self, now: float) -> bool:
-        return now >= self._last_poll_time + self._interval
+        return now >= self._last_poll_time + self._executor.status_polling_interval
 
     def poll(self, now: float) -> None:
         if self._should_poll(now):
