@@ -23,7 +23,6 @@ class PolledExecutorFacade:
         self._interval = executor.status_polling_interval
         self._last_poll_time = 0.0
         self._status = {}  # type: Dict[str, JobStatus]
-        self.first = True
 
         # Create a ZMQ channel to send poll status to monitoring
         self.monitoring_enabled = False
