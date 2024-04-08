@@ -27,7 +27,7 @@ class ExecutorState(TypedDict):
     """
 
     first: bool
-    """Is this the first poll for this executor?
+    """True if this executor has not yet had a strategy poll.
     """
 
 
