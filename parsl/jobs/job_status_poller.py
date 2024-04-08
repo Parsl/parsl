@@ -1,7 +1,6 @@
 import logging
 import parsl
 import time
-import zmq
 from typing import Dict, List, Sequence, Optional, Union
 
 from parsl.jobs.states import JobStatus, JobState
@@ -17,25 +16,11 @@ logger = logging.getLogger(__name__)
 
 
 class PolledExecutorFacade:
-    def __init__(self, executor: BlockProviderExecutor, dfk: Optional["parsl.dataflow.dflow.DataFlowKernel"] = None):
+    def __init__(self, executor: BlockProviderExecutor, monitoring: Optional["parsl.monitoring.radios.MonitoringRadio"] = None):
         self._executor = executor
         self._last_poll_time = 0.0
         self._status = {}  # type: Dict[str, JobStatus]
-
-        # Create a ZMQ channel to send poll status to monitoring
-
-        self.hub_channel: Optional[zmq.Socket]
-
-        if dfk and dfk.monitoring is not None:
-            hub_address = dfk.hub_address
-            hub_port = dfk.hub_zmq_port
-            context = zmq.Context()
-            self.hub_channel = context.socket(zmq.DEALER)
-            self.hub_channel.set_hwm(0)
-            self.hub_channel.connect("tcp://{}:{}".format(hub_address, hub_port))
-            logger.info("Monitoring enabled on job status poller")
-        else:
-            self.hub_channel = None
+        self._monitoring = monitoring
 
     def poll(self) -> None:
         now = time.time()
@@ -54,10 +39,10 @@ class PolledExecutorFacade:
 
     def send_monitoring_info(self, status: Dict) -> None:
         # Send monitoring info for HTEX when monitoring enabled
-        if self.hub_channel:
+        if self._monitoring:
             msg = self._executor.create_monitoring_info(status)
             logger.debug("Sending message {} to hub from job status poller".format(msg))
-            self.hub_channel.send_pyobj((MessageType.BLOCK_INFO, msg))
+            self._monitoring.send((MessageType.BLOCK_INFO, msg))
 
     @property
     def status(self) -> Dict[str, JobStatus]:
@@ -107,9 +92,9 @@ class PolledExecutorFacade:
 class JobStatusPoller(Timer):
     def __init__(self, *, strategy: Optional[str], max_idletime: float,
                  strategy_period: Union[float, int],
-                 dfk: Optional["parsl.dataflow.dflow.DataFlowKernel"] = None) -> None:
+                 monitoring: Optional["parsl.monitoring.radios.MonitoringRadio"] = None) -> None:
         self._executor_facades = []  # type: List[PolledExecutorFacade]
-        self.dfk = dfk
+        self.monitoring = monitoring
         self._strategy = Strategy(strategy=strategy,
                                   max_idletime=max_idletime)
         super().__init__(self.poll, interval=strategy_period, name="JobStatusPoller")
@@ -131,7 +116,7 @@ class JobStatusPoller(Timer):
         for executor in executors:
             if executor.status_polling_interval > 0:
                 logger.debug("Adding executor {}".format(executor.label))
-                self._executor_facades.append(PolledExecutorFacade(executor, self.dfk))
+                self._executor_facades.append(PolledExecutorFacade(executor, self.monitoring))
         self._strategy.add_executors(executors)
 
     def close(self):
