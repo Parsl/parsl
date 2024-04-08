@@ -102,12 +102,6 @@ class BlockProviderExecutor(ParslExecutor):
         else:
             return self._provider.status_polling_interval
 
-    def _fail_job_async(self, block_id: str, message: str):
-        """Marks a job that has failed to start but would not otherwise be included in status()
-        as failed and report it in status()
-        """
-        self._simulated_status[block_id] = JobStatus(JobState.FAILED, message)
-
     @abstractproperty
     def outstanding(self) -> int:
         """This should return the number of tasks that the executor has been given to run (waiting to run, and running now)"""
@@ -198,8 +192,7 @@ class BlockProviderExecutor(ParslExecutor):
                 self.job_ids_to_block[job_id] = block_id
                 block_ids.append(block_id)
             except Exception as ex:
-                self._fail_job_async(block_id,
-                                     "Failed to start block {}: {}".format(block_id, ex))
+                self._simulated_status[block_id] = JobStatus(JobState.FAILED, "Failed to start block {}: {}".format(block_id, ex))
         return block_ids
 
     @abstractmethod
