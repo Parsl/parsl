@@ -1,4 +1,5 @@
 import typing
+from collections import defaultdict
 from concurrent.futures import Future
 import typeguard
 import logging
@@ -687,7 +688,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             d['status'] = s.status_name
             d['timestamp'] = datetime.datetime.now()
             d['executor_label'] = self.label
-            d['job_id'] = self.blocks.get(bid, None)
+            d['job_id'] = self.blocks_to_job_id.get(bid, None)
             d['block_id'] = bid
             msg.append(d)
         return msg
@@ -730,13 +731,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             idle: float  # shortest idle time of any manager in this block
 
         managers = self.connected_managers()
-        block_info: Dict[str, BlockInfo] = {}
+        block_info: Dict[str, BlockInfo] = defaultdict(lambda: BlockInfo(tasks=0, idle=float('inf')))
         for manager in managers:
             if not manager['active']:
                 continue
             b_id = manager['block_id']
-            if b_id not in block_info:
-                block_info[b_id] = BlockInfo(tasks=0, idle=float('inf'))
             block_info[b_id].tasks += manager['tasks']
             block_info[b_id].idle = min(block_info[b_id].idle, manager['idle_duration'])
 
@@ -768,14 +767,14 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         # Now kill via provider
         # Potential issue with multiple threads trying to remove the same blocks
-        to_kill = [self.blocks[bid] for bid in block_ids_to_kill if bid in self.blocks]
+        to_kill = [self.blocks_to_job_id[bid] for bid in block_ids_to_kill if bid in self.blocks_to_job_id]
 
         r = self.provider.cancel(to_kill)
         job_ids = self._filter_scale_in_ids(to_kill, r)
 
-        # to_kill block_ids are fetched from self.blocks
-        # If a block_id is in self.block, it must exist in self.block_mapping
-        block_ids_killed = [self.block_mapping[jid] for jid in job_ids]
+        # to_kill block_ids are fetched from self.blocks_to_job_id
+        # If a block_id is in self.blocks_to_job_id, it must exist in self.job_ids_to_block
+        block_ids_killed = [self.job_ids_to_block[jid] for jid in job_ids]
 
         return block_ids_killed
 
