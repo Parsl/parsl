@@ -34,12 +34,12 @@ from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
 from parsl.dataflow.taskrecord import TaskRecord
 from parsl.errors import ConfigurationError, InternalConsistencyError, NoDataFlowKernelError
 from parsl.jobs.job_status_poller import JobStatusPoller
-from parsl.jobs.states import JobStatus, JobState
 from parsl.usage_tracking.usage import UsageTracker
 from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.monitoring import MonitoringHub
+from parsl.monitoring.remote import monitor_wrapper
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints, Timer
@@ -207,7 +207,7 @@ class DataFlowKernel:
         atexit.register(self.atexit_cleanup)
 
     def __enter__(self):
-        pass
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         logger.debug("Exiting the context manager, calling cleanup for DFK")
@@ -714,14 +714,18 @@ class DataFlowKernel:
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
-            (function, args, kwargs) = self.monitoring.monitor_wrapper(function, args, kwargs, try_id, task_id,
-                                                                       self.monitoring.monitoring_hub_url,
-                                                                       self.run_id,
-                                                                       wrapper_logging_level,
-                                                                       self.monitoring.resource_monitoring_interval,
-                                                                       executor.radio_mode,
-                                                                       executor.monitor_resources(),
-                                                                       self.run_dir)
+            (function, args, kwargs) = monitor_wrapper(f=function,
+                                                       args=args,
+                                                       kwargs=kwargs,
+                                                       x_try_id=try_id,
+                                                       x_task_id=task_id,
+                                                       monitoring_hub_url=self.monitoring.monitoring_hub_url,
+                                                       run_id=self.run_id,
+                                                       logging_level=wrapper_logging_level,
+                                                       sleep_dur=self.monitoring.resource_monitoring_interval,
+                                                       radio_mode=executor.radio_mode,
+                                                       monitor_resources=executor.monitor_resources(),
+                                                       run_dir=self.run_dir)
 
         with self.submitter_lock:
             exec_fu = executor.submit(function, task_record['resource_specification'], *args, **kwargs)
@@ -1141,14 +1145,7 @@ class DataFlowKernel:
                         self._create_remote_dirs_over_channel(executor.provider, executor.provider.channel)
 
             self.executors[executor.label] = executor
-            block_ids = executor.start()
-            if self.monitoring and block_ids:
-                new_status = {}
-                for bid in block_ids:
-                    new_status[bid] = JobStatus(JobState.PENDING)
-                msg = executor.create_monitoring_info(new_status)
-                logger.debug("Sending monitoring message {} to hub from DFK".format(msg))
-                self.monitoring.send(MessageType.BLOCK_INFO, msg)
+            executor.start()
         block_executors = [e for e in executors if isinstance(e, BlockProviderExecutor)]
         self.job_status_poller.add_executors(block_executors)
 
@@ -1221,24 +1218,9 @@ class DataFlowKernel:
         self.job_status_poller.close()
         logger.info("Terminated job status poller")
 
-        logger.info("Scaling in and shutting down executors")
+        logger.info("Shutting down executors")
 
         for executor in self.executors.values():
-            if isinstance(executor, BlockProviderExecutor):
-                if not executor.bad_state_is_set:
-                    logger.info(f"Scaling in executor {executor.label}")
-                    if executor.provider:
-                        job_ids = executor.provider.resources.keys()
-                        block_ids = executor.scale_in(len(job_ids))
-                        if self.monitoring and block_ids:
-                            new_status = {}
-                            for bid in block_ids:
-                                new_status[bid] = JobStatus(JobState.CANCELLED)
-                            msg = executor.create_monitoring_info(new_status)
-                            logger.debug("Sending message {} to hub from DFK".format(msg))
-                            self.monitoring.send(MessageType.BLOCK_INFO, msg)
-                else:  # and bad_state_is_set
-                    logger.warning(f"Not shutting down executor {executor.label} because it is in bad state")
             logger.info(f"Shutting down executor {executor.label}")
             executor.shutdown()
             logger.info(f"Shut down executor {executor.label}")
