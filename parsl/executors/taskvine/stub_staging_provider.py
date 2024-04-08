@@ -6,7 +6,7 @@ from parsl.data_provider.staging import Staging
 
 logger = logging.getLogger(__name__)
 
-known_url_schemes = ["file", "http", "https"]
+known_url_schemes = ["file", "http", "https", "taskvinetemp"]
 
 class StubStaging(Staging, RepresentationMixin):
 
