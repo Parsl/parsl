@@ -19,17 +19,16 @@ logger = logging.getLogger(__name__)
 class PolledExecutorFacade:
     def __init__(self, executor: BlockProviderExecutor, dfk: Optional["parsl.dataflow.dflow.DataFlowKernel"] = None):
         self._executor = executor
-        self._dfk = dfk
         self._interval = executor.status_polling_interval
         self._last_poll_time = 0.0
         self._status = {}  # type: Dict[str, JobStatus]
 
         # Create a ZMQ channel to send poll status to monitoring
         self.monitoring_enabled = False
-        if self._dfk and self._dfk.monitoring is not None:
+        if dfk and dfk.monitoring is not None:
             self.monitoring_enabled = True
-            hub_address = self._dfk.hub_address
-            hub_port = self._dfk.hub_zmq_port
+            hub_address = dfk.hub_address
+            hub_port = dfk.hub_zmq_port
             context = zmq.Context()
             self.hub_channel = context.socket(zmq.DEALER)
             self.hub_channel.set_hwm(0)
