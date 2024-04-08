@@ -232,18 +232,27 @@ class Strategy:
             # Case 1
             # No tasks.
             if active_tasks == 0:
-                # Case 1a
                 logger.debug("Strategy case 1: Executor has no active tasks")
 
-                # Fewer blocks that min_blocks
-                if active_blocks <= min_blocks:
-                    logger.debug("Strategy case 1a: Executor has no active tasks and minimum blocks. Taking no action.")
+                # Case 1a
+                # Active blocks == min_blocks
+                if active_blocks == min_blocks:
+                    logger.debug("Strategy case 1a: Executor has no active tasks and minimum blocks is maintained. Taking no action.")
+
                 # Case 1b
+                # Lesser blocks that min_blocks
+                elif active_blocks < min_blocks:
+                    logger.debug("Strategy case 1b: Executor has no active tasks. "
+                                 "minimum blocks is not maintained. "
+                                 "Scaling out by 1 block")
+                    exec_status.scale_out(1)  # scaling out by 1 block
+
+                # Case 1c
                 # More blocks than min_blocks. Scale in
                 else:
                     # We want to make sure that max_idletime is reached
                     # before killing off resources
-                    logger.debug(f"Strategy case 1b: Executor has no active tasks, and more ({active_blocks}) than minimum blocks ({min_blocks})")
+                    logger.debug(f"Strategy case 1c: Executor has no active tasks, and more ({active_blocks}) than minimum blocks ({min_blocks})")
 
                     if not self.executors[executor.label]['idle_since']:
                         logger.debug(f"Starting idle timer for executor. If idle time exceeds {self.max_idletime}s, blocks will be scaled in")
