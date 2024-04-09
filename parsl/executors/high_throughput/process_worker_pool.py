@@ -361,7 +361,9 @@ class Manager:
                     kill_event.set()
                 else:
                     task_recv_counter += len(tasks)
-                    logger.debug("Got executor tasks: {}, cumulative count of tasks: {}".format([t['task_id'] for t in tasks], task_recv_counter))
+                    logger.debug("Got executor tasks: {}, cumulative count of tasks: {}".format(
+                        [t['task_id'] for t in tasks], task_recv_counter
+                    ))
 
                     for task in tasks:
                         self.task_scheduler.put_task(task)
