@@ -203,7 +203,7 @@ class Strategy:
             # Tasks that are either pending completion
             active_tasks = executor.outstanding
 
-            status = ef.status
+            status = ef.executor.status()
 
             # FIXME we need to handle case where provider does not define these
             # FIXME probably more of this logic should be moved to the provider

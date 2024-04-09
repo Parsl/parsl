@@ -1,6 +1,7 @@
 from __future__ import annotations
 import logging
 import threading
+import time
 from itertools import compress
 from abc import abstractmethod, abstractproperty
 from concurrent.futures import Future
@@ -62,6 +63,8 @@ class BlockProviderExecutor(ParslExecutor):
         # to keep track of such errors so that they can be handled in one place
         # together with errors reported by status()
         self._simulated_status: Dict[str, JobStatus] = {}
+        self._poller_mutable_status: Dict[str, JobStatus] = {}
+
         self._executor_bad_state = threading.Event()
         self._executor_exception: Optional[Exception] = None
 
@@ -70,6 +73,8 @@ class BlockProviderExecutor(ParslExecutor):
         self._tasks = {}  # type: Dict[object, Future]
         self.blocks_to_job_id = {}  # type: Dict[str, str]
         self.job_ids_to_block = {}  # type: Dict[str, str]
+
+        self._last_poll_time = 0.0
 
     def _make_status_dict(self, block_ids: List[str], status_list: List[JobStatus]) -> Dict[str, JobStatus]:
         """Given a list of block ids and a list of corresponding status strings,
@@ -109,7 +114,7 @@ class BlockProviderExecutor(ParslExecutor):
         raise NotImplementedError("Classes inheriting from BlockProviderExecutor must implement "
                                   "outstanding()")
 
-    def status(self) -> Dict[str, JobStatus]:
+    def _old_status_impl(self) -> Dict[str, JobStatus]:
         """Return the status of all jobs/blocks currently known to this executor.
 
         :return: a dictionary mapping block ids (in string) to job status
@@ -119,9 +124,16 @@ class BlockProviderExecutor(ParslExecutor):
             status = self._make_status_dict(block_ids, self._provider.status(job_ids))
         else:
             status = {}
-        status.update(self._simulated_status)
 
         return status
+
+    def status(self) -> Dict[str, JobStatus]:
+        now = time.time()
+        if self._should_poll(now):
+            self._poller_mutable_status = self._old_status_impl()
+            self._last_poll_time = now
+        self._poller_mutable_status.update(self._simulated_status)
+        return self._poller_mutable_status
 
     def set_bad_state_and_fail_all(self, exception: Exception):
         """Allows external error handlers to mark this executor as irrecoverably bad and cause
@@ -234,3 +246,6 @@ class BlockProviderExecutor(ParslExecutor):
     @abstractproperty
     def workers_per_node(self) -> Union[int, float]:
         pass
+
+    def _should_poll(self, now: float) -> bool:
+        return now >= self._last_poll_time + self.status_polling_interval

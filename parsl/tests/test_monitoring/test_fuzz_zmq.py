@@ -4,6 +4,7 @@ import parsl
 import pytest
 import socket
 import time
+import zmq
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +49,16 @@ def test_row_counts():
         s.connect((hub_address, hub_zmq_port))
         s.sendall(b'fuzzing\r')
 
+    context = zmq.Context()
+    channel_timeout = 10000  # in milliseconds
+    hub_channel = context.socket(zmq.DEALER)
+    hub_channel.setsockopt(zmq.LINGER, 0)
+    hub_channel.set_hwm(0)
+    hub_channel.setsockopt(zmq.SNDTIMEO, channel_timeout)
+    hub_channel.connect("tcp://{}:{}".format(hub_address, hub_zmq_port))
+
     # this will send a non-object down the DFK's existing ZMQ connection
-    parsl.dfk().monitoring._dfk_channel.send(b'FuzzyByte\rSTREAM')
+    hub_channel.send(b'FuzzyByte\rSTREAM')
 
     # This following attack is commented out, because monitoring is not resilient
     # to this.

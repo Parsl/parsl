@@ -177,10 +177,11 @@ class DataFlowKernel:
 
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.
+        radio = self.monitoring.radio if self.monitoring else None
         self.job_status_poller = JobStatusPoller(strategy=self.config.strategy,
                                                  strategy_period=self.config.strategy_period,
                                                  max_idletime=self.config.max_idletime,
-                                                 dfk=self)
+                                                 monitoring=radio)
 
         self.executors: Dict[str, ParslExecutor] = {}
 
@@ -1227,8 +1228,7 @@ class DataFlowKernel:
                                   'tasks_completed_count': self.task_state_counts[States.exec_done],
                                   "time_began": self.time_began,
                                   'time_completed': self.time_completed,
-                                  'run_id': self.run_id, 'rundir': self.run_dir,
-                                  'exit_now': True})
+                                  'run_id': self.run_id, 'rundir': self.run_dir})
 
             logger.info("Terminating monitoring")
             self.monitoring.close()
