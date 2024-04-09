@@ -30,7 +30,6 @@ def no_checkpoint_stdout_app(stdout=None):
     return "echo X"
 
 
-@pytest.mark.issue363
 def test_memo_stdout():
 
     assert const_list_x == const_list_x_arg

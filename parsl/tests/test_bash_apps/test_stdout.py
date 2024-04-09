@@ -35,7 +35,6 @@ testids = [
 ]
 
 
-@pytest.mark.issue363
 @pytest.mark.parametrize('spec', speclist, ids=testids)
 def test_bad_stdout_specs(spec):
     """Testing bad stdout spec cases"""
@@ -54,7 +53,7 @@ def test_bad_stdout_specs(spec):
         assert False, "Did not raise expected exception"
 
 
-@pytest.mark.issue363
+@pytest.mark.issue3328
 def test_bad_stderr_file():
     """Testing bad stderr file"""
 
@@ -72,7 +71,7 @@ def test_bad_stderr_file():
     return
 
 
-@pytest.mark.issue363
+@pytest.mark.executor_supports_std_stream_tuples
 def test_stdout_truncate(tmpd_cwd):
     """Testing truncation of prior content of stdout"""
 
@@ -89,7 +88,6 @@ def test_stdout_truncate(tmpd_cwd):
     assert len1 == len2
 
 
-@pytest.mark.issue363
 def test_stdout_append(tmpd_cwd):
     """Testing appending to prior content of stdout (default open() mode)"""
 
