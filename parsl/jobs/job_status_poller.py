@@ -23,9 +23,10 @@ class PolledExecutorFacade:
         self._status = {}  # type: Dict[str, JobStatus]
 
         # Create a ZMQ channel to send poll status to monitoring
-        self.monitoring_enabled = False
+
+        self.hub_channel: Optional[zmq.Socket]
+
         if dfk and dfk.monitoring is not None:
-            self.monitoring_enabled = True
             hub_address = dfk.hub_address
             hub_port = dfk.hub_zmq_port
             context = zmq.Context()
@@ -33,6 +34,8 @@ class PolledExecutorFacade:
             self.hub_channel.set_hwm(0)
             self.hub_channel.connect("tcp://{}:{}".format(hub_address, hub_port))
             logger.info("Monitoring enabled on job status poller")
+        else:
+            self.hub_channel = None
 
     def _should_poll(self, now: float) -> bool:
         return now >= self._last_poll_time + self._executor.status_polling_interval
@@ -54,7 +57,7 @@ class PolledExecutorFacade:
 
     def send_monitoring_info(self, status: Dict) -> None:
         # Send monitoring info for HTEX when monitoring enabled
-        if self.monitoring_enabled:
+        if self.hub_channel:
             msg = self._executor.create_monitoring_info(status)
             logger.debug("Sending message {} to hub from job status poller".format(msg))
             self.hub_channel.send_pyobj((MessageType.BLOCK_INFO, msg))
