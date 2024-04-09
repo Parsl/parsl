@@ -135,12 +135,11 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
-        'noci: mark test to be unsuitable for running during automated tests'
+        'cleannet: Enable tests that require a clean network connection (such as for testing FTP)'
     )
-
     config.addinivalue_line(
         'markers',
-        'cleannet: Enable tests that require a clean network connection (such as for testing FTP)'
+        'issue363: Marks tests that require a shared filesystem for stdout/stderr - see issue #363'
     )
     config.addinivalue_line(
         'markers',
