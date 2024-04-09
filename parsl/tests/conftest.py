@@ -135,16 +135,7 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
-        'noci: mark test to be unsuitable for running during automated tests'
-    )
-
-    config.addinivalue_line(
-        'markers',
         'cleannet: Enable tests that require a clean network connection (such as for testing FTP)'
-    )
-    config.addinivalue_line(
-        'markers',
-        'issue363: Marks tests that require a shared filesystem for stdout/stderr - see issue #363'
     )
     config.addinivalue_line(
         'markers',
@@ -157,6 +148,14 @@ def pytest_configure(config):
     config.addinivalue_line(
         'markers',
         'multiple_cores_required: Marks tests that require multiple cores, such as htex affinity'
+    )
+    config.addinivalue_line(
+        'markers',
+        'issue3328: Marks tests broken by issue #3328'
+    )
+    config.addinivalue_line(
+        'markers',
+        'executor_supports_std_stream_tuples: Marks tests that require tuple support for stdout/stderr'
     )
 
 
