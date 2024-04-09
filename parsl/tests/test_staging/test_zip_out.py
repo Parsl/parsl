@@ -38,9 +38,9 @@ def output_something(outputs=()):
 @pytest.mark.local
 def test_zip_out(tmpd_cwd):
     # basic test of zip file stage-out
-    zip_path = str(tmpd_cwd) + "container.zip"
+    zip_path = tmpd_cwd / "container.zip"
     file_base = "data.txt"
-    of = File("zip:" + zip_path + "/" + file_base)
+    of = File(f"zip:{zip_path / file_base}")
 
     app_future = output_something(outputs=[of])
     output_file_future = app_future.outputs[0]
@@ -62,15 +62,15 @@ def test_zip_out_multi(tmpd_cwd):
     # tests multiple files, multiple zip files and multiple
     # sub-paths
 
-    zip_path_1 = str(tmpd_cwd) + "container1.zip"
-    zip_path_2 = str(tmpd_cwd) + "container2.zip"
+    zip_path_1 = tmpd_cwd / "container1.zip"
+    zip_path_2 = tmpd_cwd / "container2.zip"
 
     relative_file_path_1 = "a/b/c/data.txt"
     relative_file_path_2 = "something.txt"
     relative_file_path_3 = "a/d/other.txt"
-    of1 = File("zip:" + zip_path_1 + "/" + relative_file_path_1)
-    of2 = File("zip:" + zip_path_1 + "/" + relative_file_path_2)
-    of3 = File("zip:" + zip_path_2 + "/" + relative_file_path_3)
+    of1 = File(f"zip:{zip_path_1 / relative_file_path_1}")
+    of2 = File(f"zip:{zip_path_1 / relative_file_path_2}")
+    of3 = File(f"zip:{zip_path_2 / relative_file_path_3}")
 
     app_future = output_something(outputs=[of1, of2, of3])
 
