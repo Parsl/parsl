@@ -8,7 +8,6 @@ def foo(z=2, stdout=None):
     return f"echo {z}"
 
 
-@pytest.mark.issue363
 def test_command_format_1(tmpd_cwd):
     """Testing command format for BashApps
     """
