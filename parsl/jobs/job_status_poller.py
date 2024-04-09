@@ -37,7 +37,8 @@ class PolledExecutorFacade:
     def _should_poll(self, now: float) -> bool:
         return now >= self._last_poll_time + self._executor.status_polling_interval
 
-    def poll(self, now: float) -> None:
+    def poll(self) -> None:
+        now = time.time()
         if self._should_poll(now):
             previous_status = self._status
             self._status = self._executor.status()
@@ -123,9 +124,8 @@ class JobStatusPoller(Timer):
             es.executor.handle_errors(es.status)
 
     def _update_state(self) -> None:
-        now = time.time()
         for item in self._executor_facades:
-            item.poll(now)
+            item.poll()
 
     def add_executors(self, executors: Sequence[BlockProviderExecutor]) -> None:
         for executor in executors:
