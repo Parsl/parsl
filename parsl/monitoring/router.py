@@ -15,6 +15,8 @@ from parsl.utils import setproctitle
 
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import AddressedMonitoringMessage, TaggedMonitoringMessage
+
+from multiprocessing.synchronize import Event
 from typing import Optional, Tuple, Union
 
 
@@ -98,10 +100,10 @@ class MonitoringRouter:
               priority_msgs: "queue.Queue[AddressedMonitoringMessage]",
               node_msgs: "queue.Queue[AddressedMonitoringMessage]",
               block_msgs: "queue.Queue[AddressedMonitoringMessage]",
-              resource_msgs: "queue.Queue[AddressedMonitoringMessage]") -> None:
+              resource_msgs: "queue.Queue[AddressedMonitoringMessage]",
+              exit_event: Event) -> None:
         try:
-            router_keep_going = True
-            while router_keep_going:
+            while not exit_event.is_set():
                 try:
                     data, addr = self.udp_sock.recvfrom(2048)
                     resource_msg = pickle.loads(data)
@@ -135,8 +137,6 @@ class MonitoringRouter:
                             priority_msgs.put(msg_0)
                         elif msg[0] == MessageType.WORKFLOW_INFO:
                             priority_msgs.put(msg_0)
-                            if 'exit_now' in msg[1] and msg[1]['exit_now']:
-                                router_keep_going = False
                         else:
                             # There is a type: ignore here because if msg[0]
                             # is of the correct type, this code is unreachable,
@@ -178,6 +178,7 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    node_msgs: "queue.Queue[AddressedMonitoringMessage]",
                    block_msgs: "queue.Queue[AddressedMonitoringMessage]",
                    resource_msgs: "queue.Queue[AddressedMonitoringMessage]",
+                   exit_event: Event,
 
                    hub_address: str,
                    udp_port: Optional[int],
@@ -202,7 +203,7 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
 
         router.logger.info("Starting MonitoringRouter in router_starter")
         try:
-            router.start(priority_msgs, node_msgs, block_msgs, resource_msgs)
+            router.start(priority_msgs, node_msgs, block_msgs, resource_msgs, exit_event)
         except Exception as e:
             router.logger.exception("router.start exception")
             exception_q.put(('Hub', str(e)))
