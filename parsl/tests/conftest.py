@@ -143,10 +143,6 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
-        'issue363: Marks tests that require a shared filesystem for stdout/stderr - see issue #363'
-    )
-    config.addinivalue_line(
-        'markers',
         'staging_required: Marks tests that require a staging provider, when there is no sharedFS)'
     )
     config.addinivalue_line(
