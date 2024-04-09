@@ -4,7 +4,7 @@ import zipfile
 
 from parsl.data_provider.files import File
 from parsl.data_provider.data_manager import default_staging
-from parsl.data_provider.zip import ZipFileStaging
+from parsl.data_provider.zip import ZipAuthorityError, ZipFileStaging
 
 from parsl.providers import LocalProvider
 from parsl.channels import LocalChannel
@@ -97,3 +97,17 @@ def test_zip_out_multi(tmpd_cwd):
         assert len(z.namelist()) == 1
         with z.open(relative_file_path_3) as f:
             assert f.readlines() == [b'2\n']
+
+
+@pytest.mark.local
+def test_zip_bad_authority(tmpd_cwd):
+    # tests that there's an exception when staging a ZIP url with an authority
+    # section specified, rather than silently ignoring it. This simulates a
+    # user who misunderstands what that piece of what a zip: URL means.
+
+    zip_path = tmpd_cwd / "container.zip"
+    file_base = "data.txt"
+    of = File(f"zip://someauthority/{zip_path / file_base}")
+
+    with pytest.raises(ZipAuthorityError):
+        output_something(outputs=[of])

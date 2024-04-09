@@ -8,9 +8,18 @@ from typing import Tuple
 
 from parsl.data_provider.staging import Staging
 from parsl.data_provider.files import File
+from parsl.errors import ParslError
 
 
 logger = logging.getLogger(__name__)
+
+
+class ZipAuthorityError(ParslError):
+    def __init__(self, file):
+        self.file = file
+
+    def __str__(self):
+        return f"ZipFileStaging cannot stage Files with an authority (netloc) section ({self.file.netloc}), for {self.file.url}"
 
 
 class ZipFileStaging(Staging):
@@ -34,7 +43,18 @@ class ZipFileStaging(Staging):
 
     def can_stage_out(self, file: File) -> bool:
         logger.debug("archive provider checking File {}".format(repr(file)))
-        return file.scheme == 'zip'
+
+        # First check if this is the scheme we care about
+        if file.scheme != "zip":
+            return False
+
+        # This is some basic validation to check that the user isn't specifying
+        # an authority section and expecting it to mean something.
+        if file.netloc != "":
+            raise ZipAuthorityError(file)
+
+        # If we got this far, we can stage this file
+        return True
 
     def stage_out(self, dm, executor, file, parent_fut):
         assert file.scheme == 'zip'
