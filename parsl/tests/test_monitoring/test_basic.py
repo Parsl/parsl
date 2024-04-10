@@ -1,10 +1,7 @@
-import logging
 import os
 import parsl
 import pytest
 import time
-
-logger = logging.getLogger(__name__)
 
 
 @parsl.python_app
@@ -19,7 +16,7 @@ def this_app():
 
 
 @pytest.mark.local
-def test_row_counts():
+def test_row_counts(tmpd_cwd):
     # this is imported here rather than at module level because
     # it isn't available in a plain parsl install, so this module
     # would otherwise fail to import and break even a basic test
@@ -28,24 +25,20 @@ def test_row_counts():
     from sqlalchemy import text
     from parsl.tests.configs.htex_local_alternate import fresh_config
 
-    if os.path.exists("runinfo/monitoring.db"):
-        logger.info("Monitoring database already exists - deleting")
-        os.remove("runinfo/monitoring.db")
+    db_url = f"sqlite:///{tmpd_cwd}/monitoring.db"
 
-    logger.info("loading parsl")
-    parsl.load(fresh_config())
+    c = fresh_config()
+    c.run_dir = tmpd_cwd
+    c.monitoring.logging_endpoint = db_url
 
-    logger.info("invoking and waiting for result")
-    assert this_app().result() == 5
+    with parsl.load(c):
+        assert this_app().result() == 5
 
-    logger.info("cleaning up parsl")
-    parsl.dfk().cleanup()
     parsl.clear()
 
     # at this point, we should find one row in the monitoring database.
 
-    logger.info("checking database content")
-    engine = sqlalchemy.create_engine("sqlite:///runinfo/monitoring.db")
+    engine = sqlalchemy.create_engine(db_url)
     with engine.begin() as connection:
 
         result = connection.execute(text("SELECT COUNT(*) FROM workflow"))
@@ -81,5 +74,3 @@ def test_row_counts():
         result = connection.execute(text("SELECT COUNT(*) FROM resource"))
         (c, ) = result.first()
         assert c >= 1
-
-    logger.info("all done")
