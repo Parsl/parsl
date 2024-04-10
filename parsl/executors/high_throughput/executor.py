@@ -5,7 +5,6 @@ import typeguard
 import logging
 import threading
 import queue
-import datetime
 import pickle
 from dataclasses import dataclass
 from multiprocessing import Process, Queue
@@ -676,22 +675,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         # Return the future
         return fut
-
-    def create_monitoring_info(self, status):
-        """ Create a msg for monitoring based on the poll status
-
-        """
-        msg = []
-        for bid, s in status.items():
-            d = {}
-            d['run_id'] = self.run_id
-            d['status'] = s.status_name
-            d['timestamp'] = datetime.datetime.now()
-            d['executor_label'] = self.label
-            d['job_id'] = self.blocks_to_job_id.get(bid, None)
-            d['block_id'] = bid
-            msg.append(d)
-        return msg
 
     @property
     def workers_per_node(self) -> Union[int, float]:

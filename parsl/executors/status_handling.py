@@ -1,10 +1,11 @@
 from __future__ import annotations
+import datetime
 import logging
 import threading
 from itertools import compress
 from abc import abstractmethod, abstractproperty
 from concurrent.futures import Future
-from typing import List, Any, Dict, Optional, Tuple, Union, Callable
+from typing import List, Any, Dict, Optional, Sequence, Tuple, Union, Callable
 
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
@@ -234,3 +235,18 @@ class BlockProviderExecutor(ParslExecutor):
     @abstractproperty
     def workers_per_node(self) -> Union[int, float]:
         pass
+
+    def create_monitoring_info(self, status: Dict[str, JobStatus]) -> Sequence[object]:
+        """Create a monitoring message for each block based on the poll status.
+        """
+        msg = []
+        for bid, s in status.items():
+            d: Dict[str, Any] = {}
+            d['run_id'] = self.run_id
+            d['status'] = s.status_name
+            d['timestamp'] = datetime.datetime.now()
+            d['executor_label'] = self.label
+            d['job_id'] = self.blocks_to_job_id.get(bid, None)
+            d['block_id'] = bid
+            msg.append(d)
+        return msg
