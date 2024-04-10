@@ -100,9 +100,6 @@ class PolledExecutorFacade:
             self._status.update(new_status)
         return block_ids
 
-    def __repr__(self) -> str:
-        return self._status.__repr__()
-
 
 class JobStatusPoller(Timer):
     def __init__(self, *, strategy: Optional[str], max_idletime: float,
