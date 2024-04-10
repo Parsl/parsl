@@ -37,12 +37,9 @@ class PolledExecutorFacade:
         else:
             self.hub_channel = None
 
-    def _should_poll(self, now: float) -> bool:
-        return now >= self._last_poll_time + self._executor.status_polling_interval
-
     def poll(self) -> None:
         now = time.time()
-        if self._should_poll(now):
+        if now >= self._last_poll_time + self._executor.status_polling_interval:
             previous_status = self._status
             self._status = self._executor.status()
             self._last_poll_time = now
