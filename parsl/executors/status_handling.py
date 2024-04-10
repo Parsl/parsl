@@ -11,6 +11,7 @@ from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
 from parsl.jobs.states import JobStatus, JobState
 from parsl.jobs.error_handlers import simple_error_handler, noop_error_handler
+from parsl.monitoring.message_type import MessageType
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import AtomicIDCounter
 
@@ -235,6 +236,13 @@ class BlockProviderExecutor(ParslExecutor):
     @abstractproperty
     def workers_per_node(self) -> Union[int, float]:
         pass
+
+    def send_monitoring_info(self, status: Dict) -> None:
+        # Send monitoring info for HTEX when monitoring enabled
+        if self.monitoring_radio:
+            msg = self.create_monitoring_info(status)
+            logger.debug("Sending message {} to hub from job status poller".format(msg))
+            self.monitoring_radio.send((MessageType.BLOCK_INFO, msg))
 
     def create_monitoring_info(self, status: Dict[str, JobStatus]) -> Sequence[object]:
         """Create a monitoring message for each block based on the poll status.
