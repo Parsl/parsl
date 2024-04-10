@@ -28,6 +28,7 @@ def test_row_counts(tmpd_cwd):
     db_url = f"sqlite:///{tmpd_cwd}/monitoring.db"
 
     c = fresh_config()
+    c.run_dir = tmpd_cwd
     c.monitoring.logging_endpoint = db_url
 
     with parsl.load(c):
