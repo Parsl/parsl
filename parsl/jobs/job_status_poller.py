@@ -16,11 +16,10 @@ logger = logging.getLogger(__name__)
 
 
 class PolledExecutorFacade:
-    def __init__(self, executor: BlockProviderExecutor, monitoring: Optional["parsl.monitoring.radios.MonitoringRadio"] = None):
+    def __init__(self, executor: BlockProviderExecutor):
         self._executor = executor
         self._last_poll_time = 0.0
         self._status = {}  # type: Dict[str, JobStatus]
-        self._monitoring = monitoring
 
     def poll(self) -> None:
         now = time.time()
@@ -39,10 +38,10 @@ class PolledExecutorFacade:
 
     def send_monitoring_info(self, status: Dict) -> None:
         # Send monitoring info for HTEX when monitoring enabled
-        if self._monitoring:
+        if self._executor.monitoring_radio:
             msg = self._executor.create_monitoring_info(status)
             logger.debug("Sending message {} to hub from job status poller".format(msg))
-            self._monitoring.send((MessageType.BLOCK_INFO, msg))
+            self._executor.monitoring_radio.send((MessageType.BLOCK_INFO, msg))
 
     @property
     def status(self) -> Dict[str, JobStatus]:
@@ -91,7 +90,6 @@ class JobStatusPoller(Timer):
                  strategy_period: Union[float, int],
                  monitoring: Optional["parsl.monitoring.radios.MonitoringRadio"] = None) -> None:
         self._executor_facades = []  # type: List[PolledExecutorFacade]
-        self.monitoring = monitoring
         self._strategy = Strategy(strategy=strategy,
                                   max_idletime=max_idletime)
         super().__init__(self.poll, interval=strategy_period, name="JobStatusPoller")
@@ -113,7 +111,7 @@ class JobStatusPoller(Timer):
         for executor in executors:
             if executor.status_polling_interval > 0:
                 logger.debug("Adding executor {}".format(executor.label))
-                self._executor_facades.append(PolledExecutorFacade(executor, self.monitoring))
+                self._executor_facades.append(PolledExecutorFacade(executor))
         self._strategy.add_executors(executors)
 
     def close(self, timeout: Optional[float] = None) -> None:
