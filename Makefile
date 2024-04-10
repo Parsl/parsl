@@ -79,9 +79,9 @@ radical_local_test:
 	pytest parsl/tests/ -k "not cleannet and not issue3328 and not executor_supports_std_stream_tuples" --config parsl/tests/configs/local_radical.py --random-order --durations 10
 
 .PHONY: config_local_test
-config_local_test:
+config_local_test: $(CCTOOLS_INSTALL)
 	pip3 install ".[monitoring,visualization,proxystore]"
-	pytest parsl/tests/ -k "not cleannet" --config local --random-order --durations 10
+	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages pytest parsl/tests/ -k "not cleannet" --config local --random-order --durations 10
 
 .PHONY: site_test
 site_test:
