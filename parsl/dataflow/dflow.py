@@ -1391,10 +1391,20 @@ class DataFlowKernel:
 
     @staticmethod
     def _log_std_streams(task_record: TaskRecord) -> None:
-        if task_record['app_fu'].stdout is not None:
-            logger.info("Standard output for task {} available at {}".format(task_record['id'], task_record['app_fu'].stdout))
-        if task_record['app_fu'].stderr is not None:
-            logger.info("Standard error for task {} available at {}".format(task_record['id'], task_record['app_fu'].stderr))
+        tid = task_record['id']
+
+        def log_std_stream(name: str, target) -> None:
+            if target is None:
+                logger.info(f"{name} for task {tid} will not be redirected.")
+            elif isinstance(target, str):
+                logger.info(f"{name} for task {tid} will be redirected to {target}")
+            elif isinstance(target, tuple) and len(target) == 2:
+                logger.info(f"{name} for task {tid} will be redirected to {target[0]} with mode {target[1]}")
+            else:
+                logger.error(f"{name} for task {tid} has unknown specification: {target!r}")
+
+        log_std_stream("Standard out", task_record['app_fu'].stdout)
+        log_std_stream("Standard error", task_record['app_fu'].stderr)
 
 
 class DataFlowKernelLoader:
