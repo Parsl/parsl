@@ -240,16 +240,29 @@ class DataFlowKernel:
         task_log_info['task_stdin'] = task_record['kwargs'].get('stdin', None)
         stdout_spec = task_record['kwargs'].get('stdout', None)
         stderr_spec = task_record['kwargs'].get('stderr', None)
-        try:
-            stdout_name, _ = get_std_fname_mode('stdout', stdout_spec)
-        except Exception as e:
-            logger.warning("Incorrect stdout format {} for Task {}".format(stdout_spec, task_record['id']))
-            stdout_name = str(e)
-        try:
-            stderr_name, _ = get_std_fname_mode('stderr', stderr_spec)
-        except Exception as e:
-            logger.warning("Incorrect stderr format {} for Task {}".format(stderr_spec, task_record['id']))
-            stderr_name = str(e)
+
+        # stdout and stderr strings are set to the filename if we can
+        # interpret the specification; otherwise, set to the empty string
+        # (on exception, or when not specified)
+
+        if stdout_spec is not None:
+            try:
+                stdout_name, _ = get_std_fname_mode('stdout', stdout_spec)
+            except Exception:
+                logger.exception("Could not parse stdout specification {} for task {}".format(stdout_spec, task_record['id']))
+                stdout_name = ""
+        else:
+            stdout_name = ""
+
+        if stderr_spec is not None:
+            try:
+                stderr_name, _ = get_std_fname_mode('stderr', stderr_spec)
+            except Exception:
+                logger.exception("Could not parse stderr specification {} for task {}".format(stderr_spec, task_record['id']))
+                stderr_name = ""
+        else:
+            stderr_name = ""
+
         task_log_info['task_stdout'] = stdout_name
         task_log_info['task_stderr'] = stderr_name
         task_log_info['task_fail_history'] = ",".join(task_record['fail_history'])
