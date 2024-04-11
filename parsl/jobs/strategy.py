@@ -156,7 +156,7 @@ class Strategy:
             executor = ef.executor
             if self.executors[executor.label]['first']:
                 logger.debug(f"strategy_init_only: scaling out {executor.provider.init_blocks} initial blocks for {executor.label}")
-                ef.scale_out(executor.provider.init_blocks)
+                ef.scale_out_facade(executor.provider.init_blocks)
                 self.executors[executor.label]['first'] = False
             else:
                 logger.debug("strategy_init_only: doing nothing")
@@ -193,13 +193,13 @@ class Strategy:
             if self.executors[label]['first']:
                 executor = ef.executor
                 logger.debug(f"Scaling out {executor.provider.init_blocks} initial blocks for {label}")
-                ef.scale_out(executor.provider.init_blocks)
+                ef.scale_out_facade(executor.provider.init_blocks)
                 self.executors[label]['first'] = False
 
             # Tasks that are either pending completion
             active_tasks = executor.outstanding
 
-            status = ef.status
+            status = ef.status_facade
 
             # FIXME we need to handle case where provider does not define these
             # FIXME probably more of this logic should be moved to the provider
@@ -257,7 +257,7 @@ class Strategy:
                         # We have resources idle for the max duration,
                         # we have to scale_in now.
                         logger.debug(f"Idle time has reached {self.max_idletime}s for executor {label}; scaling in")
-                        ef.scale_in(active_blocks - min_blocks)
+                        ef.scale_in_facade(active_blocks - min_blocks)
 
                     else:
                         logger.debug(
@@ -281,7 +281,7 @@ class Strategy:
                     excess_blocks = math.ceil(float(excess_slots) / (tasks_per_node * nodes_per_block))
                     excess_blocks = min(excess_blocks, max_blocks - active_blocks)
                     logger.debug(f"Requesting {excess_blocks} more blocks")
-                    ef.scale_out(excess_blocks)
+                    ef.scale_out_facade(excess_blocks)
 
             elif active_slots == 0 and active_tasks > 0:
                 logger.debug("Strategy case 4a: No active slots but some active tasks - could scale out by a single block")
@@ -290,7 +290,7 @@ class Strategy:
                 if active_blocks < max_blocks:
                     logger.debug("Requesting single block")
 
-                    ef.scale_out(1)
+                    ef.scale_out_facade(1)
                 else:
                     logger.debug("Not requesting single block, because at maxblocks already")
 
@@ -306,7 +306,7 @@ class Strategy:
                             excess_blocks = math.ceil(float(excess_slots) / (tasks_per_node * nodes_per_block))
                             excess_blocks = min(excess_blocks, active_blocks - min_blocks)
                             logger.debug(f"Requesting scaling in by {excess_blocks} blocks with idle time {self.max_idletime}s")
-                            ef.scale_in(excess_blocks, max_idletime=self.max_idletime)
+                            ef.scale_in_facade(excess_blocks, max_idletime=self.max_idletime)
                     else:
                         logger.error("This strategy does not support scaling in except for HighThroughputExecutor - taking no action")
                 else:

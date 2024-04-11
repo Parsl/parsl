@@ -20,7 +20,7 @@ class PolledExecutorFacade:
         self._last_poll_time = 0.0
         self._status = {}  # type: Dict[str, JobStatus]
 
-    def poll(self) -> None:
+    def poll_facade(self) -> None:
         now = time.time()
         if now >= self._last_poll_time + self._executor.status_polling_interval:
             previous_status = self._status
@@ -36,7 +36,7 @@ class PolledExecutorFacade:
                 self._executor.send_monitoring_info(delta_status)
 
     @property
-    def status(self) -> Dict[str, JobStatus]:
+    def status_facade(self) -> Dict[str, JobStatus]:
         """Return the status of all jobs/blocks of the executor of this poller.
 
         :return: a dictionary mapping block ids (in string) to job status
@@ -47,7 +47,7 @@ class PolledExecutorFacade:
     def executor(self) -> BlockProviderExecutor:
         return self._executor
 
-    def scale_in(self, n: int, max_idletime: Optional[float] = None) -> List[str]:
+    def scale_in_facade(self, n: int, max_idletime: Optional[float] = None) -> List[str]:
 
         if max_idletime is None:
             block_ids = self._executor.scale_in(n)
@@ -66,7 +66,7 @@ class PolledExecutorFacade:
             self._executor.send_monitoring_info(new_status)
         return block_ids
 
-    def scale_out(self, n: int) -> List[str]:
+    def scale_out_facade(self, n: int) -> List[str]:
         block_ids = self._executor.scale_out(n)
         if block_ids is not None:
             new_status = {}
@@ -93,11 +93,11 @@ class JobStatusPoller(Timer):
 
     def _run_error_handlers(self, status: List[PolledExecutorFacade]) -> None:
         for es in status:
-            es.executor.handle_errors(es.status)
+            es.executor.handle_errors(es.status_facade)
 
     def _update_state(self) -> None:
         for item in self._executor_facades:
-            item.poll()
+            item.poll_facade()
 
     def add_executors(self, executors: Sequence[BlockProviderExecutor]) -> None:
         for executor in executors:
@@ -116,8 +116,8 @@ class JobStatusPoller(Timer):
                 # cancelling, but it is safe to be more, as the scaling
                 # code will cope with being asked to cancel more blocks
                 # than exist.
-                block_count = len(ef.status)
-                ef.scale_in(block_count)
+                block_count = len(ef.status_facade)
+                ef.scale_in_facade(block_count)
 
             else:  # and bad_state_is_set
                 logger.warning(f"Not scaling in executor {ef.executor.label} because it is in bad state")
