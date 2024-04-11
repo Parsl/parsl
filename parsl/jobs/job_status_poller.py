@@ -131,8 +131,8 @@ class JobStatusPoller(Timer):
                 self._executor_facades.append(PolledExecutorFacade(executor, self.dfk))
         self._strategy.add_executors(executors)
 
-    def close(self):
-        super().close()
+    def close(self, timeout: Optional[float] = None) -> None:
+        super().close(timeout)
         for ef in self._executor_facades:
             if not ef.executor.bad_state_is_set:
                 logger.info(f"Scaling in executor {ef.executor.label}")
