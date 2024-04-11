@@ -6,7 +6,6 @@ from typing import Dict, List, Sequence, Optional, Union
 from parsl.jobs.states import JobStatus, JobState
 from parsl.jobs.strategy import Strategy
 from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.monitoring.message_type import MessageType
 
 
 from parsl.utils import Timer
@@ -34,14 +33,7 @@ class PolledExecutorFacade:
                     delta_status[block_id] = self._status[block_id]
 
             if delta_status:
-                self.send_monitoring_info(delta_status)
-
-    def send_monitoring_info(self, status: Dict) -> None:
-        # Send monitoring info for HTEX when monitoring enabled
-        if self._executor.monitoring_radio:
-            msg = self._executor.create_monitoring_info(status)
-            logger.debug("Sending message {} to hub from job status poller".format(msg))
-            self._executor.monitoring_radio.send((MessageType.BLOCK_INFO, msg))
+                self._executor.send_monitoring_info(delta_status)
 
     @property
     def status(self) -> Dict[str, JobStatus]:
@@ -71,7 +63,7 @@ class PolledExecutorFacade:
             for block_id in block_ids:
                 new_status[block_id] = JobStatus(JobState.CANCELLED)
                 del self._status[block_id]
-            self.send_monitoring_info(new_status)
+            self._executor.send_monitoring_info(new_status)
         return block_ids
 
     def scale_out(self, n: int) -> List[str]:
@@ -80,7 +72,7 @@ class PolledExecutorFacade:
             new_status = {}
             for block_id in block_ids:
                 new_status[block_id] = JobStatus(JobState.PENDING)
-            self.send_monitoring_info(new_status)
+            self._executor.send_monitoring_info(new_status)
             self._status.update(new_status)
         return block_ids
 
