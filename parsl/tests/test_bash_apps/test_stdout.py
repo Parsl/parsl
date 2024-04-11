@@ -1,3 +1,4 @@
+import logging
 import os
 
 import pytest
@@ -72,7 +73,7 @@ def test_bad_stderr_file():
 
 
 @pytest.mark.executor_supports_std_stream_tuples
-def test_stdout_truncate(tmpd_cwd):
+def test_stdout_truncate(tmpd_cwd, caplog):
     """Testing truncation of prior content of stdout"""
 
     out = (str(tmpd_cwd / 't1.out'), 'w')
@@ -87,8 +88,11 @@ def test_stdout_truncate(tmpd_cwd):
     assert len1 == 1
     assert len1 == len2
 
+    for record in caplog.records:
+        assert record.levelno < logging.ERROR
 
-def test_stdout_append(tmpd_cwd):
+
+def test_stdout_append(tmpd_cwd, caplog):
     """Testing appending to prior content of stdout (default open() mode)"""
 
     out = str(tmpd_cwd / 't1.out')
@@ -101,3 +105,6 @@ def test_stdout_append(tmpd_cwd):
     len2 = len(open(out).readlines())
 
     assert len1 == 1 and len2 == 2
+
+    for record in caplog.records:
+        assert record.levelno < logging.ERROR
