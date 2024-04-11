@@ -5,6 +5,7 @@ import os
 import pickle
 import queue
 import socket
+import threading
 import time
 from multiprocessing.synchronize import Event
 from typing import Optional, Tuple, Union
@@ -108,7 +109,28 @@ class MonitoringRouter:
         self.resource_msgs = resource_msgs
         self.exit_event = exit_event
 
+    @wrap_with_logs(target="monitoring_router")
     def start(self) -> None:
+        self.logger.info("Starting UDP listener thread")
+        udp_radio_receiver_thread = threading.Thread(target=self.start_udp_listener)
+        udp_radio_receiver_thread.start()
+
+        self.logger.info("Starting ZMQ listener thread")
+        zmq_radio_receiver_thread = threading.Thread(target=self.start_zmq_listener)
+        zmq_radio_receiver_thread.start()
+
+        # exit when both of those have exiting
+        # TODO: this is to preserve the existing behaviour of start(), but it
+        # isn't necessarily the *right* thing to do...
+
+        self.logger.info("Joining on ZMQ listener thread")
+        zmq_radio_receiver_thread.join()
+        self.logger.info("Joining on UDP listener thread")
+        udp_radio_receiver_thread.join()
+        self.logger.info("Joined on both ZMQ and UDP listener threads")
+
+    @wrap_with_logs(target="monitoring_router")
+    def start_udp_listener(self) -> None:
         try:
             while not self.exit_event.is_set():
                 try:
@@ -119,6 +141,26 @@ class MonitoringRouter:
                 except socket.timeout:
                     pass
 
+            self.logger.info("UDP listener draining")
+            last_msg_received_time = time.time()
+            while time.time() - last_msg_received_time < self.atexit_timeout:
+                try:
+                    data, addr = self.udp_sock.recvfrom(2048)
+                    msg = pickle.loads(data)
+                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
+                    self.resource_msgs.put((msg, addr))
+                    last_msg_received_time = time.time()
+                except socket.timeout:
+                    pass
+
+            self.logger.info("UDP listener finishing normally")
+        finally:
+            self.logger.info("UDP listener finished")
+
+    @wrap_with_logs(target="monitoring_router")
+    def start_zmq_listener(self) -> None:
+        try:
+            while not self.exit_event.is_set():
                 try:
                     dfk_loop_start = time.time()
                     while time.time() - dfk_loop_start < 1.0:  # TODO make configurable
@@ -161,21 +203,9 @@ class MonitoringRouter:
                     # thing to do.
                     self.logger.warning("Failure processing a ZMQ message", exc_info=True)
 
-            self.logger.info("Monitoring router draining")
-            last_msg_received_time = time.time()
-            while time.time() - last_msg_received_time < self.atexit_timeout:
-                try:
-                    data, addr = self.udp_sock.recvfrom(2048)
-                    msg = pickle.loads(data)
-                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
-                    self.resource_msgs.put((msg, addr))
-                    last_msg_received_time = time.time()
-                except socket.timeout:
-                    pass
-
-            self.logger.info("Monitoring router finishing normally")
+            self.logger.info("ZMQ listener finishing normally")
         finally:
-            self.logger.info("Monitoring router finished")
+            self.logger.info("ZMQ listener finished")
 
 
 @wrap_with_logs
