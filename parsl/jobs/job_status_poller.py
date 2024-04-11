@@ -85,9 +85,6 @@ class PolledExecutorFacade:
             self._status.update(new_status)
         return block_ids
 
-    def __repr__(self) -> str:
-        return self._status.__repr__()
-
 
 class JobStatusPoller(Timer):
     def __init__(self, *, strategy: Optional[str], max_idletime: float,
@@ -119,8 +116,8 @@ class JobStatusPoller(Timer):
                 self._executor_facades.append(PolledExecutorFacade(executor, self.monitoring))
         self._strategy.add_executors(executors)
 
-    def close(self):
-        super().close()
+    def close(self, timeout: Optional[float] = None) -> None:
+        super().close(timeout)
         for ef in self._executor_facades:
             if not ef.executor.bad_state_is_set:
                 logger.info(f"Scaling in executor {ef.executor.label}")
