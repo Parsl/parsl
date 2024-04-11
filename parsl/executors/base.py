@@ -1,9 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
-from typing import Any, Callable, Dict, Optional, List
+from typing import Any, Callable, Dict, Optional
 from typing_extensions import Literal, Self
-
-from parsl.jobs.states import JobStatus
 
 
 class ParslExecutor(metaclass=ABCMeta):
@@ -78,13 +76,6 @@ class ParslExecutor(metaclass=ABCMeta):
         This includes all attached resources such as workers and controllers.
         """
         pass
-
-    def create_monitoring_info(self, status: Dict[str, JobStatus]) -> List[object]:
-        """Create a monitoring message for each block based on the poll status.
-
-        :return: a list of dictionaries mapping to the info of each block
-        """
-        return []
 
     def monitor_resources(self) -> bool:
         """Should resource monitoring happen for tasks on running on this executor?

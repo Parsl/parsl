@@ -5,7 +5,6 @@ import time
 import logging
 import multiprocessing.synchronize as ms
 import typeguard
-import zmq
 
 import queue
 
@@ -20,6 +19,7 @@ from parsl.utils import setproctitle
 
 from parsl.serialize import deserialize
 
+from parsl.monitoring.radios import MultiprocessingQueueRadio
 from parsl.monitoring.router import router_starter
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import AddressedMonitoringMessage
@@ -91,12 +91,6 @@ class MonitoringHub(RepresentationMixin):
              be made.
              Default: 30 seconds
         """
-
-        # Any is used to disable typechecking on uses of _dfk_channel,
-        # because it is used in the code as if it points to a channel, but
-        # the static type is that it can also be None. The code relies on
-        # .start() being called and initialising this to a real channel.
-        self._dfk_channel = None  # type: Any
 
         if _db_manager_excepts:
             raise _db_manager_excepts
@@ -197,6 +191,8 @@ class MonitoringHub(RepresentationMixin):
         self.filesystem_proc.start()
         logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
 
+        self.radio = MultiprocessingQueueRadio(self.block_msgs)
+
         try:
             comm_q_result = comm_q.get(block=True, timeout=120)
         except queue.Empty:
@@ -211,14 +207,6 @@ class MonitoringHub(RepresentationMixin):
 
         self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
 
-        context = zmq.Context()
-        self.dfk_channel_timeout = 10000  # in milliseconds
-        self._dfk_channel = context.socket(zmq.DEALER)
-        self._dfk_channel.setsockopt(zmq.LINGER, 0)
-        self._dfk_channel.set_hwm(0)
-        self._dfk_channel.setsockopt(zmq.SNDTIMEO, self.dfk_channel_timeout)
-        self._dfk_channel.connect("tcp://{}:{}".format(self.hub_address, zmq_port))
-
         logger.info("Monitoring Hub initialized")
 
         return zmq_port
@@ -226,11 +214,7 @@ class MonitoringHub(RepresentationMixin):
     # TODO: tighten the Any message format
     def send(self, mtype: MessageType, message: Any) -> None:
         logger.debug("Sending message type {}".format(mtype))
-        try:
-            self._dfk_channel.send_pyobj((mtype, message))
-        except zmq.Again:
-            logger.exception(
-                "The monitoring message sent from DFK to router timed-out after {}ms".format(self.dfk_channel_timeout))
+        self.radio.send((mtype, message))
 
     def close(self) -> None:
         logger.info("Terminating Monitoring Hub")
@@ -241,9 +225,8 @@ class MonitoringHub(RepresentationMixin):
                 logger.error("There was a queued exception (Either router or DBM process got exception much earlier?)")
             except queue.Empty:
                 break
-        if self._dfk_channel and self.monitoring_hub_active:
+        if self.monitoring_hub_active:
             self.monitoring_hub_active = False
-            self._dfk_channel.close()
             if exception_msgs:
                 for exception_msg in exception_msgs:
                     logger.error(
