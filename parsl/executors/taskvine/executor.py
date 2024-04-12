@@ -105,7 +105,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  factory_config: TaskVineFactoryConfig = TaskVineFactoryConfig(),
                  provider: Optional[ExecutionProvider] = LocalProvider(init_blocks=1),
+                 working_dir = '.',
                  storage_access: Optional[List[Staging]] = None):
+
+        self.working_dir = working_dir
 
         # Set worker launch option for this executor
         if worker_launch_method == 'factory' or worker_launch_method == 'manual':
@@ -213,9 +216,11 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Use the current run directory from Parsl
         run_dir = self.run_dir
 
+        run_idx = run_dir.split("/")[-1]
+
         # Create directories for data and results
         log_dir = os.path.join(run_dir, self.label)
-        self._function_data_dir = os.path.join(run_dir, self.label, "function_data")
+        self._function_data_dir = os.path.join(f"/tmp/function_data/", self.label, run_idx)
         os.makedirs(log_dir)
         os.makedirs(self._function_data_dir)
 
@@ -363,6 +368,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Also consider any *arg that looks like a file as an input:
         input_files += [self._register_file(f) for f in args if isinstance(f, File)]
+        logger.debug(f"registered input files {input_files}")
 
         for kwarg, maybe_file in kwargs.items():
             # Add appropriate input and output files from "stdout" and "stderr" keyword arguments
@@ -504,8 +510,12 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if parsl_file.scheme == 'file' or \
            (parsl_file.local_path and os.path.exists(parsl_file.local_path)):
             to_stage = not os.path.isabs(parsl_file.filepath)
-
-        return ParslFileToVine(parsl_file.filepath, to_stage, to_cache)
+            return ParslFileToVine(parsl_file.filepath, to_stage, to_cache)
+        else:
+            parsl_file.local_path = parsl_file.url
+            parsl_file.filename = uuid.uuid4()
+            logger.debug(f"setting local path {parsl_file.local_path} to filename {parsl_file.filename}")
+            return ParslFileToVine(parsl_file.filepath, True, to_cache)
 
     def _std_output_to_vine(self, fdname, stdfspec):
         """Find the name of the file that will contain stdout or stderr and
