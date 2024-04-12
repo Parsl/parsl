@@ -3,6 +3,8 @@ from concurrent.futures import Future
 from typing import Any, Callable, Dict, Optional
 from typing_extensions import Literal, Self
 
+from parsl.monitoring.radios import MonitoringRadio
+
 
 class ParslExecutor(metaclass=ABCMeta):
     """Executors are abstractions that represent available compute resources
@@ -126,3 +128,13 @@ class ParslExecutor(metaclass=ABCMeta):
     @hub_port.setter
     def hub_port(self, value: Optional[int]) -> None:
         self._hub_port = value
+
+    @property
+    def monitoring_radio(self) -> Optional[MonitoringRadio]:
+        """Local radio for sending monitoring messages
+        """
+        return self._monitoring_radio
+
+    @monitoring_radio.setter
+    def monitoring_radio(self, value: Optional[MonitoringRadio]) -> None:
+        self._monitoring_radio = value
