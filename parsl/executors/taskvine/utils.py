@@ -1,4 +1,5 @@
 from typing import Optional
+import uuid
 
 
 class ParslTaskToVine:
@@ -69,12 +70,14 @@ class ParslFileToVine:
     """
     def __init__(self,
                  parsl_name: str,   # name of file
+                 netloc: str,       # name of file if url
                  stage: bool,       # whether TaskVine should know about this file
                  cache: bool        # whether TaskVine should cache this file
                  ):
         self.parsl_name = parsl_name
         self.stage = stage
         self.cache = cache
+        self.netloc = netloc
 
 
 def run_parsl_function(map_file, function_file, argument_file, result_file):
