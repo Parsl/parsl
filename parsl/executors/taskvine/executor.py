@@ -510,19 +510,18 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if parsl_file.scheme == 'file' or \
            (parsl_file.local_path and os.path.exists(parsl_file.local_path)):
             to_stage = not os.path.isabs(parsl_file.filepath)
-            return ParslFileToVine(parsl_file.filepath, to_stage, to_cache)
+            return ParslFileToVine(parsl_file.filepath, parsl_file.netloc, to_stage, to_cache)
         else:
-            parsl_file.local_path = parsl_file.url
-            parsl_file.filename = uuid.uuid4()
-            logger.debug(f"setting local path {parsl_file.local_path} to filename {parsl_file.filename}")
-            return ParslFileToVine(parsl_file.filepath, True, to_cache)
+            # we must stage url and temp files
+            ptv = ParslFileToVine(parsl_file.url, parsl_file.netloc, True, to_cache)
+            return ptv
 
     def _std_output_to_vine(self, fdname, stdfspec):
         """Find the name of the file that will contain stdout or stderr and
         return a ParslFileToVine with it. These files are never cached"""
         fname, mode = putils.get_std_fname_mode(fdname, stdfspec)
         to_stage = not os.path.isabs(fname)
-        return ParslFileToVine(fname, stage=to_stage, cache=False)
+        return ParslFileToVine(fname, fname, stage=to_stage, cache=False)
 
     def _prepare_package(self, fn, extra_pkgs):
         """ Look at source code of apps to figure out their package depedencies

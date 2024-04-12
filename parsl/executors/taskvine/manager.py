@@ -379,7 +379,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
                             parsl_file_name_to_vine_file[spec.parsl_name] = task_in_file
                         logger.debug("Adding input file {}, {} to TaskVine".format(task_in_file, task.executor_id))
 #                        split_name = spec.parsl_name.split("/")[-1]
-                        t.add_input(task_in_file, spec.parsl_name)
+                        t.add_input(task_in_file, spec.netloc)
 
                 for spec in task.output_files:
                     if spec.stage:
@@ -390,7 +390,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
                             parsl_file_name_to_vine_file[spec.parsl_name] = task_out_file
                         logger.debug("Adding output file {}, {} to TaskVine".format(task_out_file, task.executor_id))
                         split_name = spec.parsl_name.split("/")[-1]
-                        t.add_output(task_out_file, split_name)
+                        t.add_output(task_out_file, spec.netloc)
 
             # Submit the task to the TaskVine object
             logger.debug("Submitting executor task {}, {} to TaskVine".format(task.executor_id, t))
