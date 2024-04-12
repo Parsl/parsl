@@ -724,8 +724,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         for block_id, job_status in self._status.items():
             if job_status.state not in TERMINAL_STATES:
-                # TODO: is there a nicer way to make block_info come into existence?
-                # can i write just the expression block_info[block_id] on its own?
                 block_info[block_id] = new_block_info()
 
         managers = self.connected_managers()
