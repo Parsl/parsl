@@ -88,8 +88,8 @@ fn main() {
     //     have a buffer and task_id attribute (similar but different to as received on the
     //     tasks_submit_to_interchange channel. TODO note that this is a list of tasks, while tasks_submit_to_interchange carries at most one task per message. TODO that cardinality mismatch could be made more consistent in the protocols.
     //     This implementation, which does per-slot matchmaking, probably won't send more than a single task at once in the list, though.
-    //     Other messages (heartbeat and drain) can be sent on this channel, usin magic task IDs.
-    //     TODO: it's unclear why this protocol has a blank byte string? it's always discarded...
+    //     Other messages (heartbeat and drain) can be sent on this channel, usin magic task IDs. TODO: make messages use type tags in this channel
+    //     TODO: it's unclear why this protocol has a blank byte string? it's always discarded... probably remove it?
 
     // In the workers to interchange direction:
     //    json formatted messages, not pickle formatted messages:
