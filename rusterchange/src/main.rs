@@ -6,7 +6,7 @@ use queues::IsQueue;
 #[derive(Clone)]
 struct Task {
     task_id: i64,
-    buffer: Vec<u8>
+    buffer: Vec<u8>,
 }
 
 fn main() {
@@ -24,60 +24,85 @@ fn main() {
     let zmq_ctx = zmq::Context::new();
     // will be destroyed by implicit destructor, i think
 
-    let zmq_tasks_submit_to_interchange_socket = zmq_ctx.socket(zmq::SocketType::DEALER).expect("could not create task_submit_to_interchange socket");
-    zmq_tasks_submit_to_interchange_socket.connect("tcp://127.0.0.1:9000").expect("could not connect task_submit_to_interchange socket");
+    let zmq_tasks_submit_to_interchange_socket = zmq_ctx
+        .socket(zmq::SocketType::DEALER)
+        .expect("could not create task_submit_to_interchange socket");
+    zmq_tasks_submit_to_interchange_socket
+        .connect("tcp://127.0.0.1:9000")
+        .expect("could not connect task_submit_to_interchange socket");
 
-    let zmq_results_interchange_to_submit_socket = zmq_ctx.socket(zmq::SocketType::DEALER).expect("could not create results_interchange_to_submit socket");
-    zmq_results_interchange_to_submit_socket.connect("tcp://127.0.0.1:9001").expect("could not connect results_interchange_to_submit socket");
+    let zmq_results_interchange_to_submit_socket = zmq_ctx
+        .socket(zmq::SocketType::DEALER)
+        .expect("could not create results_interchange_to_submit socket");
+    zmq_results_interchange_to_submit_socket
+        .connect("tcp://127.0.0.1:9001")
+        .expect("could not connect results_interchange_to_submit socket");
 
-    let zmq_command = zmq_ctx.socket(zmq::SocketType::DEALER).expect("could not create command socket");
-    zmq_command.connect("tcp://127.0.0.1:9002").expect("could not connect command socket");
-
+    let zmq_command = zmq_ctx
+        .socket(zmq::SocketType::DEALER)
+        .expect("could not create command socket");
+    zmq_command
+        .connect("tcp://127.0.0.1:9002")
+        .expect("could not connect command socket");
 
     // the bind addresses for these two ports need to be the self.interchange_address, not localhost
     // in order to accept connections from remote workers
-    let zmq_tasks_interchange_to_workers = zmq_ctx.socket(zmq::SocketType::ROUTER).expect("could not create tasks_interchange_to_workers socket");
-    zmq_tasks_interchange_to_workers.bind("tcp://127.0.0.1:9003").expect("could not bind tasks_interchange_to_workers");
+    let zmq_tasks_interchange_to_workers = zmq_ctx
+        .socket(zmq::SocketType::ROUTER)
+        .expect("could not create tasks_interchange_to_workers socket");
+    zmq_tasks_interchange_to_workers
+        .bind("tcp://127.0.0.1:9003")
+        .expect("could not bind tasks_interchange_to_workers");
 
-    let zmq_results_workers_to_interchange = zmq_ctx.socket(zmq::SocketType::ROUTER).expect("could not create results_workers_to_interchange socket");
-    zmq_results_workers_to_interchange.bind("tcp://127.0.0.1:9004").expect("could not bind results_workers_to_interchange");
+    let zmq_results_workers_to_interchange = zmq_ctx
+        .socket(zmq::SocketType::ROUTER)
+        .expect("could not create results_workers_to_interchange socket");
+    zmq_results_workers_to_interchange
+        .bind("tcp://127.0.0.1:9004")
+        .expect("could not bind results_workers_to_interchange");
 
     let mut task_queue: queues::Queue<Task> = queues::Queue::new();
 
     loop {
-
         // unclear to me what it means to share this sockets list across multiple loop iterations?
 
         // choose what to poll for based on if we want to be able to send things (in which case
         // poll for POLLOUT) otherwise we don't care about POLLOUT... I'm a bit unclear how much
         // data can be written when we've got a POLLOUT?
 
-        let mut sockets = [zmq_tasks_submit_to_interchange_socket.as_poll_item(zmq::PollEvents::POLLIN),
-                           // zmq_results_interchange_to_submit_socket.as_poll_item(zmq::PollEvents::all()),
-                           zmq_command.as_poll_item(zmq::PollEvents::POLLIN),
-                           // zmq_tasks_interchange_to_workers.as_poll_item(zmq::PollEvents::all()),
-                           zmq_results_workers_to_interchange.as_poll_item(zmq::PollEvents::POLLIN)
-                          ];
+        let mut sockets = [
+            zmq_tasks_submit_to_interchange_socket.as_poll_item(zmq::PollEvents::POLLIN),
+            // zmq_results_interchange_to_submit_socket.as_poll_item(zmq::PollEvents::all()),
+            zmq_command.as_poll_item(zmq::PollEvents::POLLIN),
+            // zmq_tasks_interchange_to_workers.as_poll_item(zmq::PollEvents::all()),
+            zmq_results_workers_to_interchange.as_poll_item(zmq::PollEvents::POLLIN),
+        ];
 
         println!("Polling");
         let count = zmq::poll(&mut sockets, -1).expect("poll failed");
         // -1 means infinite timeout, but maybe we should timeout on the heartbeat periods
         // in order to send and receive heartbeats? TODO
-                    
+
         println!("Found {} interesting socket(s)", count);
 
         // tasks submit to interchange channel
 
-        println!("tasks submit to interchange events: {}", sockets[0].get_revents().bits());
+        println!(
+            "tasks submit to interchange events: {}",
+            sockets[0].get_revents().bits()
+        );
         if sockets[0].get_revents().contains(zmq::PollEvents::POLLIN) {
             println!("Poll result: there is a task from the submit side");
-            let task = zmq_tasks_submit_to_interchange_socket.recv_bytes(0).expect("reading task message");
+            let task = zmq_tasks_submit_to_interchange_socket
+                .recv_bytes(0)
+                .expect("reading task message");
             print!("Message: ");
-            for b in &task { 
+            for b in &task {
                 print!("{} ", b);
             }
             println!("");
-            let t = serde_pickle::de::value_from_slice(&task, serde_pickle::de::DeOptions::new()).expect("unpickling");
+            let t = serde_pickle::de::value_from_slice(&task, serde_pickle::de::DeOptions::new())
+                .expect("unpickling");
             println!("Unpickled: {}", t);
             // the protocol on this channel gives a dict with two entries:
             // a "buffer" and a "task_id"
@@ -86,9 +111,19 @@ fn main() {
             // into something I can interact with? (what does in-process rust binding
             // do in this situation?)
 
-            let serde_pickle::Value::Dict(task_dict) = t else { panic!("protocol violation") };
-            let serde_pickle::Value::I64(task_id) = &task_dict[&serde_pickle::HashableValue::String("task_id".to_string())] else { panic!("protocol violation") }; 
-            let serde_pickle::Value::Bytes(buffer) = &task_dict[&serde_pickle::HashableValue::String("buffer".to_string())] else { panic!("protocol violation") };
+            let serde_pickle::Value::Dict(task_dict) = t else {
+                panic!("protocol violation")
+            };
+            let serde_pickle::Value::I64(task_id) =
+                &task_dict[&serde_pickle::HashableValue::String("task_id".to_string())]
+            else {
+                panic!("protocol violation")
+            };
+            let serde_pickle::Value::Bytes(buffer) =
+                &task_dict[&serde_pickle::HashableValue::String("buffer".to_string())]
+            else {
+                panic!("protocol violation")
+            };
 
             println!("Received htex task {}", task_id);
 
@@ -101,7 +136,7 @@ fn main() {
 
             let task = Task {
                 task_id: *task_id,
-                buffer: buffer.clone() // TODO: awkward clone here of buffer but I guess because of serde_pickle, we have to clone it out of the task_dict value if we're doing shared values... perhaps there is a way to convert the task dict into the buffer forgetting everything else, linearly? TODO
+                buffer: buffer.clone(), // TODO: awkward clone here of buffer but I guess because of serde_pickle, we have to clone it out of the task_dict value if we're doing shared values... perhaps there is a way to convert the task dict into the buffer forgetting everything else, linearly? TODO
             };
             task_queue.add(task).expect("queue broken - eg full?");
         }
@@ -111,7 +146,5 @@ fn main() {
         if sockets[0].get_revents().contains(zmq::PollEvents::POLLOUT) {
             println!("poll out"); // we can write to this socket. actually probably should avoid polling for this? or perhaps optionally if we want to send a heartbeat without blocking?
         }
-
-
     }
 }
