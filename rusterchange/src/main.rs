@@ -48,7 +48,6 @@ fn main() {
         .connect("tcp://127.0.0.1:9001")
         .expect("could not connect results_interchange_to_submit socket");
 
-
     // this is a ZMQ REP socket, paired with a REQ socket on the submitting side
     // providing a command server in the interchange to which the submit side
     // sends a range of commands.
@@ -99,12 +98,14 @@ fn main() {
         // data can be written when we've got a POLLOUT?
 
         // alas because of move semantics, these are not re-usable...
-        let zmq_tasks_submit_to_interchange_poll_item = zmq_tasks_submit_to_interchange.as_poll_item(zmq::PollEvents::POLLIN);
-        let zmq_tasks_interchange_to_workers_poll_item = zmq_tasks_interchange_to_workers.as_poll_item(zmq::PollEvents::POLLIN); // see protocol description for why we should be POLLIN polling on what sounds like its a send-only channel
+        let zmq_tasks_submit_to_interchange_poll_item =
+            zmq_tasks_submit_to_interchange.as_poll_item(zmq::PollEvents::POLLIN);
+        let zmq_tasks_interchange_to_workers_poll_item =
+            zmq_tasks_interchange_to_workers.as_poll_item(zmq::PollEvents::POLLIN); // see protocol description for why we should be POLLIN polling on what sounds like its a send-only channel
         let mut sockets = [
             zmq_tasks_submit_to_interchange_poll_item,
             zmq_tasks_interchange_to_workers_poll_item,
-            zmq_command.as_poll_item(zmq::PollEvents::POLLIN)
+            zmq_command.as_poll_item(zmq::PollEvents::POLLIN),
         ];
 
         // TODO: these poll items are referenced by indexing into sockets[n] which feels
@@ -177,11 +178,12 @@ fn main() {
             println!("reverse message on tasks_interchange_to_workers");
             // this is JSON, not pickle
             let message = zmq_tasks_interchange_to_workers
-                         .recv_multipart(0)
-                         .expect("reading worker message from tasks_submit_to_interchange channel");
+                .recv_multipart(0)
+                .expect("reading worker message from tasks_submit_to_interchange channel");
             let manager_id = &message[0];
             let json_bytes = &message[1];
-            let json: serde_json::Value = serde_json::from_slice(json_bytes).expect("protocol error");
+            let json: serde_json::Value =
+                serde_json::from_slice(json_bytes).expect("protocol error");
             println!("Message from workers to interchange: {}", json); // TODO: log the manager ID too...
         }
 
@@ -189,20 +191,27 @@ fn main() {
             println!("command received from submit side");
             // this a REQ/REP pair, with this end being a REP, so we MUST
             // send back a single response message.
-            let cmd_pickle_bytes = zmq_command
-                                   .recv_bytes(0)
-                                   .expect("reading command message");
-            let cmd = serde_pickle::de::value_from_slice(&cmd_pickle_bytes, serde_pickle::de::DeOptions::new())
-                      .expect("unpickling");
+            let cmd_pickle_bytes = zmq_command.recv_bytes(0).expect("reading command message");
+            let cmd = serde_pickle::de::value_from_slice(
+                &cmd_pickle_bytes,
+                serde_pickle::de::DeOptions::new(),
+            )
+            .expect("unpickling");
             println!("Unpickled command: {}", cmd);
             let resp_pkl = if cmd == serde_pickle::Value::String("CONNECTED_BLOCKS".to_string()) {
                 // TODO: this needs to return all blocks that have ever had a manager connect,
                 // even for blocks that no longer have a manager connected.
-                serde_pickle::ser::value_to_vec(&serde_pickle::value::Value::List([].to_vec()), serde_pickle::ser::SerOptions::new()).expect("pickling block list")
+                serde_pickle::ser::value_to_vec(
+                    &serde_pickle::value::Value::List([].to_vec()),
+                    serde_pickle::ser::SerOptions::new(),
+                )
+                .expect("pickling block list")
             } else {
                 panic!("Cannot handle command")
             };
-            zmq_command.send(resp_pkl, 0).expect("sending command response");
+            zmq_command
+                .send(resp_pkl, 0)
+                .expect("sending command response");
         }
     }
 }
