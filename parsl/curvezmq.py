@@ -197,6 +197,7 @@ class ClientContext(BaseContext):
             public_key, secret_key = _load_certificate(self.cert_dir, name="client")
             server_public_key, _ = _load_certificate(self.cert_dir, name="server")
             try:
+                raise RuntimeError("DONT BE USING THIS WITH THE RUSTERCHANGE")
                 sock.setsockopt(zmq.CURVE_PUBLICKEY, public_key)
                 sock.setsockopt(zmq.CURVE_SECRETKEY, secret_key)
                 sock.setsockopt(zmq.CURVE_SERVERKEY, server_public_key)

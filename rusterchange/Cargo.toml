@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 zmq = "0.10.0"
+serde-pickle = "1.1.1"

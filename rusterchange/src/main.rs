@@ -57,11 +57,18 @@ fn main() {
 
         println!("tasks submit to interchange events: {}", sockets[0].get_revents().bits());
         if sockets[0].get_revents().contains(zmq::PollEvents::POLLIN) {
-            println!("poll in");
+            println!("Poll result: there is a task from the submit side");
+            let task = zmq_tasks_submit_to_interchange_socket.recv_bytes(0).expect("reading task message");
+            print!("Message: ");
+            for b in task { 
+                print!("{} ", b);
+            }
+            println!("");
+
         }
 
         // TODO: this isn't polled for, so should be impossible to be reached...
-        // but there's no static verification of that.
+        // but there's no static verification of that...
         if sockets[0].get_revents().contains(zmq::PollEvents::POLLOUT) {
             println!("poll out"); // we can write to this socket. actually probably should avoid polling for this? or perhaps optionally if we want to send a heartbeat without blocking?
         }
