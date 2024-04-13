@@ -52,10 +52,12 @@ fn main() {
     // this is a ZMQ REP socket, paired with a REQ socket on the submitting side
     // providing a command server in the interchange to which the submit side
     // sends a range of commands.
-    // Commands are sent as pickled Python objects
+    // Commands are sent as pickled Python objects, and replies are returned as
+    // pickled Python objects.
     // This rust code probably doesn't implement all the commands - just as I
     // find my progress stopped by a missing command, I'll implement the next one.
-    // TODO: describe protocol more
+    // Some commands are (as python pickled values) -- see _command_server in interchange.py
+    //    "CONNECTED_BLOCKS"  -- return a List[str] connecting block IDs for every block that has connected. Blocks might be repeated (perhaps once per manager?)   TODO: that's probably a smell in the protocol: with thousands of nodes, this would make a 1-block message contain thousands of strings.
     let zmq_command = zmq_ctx
         .socket(zmq::SocketType::REP)
         .expect("could not create command socket");
@@ -121,10 +123,6 @@ fn main() {
 
         // tasks submit to interchange channel
 
-        println!(
-            "tasks submit to interchange events: {}",
-            sockets[0].get_revents().bits()
-        );
         if sockets[0].get_revents().contains(zmq::PollEvents::POLLIN) {
             println!("Poll result: there is a task from the submit side");
             let task = zmq_tasks_submit_to_interchange
@@ -198,8 +196,15 @@ fn main() {
                                    .expect("reading command message");
             let cmd = serde_pickle::de::value_from_slice(&cmd_pickle_bytes, serde_pickle::de::DeOptions::new())
                       .expect("unpickling");
-            println!("Unpickled: {}", cmd);
-            panic!("Cannot handle command")
+            println!("Unpickled command: {}", cmd);
+            let resp_pkl = if cmd == serde_pickle::Value::String("CONNECTED_BLOCKS".to_string()) {
+                // TODO: this needs to return all blocks that have ever had a manager connect,
+                // even for blocks that no longer have a manager connected.
+                serde_pickle::ser::value_to_vec(&serde_pickle::value::Value::List([].to_vec()), serde_pickle::ser::SerOptions::new()).expect("pickling block list")
+            } else {
+                panic!("Cannot handle command")
+            };
+            zmq_command.send(resp_pkl, 0).expect("sending command response");
         }
     }
 }

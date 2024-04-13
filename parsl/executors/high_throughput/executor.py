@@ -553,7 +553,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.interchange_proc.start()
         """
         try:
-            (self.worker_task_port, self.worker_result_port) = (9903, 9904)
+            (self.worker_task_port, self.worker_result_port) = (9003, 9004)
         except queue.Empty:
             logger.error("Interchange has not completed initialization in 120s. Aborting")
             raise Exception("Interchange failed to start")
