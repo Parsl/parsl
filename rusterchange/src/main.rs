@@ -60,11 +60,19 @@ fn main() {
             println!("Poll result: there is a task from the submit side");
             let task = zmq_tasks_submit_to_interchange_socket.recv_bytes(0).expect("reading task message");
             print!("Message: ");
-            for b in task { 
+            for b in &task { 
                 print!("{} ", b);
             }
             println!("");
+            let t = serde_pickle::de::value_from_slice(&task, serde_pickle::de::DeOptions::new()).expect("unpickling");
+            println!("Unpickled: {}", t);
+            // the protocol on this channel gives a dict with two entries:
+            // a "buffer" and a "task_id"
 
+            let serde_pickle::Value::Dict(task_dict) = t else { panic!("protocol violation"); };
+            let task_id = &task_dict[&serde_pickle::HashableValue::String("task_id".to_string())]; 
+
+            println!("Received htex task {}", task_id);
         }
 
         // TODO: this isn't polled for, so should be impossible to be reached...
