@@ -24,17 +24,18 @@ fn main() {
     let zmq_ctx = zmq::Context::new();
     // will be destroyed by implicit destructor, i think
 
-    let zmq_tasks_submit_to_interchange_socket = zmq_ctx
+    // this channel will send pickle formatted messages {task_id: , buffer: }
+    let zmq_tasks_submit_to_interchange = zmq_ctx
         .socket(zmq::SocketType::DEALER)
         .expect("could not create task_submit_to_interchange socket");
-    zmq_tasks_submit_to_interchange_socket
+    zmq_tasks_submit_to_interchange
         .connect("tcp://127.0.0.1:9000")
         .expect("could not connect task_submit_to_interchange socket");
 
-    let zmq_results_interchange_to_submit_socket = zmq_ctx
+    let zmq_results_interchange_to_submit = zmq_ctx
         .socket(zmq::SocketType::DEALER)
         .expect("could not create results_interchange_to_submit socket");
-    zmq_results_interchange_to_submit_socket
+    zmq_results_interchange_to_submit
         .connect("tcp://127.0.0.1:9001")
         .expect("could not connect results_interchange_to_submit socket");
 
@@ -47,6 +48,14 @@ fn main() {
 
     // the bind addresses for these two ports need to be the self.interchange_address, not localhost
     // in order to accept connections from remote workers
+
+    // This is a bi-directional channel, despite the name.
+    // In the interchange to worker direction: TODO format notes
+    // In the workers to interchange direction:
+    //    json formatted messages, not pickle formatted messages:
+    //    the format of those messages is a json dict with a 'type' key: registration, heartbeat, drain
+    //    This is a ROUTER socket and so receives from this message should be a multipart receive,
+    //    with the first part being the sending manager ID and the second part being the JSON message.
     let zmq_tasks_interchange_to_workers = zmq_ctx
         .socket(zmq::SocketType::ROUTER)
         .expect("could not create tasks_interchange_to_workers socket");
@@ -70,13 +79,20 @@ fn main() {
         // poll for POLLOUT) otherwise we don't care about POLLOUT... I'm a bit unclear how much
         // data can be written when we've got a POLLOUT?
 
+        // alas because of move semantics, these are not re-usable...
+        let zmq_tasks_submit_to_interchange_poll_item = zmq_tasks_submit_to_interchange.as_poll_item(zmq::PollEvents::POLLIN);
+        let zmq_tasks_interchange_to_workers_poll_item = zmq_tasks_interchange_to_workers.as_poll_item(zmq::PollEvents::POLLIN); // see protocol description for why we should be POLLIN polling on what sounds like its a send-only channel
         let mut sockets = [
-            zmq_tasks_submit_to_interchange_socket.as_poll_item(zmq::PollEvents::POLLIN),
-            // zmq_results_interchange_to_submit_socket.as_poll_item(zmq::PollEvents::all()),
-            zmq_command.as_poll_item(zmq::PollEvents::POLLIN),
-            // zmq_tasks_interchange_to_workers.as_poll_item(zmq::PollEvents::all()),
-            zmq_results_workers_to_interchange.as_poll_item(zmq::PollEvents::POLLIN),
+            zmq_tasks_submit_to_interchange_poll_item,
+            zmq_tasks_interchange_to_workers_poll_item
         ];
+
+        // TODO: these poll items are referenced by indexing into sockets[n] which feels
+        // pretty fragile - it's because the poll items are moved into the sockets array
+        // rather than the array keeping references (because that's what the API for poll
+        // is). That feels quite statically-fragile for getting the poll number and the
+        // actual socket activities out of sync? is there any nice way to move them back,
+        // borrow-style?
 
         println!("Polling");
         let count = zmq::poll(&mut sockets, -1).expect("poll failed");
@@ -93,7 +109,7 @@ fn main() {
         );
         if sockets[0].get_revents().contains(zmq::PollEvents::POLLIN) {
             println!("Poll result: there is a task from the submit side");
-            let task = zmq_tasks_submit_to_interchange_socket
+            let task = zmq_tasks_submit_to_interchange
                 .recv_bytes(0)
                 .expect("reading task message");
             print!("Message: ");
@@ -143,8 +159,16 @@ fn main() {
 
         // TODO: this isn't polled for, so should be impossible to be reached...
         // but there's no static verification of that...
-        if sockets[0].get_revents().contains(zmq::PollEvents::POLLOUT) {
-            println!("poll out"); // we can write to this socket. actually probably should avoid polling for this? or perhaps optionally if we want to send a heartbeat without blocking?
+        if sockets[1].get_revents().contains(zmq::PollEvents::POLLIN) {
+            println!("reverse message on tasks_interchange_to_workers");
+            // this is JSON, not pickle
+            let message = zmq_tasks_interchange_to_workers
+                         .recv_multipart(0)
+                         .expect("reading worker message from tasks_submit_to_interchange channel");
+            let manager_id = &message[0];
+            let json_bytes = &message[1];
+            let json: serde_json::Value = serde_json::from_slice(json_bytes).expect("protocol error");
+            println!("Message from workers to interchange: {}", json);
         }
     }
 }
