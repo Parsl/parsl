@@ -7,10 +7,11 @@ import threading
 import queue
 import pickle
 from dataclasses import dataclass
-from multiprocessing import Process, Queue
+from multiprocessing import Process
 from typing import Dict, Sequence
 from typing import List, Optional, Tuple, Union, Callable
 import math
+import os
 import warnings
 
 import parsl.launchers
@@ -19,7 +20,6 @@ from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.jobs.states import JobStatus, JobState, TERMINAL_STATES
 from parsl.executors.high_throughput import zmq_pipes
-from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
     BadMessage, ScalingFailed,
 )
@@ -35,7 +35,6 @@ from parsl.data_provider.staging import Staging
 from parsl.addresses import get_all_addresses
 from parsl.process_loggers import wrap_with_logs
 
-from parsl.multiprocessing import ForkProcess
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
 
@@ -530,7 +529,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         Starts the interchange process locally and uses an internal command queue to
         get the worker task and result ports that the interchange has bound to.
         """
-        comm_q = Queue(maxsize=10)
+        os.system("cd rusterchange; cargo run &")
+        """
         self.interchange_proc = ForkProcess(target=interchange.starter,
                                             args=(comm_q,),
                                             kwargs={"client_ports": (self.outgoing_q.port,
@@ -551,8 +551,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                             name="HTEX-Interchange"
                                             )
         self.interchange_proc.start()
+        """
         try:
-            (self.worker_task_port, self.worker_result_port) = comm_q.get(block=True, timeout=120)
+            (self.worker_task_port, self.worker_result_port) = (9903, 9904)
         except queue.Empty:
             logger.error("Interchange has not completed initialization in 120s. Aborting")
             raise Exception("Interchange failed to start")
