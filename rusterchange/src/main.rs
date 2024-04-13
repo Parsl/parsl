@@ -91,7 +91,7 @@ fn main() {
     let mut task_queue: queues::Queue<Task> = queues::Queue::new();
 
     loop {
-        // unclear to me what it means to share this sockets list across multiple loop iterations?
+        // TODO: unclear to me what it means to share this sockets list across multiple loop iterations?
 
         // choose what to poll for based on if we want to be able to send things (in which case
         // poll for POLLOUT) otherwise we don't care about POLLOUT... I'm a bit unclear how much
