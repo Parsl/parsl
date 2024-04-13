@@ -173,8 +173,6 @@ fn main() {
             task_queue.add(task).expect("queue broken - eg full?");
         }
 
-        // TODO: this isn't polled for, so should be impossible to be reached...
-        // but there's no static verification of that...
         if sockets[1].get_revents().contains(zmq::PollEvents::POLLIN) {
             println!("reverse message on tasks_interchange_to_workers");
             // this is JSON, not pickle
