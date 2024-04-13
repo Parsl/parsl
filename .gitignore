@@ -120,3 +120,8 @@ ENV/
 
 # emacs buffers
 \#*
+
+
+# Added by cargo
+
+/target
