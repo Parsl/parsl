@@ -140,6 +140,7 @@ class ServerContext(BaseContext):
             self.auth_thread.stop()
 
     def _start_auth_thread(self) -> ThreadAuthenticator:
+        raise RuntimeError("PLS NO")
         auth_thread = ThreadAuthenticator(self._ctx)
         auth_thread.start()
         # Only allow certs that are in the cert dir

@@ -24,7 +24,16 @@ fn main() {
     let zmq_ctx = zmq::Context::new();
     // will be destroyed by implicit destructor, i think
 
-    // this channel will send pickle formatted messages {task_id: , buffer: }
+    // This channel is a DEALER socket paired with a dealer socket on the submit
+    // side.
+    // This channel will convey pickle formatted messages {task_id: , buffer: }
+    // without expecting a response back on that channel: responses to this message
+    // will be the result of attempting to execute this task, which will be conveyed
+    // on the zmq_results_interchange_to_submit channel.
+    // The DEALER multiple-endpoint routing behaviour is not used and not supported: nothing
+    // conveys results back to where they came from if multiple clients are connected
+    // here, and the submit side code makes assumptions that it is only connected to
+    // a single interchange.
     let zmq_tasks_submit_to_interchange = zmq_ctx
         .socket(zmq::SocketType::DEALER)
         .expect("could not create task_submit_to_interchange socket");
@@ -39,8 +48,16 @@ fn main() {
         .connect("tcp://127.0.0.1:9001")
         .expect("could not connect results_interchange_to_submit socket");
 
+
+    // this is a ZMQ REP socket, paired with a REQ socket on the submitting side
+    // providing a command server in the interchange to which the submit side
+    // sends a range of commands.
+    // Commands are sent as pickled Python objects
+    // This rust code probably doesn't implement all the commands - just as I
+    // find my progress stopped by a missing command, I'll implement the next one.
+    // TODO: describe protocol more
     let zmq_command = zmq_ctx
-        .socket(zmq::SocketType::DEALER)
+        .socket(zmq::SocketType::REP)
         .expect("could not create command socket");
     zmq_command
         .connect("tcp://127.0.0.1:9002")
@@ -84,7 +101,8 @@ fn main() {
         let zmq_tasks_interchange_to_workers_poll_item = zmq_tasks_interchange_to_workers.as_poll_item(zmq::PollEvents::POLLIN); // see protocol description for why we should be POLLIN polling on what sounds like its a send-only channel
         let mut sockets = [
             zmq_tasks_submit_to_interchange_poll_item,
-            zmq_tasks_interchange_to_workers_poll_item
+            zmq_tasks_interchange_to_workers_poll_item,
+            zmq_command.as_poll_item(zmq::PollEvents::POLLIN)
         ];
 
         // TODO: these poll items are referenced by indexing into sockets[n] which feels
@@ -168,7 +186,20 @@ fn main() {
             let manager_id = &message[0];
             let json_bytes = &message[1];
             let json: serde_json::Value = serde_json::from_slice(json_bytes).expect("protocol error");
-            println!("Message from workers to interchange: {}", json);
+            println!("Message from workers to interchange: {}", json); // TODO: log the manager ID too...
+        }
+
+        if sockets[2].get_revents().contains(zmq::PollEvents::POLLIN) {
+            println!("command received from submit side");
+            // this a REQ/REP pair, with this end being a REP, so we MUST
+            // send back a single response message.
+            let cmd_pickle_bytes = zmq_command
+                                   .recv_bytes(0)
+                                   .expect("reading command message");
+            let cmd = serde_pickle::de::value_from_slice(&cmd_pickle_bytes, serde_pickle::de::DeOptions::new())
+                      .expect("unpickling");
+            println!("Unpickled: {}", cmd);
+            panic!("Cannot handle command")
         }
     }
 }

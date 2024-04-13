@@ -28,7 +28,7 @@ class CommandClient:
         self.zmq_context = zmq_context
         self.ip_address = ip_address
         self.port_range = port_range
-        self.port = 9902  # in parsl this enables what is otherwise dead code
+        self.port = 9002  # in parsl this enables what is otherwise dead code
         self.create_socket_and_bind()
         self._lock = threading.Lock()
 
@@ -152,7 +152,7 @@ class ResultsIncoming:
         self.zmq_context = zmq_context
         self.results_receiver = self.zmq_context.socket(zmq.DEALER)
         self.results_receiver.set_hwm(0)
-        self.port = self.results_receiver.bind("tcp://{}:9901".format(ip_address))
+        self.port = self.results_receiver.bind("tcp://{}:9001".format(ip_address))
 
     def get(self):
         logger.debug("Waiting for ResultsIncoming message")
