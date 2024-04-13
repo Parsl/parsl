@@ -1,12 +1,22 @@
 use queues::IsQueue;
 
+// TODO: terminology needs clarifying and consistenifying: managers, pools, workers. are we sending things to/from a "pool" or "manager"? is the ID for a "manager" or for a "pool"?
+
 // use of Queue wants Clone trait, which is a bit suspicious: does that mean we have
 // explicit clones of the (potentially large) buffer in interchange? when ideally we
 // would pass around the buffer linearly without ever duplicating it? TODO
+// I'm doing a clone manually anyway, I guess I always need at least one
+// memory copy to be able to get it out from the memory buffer of ZMQ...
 #[derive(Clone)]
 struct Task {
     task_id: i64,
     buffer: Vec<u8>,
+}
+
+
+#[derive(Clone)]
+struct Slot {
+    manager_id: Vec<u8>
 }
 
 fn main() {
@@ -68,7 +78,19 @@ fn main() {
     // in order to accept connections from remote workers
 
     // This is a bi-directional channel, despite the name.
-    // In the interchange to worker direction: TODO format notes
+    // In the interchange to worker direction: this carries tasks to be
+    //    executed.
+    //     This is a ROUTER socket and so the first part of a send_multipart
+    //     should be be the manager ID to receive the message.
+    //     When the message contains tasks, the second part of the
+    //     send_multipart should be a 0-length byte sequence and the third
+    //     part should be a pickled Python object, List[Dict], where the dicts
+    //     have a buffer and task_id attribute (similar but different to as received on the
+    //     tasks_submit_to_interchange channel. TODO note that this is a list of tasks, while tasks_submit_to_interchange carries at most one task per message. TODO that cardinality mismatch could be made more consistent in the protocols.
+    //     This implementation, which does per-slot matchmaking, probably won't send more than a single task at once in the list, though.
+    //     Other messages (heartbeat and drain) can be sent on this channel, usin magic task IDs.
+    //     TODO: it's unclear why this protocol has a blank byte string? it's always discarded...
+
     // In the workers to interchange direction:
     //    json formatted messages, not pickle formatted messages:
     //    the format of those messages is a json dict with a 'type' key: registration, heartbeat, drain
@@ -89,6 +111,7 @@ fn main() {
         .expect("could not bind results_workers_to_interchange");
 
     let mut task_queue: queues::Queue<Task> = queues::Queue::new();
+    let mut slot_queue: queues::Queue<Slot> = queues::Queue::new();
 
     loop {
         // TODO: unclear to me what it means to share this sockets list across multiple loop iterations?
@@ -160,12 +183,8 @@ fn main() {
 
             println!("Received htex task {}", task_id);
 
-            // now there's two options: either we can match against capacity of a registered manager
-            // or if there is no capacity, we can queue this and match when a manager indicates
-            // it has capacity.
-
-            // manager capacity isn't implemented... so all we can do is queue it here.
             // perhaps consider that i'll want to do richer matchmaking based on resource stuff contained in protocol (see outreachy internship) and be prepared to use something richer than a queue?
+            // if just matchmaking based on queues without looking at the task, don't need to do any deserialization here... the pickle can go into the queue and be dispatched later.
 
             let task = Task {
                 task_id: *task_id,
@@ -185,6 +204,26 @@ fn main() {
             let json: serde_json::Value =
                 serde_json::from_slice(json_bytes).expect("protocol error");
             println!("Message from workers to interchange: {}", json); // TODO: log the manager ID too...
+            let serde_json::Value::Object(msg_map) = json else {
+                panic!("protocol error")
+            };
+            let serde_json::Value::String(ref msg_type) = msg_map["type"] else { panic!("protocol error") };
+            println!("Message type is: {}", msg_type);
+            if msg_type == "registration" {
+                println!("processing registration");
+                // I think all we need from this message is the worker capacity.
+                // There's also a uid field which is a text representation of the manager id. In the Python interchange, this field is unused - the manager_id coming from zmq as a byte sequence is used instead. TODO: assert that they align here. perhaps remove from protocol in master Parsl?
+                let serde_json::Value::Number(ref capacity_json) = msg_map["max_capacity"] else { panic!("protocol error") }; // TODO: should I add on prefetch here? (or is that included in max_workers by the pool?)
+                // now we're in a position for match-making
+                // let's do that as a queue of manager requests, so that we have capacity copies of a Slot, that will be matched with Task objects 1:1 over time: specifically *not* keeping manager capacity as an int, but more symmetrically structured as two queues being paired/matched until one is empty. As a trade-off, this probably makes summary info more awkward to provide, though.
+                let capacity = capacity_json.as_u64().expect("protocol error");
+                for _ in 0..capacity {
+                    println!("adding a slot");
+                    slot_queue.add(Slot {manager_id: manager_id.clone()}).expect("enqueuing slot at registration");
+                }
+            } else {
+                panic!("unknown message type")
+            };
         }
 
         if sockets[2].get_revents().contains(zmq::PollEvents::POLLIN) {
@@ -212,6 +251,33 @@ fn main() {
             zmq_command
                 .send(resp_pkl, 0)
                 .expect("sending command response");
+        }
+
+        // we've maybe added tasks and slots to the slot queues, so now
+        // do some match-making. This only needs to happen if both queues
+        // are non-empty:
+
+        while task_queue.size() > 0 && slot_queue.size() > 0 {
+            println!("matching a slot and a task");
+            let task = task_queue.remove().expect("reasoning violation: task_queue is non-empty, by while condition");
+            let slot = slot_queue.remove().expect("reasoning violation: slot_queue is non-empty, by while condition");
+
+            let empty: [u8; 0] = [];  // see protocol description for this weird unnecessary(?) field
+
+            let task_list = serde_pickle::value::Value::List([
+                            serde_pickle::value::Value::Dict(std::collections::BTreeMap::from([
+  (serde_pickle::value::HashableValue::String("task_id".to_string()), serde_pickle::value::Value::I64(task.task_id)),
+  (serde_pickle::value::HashableValue::String("buffer".to_string()), serde_pickle::value::Value::Bytes(task.buffer))]))].to_vec());
+
+            let task_list_pkl = serde_pickle::ser::value_to_vec(&task_list, serde_pickle::ser::SerOptions::new()).expect("pickling tasks for workers");
+
+            // now we send the task to the slot...
+            let multipart_msg = [
+                slot.manager_id,
+                empty.to_vec(),
+                task_list_pkl
+            ];
+            zmq_tasks_interchange_to_workers.send_multipart(multipart_msg, 0).expect("sending task to pool");
         }
     }
 }

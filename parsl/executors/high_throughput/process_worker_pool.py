@@ -361,6 +361,7 @@ class Manager:
                     kill_event.set()
                 else:
                     task_recv_counter += len(tasks)
+                    logger.debug(f"received task list: {tasks}")
                     logger.debug("Got executor tasks: {}, cumulative count of tasks: {}".format(
                         [t['task_id'] for t in tasks], task_recv_counter
                     ))
