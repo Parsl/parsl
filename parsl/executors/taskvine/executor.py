@@ -105,7 +105,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  factory_config: TaskVineFactoryConfig = TaskVineFactoryConfig(),
                  provider: Optional[ExecutionProvider] = LocalProvider(init_blocks=1),
-                 working_dir = '.',
+                 working_dir: str = '.',
                  storage_access: Optional[List[Staging]] = None):
 
         self.working_dir = working_dir
@@ -220,7 +220,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Create directories for data and results
         log_dir = os.path.join(run_dir, self.label)
-        self._function_data_dir = os.path.join(f"/tmp/function_data/", self.label, run_idx)
+        self._function_data_dir = os.path.join("/tmp/function_data/", self.label, run_idx)
         os.makedirs(log_dir)
         os.makedirs(self._function_data_dir)
 
