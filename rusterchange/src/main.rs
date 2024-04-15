@@ -1,6 +1,25 @@
 use queues::IsQueue;
 
+// Vocab:
+// This document attempts to avoid the use of "client" and "server" as
+// there are multiple interpretations for that even on a single connection,
+// and htex is not a clear client server architecture.
+
+// threadedness: single threaded as much as possible
+
+// TODO: there's a multiprocessing message queue used at start-up that this interchange does not implement
+// I should replace it with a PORTS command I think? In the prototype it's hacked out and only works with hard-coded ports.
+// Removing multiprocessing fork and perhaps using a regular python fork/exec would force this to happen anyway?
+
 // TODO: terminology needs clarifying and consistenifying: managers, pools, workers. are we sending things to/from a "pool" or "manager"? is the ID for a "manager" or for a "pool"?
+
+// TODO: this code has no handling/reasoning about what happens when any ZMQ queue is unable to deal with a `send` call (aka its full)
+// TOOD: this code has no handling/reasoning about what happens if a ZMQ socket doesn't actually connect: as I've seen both in real Python Parsl and while developing this implementation, there's a lot of silent hangs hoping things get better - ZMQ Monitoring Sockets might be interesting there.
+// TODO: heartbeats are not implemented. there are a few heartbeats that are distinct, and perhaps it would be good to name them, "this is the heartbeat that detects XXX failing". heartbeats also need to pickle new python objects (the exception for missing task) which might be simple enough to do here as there isn't much in there?
+
+// TODO: monitoring - both node table messages from the interchange and relaying on htex-radio messages from workers, over ZMQ
+
+// TODO: in development, the interchange often panics and exits, and that leaves htex in a hung state, rather than noticing and failing the tests: the user equivalent of that is eg. if oom-killer kills the real Python interchange, a run will hang rather than report an error... everything else has heartbeats but not this... (or even process-aliveness-checking...)
 
 // use of Queue wants Clone trait, which is a bit suspicious: does that mean we have
 // explicit clones of the (potentially large) buffer in interchange? when ideally we
@@ -26,10 +45,12 @@ fn main() {
     // three to the submit side (sometimes called the client side) - TCP outbound
     // two to the worker side - TCP listening
 
-    // there's also a startup-time channel that is in master parsl a multiprocessing.queue
-    // that sends the port numbers for the two listening ports.
+    // there's also a startup-time channel that is in master parsl a multiprocessing.Queue
+    // that sends the port numbers for the two listening ports chosen at bind time.
 
-    // ... and we shutdown on unix termination signals, not on a message.
+    // ... and we shutdown on unix termination signals, not on a message - this probably
+    // should be thought of as a very limited communication channel, when reasoning about
+    // whole system behaviour.
 
     let zmq_ctx = zmq::Context::new();
     // will be destroyed by implicit destructor, i think
@@ -43,7 +64,7 @@ fn main() {
     // The DEALER multiple-endpoint routing behaviour is not used and not supported: nothing
     // conveys results back to where they came from if multiple clients are connected
     // here, and the submit side code makes assumptions that it is only connected to
-    // a single interchange.
+    // a single interchange - so this is only used in a 1:1 configuration.
     let zmq_tasks_submit_to_interchange = zmq_ctx
         .socket(zmq::SocketType::DEALER)
         .expect("could not create task_submit_to_interchange socket");
@@ -51,6 +72,14 @@ fn main() {
         .connect("tcp://127.0.0.1:9000")
         .expect("could not connect task_submit_to_interchange socket");
 
+    // this channel is for sending results from the interchange to the submit side.
+    // messages on this channel are multipart messages. each part is a pickled Python dictionary
+    // with a type field, a Python string. In this Rust implementation, probably only one part will be sent in each message.
+    // TODO: is there an advantage to making these multipart messages rather than sending individual messages and processing them one by one?
+    // types:
+    //   'result': this have at least a task_id field
+    //     which corresponds to the task_id in a task submission message
+    //    when an exception is being sent (as is created by the Python interchange in some situations, not just passing along an exception from a worker pool) then the 'exception' field is set in this dictionary, and that should be a Parsl-serialized (not pickle-serialized, but using the parsl serialization abstractions) exception object.
     let zmq_results_interchange_to_submit = zmq_ctx
         .socket(zmq::SocketType::DEALER)
         .expect("could not create results_interchange_to_submit socket");
@@ -63,6 +92,19 @@ fn main() {
     // sends a range of commands.
     // Commands are sent as pickled Python objects, and replies are returned as
     // pickled Python objects.
+    //
+    // Although commands from from submit side to interchange side, the TCP direction
+    // is the other way round: the interchange makes a TCP connection into the
+    // submit side and listens for commands on that connection. TODO: the use of the
+    // command channel on the submit side is not thread safe, even with locks. So
+    // what might be done differently? One option is one zmq connection per thread that
+    // wants to run commands, which should then more easily be initiated the other way
+    // round from submit end to interchange end? (another is to make the command
+    // queue only be used from a single thread, and have some inside-process behaviour
+    // to coordinate those RPCs across threads...). That's not so easy when we don't
+    // know the port which will be opened (if random port is chosen on the interchange
+    // side, to receive connections)...
+    //
     // This rust code probably doesn't implement all the commands - just as I
     // find my progress stopped by a missing command, I'll implement the next one.
     // Some commands are (as python pickled values) -- see _command_server in interchange.py
@@ -88,7 +130,7 @@ fn main() {
     //     have a buffer and task_id attribute (similar but different to as received on the
     //     tasks_submit_to_interchange channel. TODO note that this is a list of tasks, while tasks_submit_to_interchange carries at most one task per message. TODO that cardinality mismatch could be made more consistent in the protocols.
     //     This implementation, which does per-slot matchmaking, probably won't send more than a single task at once in the list, though.
-    //     Other messages (heartbeat and drain) can be sent on this channel, usin magic task IDs. TODO: make messages use type tags in this channel
+    //     Other messages (heartbeat and drain) can be sent on this channel, using magic task IDs. TODO: make messages use type tags in this channel
     //     TODO: it's unclear why this protocol has a blank byte string? it's always discarded... probably remove it?
 
     // In the workers to interchange direction:
@@ -103,6 +145,11 @@ fn main() {
         .bind("tcp://127.0.0.1:9003")
         .expect("could not bind tasks_interchange_to_workers");
 
+
+    // In the workers to interchange direction, this carries results from tasks which were previously sent over the tasks_workers_to_interchange channel. Messges take the form of arbitrary length multipart messages. The first part as received from recv_multipart will be the manager ID (added by ZMQ because this is a ROUTER socket) and then each subsequent part will be a pickle containing a result. Note that this is different from the wrapping used on tasks_interchange_to_workers, where a single pickle object is sent, containing a pickle/python level list of task definitions. TODO: consistentify the multipart vs python list form.
+    // The pickled object is a Python dictionary with a type entry that is one of these strings:  'result' 'monitoring' or 'heartbeat'.
+    // The rest of the dictionary depends on that type.
+    // TODO: this is a pickled dict, vs tasks_interchange_to_workers
     let zmq_results_workers_to_interchange = zmq_ctx
         .socket(zmq::SocketType::ROUTER)
         .expect("could not create results_workers_to_interchange socket");
@@ -129,6 +176,7 @@ fn main() {
             zmq_tasks_submit_to_interchange_poll_item,
             zmq_tasks_interchange_to_workers_poll_item,
             zmq_command.as_poll_item(zmq::PollEvents::POLLIN),
+            zmq_results_workers_to_interchange.as_poll_item(zmq::PollEvents::POLLIN)
         ];
 
         // TODO: these poll items are referenced by indexing into sockets[n] which feels
@@ -219,7 +267,7 @@ fn main() {
                 let capacity = capacity_json.as_u64().expect("protocol error");
                 for _ in 0..capacity {
                     println!("adding a slot");
-                    slot_queue.add(Slot {manager_id: manager_id.clone()}).expect("enqueuing slot at registration");
+                    slot_queue.add(Slot {manager_id: manager_id.clone()}).expect("enqueuing slot on registration");
                 }
             } else {
                 panic!("unknown message type")
@@ -251,6 +299,44 @@ fn main() {
             zmq_command
                 .send(resp_pkl, 0)
                 .expect("sending command response");
+        }
+
+        if sockets[3].get_revents().contains(zmq::PollEvents::POLLIN) {
+            let parts = zmq_results_workers_to_interchange.recv_multipart(0).expect("couldn't get messages from results_workers_to_interchange");
+            println!("Received a result-like message with {} parts", parts.len());
+            // this parts vec will contain first a manager ID, and then an arbitrary number of result-like parts from that manager.
+            let mut parts_iter = parts.into_iter();
+            let manager_id = parts_iter.next().expect("getting manager ID");
+            for part_pickle_bytes in parts_iter {
+                println!("Processing part");
+                // part is a pickled python dict with a 'type' tag
+                // a part here is not necessarily a result: this channel also contains heartbeats and monitoring messages.
+                // TODO: implement monitoring handling
+                // TODO: implement heartbeat handling
+                let p = serde_pickle::de::value_from_slice(
+                    &part_pickle_bytes,
+                    serde_pickle::de::DeOptions::new(),
+                ).expect("protocol error");
+
+                let serde_pickle::Value::Dict(part_dict) = p else {
+                     panic!("protocol violation")
+                };
+                let serde_pickle::Value::String(part_type) =
+                &part_dict[&serde_pickle::HashableValue::String("type".to_string())]
+                else {
+                    panic!("protocol violation")
+                };
+
+                println!("Result-like message part type: {}", part_type);
+                if part_type == "result" {
+                    // pass the message on without reserializing it
+                    zmq_results_interchange_to_submit.send_multipart([&part_pickle_bytes], 0).expect("sending result on results_interchange_to_submit");
+                    slot_queue.add(Slot {manager_id: manager_id.clone()}).expect("enqueuing slot on result");
+
+                } else {
+                    panic!("Unknown result-like message part type");
+                }
+            }
         }
 
         // we've maybe added tasks and slots to the slot queues, so now
