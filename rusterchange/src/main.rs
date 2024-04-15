@@ -202,7 +202,6 @@ fn main() {
             for b in &task {
                 print!("{} ", b);
             }
-            println!("");
             let t = serde_pickle::de::value_from_slice(&task, serde_pickle::de::DeOptions::new())
                 .expect("unpickling");
             println!("Unpickled: {}", t);
