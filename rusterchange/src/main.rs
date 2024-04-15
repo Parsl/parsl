@@ -32,10 +32,9 @@ struct Task {
     buffer: Vec<u8>,
 }
 
-
 #[derive(Clone)]
 struct Slot {
-    manager_id: Vec<u8>
+    manager_id: Vec<u8>,
 }
 
 fn main() {
@@ -145,7 +144,6 @@ fn main() {
         .bind("tcp://127.0.0.1:9003")
         .expect("could not bind tasks_interchange_to_workers");
 
-
     // In the workers to interchange direction, this carries results from tasks which were previously sent over the tasks_workers_to_interchange channel. Messges take the form of arbitrary length multipart messages. The first part as received from recv_multipart will be the manager ID (added by ZMQ because this is a ROUTER socket) and then each subsequent part will be a pickle containing a result. Note that this is different from the wrapping used on tasks_interchange_to_workers, where a single pickle object is sent, containing a pickle/python level list of task definitions. TODO: consistentify the multipart vs python list form.
     // The pickled object is a Python dictionary with a type entry that is one of these strings:  'result' 'monitoring' or 'heartbeat'.
     // The rest of the dictionary depends on that type.
@@ -176,7 +174,7 @@ fn main() {
             zmq_tasks_submit_to_interchange_poll_item,
             zmq_tasks_interchange_to_workers_poll_item,
             zmq_command.as_poll_item(zmq::PollEvents::POLLIN),
-            zmq_results_workers_to_interchange.as_poll_item(zmq::PollEvents::POLLIN)
+            zmq_results_workers_to_interchange.as_poll_item(zmq::PollEvents::POLLIN),
         ];
 
         // TODO: these poll items are referenced by indexing into sockets[n] which feels
@@ -255,19 +253,27 @@ fn main() {
             let serde_json::Value::Object(msg_map) = json else {
                 panic!("protocol error")
             };
-            let serde_json::Value::String(ref msg_type) = msg_map["type"] else { panic!("protocol error") };
+            let serde_json::Value::String(ref msg_type) = msg_map["type"] else {
+                panic!("protocol error")
+            };
             println!("Message type is: {}", msg_type);
             if msg_type == "registration" {
                 println!("processing registration");
                 // I think all we need from this message is the worker capacity.
                 // There's also a uid field which is a text representation of the manager id. In the Python interchange, this field is unused - the manager_id coming from zmq as a byte sequence is used instead. TODO: assert that they align here. perhaps remove from protocol in master Parsl?
-                let serde_json::Value::Number(ref capacity_json) = msg_map["max_capacity"] else { panic!("protocol error") }; // TODO: should I add on prefetch here? (or is that included in max_workers by the pool?)
-                // now we're in a position for match-making
-                // let's do that as a queue of manager requests, so that we have capacity copies of a Slot, that will be matched with Task objects 1:1 over time: specifically *not* keeping manager capacity as an int, but more symmetrically structured as two queues being paired/matched until one is empty. As a trade-off, this probably makes summary info more awkward to provide, though.
+                let serde_json::Value::Number(ref capacity_json) = msg_map["max_capacity"] else {
+                    panic!("protocol error")
+                }; // TODO: should I add on prefetch here? (or is that included in max_workers by the pool?)
+                   // now we're in a position for match-making
+                   // let's do that as a queue of manager requests, so that we have capacity copies of a Slot, that will be matched with Task objects 1:1 over time: specifically *not* keeping manager capacity as an int, but more symmetrically structured as two queues being paired/matched until one is empty. As a trade-off, this probably makes summary info more awkward to provide, though.
                 let capacity = capacity_json.as_u64().expect("protocol error");
                 for _ in 0..capacity {
                     println!("adding a slot");
-                    slot_queue.add(Slot {manager_id: manager_id.clone()}).expect("enqueuing slot on registration");
+                    slot_queue
+                        .add(Slot {
+                            manager_id: manager_id.clone(),
+                        })
+                        .expect("enqueuing slot on registration");
                 }
             } else {
                 panic!("unknown message type")
@@ -302,7 +308,9 @@ fn main() {
         }
 
         if sockets[3].get_revents().contains(zmq::PollEvents::POLLIN) {
-            let parts = zmq_results_workers_to_interchange.recv_multipart(0).expect("couldn't get messages from results_workers_to_interchange");
+            let parts = zmq_results_workers_to_interchange
+                .recv_multipart(0)
+                .expect("couldn't get messages from results_workers_to_interchange");
             println!("Received a result-like message with {} parts", parts.len());
             // this parts vec will contain first a manager ID, and then an arbitrary number of result-like parts from that manager.
             let mut parts_iter = parts.into_iter();
@@ -316,13 +324,14 @@ fn main() {
                 let p = serde_pickle::de::value_from_slice(
                     &part_pickle_bytes,
                     serde_pickle::de::DeOptions::new(),
-                ).expect("protocol error");
+                )
+                .expect("protocol error");
 
                 let serde_pickle::Value::Dict(part_dict) = p else {
-                     panic!("protocol violation")
+                    panic!("protocol violation")
                 };
                 let serde_pickle::Value::String(part_type) =
-                &part_dict[&serde_pickle::HashableValue::String("type".to_string())]
+                    &part_dict[&serde_pickle::HashableValue::String("type".to_string())]
                 else {
                     panic!("protocol violation")
                 };
@@ -330,9 +339,14 @@ fn main() {
                 println!("Result-like message part type: {}", part_type);
                 if part_type == "result" {
                     // pass the message on without reserializing it
-                    zmq_results_interchange_to_submit.send_multipart([&part_pickle_bytes], 0).expect("sending result on results_interchange_to_submit");
-                    slot_queue.add(Slot {manager_id: manager_id.clone()}).expect("enqueuing slot on result");
-
+                    zmq_results_interchange_to_submit
+                        .send_multipart([&part_pickle_bytes], 0)
+                        .expect("sending result on results_interchange_to_submit");
+                    slot_queue
+                        .add(Slot {
+                            manager_id: manager_id.clone(),
+                        })
+                        .expect("enqueuing slot on result");
                 } else {
                     panic!("Unknown result-like message part type");
                 }
@@ -345,25 +359,40 @@ fn main() {
 
         while task_queue.size() > 0 && slot_queue.size() > 0 {
             println!("matching a slot and a task");
-            let task = task_queue.remove().expect("reasoning violation: task_queue is non-empty, by while condition");
-            let slot = slot_queue.remove().expect("reasoning violation: slot_queue is non-empty, by while condition");
+            let task = task_queue
+                .remove()
+                .expect("reasoning violation: task_queue is non-empty, by while condition");
+            let slot = slot_queue
+                .remove()
+                .expect("reasoning violation: slot_queue is non-empty, by while condition");
 
-            let empty: [u8; 0] = [];  // see protocol description for this weird unnecessary(?) field
+            let empty: [u8; 0] = []; // see protocol description for this weird unnecessary(?) field
 
-            let task_list = serde_pickle::value::Value::List([
-                            serde_pickle::value::Value::Dict(std::collections::BTreeMap::from([
-  (serde_pickle::value::HashableValue::String("task_id".to_string()), serde_pickle::value::Value::I64(task.task_id)),
-  (serde_pickle::value::HashableValue::String("buffer".to_string()), serde_pickle::value::Value::Bytes(task.buffer))]))].to_vec());
+            let task_list = serde_pickle::value::Value::List(
+                [serde_pickle::value::Value::Dict(
+                    std::collections::BTreeMap::from([
+                        (
+                            serde_pickle::value::HashableValue::String("task_id".to_string()),
+                            serde_pickle::value::Value::I64(task.task_id),
+                        ),
+                        (
+                            serde_pickle::value::HashableValue::String("buffer".to_string()),
+                            serde_pickle::value::Value::Bytes(task.buffer),
+                        ),
+                    ]),
+                )]
+                .to_vec(),
+            );
 
-            let task_list_pkl = serde_pickle::ser::value_to_vec(&task_list, serde_pickle::ser::SerOptions::new()).expect("pickling tasks for workers");
+            let task_list_pkl =
+                serde_pickle::ser::value_to_vec(&task_list, serde_pickle::ser::SerOptions::new())
+                    .expect("pickling tasks for workers");
 
             // now we send the task to the slot...
-            let multipart_msg = [
-                slot.manager_id,
-                empty.to_vec(),
-                task_list_pkl
-            ];
-            zmq_tasks_interchange_to_workers.send_multipart(multipart_msg, 0).expect("sending task to pool");
+            let multipart_msg = [slot.manager_id, empty.to_vec(), task_list_pkl];
+            zmq_tasks_interchange_to_workers
+                .send_multipart(multipart_msg, 0)
+                .expect("sending task to pool");
         }
     }
 }
