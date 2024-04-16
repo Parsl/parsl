@@ -107,7 +107,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                                         "Kubernetes provider requires kubernetes module and config.")
         try:
             config.load_kube_config()
-        except:
+        except config.config_exception.ConfigException:
             config.load_incluster_config()
 
         self.namespace = namespace
