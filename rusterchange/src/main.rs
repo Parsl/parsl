@@ -199,13 +199,8 @@ fn main() {
             let task = zmq_tasks_submit_to_interchange
                 .recv_bytes(0)
                 .expect("reading task message");
-            print!("Message: ");
-            for b in &task {
-                print!("{} ", b);
-            }
             let t = serde_pickle::de::value_from_slice(&task, serde_pickle::de::DeOptions::new())
                 .expect("unpickling");
-            println!("Unpickled: {}", t);
             // the protocol on this channel gives a dict with two entries:
             // a "buffer" and a "task_id"
             // if this protocol was declared as a dataclass or typed dict, would I be
