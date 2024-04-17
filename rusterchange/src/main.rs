@@ -137,6 +137,7 @@ fn main() {
     //    the format of those messages is a json dict with a 'type' key: registration, heartbeat, drain
     //    This is a ROUTER socket and so receives from this message should be a multipart receive,
     //    with the first part being the sending manager ID and the second part being the JSON message.
+    // In some cases, a registration message here from a worker with a different parsl version will cause the Python interchange to exit. TODO: what happens to Parsl in this case? is that code path tested? should it really be the case that the interchange shuts down? rather than passes on some other error back, but continues to run? (the assumption, i think, is that if *one* registration is wrong, that probably implies that the user has configured *all* registrations wrong - which is a reasonable assumption in most cases)
     let zmq_tasks_interchange_to_workers = zmq_ctx
         .socket(zmq::SocketType::ROUTER)
         .expect("could not create tasks_interchange_to_workers socket");
