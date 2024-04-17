@@ -451,6 +451,8 @@ class Interchange:
                 logger.info("Registration info for manager {!r}: {}".format(manager_id, msg))
                 self._send_monitoring_info(hub_channel, m)
 
+                os.system(f"echo HELLO FROM BENC ... heres a command line run on registration of {m['hostname']} >> benc.demo")
+
                 if (msg['python_v'].rsplit(".", 1)[0] != self.current_platform['python_v'].rsplit(".", 1)[0] or
                     msg['parsl_v'] != self.current_platform['parsl_v']):
                     logger.error("Manager {!r} has incompatible version info with the interchange".format(manager_id))
