@@ -1,25 +1,33 @@
 use queues::IsQueue;
 
 // Vocab:
+
 // This document attempts to avoid the use of "client" and "server" as
 // there are multiple interpretations for that even on a single connection,
 // and htex is not a clear client server architecture.
-
-// threadedness: single threaded as much as possible
-
-// TODO: there's a multiprocessing message queue used at start-up that this interchange does not implement
-// I should replace it with a PORTS command I think? In the prototype it's hacked out and only works with hard-coded ports.
-// Removing multiprocessing fork and perhaps using a regular python fork/exec would force this to happen anyway?
+// TODO: in Python interchange, "client" is used a lot and can be a bit confusing.
 
 // TODO: terminology needs clarifying and consistenifying: managers, pools, workers. are we sending things to/from a "pool" or "manager"? is the ID for a "manager" or for a "pool"?
 
+
+// threadedness: single threaded as much as possible
+
+// TODO: there's a multiprocessing Queue used at start-up that this interchange does not implement
+// I should replace it with a PORTS command I think? In the prototype it's hacked out and only works with hard-coded ports.
+// Removing multiprocessing fork and perhaps using a regular python fork/exec would force this to happen anyway?
+// That doesn't work with proposal to flip direction of command channel...
+
+
 // TODO: this code has no handling/reasoning about what happens when any ZMQ queue is unable to deal with a `send` call (aka its full)
+//       and the Python interchange doesn't have clear documentation about what's meant to be happening then either.
 // TOOD: this code has no handling/reasoning about what happens if a ZMQ socket doesn't actually connect: as I've seen both in real Python Parsl and while developing this implementation, there's a lot of silent hangs hoping things get better - ZMQ Monitoring Sockets might be interesting there.
 // TODO: heartbeats are not implemented. there are a few heartbeats that are distinct, and perhaps it would be good to name them, "this is the heartbeat that detects XXX failing". heartbeats also need to pickle new python objects (the exception for missing task) which might be simple enough to do here as there isn't much in there?
 
 // TODO: monitoring - both node table messages from the interchange and relaying on htex-radio messages from workers, over ZMQ
 
 // TODO: in development, the interchange often panics and exits, and that leaves htex in a hung state, rather than noticing and failing the tests: the user equivalent of that is eg. if oom-killer kills the real Python interchange, a run will hang rather than report an error... everything else has heartbeats but not this... (or even process-aliveness-checking...)
+
+// TODO: this code has no handling of if one of a pair of sockets binds: for example (I think in github already) a worker can register and receive tasks (using its task port) but not send results because the result port may be misconfigured. This is an argument to move towards using a single channel per worker.
 
 // use of Queue wants Clone trait, which is a bit suspicious: does that mean we have
 // explicit clones of the (potentially large) buffer in interchange? when ideally we
@@ -108,6 +116,7 @@ fn main() {
     // find my progress stopped by a missing command, I'll implement the next one.
     // Some commands are (as python pickled values) -- see _command_server in interchange.py
     //    "CONNECTED_BLOCKS"  -- return a List[str] connecting block IDs for every block that has connected. Blocks might be repeated (perhaps once per manager?)   TODO: that's probably a smell in the protocol: with thousands of nodes, this would make a 1-block message contain thousands of strings.
+    //    "MANAGERS" -- return List[Dict]: one entry per known manager, each dict is some status about that manager, in an ad-hoc format
     let zmq_command = zmq_ctx
         .socket(zmq::SocketType::REP)
         .expect("could not create command socket");
@@ -158,6 +167,8 @@ fn main() {
 
     let mut task_queue: queues::Queue<Task> = queues::Queue::new();
     let mut slot_queue: queues::Queue<Slot> = queues::Queue::new();
+
+    let mut manager_info: std::collections::BTreeMap<Vec<u8>, ()> = std::collections::BTreeMap::new();
 
     loop {
         // TODO: unclear to me what it means to share this sockets list across multiple loop iterations?
@@ -228,7 +239,7 @@ fn main() {
             // if just matchmaking based on queues without looking at the task, don't need to do any deserialization here... the pickle can go into the queue and be dispatched later.
 
             let task = Task {
-                task_id: *task_id,
+                task_id: *task_id,  // TODO: why need this *? something to do with ownership I don't understand
                 buffer: buffer.clone(), // TODO: awkward clone here of buffer but I guess because of serde_pickle, we have to clone it out of the task_dict value if we're doing shared values... perhaps there is a way to convert the task dict into the buffer forgetting everything else, linearly? TODO
             };
             task_queue.add(task).expect("queue broken - eg full?");
@@ -244,7 +255,7 @@ fn main() {
             let json_bytes = &message[1];
             let json: serde_json::Value =
                 serde_json::from_slice(json_bytes).expect("protocol error");
-            println!("Message from workers to interchange: {}", json); // TODO: log the manager ID too...
+            println!("Message from workers to interchange: {}", json); // TODO: log the manager ID too... awkward because it's a byte string
             let serde_json::Value::Object(msg_map) = json else {
                 panic!("protocol error")
             };
@@ -258,7 +269,9 @@ fn main() {
                 // There's also a uid field which is a text representation of the manager id. In the Python interchange, this field is unused - the manager_id coming from zmq as a byte sequence is used instead. TODO: assert that they align here. perhaps remove from protocol in master Parsl?
                 let serde_json::Value::Number(ref capacity_json) = msg_map["max_capacity"] else {
                     panic!("protocol error")
-                }; // TODO: should I add on prefetch here? (or is that included in max_workers by the pool?)
+                }; // max_capacity = worker_count + prefetch_capacity
+                   // might be interesting to assert or validate that here as a protocol behaviour? TODO
+
                    // now we're in a position for match-making
                    // let's do that as a queue of manager requests, so that we have capacity copies of a Slot, that will be matched with Task objects 1:1 over time: specifically *not* keeping manager capacity as an int, but more symmetrically structured as two queues being paired/matched until one is empty. As a trade-off, this probably makes summary info more awkward to provide, though.
                 let capacity = capacity_json.as_u64().expect("protocol error");
@@ -270,6 +283,8 @@ fn main() {
                         })
                         .expect("enqueuing slot on registration");
                 }
+                // TODO: it's an error for a manager ID to be used... is that a protocol error? or some other error?
+                manager_info.insert(manager_id.clone(), ());
             } else {
                 panic!("unknown message type")
             };
@@ -294,8 +309,41 @@ fn main() {
                     serde_pickle::ser::SerOptions::new(),
                 )
                 .expect("pickling block list")
+            } else if cmd == serde_pickle::Value::String("MANAGERS".to_string()) {
+                // Right now I'll only implement MANAGERS information to the extent needed for making tests pass,
+                // rather than some more abstract notion of "behaving correctly"
+                // TODO: this means we're going to need to remember the managers in a structure (because so far,
+                // only remembering church-style slot counts in a queue)
+                // TODO: Later on, we'll need to know which tasks went to a manager (rather than only a task count on
+                // each manager) so that heartbeat failure can send the appropriate failure messages for the tasks it
+                // is failing out.
+
+                // The per-manager dictionary is formatted like this:
+                //      resp = {'manager': manager_id.decode('utf-8'),       what format is this? some kind of string repr of manager ID?
+                //                                                           TODO:  if it's not a byte sequence, this is a protocol wart
+                //              'block_id': m['block_id'],                   block IDs... string or int?
+                //              'worker_count': m['worker_count'],           int
+                //              'tasks': len(m['tasks']),                    int - this can be bigger than worker count because of
+                //                                                                 prefetch capacity but should never be bigger than
+                //                                                                 worker count + prefetch capactity. Note that
+                //                                                                 prefetch capacity is not reported in this message.
+                //              'idle_duration': idle_duration,              float - number of seconds idle, 0 if not idle
+                //                                                              - i guess protocol assertion, if tasks > 0,
+                //                                                                this value must be 0? so sum-type representation
+                //                                                                might be Activity = Idle seconds | Active [tasks]
+                //              'active': m['active'],                       bool: active, in the sense of should we send tasks?
+                //              'draining': m['draining']}                   bool: draining, in the sese of should we send tasks?
+                //                                                             - there's some subtle behavioural difference here which
+                //                                                               could be sorted out, but future draining work might
+                //                                                               remove the notion of a draining bool and instead have
+                //                                                               a draining end-time that is always or often set. TODO
+                // TODO: return actual manager info, not an empty list
+                serde_pickle::ser::value_to_vec(
+                    &serde_pickle::value::Value::List([].to_vec()),
+                    serde_pickle::ser::SerOptions::new(),
+                ).expect("pickling MANAGERS list")
             } else {
-                panic!("Cannot handle command")
+                panic!("This command is not implemented")
             };
             zmq_command
                 .send(resp_pkl, 0)
@@ -361,7 +409,7 @@ fn main() {
                 .remove()
                 .expect("reasoning violation: slot_queue is non-empty, by while condition");
 
-            let empty: [u8; 0] = []; // see protocol description for this weird unnecessary(?) field
+            let empty: [u8; 0] = []; // see protocol description for this weird unnecessary(TODO?) field
 
             let task_list = serde_pickle::value::Value::List(
                 [serde_pickle::value::Value::Dict(
