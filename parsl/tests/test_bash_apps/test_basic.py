@@ -1,3 +1,4 @@
+import logging
 import os
 import random
 import re
@@ -23,7 +24,6 @@ def foo(x, y, z=10, stdout=None, label=None):
     return f"echo {x} {y} {z}"
 
 
-@pytest.mark.issue363
 def test_command_format_1(tmpd_cwd):
     """Testing command format for BashApps"""
 
@@ -38,8 +38,7 @@ def test_command_format_1(tmpd_cwd):
     assert so_content == "1 4 10"
 
 
-@pytest.mark.issue363
-def test_auto_log_filename_format():
+def test_auto_log_filename_format(caplog):
     """Testing auto log filename format for BashApps
     """
     app_label = "label_test_auto_log_filename_format"
@@ -61,8 +60,10 @@ def test_auto_log_filename_format():
     assert contents == '1 {0} 10\n'.format(rand_int), \
         'Output does not match expected string "1 {0} 10", Got: "{1}"'.format(rand_int, contents)
 
+    for record in caplog.records:
+        assert record.levelno < logging.ERROR
 
-@pytest.mark.issue363
+
 def test_parallel_for(tmpd_cwd, n=3):
     """Testing a simple parallel for loop"""
     outdir = tmpd_cwd / "outputs/test_parallel"

@@ -1,3 +1,4 @@
+import logging
 import os
 
 import pytest
@@ -35,7 +36,6 @@ testids = [
 ]
 
 
-@pytest.mark.issue363
 @pytest.mark.parametrize('spec', speclist, ids=testids)
 def test_bad_stdout_specs(spec):
     """Testing bad stdout spec cases"""
@@ -54,7 +54,7 @@ def test_bad_stdout_specs(spec):
         assert False, "Did not raise expected exception"
 
 
-@pytest.mark.issue363
+@pytest.mark.issue3328
 def test_bad_stderr_file():
     """Testing bad stderr file"""
 
@@ -72,8 +72,8 @@ def test_bad_stderr_file():
     return
 
 
-@pytest.mark.issue363
-def test_stdout_truncate(tmpd_cwd):
+@pytest.mark.executor_supports_std_stream_tuples
+def test_stdout_truncate(tmpd_cwd, caplog):
     """Testing truncation of prior content of stdout"""
 
     out = (str(tmpd_cwd / 't1.out'), 'w')
@@ -88,9 +88,11 @@ def test_stdout_truncate(tmpd_cwd):
     assert len1 == 1
     assert len1 == len2
 
+    for record in caplog.records:
+        assert record.levelno < logging.ERROR
 
-@pytest.mark.issue363
-def test_stdout_append(tmpd_cwd):
+
+def test_stdout_append(tmpd_cwd, caplog):
     """Testing appending to prior content of stdout (default open() mode)"""
 
     out = str(tmpd_cwd / 't1.out')
@@ -103,3 +105,6 @@ def test_stdout_append(tmpd_cwd):
     len2 = len(open(out).readlines())
 
     assert len1 == 1 and len2 == 2
+
+    for record in caplog.records:
+        assert record.levelno < logging.ERROR

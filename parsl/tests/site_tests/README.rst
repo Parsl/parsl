@@ -67,10 +67,6 @@ Shared filesystem option
 
 There is a new env variable "SHARED_FS_OPTIONS" to pass markers to pytest to skip certain tests.
 
-Tests that rely on stdout/stderr side-effects between apps that work on with a shared-FS can be deselected with `-k "not issue363"`
-
 When there's a shared-FS, the default NoOpStaging works. However, when there's no shared-FS some tests
 that uses File objects require a staging provider (eg. rsync). These tests can be turned off with
 `-k "not staging_required"`
-
-These can also be combined as `-k "not issue363 and not staging_required"`

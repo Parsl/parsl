@@ -72,10 +72,6 @@ making FTP transfers). When the test environment (github actions) does not
 provide a sufficiently clean network, run all tests with ``-k "not cleannet"`` to
 disable those tests.
 
-A pytest marker of ``issue363`` can be used to select or deselect tests
-that will fail because of issue 363 when running without a shared file
-system.
-
 Some other markers are available but unused in testing;
 see ``pytest --markers parsl/tests/`` for more details.
 

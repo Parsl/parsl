@@ -1,15 +1,18 @@
 from __future__ import annotations
+import datetime
 import logging
 import threading
+import time
 from itertools import compress
 from abc import abstractmethod, abstractproperty
 from concurrent.futures import Future
-from typing import List, Any, Dict, Optional, Tuple, Union, Callable
+from typing import List, Any, Dict, Optional, Sequence, Tuple, Union, Callable
 
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
 from parsl.jobs.states import JobStatus, JobState
 from parsl.jobs.error_handlers import simple_error_handler, noop_error_handler
+from parsl.monitoring.message_type import MessageType
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import AtomicIDCounter
 
@@ -70,6 +73,9 @@ class BlockProviderExecutor(ParslExecutor):
         self._tasks = {}  # type: Dict[object, Future]
         self.blocks_to_job_id = {}  # type: Dict[str, str]
         self.job_ids_to_block = {}  # type: Dict[str, str]
+
+        self._last_poll_time = 0.0
+        self._status = {}  # type: Dict[str, JobStatus]
 
     def _make_status_dict(self, block_ids: List[str], status_list: List[JobStatus]) -> Dict[str, JobStatus]:
         """Given a list of block ids and a list of corresponding status strings,
@@ -234,3 +240,77 @@ class BlockProviderExecutor(ParslExecutor):
     @abstractproperty
     def workers_per_node(self) -> Union[int, float]:
         pass
+
+    def send_monitoring_info(self, status: Dict) -> None:
+        # Send monitoring info for HTEX when monitoring enabled
+        if self.monitoring_radio:
+            msg = self.create_monitoring_info(status)
+            logger.debug("Sending message {} to hub from job status poller".format(msg))
+            self.monitoring_radio.send((MessageType.BLOCK_INFO, msg))
+
+    def create_monitoring_info(self, status: Dict[str, JobStatus]) -> Sequence[object]:
+        """Create a monitoring message for each block based on the poll status.
+        """
+        msg = []
+        for bid, s in status.items():
+            d: Dict[str, Any] = {}
+            d['run_id'] = self.run_id
+            d['status'] = s.status_name
+            d['timestamp'] = datetime.datetime.now()
+            d['executor_label'] = self.label
+            d['job_id'] = self.blocks_to_job_id.get(bid, None)
+            d['block_id'] = bid
+            msg.append(d)
+        return msg
+
+    def poll_facade(self) -> None:
+        now = time.time()
+        if now >= self._last_poll_time + self.status_polling_interval:
+            previous_status = self._status
+            self._status = self.status()
+            self._last_poll_time = now
+            delta_status = {}
+            for block_id in self._status:
+                if block_id not in previous_status \
+                   or previous_status[block_id].state != self._status[block_id].state:
+                    delta_status[block_id] = self._status[block_id]
+
+            if delta_status:
+                self.send_monitoring_info(delta_status)
+
+    @property
+    def status_facade(self) -> Dict[str, JobStatus]:
+        """Return the status of all jobs/blocks of the executor of this poller.
+
+        :return: a dictionary mapping block ids (in string) to job status
+        """
+        return self._status
+
+    def scale_in_facade(self, n: int, max_idletime: Optional[float] = None) -> List[str]:
+
+        if max_idletime is None:
+            block_ids = self.scale_in(n)
+        else:
+            # This is a HighThroughputExecutor-specific interface violation.
+            # This code hopes, through pan-codebase reasoning, that this
+            # scale_in method really does come from HighThroughputExecutor,
+            # and so does have an extra max_idletime parameter not present
+            # in the executor interface.
+            block_ids = self.scale_in(n, max_idletime=max_idletime)  # type: ignore[call-arg]
+        if block_ids is not None:
+            new_status = {}
+            for block_id in block_ids:
+                new_status[block_id] = JobStatus(JobState.CANCELLED)
+                del self._status[block_id]
+            self.send_monitoring_info(new_status)
+        return block_ids
+
+    def scale_out_facade(self, n: int) -> List[str]:
+        block_ids = self.scale_out(n)
+        if block_ids is not None:
+            new_status = {}
+            for block_id in block_ids:
+                new_status[block_id] = JobStatus(JobState.PENDING)
+            self.send_monitoring_info(new_status)
+            self._status.update(new_status)
+        return block_ids
