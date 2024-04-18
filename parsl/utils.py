@@ -131,7 +131,7 @@ def get_std_fname_mode(
     elif isinstance(fname, bytes):
         return fname.decode(), mode
     else:
-        raise ParslError(f"fname had invalid type {type(fname)}")
+        raise BadStdStreamFile(f"fname has invalid type {type(fname)}")
 
 
 @contextmanager
