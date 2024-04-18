@@ -13,6 +13,7 @@ import typeguard
 from typing_extensions import Type
 
 import parsl
+from parsl.app.errors import BadStdStreamFile
 from parsl.version import VERSION
 
 
@@ -124,14 +125,14 @@ def get_std_fname_mode(
             raise pe.BadStdStreamFile(msg)
         fname, mode = stdfspec
 
-    fname = os.fspath(fname)
+    path = os.fspath(fname)
 
-    if isinstance(fname, str):
-        return fname, mode
-    elif isinstance(fname, bytes):
-        return fname.decode(), mode
+    if isinstance(path, str):
+        return path, mode
+    elif isinstance(path, bytes):
+        return path.decode(), mode
     else:
-        raise BadStdStreamFile(f"fname has invalid type {type(fname)}")
+        raise BadStdStreamFile(f"fname has invalid type {type(path)}")
 
 
 @contextmanager

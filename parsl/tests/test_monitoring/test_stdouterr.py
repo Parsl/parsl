@@ -34,7 +34,11 @@ class ArbitraryPathLike(os.PathLike):
                           (ArbitraryPathLike(b'pl2.txt'), 'pl2.txt'),
                           ((ArbitraryPathLike('pl3.txt'), 'w'), 'pl3.txt'),
                           ((ArbitraryPathLike(b'pl4.txt'), 'w'), 'pl4.txt'),
-                          (parsl.AUTO_LOGNAME, lambda p: isinstance(p, str) and os.path.isabs(p) and re.match("^.*/task_0000_stdapp\\.std...$", p))
+                          (parsl.AUTO_LOGNAME,
+                              lambda p:
+                              isinstance(p, str) and
+                              os.path.isabs(p) and
+                              re.match("^.*/task_0000_stdapp\\.std...$", p))
                           ])
 @pytest.mark.parametrize('stream', ['stdout', 'stderr'])
 def test_stdstream_to_monitoring(stdx, expected_stdx, stream, tmpd_cwd):
