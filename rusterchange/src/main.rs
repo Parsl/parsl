@@ -10,7 +10,7 @@ use queues::IsQueue;
 // TODO: terminology needs clarifying and consistenifying: managers, pools, workers. are we sending things to/from a "pool" or "manager"? is the ID for a "manager" or for a "pool"?
 
 
-// threadedness: single threaded as much as possible
+// threadedness: single threaded as much as possible. I initially thought I'd use async rust for this, but a poll-loop has been how things have naturally flushed out for me. That perhaps also reflects on how I thought the Python interchange should perhaps use async Python instead of threads, but actually might be better fully poll driven.
 
 // TODO: there's a multiprocessing Queue used at start-up that this interchange does not implement
 // I should replace it with a PORTS command I think? In the prototype it's hacked out and only works with hard-coded ports.
@@ -23,11 +23,13 @@ use queues::IsQueue;
 // TOOD: this code has no handling/reasoning about what happens if a ZMQ socket doesn't actually connect: as I've seen both in real Python Parsl and while developing this implementation, there's a lot of silent hangs hoping things get better - ZMQ Monitoring Sockets might be interesting there.
 // TODO: heartbeats are not implemented. there are a few heartbeats that are distinct, and perhaps it would be good to name them, "this is the heartbeat that detects XXX failing". heartbeats also need to pickle new python objects (the exception for missing task) which might be simple enough to do here as there isn't much in there?
 
-// TODO: monitoring - both node table messages from the interchange and relaying on htex-radio messages from workers, over ZMQ
+// TODO: monitoring - both node table messages from the interchange and relaying on htex-radio messages from workers, over ZMQ to configured radio: that's something a bit more interesting Parsl-wise because I want to transition that to something configurable-in-Python-code which is not easy to replicate in Rust - for example, perhaps recognising the specific config objects for a few radios, and interpreting them, rather than running arbitrary Python code? And perhaps that should be a requirement for the radio specification?
 
 // TODO: in development, the interchange often panics and exits, and that leaves htex in a hung state, rather than noticing and failing the tests: the user equivalent of that is eg. if oom-killer kills the real Python interchange, a run will hang rather than report an error... everything else has heartbeats but not this... (or even process-aliveness-checking...)
 
 // TODO: this code has no handling of if one of a pair of sockets binds: for example (I think in github already) a worker can register and receive tasks (using its task port) but not send results because the result port may be misconfigured. This is an argument to move towards using a single channel per worker.
+
+// TODO: if there's an encrypted yes/no misconfiguration between submit side and interchange, where submit side has encryption on and interchange does not, Parsl execution hangs. (maybe the other way round too - I didn't try)
 
 // use of Queue wants Clone trait, which is a bit suspicious: does that mean we have
 // explicit clones of the (potentially large) buffer in interchange? when ideally we
