@@ -219,14 +219,18 @@ class DataFlowKernel:
             task_log_info = self._create_task_log_info(task_record)
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
-    def _create_task_log_info(self, task_record):
+    def _create_task_log_info(self, task_record: TaskRecord) -> Dict[str, Any]:
         """
         Create the dictionary that will be included in the log.
         """
         info_to_monitor = ['func_name', 'memoize', 'hashsum', 'fail_count', 'fail_cost', 'status',
                            'id', 'time_invoked', 'try_time_launched', 'time_returned', 'try_time_returned', 'executor']
 
-        task_log_info = {"task_" + k: task_record[k] for k in info_to_monitor}
+        # mypy cannot verify that these task_record[k] references are valid:
+        # They are valid if all entries in info_to_monitor are declared in the definition of TaskRecord
+        # This type: ignore[literal-required] asserts that fact.
+        task_log_info = {"task_" + k: task_record[k] for k in info_to_monitor}  # type: ignore[literal-required]
+
         task_log_info['run_id'] = self.run_id
         task_log_info['try_id'] = task_record['try_id']
         task_log_info['timestamp'] = datetime.datetime.now()
@@ -238,34 +242,48 @@ class DataFlowKernel:
         task_log_info['task_inputs'] = str(task_record['kwargs'].get('inputs', None))
         task_log_info['task_outputs'] = str(task_record['kwargs'].get('outputs', None))
         task_log_info['task_stdin'] = task_record['kwargs'].get('stdin', None)
-        stdout_spec = task_record['kwargs'].get('stdout', None)
-        stderr_spec = task_record['kwargs'].get('stderr', None)
+
+        # TODO: put a stronger type annotation here - even though what's coming out of the
+        # kwargs is any, it can force case resolution checking lower down in this same function.
+        # kwargs is an arbitrary dict so there's nothing that says the kwargs attribute has
+        # this relevant type, statically...  and here is probably not the place to be validating it
+
+        stdout_spec: Union[None, str, Tuple[str, str], File] = task_record['kwargs'].get('stdout')
+        stderr_spec: Union[None, str, Tuple[str, str], File] = task_record['kwargs'].get('stderr')
 
         # stdout and stderr strings are set to the filename if we can
         # interpret the specification; otherwise, set to the empty string
         # (on exception, or when not specified)
+        # TODO: in the case of a File, they should be set to the URL
 
-        if stdout_spec is not None:
+        # TODO: this can also be pathlike... which is what File is too, even though on the submit-side it isn't always pathlike...
+
+        if stdout_spec is None:
+            stdout_name = ""
+        else:  # TODO
             try:
                 stdout_name, _ = get_std_fname_mode('stdout', stdout_spec)
             except Exception:
                 logger.exception("Could not parse stdout specification {} for task {}".format(stdout_spec, task_record['id']))
                 stdout_name = ""
-        else:
-            stdout_name = ""
 
-        if stderr_spec is not None:
+        # TODO: this needs to become per-case, not per-anti-case
+        # with all cases addressed.
+        if stderr_spec is None:
+            stderr_name = ""
+        else:
+            reveal_type(stderr_spec)
             try:
                 stderr_name, _ = get_std_fname_mode('stderr', stderr_spec)
+                reveal_type(stderr_spec)
+                reveal_type(get_std_fname_mode)
             except Exception:
                 logger.exception("Could not parse stderr specification {} for task {}".format(stderr_spec, task_record['id']))
                 stderr_name = ""
-        else:
-            stderr_name = ""
             # TODO:
             # When stdout_spec is a File, the above fails, but we can't then use str, because str for a File
             # gives the localpath, which doesn't exist on the submit side for a non-file: File object.
-            # Reporting the stderr path here probably should be done differnetly for File objects, perhaps
+            # Reporting the stderr path here probably should be done differently for File objects, perhaps
             # reporting the URL without using get_std_fname_mode which only makes sense in the case of
             # shared filesystem stdout/stderrs?
 

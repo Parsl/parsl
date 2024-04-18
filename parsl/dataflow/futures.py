@@ -78,7 +78,8 @@ class AppFuture(Future):
         """Return app stdout. If stdout was specified as a string, then this
         property will return that string. If stdout was specified as a File,
         then this property will return a DataFuture representing that file
-        stageout."""
+        stageout.
+        TODO: this can be a tuple too I think?"""
         if self._stdout_future:
             return self._stdout_future
         else:
@@ -90,7 +91,8 @@ class AppFuture(Future):
         """Return app stderr. If stdout was specified as a string, then this
         property will return that string. If stdout was specified as a File,
         then this property will return a DataFuture representing that file
-        stageout."""
+        stageout.
+        TODO: this can be a tuple too I think?"""
         if self._stderr_future:
             return self._stderr_future
         else:
