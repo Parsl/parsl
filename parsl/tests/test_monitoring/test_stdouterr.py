@@ -14,13 +14,25 @@ def stdapp(stdout=None, stderr=None):
     pass
 
 
+class ArbitraryPathLike(os.PathLike):
+    def __init__(self, path: str) -> None:
+        self.path = path
+
+    def __fspath__(self) -> str:
+        return path
+
+
 @pytest.mark.local
-@pytest.mark.parametrize("stdx,expected_stdx",
-                         [("hello.txt", "hello.txt"),
-                          (None, ""),
-                          (("tuple.txt", "w"), "tuple.txt")
+@pytest.mark.parametrize('stdx,expected_stdx',
+                         [('hello.txt', 'hello.txt'),
+                          (None, ''),
+                          (('tuple.txt', 'w'), 'tuple.txt'),
+                          (ArbitraryPathLike('pl.txt'), 'pl.txt'),
+                          (ArbitraryPathLike(b'pl2.txt'), 'pl2.txt'),
+                          ((ArbitraryPathLike('pl3.txt'), 'w'), 'pl3.txt'),
+                          ((ArbitraryPathLike(b'pl4.txt'), 'w'), 'pl4.txt')
                           ])  # TODO: how to test the result of PARSL_AUTO here? is it by using a predicate not a string?
-@pytest.mark.parametrize("stream", ["stdout", "stderr"])
+@pytest.mark.parametrize('stream', ['stdout', 'stderr'])
 def test_stdstream_to_monitoring(stdx, expected_stdx, stream, tmpd_cwd):
     """This tests that various forms of stdout/err specification are
        represented in monitoring correctly. The stderr and stdout codepaths
