@@ -113,7 +113,7 @@ def get_all_addresses() -> Set[str]:
         try:
             s_addresses.add(address_by_interface(interface))
         except Exception:
-            logger.info("Ignoring failure to fetch address from interface {}".format(interface))
+            logger.debug("Ignoring failure to fetch address from interface {}".format(interface))
 
     resolution_functions: List[Callable[[], str]]
     resolution_functions = [address_by_hostname, address_by_route, address_by_query]
@@ -121,7 +121,7 @@ def get_all_addresses() -> Set[str]:
         try:
             s_addresses.add(f())
         except Exception:
-            logger.info("Ignoring an address finder exception")
+            logger.debug("Ignoring an address finder exception")
 
     return s_addresses
 
