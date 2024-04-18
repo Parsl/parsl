@@ -78,16 +78,14 @@ class BadStdStreamFile(ParslError):
 
     Contains:
        reason(string)
-       exception object
     """
 
-    def __init__(self, reason: str, exception: Exception) -> None:
-        super().__init__(reason, exception)
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
         self._reason = reason
-        self._exception = exception
 
     def __repr__(self) -> str:
-        return "Bad Stream File: {} Exception: {}".format(self._reason, self._exception)
+        return "Bad Stream File: {}".format(self._reason)
 
     def __str__(self) -> str:
         return self.__repr__()
