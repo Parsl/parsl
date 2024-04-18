@@ -60,7 +60,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
                 os.makedirs(os.path.dirname(fname), exist_ok=True)
             fd = open(fname, mode)
         except Exception as e:
-            raise pe.BadStdStreamFile(fname, e)
+            raise pe.BadStdStreamFile(fname) from e
         return fd
 
     std_out = open_std_fd('stdout')
