@@ -780,8 +780,8 @@ class DataFlowKernel:
             (inputs[idx], func) = self.data_manager.optionally_stage_in(f, func, executor)
 
         for kwarg, f in kwargs.items():
-            # stdout and stderr files should not be staging in (they should be staged *out*
-            # in _add_output_deps
+            # stdout and stderr files should not be staging in (they will be staged *out*
+            # in _add_output_deps)
             if kwarg in ['stdout', 'stderr']:
                 continue
             (kwargs[kwarg], func) = self.data_manager.optionally_stage_in(f, func, executor)
