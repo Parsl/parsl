@@ -123,7 +123,15 @@ def get_std_fname_mode(
                    f"{len(stdfspec)}")
             raise pe.BadStdStreamFile(msg, TypeError('Bad Tuple Length'))
         fname, mode = stdfspec
-    return str(fname), mode
+
+    fname = os.fspath(fname)
+
+    if isinstance(fname, str):
+        return fname, mode
+    elif isinstance(fname, bytes):
+        return fname.decode(), mode
+    else:
+        raise ParslError(f"fname had invalid type {type(fname)}")
 
 
 @contextmanager

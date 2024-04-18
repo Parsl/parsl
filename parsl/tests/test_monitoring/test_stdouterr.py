@@ -4,7 +4,10 @@
 import os
 import parsl
 import pytest
+import re
 import time
+
+from typing import Union
 
 from parsl.tests.configs.htex_local_alternate import fresh_config
 
@@ -15,11 +18,11 @@ def stdapp(stdout=None, stderr=None):
 
 
 class ArbitraryPathLike(os.PathLike):
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: Union[str, bytes]) -> None:
         self.path = path
 
-    def __fspath__(self) -> str:
-        return path
+    def __fspath__(self) -> Union[str, bytes]:
+        return self.path
 
 
 @pytest.mark.local
@@ -30,8 +33,9 @@ class ArbitraryPathLike(os.PathLike):
                           (ArbitraryPathLike('pl.txt'), 'pl.txt'),
                           (ArbitraryPathLike(b'pl2.txt'), 'pl2.txt'),
                           ((ArbitraryPathLike('pl3.txt'), 'w'), 'pl3.txt'),
-                          ((ArbitraryPathLike(b'pl4.txt'), 'w'), 'pl4.txt')
-                          ])  # TODO: how to test the result of PARSL_AUTO here? is it by using a predicate not a string?
+                          ((ArbitraryPathLike(b'pl4.txt'), 'w'), 'pl4.txt'),
+                          (parsl.AUTO_LOGNAME, lambda p: isinstance(p, str) and os.path.isabs(p) and re.match("^.*/task_0000_stdapp\\.std...$", p))
+                          ])
 @pytest.mark.parametrize('stream', ['stdout', 'stderr'])
 def test_stdstream_to_monitoring(stdx, expected_stdx, stream, tmpd_cwd):
     """This tests that various forms of stdout/err specification are
@@ -75,4 +79,10 @@ def test_stdstream_to_monitoring(stdx, expected_stdx, stream, tmpd_cwd):
         # ... and has the expected name.
         result = connection.execute(f"SELECT task_{stream} FROM task")
         (c, ) = result.first()
-        assert c == expected_stdx
+
+        if isinstance(expected_stdx, str):
+            assert c == expected_stdx
+        elif callable(expected_stdx):
+            assert expected_stdx(c)
+        else:
+            raise RuntimeError("Bad expected_stdx value")
