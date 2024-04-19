@@ -831,11 +831,11 @@ class DataFlowKernel:
             func, outputs[idx], o = stageout_one_file(file, func)
             app_fut._outputs.append(o)
 
-        file = kwargs.get('stdout', None)
+        file = kwargs.get('stdout')
         if isinstance(file, File):
             func, kwargs['stdout'], app_fut._stdout_future = stageout_one_file(file, func)
 
-        file = kwargs.get('stderr', None)
+        file = kwargs.get('stderr')
         if isinstance(file, File):
             func, kwargs['stderr'], app_fut._stderr_future = stageout_one_file(file, func)
 
