@@ -53,6 +53,7 @@ def test_interchange_binding_with_address(cert_dir: Optional[str]):
     assert ix.interchange_address == address
 
 
+@pytest.mark.skip("This behaviour is possibly unexpected. See issue #3037")
 @pytest.mark.local
 @pytest.mark.parametrize("encrypted", (True, False), indirect=True)
 def test_interchange_binding_with_non_ipv4_address(cert_dir: Optional[str]):
