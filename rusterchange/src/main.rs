@@ -493,7 +493,9 @@ fn decode_zmq_monitor_event(a_event_type: u16) -> String {
         zmq_sys::ZMQ_EVENT_CONNECT_DELAYED => "CONNECT_DELAYED",
         zmq_sys::ZMQ_EVENT_CONNECT_RETRIED => "CONNECT_RETRIED",
         zmq_sys::ZMQ_EVENT_CLOSED => "CLOSED",
+        zmq_sys::ZMQ_EVENT_DISCONNECTED => "DISCONNECTED",
         zmq_sys::ZMQ_EVENT_HANDSHAKE_SUCCEEDED => "HANDSHAKE_SUCCEEDED",
+        zmq_sys::ZMQ_EVENT_HANDSHAKE_FAILED_PROTOCOL => "HANDSHAKE_FAILED_PROTOCOL",
         _ => panic!("Unknown monitoring event type {}", a_event_type) // panic to force development. would also be OK to return UNKNOWN
     }.to_string()
     // TODO can I use strs somehow? to return a &str, needs some lifetime work?
