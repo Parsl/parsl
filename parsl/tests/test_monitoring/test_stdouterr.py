@@ -9,6 +9,9 @@ import time
 
 from typing import Union
 
+from parsl.data_provider.files import File
+from parsl.data_provider.data_manager import default_staging
+from parsl.data_provider.staging import Staging
 from parsl.tests.configs.htex_local_alternate import fresh_config
 
 
@@ -25,6 +28,15 @@ class ArbitraryPathLike(os.PathLike):
         return self.path
 
 
+class ArbitraryStaging(Staging):
+    """This staging provider will not actually do any staging, but will
+    accept arbitrary: scheme URLs. That's enough for this monitoring test
+    which doesn't need any actual stage out action to happen.
+    """
+    def can_stage_out(self, file):
+        return file.scheme == "arbitrary"
+
+
 @pytest.mark.local
 @pytest.mark.parametrize('stdx,expected_stdx',
                          [('hello.txt', 'hello.txt'),
@@ -38,7 +50,9 @@ class ArbitraryPathLike(os.PathLike):
                               lambda p:
                               isinstance(p, str) and
                               os.path.isabs(p) and
-                              re.match("^.*/task_0000_stdapp\\.std...$", p))
+                              re.match("^.*/task_0000_stdapp\\.std...$", p)),
+                          (File("arbitrary:abc123"), "arbitrary:abc123"),
+                          (File("file:///tmp/pl5"), "file:///tmp/pl5"),
                           ])
 @pytest.mark.parametrize('stream', ['stdout', 'stderr'])
 def test_stdstream_to_monitoring(stdx, expected_stdx, stream, tmpd_cwd):
@@ -57,6 +71,8 @@ def test_stdstream_to_monitoring(stdx, expected_stdx, stream, tmpd_cwd):
     c = fresh_config()
     c.run_dir = tmpd_cwd
     c.monitoring.logging_endpoint = f"sqlite:///{tmpd_cwd}/monitoring.db"
+    c.executors[0].storage_access = default_staging + [ArbitraryStaging()]
+
     with parsl.load(c):
         kwargs = {stream: stdx}
         stdapp(**kwargs).result()
