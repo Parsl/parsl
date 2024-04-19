@@ -499,6 +499,9 @@ fn main() {
     }
 }
 
+
+// TODO: it would be nice if these could be autodecoded...
+// it's a bit horrible transcribing symbol names between universes...
 fn decode_zmq_monitor_event(a_event_type: u16) -> String {
     match a_event_type.into() {
         // this is a transcription of some event types from:
