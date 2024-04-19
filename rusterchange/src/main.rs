@@ -11,7 +11,7 @@ use queues::IsQueue;
 
 // TODO: terminology needs clarifying and consistenifying: managers, pools, workers. are we sending things to/from a "pool" or "manager"? is the ID for a "manager" or for a "pool"?
 
-// threadedness: single threaded as much as possible. I initially thought I'd use async rust for this, but a poll-loop has been how things have naturally flushed out for me. That perhaps also reflects on how I thought the Python interchange should perhaps use async Python instead of threads, but actually might be better fully poll driven. CURVE in the Python interchange uses an auth thread, but the communications are all done over zmq sockets so does that mean I can implement that socket in my regular poll loop?
+// threadedness: single threaded as much as possible. I initially thought I'd use async rust for this, but a poll-loop has been how things have naturally flushed out for me. That perhaps also reflects on how I thought the Python interchange should perhaps use async Python instead of threads, but actually might be better fully poll driven. CURVE in the Python interchange uses an auth thread, but the communications are all done over zmq sockets so does that mean I can implement that socket in my regular poll loop?  libzmq might be using threads internally though? but we hopefully aren't introducing thread related code in the rust interchange implementation itself.
 
 // TODO: there's a multiprocessing Queue used at start-up that this interchange does not implement
 // I should replace it with a PORTS command I think? In the prototype it's hacked out and only works with hard-coded ports.
@@ -22,16 +22,16 @@ use queues::IsQueue;
 
 // TODO: this code has no handling/reasoning about what happens when any ZMQ queue is unable to deal with a `send` call (aka its full)
 //       and the Python interchange doesn't have clear documentation about what's meant to be happening then either.
-// TOOD: this code has no handling/reasoning about what happens if a ZMQ socket doesn't actually connect: as I've seen both in real Python Parsl and while developing this implementation, there's a lot of silent hangs hoping things get better - ZMQ Monitoring Sockets might be interesting there.
-// TODO: heartbeats are not implemented. there are a few heartbeats that are distinct, and perhaps it would be good to name them, "this is the heartbeat that detects XXX failing". heartbeats also need to pickle new python objects (the exception for missing task) which might be simple enough to do here as there isn't much in there?
+// TOOD: this code has no handling/reasoning about what happens if a ZMQ socket doesn't actually connect: as I've seen both in real Python Parsl and while developing this implementation, there's a lot of silent hangs hoping things get better - ZMQ Monitoring Sockets give some interersting progress information about socket connections which TODO could be logged in the Python interchange too.
+// TODO: heartbeats are not implemented. there are a few heartbeats that are distinct, and perhaps it would be good to name them, "this is the heartbeat that detects XXX failing". heartbeats also need to pickle new python objects (the exception for missing task) which might be simple enough to do here as there isn't much in there? The basic htex_local.py test passes ok without any heartbeat implementation, though! TODO: check heartbeats really get tested.
 
-// TODO: monitoring - both node table messages from the interchange and relaying on htex-radio messages from workers, over ZMQ to configured radio: that's something a bit more interesting Parsl-wise because I want to transition that to something configurable-in-Python-code which is not easy to replicate in Rust - for example, perhaps recognising the specific config objects for a few radios, and interpreting them, rather than running arbitrary Python code? And perhaps that should be a requirement for the radio specification?
+// TODO: Parsl monitoring (not ZMQ monitoring) - both node table messages from the interchange and relaying on htex-radio messages from workers, over ZMQ to configured radio: that's something a bit more interesting Parsl-wise because I want to transition that to something configurable-in-Python-code which is not easy to replicate in Rust - for example, perhaps recognising the specific config objects for a few radios, and interpreting them, rather than running arbitrary Python code? And perhaps that should be a requirement for the radio specification?
 
-// TODO: in development, the interchange often panics and exits, and that leaves htex in a hung state, rather than noticing and failing the tests: the user equivalent of that is eg. if oom-killer kills the real Python interchange, a run will hang rather than report an error... everything else has heartbeats but not this... (or even process-aliveness-checking...)
+// TODO: in development, this interchange often panics and exits, and that leaves htex in a hung state, rather than noticing and failing the tests: the user equivalent of that is eg. if oom-killer kills the real Python interchange, a run will hang rather than report an error... everything else has heartbeats but not this... (or even process-aliveness-checking...). htex submit side should notice a gone-away interchange by noticing the process is gone.
 
 // TODO: this code has no handling of if one of a pair of sockets binds: for example (I think in github already) a worker can register and receive tasks (using its task port) but not send results because the result port may be misconfigured. This is an argument to move towards using a single channel per worker.
 
-// TODO: if there's an encrypted yes/no misconfiguration between submit side and interchange, where submit side has encryption on and interchange does not, Parsl execution hangs. (maybe the other way round too - I didn't try). This should get i) fixed and ii) tested in mainline Parsl
+// TODO: if there's an encrypted yes/no misconfiguration between submit side and interchange, where submit side has encryption on and interchange does not, Parsl execution hangs. (maybe the other way round too - I didn't try). This should get i) fixed and ii) tested in mainline Parsl. ZMQ Monitoring gives some quite interesting progress messages which might help debugging.
 
 // TODO: Auth: turns out if you don't bind an auth socket, zmq defaults to authorizing everyone (although in the interchange case,
 // I think they would still need to acquire the servers public key - which is now a secret key, as far as that defence is concerned).
@@ -62,7 +62,10 @@ fn main() {
     let cert_dir = args_iterator.next().expect("certificate directory");
     println!("cert_dir is {}", cert_dir);
 
-
+    // the cert_dir has these four files in it:
+    // client.key  client.key_secret  server.key  server.key_secret
+    // "client" and "server" terminology here refers to the CURVE client/server
+    // directions (which may not align with either TCP or REQ/REP direction)
 
     // we've got 8 communication channels:
 
@@ -157,6 +160,11 @@ fn main() {
     // to coordinate those RPCs across threads...). That's not so easy when we don't
     // know the port which will be opened (if random port is chosen on the interchange
     // side, to receive connections)...
+    //
+    // There's no requirement that command REQ/REP has to happen all on one channel,
+    // though: there can be an initial configuration main thread REQ/REP that the
+    // interchagne connects to, and then other threads on the submit side could connect
+    // the other way (as a somewhat weird connection pattern...)
     //
     // This rust code probably doesn't implement all the commands - just as I
     // find my progress stopped by a missing command, I'll implement the next one.
