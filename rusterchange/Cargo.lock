@@ -273,10 +273,12 @@ dependencies = [
 name = "rusterchange"
 version = "0.1.0"
 dependencies = [
+ "byteorder",
  "queues",
  "serde-pickle",
  "serde_json",
  "zmq",
+ "zmq-sys",
 ]
 
 [[package]]

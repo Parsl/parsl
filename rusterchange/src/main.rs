@@ -1,4 +1,5 @@
 use queues::IsQueue;
+use byteorder::ReadBytesExt;
 
 // Vocab:
 
@@ -54,10 +55,20 @@ fn main() {
 
     // there are 5 ZMQ channels:
     //   three to the submit side (sometimes called the client side) - TCP outbound
+    //        TODO: could these be ZMQ IPC sockets? how would that compare to using TCP
+    //              here? Would it give us, for example, the unix user security model
+    //              which TCP doesn't have? Could some of the Parsl monitoring stuff be
+    //              done that way too?
+    //              
     //   two to the worker side - TCP listening  (x number of worker pools)
-
+    //     TODO: this should be unified into one? I think the performance reasons for
+    //           having two sockets have gone away - primarily, i think, because
+    //           a new task is not dispatched until a result is processed, rather than
+    //           them being so decoupled.
+    //
     // there's also a startup-time channel that is in master parsl a multiprocessing.Queue
-    // that sends the port numbers for the two listening ports chosen at bind time.
+    // that sends the port numbers for the two listening ports chosen by the interchange
+    // at zmq socket bind time.
 
     // ... and we shutdown on unix termination signals, not on a message - this probably
     // should be thought of as a very limited communication channel, when reasoning about
@@ -82,6 +93,12 @@ fn main() {
     zmq_tasks_submit_to_interchange
         .connect("tcp://127.0.0.1:9000")
         .expect("could not connect task_submit_to_interchange socket");
+
+    zmq_tasks_submit_to_interchange.monitor("inproc://monitor-tasks-submit-to-interchange", zmq_sys::ZMQ_EVENT_ALL.try_into().expect("zmq_sys vs zmq API awkwardness")).expect("Configuring zmq monitoring");
+    let zmq_tasks_submit_to_interchange_monitor = zmq_ctx
+        .socket(zmq::SocketType::PAIR)
+        .expect("create pair socket for zmq monitoring");
+    zmq_tasks_submit_to_interchange_monitor.connect("inproc://monitor-tasks-submit-to-interchange").expect("connecting monitoring");
 
     // this channel is for sending results from the interchange to the submit side.
     // messages on this channel are multipart messages. each part is a pickled Python dictionary
@@ -191,6 +208,7 @@ fn main() {
             zmq_tasks_interchange_to_workers_poll_item,
             zmq_command.as_poll_item(zmq::PollEvents::POLLIN),
             zmq_results_workers_to_interchange.as_poll_item(zmq::PollEvents::POLLIN),
+            zmq_tasks_submit_to_interchange_monitor.as_poll_item(zmq::PollEvents::POLLIN)
         ];
 
         // TODO: these poll items are referenced by indexing into sockets[n] which feels
@@ -399,6 +417,24 @@ fn main() {
                 }
             }
         }
+
+        // socket monitoring
+        if sockets[4].get_revents().contains(zmq::PollEvents::POLLIN) {
+            let parts = zmq_tasks_submit_to_interchange_monitor.recv_multipart(0).expect("monitoring message");
+            println!("got a zmq monitoring message for zmq_tasks_submit_to_interchange_monitor");
+            assert!(parts.len() == 2);
+            let a = &parts[0];
+            assert!(a.len() == 6);
+            let mut a_reader = std::io::Cursor::new(a);
+            let a_event_type = a_reader.read_u16::<byteorder::NativeEndian>().expect("Parsing event type");
+
+            let b = &parts[1];
+            // is this UTF-8? maybe not? ZMQ docs a bit unclear TODO
+            let b_endpoint = std::str::from_utf8(b).expect("UTF-8(?) encoded endpoint");
+
+            println!("ZMQ Monitoring: event type {}, distant endpoint: {}", a_event_type, b_endpoint);
+        }
+
 
         // we've maybe added tasks and slots to the slot queues, so now
         // do some match-making. This only needs to happen if both queues
