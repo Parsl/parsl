@@ -11,12 +11,13 @@ use queues::IsQueue;
 
 // TODO: terminology needs clarifying and consistenifying: managers, pools, workers. are we sending things to/from a "pool" or "manager"? is the ID for a "manager" or for a "pool"?
 
-// threadedness: single threaded as much as possible. I initially thought I'd use async rust for this, but a poll-loop has been how things have naturally flushed out for me. That perhaps also reflects on how I thought the Python interchange should perhaps use async Python instead of threads, but actually might be better fully poll driven. CURVE in the Python interchange uses an auth thread, but the communications are all done over zmq sockets so does that mean I can implement that socket in my regular poll loop?  libzmq might be using threads internally though? but we hopefully aren't introducing thread related code in the rust interchange implementation itself.
+// threadedness: single threaded as much as possible. I initially thought I'd use async rust for this, but a poll-loop has been how things have naturally flushed out for me. That perhaps also reflects on how I thought the Python interchange should perhaps use async Python instead of threads, but actually might be better fully poll driven. CURVE in the Python interchange uses an auth thread, but the communications are all done over zmq sockets so does that mean I can implement that socket in my regular poll loop?  libzmq might be using threads internally though? but we hopefully aren't introducing thread related code in the rust interchange implementation itself.   using async might make it easier to understand some of the different bits of code if they start getting too tangled together, but I think everything is message or time driven - there aren't any state machines to manually construct that async would help with, I think? that doesn't mean I can't use it gratuitously, though.
 
 // TODO: there's a multiprocessing Queue used at start-up that this interchange does not implement
 // I should replace it with a PORTS command I think? In the prototype it's hacked out and only works with hard-coded ports.
 // Removing multiprocessing fork and perhaps using a regular python fork/exec would force this to happen anyway?
 // That doesn't work with proposal to flip direction of command channel...
+// Some other stuff (maybe wq/taskvine?) outputs a port number on stdout/stderr at startup after binding.
 
 // TODO: theres an implicit "we have exited" channel (perhaps with a unix exit code?) that the submit side could pay attention to, to notice if the interchange is gone away, either accidentally or deliberately.
 
@@ -65,7 +66,13 @@ fn main() {
     // the cert_dir has these four files in it:
     // client.key  client.key_secret  server.key  server.key_secret
     // "client" and "server" terminology here refers to the CURVE client/server
-    // directions (which may not align with either TCP or REQ/REP direction)
+    // directions (which may not align with either TCP or REQ/REP direction).
+    // parsl.curvezmq implements these two directions as new ZMQ context facades
+    // and then every socket created via one of those facades is aligned in
+    // direction with the parsl.curvezmq facade context (ServerContext or
+    // ClientContext). But that's a Parsl library-impl thing, not a ZMQ thing,
+    // and not an interchange protocol thing.
+
 
     // we've got 8 communication channels:
 
