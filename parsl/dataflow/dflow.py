@@ -794,7 +794,7 @@ class DataFlowKernel:
         # and for each of those, perform possible stage-out. This can result in:
         # a DataFuture to be exposed in app_fut to represent the completion of
         # that stageout (sometimes backed by a new sub-workflow for separate-task
-        # stageout), a replacement # for the function to be executed (intended to
+        # stageout), a replacement for the function to be executed (intended to
         # be the original function wrapped with an in-task stageout wrapper), a
         # rewritten File object to be passed to task to be executed
 
