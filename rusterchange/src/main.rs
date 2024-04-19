@@ -6,11 +6,12 @@ use queues::IsQueue;
 // This document attempts to avoid the use of "client" and "server" as
 // there are multiple interpretations for that even on a single connection,
 // and htex is not a clear client server architecture.
-// TODO: in Python interchange, "client" is used a lot and can be a bit confusing.
+// TODO: in Python interchange, "client" is used a lot and can be a bit confusing - it usually means the main process of parsl that is submitting tasks into the interchange, and in this rust impl, that's called "submit" not "client.
+// CURVE security also has a notion of server and client, because communications are bootstrapped needing to have the servers public key well known (and correct), but not the clients. I think it's not necessarily that case that this client/server direction aligns with either the TCP connection direction or REQ/REP direction.
 
 // TODO: terminology needs clarifying and consistenifying: managers, pools, workers. are we sending things to/from a "pool" or "manager"? is the ID for a "manager" or for a "pool"?
 
-// threadedness: single threaded as much as possible. I initially thought I'd use async rust for this, but a poll-loop has been how things have naturally flushed out for me. That perhaps also reflects on how I thought the Python interchange should perhaps use async Python instead of threads, but actually might be better fully poll driven.
+// threadedness: single threaded as much as possible. I initially thought I'd use async rust for this, but a poll-loop has been how things have naturally flushed out for me. That perhaps also reflects on how I thought the Python interchange should perhaps use async Python instead of threads, but actually might be better fully poll driven. CURVE in the Python interchange uses an auth thread, but the communications are all done over zmq sockets so does that mean I can implement that socket in my regular poll loop?
 
 // TODO: there's a multiprocessing Queue used at start-up that this interchange does not implement
 // I should replace it with a PORTS command I think? In the prototype it's hacked out and only works with hard-coded ports.
@@ -30,7 +31,10 @@ use queues::IsQueue;
 
 // TODO: this code has no handling of if one of a pair of sockets binds: for example (I think in github already) a worker can register and receive tasks (using its task port) but not send results because the result port may be misconfigured. This is an argument to move towards using a single channel per worker.
 
-// TODO: if there's an encrypted yes/no misconfiguration between submit side and interchange, where submit side has encryption on and interchange does not, Parsl execution hangs. (maybe the other way round too - I didn't try)
+// TODO: if there's an encrypted yes/no misconfiguration between submit side and interchange, where submit side has encryption on and interchange does not, Parsl execution hangs. (maybe the other way round too - I didn't try). This should get i) fixed and ii) tested in mainline Parsl
+
+// TODO: Auth: turns out if you don't bind an auth socket, zmq defaults to authorizing everyone (although in the interchange case,
+// I think they would still need to acquire the servers public key - which is now a secret key, as far as that defence is concerned).
 
 // use of Queue wants Clone trait, which is a bit suspicious: does that mean we have
 // explicit clones of the (potentially large) buffer in interchange? when ideally we
@@ -51,7 +55,16 @@ struct Slot {
 fn main() {
     println!("the rusterchange");
 
-    // we've got 6 communication channels:
+    // TODO: use a proper command line args library
+    // This impl. requires a cert dir
+    let mut args_iterator = std::env::args();
+    let _ = args_iterator.next(); // skip the executable name
+    let cert_dir = args_iterator.next().expect("certificate directory");
+    println!("cert_dir is {}", cert_dir);
+
+
+
+    // we've got 8 communication channels:
 
     // there are 5 ZMQ channels:
     //   three to the submit side (sometimes called the client side) - TCP outbound
@@ -69,7 +82,10 @@ fn main() {
     // there's also a startup-time channel that is in master parsl a multiprocessing.Queue
     // that sends the port numbers for the two listening ports chosen by the interchange
     // at zmq socket bind time.
-
+    //
+    // there are various command line arguments which communicate configuration information
+    // into the interchange to help it get bootstrapped with ZMQ channels.
+    //
     // ... and we shutdown on unix termination signals, not on a message - this probably
     // should be thought of as a very limited communication channel, when reasoning about
     // whole system behaviour.

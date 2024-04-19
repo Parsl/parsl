@@ -531,7 +531,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         get the worker task and result ports that the interchange has bound to.
         """
 
-        self.interchange_proc = subprocess.Popen(args="rusterchange/target/debug/rusterchange")
+        self.interchange_proc = subprocess.Popen(args=["rusterchange/target/debug/rusterchange", str(self.cert_dir)])
 
         # TODO: all these arguments below aren't used... so are they necessary? should there be
         # tests discovering they aren't used/passed?
