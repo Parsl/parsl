@@ -18,6 +18,7 @@ use byteorder::ReadBytesExt;
 // Removing multiprocessing fork and perhaps using a regular python fork/exec would force this to happen anyway?
 // That doesn't work with proposal to flip direction of command channel...
 
+// TODO: theres an implicit "we have exited" channel (perhaps with a unix exit code?) that the submit side could pay attention to, to notice if the interchange is gone away, either accidentally or deliberately.
 
 // TODO: this code has no handling/reasoning about what happens when any ZMQ queue is unable to deal with a `send` call (aka its full)
 //       and the Python interchange doesn't have clear documentation about what's meant to be happening then either.
@@ -495,7 +496,15 @@ fn decode_zmq_monitor_event(a_event_type: u16) -> String {
         zmq_sys::ZMQ_EVENT_CLOSED => "CLOSED",
         zmq_sys::ZMQ_EVENT_DISCONNECTED => "DISCONNECTED",
         zmq_sys::ZMQ_EVENT_HANDSHAKE_SUCCEEDED => "HANDSHAKE_SUCCEEDED",
+
         zmq_sys::ZMQ_EVENT_HANDSHAKE_FAILED_PROTOCOL => "HANDSHAKE_FAILED_PROTOCOL",
+        // TODO: looks like if this happens, nothing is going to retry and the socket is dead
+        // in which case we might as well panic the whole interchange
+        // and then TODO have the executor notice the interchange died. Rather than hang
+        // waiting for an interchange that will likely never connect? (that's part of
+        // exit-protocol - another implicit comms channel from interchange to the
+        // submit side)
+
         _ => panic!("Unknown monitoring event type {}", a_event_type) // panic to force development. would also be OK to return UNKNOWN
     }.to_string()
     // TODO can I use strs somehow? to return a &str, needs some lifetime work?
