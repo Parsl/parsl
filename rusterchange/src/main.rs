@@ -1,5 +1,5 @@
-use queues::IsQueue;
 use byteorder::ReadBytesExt;
+use queues::IsQueue;
 
 // Vocab:
 
@@ -9,7 +9,6 @@ use byteorder::ReadBytesExt;
 // TODO: in Python interchange, "client" is used a lot and can be a bit confusing.
 
 // TODO: terminology needs clarifying and consistenifying: managers, pools, workers. are we sending things to/from a "pool" or "manager"? is the ID for a "manager" or for a "pool"?
-
 
 // threadedness: single threaded as much as possible. I initially thought I'd use async rust for this, but a poll-loop has been how things have naturally flushed out for me. That perhaps also reflects on how I thought the Python interchange should perhaps use async Python instead of threads, but actually might be better fully poll driven.
 
@@ -60,7 +59,7 @@ fn main() {
     //              here? Would it give us, for example, the unix user security model
     //              which TCP doesn't have? Could some of the Parsl monitoring stuff be
     //              done that way too?
-    //              
+    //
     //   two to the worker side - TCP listening  (x number of worker pools)
     //     TODO: this should be unified into one? I think the performance reasons for
     //           having two sockets have gone away - primarily, i think, because
@@ -95,11 +94,20 @@ fn main() {
         .connect("tcp://127.0.0.1:9000")
         .expect("could not connect task_submit_to_interchange socket");
 
-    zmq_tasks_submit_to_interchange.monitor("inproc://monitor-tasks-submit-to-interchange", zmq_sys::ZMQ_EVENT_ALL.try_into().expect("zmq_sys vs zmq API awkwardness")).expect("Configuring zmq monitoring");
+    zmq_tasks_submit_to_interchange
+        .monitor(
+            "inproc://monitor-tasks-submit-to-interchange",
+            zmq_sys::ZMQ_EVENT_ALL
+                .try_into()
+                .expect("zmq_sys vs zmq API awkwardness"),
+        )
+        .expect("Configuring zmq monitoring");
     let zmq_tasks_submit_to_interchange_monitor = zmq_ctx
         .socket(zmq::SocketType::PAIR)
         .expect("create pair socket for zmq monitoring");
-    zmq_tasks_submit_to_interchange_monitor.connect("inproc://monitor-tasks-submit-to-interchange").expect("connecting monitoring");
+    zmq_tasks_submit_to_interchange_monitor
+        .connect("inproc://monitor-tasks-submit-to-interchange")
+        .expect("connecting monitoring");
 
     // this channel is for sending results from the interchange to the submit side.
     // messages on this channel are multipart messages. each part is a pickled Python dictionary
@@ -190,7 +198,8 @@ fn main() {
     let mut task_queue: queues::Queue<Task> = queues::Queue::new();
     let mut slot_queue: queues::Queue<Slot> = queues::Queue::new();
 
-    let mut manager_info: std::collections::BTreeMap<Vec<u8>, ()> = std::collections::BTreeMap::new();
+    let mut manager_info: std::collections::BTreeMap<Vec<u8>, ()> =
+        std::collections::BTreeMap::new();
 
     loop {
         // TODO: unclear to me what it means to share this sockets list across multiple loop iterations?
@@ -209,7 +218,7 @@ fn main() {
             zmq_tasks_interchange_to_workers_poll_item,
             zmq_command.as_poll_item(zmq::PollEvents::POLLIN),
             zmq_results_workers_to_interchange.as_poll_item(zmq::PollEvents::POLLIN),
-            zmq_tasks_submit_to_interchange_monitor.as_poll_item(zmq::PollEvents::POLLIN)
+            zmq_tasks_submit_to_interchange_monitor.as_poll_item(zmq::PollEvents::POLLIN),
         ];
 
         // TODO: these poll items are referenced by indexing into sockets[n] which feels
@@ -262,7 +271,7 @@ fn main() {
             // if just matchmaking based on queues without looking at the task, don't need to do any deserialization here... the pickle can go into the queue and be dispatched later.
 
             let task = Task {
-                task_id: *task_id,  // TODO: why need this *? something to do with ownership I don't understand
+                task_id: *task_id, // TODO: why need this *? something to do with ownership I don't understand
                 buffer: buffer.clone(), // TODO: awkward clone here of buffer but I guess because of serde_pickle, we have to clone it out of the task_dict value if we're doing shared values... perhaps there is a way to convert the task dict into the buffer forgetting everything else, linearly? TODO
             };
             task_queue.add(task).expect("queue broken - eg full?");
@@ -295,8 +304,8 @@ fn main() {
                 }; // max_capacity = worker_count + prefetch_capacity
                    // might be interesting to assert or validate that here as a protocol behaviour? TODO
 
-                   // now we're in a position for match-making
-                   // let's do that as a queue of manager requests, so that we have capacity copies of a Slot, that will be matched with Task objects 1:1 over time: specifically *not* keeping manager capacity as an int, but more symmetrically structured as two queues being paired/matched until one is empty. As a trade-off, this probably makes summary info more awkward to provide, though.
+                // now we're in a position for match-making
+                // let's do that as a queue of manager requests, so that we have capacity copies of a Slot, that will be matched with Task objects 1:1 over time: specifically *not* keeping manager capacity as an int, but more symmetrically structured as two queues being paired/matched until one is empty. As a trade-off, this probably makes summary info more awkward to provide, though.
                 let capacity = capacity_json.as_u64().expect("protocol error");
                 for _ in 0..capacity {
                     println!("adding a slot");
@@ -364,7 +373,8 @@ fn main() {
                 serde_pickle::ser::value_to_vec(
                     &serde_pickle::value::Value::List([].to_vec()),
                     serde_pickle::ser::SerOptions::new(),
-                ).expect("pickling MANAGERS list")
+                )
+                .expect("pickling MANAGERS list")
             } else {
                 panic!("This command is not implemented")
             };
@@ -421,13 +431,17 @@ fn main() {
 
         // socket monitoring
         if sockets[4].get_revents().contains(zmq::PollEvents::POLLIN) {
-            let parts = zmq_tasks_submit_to_interchange_monitor.recv_multipart(0).expect("monitoring message");
+            let parts = zmq_tasks_submit_to_interchange_monitor
+                .recv_multipart(0)
+                .expect("monitoring message");
             println!("got a zmq monitoring message for zmq_tasks_submit_to_interchange_monitor");
             assert!(parts.len() == 2);
             let a = &parts[0];
             assert!(a.len() == 6);
             let mut a_reader = std::io::Cursor::new(a);
-            let a_event_type = a_reader.read_u16::<byteorder::NativeEndian>().expect("Parsing event type");
+            let a_event_type = a_reader
+                .read_u16::<byteorder::NativeEndian>()
+                .expect("Parsing event type");
 
             let a_event_info = decode_zmq_monitor_event(a_event_type);
 
@@ -435,9 +449,11 @@ fn main() {
             // is this UTF-8? maybe not? ZMQ docs a bit unclear TODO
             let b_endpoint = std::str::from_utf8(b).expect("UTF-8(?) encoded endpoint");
 
-            println!("ZMQ Monitoring: event type {} ({}), distant endpoint: {}", a_event_type, a_event_info, b_endpoint);
+            println!(
+                "ZMQ Monitoring: event type {} ({}), distant endpoint: {}",
+                a_event_type, a_event_info, b_endpoint
+            );
         }
-
 
         // we've maybe added tasks and slots to the slot queues, so now
         // do some match-making. This only needs to happen if both queues
@@ -483,13 +499,11 @@ fn main() {
     }
 }
 
-
 fn decode_zmq_monitor_event(a_event_type: u16) -> String {
     match a_event_type.into() {
         // this is a transcription of some event types from:
         // https://docs.rs/zmq-sys/latest/src/zmq_sys/ffi.rs.html#141
         // When you get an UNKNOWN, look it up there and add here.
-
         zmq_sys::ZMQ_EVENT_CONNECTED => "CONNECTED",
         zmq_sys::ZMQ_EVENT_CONNECT_DELAYED => "CONNECT_DELAYED",
         zmq_sys::ZMQ_EVENT_CONNECT_RETRIED => "CONNECT_RETRIED",
@@ -504,8 +518,8 @@ fn decode_zmq_monitor_event(a_event_type: u16) -> String {
         // waiting for an interchange that will likely never connect? (that's part of
         // exit-protocol - another implicit comms channel from interchange to the
         // submit side)
-
-        _ => panic!("Unknown monitoring event type {}", a_event_type) // panic to force development. would also be OK to return UNKNOWN
-    }.to_string()
+        _ => panic!("Unknown monitoring event type {}", a_event_type), // panic to force development. would also be OK to return UNKNOWN
+    }
+    .to_string()
     // TODO can I use strs somehow? to return a &str, needs some lifetime work?
 }
