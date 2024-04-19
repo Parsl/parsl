@@ -56,7 +56,9 @@ def remote_side_bash_executor(func, *args, **kwargs):
             return None
 
         if isinstance(stdfspec, File):
-            fname = str(stdfspec)
+            # a File is an os.PathLike and so we can use it directly for
+            # the subsequent file operations
+            fname = stdfspec
             mode = "w"
         else:
             fname, mode = get_std_fname_mode(fdname, stdfspec)
@@ -66,7 +68,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
                 os.makedirs(os.path.dirname(fname), exist_ok=True)
             fd = open(fname, mode)
         except Exception as e:
-            raise pe.BadStdStreamFile(fname) from e
+            raise pe.BadStdStreamFile(str(fname)) from e
         return fd
 
     std_out = open_std_fd('stdout')
