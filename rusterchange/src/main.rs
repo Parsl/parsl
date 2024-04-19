@@ -50,9 +50,11 @@ struct Slot {
 fn main() {
     println!("the rusterchange");
 
-    // we've got 5 communication channels - they're all ZMQ
-    // three to the submit side (sometimes called the client side) - TCP outbound
-    // two to the worker side - TCP listening
+    // we've got 6 communication channels:
+
+    // there are 5 ZMQ channels:
+    //   three to the submit side (sometimes called the client side) - TCP outbound
+    //   two to the worker side - TCP listening  (x number of worker pools)
 
     // there's also a startup-time channel that is in master parsl a multiprocessing.Queue
     // that sends the port numbers for the two listening ports chosen at bind time.
