@@ -12,6 +12,7 @@ from typing import Dict, Sequence
 from typing import List, Optional, Tuple, Union, Callable
 import math
 import os
+import subprocess
 import warnings
 
 import parsl.launchers
@@ -529,7 +530,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         Starts the interchange process locally and uses an internal command queue to
         get the worker task and result ports that the interchange has bound to.
         """
-        os.system("cd rusterchange; cargo run &")
+
+        self.interchange_proc = subprocess.Popen(args="rusterchange/target/debug/rusterchange")
+
+        # TODO: all these arguments below aren't used... so are they necessary? should there be
+        # tests discovering they aren't used/passed?
+
         """
         self.interchange_proc = ForkProcess(target=interchange.starter,
                                             args=(comm_q,),
@@ -805,7 +811,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         timeout : float
             Amount of time to wait for the Interchange process to terminate before
-            we forcefully kill it.
+            we forcefully kill it, in seconds
         """
         if self.interchange_proc is None:
             logger.info("HighThroughputExecutor has not started; skipping shutdown")
@@ -814,8 +820,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         logger.info("Attempting HighThroughputExecutor shutdown")
 
         self.interchange_proc.terminate()
-        self.interchange_proc.join(timeout=timeout)
-        if self.interchange_proc.is_alive():
+        self.interchange_proc.wait(timeout=timeout)
+
+        # TODO: this liveness check should also be happening throughout execution,
+        # because if the interchange is gone away we should do something other than
+        # hang.
+        if self.interchange_proc.poll() is None:
             logger.info("Unable to terminate Interchange process; sending SIGKILL")
             self.interchange_proc.kill()
 
