@@ -543,6 +543,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                                                      self.incoming_q.port,
                                                                      self.command_client.port),
                                                     "interchange_address": self.address,
+                                                    # TODO: whats the difference between worker_ports and
+                                                    # worker ports range?
                                                     "worker_ports": self.worker_ports,
                                                     "worker_port_range": self.worker_port_range,
                                                     "hub_address": self.hub_address,
