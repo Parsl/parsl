@@ -243,49 +243,27 @@ class DataFlowKernel:
         task_log_info['task_outputs'] = str(task_record['kwargs'].get('outputs', None))
         task_log_info['task_stdin'] = task_record['kwargs'].get('stdin', None)
 
-        # TODO: put a stronger type annotation here - even though what's coming out of the
-        # kwargs is any, it can force case resolution checking lower down in this same function.
-        # kwargs is an arbitrary dict so there's nothing that says the kwargs attribute has
-        # this relevant type, statically...  and here is probably not the place to be validating it
+        def std_spec_to_name(name, spec):
+            if spec is None:
+                name = ""
+            elif isinstance(spec, File):
+                name = spec.url
+            else:
+                # fallthrough case is various str, os.PathLike, tuple modes that
+                # can be interpreted by get_std_fname_mode.
+                try:
+                    name, _ = get_std_fname_mode(name, spec)
+                except Exception:
+                    logger.exception(f"Could not parse {name} specification {spec} for task {task_record['id']}")
+                    name = ""
+            return name
 
-        stdout_spec: Union[None, str, Tuple[str, str], File] = task_record['kwargs'].get('stdout')
-        stderr_spec: Union[None, str, Tuple[str, str], File] = task_record['kwargs'].get('stderr')
+        stdout_spec = task_record['kwargs'].get('stdout')
+        task_log_info['task_stdout'] = std_spec_to_name('stdout', stdout_spec)
 
-        # stdout and stderr strings are set to the filename if we can
-        # interpret the specification; otherwise, set to the empty string
-        # (on exception, or when not specified)
-        # TODO: in the case of a File, they should be set to the URL
+        stderr_spec = task_record['kwargs'].get('stderr')
+        task_log_info['task_stderr'] = std_spec_to_name('stderr', stderr_spec)
 
-        # TODO: this can also be pathlike... which is what File is too, even though on the submit-side it isn't always pathlike...
-
-        if stdout_spec is None:
-            stdout_name = ""
-        elif isinstance(stdout_spec, File):
-            stdout_name = stdout_spec.url
-        else:
-            # fallthrough case is various str, os.PathLike, tuple modes that
-            # can be interpreted by get_std_fname_mode.
-            try:
-                stdout_name, _ = get_std_fname_mode('stdout', stdout_spec)
-            except Exception:
-                logger.exception("Could not parse stdout specification {} for task {}".format(stdout_spec, task_record['id']))
-                stdout_name = ""
-
-        if stderr_spec is None:
-            stderr_name = ""
-        elif isinstance(stderr_spec, File):
-            stderr_name = stderr_spec.url
-        else:
-            # fallthrough case is various str, os.PathLike, tuple modes that
-            # can be interpreted by get_std_fname_mode.
-            try:
-                stderr_name, _ = get_std_fname_mode('stderr', stderr_spec)
-            except Exception:
-                logger.exception("Could not parse stderr specification {} for task {}".format(stderr_spec, task_record['id']))
-                stderr_name = ""
-
-        task_log_info['task_stdout'] = stdout_name
-        task_log_info['task_stderr'] = stderr_name
         task_log_info['task_fail_history'] = ",".join(task_record['fail_history'])
         task_log_info['task_depends'] = None
         if task_record['depends'] is not None:
