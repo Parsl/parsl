@@ -151,6 +151,8 @@ fn main() {
                 .expect("zmq_sys vs zmq API awkwardness"),
         )
         .expect("Configuring zmq monitoring");
+
+
     let zmq_tasks_submit_to_interchange_monitor = zmq_ctx
         .socket(zmq::SocketType::PAIR)
         .expect("create pair socket for zmq monitoring");
@@ -169,6 +171,8 @@ fn main() {
     let zmq_results_interchange_to_submit = zmq_ctx
         .socket(zmq::SocketType::DEALER)
         .expect("could not create results_interchange_to_submit socket");
+    zmq_results_interchange_to_submit.set_curve_server(true).expect("setting as curve server");
+    zmq_results_interchange_to_submit.set_curve_secretkey(&server_keypair.secret_key).expect("setting server secret key");
     zmq_results_interchange_to_submit
         .connect("tcp://127.0.0.1:9001")
         .expect("could not connect results_interchange_to_submit socket");
@@ -204,6 +208,8 @@ fn main() {
     let zmq_command = zmq_ctx
         .socket(zmq::SocketType::REP)
         .expect("could not create command socket");
+    zmq_command.set_curve_server(true).expect("setting as curve server");
+    zmq_command.set_curve_secretkey(&server_keypair.secret_key).expect("setting server secret key");
     zmq_command
         .connect("tcp://127.0.0.1:9002")
         .expect("could not connect command socket");
@@ -234,6 +240,8 @@ fn main() {
     let zmq_tasks_interchange_to_workers = zmq_ctx
         .socket(zmq::SocketType::ROUTER)
         .expect("could not create tasks_interchange_to_workers socket");
+    zmq_tasks_interchange_to_workers.set_curve_server(true).expect("setting as curve server");
+    zmq_tasks_interchange_to_workers.set_curve_secretkey(&server_keypair.secret_key).expect("setting server secret key");
     zmq_tasks_interchange_to_workers
         .bind("tcp://127.0.0.1:9003")
         .expect("could not bind tasks_interchange_to_workers");
@@ -245,6 +253,8 @@ fn main() {
     let zmq_results_workers_to_interchange = zmq_ctx
         .socket(zmq::SocketType::ROUTER)
         .expect("could not create results_workers_to_interchange socket");
+    zmq_results_workers_to_interchange.set_curve_server(true).expect("setting as curve server");
+    zmq_results_workers_to_interchange.set_curve_secretkey(&server_keypair.secret_key).expect("setting server secret key");
     zmq_results_workers_to_interchange
         .bind("tcp://127.0.0.1:9004")
         .expect("could not bind results_workers_to_interchange");
