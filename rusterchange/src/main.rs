@@ -428,11 +428,13 @@ fn main() {
             let mut a_reader = std::io::Cursor::new(a);
             let a_event_type = a_reader.read_u16::<byteorder::NativeEndian>().expect("Parsing event type");
 
+            let a_event_info = decode_zmq_monitor_event(a_event_type);
+
             let b = &parts[1];
             // is this UTF-8? maybe not? ZMQ docs a bit unclear TODO
             let b_endpoint = std::str::from_utf8(b).expect("UTF-8(?) encoded endpoint");
 
-            println!("ZMQ Monitoring: event type {}, distant endpoint: {}", a_event_type, b_endpoint);
+            println!("ZMQ Monitoring: event type {} ({}), distant endpoint: {}", a_event_type, a_event_info, b_endpoint);
         }
 
 
@@ -478,4 +480,21 @@ fn main() {
                 .expect("sending task to pool");
         }
     }
+}
+
+
+fn decode_zmq_monitor_event(a_event_type: u16) -> String {
+    match a_event_type.into() {
+        // this is a transcription of some event types from:
+        // https://docs.rs/zmq-sys/latest/src/zmq_sys/ffi.rs.html#141
+        // When you get an UNKNOWN, look it up there and add here.
+
+        zmq_sys::ZMQ_EVENT_CONNECTED => "CONNECTED",
+        zmq_sys::ZMQ_EVENT_CONNECT_DELAYED => "CONNECT_DELAYED",
+        zmq_sys::ZMQ_EVENT_CONNECT_RETRIED => "CONNECT_RETRIED",
+        zmq_sys::ZMQ_EVENT_CLOSED => "CLOSED",
+        zmq_sys::ZMQ_EVENT_HANDSHAKE_SUCCEEDED => "HANDSHAKE_SUCCEEDED",
+        _ => panic!("Unknown monitoring event type {}", a_event_type) // panic to force development. would also be OK to return UNKNOWN
+    }.to_string()
+    // TODO can I use strs somehow? to return a &str, needs some lifetime work?
 }
