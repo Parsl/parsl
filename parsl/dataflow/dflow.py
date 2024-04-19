@@ -260,32 +260,29 @@ class DataFlowKernel:
 
         if stdout_spec is None:
             stdout_name = ""
-        else:  # TODO
+        elif isinstance(stdout_spec, File):
+            stdout_name = stdout_spec.url
+        else:
+            # fallthrough case is various str, os.PathLike, tuple modes that
+            # can be interpreted by get_std_fname_mode.
             try:
                 stdout_name, _ = get_std_fname_mode('stdout', stdout_spec)
             except Exception:
                 logger.exception("Could not parse stdout specification {} for task {}".format(stdout_spec, task_record['id']))
                 stdout_name = ""
 
-        # TODO: this needs to become per-case, not per-anti-case
-        # with all cases addressed.
         if stderr_spec is None:
             stderr_name = ""
+        elif isinstance(stderr_spec, File):
+            stderr_name = stderr_spec.url
         else:
-            reveal_type(stderr_spec)
+            # fallthrough case is various str, os.PathLike, tuple modes that
+            # can be interpreted by get_std_fname_mode.
             try:
                 stderr_name, _ = get_std_fname_mode('stderr', stderr_spec)
-                reveal_type(stderr_spec)
-                reveal_type(get_std_fname_mode)
             except Exception:
                 logger.exception("Could not parse stderr specification {} for task {}".format(stderr_spec, task_record['id']))
                 stderr_name = ""
-            # TODO:
-            # When stdout_spec is a File, the above fails, but we can't then use str, because str for a File
-            # gives the localpath, which doesn't exist on the submit side for a non-file: File object.
-            # Reporting the stderr path here probably should be done differently for File objects, perhaps
-            # reporting the URL without using get_std_fname_mode which only makes sense in the case of
-            # shared filesystem stdout/stderrs?
 
         task_log_info['task_stdout'] = stdout_name
         task_log_info['task_stderr'] = stderr_name
