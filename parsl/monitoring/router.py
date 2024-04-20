@@ -32,7 +32,7 @@ class MonitoringRouter:
                  monitoring_hub_address: str = "127.0.0.1",
                  logdir: str = ".",
                  logging_level: int = logging.INFO,
-                 atexit_timeout: int = 3,   # in seconds
+                 atexit_timeout: float,   # in seconds
                  priority_msgs: "queue.Queue[AddressedMonitoringMessage]",
                  node_msgs: "queue.Queue[AddressedMonitoringMessage]",
                  block_msgs: "queue.Queue[AddressedMonitoringMessage]",
@@ -55,7 +55,8 @@ class MonitoringRouter:
         logging_level : int
              Logging level as defined in the logging module. Default: logging.INFO
         atexit_timeout : float, optional
-            The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
+            The amount of time in seconds to wait for more UDP messages at shutdown, after the last DFK
+            workflow message is received.
         *_msgs : Queue
             Four multiprocessing queues to receive messages, routed by type tag, and sometimes modified according to type tag.
 
@@ -214,6 +215,8 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    udp_port: Optional[int],
                    zmq_port_range: Tuple[int, int],
 
+                   udp_atexit_timeout: float,
+
                    logdir: str,
                    logging_level: int) -> None:
     setproctitle("parsl: monitoring router")
@@ -227,7 +230,8 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                                   node_msgs=node_msgs,
                                   block_msgs=block_msgs,
                                   resource_msgs=resource_msgs,
-                                  exit_event=exit_event)
+                                  exit_event=exit_event,
+                                  atexit_timeout=udp_atexit_timeout)
     except Exception as e:
         logger.error("MonitoringRouter construction failed.", exc_info=True)
         comm_q.put(f"Monitoring router construction failed: {e}")
