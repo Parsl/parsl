@@ -195,6 +195,14 @@ def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
         this_process = psutil.Process()
         start_fds = this_process.num_fds()
         logger.error(f"BENC: start open fds: {start_fds}")
+
+        # GC executor starts a thread at import(!)
+        # so we can't make this assertion...
+        # assert threading.active_count() == 1, "precondition: only one thread can be running before this test: " + repr(threading.enumerate())
+        pre_ac = threading.active_count()
+        if pre_ac > 1:
+            logger.warning("precondition: only one thread should be running before this test: " + repr(threading.enumerate()))
+
         spec = importlib.util.spec_from_file_location('', config)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
@@ -224,6 +232,11 @@ def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
         assert DataFlowKernelLoader._dfk is None
         end_fds = this_process.num_fds()
         logger.error(f"BENC: end open fds: {end_fds}")
+
+        post_ac = threading.active_count()
+        assert pre_ac == post_ac, "test left threads running: " + repr(threading.enumerate())
+        # assert threading.active_count() == 1, "test left threads running: " + repr(threading.enumerate())
+
     else:
         yield
 
@@ -249,6 +262,11 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
         start_fds = this_process.num_fds()
         logger.error(f"BENC: start open fds: {start_fds}")
         logger.error(f"BENC: start threads: {threading.active_count()}")
+
+        pre_ac = threading.active_count()
+        if pre_ac > 1:
+            logger.warning("precondition: only one thread should be running before this test: " + repr(threading.enumerate()))
+        # assert threading.active_count() == 1, "precondition: only one thread can be running before this test: " + repr(threading.enumerate())
 
         local_setup = getattr(request.module, "local_setup", None)
         local_teardown = getattr(request.module, "local_teardown", None)
@@ -284,6 +302,11 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
         end_fds = this_process.num_fds()
         logger.error(f"BENC: end open fds: {end_fds} (vs start {start_fds}")
         logger.error(f"BENC: end threads: {threading.active_count()}")
+
+        post_ac = threading.active_count()
+        assert pre_ac == post_ac, "test left threads running: " + repr(threading.enumerate())
+
+        # assert threading.active_count() == 1, "test left threads running: " + repr(threading.enumerate())
 
     else:
         yield
