@@ -16,7 +16,7 @@ use std::io::BufRead;
 
 // TODO: there's a multiprocessing Queue used at start-up that this interchange does not implement
 // I should replace it with a PORTS command I think? In the prototype it's hacked out and only works with hard-coded ports.
-// Removing multiprocessing fork and perhaps using a regular python fork/exec would force this to happen anyway?
+// Removing multiprocessing fork and perhaps using a regular python fork/exec would force this to happen anyway? issue #2343
 // That doesn't work with proposal to flip direction of command channel...
 // Some other stuff (maybe wq/taskvine?) outputs a port number on stdout/stderr at startup after binding.
 
@@ -205,6 +205,7 @@ fn main() {
     // Some commands are (as python pickled values) -- see _command_server in interchange.py
     //    "CONNECTED_BLOCKS"  -- return a List[str] connecting block IDs for every block that has connected. Blocks might be repeated (perhaps once per manager?)   TODO: that's probably a smell in the protocol: with thousands of nodes, this would make a 1-block message contain thousands of strings.
     //    "MANAGERS" -- return List[Dict]: one entry per known manager, each dict is some status about that manager, in an ad-hoc format
+    //    "OUTSTANDING_C" -- return count of outstanding tasks (in queues and on workers) -- TODO: this info is available on the submit side, with a slight phase shift (more because also includes executor->interchange send queue, does not include interchange->executor result queue) - issue #3365
     let zmq_command = zmq_ctx
         .socket(zmq::SocketType::REP)
         .expect("could not create command socket");
@@ -250,6 +251,7 @@ fn main() {
     // The pickled object is a Python dictionary with a type entry that is one of these strings:  'result' 'monitoring' or 'heartbeat'.
     // The rest of the dictionary depends on that type.
     // TODO: this is a pickled dict, vs tasks_interchange_to_workers
+    // TODO: this channel could be merged with tasks_interchange_to_workers, issue #3022, #2165
     let zmq_results_workers_to_interchange = zmq_ctx
         .socket(zmq::SocketType::ROUTER)
         .expect("could not create results_workers_to_interchange socket");

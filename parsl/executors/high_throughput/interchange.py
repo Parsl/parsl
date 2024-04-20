@@ -287,6 +287,7 @@ class Interchange:
                     reply = outstanding
 
                 elif command_req == "CONNECTED_BLOCKS":
+                    # TODO: this can contain duplicates, I think, because one per manager?
                     reply = self.connected_block_history
 
                 elif command_req == "WORKERS":

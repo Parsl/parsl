@@ -451,7 +451,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                "exception" : serialized exception object, on failure
             }
 
-        The `None` message is a die request.
+        The `None` message is a die request. - TODO: i think this is never used?
         """
         logger.debug("Queue management worker starting")
 
@@ -597,6 +597,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.command_client.run("HOLD_WORKER;{}".format(worker_id))
         logger.debug("Sent hold request to manager: {}".format(worker_id))
 
+    # TODO: is this information available on the executor side?
+    # for example the size of the self.tasks dictionary? (in which case,
+    # we'd need to make sure we delete elements from it?)
     @property
     def outstanding(self) -> int:
         """Returns the count of tasks outstanding across the interchange
