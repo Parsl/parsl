@@ -191,6 +191,8 @@ def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
     config = pytestconfig.getoption('config')[0]
 
     if config != 'local':
+        pre_ac = threading.active_count()
+        assert pre_ac == 1, "precondition: only one thread can be running before this test: " + repr(threading.enumerate())
         spec = importlib.util.spec_from_file_location('', config)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
@@ -218,6 +220,10 @@ def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
             raise RuntimeError("DFK changed unexpectedly during test")
         dfk.cleanup()
         assert DataFlowKernelLoader._dfk is None
+        post_ac = threading.active_count()
+        assert post_ac == 1, "test left threads running: " + repr(threading.enumerate())
+        assert pre_ac == post_ac, "test left threads running: " + repr(threading.enumerate())
+
     else:
         yield
 
@@ -240,6 +246,9 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
 
     if config == 'local':
         logger.error(f"BENC: start threads: {threading.active_count()}")
+
+        pre_ac = threading.active_count()
+        assert pre_ac == 1, "precondition: only one thread can be running before this test: " + repr(threading.enumerate())
 
         local_setup = getattr(request.module, "local_setup", None)
         local_teardown = getattr(request.module, "local_teardown", None)
@@ -273,6 +282,10 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
             dfk.cleanup()
             assert DataFlowKernelLoader._dfk is None
         logger.error(f"BENC: end threads: {threading.active_count()}")
+
+        post_ac = threading.active_count()
+        assert pre_ac == post_ac, "test left threads running: " + repr(threading.enumerate())
+        assert post_ac == 1, "test left threads running: " + repr(threading.enumerate())
 
     else:
         yield
