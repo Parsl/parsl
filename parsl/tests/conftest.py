@@ -180,6 +180,8 @@ def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
     config = pytestconfig.getoption('config')[0]
 
     if config != 'local':
+        assert threading.active_count() == 1, "precondition: only one thread can be running before this test: " + repr(threading.enumerate())
+
         spec = importlib.util.spec_from_file_location('', config)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
@@ -207,6 +209,9 @@ def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
             raise RuntimeError("DFK changed unexpectedly during test")
         dfk.cleanup()
         assert DataFlowKernelLoader._dfk is None
+
+        assert threading.active_count() == 1, "test left threads running: " + repr(threading.enumerate())
+
     else:
         yield
 
@@ -233,6 +238,7 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
         logger.error(f"BENC: start open fds: {start_fds}")
         logger.error(f"BENC: start threads: {threading.active_count()}")
 
+        assert threading.active_count() == 1, "precondition: only one thread can be running before this test"
         local_setup = getattr(request.module, "local_setup", None)
         local_teardown = getattr(request.module, "local_teardown", None)
         local_config = getattr(request.module, "local_config", None)
@@ -267,6 +273,8 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
         end_fds = this_process.num_fds()
         logger.error(f"BENC: end open fds: {end_fds} (vs start {start_fds}")
         logger.error(f"BENC: end threads: {threading.active_count()}")
+
+        assert threading.active_count() == 1, "test left threads running: " + repr(threading.enumerate())
 
     else:
         yield
