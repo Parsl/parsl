@@ -15,12 +15,12 @@ use std::io::BufRead;
 // threadedness: single threaded as much as possible. I initially thought I'd use async rust for this, but a poll-loop has been how things have naturally flushed out for me. That perhaps also reflects on how I thought the Python interchange should perhaps use async Python instead of threads, but actually might be better fully poll driven. CURVE in the Python interchange uses an auth thread, but the communications are all done over zmq sockets so does that mean I can implement that socket in my regular poll loop?  libzmq might be using threads internally though? but we hopefully aren't introducing thread related code in the rust interchange implementation itself.   using async might make it easier to understand some of the different bits of code if they start getting too tangled together, but I think everything is message or time driven - there aren't any state machines to manually construct that async would help with, I think? that doesn't mean I can't use it gratuitously, though.
 
 // TODO: there's a multiprocessing Queue used at start-up that this interchange does not implement
-// I should replace it with a PORTS command I think? In the prototype it's hacked out and only works with hard-coded ports.
-// Removing multiprocessing fork and perhaps using a regular python fork/exec would force this to happen anyway? issue #2343
+// I should replace it with a PORTS command I think? In the prototype it's hacked out and only works with hard-coded ports
+// Removing multiprocessing fork and perhaps using a regular python fork/exec would force this to happen anyway? issue #3373 #2343
 // That doesn't work with proposal to flip direction of command channel...
 // Some other stuff (maybe wq/taskvine?) outputs a port number on stdout/stderr at startup after binding.
 
-// TODO: theres an implicit "we have exited" channel (perhaps with a unix exit code?) that the submit side could pay attention to, to notice if the interchange is gone away, either accidentally or deliberately.
+// TODO: theres an implicit "we have exited" channel (perhaps with a unix exit code?) that the submit side could pay attention to, to notice if the interchange is gone away, either accidentally or deliberately. - #3374
 
 // TODO: this code has no handling/reasoning about what happens when any ZMQ queue is unable to deal with a `send` call (aka its full)
 //       and the Python interchange doesn't have clear documentation about what's meant to be happening then either.
@@ -31,11 +31,11 @@ use std::io::BufRead;
 
 // TODO: Parsl monitoring (not ZMQ monitoring) - both node table messages from the interchange and relaying on htex-radio messages from workers, over ZMQ to configured radio: that's something a bit more interesting Parsl-wise because I want to transition that to something configurable-in-Python-code which is not easy to replicate in Rust - for example, perhaps recognising the specific config objects for a few radios, and interpreting them, rather than running arbitrary Python code? And perhaps that should be a requirement for the radio specification?
 
-// TODO: in development, this interchange often panics and exits, and that leaves htex in a hung state, rather than noticing and failing the tests: the user equivalent of that is eg. if oom-killer kills the real Python interchange, a run will hang rather than report an error... everything else has heartbeats but not this... (or even process-aliveness-checking...). htex submit side should notice a gone-away interchange by noticing the process is gone.
+// TODO: in development, this interchange often panics and exits, and that leaves htex in a hung state, rather than noticing and failing the tests: the user equivalent of that is eg. if oom-killer kills the real Python interchange, a run will hang rather than report an error... everything else has heartbeats but not this... (or even process-aliveness-checking...). htex submit side should notice a gone-away interchange by noticing the process is gone. - issue #3374
 
-// TODO: this code has no handling of if one of a pair of sockets binds: for example (I think in github already) a worker can register and receive tasks (using its task port) but not send results because the result port may be misconfigured. This is an argument to move towards using a single channel per worker.
+// TODO: this code has no handling of if one of a pair of sockets binds: for example (I think in github already) a worker can register and receive tasks (using its task port) but not send results because the result port may be misconfigured. This is an argument to move towards using a single channel per worker.  - issue #3019
 
-// TODO: if there's an encrypted yes/no misconfiguration between submit side and interchange, where submit side has encryption on and interchange does not, Parsl execution hangs. (maybe the other way round too - I didn't try). This should get i) fixed and ii) tested in mainline Parsl. ZMQ Monitoring gives some quite interesting progress messages which might help debugging.
+// TODO: if there's an encrypted yes/no misconfiguration between submit side and interchange, where submit side has encryption on and interchange does not, Parsl execution hangs. (maybe the other way round too - I didn't try). This should get i) fixed and ii) tested in mainline Parsl. ZMQ Monitoring gives some quite interesting progress messages which help debugging here. see issue #3375
 
 // TODO: Auth: turns out if you don't bind an auth socket, zmq defaults to authorizing everyone (although in the interchange case,
 // I think they would still need to acquire the servers public key - which is now a secret key, as far as that defence is concerned).
@@ -200,6 +200,8 @@ fn main() {
     // interchagne connects to, and then other threads on the submit side could connect
     // the other way (as a somewhat weird connection pattern...)
     //
+    // TODO: For command channel safety on the submit side: issue #3376
+    //
     // This rust code probably doesn't implement all the commands - just as I
     // find my progress stopped by a missing command, I'll implement the next one.
     // Some commands are (as python pickled values) -- see _command_server in interchange.py
@@ -231,7 +233,7 @@ fn main() {
     //     tasks_submit_to_interchange channel. TODO note that this is a list of tasks, while tasks_submit_to_interchange carries at most one task per message. TODO that cardinality mismatch could be made more consistent in the protocols.
     //     This implementation, which does per-slot matchmaking, probably won't send more than a single task at once in the list, though.
     //     Other messages (heartbeat and drain) can be sent on this channel, using magic task IDs. TODO: make messages use type tags in this channel
-    //     TODO: it's unclear why this protocol has a blank byte string? it's always discarded... probably remove it?
+    //     TODO: it's unclear why this protocol has a blank byte string? it's always discarded... probably remove it? - issue #3372
 
     // In the workers to interchange direction:
     //    json formatted messages, not pickle formatted messages: - TODO: issue #3370
@@ -365,7 +367,7 @@ fn main() {
             if msg_type == "registration" {
                 println!("processing registration");
                 // I think all we need from this message is the worker capacity.
-                // There's also a uid field which is a text representation of the manager id. In the Python interchange, this field is unused - the manager_id coming from zmq as a byte sequence is used instead. TODO: assert that they align here. perhaps remove from protocol in master Parsl?
+                // There's also a uid field which is a text representation of the manager id. In the Python interchange, this field is unused - the manager_id coming from zmq as a byte sequence is used instead. TODO: assert that they align here. perhaps remove from protocol in master Parsl? - issue #3377
                 let serde_json::Value::Number(ref capacity_json) = msg_map["max_capacity"] else {
                     panic!("protocol error")
                 }; // max_capacity = worker_count + prefetch_capacity
@@ -559,6 +561,7 @@ fn main() {
 
             // now we send the task to the slot...
             let multipart_msg = [slot.manager_id, empty.to_vec(), task_list_pkl];
+            // TODO empty.to_vec is a protocol wart - see issue #3372
             zmq_tasks_interchange_to_workers
                 .send_multipart(multipart_msg, 0)
                 .expect("sending task to pool");
