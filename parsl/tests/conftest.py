@@ -183,6 +183,9 @@ def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
         this_process = psutil.Process()
         start_fds = this_process.num_fds()
         logger.error(f"BENC: start open fds: {start_fds}")
+
+        assert threading.active_count() == 1, "precondition: only one thread can be running before this test: " + repr(threading.enumerate())
+
         spec = importlib.util.spec_from_file_location('', config)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
@@ -217,6 +220,8 @@ def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
         logger.error(f"BENC: end open fds: {end_fds} (vs {start_fds} at start)")
         assert start_fds == end_fds, "number of open fds changed across test run"
 
+        assert threading.active_count() == 1, "test left threads running: " + repr(threading.enumerate())
+
     else:
         yield
 
@@ -243,6 +248,7 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
         logger.error(f"BENC: start open fds: {start_fds}")
         logger.error(f"BENC: start threads: {threading.active_count()}")
 
+        assert threading.active_count() == 1, "precondition: only one thread can be running before this test"
         local_setup = getattr(request.module, "local_setup", None)
         local_teardown = getattr(request.module, "local_teardown", None)
         local_config = getattr(request.module, "local_config", None)
@@ -284,6 +290,8 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
             logger.error(f"Open files (not all fds, though?): {this_process.open_files()!r}")
             os.system(f"ls -l /proc/{os.getpid()}/fd")
             pytest.fail("BENC: number of open fds increased across test")
+
+        assert threading.active_count() == 1, "test left threads running: " + repr(threading.enumerate())
 
     else:
         yield
