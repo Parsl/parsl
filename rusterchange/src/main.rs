@@ -10,7 +10,7 @@ use std::io::BufRead;
 // TODO: in Python interchange, "client" is used a lot and can be a bit confusing - it usually means the main process of parsl that is submitting tasks into the interchange, and in this rust impl, that's called "submit" not "client.
 // CURVE security also has a notion of server and client, because communications are bootstrapped needing to have the servers public key well known (and correct), but not the clients. I think it's not necessarily that case that this client/server direction aligns with either the TCP connection direction or REQ/REP direction.
 
-// TODO: terminology needs clarifying and consistenifying: managers, pools, workers. are we sending things to/from a "pool" or "manager"? is the ID for a "manager" or for a "pool"?
+// TODO: terminology needs clarifying and consistenifying: managers, pools, workers. are we sending things to/from a "pool" or "manager"? is the ID for a "manager" or for a "pool"? -- issue #3369
 
 // threadedness: single threaded as much as possible. I initially thought I'd use async rust for this, but a poll-loop has been how things have naturally flushed out for me. That perhaps also reflects on how I thought the Python interchange should perhaps use async Python instead of threads, but actually might be better fully poll driven. CURVE in the Python interchange uses an auth thread, but the communications are all done over zmq sockets so does that mean I can implement that socket in my regular poll loop?  libzmq might be using threads internally though? but we hopefully aren't introducing thread related code in the rust interchange implementation itself.   using async might make it easier to understand some of the different bits of code if they start getting too tangled together, but I think everything is message or time driven - there aren't any state machines to manually construct that async would help with, I think? that doesn't mean I can't use it gratuitously, though.
 
@@ -203,9 +203,10 @@ fn main() {
     // This rust code probably doesn't implement all the commands - just as I
     // find my progress stopped by a missing command, I'll implement the next one.
     // Some commands are (as python pickled values) -- see _command_server in interchange.py
-    //    "CONNECTED_BLOCKS"  -- return a List[str] connecting block IDs for every block that has connected. Blocks might be repeated (perhaps once per manager?)   TODO: that's probably a smell in the protocol: with thousands of nodes, this would make a 1-block message contain thousands of strings.
+    //    "CONNECTED_BLOCKS"  -- return a List[str] connecting block IDs for every block that has connected. Blocks might be repeated (perhaps once per manager?)   TODO: that's probably a smell in the protocol: with thousands of nodes, this would make a 1-block message contain thousands of strings - issue #3366
     //    "MANAGERS" -- return List[Dict]: one entry per known manager, each dict is some status about that manager, in an ad-hoc format
     //    "OUTSTANDING_C" -- return count of outstanding tasks (in queues and on workers) -- TODO: this info is available on the submit side, with a slight phase shift (more because also includes executor->interchange send queue, does not include interchange->executor result queue) - issue #3365
+    //    "HOLD_WORKER" - (not implemented here) - but it's an ad-hoc encoded protocol TODO: use pickle structure - issue #3368
     let zmq_command = zmq_ctx
         .socket(zmq::SocketType::REP)
         .expect("could not create command socket");
@@ -233,7 +234,7 @@ fn main() {
     //     TODO: it's unclear why this protocol has a blank byte string? it's always discarded... probably remove it?
 
     // In the workers to interchange direction:
-    //    json formatted messages, not pickle formatted messages:
+    //    json formatted messages, not pickle formatted messages: - TODO: issue #3370
     //    the format of those messages is a json dict with a 'type' key: registration, heartbeat, drain
     //    This is a ROUTER socket and so receives from this message should be a multipart receive,
     //    with the first part being the sending manager ID and the second part being the JSON message.
