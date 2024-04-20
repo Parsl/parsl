@@ -9,10 +9,36 @@ import time
 
 from typing import Union
 
+from parsl.config import Config
 from parsl.data_provider.files import File
 from parsl.data_provider.data_manager import default_staging
 from parsl.data_provider.staging import Staging
-from parsl.tests.configs.htex_local_alternate import fresh_config
+from parsl.executors import HighThroughputExecutor
+from parsl.monitoring import MonitoringHub
+from parsl.providers import LocalProvider
+
+
+def fresh_config(run_dir):
+    return Config(
+        run_dir=str(run_dir),
+        executors=[
+            HighThroughputExecutor(
+                address="127.0.0.1",
+                label="htex_Local",
+                provider=LocalProvider(
+                    init_blocks=1,
+                    min_blocks=1,
+                    max_blocks=1,
+                )
+            )
+        ],
+        strategy='simple',
+        strategy_period=0.1,
+        monitoring=MonitoringHub(
+                        hub_address="localhost",
+                        hub_port=55055,
+        )
+    )
 
 
 @parsl.python_app
@@ -68,8 +94,7 @@ def test_stdstream_to_monitoring(stdx, expected_stdx, stream, tmpd_cwd):
     # run.
     import sqlalchemy
 
-    c = fresh_config()
-    c.run_dir = tmpd_cwd
+    c = fresh_config(tmpd_cwd)
     c.monitoring.logging_endpoint = f"sqlite:///{tmpd_cwd}/monitoring.db"
     c.executors[0].storage_access = default_staging + [ArbitraryStaging()]
 
