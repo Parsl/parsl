@@ -55,9 +55,9 @@ class MonitoringRouter:
 
         """
         os.makedirs(logdir, exist_ok=True)
-        self.logger = set_file_logger("{}/monitoring_router.log".format(logdir),
-                                      name="monitoring_router",
-                                      level=logging_level)
+        self.logger, _ = set_file_logger("{}/monitoring_router.log".format(logdir),
+                                         name="monitoring_router",
+                                         level=logging_level)
         self.logger.debug("Monitoring router starting")
 
         self.hub_address = hub_address
