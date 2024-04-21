@@ -283,9 +283,9 @@ class MonitoringHub(RepresentationMixin):
 
 @wrap_with_logs
 def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]", run_dir: str) -> None:
-    logger = set_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
-                             name="monitoring_filesystem_radio",
-                             level=logging.INFO)
+    logger, _ = set_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
+                                name="monitoring_filesystem_radio",
+                                level=logging.INFO)
 
     logger.info("Starting filesystem radio receiver")
     setproctitle("parsl: monitoring filesystem receiver")
