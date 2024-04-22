@@ -1426,8 +1426,12 @@ class DataFlowKernel:
                 logger.info(f"{name} for task {tid} will not be redirected.")
             elif isinstance(target, str):
                 logger.info(f"{name} for task {tid} will be redirected to {target}")
-            elif isinstance(target, tuple) and len(target) == 2:
+            elif isinstance(target, os.PathLike):
+                logger.info(f"{name} for task {tid} will be redirected to {os.fspath(target)}")
+            elif isinstance(target, tuple) and len(target) == 2 and isinstance(target[0], str):
                 logger.info(f"{name} for task {tid} will be redirected to {target[0]} with mode {target[1]}")
+            elif isinstance(target, tuple) and len(target) == 2 and isinstance(target[0], os.PathLike):
+                logger.info(f"{name} for task {tid} will be redirected to {os.fspath(target[0])} with mode {target[1]}")
             elif isinstance(target, DataFuture):
                 logger.info(f"{name} for task {tid} will staged to {target.file_obj.url}")
             else:
