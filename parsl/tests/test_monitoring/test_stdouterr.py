@@ -1,6 +1,7 @@
 """Tests monitoring records app name under various decoration patterns.
 """
 
+import logging
 import os
 import parsl
 import pytest
@@ -55,7 +56,7 @@ class ArbitraryStaging(Staging):
                           (File("file:///tmp/pl5"), "file:///tmp/pl5"),
                           ])
 @pytest.mark.parametrize('stream', ['stdout', 'stderr'])
-def test_stdstream_to_monitoring(stdx, expected_stdx, stream, tmpd_cwd):
+def test_stdstream_to_monitoring(stdx, expected_stdx, stream, tmpd_cwd, caplog):
     """This tests that various forms of stdout/err specification are
        represented in monitoring correctly. The stderr and stdout codepaths
        are generally duplicated, rather than factorised, and so this test
@@ -106,3 +107,6 @@ def test_stdstream_to_monitoring(stdx, expected_stdx, stream, tmpd_cwd):
             assert expected_stdx(c)
         else:
             raise RuntimeError("Bad expected_stdx value")
+
+    for record in caplog.records:
+        assert record.levelno < logging.ERROR
