@@ -644,6 +644,12 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             logger.debug("Joining on factory process")
             self._factory_process.join()
 
+        # Shutdown multiprocessing queues
+        self._ready_task_queue.close()
+        self._ready_task_queue.join_thread()
+        self._finished_task_queue.close()
+        self._finished_task_queue.join_thread()
+
         self._is_shutdown = True
         logger.debug("TaskVine shutdown completed")
 
