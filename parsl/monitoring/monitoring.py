@@ -195,6 +195,8 @@ class MonitoringHub(RepresentationMixin):
 
         try:
             comm_q_result = comm_q.get(block=True, timeout=120)
+            comm_q.close()
+            comm_q.join_thread()
         except queue.Empty:
             logger.error("Hub has not completed initialization in 120s. Aborting")
             raise Exception("Hub failed to start")
@@ -257,6 +259,19 @@ class MonitoringHub(RepresentationMixin):
             logger.info("Terminating filesystem radio receiver process")
             self.filesystem_proc.terminate()
             self.filesystem_proc.join()
+
+            logger.info("Closing monitoring multiprocessing queues")
+            self.exception_q.close()
+            self.exception_q.join_thread()
+            self.priority_msgs.close()
+            self.priority_msgs.join_thread()
+            self.resource_msgs.close()
+            self.resource_msgs.join_thread()
+            self.node_msgs.close()
+            self.node_msgs.join_thread()
+            self.block_msgs.close()
+            self.block_msgs.join_thread()
+            logger.info("Closed monitoring multiprocessing queues")
 
 
 @wrap_with_logs
