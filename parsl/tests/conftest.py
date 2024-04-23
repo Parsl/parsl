@@ -245,6 +245,7 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
 
         if callable(local_teardown):
             local_teardown()
+            assert DataFlowKernelLoader._dfk is None, "Expected teardown to clear DFK"
 
         if local_config:
             if parsl.dfk() != dfk:

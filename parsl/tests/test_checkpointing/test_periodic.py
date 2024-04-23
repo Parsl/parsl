@@ -1,16 +1,12 @@
-import argparse
-import time
-
 import pytest
 
 import parsl
 from parsl.app.app import python_app
-from parsl.tests.configs.local_threads_checkpoint_periodic import config
+from parsl.tests.configs.local_threads_checkpoint_periodic import fresh_config
 
 
 def local_setup():
-    global dfk
-    dfk = parsl.load(config)
+    parsl.load(fresh_config())
 
 
 def local_teardown():
@@ -27,40 +23,31 @@ def slow_double(x, sleep_dur=1):
 
 
 def tstamp_to_seconds(line):
-    print("Parsing line: ", line)
     f = line.partition(" ")[0]
     return float(f)
 
 
 @pytest.mark.local
-def test_periodic(n=4):
+def test_periodic():
     """Test checkpointing with task_periodic behavior
     """
-
-    d = {}
-
-    print("Launching : ", n)
-    for i in range(0, n):
-        d[i] = slow_double(i)
-    print("Done launching")
-
-    for i in range(0, n):
-        d[i].result()
-    print("Done sleeping")
-
-    time.sleep(16)
-    dfk.cleanup()
+    h, m, s = map(int, parsl.dfk().config.checkpoint_period.split(":"))
+    assert h == 0, "Verify test setup"
+    assert m == 0, "Verify test setup"
+    assert s > 0, "Verify test setup"
+    sleep_for = s + 1
+    with parsl.dfk():
+        futs = [slow_double(sleep_for) for _ in range(4)]
+        [f.result() for f in futs]
 
     # Here we will check if the loglines came back with 5 seconds deltas
-    print("Rundir: ", dfk.run_dir)
-
-    with open("{}/parsl.log".format(dfk.run_dir), 'r') as f:
+    with open("{}/parsl.log".format(parsl.dfk().run_dir)) as f:
         log_lines = f.readlines()
-        expected_msg = " Done checkpointing"
-        expected_msg2 = " No tasks checkpointed in this pass"
+    expected_msg = " Done checkpointing"
+    expected_msg2 = " No tasks checkpointed in this pass"
 
-        lines = [line for line in log_lines if expected_msg in line or expected_msg2 in line]
-        assert len(lines) >= 3, "Insufficient checkpoint lines in logfile"
-        deltas = [tstamp_to_seconds(line) for line in lines]
-        assert deltas[1] - deltas[0] < 5.5, "Delta between checkpoints exceeded period"
-        assert deltas[2] - deltas[1] < 5.5, "Delta between checkpoints exceeded period"
+    lines = [line for line in log_lines if expected_msg in line or expected_msg2 in line]
+    assert len(lines) >= 3, "Insufficient checkpoint lines in logfile"
+    deltas = [tstamp_to_seconds(line) for line in lines]
+    assert deltas[1] - deltas[0] < 5.5, "Delta between checkpoints exceeded period"
+    assert deltas[2] - deltas[1] < 5.5, "Delta between checkpoints exceeded period"
