@@ -191,7 +191,10 @@ class UsageTracker:
         or won't respond to SIGTERM.
         """
         for proc in self.procs:
+            logger.debug("Joining usage tracking process %s", proc)
             proc.join(timeout=timeout)
             if proc.is_alive():
-                logger.info("Usage tracking process did not end itself; sending SIGKILL")
+                logger.warning("Usage tracking process did not end itself; sending SIGKILL")
                 proc.kill()
+
+            proc.close()
