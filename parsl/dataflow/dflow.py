@@ -1245,8 +1245,10 @@ class DataFlowKernel:
                 self._checkpoint_timer.close()
 
         # Send final stats
+        logger.info("Sending end message for usage tracking")
         self.usage_tracker.send_end_message()
         self.usage_tracker.close()
+        logger.info("Closed usage tracking")
 
         logger.info("Closing job status poller")
         self.job_status_poller.close()
