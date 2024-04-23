@@ -139,7 +139,7 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
-        'staging_required: Marks tests that require a staging provider, when there is no sharedFS)'
+        'staging_required: Marks tests that require a staging provider, when there is no sharedFS'
     )
     config.addinivalue_line(
         'markers',
