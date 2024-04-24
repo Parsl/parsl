@@ -112,7 +112,7 @@ class UsageTracker:
         )
         self.tracking_level = self.check_tracking_level()
         self.start_time = None
-        logger.debug(f"Tracking status: {self.tracking_level}")
+        logger.debug(f"Tracking level: {self.tracking_level}")
 
     def check_tracking_level(self):
         """Check if tracking is enabled and return level.
