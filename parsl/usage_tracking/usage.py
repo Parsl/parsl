@@ -170,6 +170,8 @@ class UsageTracker:
         Returns:
             - Message dict dumped as json string, ready for UDP
         """
+        end_time = int(time.time())
+        
         app_count = self.dfk.task_count
 
         app_fails = (
@@ -187,8 +189,8 @@ class UsageTracker:
 
         message = {
             "correlator": self.correlator_uuid,
-            "end": int(time.time()),
-            "execution_time": int(time.time() - self.start_time),
+            "end": end_time,
+            "execution_time": end_time - self.start_time,
             "components": [dfk_component] + get_parsl_usage(self.dfk._config),
         }
         logger.debug(
