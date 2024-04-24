@@ -196,28 +196,29 @@ class UsageTracker:
                 with tracking level {self.tracking_level}"
         )
 
+        return self.encode_message(message)
+
     def encode_message(self, obj):
         return PROTOCOL_VERSION + json.dumps(obj).encode("utf-8")
 
     def send_udp_message(self, message: bytes) -> None:
         """Send UDP message."""
-        if self.tracking_enabled:
-            try:
-                proc = udp_messenger(self.domain_name, self.UDP_PORT, self.sock_timeout, message)
-                self.procs.append(proc)
-            except Exception as e:
-                logger.debug(f"Usage tracking failed: {e}")
+        try:
+            proc = udp_messenger(self.domain_name, self.UDP_PORT, self.sock_timeout, message)
+            self.procs.append(proc)
+        except Exception as e:
+            logger.debug(f"Usage tracking failed: {e}")
 
     def send_start_message(self) -> None:
         if self.tracking_level:
             self.start_time = time.time()
             message = self.construct_start_message()
-            self.send_UDP_message(message)
+            self.send_udp_message(message)
 
     def send_end_message(self) -> None:
         if self.tracking_level == 3:
             message = self.construct_end_message()
-            self.send_UDP_message(message)
+            self.send_udp_message(message)
 
     def close(self, timeout: float = 10.0) -> None:
         """First give each process one timeout period to finish what it is
