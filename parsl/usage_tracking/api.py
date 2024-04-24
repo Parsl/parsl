@@ -18,7 +18,7 @@ def get_parsl_usage(obj) -> List[Any]:
 
 
 @get_parsl_usage.register
-def get_parsl_usage_representation_mixin(obj: RepresentationMixin):
+def get_parsl_usage_representation_mixin(obj: RepresentationMixin) -> List[Any]:
     t = type(obj)
     qualified_name = f"{t.__module__}.{t.__name__}"
 
