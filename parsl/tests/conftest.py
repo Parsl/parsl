@@ -3,8 +3,10 @@ import itertools
 import logging
 import os
 import pathlib
+import random
 import re
 import shutil
+import string
 import time
 import types
 import signal
@@ -422,3 +424,11 @@ def try_assert():
             raise AssertionError("Bad assert call: no attempts or timeout period")
 
     yield _impl
+
+
+@pytest.fixture
+def randomstring():
+    def func(length=5, alphabet=string.ascii_letters):
+        return "".join(random.choice(alphabet) for _ in range(length))
+
+    return func
