@@ -41,7 +41,7 @@ def async_process(fn: Callable[P, None]) -> Callable[P, None]:
 
 
 @async_process
-def udp_messenger(domain_name: str, UDP_PORT: int, sock_timeout: int, message: bytes) -> None:
+def udp_messenger(domain_name: str, udp_port: int, sock_timeout: int, message: bytes) -> None:
     """Send UDP messages to usage tracker asynchronously
 
     This multiprocessing based messenger was written to overcome the limitations
@@ -55,11 +55,11 @@ def udp_messenger(domain_name: str, UDP_PORT: int, sock_timeout: int, message: b
     setproctitle("parsl: Usage tracking")
 
     try:
-        UDP_IP = socket.gethostbyname(domain_name)
+        udp_ip = socket.gethostbyname(domain_name)
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
         sock.settimeout(sock_timeout)
-        sock.sendto(message, (UDP_IP, UDP_PORT))
+        sock.sendto(message, (udp_ip, udp_port))
         sock.close()
 
     except socket.timeout:
@@ -84,7 +84,7 @@ class UsageTracker:
 
         We will try to resolve the hostname specified in kwarg:domain_name
         and if that fails attempt to use the kwarg:ip. Determining the
-        IP and sending message happens in an asynchronous processs to avoid
+        IP and sending message happens in an asynchronous process to avoid
         slowing down DFK initialization.
 
         Tracks usage stats by inspecting the internal state of the dfk.
@@ -112,7 +112,7 @@ class UsageTracker:
         )
         self.tracking_level = self.check_tracking_level()
         self.start_time = None
-        logger.debug(f"Tracking status: {self.tracking_enabled}")
+        logger.debug(f"Tracking status: {self.tracking_level}")
 
     def check_tracking_level(self):
         """Check if tracking is enabled and return level.
@@ -157,9 +157,7 @@ class UsageTracker:
             self.start_time = int(time.time())
             message["start"] = self.start_time
 
-        logger.debug(
-            f"Usage tracking start message: {message}, with tracking level {self.tracking_level}"
-        )
+        logger.debug( "Usage tracking start message: %s, with tracking level %s", message, self.tracking_level)
 
         return self.encode_message(message)
 
@@ -171,7 +169,7 @@ class UsageTracker:
             - Message dict dumped as json string, ready for UDP
         """
         end_time = int(time.time())
-        
+
         app_count = self.dfk.task_count
 
         app_fails = (
@@ -194,13 +192,14 @@ class UsageTracker:
             "components": [dfk_component] + get_parsl_usage(self.dfk._config),
         }
         logger.debug(
-            f"Usage tracking end message (unencoded): {message}, with tracking level {self.tracking_level}"
+            f"Usage tracking end message (unencoded): {message},\
+                with tracking level {self.tracking_level}"
         )
 
     def encode_message(self, obj):
         return PROTOCOL_VERSION + json.dumps(obj).encode("utf-8")
 
-    def send_UDP_message(self, message: bytes) -> None:
+    def send_udp_message(self, message: bytes) -> None:
         """Send UDP message."""
         if self.tracking_enabled:
             try:
@@ -211,11 +210,11 @@ class UsageTracker:
 
     def send_start_message(self) -> None:
         message = self.construct_start_message()
-        self.send_UDP_message(message)
+        self.send_udp_message(message)
 
     def send_end_message(self) -> None:
         message = self.construct_end_message()
-        self.send_UDP_message(message)
+        self.send_udp_message(message)
 
     def close(self, timeout: float = 10.0) -> None:
         """First give each process one timeout period to finish what it is
