@@ -101,7 +101,7 @@ class UsageTracker:
         self.domain_name = domain_name
         # The sock timeout will only apply to UDP send and not domain resolution
         self.sock_timeout = 5
-        self.UDP_PORT = port
+        self.udp_port = port
         self.procs = []
         self.dfk = dfk
         self.config = self.dfk.config
@@ -201,7 +201,7 @@ class UsageTracker:
     def send_udp_message(self, message: bytes) -> None:
         """Send UDP message."""
         try:
-            proc = udp_messenger(self.domain_name, self.UDP_PORT, self.sock_timeout, message)
+            proc = udp_messenger(self.domain_name, self.udp_port, self.sock_timeout, message)
             self.procs.append(proc)
         except Exception as e:
             logger.debug(f"Usage tracking failed: {e}")
