@@ -49,7 +49,7 @@ def udp_messenger(domain_name: str, udp_port: int, sock_timeout: int, message: b
 
     Args:
           - domain_name (str) : Domain name string
-          - UDP_PORT (int) : UDP port to send out on
+          - udp_port (int) : UDP port to send out on
           - sock_timeout (int) : Socket timeout
     """
     setproctitle("parsl: Usage tracking")
@@ -120,8 +120,11 @@ class UsageTracker:
         Returns: int
             - 0 : Tracking is disabled
             - 1 : Tracking is enabled with level 1
+                  Share info about Parsl version, Python version, platform
             - 2 : Tracking is enabled with level 2
+                  Share info about config + level 1
             - 3 : Tracking is enabled with level 3
+                  Share info about app count, app fails, execution time + level 2
         """
 
         level = 0
