@@ -138,18 +138,27 @@ class UsageTracker:
     def construct_start_message(self) -> bytes:
         """Collect preliminary run info at the start of the DFK.
 
-        Returns :
-              - Message dict dumped as json string, ready for UDP
+        Returns:
+            - Message dict dumped as json string, ready for UDP
         """
+
         message = {
             "correlator": self.correlator_uuid,
             "parsl_v": self.parsl_version,
             "python_v": self.python_version,
             "platform.system": platform.system(),
-            "start": int(time.time()),
-            "components": get_parsl_usage(self.dfk._config),
+            "tracking_level": self.tracking_level,
         }
-        logger.debug(f"Usage tracking start message: {message}")
+
+        if self.tracking_level >= 2:
+            message.update({"components": get_parsl_usage(self.dfk._config)})
+
+        if self.tracking_level == 3:
+            message.update({"start": int(time.time())})
+
+        logger.debug(
+            f"Usage tracking start message: {message}, with tracking level {self.tracking_level}"
+        )
 
         return self.encode_message(message)
 
