@@ -164,9 +164,10 @@ class UsageTracker:
 
     def construct_end_message(self) -> bytes:
         """Collect the final run information at the time of DFK cleanup.
+        This is only called if tracking level is 3.
 
         Returns:
-             - Message dict dumped as json string, ready for UDP
+            - Message dict dumped as json string, ready for UDP
         """
         app_count = self.dfk.task_count
 
@@ -186,11 +187,12 @@ class UsageTracker:
         message = {
             "correlator": self.correlator_uuid,
             "end": int(time.time()),
+            "execution_time": int(time.time() - self.start_time),
             "components": [dfk_component] + get_parsl_usage(self.dfk._config),
         }
-        logger.debug(f"Usage tracking end message (unencoded): {message}")
-
-        return self.encode_message(message)
+        logger.debug(
+            f"Usage tracking end message (unencoded): {message}, with tracking level {self.tracking_level}"
+        )
 
     def encode_message(self, obj):
         return PROTOCOL_VERSION + json.dumps(obj).encode("utf-8")
