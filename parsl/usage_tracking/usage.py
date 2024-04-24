@@ -1,21 +1,22 @@
-import uuid
-import time
-import os
 import json
 import logging
+import os
+import platform
 import socket
 import sys
-import platform
+import time
+import uuid
 
+from parsl.dataflow.states import States
+from parsl.multiprocessing import ForkProcess
 from parsl.usage_tracking.api import get_parsl_usage
 from parsl.utils import setproctitle
-from parsl.multiprocessing import ForkProcess
-from parsl.dataflow.states import States
 from parsl.version import VERSION as PARSL_VERSION
 
 logger = logging.getLogger(__name__)
 
 from typing import Callable
+
 from typing_extensions import ParamSpec
 
 # protocol version byte: when (for example) compression parameters are changed
@@ -109,28 +110,30 @@ class UsageTracker:
         self.python_version = (
             f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
         )
-        self.tracking_enabled = self.check_tracking_enabled()
+        self.tracking_level = self.check_tracking_level()
+        self.start_time = None
         logger.debug(f"Tracking status: {self.tracking_enabled}")
 
-    def check_tracking_enabled(self):
-        """Check if tracking is enabled.
+    def check_tracking_level(self):
+        """Check if tracking is enabled and return level.
 
-        Tracking will be enabled unless either of these is true:
-
-            1. dfk.config.usage_tracking is set to False
-            2. Environment variable PARSL_TRACKING is set to false (case insensitive)
-
+        Returns: int
+            - 0 : Tracking is disabled
+            - 1 : Tracking is enabled with level 1
+            - 2 : Tracking is enabled with level 2
+            - 3 : Tracking is enabled with level 3
         """
-        track = True
 
-        if not self.config.usage_tracking:
-            track = False
+        level = 0
 
-        envvar = str(os.environ.get("PARSL_TRACKING", True)).lower()
-        if envvar == "false":
-            track = False
+        if self.config.usage_tracking:
+            level = 1 if self.config.usage_tracking is True else int(self.config.usage_tracking)
 
-        return track
+        envvar = str(os.environ.get("PARSL_TRACKING", False)).lower()
+        if envvar in {"true", "1", "2", "3"}:
+            level = 1 if envvar == "true" else int(envvar)
+
+        return level
 
     def construct_start_message(self) -> bytes:
         """Collect preliminary run info at the start of the DFK.
