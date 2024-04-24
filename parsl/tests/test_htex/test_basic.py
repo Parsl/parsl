@@ -23,6 +23,6 @@ def dummy():
 
 
 @pytest.mark.local
-def test_that_it_fails():
+def test_app():
     x = dummy()
-    x.result()
+    assert x.result() is None

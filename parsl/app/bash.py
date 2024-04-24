@@ -5,6 +5,7 @@ import logging
 
 from parsl.app.errors import wrap_error
 from parsl.app.app import AppBase
+from parsl.data_provider.files import File
 from parsl.dataflow.dflow import DataFlowKernelLoader
 
 logger = logging.getLogger(__name__)
@@ -54,13 +55,20 @@ def remote_side_bash_executor(func, *args, **kwargs):
         if stdfspec is None:
             return None
 
-        fname, mode = get_std_fname_mode(fdname, stdfspec)
+        if isinstance(stdfspec, File):
+            # a File is an os.PathLike and so we can use it directly for
+            # the subsequent file operations
+            fname = stdfspec
+            mode = "w"
+        else:
+            fname, mode = get_std_fname_mode(fdname, stdfspec)
+
         try:
             if os.path.dirname(fname):
                 os.makedirs(os.path.dirname(fname), exist_ok=True)
             fd = open(fname, mode)
         except Exception as e:
-            raise pe.BadStdStreamFile(fname) from e
+            raise pe.BadStdStreamFile(str(fname)) from e
         return fd
 
     std_out = open_std_fd('stdout')

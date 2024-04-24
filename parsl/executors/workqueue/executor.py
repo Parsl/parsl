@@ -735,6 +735,12 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Joining on collector thread")
         self.collector_thread.join()
 
+        logger.debug("Closing multiprocessing queues")
+        self.task_queue.close()
+        self.task_queue.join_thread()
+        self.collector_queue.close()
+        self.collector_queue.join_thread()
+
         self.is_shutdown = True
         logger.debug("Work Queue shutdown completed")
 
