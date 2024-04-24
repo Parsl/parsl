@@ -23,13 +23,13 @@ from typing_extensions import ParamSpec
 # ID needs to imply those parameters.
 
 # Earlier protocol versions: b'{' - the original pure-JSON protocol pre-March 2024
-PROTOCOL_VERSION = b'1'
+PROTOCOL_VERSION = b"1"
 
 P = ParamSpec("P")
 
 
 def async_process(fn: Callable[P, None]) -> Callable[P, None]:
-    """ Decorator function to launch a function as a separate process """
+    """Decorator function to launch a function as a separate process"""
 
     def run(*args, **kwargs):
         proc = ForkProcess(target=fn, args=args, kwargs=kwargs, name="Usage-Tracking")
@@ -64,9 +64,9 @@ def udp_messenger(domain_name: str, UDP_PORT: int, sock_timeout: int, message: b
     except socket.timeout:
         logger.debug("Failed to send usage tracking data: socket timeout")
     except OSError as e:
-        logger.debug("Failed to send usage tracking data: OSError: {}".format(e))
+        logger.debug(f"Failed to send usage tracking data: OSError: {e}")
     except Exception as e:
-        logger.debug("Failed to send usage tracking data: Exception: {}".format(e))
+        logger.debug(f"Failed to send usage tracking data: Exception: {e}")
 
 
 class UsageTracker:
@@ -78,8 +78,7 @@ class UsageTracker:
 
     """
 
-    def __init__(self, dfk, port=50077,
-                 domain_name='tracking.parsl-project.org'):
+    def __init__(self, dfk, port=50077, domain_name="tracking.parsl-project.org"):
         """Initialize usage tracking unless the user has opted-out.
 
         We will try to resolve the hostname specified in kwarg:domain_name
@@ -107,11 +106,11 @@ class UsageTracker:
         self.config = self.dfk.config
         self.correlator_uuid = str(uuid.uuid4())
         self.parsl_version = PARSL_VERSION
-        self.python_version = "{}.{}.{}".format(sys.version_info.major,
-                                                sys.version_info.minor,
-                                                sys.version_info.micro)
+        self.python_version = (
+            f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        )
         self.tracking_enabled = self.check_tracking_enabled()
-        logger.debug("Tracking status: {}".format(self.tracking_enabled))
+        logger.debug(f"Tracking status: {self.tracking_enabled}")
 
     def check_tracking_enabled(self):
         """Check if tracking is enabled.
@@ -139,12 +138,14 @@ class UsageTracker:
         Returns :
               - Message dict dumped as json string, ready for UDP
         """
-        message = {'correlator': self.correlator_uuid,
-                   'parsl_v': self.parsl_version,
-                   'python_v': self.python_version,
-                   'platform.system': platform.system(),
-                   'start': int(time.time()),
-                   'components': get_parsl_usage(self.dfk._config)}
+        message = {
+            "correlator": self.correlator_uuid,
+            "parsl_v": self.parsl_version,
+            "python_v": self.python_version,
+            "platform.system": platform.system(),
+            "start": int(time.time()),
+            "components": get_parsl_usage(self.dfk._config),
+        }
         logger.debug(f"Usage tracking start message: {message}")
 
         return self.encode_message(message)
@@ -157,24 +158,30 @@ class UsageTracker:
         """
         app_count = self.dfk.task_count
 
-        app_fails = self.dfk.task_state_counts[States.failed] + self.dfk.task_state_counts[States.dep_fail]
+        app_fails = (
+            self.dfk.task_state_counts[States.failed] + self.dfk.task_state_counts[States.dep_fail]
+        )
 
         # the DFK is tangled into this code as a god-object, so it is
         # handled separately from the usual traversal code, but presenting
         # the same protocol-level report.
-        dfk_component = {'c': type(self.dfk).__module__ + "." + type(self.dfk).__name__,
-                         'app_count': app_count,
-                         'app_fails': app_fails}
+        dfk_component = {
+            "c": f"{type(self.dfk).__module__}.{type(self.dfk).__name__}",
+            "app_count": app_count,
+            "app_fails": app_fails,
+        }
 
-        message = {'correlator': self.correlator_uuid,
-                   'end': int(time.time()),
-                   'components': [dfk_component] + get_parsl_usage(self.dfk._config)}
+        message = {
+            "correlator": self.correlator_uuid,
+            "end": int(time.time()),
+            "components": [dfk_component] + get_parsl_usage(self.dfk._config),
+        }
         logger.debug(f"Usage tracking end message (unencoded): {message}")
 
         return self.encode_message(message)
 
     def encode_message(self, obj):
-        return PROTOCOL_VERSION + json.dumps(obj).encode('utf-8')
+        return PROTOCOL_VERSION + json.dumps(obj).encode("utf-8")
 
     def send_UDP_message(self, message: bytes) -> None:
         """Send UDP message."""
@@ -183,7 +190,7 @@ class UsageTracker:
                 proc = udp_messenger(self.domain_name, self.UDP_PORT, self.sock_timeout, message)
                 self.procs.append(proc)
             except Exception as e:
-                logger.debug("Usage tracking failed: {}".format(e))
+                logger.debug(f"Usage tracking failed: {e}")
 
     def send_start_message(self) -> None:
         message = self.construct_start_message()
