@@ -151,10 +151,11 @@ class UsageTracker:
         }
 
         if self.tracking_level >= 2:
-            message.update({"components": get_parsl_usage(self.dfk._config)})
+            message["components"] = get_parsl_usage(self.dfk._config)
 
         if self.tracking_level == 3:
-            message.update({"start": int(time.time())})
+            self.start_time = int(time.time())
+            message["start"] = self.start_time
 
         logger.debug(
             f"Usage tracking start message: {message}, with tracking level {self.tracking_level}"
