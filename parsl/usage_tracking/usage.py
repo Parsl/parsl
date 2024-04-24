@@ -157,8 +157,6 @@ class UsageTracker:
             self.start_time = int(time.time())
             message["start"] = self.start_time
 
-        logger.debug( "Usage tracking start message: %s, with tracking level %s", message, self.tracking_level)
-
         return self.encode_message(message)
 
     def construct_end_message(self) -> bytes:
@@ -191,10 +189,6 @@ class UsageTracker:
             "execution_time": end_time - self.start_time,
             "components": [dfk_component] + get_parsl_usage(self.dfk._config),
         }
-        logger.debug(
-            f"Usage tracking end message (unencoded): {message},\
-                with tracking level {self.tracking_level}"
-        )
 
         return self.encode_message(message)
 
