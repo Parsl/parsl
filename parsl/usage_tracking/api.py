@@ -27,7 +27,7 @@ def get_parsl_usage_representation_mixin(obj: RepresentationMixin) -> List[Any]:
 
     if isinstance(obj, UsageInformation):
         # report rich usage information for this component
-        attrs = {'c': qualified_name}
+        attrs = {"c": qualified_name}
         attrs.update(obj.get_usage_information())
         me = [attrs]
     else:
@@ -42,7 +42,7 @@ def get_parsl_usage_representation_mixin(obj: RepresentationMixin) -> List[Any]:
     import inspect
 
     argspec = inspect.getfullargspec(init)
-    for arg in argspec.args[1:]: # skip first arg, self
+    for arg in argspec.args[1:]:  # skip first arg, self
         me.extend(get_parsl_usage(getattr(obj, arg)))
 
     return me
