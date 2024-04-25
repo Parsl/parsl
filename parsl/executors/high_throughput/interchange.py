@@ -28,6 +28,7 @@ from parsl.process_loggers import wrap_with_logs
 
 
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
+PKL_DRAINED_CODE = pickle.dumps((2 ** 32) - 2)
 
 LOGGER_NAME = "interchange"
 logger = logging.getLogger(LOGGER_NAME)
@@ -101,12 +102,12 @@ class Interchange:
              This is overridden when the worker_ports option is set. Default: (54000, 55000)
 
         hub_address : str
-             The ip address at which the interchange can send info about managers to when monitoring is enabled.
-             This is passed via dfk and executor automatically. Default: None (meaning monitoring disabled)
+             The IP address at which the interchange can send info about managers to when monitoring is enabled.
+             Default: None (meaning monitoring disabled)
 
         hub_port : str
              The port at which the interchange can send info about managers to when monitoring is enabled.
-             This is passed via dfk and executor automatically. Default: None (meaning monitoring disabled)
+             Default: None (meaning monitoring disabled)
 
         heartbeat_threshold : int
              Number of seconds since the last heartbeat after which worker is considered lost.
@@ -244,19 +245,19 @@ class Interchange:
 
     def _create_monitoring_channel(self) -> Optional[zmq.Socket]:
         if self.hub_address and self.hub_port:
-            logger.info("Connecting to monitoring")
+            logger.info("Connecting to MonitoringHub")
             # This is a one-off because monitoring is unencrypted
             hub_channel = zmq.Context().socket(zmq.DEALER)
             hub_channel.set_hwm(0)
             hub_channel.connect("tcp://{}:{}".format(self.hub_address, self.hub_port))
-            logger.info("Monitoring enabled and connected to hub")
+            logger.info("Connected to MonitoringHub")
             return hub_channel
         else:
             return None
 
     def _send_monitoring_info(self, hub_channel: Optional[zmq.Socket], manager: ManagerRecord) -> None:
         if hub_channel:
-            logger.info("Sending message {} to hub".format(manager))
+            logger.info("Sending message {} to MonitoringHub".format(manager))
 
             d: Dict = cast(Dict, manager.copy())
             d['timestamp'] = datetime.datetime.now()
@@ -308,7 +309,8 @@ class Interchange:
                                 'worker_count': m['worker_count'],
                                 'tasks': len(m['tasks']),
                                 'idle_duration': idle_duration,
-                                'active': m['active']}
+                                'active': m['active'],
+                                'draining': m['draining']}
                         reply.append(resp)
 
                 elif command_req.startswith("HOLD_WORKER"):
@@ -385,6 +387,7 @@ class Interchange:
             self.process_task_outgoing_incoming(interesting_managers, hub_channel, kill_event)
             self.process_results_incoming(interesting_managers, hub_channel)
             self.expire_bad_managers(interesting_managers, hub_channel)
+            self.expire_drained_managers(interesting_managers, hub_channel)
             self.process_tasks_to_send(interesting_managers)
 
         self.zmq_context.destroy()
@@ -431,6 +434,7 @@ class Interchange:
                                                     'max_capacity': 0,
                                                     'worker_count': 0,
                                                     'active': True,
+                                                    'draining': False,
                                                     'tasks': []}
                 self.connected_block_history.append(msg['block_id'])
 
@@ -469,9 +473,27 @@ class Interchange:
                 self._ready_managers[manager_id]['last_heartbeat'] = time.time()
                 logger.debug("Manager {!r} sent heartbeat via tasks connection".format(manager_id))
                 self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
+            elif msg['type'] == 'drain':
+                self._ready_managers[manager_id]['draining'] = True
+                logger.debug(f"Manager {manager_id!r} requested drain")
             else:
                 logger.error(f"Unexpected message type received from manager: {msg['type']}")
             logger.debug("leaving task_outgoing section")
+
+    def expire_drained_managers(self, interesting_managers: Set[bytes], hub_channel: Optional[zmq.Socket]) -> None:
+
+        for manager_id in list(interesting_managers):
+            # is it always true that a draining manager will be in interesting managers?
+            # i think so because it will have outstanding capacity?
+            m = self._ready_managers[manager_id]
+            if m['draining'] and len(m['tasks']) == 0:
+                logger.info(f"Manager {manager_id!r} is drained - sending drained message to manager")
+                self.task_outgoing.send_multipart([manager_id, b'', PKL_DRAINED_CODE])
+                interesting_managers.remove(manager_id)
+                self._ready_managers.pop(manager_id)
+
+                m['active'] = False
+                self._send_monitoring_info(hub_channel, m)
 
     def process_tasks_to_send(self, interesting_managers: Set[bytes]) -> None:
         # Check if there are tasks that could be sent to managers
@@ -490,7 +512,7 @@ class Interchange:
                 tasks_inflight = len(m['tasks'])
                 real_capacity = m['max_capacity'] - tasks_inflight
 
-                if (real_capacity and m['active']):
+                if (real_capacity and m['active'] and not m['draining']):
                     tasks = self.get_tasks(real_capacity)
                     if tasks:
                         self.task_outgoing.send_multipart([manager_id, b'', pickle.dumps(tasks)])

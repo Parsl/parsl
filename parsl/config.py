@@ -56,6 +56,8 @@ class Config(RepresentationMixin, UsageInformation):
         or `None`.
         If 'none' or `None`, dynamic scaling will be disabled. Default is 'simple'. The literal value `None` is
         deprecated.
+    strategy_period : float or int, optional
+        How often the scaling strategy should be executed. Default is 5 seconds.
     max_idletime : float, optional
         The maximum idle time allowed for an executor before strategy could shut down unused blocks. Default is 120.0 seconds.
     usage_tracking : bool, optional
@@ -89,6 +91,7 @@ class Config(RepresentationMixin, UsageInformation):
                  retry_handler: Optional[Callable[[Exception, TaskRecord], float]] = None,
                  run_dir: str = 'runinfo',
                  strategy: Optional[str] = 'simple',
+                 strategy_period: Union[float, int] = 5,
                  max_idletime: float = 120.0,
                  monitoring: Optional[MonitoringHub] = None,
                  usage_tracking: bool = False,
@@ -122,6 +125,7 @@ class Config(RepresentationMixin, UsageInformation):
         self.retry_handler = retry_handler
         self.run_dir = run_dir
         self.strategy = strategy
+        self.strategy_period = strategy_period
         self.max_idletime = max_idletime
         self.usage_tracking = usage_tracking
         self.initialize_logging = initialize_logging

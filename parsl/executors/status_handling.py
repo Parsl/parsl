@@ -1,15 +1,18 @@
 from __future__ import annotations
+import datetime
 import logging
 import threading
+import time
 from itertools import compress
 from abc import abstractmethod, abstractproperty
 from concurrent.futures import Future
-from typing import List, Any, Dict, Optional, Tuple, Union, Callable
+from typing import List, Any, Dict, Optional, Sequence, Tuple, Union, Callable
 
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
 from parsl.jobs.states import JobStatus, JobState
 from parsl.jobs.error_handlers import simple_error_handler, noop_error_handler
+from parsl.monitoring.message_type import MessageType
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import AtomicIDCounter
 
@@ -61,15 +64,18 @@ class BlockProviderExecutor(ParslExecutor):
         # errors can happen during the submit call to the provider; this is used
         # to keep track of such errors so that they can be handled in one place
         # together with errors reported by status()
-        self._simulated_status: Dict[Any, JobStatus] = {}
+        self._simulated_status: Dict[str, JobStatus] = {}
         self._executor_bad_state = threading.Event()
         self._executor_exception: Optional[Exception] = None
 
         self._block_id_counter = AtomicIDCounter()
 
         self._tasks = {}  # type: Dict[object, Future]
-        self.blocks = {}  # type: Dict[str, str]
-        self.block_mapping = {}  # type: Dict[str, str]
+        self.blocks_to_job_id = {}  # type: Dict[str, str]
+        self.job_ids_to_block = {}  # type: Dict[str, str]
+
+        self._last_poll_time = 0.0
+        self._status = {}  # type: Dict[str, JobStatus]
 
     def _make_status_dict(self, block_ids: List[str], status_list: List[JobStatus]) -> Dict[str, JobStatus]:
         """Given a list of block ids and a list of corresponding status strings,
@@ -101,15 +107,6 @@ class BlockProviderExecutor(ParslExecutor):
             return 0
         else:
             return self._provider.status_polling_interval
-
-    def _fail_job_async(self, block_id: Any, message: str):
-        """Marks a job that has failed to start but would not otherwise be included in status()
-        as failed and report it in status()
-        """
-        if block_id is None:
-            block_id = str(self._block_id_counter.get_id())
-            logger.info(f"Allocated block ID {block_id} for simulated failure")
-        self._simulated_status[block_id] = JobStatus(JobState.FAILED, message)
 
     @abstractproperty
     def outstanding(self) -> int:
@@ -197,12 +194,11 @@ class BlockProviderExecutor(ParslExecutor):
             logger.info(f"Allocated block ID {block_id}")
             try:
                 job_id = self._launch_block(block_id)
-                self.blocks[block_id] = job_id
-                self.block_mapping[job_id] = block_id
+                self.blocks_to_job_id[block_id] = job_id
+                self.job_ids_to_block[job_id] = block_id
                 block_ids.append(block_id)
             except Exception as ex:
-                self._fail_job_async(block_id,
-                                     "Failed to start block {}: {}".format(block_id, ex))
+                self._simulated_status[block_id] = JobStatus(JobState.FAILED, "Failed to start block {}: {}".format(block_id, ex))
         return block_ids
 
     @abstractmethod
@@ -210,10 +206,6 @@ class BlockProviderExecutor(ParslExecutor):
         """Scale in method.
 
         Cause the executor to reduce the number of blocks by count.
-
-        We should have the scale in method simply take resource object
-        which will have the scaling methods, scale_in itself should be a coroutine, since
-        scaling tasks can be slow.
 
         :return: A list of block ids corresponding to the blocks that were removed.
         """
@@ -239,12 +231,86 @@ class BlockProviderExecutor(ParslExecutor):
         # Not using self.blocks.keys() and self.blocks.values() simultaneously
         # The dictionary may be changed during invoking this function
         # As scale_in and scale_out are invoked in multiple threads
-        block_ids = list(self.blocks.keys())
+        block_ids = list(self.blocks_to_job_id.keys())
         job_ids = []  # types: List[Any]
         for bid in block_ids:
-            job_ids.append(self.blocks[bid])
+            job_ids.append(self.blocks_to_job_id[bid])
         return block_ids, job_ids
 
     @abstractproperty
     def workers_per_node(self) -> Union[int, float]:
         pass
+
+    def send_monitoring_info(self, status: Dict) -> None:
+        # Send monitoring info for HTEX when monitoring enabled
+        if self.monitoring_radio:
+            msg = self.create_monitoring_info(status)
+            logger.debug("Sending message {} to hub from job status poller".format(msg))
+            self.monitoring_radio.send((MessageType.BLOCK_INFO, msg))
+
+    def create_monitoring_info(self, status: Dict[str, JobStatus]) -> Sequence[object]:
+        """Create a monitoring message for each block based on the poll status.
+        """
+        msg = []
+        for bid, s in status.items():
+            d: Dict[str, Any] = {}
+            d['run_id'] = self.run_id
+            d['status'] = s.status_name
+            d['timestamp'] = datetime.datetime.now()
+            d['executor_label'] = self.label
+            d['job_id'] = self.blocks_to_job_id.get(bid, None)
+            d['block_id'] = bid
+            msg.append(d)
+        return msg
+
+    def poll_facade(self) -> None:
+        now = time.time()
+        if now >= self._last_poll_time + self.status_polling_interval:
+            previous_status = self._status
+            self._status = self.status()
+            self._last_poll_time = now
+            delta_status = {}
+            for block_id in self._status:
+                if block_id not in previous_status \
+                   or previous_status[block_id].state != self._status[block_id].state:
+                    delta_status[block_id] = self._status[block_id]
+
+            if delta_status:
+                self.send_monitoring_info(delta_status)
+
+    @property
+    def status_facade(self) -> Dict[str, JobStatus]:
+        """Return the status of all jobs/blocks of the executor of this poller.
+
+        :return: a dictionary mapping block ids (in string) to job status
+        """
+        return self._status
+
+    def scale_in_facade(self, n: int, max_idletime: Optional[float] = None) -> List[str]:
+
+        if max_idletime is None:
+            block_ids = self.scale_in(n)
+        else:
+            # This is a HighThroughputExecutor-specific interface violation.
+            # This code hopes, through pan-codebase reasoning, that this
+            # scale_in method really does come from HighThroughputExecutor,
+            # and so does have an extra max_idletime parameter not present
+            # in the executor interface.
+            block_ids = self.scale_in(n, max_idletime=max_idletime)  # type: ignore[call-arg]
+        if block_ids is not None:
+            new_status = {}
+            for block_id in block_ids:
+                new_status[block_id] = JobStatus(JobState.CANCELLED)
+                del self._status[block_id]
+            self.send_monitoring_info(new_status)
+        return block_ids
+
+    def scale_out_facade(self, n: int) -> List[str]:
+        block_ids = self.scale_out(n)
+        if block_ids is not None:
+            new_status = {}
+            for block_id in block_ids:
+                new_status[block_id] = JobStatus(JobState.PENDING)
+            self.send_monitoring_info(new_status)
+            self._status.update(new_status)
+        return block_ids

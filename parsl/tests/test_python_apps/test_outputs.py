@@ -16,7 +16,6 @@ def double(x, outputs=[]):
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
 
 
-@pytest.mark.issue363
 def test_launch_apps(tmpd_cwd, n=2):
     outdir = tmpd_cwd / "outputs"
     outdir.mkdir()

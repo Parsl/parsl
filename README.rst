@@ -97,6 +97,7 @@ For Developers
 
 2. Build and Test::
 
+    $ cd parsl # navigate to the root directory of the project
     $ make   # show all available makefile targets
     $ make virtualenv # create a virtual environment
     $ source .venv/bin/activate # activate the virtual environment
@@ -119,7 +120,7 @@ Parsl is supported in Python 3.8+. Requirements can be found `here <requirements
 Code of Conduct
 ===============
 
-Parsl seeks to foster an open and welcoming environment - Please see the `Parsl Code of Conduct <https://github.com/Parsl/parsl/blob/master/CoC.md>`_ for more details.
+Parsl seeks to foster an open and welcoming environment - Please see the `Parsl Code of Conduct <https://github.com/Parsl/parsl/blob/master/CODE_OF_CONDUCT.md>`_ for more details.
 
 Contributing
 ============
