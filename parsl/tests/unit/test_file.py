@@ -78,7 +78,7 @@ def test_file_repr(scheme):
     netloc = "some.netloc"
     filename = "some_file_name"
     path = f"/some/path/{filename}"
-    if scheme and scheme != "file":
+    if scheme:
         url = f"{scheme}://{netloc}{path}"
     else:
         scheme = "file"
