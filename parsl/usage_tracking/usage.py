@@ -174,7 +174,7 @@ class UsageTracker:
         return self.encode_message(message)
 
     def encode_message(self, obj):
-        return PROTOCOL_VERSION + json.dumps(obj).encode('utf-8')
+        return PROTOCOL_VERSION + json.dumps(obj).encode()
 
     def send_UDP_message(self, message: bytes) -> None:
         """Send UDP message."""
