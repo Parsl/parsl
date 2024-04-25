@@ -270,6 +270,9 @@ fn main() {
     let mut manager_info: std::collections::BTreeMap<Vec<u8>, ()> =
         std::collections::BTreeMap::new();
 
+    // this will maintain the task count for OUTSTANDING_C
+    let mut outstanding_c = 0;
+
     loop {
         // TODO: unclear to me what it means to share this sockets list across multiple loop iterations?
 
@@ -438,12 +441,21 @@ fn main() {
                 //                                                               could be sorted out, but future draining work might
                 //                                                               remove the notion of a draining bool and instead have
                 //                                                               a draining end-time that is always or often set. TODO
-                // TODO: return actual manager info, not an empty list
+                // TODO: return actual manager info, not an empty list -- basic tests still work without anything more than
+                // an empty list here.
+                // (should it be tested? is it tested in the --config local tests? what's it used for that should be tested?)
                 serde_pickle::ser::value_to_vec(
                     &serde_pickle::value::Value::List([].to_vec()),
                     serde_pickle::ser::SerOptions::new(),
                 )
                 .expect("pickling MANAGERS list")
+            } else if cmd == serde_pickle::Value::String("OUTSTANDING_C".to_string()) {
+                // number of outstanding tasks known to htex: informally, tasks we've received that we havent' processed
+                // a result for. To deal with worker failure, we'll need a structure mapping tasks and managers to each
+                // other, and that could perhaps also be used. but for now, perhaps a mutable counter will do?
+                // TODO: the test suite looks like it doesn't ever test the main Python interchange impl of OUTSTANDING_C
+                // (but maybe work is better done *removing* that command rather than testing it - see issue #3365 - and
+                // so I don't need to think about this too much)
             } else {
                 panic!("This command is not implemented")
             };
