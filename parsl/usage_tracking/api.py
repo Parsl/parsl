@@ -1,3 +1,5 @@
+import inspect
+
 from parsl.utils import RepresentationMixin
 
 from abc import abstractmethod
@@ -38,8 +40,6 @@ def get_parsl_usage_representation_mixin(obj: RepresentationMixin):
     init: Any = type(obj).__init__
     if hasattr(init, '__wrapped__'):
         init = init.__wrapped__
-
-    import inspect
 
     argspec = inspect.getfullargspec(init)
 
