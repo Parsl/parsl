@@ -20,7 +20,7 @@ def get_parsl_usage(obj) -> List[Any]:
 
 
 @get_parsl_usage.register
-def get_parsl_usage_representation_mixin(obj: RepresentationMixin):
+def get_parsl_usage_representation_mixin(obj: RepresentationMixin) -> List[Any]:
     t = type(obj)
     qualified_name = t.__module__ + "." + t.__name__
 
@@ -53,7 +53,7 @@ def get_parsl_usage_representation_mixin(obj: RepresentationMixin):
 
 @get_parsl_usage.register(list)
 @get_parsl_usage.register(tuple)
-def get_parsl_usage_sequence(obj: Sequence):
+def get_parsl_usage_sequence(obj: Sequence) -> List[Any]:
     result = []
     for v in obj:
         result += get_parsl_usage(v)
