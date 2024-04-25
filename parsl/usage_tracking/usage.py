@@ -75,8 +75,6 @@ class UsageTracker:
 
     The server for this is here: https://github.com/Parsl/parsl_tracking
     This issue captures the discussion that went into functionality
-    implemented here: https://github.com/Parsl/parsl/issues/34
-
     """
 
     def __init__(self, dfk, port=50077, domain_name="tracking.parsl-project.org"):
