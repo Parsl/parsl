@@ -5,7 +5,7 @@ from functools import singledispatch
 from typing import Any, List, Sequence
 
 
-# Traverse the configuration heirarchy, returning a JSON component
+# Traverse the configuration hierarchy, returning a JSON component
 # for each one. Configuration components which implement
 # RepresentationMixin will be in the right form for inspecting
 # object attributes. Configuration components which are lists or tuples
