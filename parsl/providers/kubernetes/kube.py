@@ -107,7 +107,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                                         "Kubernetes provider requires kubernetes module and config.")
         try:
             config.load_kube_config()
-        except config.config_exception.ConfigException as kube_config_exception:
+        except config.config_exception.ConfigException:
             # `load_kube_config` assumes a local kube-config file, and fails if not
             # present, raising:
             #
@@ -125,7 +125,6 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                 raise config.config_exception.ConfigException(
                     "Failed to load both kube-config file and in-cluster configuration."
                 )
-
 
         self.namespace = namespace
         self.image = image
