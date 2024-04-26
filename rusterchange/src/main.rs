@@ -42,6 +42,10 @@ use std::io::BufRead;
 
 // TODO: note when sending python simple dicts, this is compatible across many python versions: for example, we can look at them in rust! and do.
 
+// TODO: I wonder what garbage collection looks like - I've previously seen (in Haskell land) Will (?) present about how their message queue system worked extremely badly with garbage collection because garbage collection was focused on the wrong objects. Possibly Python's reference-count-first system would be better? But that would be profilable, and rust's explicit deallocations should make that less costly? how do those two get compared? (eg. what % of CPU time is spent garbage collecting in Python?)
+
+// TODO: how to profile this in general? using whole DFK and usual process workers is maybe not the right way to do it as there are a lot of other things going on in that stack?
+
 // use of Queue wants Clone trait, which is a bit suspicious: does that mean we have
 // explicit clones of the (potentially large) buffer in interchange? when ideally we
 // would pass around the buffer linearly without ever duplicating it? TODO
@@ -456,6 +460,7 @@ fn main() {
                 // TODO: the test suite looks like it doesn't ever test the main Python interchange impl of OUTSTANDING_C
                 // (but maybe work is better done *removing* that command rather than testing it - see issue #3365 - and
                 // so I don't need to think about this too much)
+                panic!("OUTSTANDING_C is not implemented")
             } else {
                 panic!("This command is not implemented")
             };
