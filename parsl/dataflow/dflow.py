@@ -798,7 +798,6 @@ class DataFlowKernel:
         # be the original function wrapped with an in-task stageout wrapper), a
         # rewritten File object to be passed to task to be executed
 
-        @typechecked
         def stageout_one_file(file: File, rewritable_func: Callable):
             if not self.check_staging_inhibited(kwargs):
                 # replace a File with a DataFuture - either completing when the stageout
