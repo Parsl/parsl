@@ -42,6 +42,12 @@ class ZipFileStaging(Staging):
     """
 
     def can_stage_out(self, file: File) -> bool:
+        return self.is_zip_url(file)
+
+    def can_stage_in(self, file: File) -> bool:
+        return self.is_zip_url(file)
+
+    def is_zip_url(self, file: File) -> bool:
         logger.debug("archive provider checking File {}".format(repr(file)))
 
         # First check if this is the scheme we care about
@@ -76,6 +82,20 @@ class ZipFileStaging(Staging):
         app_fut = stage_out_app(zip_path, inside_path, working_dir, inputs=[file], _parsl_staging_inhibit=True, parent_fut=parent_fut)
         return app_fut
 
+    def stage_in(self, dm, executor, file, parent_fut):
+        assert file.scheme == 'zip'
+
+        zip_path, inside_path = zip_path_split(file.path)
+
+        working_dir = dm.dfk.executors[executor].working_dir
+
+        if working_dir:
+            file.local_path = os.path.join(working_dir, inside_path)
+
+        stage_in_app = _zip_stage_in_app(dm)
+        app_fut = stage_in_app(zip_path, inside_path, working_dir, outputs=[file], _parsl_staging_inhibit=True, parent_fut=parent_fut)
+        return app_fut._outputs[0]
+
 
 def _zip_stage_out(zip_file, inside_path, working_dir, parent_fut=None, inputs=[], _parsl_staging_inhibit=True):
     file = inputs[0]
@@ -91,6 +111,18 @@ def _zip_stage_out(zip_file, inside_path, working_dir, parent_fut=None, inputs=[
 
 def _zip_stage_out_app(dm):
     return parsl.python_app(executors=['_parsl_internal'], data_flow_kernel=dm.dfk)(_zip_stage_out)
+
+
+def _zip_stage_in(zip_file, inside_path, working_dir, *, parent_fut, outputs, _parsl_staging_inhibit=True):
+    with filelock.FileLock(zip_file + ".lock"):
+        with zipfile.ZipFile(zip_file, mode='r') as z:
+            content = z.read(inside_path)
+        with open(outputs[0], "wb") as of:
+            of.write(content)
+
+
+def _zip_stage_in_app(dm):
+    return parsl.python_app(executors=['_parsl_internal'], data_flow_kernel=dm.dfk)(_zip_stage_in)
 
 
 def zip_path_split(path: str) -> Tuple[str, str]:
