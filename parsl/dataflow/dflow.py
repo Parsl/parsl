@@ -798,7 +798,6 @@ class DataFlowKernel:
         # be the original function wrapped with an in-task stageout wrapper), a
         # rewritten File object to be passed to task to be executed
 
-        @typechecked
         def stageout_one_file(file: File, rewritable_func: Callable):
             if not self.check_staging_inhibited(kwargs):
                 # replace a File with a DataFuture - either completing when the stageout
@@ -1241,8 +1240,10 @@ class DataFlowKernel:
                 self._checkpoint_timer.close()
 
         # Send final stats
+        logger.info("Sending end message for usage tracking")
         self.usage_tracker.send_end_message()
         self.usage_tracker.close()
+        logger.info("Closed usage tracking")
 
         logger.info("Closing job status poller")
         self.job_status_poller.close()
