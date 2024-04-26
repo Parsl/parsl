@@ -37,7 +37,3 @@ def test_that_it_fails():
         raise Exception("The app somehow ran without a valid worker")
 
     assert parsl.dfk().config.executors[0]._executor_bad_state.is_set()
-
-    # htex needs shutting down explicitly because dfk.cleanup() will not
-    # do that, as it is in bad state
-    parsl.dfk().config.executors[0].shutdown()
