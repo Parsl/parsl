@@ -121,10 +121,9 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
             # Based on: https://github.com/kubernetes-client/python/issues/1005
             try:
                 config.load_incluster_config()
-            except Exception as incluster_config_exception:
-                raise ExceptionGroup(
-                    "Encountered errors loading kubernetes cluster configuration",
-                    [kube_config_exception, incluster_config_exception],
+            except config.config_exception.ConfigException:
+                raise config.config_exception.ConfigException(
+                    "Failed to load both kube-config file and in-cluster configuration."
                 )
 
 
