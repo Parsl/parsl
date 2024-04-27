@@ -1,3 +1,4 @@
+import inspect
 from abc import abstractmethod
 from functools import singledispatch
 from typing import Any, List, Sequence
@@ -38,8 +39,6 @@ def get_parsl_usage_representation_mixin(obj: RepresentationMixin) -> List[Any]:
     init: Any = type(obj).__init__
     if hasattr(init, "__wrapped__"):
         init = init.__wrapped__
-
-    import inspect
 
     argspec = inspect.getfullargspec(init)
     for arg in argspec.args[1:]:  # skip first arg, self
