@@ -117,7 +117,7 @@ class UsageTracker:
 
         Checks the following in order:
             1. PARSL_TRACKING environment variable
-                - Possible values: 
+                - Possible values:
                     ["true", "false", "True", "False", "0", "1", "2", "3"]
                 - Other values are treated as Level 0 (disabled)
 
@@ -143,7 +143,7 @@ class UsageTracker:
         envvar = str(os.environ.get("PARSL_TRACKING", 0)).lower()
         if envvar in {"true", "1", "2", "3"}:
             level = 1 if envvar == "true" else int(envvar)
-        
+
         if int(self.config.usage_tracking) > 0:
             level = int(self.config.usage_tracking)
 
