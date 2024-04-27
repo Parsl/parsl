@@ -25,17 +25,11 @@ from parsl.executors.high_throughput.mpi_prefix_composer import (
 EXECUTOR_LABEL = "MPI_TEST"
 
 
-def local_setup():
+def local_config():
     config = fresh_config()
     config.executors[0].label = EXECUTOR_LABEL
     config.executors[0].max_workers_per_node = 1
-    parsl.load(config)
-
-
-def local_teardown():
-    logging.warning("Exiting")
-    parsl.dfk().cleanup()
-    parsl.clear()
+    return config
 
 
 @python_app
