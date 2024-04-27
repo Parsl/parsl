@@ -118,7 +118,7 @@ class UsageTracker:
         Checks the following in order:
             1. PARSL_TRACKING environment variable
                 - Possible values: 
-                    ["true", "false", "0", "1", "2", "3", True, False, 0, 1, 2, 3]
+                    ["true", "false", "True", "False", "0", "1", "2", "3"]
                 - Other values are treated as Level 0 (disabled)
 
             2. usage_tracking in Config
