@@ -1,6 +1,7 @@
 import pytest
 
-from parsl.config import Config, ConfigurationError
+from parsl.config import Config
+from parsl.errors import ConfigurationError
 
 
 @pytest.mark.local
