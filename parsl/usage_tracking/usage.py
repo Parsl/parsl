@@ -112,8 +112,21 @@ class UsageTracker:
         self.start_time = None
         logger.debug(f"Tracking level: {self.tracking_level}")
 
-    def check_tracking_level(self):
+    def check_tracking_level(self) -> int:
         """Check if tracking is enabled and return level.
+
+        Checks the following in order:
+            1. PARSL_TRACKING environment variable
+                - Possible values: 
+                    ["true", "false", "0", "1", "2", "3", True, False, 0, 1, 2, 3]
+                - Other values are treated as Level 0 (disabled)
+
+            2. usage_tracking in Config
+                - Possible values: [True, False, 0, 1, 2, 3]
+
+            Config.usage_tracking overrides PARSL_TRACKING if both are set.
+
+            True/False values are treated as Level 1/Level 0 respectively.
 
         Returns: int
             - 0 : Tracking is disabled
@@ -127,12 +140,12 @@ class UsageTracker:
 
         level = 0
 
-        if self.config.usage_tracking:
-            level = 1 if self.config.usage_tracking is True else int(self.config.usage_tracking)
-
-        envvar = str(os.environ.get("PARSL_TRACKING", False)).lower()
+        envvar = str(os.environ.get("PARSL_TRACKING", 0)).lower()
         if envvar in {"true", "1", "2", "3"}:
             level = 1 if envvar == "true" else int(envvar)
+        
+        if int(self.config.usage_tracking) > 0:
+            level = int(self.config.usage_tracking)
 
         return level
 
