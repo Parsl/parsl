@@ -20,12 +20,13 @@ defmodule EIC.Supervisor do
 
   @impl true
   def init(:ok) do
+    {:ok, ctx} = :erlzmq.context()
     children = [
-      %{id: EIC.TasksSubmitToInterchange, start: {EIC.TasksSubmitToInterchange, :start_link, []}},
-      %{id: EIC.CommandChannel, start: {EIC.CommandChannel, :start_link, []}},
+      %{id: EIC.TasksSubmitToInterchange, start: {EIC.TasksSubmitToInterchange, :start_link, [ctx]}},
+      %{id: EIC.CommandChannel, start: {EIC.CommandChannel, :start_link, [ctx]}},
       %{
         id: EIC.TasksInterchangeToWorkers,
-        start: {EIC.TasksInterchangeToWorkers, :start_link, []}
+        start: {EIC.TasksInterchangeToWorkers, :start_link, [ctx]}
       },
       %{id: EIC.TaskQueue, start: {EIC.TaskQueue, :start_link, []}}
     ]
@@ -41,13 +42,12 @@ defmodule EIC.TasksSubmitToInterchange do
   over ZMQ.
   """
 
-  def start_link() do
-    Task.start_link(EIC.TasksSubmitToInterchange, :body, [])
+  def start_link(ctx) do
+    Task.start_link(EIC.TasksSubmitToInterchange, :body, [ctx])
   end
 
-  def body() do
+  def body(ctx) do
     IO.puts("Starting tasks submit to interchange ZMQ handler")
-    {:ok, ctx} = :erlzmq.context()
     {:ok, socket} = :erlzmq.socket(ctx, :dealer)
     :ok = :erlzmq.connect(socket, "tcp://127.0.0.1:9000")
     loop(socket)
@@ -69,13 +69,12 @@ defmodule EIC.TasksSubmitToInterchange do
 end
 
 defmodule EIC.CommandChannel do
-  def start_link() do
-    Task.start_link(EIC.CommandChannel, :body, [])
+  def start_link(ctx) do
+    Task.start_link(EIC.CommandChannel, :body, [ctx])
   end
 
-  def body() do
+  def body(ctx) do
     IO.puts("CommandChannel: Starting command channel ZMQ handler")
-    {:ok, ctx} = :erlzmq.context()
     {:ok, socket} = :erlzmq.socket(ctx, :rep)
     :ok = :erlzmq.connect(socket, "tcp://127.0.0.1:9002")
     loop(socket)
@@ -121,13 +120,12 @@ defmodule EIC.TasksInterchangeToWorkers do
   # should this launch a separate process for each registered manager, to track
   # things like heartbeats?
 
-  def start_link() do
-    Task.start_link(EIC.TasksInterchangeToWorkers, :body, [])
+  def start_link(ctx) do
+    Task.start_link(EIC.TasksInterchangeToWorkers, :body, [ctx])
   end
 
-  def body() do
+  def body(ctx) do
     IO.puts("TasksInterchangeToWorkers: in body")
-    {:ok, ctx} = :erlzmq.context()
     {:ok, socket} = :erlzmq.socket(ctx, :router)
     :ok = :erlzmq.bind(socket, "tcp://127.0.0.1:9003")
     loop(socket)
