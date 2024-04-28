@@ -16,6 +16,7 @@ import subprocess
 import warnings
 
 import parsl.launchers
+from parsl.usage_tracking.api import UsageInformation
 from parsl.serialize import pack_res_spec_apply_message, deserialize
 from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
@@ -62,7 +63,7 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers_per_node} "
                       "--available-accelerators {accelerators}")
 
 
-class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
+class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageInformation):
     """Executor designed for cluster-scale
 
     The HighThroughputExecutor system has the following components:
@@ -834,4 +835,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             logger.info("Unable to terminate Interchange process; sending SIGKILL")
             self.interchange_proc.kill()
 
+        self.interchange_proc.close()
+
         logger.info("Finished HighThroughputExecutor shutdown attempt")
+
+    def get_usage_information(self):
+        return {"mpi": self.enable_mpi_mode}

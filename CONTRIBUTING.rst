@@ -50,18 +50,16 @@ There are two broad groups of tests: those which must run with a
 specific configuration, and those which should work with any
 configuration.
 
-Tests which run with a specific configuration live under the
-``parsl/tests/sites`` and ``parsl/tests/integration`` directories.
-They can be launched with a pytest parameter of
-``--config local`` and each test file should initialise a DFK
-explicitly.
-
 Tests which should run with with any configuration live under
 themed directories ``parsl/tests/test*/`` and should be named ``test*.py``.
 They can be run with any configuration, by specifying ``--config CONFIGPATH``
 where CONFIGPATH is a path to a ``.py`` file exporting a parsl configuration
 object named ``config``. The parsl-specific test fixtures will ensure
 a suitable DFK is loaded with that configuration for each test.
+
+Tests which require their own specially configured DFK, or no DFK at all,
+should be labelled with ``@pytest.mark.local`` and can be run with
+``--config local``.
 
 There is more fine-grained enabling and disabling of tests within the
 above categories:
