@@ -28,7 +28,7 @@ defmodule EIC.Supervisor do
         id: EIC.TasksInterchangeToWorkers,
         start: {EIC.TasksInterchangeToWorkers, :start_link, [ctx]}
       },
-      %{id: EIC.TaskQueue, start: {EIC.TaskQueue, :start_link, []}}
+      %{id: EIC.TaskQueue, start: {EIC.TaskQueue, :start_link, [ctx]}}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
@@ -62,7 +62,8 @@ defmodule EIC.TasksSubmitToInterchange do
     IO.inspect(task_dict)
 
     IO.puts("casting task to task queue")
-    GenServer.cast(:task_queue, {:new_task, task_dict})
+    # keep the pickled message around so that we don't need to re-pickle it?
+    GenServer.cast(:task_queue, {:new_task, task_dict, msg})
 
     loop(socket)
   end
@@ -113,38 +114,82 @@ defmodule EIC.CommandChannel do
 end
 
 defmodule EIC.TasksInterchangeToWorkers do
-  # TODO: this cannot restart properly: when it is restarted by its supervisor,
-  # the bound socket from the previous process is left open and so it fails to
-  # perform the bind.
+  @moduledoc """
+  This handles messages on the interchange to workers channel, which is
+  actually bi-directional: registrations and heartbeats will be received
+  in the reverse direction.
 
-  # should this launch a separate process for each registered manager, to track
-  # things like heartbeats?
+  Any process can send a message on this pipe by sending a message to the
+  singleton process here. That message will be forwarded on through the
+  zmq connection.
+
+  Because there's no "poll zmq inbound and process mailbox" facility in
+  elixir, this is going to sit in a loop alternating between polling those
+  two things separately. That's pretty horrible. Another erlang/zmq
+  implementations have the ability to gateway incoming zmq directly into
+  process mailbox, but is pretty out of date, and that functionality
+  was removed in the erlzmq_dnif fork of that code. It would let this process
+  be much more message driven, I think, if it existed.
+
+  TODO: this cannot restart properly: when it is restarted by its supervisor,
+  the bound socket from the previous process is left open and so it fails to
+  perform the bind.
+
+  should this launch a separate process for each registered manager, to track
+  things like heartbeats?
+
+  """
 
   def start_link(ctx) do
-    Task.start_link(EIC.TasksInterchangeToWorkers, :body, [ctx])
+    {:ok, pid} = Task.start_link(EIC.TasksInterchangeToWorkers, :body, [ctx])
+    Process.register(pid, EIC.TasksInterchangeToWorkers)
+    {:ok, pid}
   end
 
   def body(ctx) do
     IO.puts("TasksInterchangeToWorkers: in body")
-    {:ok, socket} = :erlzmq.socket(ctx, :router)
-    :ok = :erlzmq.bind(socket, "tcp://127.0.0.1:9003")
-    loop(socket)
+    {:ok, socket_to_workers} = :erlzmq.socket(ctx, :router)
+    :ok = :erlzmq.bind(socket_to_workers, "tcp://127.0.0.1:9003")
+    :ok = :erlzmq.setsockopt(socket_to_workers, :rcvtimeo, 100)
+
+    loop(socket_to_workers)
   end
 
   def loop(socket) do
-    IO.puts("TaskInterchangeToWorkers: recv")
-    {:ok, [source, msg]} = :erlzmq.recv_multipart(socket)
-    IO.inspect(msg)
+    # IO.puts("TaskInterchangeToWorkers: recv poll")
 
-    decoded_msg = JSON.decode!(msg)
+    # TODO: this timeout polling mode is going to give a pretty bad
+    # rate limit on throughput through the interchange... and pretty
+    # ugly to do more fancy stuff like while loops that also try to
+    # be fair on each direction. The active gatewaying stuff mentioned
+    # above would be nicer... or being able to do a zmq poll on two
+    # sockets and use inproc zmq sockets, which I started prototyping
+    # then discovered you can't do zmq poll on multiple sockets in this
+    # zmq implementation.
 
-    IO.inspect(decoded_msg)
+    # TODO: this can now be: {:error, :eagain}
+    # when we hit timeout, where we would then loop around again
+    case :erlzmq.recv_multipart(socket) do
+      {:ok, [source, msg]} -> 
+        IO.inspect(msg)
+        decoded_msg = JSON.decode!(msg)
+        IO.inspect(decoded_msg)
+        handle_message_from_worker(source, decoded_msg)
+      {:error, :eagain} ->
+        :whatever
+    end
 
-    handle_message(decoded_msg)
+    receive do
+      m -> :erlzmq.send_multipart(socket, m)
+    after 
+      100 -> :whatever
+    end
+
+
     loop(socket)
   end
 
-  def handle_message(%{"type" => "registration"} = msg) do
+  def handle_message_from_worker(source, %{"type" => "registration"} = msg) do
     # %{
     #  "block_id" => "0",
     # "cpu_count" => 4,
@@ -161,11 +206,10 @@ defmodule EIC.TasksInterchangeToWorkers do
     # "worker_count" => 8
     # }
 
-    # need some kind of manager registry that we can send this message to, I guess?
-    GenServer.cast(:task_queue, {:new_manager, msg})
+   GenServer.cast(:task_queue, {:new_manager, msg})
   end
 
-  def handle_message(msg) do
+  def handle_message_from_worker(source, msg) do
     raise "Unsupported message"
   end
 end
@@ -173,21 +217,25 @@ end
 defmodule EIC.TaskQueue do
   use GenServer
 
-  def start_link() do
+  def start_link(ctx) do
     IO.puts("TaskQueue: start_link")
-    GenServer.start_link(EIC.TaskQueue, [], name: :task_queue)
+    GenServer.start_link(EIC.TaskQueue, [ctx], name: :task_queue)
   end
 
   @impl true
-  def init(_args) do
+  def init([_ctx]) do
     IO.puts("TaskQueue: initializing")
+
     {:ok, %{:tasks => [], :managers => []}}
   end
 
   @impl true
-  def handle_cast({:new_task, task_dict}, state) do
+  def handle_cast({:new_task, task_dict, pickled_msg}, state) do
     IO.puts("TaskQueue: received a task")
-    new_state = %{:tasks => [task_dict | state[:tasks]], :managers => state[:managers]}
+
+    # TODO: better syntax for updating individual entries in map rather than
+    # listing them all copy style?
+    new_state = %{:tasks => [{task_dict, pickled_msg} | state[:tasks]], :managers => state[:managers]}
 
     new_state2 = matchmake(new_state)
     {:noreply, new_state}
@@ -218,6 +266,7 @@ defmodule EIC.TaskQueue do
   # and maybe that means this can't be implemented in function guard style?
   def matchmake(%{:tasks => [t | t_rest], :managers => [m | m_rest]} = state) do
     IO.puts("Made a match")
+    {_dict, pickled} = t
     # TODO: send this off to execute
     # also, record the pairing somehow so that we do appropriate behaviour on
     # task result or manager failure.
@@ -225,6 +274,12 @@ defmodule EIC.TaskQueue do
     # getting that into the interchange->workers ZMQ socket seems pretty awkward
     # but maybe I can do it with an inproc: zmq message and a poller, so that
     # we use ZMQ messaging from inside matchmake instead of erlang messaging?
+
+    # TODO: can't reuse pickled form, I think? maybe I wrote about it in the
+    # rusterchange?
+    parts = [m["uid"], <<>>, pickled] 
+
+    send(EIC.TasksInterchangeToWorkers, parts)
 
     %{:tasks => t_rest, :managers => m_rest}
   end
