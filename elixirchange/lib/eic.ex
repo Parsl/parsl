@@ -93,10 +93,6 @@ defmodule EIC.CommandChannel do
 
       response = handle_command(command)
 
-      # TODO: now we're going to need to be able to do some basic pickling, which Unpickle does not implement...
-      # but maybe another erlang library does?
-
-      # pickled_response = Pickler.save!(response)
       pickled_response = :pickle.term_to_pickle(response)
 
       IO.inspect(pickled_response)
@@ -108,6 +104,7 @@ defmodule EIC.CommandChannel do
 
   def handle_command("CONNECTED_BLOCKS") do
       []  # TODO: talk to some process that will keep track of a set of seen blocks
+          # as supplied by manager registration messages
   end
 
   def handle_command(_bad) do
@@ -221,9 +218,20 @@ defmodule EIC.TaskQueue do
     raise "Unhandled TaskQueue call"
   end
 
+
+  # TODO: manager should be guarded by available capacity and new state should
+  # modify that capacity, rather than forgetting the whole manager...
+  # and maybe that means this can't be implemented in function guard style?
   def matchmake(%{:tasks => [t | t_rest], :managers => [m | m_rest]} = state) do
     IO.puts "Made a match"
     # TODO: send this off to execute
+    # also, record the pairing somehow so that we do appropriate behaviour on
+    # task result or manager failure.
+
+    # getting that into the interchange->workers ZMQ socket seems pretty awkward
+    # but maybe I can do it with an inproc: zmq message and a poller, so that
+    # we use ZMQ messaging from inside matchmake instead of erlang messaging?
+
     %{:tasks => t_rest, :managers => m_rest}
   end
 
