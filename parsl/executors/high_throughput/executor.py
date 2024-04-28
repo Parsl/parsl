@@ -835,7 +835,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             logger.info("Unable to terminate Interchange process; sending SIGKILL")
             self.interchange_proc.kill()
 
-        self.interchange_proc.close()
+        # self.interchange_proc.close()
 
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 
