@@ -532,7 +532,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         get the worker task and result ports that the interchange has bound to.
         """
 
-        self.interchange_proc = subprocess.Popen(args=["rusterchange/target/debug/rusterchange", str(self.cert_dir)])
+        # self.interchange_proc = subprocess.Popen(args=["rusterchange/target/debug/rusterchange", str(self.cert_dir)])
+
+        # this is going to leave residual elixirchange around because killing shell won't kill children...
+        self.interchange_proc = subprocess.Popen(args=["cd elixirchange; mix run --no-halt"], shell=True)
 
         # TODO: all these arguments below aren't used... so are they necessary? should there be
         # tests discovering they aren't used/passed?
