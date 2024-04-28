@@ -26,6 +26,7 @@ defmodule EIC.Supervisor do
     children = [ %{id: EIC.TasksSubmitToInterchange, start: {EIC.TasksSubmitToInterchange, :start_link, []}},
                  %{id: EIC.CommandChannel, start: {EIC.CommandChannel, :start_link, []}},
                  %{id: EIC.TasksInterchangeToWorkers, start: {EIC.TasksInterchangeToWorkers, :start_link, []}},
+
                  %{id: EIC.TaskQueue, start: {EIC.TaskQueue, :start_link, []}}
                ]
 
@@ -61,7 +62,7 @@ defmodule EIC.TasksSubmitToInterchange do
       IO.inspect(task_dict)
 
       IO.puts "casting task to task queue"
-      GenServer.cast(:tq, {:push, task_dict})
+      GenServer.cast(:task_queue, {:new_task, task_dict})
 
       loop(socket)
   end
@@ -166,7 +167,8 @@ defmodule EIC.TasksInterchangeToWorkers do
       # "worker_count" => 8
       # }
 
-      raise "NOTIMPL registration message"
+      # need some kind of manager registry that we can send this message to, I guess?
+      GenServer.cast(:task_queue, {:new_manager, msg})
   end
 
   def handle_message(msg) do
@@ -181,19 +183,30 @@ defmodule EIC.TaskQueue do
 
   def start_link() do
     IO.puts "TaskQueue: start_link"
-    GenServer.start_link(EIC.TaskQueue, [], name: :tq)
+    GenServer.start_link(EIC.TaskQueue, [], name: :task_queue)
   end
 
   @impl true
   def init(_args) do
     IO.puts "TaskQueue: initializing"
-    {:ok, []}
+    {:ok, %{:tasks => [], :managers => []}}
   end 
 
   @impl true
-  def handle_cast({:push, task_dict}, state) do
+  def handle_cast({:new_task, task_dict}, state) do
     IO.puts "TaskQueue: received a task"
-    {:noreply, [task_dict | state]}
+    new_state = %{:tasks => [task_dict | state[:tasks]], :managers => state[:managers]}
+
+    new_state2 = matchmake(new_state)
+    {:noreply, new_state}
+  end
+
+  def handle_cast({:new_manager, registration_msg}, state) do
+    new_state = %{:tasks => state[:tasks], :managers => [registration_msg | state[:managers]]}
+    IO.puts "TaskQueue: new state:"
+    IO.inspect new_state
+    new_state2 = matchmake(new_state)
+    {:noreply, new_state2}
   end
 
   def handle_cast(rest, state) do
@@ -206,6 +219,17 @@ defmodule EIC.TaskQueue do
   def handle_call(_what, _from, state) do
     IO.puts "TaskQueue: ERROR: handle call"
     raise "Unhandled TaskQueue call"
+  end
+
+  def matchmake(%{:tasks => [t | t_rest], :managers => [m | m_rest]} = state) do
+    IO.puts "Made a match"
+    # TODO: send this off to execute
+    %{:tasks => t_rest, :managers => m_rest}
+  end
+
+  def matchmake(state) do
+    IO.puts "No match made between any manager or task"
+    state
   end
 
 end
