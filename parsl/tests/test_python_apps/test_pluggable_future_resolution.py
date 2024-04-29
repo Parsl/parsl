@@ -119,3 +119,22 @@ def test_deeper_list_and_tuple():
     f_b = extract_deep([([([f],)],)])
 
     assert f_b.result() == 7
+
+
+@parsl.python_app
+def dictionary_checker(d):
+    assert d["a"] == [30, 10]
+    assert d["b"] == 20
+
+
+@pytest.mark.local
+def test_dictionary():
+    k1 = Future()
+    k1.set_result("a")
+    k2 = Future()
+    k2.set_result("b")
+    v1 = Future()
+    v1.set_result(10)
+
+    # this .result() will fail if the asserts fail
+    dictionary_checker({k1: [30, v1], k2: 20}).result()

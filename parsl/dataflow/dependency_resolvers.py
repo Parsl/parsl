@@ -106,12 +106,8 @@ def _(dictionary):
 def _(dictionary):
     unwrapped_dict = {}
     for key, value in dictionary.items():
-        if isinstance(key, Future):
-            assert key.done(), "key future should be done by now"
-            key = key.result()
-        if isinstance(value, Future):
-            assert value.done(), "value future should be done by now"
-            value = value.result()
+        key = deep_traverse_to_unwrap(key)
+        value = deep_traverse_to_unwrap(value)
         unwrapped_dict[key] = value
     return unwrapped_dict
 
