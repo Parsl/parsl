@@ -905,15 +905,7 @@ class DataFlowKernel:
         for dep in args:
             try:
                 new_args.extend([self.dependency_resolver.traverse_to_unwrap(dep)])
-                # TODO: with pluggable traversal, this is user facing so should be a proper test/exception, not an assert?
-                # assert dep.done(), "trying to unwrap a dependency that is not done... misaligned gather/unwrap?"
-                # new_args.extend([dep.result()])
             except Exception as e:
-                # TODO: this error handling was assuming 'dep' is a Future and that raised errors here are dependency
-                # errors - that might not be the case any more, especially with user-pluggable traversal
-                # If this Future is associated with a task inside this DFK,
-                # then refer to the task ID.
-                # Otherwise make a repr of the Future object.
                 if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
                     tid = "task " + repr(dep.task_record['id'])
                 else:
