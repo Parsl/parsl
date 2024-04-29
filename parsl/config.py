@@ -36,7 +36,8 @@ class Config(RepresentationMixin, UsageInformation):
     checkpoint_period : str, optional
         Time interval (in "HH:MM:SS") at which to checkpoint completed tasks. Only has an effect if
         ``checkpoint_mode='periodic'``.
-    dependency_resolver: plugin point for custom dependency resolvers. Default: only resolve Futures
+    dependency_resolver: plugin point for custom dependency resolvers. Default: only resolve Futures,
+        using the `SHALLOW_DEPENDENCY_RESOLVER`.
     garbage_collect : bool. optional.
         Delete task records from DFK when tasks have completed. Default: True
     internal_tasks_max_threads : int, optional
