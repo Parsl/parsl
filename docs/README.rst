@@ -21,7 +21,15 @@ Local builds
 
 To build the documentation locally, use::
 
-    $ make html
+    $ make clean html
+
+To view the freshly rebuilt docs, use::
+
+    $ cd _build/html
+    $ python3 -m http.server 8080
+
+Once the python http server is launched, point your browser to `http://localhost:8080 <http://localhost:8080>`_
+
 
 Regenerate module stubs
 --------------------------

@@ -13,6 +13,7 @@ import typeguard
 from typing_extensions import Type
 
 import parsl
+from parsl.app.errors import BadStdStreamFile
 from parsl.version import VERSION
 
 
@@ -121,9 +122,17 @@ def get_std_fname_mode(
         if len(stdfspec) != 2:
             msg = (f"std descriptor {fdname} has incorrect tuple length "
                    f"{len(stdfspec)}")
-            raise pe.BadStdStreamFile(msg, TypeError('Bad Tuple Length'))
+            raise pe.BadStdStreamFile(msg)
         fname, mode = stdfspec
-    return str(fname), mode
+
+    path = os.fspath(fname)
+
+    if isinstance(path, str):
+        return path, mode
+    elif isinstance(path, bytes):
+        return path.decode(), mode
+    else:
+        raise BadStdStreamFile(f"fname has invalid type {type(path)}")
 
 
 @contextmanager
@@ -296,12 +305,12 @@ class Timer:
 
     """
 
-    def __init__(self, callback: Callable, *args: Any, interval: int = 5, name: Optional[str] = None) -> None:
+    def __init__(self, callback: Callable, *args: Any, interval: Union[float, int] = 5, name: Optional[str] = None) -> None:
         """Initialize the Timer object.
         We start the timer thread here
 
         KWargs:
-             - interval (int) : number of seconds between callback events
+             - interval (int or float) : number of seconds between callback events
              - name (str) : a base name to use when naming the started thread
         """
 

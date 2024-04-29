@@ -27,7 +27,7 @@ def local_config():
                 poll_period=100,
                 label="htex_local",
                 address="127.0.0.1",
-                max_workers=1,
+                max_workers_per_node=1,
                 encrypted=True,
                 provider=LocalProvider(
                     channel=LocalChannel(),
@@ -39,7 +39,7 @@ def local_config():
             )
         ],
         max_idletime=0.5,
-        strategy='htex_auto_scale',
+        strategy='simple',
     )
 
 

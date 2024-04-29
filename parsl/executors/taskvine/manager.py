@@ -376,6 +376,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
                             task_out_file = parsl_file_name_to_vine_file[spec.parsl_name]
                         else:
                             task_out_file = m.declare_file(spec.parsl_name, cache=spec.cache, peer_transfer=True)
+                            parsl_file_name_to_vine_file[spec.parsl_name] = task_out_file
                         t.add_output(task_out_file, spec.parsl_name)
 
             # Submit the task to the TaskVine object

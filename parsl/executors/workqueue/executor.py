@@ -3,6 +3,7 @@ Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant,
 high-throughput system for delegating Parsl tasks to thousands of remote machines
 """
 
+import atexit
 import threading
 import multiprocessing
 import logging
@@ -61,8 +62,11 @@ logger = logging.getLogger(__name__)
 
 
 # Support structure to communicate parsl tasks to the work queue submit thread.
-ParslTaskToWq = namedtuple('ParslTaskToWq',
-                           'id category cores memory disk gpus priority running_time_min env_pkg map_file function_file result_file input_files output_files')
+ParslTaskToWq = namedtuple(
+                        'ParslTaskToWq',
+                        'id '
+                        'category '
+                        'cores memory disk gpus priority running_time_min env_pkg map_file function_file result_file input_files output_files')
 
 # Support structure to communicate final status of work queue tasks to parsl
 # if result_received is True:
@@ -251,7 +255,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.label = label
         self.task_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
         self.collector_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
-        self.blocks = {}  # type: Dict[str, str]
         self.address = address
         self.port = port
         self.executor_task_counter = -1
@@ -295,6 +298,24 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
+        # register atexit handler to cleanup when Python shuts down
+        atexit.register(self.atexit_cleanup)
+
+        # Attribute indicating whether this executor was started to shut it down properly.
+        # This safeguards cases where an object of this executor is created but
+        # the executor never starts, so it shouldn't be shutdowned.
+        self.is_started = False
+
+        # Attribute indicating whether this executor was shutdown before.
+        # This safeguards cases where this object is automatically shut down (e.g.,
+        # via atexit) and the user also explicitly calls shut down. While this is
+        # permitted, the effect of an executor shutdown should happen only once.
+        self.is_shutdown = False
+
+    def atexit_cleanup(self):
+        # Calls this executor's shutdown method upon Python exiting the process.
+        self.shutdown()
+
     def _get_launch_command(self, block_id):
         # this executor uses different terminology for worker/launch
         # commands than in htex
@@ -304,6 +325,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Create submit process and collector thread to create, send, and
         retrieve Parsl tasks within the Work Queue system.
         """
+        # Mark this executor object as started
+        self.is_started = True
         self.tasks_lock = threading.Lock()
 
         # Create directories for data and results
@@ -651,13 +674,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.worker_command = self._construct_worker_command()
         self._patch_providers()
 
-        if hasattr(self.provider, 'init_blocks'):
-            try:
-                self.scale_out(blocks=self.provider.init_blocks)
-            except Exception as e:
-                logger.error("Initial block scaling out failed: {}".format(e))
-                raise e
-
     @property
     def outstanding(self) -> int:
         """Count the number of outstanding tasks. This is inefficiently
@@ -675,28 +691,41 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     def workers_per_node(self) -> Union[int, float]:
         return 1
 
-    def scale_in(self, count):
+    def scale_in(self, count: int) -> List[str]:
         """Scale in method.
         """
         # Obtain list of blocks to kill
-        to_kill = list(self.blocks.keys())[:count]
-        kill_ids = [self.blocks[block] for block in to_kill]
+        to_kill = list(self.blocks_to_job_id.keys())[:count]
+        kill_ids = [self.blocks_to_job_id[block] for block in to_kill]
 
         # Cancel the blocks provisioned
         if self.provider:
-            self.provider.cancel(kill_ids)
+            logger.info(f"Scaling in jobs: {kill_ids}")
+            r = self.provider.cancel(kill_ids)
+            job_ids = self._filter_scale_in_ids(kill_ids, r)
+            block_ids_killed = [self.job_ids_to_block[jid] for jid in job_ids]
+            return block_ids_killed
         else:
-            logger.error("No execution provider available to scale")
+            logger.error("No execution provider available to scale in")
+            return []
 
     def shutdown(self, *args, **kwargs):
         """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the Work Queue system submission.
         """
+        if not self.is_started:
+            # Don't shutdown if the executor never starts.
+            return
+
+        if self.is_shutdown:
+            # Don't shutdown this executor again.
+            return
+
         logger.debug("Work Queue shutdown started")
         self.should_stop.value = True
 
         # Remove the workers that are still going
-        kill_ids = [self.blocks[block] for block in self.blocks.keys()]
+        kill_ids = [self.blocks_to_job_id[block] for block in self.blocks_to_job_id.keys()]
         if self.provider:
             logger.debug("Cancelling blocks")
             self.provider.cancel(kill_ids)
@@ -706,6 +735,13 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Joining on collector thread")
         self.collector_thread.join()
 
+        logger.debug("Closing multiprocessing queues")
+        self.task_queue.close()
+        self.task_queue.join_thread()
+        self.collector_queue.close()
+        self.collector_queue.join_thread()
+
+        self.is_shutdown = True
         logger.debug("Work Queue shutdown completed")
 
     @wrap_with_logs

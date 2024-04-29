@@ -1,10 +1,13 @@
-import logging
 import os
 import parsl
 import pytest
 import time
 
-logger = logging.getLogger(__name__)
+from parsl import HighThroughputExecutor
+from parsl.config import Config
+from parsl.executors.taskvine import TaskVineExecutor
+from parsl.executors.taskvine import TaskVineManagerConfig
+from parsl.monitoring import MonitoringHub
 
 
 @parsl.python_app
@@ -18,34 +21,56 @@ def this_app():
     return 5
 
 
+# The below fresh configs are for use in parametrization, and should return
+# a configuration that is suitably configured for monitoring.
+
+def htex_config():
+    from parsl.tests.configs.htex_local_alternate import fresh_config
+    return fresh_config()
+
+
+def workqueue_config():
+    from parsl.tests.configs.workqueue_ex import fresh_config
+    c = fresh_config()
+    c.monitoring = MonitoringHub(
+                        hub_address="localhost",
+                        resource_monitoring_interval=1)
+    return c
+
+
+def taskvine_config():
+    c = Config(executors=[TaskVineExecutor(manager_config=TaskVineManagerConfig(port=9000),
+                                           worker_launch_method='provider')],
+
+               monitoring=MonitoringHub(hub_address="localhost",
+                                        resource_monitoring_interval=1))
+    return c
+
+
 @pytest.mark.local
-def test_row_counts():
+@pytest.mark.parametrize("fresh_config", [htex_config, workqueue_config, taskvine_config])
+def test_row_counts(tmpd_cwd, fresh_config):
     # this is imported here rather than at module level because
     # it isn't available in a plain parsl install, so this module
     # would otherwise fail to import and break even a basic test
     # run.
     import sqlalchemy
     from sqlalchemy import text
-    from parsl.tests.configs.htex_local_alternate import fresh_config
 
-    if os.path.exists("runinfo/monitoring.db"):
-        logger.info("Monitoring database already exists - deleting")
-        os.remove("runinfo/monitoring.db")
+    db_url = f"sqlite:///{tmpd_cwd}/monitoring.db"
 
-    logger.info("loading parsl")
-    parsl.load(fresh_config())
+    config = fresh_config()
+    config.run_dir = tmpd_cwd
+    config.monitoring.logging_endpoint = db_url
 
-    logger.info("invoking and waiting for result")
-    assert this_app().result() == 5
+    with parsl.load(config):
+        assert this_app().result() == 5
 
-    logger.info("cleaning up parsl")
-    parsl.dfk().cleanup()
     parsl.clear()
 
     # at this point, we should find one row in the monitoring database.
 
-    logger.info("checking database content")
-    engine = sqlalchemy.create_engine("sqlite:///runinfo/monitoring.db")
+    engine = sqlalchemy.create_engine(db_url)
     with engine.begin() as connection:
 
         result = connection.execute(text("SELECT COUNT(*) FROM workflow"))
@@ -67,10 +92,12 @@ def test_row_counts():
         (c, ) = result.first()
         assert c == 0
 
-        # Two entries: one showing manager active, one inactive
-        result = connection.execute(text("SELECT COUNT(*) FROM node"))
-        (c, ) = result.first()
-        assert c == 2
+        if isinstance(config.executors[0], HighThroughputExecutor):
+            # The node table is specific to the HighThroughputExecutor
+            # Two entries: one showing manager active, one inactive
+            result = connection.execute(text("SELECT COUNT(*) FROM node"))
+            (c, ) = result.first()
+            assert c == 2
 
         # There should be one block polling status
         # local provider has a status_polling_interval of 5s
@@ -81,5 +108,3 @@ def test_row_counts():
         result = connection.execute(text("SELECT COUNT(*) FROM resource"))
         (c, ) = result.first()
         assert c >= 1
-
-    logger.info("all done")
