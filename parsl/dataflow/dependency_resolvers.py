@@ -6,6 +6,20 @@ from typing import Callable
 
 @dataclass
 class DependencyResolver:
+    """A DependencyResolver describes how app dependencies can be resolved.
+    It is specified as two functions: `traverse_to_gather` which turns an
+    app parameter into a list of futures which must be waited for before
+    the task can be executed (for example, in the case of
+    `DEEP_DEPENDENCY_RESOLVER` this traverses structures such as lists to
+    find every contained ``Future``), and `traverse_to_unwrap` which turns ani
+    app parameter into it's value to be passed to the app on execution
+    (for example in the case of `DEEP_DEPENDENCY_RESOLVER` this replaces a
+    list containing futures with a new list containing the values of those
+    resolved futures).
+
+    By default, Parsl will use `SHALLOW_DEPENDENCY_RESOLVER` which only
+    resolves Futures passed directly as arguments.
+    """
     traverse_to_gather: Callable
     traverse_to_unwrap: Callable
 
