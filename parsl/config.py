@@ -5,6 +5,7 @@ from typing import Callable, Iterable, Optional, Sequence, Union
 from typing_extensions import Literal
 
 from parsl.utils import RepresentationMixin
+from parsl.dataflow.dependency_resolvers import DependencyResolver
 from parsl.executors.base import ParslExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.errors import ConfigurationError
@@ -35,6 +36,7 @@ class Config(RepresentationMixin, UsageInformation):
     checkpoint_period : str, optional
         Time interval (in "HH:MM:SS") at which to checkpoint completed tasks. Only has an effect if
         ``checkpoint_mode='periodic'``.
+    dependency_resolver: plugin point for custom dependency resolvers. Default: only resolve Futures
     garbage_collect : bool. optional.
         Delete task records from DFK when tasks have completed. Default: True
     internal_tasks_max_threads : int, optional
@@ -88,6 +90,7 @@ class Config(RepresentationMixin, UsageInformation):
                                         Literal['dfk_exit'],
                                         Literal['manual']] = None,
                  checkpoint_period: Optional[str] = None,
+                 dependency_resolver: Optional[DependencyResolver] = None,
                  garbage_collect: bool = True,
                  internal_tasks_max_threads: int = 10,
                  retries: int = 0,
@@ -123,6 +126,7 @@ class Config(RepresentationMixin, UsageInformation):
         if checkpoint_mode == 'periodic' and checkpoint_period is None:
             checkpoint_period = "00:30:00"
         self.checkpoint_period = checkpoint_period
+        self.dependency_resolver = dependency_resolver
         self.garbage_collect = garbage_collect
         self.internal_tasks_max_threads = internal_tasks_max_threads
         self.retries = retries
@@ -152,4 +156,5 @@ class Config(RepresentationMixin, UsageInformation):
                 ', '.join(['label={}'.format(repr(d)) for d in duplicates])))
 
     def get_usage_information(self):
-        return {"executors_len": len(self.executors)}
+        return {"executors_len": len(self.executors),
+                "dependency_resolver": self.dependency_resolver is not None}

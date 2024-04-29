@@ -5,7 +5,12 @@ from typing import Sequence
 import pytest
 
 import parsl
-from parsl.tests.configs.local_threads import fresh_config as local_config
+from parsl.config import Config
+from parsl.dataflow.dependency_resolvers import DEEP_DEPENDENCY_RESOLVER
+
+
+def local_config():
+    return Config(dependency_resolver=DEEP_DEPENDENCY_RESOLVER)
 
 
 @parsl.python_app

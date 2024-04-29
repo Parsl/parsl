@@ -26,8 +26,8 @@ from parsl.channels import Channel
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
+from parsl.dataflow.dependency_resolvers import SHALLOW_DEPENDENCY_RESOLVER
 from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
-from parsl.dataflow.future_resolution import traverse_to_gather, traverse_to_unwrap
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
@@ -205,6 +205,9 @@ class DataFlowKernel:
         self.task_count = 0
         self.tasks: Dict[int, TaskRecord] = {}
         self.submitter_lock = threading.Lock()
+
+        self.dependency_resolver = self.config.dependency_resolver if self.config.dependency_resolver is not None \
+            else SHALLOW_DEPENDENCY_RESOLVER
 
         atexit.register(self.atexit_cleanup)
 
@@ -855,7 +858,7 @@ class DataFlowKernel:
         depends: List[Future] = []
 
         def check_dep(d: Any) -> None:
-            depends.extend(traverse_to_gather(d))
+            depends.extend(self.dependency_resolver.traverse_to_gather(d))
 
         # Check the positional args
         for dep in args:
@@ -897,8 +900,8 @@ class DataFlowKernel:
         new_args = []
         for dep in args:
             try:
-                new_args.extend([traverse_to_unwrap(dep)])
-                # with pluggable traversal, this is user facing so should be a proper test/exception, not an assert?
+                new_args.extend([self.dependency_resolver.traverse_to_unwrap(dep)])
+                # TODO: with pluggable traversal, this is user facing so should be a proper test/exception, not an assert?
                 # assert dep.done(), "trying to unwrap a dependency that is not done... misaligned gather/unwrap?"
                 # new_args.extend([dep.result()])
             except Exception as e:
@@ -917,7 +920,7 @@ class DataFlowKernel:
         for key in kwargs:
             dep = kwargs[key]
             try:
-                kwargs[key] = traverse_to_unwrap(dep)
+                kwargs[key] = self.dependency_resolver.traverse_to_unwrap(dep)
             except Exception as e:
                 if hasattr(dep, 'task_record'):
                     tid = dep.task_record['id']
@@ -930,7 +933,7 @@ class DataFlowKernel:
             new_inputs = []
             for dep in kwargs['inputs']:
                 try:
-                    new_inputs.extend([traverse_to_unwrap(dep)])
+                    new_inputs.extend([self.dependency_resolver.traverse_to_unwrap(dep)])
                 except Exception as e:
                     if hasattr(dep, 'task_record'):
                         tid = dep.task_record['id']

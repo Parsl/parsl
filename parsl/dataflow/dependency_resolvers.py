@@ -1,25 +1,56 @@
 from concurrent.futures import Future
+from dataclasses import dataclass
 from functools import singledispatch
+from typing import Callable
+
+
+@dataclass
+class DependencyResolver:
+    traverse_to_gather: Callable
+    traverse_to_unwrap: Callable
 
 
 @singledispatch
-def traverse_to_gather(o):
+def shallow_traverse_to_gather(o):
     # objects in general do not expose futures that we can see
     return []
 
 
 @singledispatch
-def traverse_to_unwrap(o):
+def shallow_traverse_to_unwrap(o):
     # objects in general unwrap to themselves
     return o
 
 
-@traverse_to_gather.register
+@shallow_traverse_to_gather.register
 def _(fut: Future):
     return [fut]
 
 
-@traverse_to_unwrap.register
+@shallow_traverse_to_unwrap.register
+@singledispatch
+def _(fut: Future):
+    return fut.result()
+
+
+@singledispatch
+def deep_traverse_to_gather(o):
+    # objects in general do not expose futures that we can see
+    return []
+
+
+@singledispatch
+def deep_traverse_to_unwrap(o):
+    # objects in general unwrap to themselves
+    return o
+
+
+@deep_traverse_to_gather.register
+def _(fut: Future):
+    return [fut]
+
+
+@deep_traverse_to_unwrap.register
 @singledispatch
 def _(fut: Future):
     return fut.result()
@@ -29,19 +60,19 @@ def _(fut: Future):
 # Below is an example of shallow traversal of iterables.
 
 
-@traverse_to_gather.register(tuple)
-@traverse_to_gather.register(list)
-@traverse_to_gather.register(set)
+@deep_traverse_to_gather.register(tuple)
+@deep_traverse_to_gather.register(list)
+@deep_traverse_to_gather.register(set)
 def _(iterable):
-    # a "deep" traversal would instead recursively call traverse_to_gather
+    # a "deep" traversal would instead recursively call deep_traverse_to_gather
     # here to inspect whatever is inside the sequence
 
     return [v for v in iterable if isinstance(v, Future)]
 
 
-@traverse_to_unwrap.register(tuple)
-@traverse_to_unwrap.register(list)
-@traverse_to_unwrap.register(set)
+@deep_traverse_to_unwrap.register(tuple)
+@deep_traverse_to_unwrap.register(list)
+@deep_traverse_to_unwrap.register(set)
 @singledispatch
 def _(iterable):
     def unwrap(v):
@@ -57,7 +88,7 @@ def _(iterable):
     return type_(map(unwrap, iterable))
 
 
-@traverse_to_gather.register(dict)
+@deep_traverse_to_gather.register(dict)
 def _(dictionary):
     futures = []
     for key, value in dictionary.items():
@@ -68,7 +99,7 @@ def _(dictionary):
     return futures
 
 
-@traverse_to_unwrap.register(dict)
+@deep_traverse_to_unwrap.register(dict)
 def _(dictionary):
     unwrapped_dict = {}
     for key, value in dictionary.items():
@@ -80,3 +111,10 @@ def _(dictionary):
             value = value.result()
         unwrapped_dict[key] = value
     return unwrapped_dict
+
+
+DEEP_DEPENDENCY_RESOLVER = DependencyResolver(traverse_to_gather=deep_traverse_to_gather,
+                                              traverse_to_unwrap=deep_traverse_to_unwrap)
+
+SHALLOW_DEPENDENCY_RESOLVER = DependencyResolver(traverse_to_gather=shallow_traverse_to_gather,
+                                                 traverse_to_unwrap=shallow_traverse_to_unwrap)
