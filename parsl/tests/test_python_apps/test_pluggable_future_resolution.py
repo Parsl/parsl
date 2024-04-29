@@ -86,3 +86,21 @@ def test_resolving_dict():
     output2 = make_path("test2")
     output3 = append_paths_dict({output1: output2}, end_str="end")
     assert output3.result() == {Path("test1", "end"): Path("test2", "end")}
+
+
+
+@parsl.python_app
+def extract_deep_list(l: list):
+    return l[0][0][0][0][0];
+
+
+@pytest.mark.local
+def test_deeper_list():
+    e = Event()
+    s = a(e)
+    f_b = b([[[[[s]]]]])
+    assert not f_b.done()
+
+    e.set()
+
+    assert f_b.result() == 7
