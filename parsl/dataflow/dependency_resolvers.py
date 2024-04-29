@@ -78,10 +78,7 @@ def _(fut: Future):
 @deep_traverse_to_gather.register(list)
 @deep_traverse_to_gather.register(set)
 def _(iterable):
-    # a "deep" traversal would instead recursively call deep_traverse_to_gather
-    # here to inspect whatever is inside the sequence
-
-    return [v for v in iterable if isinstance(v, Future)]
+    return [e for v in iterable for e in deep_traverse_to_gather(v) if isinstance(e, Future)]
 
 
 @deep_traverse_to_unwrap.register(tuple)
@@ -89,17 +86,9 @@ def _(iterable):
 @deep_traverse_to_unwrap.register(set)
 @singledispatch
 def _(iterable):
-    def unwrap(v):
-        if isinstance(v, Future):
-            assert (
-                v.done()
-            ), "sequencing error: v should be done by now, otherwise weird hangs in DFK"
-            return v.result()
-        else:
-            return v
 
     type_ = type(iterable)
-    return type_(map(unwrap, iterable))
+    return type_(map(deep_traverse_to_unwrap, iterable))
 
 
 @deep_traverse_to_gather.register(dict)

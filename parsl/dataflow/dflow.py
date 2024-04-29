@@ -858,7 +858,11 @@ class DataFlowKernel:
         depends: List[Future] = []
 
         def check_dep(d: Any) -> None:
-            depends.extend(self.dependency_resolver.traverse_to_gather(d))
+            try:
+                depends.extend(self.dependency_resolver.traverse_to_gather(d))
+            except Exception:
+                logger.exception("Exception in dependency_resolver.traverse_to_gather")
+                raise
 
         # Check the positional args
         for dep in args:
@@ -1045,6 +1049,8 @@ class DataFlowKernel:
 
         func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func)
 
+        logger.debug("Added output dependencies")
+
         # Replace the function invocation in the TaskRecord with whatever file-staging
         # substitutions have been made.
         task_record.update({
@@ -1056,8 +1062,10 @@ class DataFlowKernel:
 
         self.tasks[task_id] = task_record
 
+        logger.debug("Gathering dependenciess")
         # Get the list of dependencies for the task
         depends = self._gather_all_deps(app_args, app_kwargs)
+        logger.debug("Gathered dependenciess")
         task_record['depends'] = depends
 
         depend_descs = []

@@ -1,3 +1,4 @@
+from concurrent.futures import Future
 from pathlib import Path
 from threading import Event
 from typing import Sequence
@@ -6,6 +7,7 @@ import pytest
 
 import parsl
 from parsl.config import Config
+from parsl.dataflow.errors import DependencyError
 from parsl.dataflow.dependency_resolvers import DEEP_DEPENDENCY_RESOLVER
 
 
@@ -48,6 +50,14 @@ def test_tuple_pos_arg():
     assert f_b.result() == 8
 
 
+@pytest.mark.local
+def test_list_exception():
+    a = Future()
+    a.set_exception(RuntimeError("artificial error"))
+    f_b = b([a])
+    assert isinstance(f_b.exception(), DependencyError)
+
+
 @parsl.python_app
 def make_path(s: str):
     return Path(s)
@@ -88,18 +98,16 @@ def test_resolving_dict():
     assert output3.result() == {Path("test1", "end"): Path("test2", "end")}
 
 
-
 @parsl.python_app
-def extract_deep_list(l: list):
-    return l[0][0][0][0][0];
+def extract_deep_list(struct: list):
+    return struct[0][0][0][0][0]
 
 
 @pytest.mark.local
 def test_deeper_list():
     e = Event()
     s = a(e)
-    f_b = b([[[[[s]]]]])
-    assert not f_b.done()
+    f_b = extract_deep_list([[[[[s]]]]])
 
     e.set()
 
