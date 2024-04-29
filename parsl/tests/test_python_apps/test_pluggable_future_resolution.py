@@ -99,16 +99,23 @@ def test_resolving_dict():
 
 
 @parsl.python_app
-def extract_deep_list(struct: list):
+def extract_deep(struct: list):
     return struct[0][0][0][0][0]
 
 
 @pytest.mark.local
 def test_deeper_list():
-    e = Event()
-    s = a(e)
-    f_b = extract_deep_list([[[[[s]]]]])
+    f = Future()
+    f.set_result(7)
+    f_b = extract_deep([[[[[f]]]]])
 
-    e.set()
+    assert f_b.result() == 7
+
+
+@pytest.mark.local
+def test_deeper_list_and_tuple():
+    f = Future()
+    f.set_result(7)
+    f_b = extract_deep([([([f],)],)])
 
     assert f_b.result() == 7
