@@ -145,8 +145,8 @@ The :class:`~parsl.concurrent.ParslPoolExecutor` simplifies this pattern using t
         return randint(1, limit)
 
 
-    with ParslPoolExecutor(config) as exec:
-        outputs = exec.map(generate, range(1, 5))
+    with ParslPoolExecutor(config) as pool:
+        outputs = pool.map(generate, range(1, 5))
 
 
 In the preceding example, the execution of different tasks is coordinated by passing Python objects from producers to consumers.
