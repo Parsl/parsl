@@ -15,8 +15,6 @@ Parsl lets you chain functions together and will launch each function as inputs 
     import parsl
     from parsl import python_app
 
-    # Start Parsl on a single computer
-    parsl.load()
 
     # Make functions parallel by decorating them
     @python_app
@@ -27,12 +25,14 @@ Parsl lets you chain functions together and will launch each function as inputs 
     def g(x):
         return x * 2
 
-    # These functions now return Futures, and can be chained
-    future = f(1)
-    assert future.result() == 2
+    # Start Parsl on a single computer
+    with parsl.load():
+        # These functions now return Futures, and can be chained
+        future = f(1)
+        assert future.result() == 2
 
-    future = g(f(1))
-    assert future.result() == 4
+        future = g(f(1))
+        assert future.result() == 4
 
 
 Start with the `configuration quickstart <https://parsl.readthedocs.io/en/stable/quickstart.html#getting-started>`_ to learn how to tell Parsl how to use your computing resource,
