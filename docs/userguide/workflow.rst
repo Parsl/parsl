@@ -146,7 +146,7 @@ The :class:`~parsl.concurrent.ParslPoolExecutor` simplifies this pattern using t
 
 
     with ParslPoolExecutor(config) as exec:
-        outputs = pool.map(generate, range(1, 5))
+        outputs = exec.map(generate, range(1, 5))
 
 
 In the preceding example, the execution of different tasks is coordinated by passing Python objects from producers to consumers.
