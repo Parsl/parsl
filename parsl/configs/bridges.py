@@ -13,7 +13,7 @@ config = Config(
         HighThroughputExecutor(
             label='Bridges_HTEX_multinode',
             address=address_by_interface('ens3f0'),
-            max_workers=1,
+            max_workers_per_node=1,
             provider=SlurmProvider(
                 'YOUR_PARTITION_NAME',  # Specify Partition / QOS, for eg. RM-small
                 nodes_per_block=2,

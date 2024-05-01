@@ -108,6 +108,7 @@ Table of Contents
    faq
    reference
    devguide/index
+   historical/index
 
 
 Indices and tables

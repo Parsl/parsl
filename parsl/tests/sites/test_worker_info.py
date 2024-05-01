@@ -14,7 +14,7 @@ def local_config():
             HighThroughputExecutor(
                 label="htex_Local",
                 worker_debug=True,
-                max_workers=4,
+                max_workers_per_node=4,
                 encrypted=True,
                 provider=LocalProvider(
                     channel=LocalChannel(),

@@ -47,7 +47,7 @@ class JobState(IntEnum):
     """
 
     def __str__(self) -> str:
-        return self.__class__.__name__ + "." + self.name
+        return f"{self.__class__.__name__}.{self.name}"
 
 
 TERMINAL_STATES = [JobState.CANCELLED, JobState.COMPLETED, JobState.FAILED,
@@ -84,16 +84,16 @@ class JobStatus:
 
     def __repr__(self) -> str:
         if self.message is not None:
-            extra = f"state={self.state} message={self.message}".format(self.state, self.message)
+            extra = f"state={self.state} message={self.message}"
         else:
-            extra = f"state={self.state}".format(self.state)
+            extra = f"state={self.state}"
         return f"<{type(self).__module__}.{type(self).__qualname__} object at {hex(id(self))}, {extra}>"
 
     def __str__(self) -> str:
         if self.message is not None:
-            return "{} ({})".format(self.state, self.message)
+            return f"{self.state} ({self.message})"
         else:
-            return "{}".format(self.state)
+            return f"{self.state}"
 
     @property
     def stdout(self) -> Optional[str]:

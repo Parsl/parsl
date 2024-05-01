@@ -14,11 +14,8 @@ class ChannelError(ParslError):
         self.e = e
         self.hostname = hostname
 
-    def __repr__(self) -> str:
-        return "Hostname:{0}, Reason:{1}".format(self.hostname, self.reason)
-
     def __str__(self) -> str:
-        return self.__repr__()
+        return "Hostname:{0}, Reason:{1}".format(self.hostname, self.reason)
 
 
 class BadHostKeyException(ChannelError):

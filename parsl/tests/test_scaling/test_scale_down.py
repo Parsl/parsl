@@ -27,7 +27,7 @@ def local_config():
                 poll_period=100,
                 label="htex_local",
                 address="127.0.0.1",
-                max_workers=1,
+                max_workers_per_node=1,
                 encrypted=True,
                 provider=LocalProvider(
                     channel=LocalChannel(),
@@ -39,21 +39,21 @@ def local_config():
             )
         ],
         max_idletime=0.5,
-        strategy='htex_auto_scale',
+        strategy='simple',
     )
 
 
 @python_app
-def waiting_app(ident: int, inputs=()):
+def waiting_app(ident: int, inputs=(), outputs=()):
     import pathlib
     import time
 
     # Approximate an Event by writing to files; the test logic will poll this file
-    with open(inputs[0], "a") as f:
+    with open(outputs[0], "a") as f:
         f.write(f"Ready: {ident}\n")
 
     # Similarly, use Event approximation (file check!) by polling.
-    may_finish_file = pathlib.Path(inputs[1])
+    may_finish_file = pathlib.Path(inputs[0])
     while not may_finish_file.exists():
         time.sleep(0.01)
 
@@ -74,9 +74,10 @@ def test_scale_out(tmpd_cwd, try_assert):
     ready_path = tmpd_cwd / "workers_ready"
     finish_path = tmpd_cwd / "workers_may_continue"
     ready_path.touch()
-    inputs = [File(str(ready_path)), File(str(finish_path))]
+    inputs = [File(finish_path)]
+    outputs = [File(ready_path)]
 
-    futs = [waiting_app(i, inputs=inputs) for i in range(ntasks)]
+    futs = [waiting_app(i, outputs=outputs, inputs=inputs) for i in range(ntasks)]
 
     while ready_path.read_text().count("\n") < _max_blocks:
         time.sleep(0.5)

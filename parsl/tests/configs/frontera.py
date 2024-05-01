@@ -15,7 +15,7 @@ def fresh_config():
         executors=[
             HighThroughputExecutor(
                 label="frontera_htex",
-                max_workers=1,
+                max_workers_per_node=1,
                 encrypted=True,
                 provider=SlurmProvider(
                     cmd_timeout=60,     # Add extra time for slow scheduler responses

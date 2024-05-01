@@ -52,13 +52,16 @@ user_opts = {
     #     'username': MIDWAY_USERNAME,
     #     'script_dir': '/scratch/midway2/{}/parsl_scripts'.format(MIDWAY_USERNAME),
     #     'scheduler_options': "",
-    #     'worker_init': 'cd /scratch/midway2/{}/parsl_scripts; module load Anaconda3/5.1.0; source activate parsl_testing;'.format(MIDWAY_USERNAME),
+    #     'worker_init': 'cd /scratch/midway2/{}/parsl_scripts; '
+    #                    'module load Anaconda3/5.1.0; source activate parsl_testing;'
+    #                    .format(MIDWAY_USERNAME),
     # },
     # 'osg': {
     #     'username': OSG_USERNAME,
     #     'script_dir': '/home/{}/parsl_scripts'.format(OSG_USERNAME),
     #     'scheduler_options': "",
-    #     'worker_init' : 'module load python/3.5.2; python3 -m venv parsl_env; source parsl_env/bin/activate; python3 -m pip install parsl==0.5.2'
+    #     'worker_init' : 'module load python/3.5.2; python3 -m venv parsl_env;
+    #                      source parsl_env/bin/activate; python3 -m pip install parsl==0.5.2'
     # },
     # 'swan': {
     #     'username': SWAN_USERNAME,
