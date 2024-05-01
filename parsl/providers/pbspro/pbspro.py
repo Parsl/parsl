@@ -119,13 +119,17 @@ class PBSProProvider(TorqueProvider):
 
                 job_state = job.get('job_state', JobState.UNKNOWN)
                 state = translate_table.get(job_state, JobState.UNKNOWN)
-                self.resources[job_id]['status'] = JobStatus(state)
+                self.resources[job_id]['status'] = JobStatus(state,
+                                                             stdout_path=self.resources[job_id]['job_stdout_path'],
+                                                             stderr_path=self.resources[job_id]['job_stderr_path'])
                 jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
+            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED,
+                                                              stdout_path=self.resources[missing_job]['job_stdout_path'],
+                                                              stderr_path=self.resources[missing_job]['job_stderr_path'])
 
     def submit(self, command, tasks_per_node, job_name="parsl"):
         """Submits the command job.
@@ -149,7 +153,11 @@ class PBSProProvider(TorqueProvider):
 
         job_name = "{0}.{1}".format(job_name, time.time())
 
-        script_path = os.path.abspath("{0}/{1}.submit".format(self.script_dir, job_name))
+        assert self.script_dir, "Expected script_dir to be set"
+        script_path = os.path.join(self.script_dir, job_name)
+        script_path = os.path.abspath(script_path)
+        job_stdout_path = script_path + ".stdout"
+        job_stderr_path = script_path + ".stderr"
 
         logger.debug("Requesting {} nodes_per_block, {} tasks_per_node".format(
             self.nodes_per_block, tasks_per_node)
@@ -163,6 +171,8 @@ class PBSProProvider(TorqueProvider):
         job_config["scheduler_options"] = self.scheduler_options
         job_config["worker_init"] = self.worker_init
         job_config["user_script"] = command
+        job_config["job_stdout_path"] = job_stdout_path
+        job_config["job_stderr_path"] = job_stderr_path
 
         # Add a colon to select_options if one isn't included
         if self.select_options and not self.select_options.startswith(":"):
@@ -194,7 +204,11 @@ class PBSProProvider(TorqueProvider):
             for line in stdout.split('\n'):
                 if line.strip():
                     job_id = line.strip()
-                    self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
+                    self.resources[job_id] = {'job_id': job_id,
+                                              'status': JobStatus(JobState.PENDING),
+                                              'job_stdout_path': job_stdout_path,
+                                              'job_stderr_path': job_stderr_path,
+                                              }
         else:
             message = "Command '{}' failed with return code {}".format(launch_cmd, retcode)
             if (stdout is not None) and (stderr is not None):

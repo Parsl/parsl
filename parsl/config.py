@@ -10,11 +10,12 @@ from parsl.executors.threads import ThreadPoolExecutor
 from parsl.errors import ConfigurationError
 from parsl.dataflow.taskrecord import TaskRecord
 from parsl.monitoring import MonitoringHub
+from parsl.usage_tracking.api import UsageInformation
 
 logger = logging.getLogger(__name__)
 
 
-class Config(RepresentationMixin):
+class Config(RepresentationMixin, UsageInformation):
     """
     Specification of Parsl configuration options.
 
@@ -50,11 +51,16 @@ class Config(RepresentationMixin):
         of 1.
     run_dir : str, optional
         Path to run directory. Default is 'runinfo'.
+    std_autopath : function, optional
+        Sets the function used to generate stdout/stderr specifications when parsl.AUTO_LOGPATH is used. If no function
+        is specified, generates paths that look like: ``rundir/NNN/task_logs/X/task_{id}_{name}{label}.{out/err}``
     strategy : str, optional
         Strategy to use for scaling blocks according to workflow needs. Can be 'simple', 'htex_auto_scale', 'none'
         or `None`.
         If 'none' or `None`, dynamic scaling will be disabled. Default is 'simple'. The literal value `None` is
         deprecated.
+    strategy_period : float or int, optional
+        How often the scaling strategy should be executed. Default is 5 seconds.
     max_idletime : float, optional
         The maximum idle time allowed for an executor before strategy could shut down unused blocks. Default is 120.0 seconds.
     usage_tracking : bool, optional
@@ -87,7 +93,9 @@ class Config(RepresentationMixin):
                  retries: int = 0,
                  retry_handler: Optional[Callable[[Exception, TaskRecord], float]] = None,
                  run_dir: str = 'runinfo',
+                 std_autopath: Optional[Callable] = None,
                  strategy: Optional[str] = 'simple',
+                 strategy_period: Union[float, int] = 5,
                  max_idletime: float = 120.0,
                  monitoring: Optional[MonitoringHub] = None,
                  usage_tracking: bool = False,
@@ -121,10 +129,12 @@ class Config(RepresentationMixin):
         self.retry_handler = retry_handler
         self.run_dir = run_dir
         self.strategy = strategy
+        self.strategy_period = strategy_period
         self.max_idletime = max_idletime
         self.usage_tracking = usage_tracking
         self.initialize_logging = initialize_logging
         self.monitoring = monitoring
+        self.std_autopath: Optional[Callable] = std_autopath
 
     @property
     def executors(self) -> Sequence[ParslExecutor]:
@@ -140,3 +150,6 @@ class Config(RepresentationMixin):
         if len(duplicates) > 0:
             raise ConfigurationError('Executors must have unique labels ({})'.format(
                 ', '.join(['label={}'.format(repr(d)) for d in duplicates])))
+
+    def get_usage_information(self):
+        return {"executors_len": len(self.executors)}

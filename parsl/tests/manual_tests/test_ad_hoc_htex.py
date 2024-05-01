@@ -13,7 +13,7 @@ config = Config(
     executors=[
         HighThroughputExecutor(
             label='AdHoc',
-            max_workers=2,
+            max_workers_per_node=2,
             worker_logdir_root="/scratch/midway2/yadunand/parsl_scripts",
             encrypted=True,
             provider=AdHocProvider(

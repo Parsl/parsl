@@ -62,11 +62,42 @@ def pack_apply_message(func: Any, args: Any, kwargs: Any, buffer_threshold: int 
     return packed_buffer
 
 
+def pack_res_spec_apply_message(func: Any, args: Any, kwargs: Any, resource_specification: Any, buffer_threshold: int = int(128 * 1e6)) -> bytes:
+    """Serialize and pack function, parameters, and resource_specification
+
+    Parameters
+    ----------
+
+    func: Function
+        A function to ship
+
+    args: Tuple/list of objects
+        positional parameters as a list
+
+    kwargs: Dict
+        Dict containing named parameters
+
+    resource_specification: Dict
+        Dict containing application resource specification
+
+    buffer_threshold: int
+        Limits buffer to specified size in bytes. Exceeding this limit would give you
+        a warning in the log. Default is 128MB.
+    """
+    return pack_apply_message(func, args, (kwargs, resource_specification), buffer_threshold=buffer_threshold)
+
+
 def unpack_apply_message(packed_buffer: bytes, user_ns: Any = None, copy: Any = False) -> List[Any]:
     """ Unpack and deserialize function and parameters
-
     """
     return [deserialize(buf) for buf in unpack_buffers(packed_buffer)]
+
+
+def unpack_res_spec_apply_message(packed_buffer: bytes, user_ns: Any = None, copy: Any = False) -> List[Any]:
+    """ Unpack and deserialize function, parameters, and resource_specification
+    """
+    func, args, (kwargs, resource_spec) = unpack_apply_message(packed_buffer, user_ns=user_ns, copy=copy)
+    return [func, args, kwargs, resource_spec]
 
 
 def serialize(obj: Any, buffer_threshold: int = int(1e6)) -> bytes:

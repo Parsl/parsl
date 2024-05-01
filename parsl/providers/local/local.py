@@ -266,7 +266,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         for job in job_ids:
             job_dict = self.resources[job]
             job_dict['cancelled'] = True
-            logger.debug("Terminating job/proc_id: {0}".format(job))
+            logger.debug("Terminating job/process ID: {0}".format(job))
             cmd = "kill -- -$(ps -o pgid= {} | grep -o '[0-9]*')".format(job_dict['remote_pid'])
             retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
             if retcode != 0:

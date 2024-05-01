@@ -3,7 +3,7 @@
 Usage statistics collection
 ===========================
 
-Parsl uses an **Opt-in** model to send anonymized usage statistics back to the Parsl development team to
+Parsl uses an **Opt-in** model to send usage statistics back to the Parsl development team to
 measure worldwide usage and improve reliability and usability. The usage statistics are used only for
 improvements and reporting. They are not shared in raw form outside of the Parsl team.
 
@@ -21,7 +21,7 @@ it is important that we provide aggregate usage data about such things as the fo
 * Parsl exit codes
 
 By participating in this project, you help justify continuing support for the software on which you rely.
-The data sent is as generic as possible and is anonymized (see :ref:`What is sent? <what-is-sent>` below).
+(see :ref:`What is sent? <what-is-sent>` below).
 
 Opt-In
 ------
@@ -40,11 +40,9 @@ If you wish to opt in to usage reporting, set ``PARSL_TRACKING=true`` in your en
 What is sent?
 -------------
 
-* Anonymized user ID
-* Anonymized hostname
-* Anonymized Parsl script ID
+* IP address
+* Run UUID
 * Start and end times
-* Parsl exit code
 * Number of executors used
 * Number of failures
 * Parsl and Python version

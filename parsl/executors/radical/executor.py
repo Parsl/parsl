@@ -23,7 +23,7 @@ from parsl.utils import RepresentationMixin
 from parsl.app.errors import BashExitFailure
 from parsl.executors.base import ParslExecutor
 from parsl.app.errors import RemoteExceptionWrapper
-from parsl.serialize import pack_apply_message, deserialize
+from parsl.serialize import deserialize, pack_res_spec_apply_message
 from parsl.serialize.errors import SerializationError, DeserializationError
 
 try:
@@ -400,8 +400,11 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
     def _pack_and_apply_message(self, func, args, kwargs):
         try:
-            buffer = pack_apply_message(func, args, kwargs,
-                                        buffer_threshold=1024 * 1024)
+            buffer = pack_res_spec_apply_message(func,
+                                                 args,
+                                                 kwargs,
+                                                 resource_specification={},
+                                                 buffer_threshold=1024 * 1024)
             task_func = rp.utils.serialize_bson(buffer)
         except TypeError:
             raise SerializationError(func.__name__)

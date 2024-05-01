@@ -15,7 +15,7 @@ def local_config():
             HighThroughputExecutor(
                 label="htex_Local",
                 worker_debug=True,
-                max_workers=2,
+                max_workers_per_node=2,
                 cpu_affinity='block',
                 available_accelerators=2,
                 encrypted=True,
