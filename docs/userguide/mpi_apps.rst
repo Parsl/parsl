@@ -1,14 +1,6 @@
 MPI Apps
 ========
 
-.. note::
-
-    Parsl's support for MPI Apps described below is pending release.
-    Please use the ``mpi_experimental_3`` branch to use the functionality
-    described in this document. To install directly from github:
-
-    >>  pip install git+https://github.com/Parsl/parsl.git@mpi_experimental_3
-
 MPI applications run multiple copies of a program that complete a single task by
 coordinating using messages passed within or across nodes.
 Starting MPI application requires invoking a "launcher" code (e.g., ``mpiexec``) from one node
@@ -146,7 +138,7 @@ Writing MPI-Compatible Apps
 ++++++++++++++++++++++++++++
 
 In MPI mode, the :class:`~parsl.executors.high_throughput.executor.HighThroughputExecutor` can execute both Python or Bash Apps which invokes the MPI application.
-However, it is important to not that Python Apps that directly use ``mpi4py`` is not supported.
+However, it is important to note that Python Apps that directly use ``mpi4py`` is not supported.
 
 For multi-node MPI applications, especially when running multiple applications within a single batch job,
 it is important to specify the resource requirements for the app so that the Parsl worker can provision

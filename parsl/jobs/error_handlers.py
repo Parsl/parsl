@@ -20,7 +20,7 @@ def simple_error_handler(executor: status_handling.BlockProviderExecutor, status
         executor.set_bad_state_and_fail_all(_get_error(status))
 
 
-def windowed_error_handler(executor: status_handling.BlockProviderExecutor, status: Dict[str, JobStatus], threshold: int = 3):
+def windowed_error_handler(executor: status_handling.BlockProviderExecutor, status: Dict[str, JobStatus], threshold: int = 3) -> None:
     sorted_status = [(key, status[key]) for key in sorted(status, key=lambda x: int(x))]
     current_window = dict(sorted_status[-threshold:])
     total, failed = _count_jobs(current_window)

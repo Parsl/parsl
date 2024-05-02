@@ -1,21 +1,24 @@
 import typing
+from collections import defaultdict
 from concurrent.futures import Future
 import typeguard
 import logging
 import threading
 import queue
-import datetime
 import pickle
+from dataclasses import dataclass
 from multiprocessing import Process, Queue
 from typing import Dict, Sequence
 from typing import List, Optional, Tuple, Union, Callable
 import math
+import warnings
 
 import parsl.launchers
+from parsl.usage_tracking.api import UsageInformation
 from parsl.serialize import pack_res_spec_apply_message, deserialize
 from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
-from parsl.jobs.states import JobStatus, JobState
+from parsl.jobs.states import JobStatus, JobState, TERMINAL_STATES
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput import interchange
 from parsl.executors.errors import (
@@ -39,7 +42,7 @@ from parsl.providers import LocalProvider
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers} "
+DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers_per_node} "
                       "-a {addresses} "
                       "-p {prefetch_capacity} "
                       "-c {cores_per_worker} "
@@ -53,13 +56,14 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers} "
                       "--hb_period={heartbeat_period} "
                       "{address_probe_timeout_string} "
                       "--hb_threshold={heartbeat_threshold} "
+                      "--drain_period={drain_period} "
                       "--cpu-affinity {cpu_affinity} "
                       "{enable_mpi_mode} "
                       "--mpi-launcher={mpi_launcher} "
                       "--available-accelerators {accelerators}")
 
 
-class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
+class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageInformation):
     """Executor designed for cluster-scale
 
     The HighThroughputExecutor system has the following components:
@@ -154,7 +158,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         the there's sufficient memory for each worker. Default: None
 
     max_workers : int
-        Caps the number of workers launched per node. Default: infinity
+        Deprecated. Please use max_workers_per_node instead.
+
+    max_workers_per_node : int
+        Caps the number of workers launched per node. Default: None
 
     cpu_affinity: string
         Whether or how each worker process sets thread affinity. Options include "none" to forgo
@@ -196,6 +203,14 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         Timeout period to be used by the executor components in milliseconds. Increasing poll_periods
         trades performance for cpu efficiency. Default: 10ms
 
+    drain_period : int
+        The number of seconds after start when workers will begin to drain
+        and then exit. Set this to a time that is slightly less than the
+        maximum walltime of batch jobs to avoid killing tasks while they
+        execute. For example, you could set this to the walltime minus a grace
+        period for the batch job to start the workers, minus the expected
+        maximum length of an individual task.
+
     worker_logdir_root : string
         In case of a remote file system, specify the path to where logs will be kept.
 
@@ -228,12 +243,14 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  worker_debug: bool = False,
                  cores_per_worker: float = 1.0,
                  mem_per_worker: Optional[float] = None,
-                 max_workers: Union[int, float] = float('inf'),
+                 max_workers: Optional[Union[int, float]] = None,
+                 max_workers_per_node: Optional[Union[int, float]] = None,
                  cpu_affinity: str = 'none',
                  available_accelerators: Union[int, Sequence[str]] = (),
                  prefetch_capacity: int = 0,
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
+                 drain_period: Optional[int] = None,
                  poll_period: int = 10,
                  address_probe_timeout: Optional[int] = None,
                  worker_logdir_root: Optional[str] = None,
@@ -251,7 +268,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.working_dir = working_dir
         self.cores_per_worker = cores_per_worker
         self.mem_per_worker = mem_per_worker
-        self.max_workers = max_workers
         self.prefetch_capacity = prefetch_capacity
         self.address = address
         self.address_probe_timeout = address_probe_timeout
@@ -260,8 +276,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         else:
             self.all_addresses = ','.join(get_all_addresses())
 
-        mem_slots = max_workers
-        cpu_slots = max_workers
+        if max_workers:
+            self._warn_deprecated("max_workers", "max_workers_per_node")
+        self.max_workers_per_node = max_workers_per_node or max_workers or float("inf")
+
+        mem_slots = self.max_workers_per_node
+        cpu_slots = self.max_workers_per_node
         if hasattr(self.provider, 'mem_per_node') and \
                 self.provider.mem_per_node is not None and \
                 mem_per_worker is not None and \
@@ -278,7 +298,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.available_accelerators = list(available_accelerators)
 
         # Determine the number of workers per node
-        self._workers_per_node = min(max_workers, mem_slots, cpu_slots)
+        self._workers_per_node = min(self.max_workers_per_node, mem_slots, cpu_slots)
         if len(self.available_accelerators) > 0:
             self._workers_per_node = min(self._workers_per_node, len(available_accelerators))
         if self._workers_per_node == float('inf'):
@@ -294,6 +314,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.interchange_port_range = interchange_port_range
         self.heartbeat_threshold = heartbeat_threshold
         self.heartbeat_period = heartbeat_period
+        self.drain_period = drain_period
         self.poll_period = poll_period
         self.run_dir = '.'
         self.worker_logdir_root = worker_logdir_root
@@ -316,6 +337,24 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         self.radio_mode = "htex"
 
+    def _warn_deprecated(self, old: str, new: str):
+        warnings.warn(
+            f"{old} is deprecated and will be removed in a future release. "
+            f"Please use {new} instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+
+    @property
+    def max_workers(self):
+        self._warn_deprecated("max_workers", "max_workers_per_node")
+        return self.max_workers_per_node
+
+    @max_workers.setter
+    def max_workers(self, val: Union[int, float]):
+        self._warn_deprecated("max_workers", "max_workers_per_node")
+        self.max_workers_per_node = val
+
     @property
     def logdir(self):
         return "{}/{}".format(self.run_dir, self.label)
@@ -330,7 +369,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """Compose the launch command and scale out the initial blocks.
         """
         debug_opts = "--debug" if self.worker_debug else ""
-        max_workers = "" if self.max_workers == float('inf') else "--max_workers={}".format(self.max_workers)
+        max_workers_per_node = "" if self.max_workers_per_node == float('inf') else "--max_workers_per_node={}".format(self.max_workers_per_node)
         enable_mpi_opts = "--enable_mpi_mode " if self.enable_mpi_mode else ""
 
         address_probe_timeout_string = ""
@@ -345,10 +384,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                        result_port=self.worker_result_port,
                                        cores_per_worker=self.cores_per_worker,
                                        mem_per_worker=self.mem_per_worker,
-                                       max_workers=max_workers,
+                                       max_workers_per_node=max_workers_per_node,
                                        nodes_per_block=self.provider.nodes_per_block,
                                        heartbeat_period=self.heartbeat_period,
                                        heartbeat_threshold=self.heartbeat_threshold,
+                                       drain_period=self.drain_period,
                                        poll_period=self.poll_period,
                                        cert_dir=self.cert_dir,
                                        logdir=self.worker_logdir,
@@ -360,16 +400,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         logger.debug("Launch command: {}".format(self.launch_cmd))
 
         logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
-
-        # TODO: why is this a provider property?
-        block_ids = []
-        if hasattr(self.provider, 'init_blocks'):
-            try:
-                block_ids = self.scale_out(blocks=self.provider.init_blocks)
-            except Exception as e:
-                logger.error("Scaling out failed: {}".format(e))
-                raise e
-        return block_ids
 
     def start(self):
         """Create the Interchange process and connect to it.
@@ -400,8 +430,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
-        block_ids = self.initialize_scaling()
-        return block_ids
+        self.initialize_scaling()
 
     @wrap_with_logs
     def _queue_management_worker(self):
@@ -602,8 +631,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         """Submits work to the outgoing_q.
 
         The outgoing_q is an external process listens on this
-        queue for new work. This method behaves like a
-        submit call as described here `Python docs: <https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
+        queue for new work. This method behaves like a submit call as described here `Python docs: <https://docs.python.org/3/
+        library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor>`_
 
         Args:
             - func (callable) : Callable function
@@ -648,27 +677,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         # Return the future
         return fut
 
-    def create_monitoring_info(self, status):
-        """ Create a msg for monitoring based on the poll status
-
-        """
-        msg = []
-        for bid, s in status.items():
-            d = {}
-            d['run_id'] = self.run_id
-            d['status'] = s.status_name
-            d['timestamp'] = datetime.datetime.now()
-            d['executor_label'] = self.label
-            d['job_id'] = self.blocks.get(bid, None)
-            d['block_id'] = bid
-            msg.append(d)
-        return msg
-
     @property
     def workers_per_node(self) -> Union[int, float]:
         return self._workers_per_node
 
-    def scale_in(self, blocks, max_idletime=None):
+    def scale_in(self, blocks: int, max_idletime: Optional[float] = None) -> List[str]:
         """Scale in the number of active blocks by specified amount.
 
         The scale in method here is very rude. It doesn't give the workers
@@ -695,25 +708,46 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         List of block IDs scaled in
         """
         logger.debug(f"Scale in called, blocks={blocks}")
+
+        @dataclass
+        class BlockInfo:
+            tasks: int  # sum of tasks in this block
+            idle: float  # shortest idle time of any manager in this block
+
+        # block_info will be populated from two sources:
+        # the Job Status Poller mutable block list, and the list of blocks
+        # which have connected to the interchange.
+
+        def new_block_info():
+            return BlockInfo(tasks=0, idle=float('inf'))
+
+        block_info: Dict[str, BlockInfo] = defaultdict(new_block_info)
+
+        for block_id, job_status in self._status.items():
+            if job_status.state not in TERMINAL_STATES:
+                block_info[block_id] = new_block_info()
+
         managers = self.connected_managers()
-        block_info = {}  # block id -> list( tasks, idle duration )
         for manager in managers:
             if not manager['active']:
                 continue
             b_id = manager['block_id']
-            if b_id not in block_info:
-                block_info[b_id] = [0, float('inf')]
-            block_info[b_id][0] += manager['tasks']
-            block_info[b_id][1] = min(block_info[b_id][1], manager['idle_duration'])
+            block_info[b_id].tasks += manager['tasks']
+            block_info[b_id].idle = min(block_info[b_id].idle, manager['idle_duration'])
 
-        sorted_blocks = sorted(block_info.items(), key=lambda item: (item[1][1], item[1][0]))
+        # The scaling policy is that longest idle blocks should be scaled down
+        # in preference to least idle (most recently used) blocks.
+        # Other policies could be implemented here.
+
+        sorted_blocks = sorted(block_info.items(), key=lambda item: (-item[1].idle, item[1].tasks))
+
         logger.debug(f"Scale in selecting from {len(sorted_blocks)} blocks")
         if max_idletime is None:
             block_ids_to_kill = [x[0] for x in sorted_blocks[:blocks]]
         else:
             block_ids_to_kill = []
             for x in sorted_blocks:
-                if x[1][1] > max_idletime and x[1][0] == 0:
+                if x[1].idle > max_idletime and x[1].tasks == 0:
                     block_ids_to_kill.append(x[0])
                     if len(block_ids_to_kill) == blocks:
                         break
@@ -731,16 +765,16 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         # Now kill via provider
         # Potential issue with multiple threads trying to remove the same blocks
-        to_kill = [self.blocks[bid] for bid in block_ids_to_kill if bid in self.blocks]
+        to_kill = [self.blocks_to_job_id[bid] for bid in block_ids_to_kill if bid in self.blocks_to_job_id]
 
         logger.info("Calling provider cancel")
         r = self.provider.cancel(to_kill)
         logger.info("Provide cancel returned")
         job_ids = self._filter_scale_in_ids(to_kill, r)
 
-        # to_kill block_ids are fetched from self.blocks
-        # If a block_id is in self.block, it must exist in self.block_mapping
-        block_ids_killed = [self.block_mapping[jid] for jid in job_ids]
+        # to_kill block_ids are fetched from self.blocks_to_job_id
+        # If a block_id is in self.blocks_to_job_id, it must exist in self.job_ids_to_block
+        block_ids_killed = [self.job_ids_to_block[jid] for jid in job_ids]
 
         logger.info("htex scale in returning")
         return block_ids_killed
@@ -790,4 +824,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             logger.info("Unable to terminate Interchange process; sending SIGKILL")
             self.interchange_proc.kill()
 
+        self.interchange_proc.close()
+
         logger.info("Finished HighThroughputExecutor shutdown attempt")
+
+    def get_usage_information(self):
+        return {"mpi": self.enable_mpi_mode}

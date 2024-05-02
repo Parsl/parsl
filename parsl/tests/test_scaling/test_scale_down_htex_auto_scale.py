@@ -37,6 +37,7 @@ def local_config():
         ],
         max_idletime=0.5,
         strategy='htex_auto_scale',
+        strategy_period=0.1
     )
 
 
@@ -61,16 +62,6 @@ def waiting_app(ident: int, outputs=(), inputs=()):
 @pytest.mark.local
 def test_scale_out(tmpd_cwd, try_assert):
     dfk = parsl.dfk()
-
-    # reconfigure scaling strategy to run faster than usual. This allows
-    # this test to complete faster - at time of writing 27s with default
-    # 5s strategy, vs XXXX with 0.5s strategy.
-
-    # check this attribute still exists, in the presence of ongoing
-    # development, so we have some belief that setting it will not be
-    # setting a now-ignored parameter.
-    assert hasattr(dfk.job_status_poller, 'interval')
-    dfk.job_status_poller.interval = 0.1
 
     num_managers = len(dfk.executors['htex_local'].connected_managers())
 
@@ -98,7 +89,8 @@ def test_scale_out(tmpd_cwd, try_assert):
 
     assert dfk.executors['htex_local'].outstanding == 0
 
-    # now we can launch one "long" task - and what should happen is that the connected_managers count "eventually" (?) converges to 1 and stays there.
+    # now we can launch one "long" task -
+    # and what should happen is that the connected_managers count "eventually" (?) converges to 1 and stays there.
 
     finish_path = tmpd_cwd / "stage2_workers_may_continue"
 

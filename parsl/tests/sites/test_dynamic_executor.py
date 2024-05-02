@@ -59,7 +59,7 @@ def test_dynamic_executor():
         HighThroughputExecutor(
             label='htex_local',
             cores_per_worker=1,
-            max_workers=5,
+            max_workers_per_node=5,
             encrypted=True,
             provider=LocalProvider(
                 init_blocks=1,

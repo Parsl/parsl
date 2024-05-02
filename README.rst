@@ -15,8 +15,6 @@ Parsl lets you chain functions together and will launch each function as inputs 
     import parsl
     from parsl import python_app
 
-    # Start Parsl on a single computer
-    parsl.load()
 
     # Make functions parallel by decorating them
     @python_app
@@ -27,12 +25,14 @@ Parsl lets you chain functions together and will launch each function as inputs 
     def g(x):
         return x * 2
 
-    # These functions now return Futures, and can be chained
-    future = f(1)
-    assert future.result() == 2
+    # Start Parsl on a single computer
+    with parsl.load():
+        # These functions now return Futures, and can be chained
+        future = f(1)
+        assert future.result() == 2
 
-    future = g(f(1))
-    assert future.result() == 4
+        future = g(f(1))
+        assert future.result() == 4
 
 
 Start with the `configuration quickstart <https://parsl.readthedocs.io/en/stable/quickstart.html#getting-started>`_ to learn how to tell Parsl how to use your computing resource,
@@ -59,6 +59,10 @@ then explore the `parallel computing patterns <https://parsl.readthedocs.io/en/s
 .. |NSF-1550528| image:: https://img.shields.io/badge/NSF-1550528-blue.svg
    :target: https://nsf.gov/awardsearch/showAward?AWD_ID=1550528
    :alt: NSF award info
+.. |NSF-1550475| image:: https://img.shields.io/badge/NSF-1550475-blue.svg
+   :target: https://nsf.gov/awardsearch/showAward?AWD_ID=1550475
+   :alt: NSF award info
+
    
 Quickstart
 ==========
@@ -93,6 +97,7 @@ For Developers
 
 2. Build and Test::
 
+    $ cd parsl # navigate to the root directory of the project
     $ make   # show all available makefile targets
     $ make virtualenv # create a virtual environment
     $ source .venv/bin/activate # activate the virtual environment
@@ -115,7 +120,7 @@ Parsl is supported in Python 3.8+. Requirements can be found `here <requirements
 Code of Conduct
 ===============
 
-Parsl seeks to foster an open and welcoming environment - Please see the `Parsl Code of Conduct <https://github.com/Parsl/parsl/blob/master/CoC.md>`_ for more details.
+Parsl seeks to foster an open and welcoming environment - Please see the `Parsl Code of Conduct <https://github.com/Parsl/parsl/blob/master/CODE_OF_CONDUCT.md>`_ for more details.
 
 Contributing
 ============

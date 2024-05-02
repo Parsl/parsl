@@ -16,7 +16,8 @@ from typing import Any, Callable, Dict, List, Sequence, Tuple
 logger = logging.getLogger(__name__)
 
 
-def monitor_wrapper(f: Any,           # per app
+def monitor_wrapper(*,
+                    f: Any,           # per app
                     args: Sequence,   # per invocation
                     kwargs: Dict,     # per invocation
                     x_try_id: int,    # per invocation
@@ -352,7 +353,7 @@ def monitor(pid: int,
         try:
             d = accumulate_and_prepare()
             if time.time() >= next_send:
-                logging.debug(f"Sending intermediate resource message: {d}")
+                logging.debug("Sending intermediate resource message")
                 radio.send((MessageType.RESOURCE_INFO, d))
                 next_send += sleep_dur
         except Exception:
@@ -366,10 +367,9 @@ def monitor(pid: int,
 
         terminate_event.wait(max(0, min(next_send - time.time(), accumulate_dur)))
 
+    logging.debug("Sending final resource message")
     try:
-        logging.debug("Preparing final resource message")
         d = accumulate_and_prepare()
-        logging.debug(f"Sending final resource message: {d}")
         radio.send((MessageType.RESOURCE_INFO, d))
     except Exception:
         logging.exception("Exception getting the resource usage. Not sending final usage to Hub", exc_info=True)
@@ -381,4 +381,4 @@ def monitor(pid: int,
     logging.debug("Sending result_radio_queue")
     terminate_queue.put(result_radio_queue)
 
-    logging.info("End of monitoring helper")
+    logging.debug("End of monitoring helper")

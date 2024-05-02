@@ -13,7 +13,7 @@ def fresh_config():
     return Config(strategy='simple',
                   executors=[WorkQueueExecutor(port=9000,
                                                provider=LocalProvider(init_blocks=0),
-                                               storage_access=[FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging()], radio_mode="results")],
+                                               radio_mode="results")],
                   monitoring=MonitoringHub(hub_address="localhost",
                                            hub_port=55055,
                                            monitoring_debug=True,

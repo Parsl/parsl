@@ -34,7 +34,7 @@ def test_cpu_affinity_explicit():
 
     config = fresh_config()
     config.executors[0].cpu_affinity = affinity
-    config.executors[0].max_workers = 1
+    config.executors[0].max_workers_per_node = 1
 
     logger.debug(f"config: {config}")
     # TODO: is there a `with` style for this, to properly deal with exceptions?

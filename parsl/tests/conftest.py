@@ -3,8 +3,10 @@ import itertools
 import logging
 import os
 import pathlib
+import random
 import re
 import shutil
+import string
 import time
 import types
 import signal
@@ -136,20 +138,11 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
-        'noci: mark test to be unsuitable for running during automated tests'
-    )
-
-    config.addinivalue_line(
-        'markers',
         'cleannet: Enable tests that require a clean network connection (such as for testing FTP)'
     )
     config.addinivalue_line(
         'markers',
-        'issue363: Marks tests that require a shared filesystem for stdout/stderr - see issue #363'
-    )
-    config.addinivalue_line(
-        'markers',
-        'staging_required: Marks tests that require a staging provider, when there is no sharedFS)'
+        'staging_required: Marks tests that require a staging provider, when there is no sharedFS'
     )
     config.addinivalue_line(
         'markers',
@@ -158,6 +151,14 @@ def pytest_configure(config):
     config.addinivalue_line(
         'markers',
         'multiple_cores_required: Marks tests that require multiple cores, such as htex affinity'
+    )
+    config.addinivalue_line(
+        'markers',
+        'issue3328: Marks tests broken by issue #3328'
+    )
+    config.addinivalue_line(
+        'markers',
+        'executor_supports_std_stream_tuples: Marks tests that require tuple support for stdout/stderr'
     )
 
 
@@ -255,6 +256,7 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
 
         if callable(local_teardown):
             local_teardown()
+            assert DataFlowKernelLoader._dfk is None, "Expected teardown to clear DFK"
 
         if local_config:
             if parsl.dfk() != dfk:
@@ -431,3 +433,11 @@ def try_assert():
             raise AssertionError("Bad assert call: no attempts or timeout period")
 
     yield _impl
+
+
+@pytest.fixture
+def randomstring():
+    def func(length=5, alphabet=string.ascii_letters):
+        return "".join(random.choice(alphabet) for _ in range(length))
+
+    return func
