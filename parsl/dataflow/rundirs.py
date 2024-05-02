@@ -22,7 +22,7 @@ def make_rundir(path: str, *, max_tries: int = 3) -> str:
     Kwargs:
         - path (str): String path to a specific run dir
     """
-    backoff_time_s = random.random()
+    backoff_time_s = 1 + random.random()
 
     os.makedirs(path, exist_ok=True)
 
@@ -30,15 +30,19 @@ def make_rundir(path: str, *, max_tries: int = 3) -> str:
     try_count = 1
     while True:
 
-        prev_rundirs = glob("[0-9]*[0-9]", root_dir=path)
+        # Python 3.10 introduces root_dir argument to glob which in future
+        # can be used to simplify this code, something like:
+        #   prev_rundirs = glob("[0-9]*[0-9]", root_dir=path)
+        full_prev_rundirs = glob(os.path.join(path, "[0-9]*[0-9]"))
+        prev_rundirs = [os.path.basename(d) for d in full_prev_rundirs]
 
-        next = max([int(os.path.basename(x)) for x in prev_rundirs] + [-1]) + 1
+        next = max([int(d) for d in prev_rundirs] + [-1]) + 1
 
         current_rundir = os.path.join(path, '{0:03}'.format(next))
 
         try:
             os.makedirs(current_rundir)
-            logger.debug("rundir created: {}", current_rundir)
+            logger.debug("rundir created: %s", current_rundir)
             return os.path.abspath(current_rundir)
         except FileExistsError:
             logger.warning(f"Could not create rundir {current_rundir} on try {try_count}")

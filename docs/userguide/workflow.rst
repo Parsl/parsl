@@ -145,7 +145,7 @@ The :class:`~parsl.concurrent.ParslPoolExecutor` simplifies this pattern using t
         return randint(1, limit)
 
 
-    with ParslPoolExecutor(config) as exec:
+    with ParslPoolExecutor(config) as pool:
         outputs = pool.map(generate, range(1, 5))
 
 
