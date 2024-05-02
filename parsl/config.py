@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import typeguard
 
@@ -8,7 +10,7 @@ from parsl.utils import RepresentationMixin
 from parsl.executors.base import ParslExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.errors import ConfigurationError
-from parsl.dataflow.taskrecord import TaskRecord
+import parsl.dataflow.taskrecord as taskrecord
 from parsl.monitoring import MonitoringHub
 from parsl.usage_tracking.api import UsageInformation
 
@@ -91,7 +93,7 @@ class Config(RepresentationMixin, UsageInformation):
                  garbage_collect: bool = True,
                  internal_tasks_max_threads: int = 10,
                  retries: int = 0,
-                 retry_handler: Optional[Callable[[Exception, TaskRecord], float]] = None,
+                 retry_handler: Optional[Callable[[Exception, taskrecord.TaskRecord], float]] = None,
                  run_dir: str = 'runinfo',
                  std_autopath: Optional[Callable] = None,
                  strategy: Optional[str] = 'simple',
@@ -150,6 +152,9 @@ class Config(RepresentationMixin, UsageInformation):
         if len(duplicates) > 0:
             raise ConfigurationError('Executors must have unique labels ({})'.format(
                 ', '.join(['label={}'.format(repr(d)) for d in duplicates])))
+
+        if 'all' in labels:
+            raise ConfigurationError('Executor cannot be labelled "all"')
 
     def get_usage_information(self):
         return {"executors_len": len(self.executors)}

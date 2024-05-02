@@ -8,7 +8,7 @@ from typing import Any, Optional, Sequence, Union
 import parsl.app.app as app
 
 from parsl.app.futures import DataFuture
-from parsl.dataflow.taskrecord import TaskRecord
+import parsl.dataflow.taskrecord as taskrecord
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class AppFuture(Future):
 
     """
 
-    def __init__(self, task_record: TaskRecord) -> None:
+    def __init__(self, task_record: taskrecord.TaskRecord) -> None:
         """Initialize the AppFuture.
 
         Args:

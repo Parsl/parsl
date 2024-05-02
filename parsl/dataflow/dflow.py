@@ -20,6 +20,7 @@ from concurrent.futures import Future
 from functools import partial
 
 import parsl
+from parsl.trace import event, span_bind_sub, output_event_stats, Span
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.app.futures import DataFuture
 from parsl.channels import Channel
@@ -28,10 +29,10 @@ from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
-from parsl.dataflow.memoization import Memoizer
+import parsl.dataflow.memoization as memoization
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
-from parsl.dataflow.taskrecord import TaskRecord
+import parsl.dataflow.taskrecord as taskrecord
 from parsl.errors import ConfigurationError, InternalConsistencyError, NoDataFlowKernelError
 from parsl.jobs.job_status_poller import JobStatusPoller
 from parsl.usage_tracking.usage import UsageTracker
@@ -169,11 +170,11 @@ class DataFlowKernel:
         else:
             checkpoints = {}
 
-        self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint=checkpoints)
+        self.memoizer = memoization.Memoizer(self, memoize=config.app_cache, checkpoint=checkpoints)
         self.checkpointed_tasks = 0
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
-        self.checkpointable_tasks: List[TaskRecord] = []
+        self.checkpointable_tasks: List[taskrecord.TaskRecord] = []
 
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.
@@ -202,7 +203,7 @@ class DataFlowKernel:
                 self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period, name="Checkpoint")
 
         self.task_count = 0
-        self.tasks: Dict[int, TaskRecord] = {}
+        self.tasks: Dict[int, taskrecord.TaskRecord] = {}
         self.submitter_lock = threading.Lock()
 
         atexit.register(self.atexit_cleanup)
@@ -214,12 +215,12 @@ class DataFlowKernel:
         logger.debug("Exiting the context manager, calling cleanup for DFK")
         self.cleanup()
 
-    def _send_task_log_info(self, task_record: TaskRecord) -> None:
+    def _send_task_log_info(self, task_record: taskrecord.TaskRecord) -> None:
         if self.monitoring:
             task_log_info = self._create_task_log_info(task_record)
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
-    def _create_task_log_info(self, task_record: TaskRecord) -> Dict[str, Any]:
+    def _create_task_log_info(self, task_record: taskrecord.TaskRecord) -> Dict[str, Any]:
         """
         Create the dictionary that will be included in the log.
         """
@@ -299,7 +300,7 @@ class DataFlowKernel:
         """
         return self._config
 
-    def handle_exec_update(self, task_record: TaskRecord, future: Future) -> None:
+    def handle_exec_update(self, task_record: taskrecord.TaskRecord, future: Future) -> None:
         """This function is called only as a callback from an execution
         attempt reaching a final state (either successfully or failing).
 
@@ -320,7 +321,7 @@ class DataFlowKernel:
             raise InternalConsistencyError("done callback called, despite future not reporting itself as done")
 
         try:
-            res = self._unwrap_remote_exception_wrapper(future)
+            res = self._unwrap_remote_exception_wrapper(future, task_record)
 
         except Exception as e:
             logger.info(f"Task {task_id} try {task_record['try_id']} failed with exception of type {type(e).__name__}")
@@ -432,7 +433,7 @@ class DataFlowKernel:
         if task_record['status'] == States.pending:
             self.launch_if_ready(task_record)
 
-    def handle_join_update(self, task_record: TaskRecord, inner_app_future: Optional[AppFuture]) -> None:
+    def handle_join_update(self, task_record: taskrecord.TaskRecord, inner_app_future: Optional[AppFuture]) -> None:
         with task_record['join_lock']:
             # inner_app_future has completed, which is one (potentially of many)
             # futures the outer task is joining on.
@@ -522,7 +523,7 @@ class DataFlowKernel:
 
             self._send_task_log_info(task_record)
 
-    def handle_app_update(self, task_record: TaskRecord, future: AppFuture) -> None:
+    def handle_app_update(self, task_record: taskrecord.TaskRecord, future: AppFuture) -> None:
         """This function is called as a callback when an AppFuture
         is in its final state.
 
@@ -560,7 +561,7 @@ class DataFlowKernel:
         self.wipe_task(task_id)
         return
 
-    def _complete_task(self, task_record: TaskRecord, new_state: States, result: Any) -> None:
+    def _complete_task(self, task_record: taskrecord.TaskRecord, new_state: States, result: Any) -> None:
         """Set a task into a completed state
         """
         assert new_state in FINAL_STATES
@@ -575,7 +576,7 @@ class DataFlowKernel:
         with task_record['app_fu']._update_lock:
             task_record['app_fu'].set_result(result)
 
-    def update_task_state(self, task_record: TaskRecord, new_state: States) -> None:
+    def update_task_state(self, task_record: taskrecord.TaskRecord, new_state: States) -> None:
         """Updates a task record state, and recording an appropriate change
         to task state counters.
         """
@@ -586,9 +587,31 @@ class DataFlowKernel:
             self.task_state_counts[new_state] += 1
             task_record['status'] = new_state
 
-    @staticmethod
-    def _unwrap_remote_exception_wrapper(future: Future) -> Any:
+    # this is a horrible place to put results radio mode decoding.
+    # @staticmethod
+    def _unwrap_remote_exception_wrapper(self, future: Future, task_record) -> Any:
         result = future.result()
+
+        # this instance check is made twice - once before unwrapping radio results
+        # and once afterwards. This is a bit ugly, but executors can send back an
+        # unannotated RemoteExceptionWrapper, in addition to the monitoring wrapper
+        # sending back an annotated RemoteExceptionWrapper
+        if isinstance(result, RemoteExceptionWrapper):
+            result.reraise()
+
+        executor = self.executors[task_record['executor']]
+        radio_mode = executor.radio_mode
+        # raise RuntimeError(f"BENC: with radio_mode {radio_mode}, result potentially with monitoring: {result}")
+        if radio_mode == "results" and not task_record['from_memo']:
+            try:
+                (messages, result) = result
+            except Exception as e:
+                raise RuntimeError(f"BENC: Got exception {e} with result = {result}")
+            # raise RuntimeError(f"BENC: discarding {len(messages)} monitoring messages: {messages}")
+            if self.monitoring:
+                for (t, v) in messages:
+                    self.monitoring.send(t, v)
+
         if isinstance(result, RemoteExceptionWrapper):
             result.reraise()
         return result
@@ -603,7 +626,7 @@ class DataFlowKernel:
     def check_staging_inhibited(kwargs: Dict[str, Any]) -> bool:
         return kwargs.get('_parsl_staging_inhibit', False)
 
-    def launch_if_ready(self, task_record: TaskRecord) -> None:
+    def launch_if_ready(self, task_record: taskrecord.TaskRecord) -> None:
         """
         launch_if_ready will launch the specified task, if it is ready
         to run (for example, without dependencies, and in pending state).
@@ -622,17 +645,23 @@ class DataFlowKernel:
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
         """
+        task_id = task_record['id']
+        event("DFK_LAUNCH_IF_READY_START", task_record['span'])
         exec_fu = None
 
-        task_id = task_record['id']
         with task_record['task_launch_lock']:
 
             if task_record['status'] != States.pending:
                 logger.debug(f"Task {task_id} is not pending, so launch_if_ready skipping")
                 return
 
-            if self._count_deps(task_record['depends']) != 0:
-                logger.debug(f"Task {task_id} has outstanding dependencies, so launch_if_ready skipping")
+            counted_deps = self._count_deps(task_record['depends'])
+
+            logger.debug(f"METRIC COUNTED_DEPS {task_id} "
+                         f"total={len(task_record['depends'])} outstanding={counted_deps}")
+
+            if counted_deps != 0:
+                logger.debug(f"Task {task_id} has {counted_deps} outstanding dependencies, so launch_if_ready skipping")
                 return
 
             # We can now launch the task or handle any dependency failures
@@ -683,8 +712,9 @@ class DataFlowKernel:
                 logger.error("add_done_callback got an exception which will be ignored", exc_info=True)
 
             task_record['exec_fu'] = exec_fu
+        event("DFK_LAUNCH_IF_READY_END", task_record['span'])
 
-    def launch_task(self, task_record: TaskRecord) -> Future:
+    def launch_task(self, task_record: taskrecord.TaskRecord) -> Future:
         """Handle the actual submission of the task to the executor layer.
 
         Args:
@@ -694,6 +724,8 @@ class DataFlowKernel:
             Future that tracks the execution of the submitted function
         """
         task_id = task_record['id']
+        task_span = task_record['span']
+        event("DFK_LAUNCH_TASK_START", task_span)
         function = task_record['func']
         args = task_record['args']
         kwargs = task_record['kwargs']
@@ -705,6 +737,7 @@ class DataFlowKernel:
             logger.info("Reusing cached result for task {}".format(task_id))
             task_record['from_memo'] = True
             assert isinstance(memo_fu, Future)
+            event("DFK_LAUNCH_TASK_END_MEMO", task_record['span'])
             return memo_fu
 
         task_record['from_memo'] = False
@@ -716,8 +749,11 @@ class DataFlowKernel:
             raise ValueError("Task {} requested invalid executor {}".format(task_id, executor_label))
 
         try_id = task_record['fail_count']
+        try_span = Span("TRY", (task_id, try_id))
+        span_bind_sub(task_span, try_span)
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
+            event("DFK_LAUNCH_TASK_MONITORING_WRAP_START", try_span)
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
             (function, args, kwargs) = monitor_wrapper(f=function,
                                                        args=args,
@@ -731,14 +767,22 @@ class DataFlowKernel:
                                                        radio_mode=executor.radio_mode,
                                                        monitor_resources=executor.monitor_resources(),
                                                        run_dir=self.run_dir)
+            event("DFK_LAUNCH_TASK_MONITORING_WRAP_END", try_span)
 
+        event("DFK_LAUNCH_TASK_GET_SUBMITTER_LOCK_START", try_span)
         with self.submitter_lock:
+            event("DFK_LAUNCH_TASK_GET_SUBMITTER_LOCK_END", try_span)
             exec_fu = executor.submit(function, task_record['resource_specification'], *args, **kwargs)
+        event("DFK_LAUNCH_TASK_UPDATE_TASK_STATE_START", try_span)
         self.update_task_state(task_record, States.launched)
+        event("DFK_LAUNCH_TASK_UPDATE_TASK_STATE_END", try_span)
 
+        event("DFK_LAUNCH_TASK_SEND_TASK_LOG_INFO_START", try_span)
         self._send_task_log_info(task_record)
+        event("DFK_LAUNCH_TASK_SEND_TASK_LOG_INFO_END", try_span)
 
         if hasattr(exec_fu, "parsl_executor_task_id"):
+            # span_bind_sub(try_span, exec_fu.parsl_executor_task_span)
             logger.info(
                 f"Parsl task {task_id} try {try_id} launched on executor {executor.label} "
                 f"with executor id {exec_fu.parsl_executor_task_id}")
@@ -746,8 +790,11 @@ class DataFlowKernel:
         else:
             logger.info(f"Parsl task {task_id} try {try_id} launched on executor {executor.label}")
 
+        event("DFK_LAUNCH_TASK_LOG_STD_STREAMS_START", try_span)
         self._log_std_streams(task_record)
+        event("DFK_LAUNCH_TASK_LOG_STD_STREAMS_END", try_span)
 
+        event("DFK_LAUNCH_TASK_END_LAUNCHED", try_span)
         return exec_fu
 
     def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable) -> Tuple[Sequence[Any], Dict[str, Any],
@@ -974,7 +1021,10 @@ class DataFlowKernel:
                (AppFuture) [DataFutures,]
 
         """
-
+        task_id = self.task_count
+        self.task_count += 1
+        task_span = Span("TASK", task_id)
+        event("DFK_SUBMIT_START", task_span)
         if ignore_for_cache is None:
             ignore_for_cache = []
         else:
@@ -984,20 +1034,22 @@ class DataFlowKernel:
         if self.cleanup_called:
             raise NoDataFlowKernelError("Cannot submit to a DFK that has been cleaned up")
 
-        task_id = self.task_count
-        self.task_count += 1
+        event("DFK_SUBMIT_CHOOSE_EXECUTOR_START", task_span)
         if isinstance(executors, str) and executors.lower() == 'all':
             choices = list(e for e in self.executors if e != '_parsl_internal')
+        elif isinstance(executors, str):  # and not 'all'
+            choices = [executors]
         elif isinstance(executors, list):
             choices = executors
         else:
             raise ValueError("Task {} supplied invalid type for executors: {}".format(task_id, type(executors)))
         executor = random.choice(choices)
+        event("DFK_SUBMIT_CHOOSE_EXECUTOR_END", task_span)
         logger.debug("Task {} will be sent to executor {}".format(task_id, executor))
 
         resource_specification = app_kwargs.get('parsl_resource_specification', {})
 
-        task_record: TaskRecord
+        task_record: taskrecord.TaskRecord
         task_record = {'args': app_args,
                        'depends': [],
                        'dfk': self,
@@ -1018,14 +1070,18 @@ class DataFlowKernel:
                        'try_id': 0,
                        'id': task_id,
                        'task_launch_lock': threading.Lock(),
+                       'span': task_span,
                        'time_invoked': datetime.datetime.now(),
                        'time_returned': None,
                        'try_time_launched': None,
                        'try_time_returned': None,
                        'resource_specification': resource_specification}
 
+        event("DFK_SUBMIT_UPDATE_UNSCHED_STATE_START", task_span)
         self.update_task_state(task_record, States.unsched)
+        event("DFK_SUBMIT_UPDATE_UNSCHED_STATE_END", task_span)
 
+        event("DFK_SUBMIT_MUNGE_ARGS_START", task_span)
         for kw in ['stdout', 'stderr']:
             if kw in app_kwargs:
                 if app_kwargs[kw] == parsl.AUTO_LOGNAME:
@@ -1035,17 +1091,21 @@ class DataFlowKernel:
                         app_kwargs[kw] = self.default_std_autopath(task_record, kw)
                     else:
                         app_kwargs[kw] = self.config.std_autopath(task_record, kw)
+        event("DFK_SUBMIT_MUNGE_ARGS_END", task_span)
 
         app_fu = AppFuture(task_record)
         task_record['app_fu'] = app_fu
 
         # Transform remote input files to data futures
+        event("DFK_SUBMIT_ADD_DEPS_START", task_span)
         app_args, app_kwargs, func = self._add_input_deps(executor, app_args, app_kwargs, func)
 
         func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func)
+        event("DFK_SUBMIT_ADD_DEPS_END", task_span)
 
         # Replace the function invocation in the TaskRecord with whatever file-staging
         # substitutions have been made.
+
         task_record.update({
                     'args': app_args,
                     'func': func,
@@ -1056,6 +1116,7 @@ class DataFlowKernel:
         self.tasks[task_id] = task_record
 
         # Get the list of dependencies for the task
+        event("DFK_SUBMIT_EXAMINE_DEPS_START", task_span)
         depends = self._gather_all_deps(app_args, app_kwargs)
         task_record['depends'] = depends
 
@@ -1071,15 +1132,25 @@ class DataFlowKernel:
         else:
             waiting_message = "not waiting on any dependency"
 
+        logger.debug(f"METRIC GATHERED_DEPS {task_id} "
+                     f"depends={len(depends)}")
+
+        event("DFK_SUBMIT_EXAMINE_DEPS_END", task_span)
+
         logger.info("Task {} submitted for App {}, {}".format(task_id,
                                                               task_record['func_name'],
                                                               waiting_message))
 
+        event("DFK_SUBMIT_ADD_CALLBACK_START", task_span)
         app_fu.add_done_callback(partial(self.handle_app_update, task_record))
+        event("DFK_SUBMIT_UPDATE_PENDING_STATE_START", task_span)
         self.update_task_state(task_record, States.pending)
+        event("DFK_SUBMIT_UPDATE_PENDING_STATE_END", task_span)
         logger.debug("Task {} set to pending state with AppFuture: {}".format(task_id, task_record['app_fu']))
 
+        event("DFK_SUBMIT_MONITORING_PENDING_START", task_span)
         self._send_task_log_info(task_record)
+        event("DFK_SUBMIT_MONITORING_PENDING_END", task_span)
 
         # at this point add callbacks to all dependencies to do a launch_if_ready
         # call whenever a dependency completes.
@@ -1105,6 +1176,7 @@ class DataFlowKernel:
 
         self.launch_if_ready(task_record)
 
+        event("DFK_SUBMIT_END", task_span)
         return app_fu
 
     # it might also be interesting to assert that all DFK
@@ -1272,9 +1344,13 @@ class DataFlowKernel:
             self.monitoring.close()
             logger.info("Terminated monitoring")
 
+        # TODO: enabling based on whether dict tracing is enabled or not.
+        logger.info("Writing tracing pickle file")
+        output_event_stats(directory=self.run_dir)
+
         logger.info("DFK cleanup complete")
 
-    def checkpoint(self, tasks: Optional[Sequence[TaskRecord]] = None) -> str:
+    def checkpoint(self, tasks: Optional[Sequence[taskrecord.TaskRecord]] = None) -> str:
         """Checkpoint the dfk incrementally to a checkpoint file.
 
         When called, every task that has been completed yet not
@@ -1415,7 +1491,7 @@ class DataFlowKernel:
             return {}
 
     @staticmethod
-    def _log_std_streams(task_record: TaskRecord) -> None:
+    def _log_std_streams(task_record: taskrecord.TaskRecord) -> None:
         tid = task_record['id']
 
         def log_std_stream(name: str, target) -> None:
