@@ -177,11 +177,9 @@ class DataFlowKernel:
 
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.
-        radio = self.monitoring.radio if self.monitoring else None
         self.job_status_poller = JobStatusPoller(strategy=self.config.strategy,
                                                  strategy_period=self.config.strategy_period,
-                                                 max_idletime=self.config.max_idletime,
-                                                 monitoring=radio)
+                                                 max_idletime=self.config.max_idletime)
 
         self.executors: Dict[str, ParslExecutor] = {}
 
