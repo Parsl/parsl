@@ -7,6 +7,8 @@ from abc import ABCMeta, abstractmethod
 from multiprocessing.queues import Queue
 from typing import Optional
 
+import zmq
+
 from parsl.serialize import serialize
 
 _db_manager_excepts: Optional[Exception]
@@ -186,3 +188,22 @@ class MultiprocessingQueueRadioSender(MonitoringRadioSender):
 
     def send(self, message: object) -> None:
         self.queue.put((message, 0))
+
+
+class ZMQRadioSender(MonitoringRadioSender):
+    """A monitoring radio which connects over ZMQ. This radio is not
+    thread-safe, because its use of ZMQ is not thread-safe.
+    """
+
+    def __init__(self, hub_address: str, hub_zmq_port: int) -> None:
+        print("in zmq radio init. about to log.")
+        logger.debug("Creating ZMQ socket")
+        print("in zmq radio init. logged first log. about to create context.")
+        self._hub_channel = zmq.Context().socket(zmq.DEALER)
+        print("in zmq radio init. created context.")
+        self._hub_channel.set_hwm(0)
+        self._hub_channel.connect(f"tcp://{hub_address}:{hub_zmq_port}")
+        logger.debug("Created ZMQ socket")
+
+    def send(self, message: object) -> None:
+        self._hub_channel.send_pyobj(message)
