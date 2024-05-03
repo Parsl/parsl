@@ -14,7 +14,7 @@ import threading as mt
 
 from functools import partial
 from typing import Optional, Dict
-from pathlib import Path, PosixPath
+from pathlib import PosixPath
 from concurrent.futures import Future
 
 from parsl.app.python import timeout
@@ -485,16 +485,10 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                 elif isinstance(k_val, PosixPath):
                     k_val = k_val.__str__()
 
-                # if the stderr/out has no path
-                # then we consider it local and
-                # we just set the path to the cwd
-                if '/' not in k_val:
-                    k_val = CWD + '/' + k_val
-
-                # finally set the stderr/out to
-                # the desired name by the user
+                # set the stderr/out to the desired
+                # name by the user
                 setattr(task, k, k_val)
-                task.sandbox = Path(k_val).parent.__str__()
+                task.sandbox = CWD
 
     def _stage_files(self, files, mode):
         """
@@ -522,7 +516,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                 # this indicates that the user
                 # did not provided a specific
                 # output file and RP will stage out
-                # the task.output from pilot://task_folder
+                # the task.stdout from pilot://task_folder
                 # to the CWD or file.url
                 if '/' not in file.url:
                     f = {'source': file.filename,
