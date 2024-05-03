@@ -52,13 +52,13 @@ class ParslExecutor(metaclass=ABCMeta):
         *,
         hub_address: Optional[str] = None,
         hub_zmq_port: Optional[int] = None,
-        monitoring_radio: Optional[MonitoringRadioSender] = None,
+        submit_monitoring_radio: Optional[MonitoringRadioSender] = None,
         run_dir: str = ".",
         run_id: Optional[str] = None,
     ):
         self.hub_address = hub_address
         self.hub_zmq_port = hub_zmq_port
-        self.monitoring_radio = monitoring_radio
+        self.submit_monitoring_radio = submit_monitoring_radio
         self.run_dir = os.path.abspath(run_dir)
         self.run_id = run_id
 
@@ -147,11 +147,11 @@ class ParslExecutor(metaclass=ABCMeta):
         self._hub_zmq_port = value
 
     @property
-    def monitoring_radio(self) -> Optional[MonitoringRadioSender]:
+    def submit_monitoring_radio(self) -> Optional[MonitoringRadioSender]:
         """Local radio for sending monitoring messages
         """
-        return self._monitoring_radio
+        return self._submit_monitoring_radio
 
-    @monitoring_radio.setter
-    def monitoring_radio(self, value: Optional[MonitoringRadioSender]) -> None:
-        self._monitoring_radio = value
+    @submit_monitoring_radio.setter
+    def submit_monitoring_radio(self, value: Optional[MonitoringRadioSender]) -> None:
+        self._submit_monitoring_radio = value
