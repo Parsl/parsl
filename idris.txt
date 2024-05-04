@@ -1,0 +1,9 @@
+notes for idris2 interchange
+
+apt install openssh-server vim git less build-essential chezscheme libgmp-dev
+
+build idris2 like in my idris2 environment, but inside my parsl dev container
+
+export PATH=~/.idris2/bin/:$PATH
+
+I am working with this idris2 version: 5d04f89c7b42afba384d19108b5e0cdaee99a224
