@@ -85,4 +85,15 @@ main = do
   -- maybe want to do some linear typing on?
   zmq_connect tasks_submit_to_interchange_socket "tcp://127.0.0.1:9000"
 
+  -- now receive a message without polling, just blocking forever until that
+  -- message arrives. that should be enough to see a task arrive from the
+  -- submit side.
+
+  -- Semantics of buffer ownership: the caller must allocate a buffer and
+  -- describe the size to zmq_recv. Probably some linear type stuff to be
+  -- done here to ensure the buffer gets used properly? (maybe even type
+  -- state for: not populated, populated by a message which can be read
+  -- many times -> delete/reuse?)
+  -- msg <- zmq_recv
+
   log "Idris2 interchange ending"
