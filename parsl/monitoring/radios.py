@@ -177,7 +177,7 @@ class UDPRadio(MonitoringRadio):
 
 
 class MultiprocessingQueueRadio(MonitoringRadio):
-    """A monitoring radio intended which connects over a multiprocessing Queue.
+    """A monitoring radio which connects over a multiprocessing Queue.
     This radio is intended to be used on the submit side, where components
     in the submit process, or processes launched by multiprocessing, will have
     access to a Queue shared with the monitoring database code (bypassing the
