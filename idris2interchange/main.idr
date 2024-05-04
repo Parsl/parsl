@@ -126,4 +126,8 @@ main = do
   -- so now we've received a message... we'll need to eventually deallocate
   -- it... and hopefully have the type system enforce that... TODO
 
+  -- what msg contains here is a pickle-encoded two element dictionary,
+  -- the task ID and the buffer.
+  -- so... now its time to write a pickle decoder?
+
   log "Idris2 interchange ending"
