@@ -38,6 +38,9 @@ data ZMQSocketType = ZMQSocketDEALER
 zmq_socket_to_int : ZMQSocketType -> Int
 zmq_socket_to_int ZMQSocketDEALER = 5
 
+-- TODO: all these AnyPtrs could be made tighter perhaps - they're all
+-- pointers to specific kinds of data structure (as evidenced by their
+-- immediate wrapping in type-specific wrappers...)
 
 data ZMQSocket = MkZMQSocket AnyPtr
 
@@ -55,6 +58,26 @@ prim__zmq_connect : AnyPtr -> String -> PrimIO ()
 zmq_connect : ZMQSocket -> String -> IO ()
 zmq_connect (MkZMQSocket sock_ptr) dest = 
   primIO $ prim__zmq_connect sock_ptr dest
+
+
+data ZMQMsg = MkZMQMsg AnyPtr
+
+-- void *glue_zmq_recv_msg_alloc(void *sock) {
+%foreign (gluezmq "glue_zmq_recv_msg_alloc")
+prim__zmq_recv_msg_alloc : AnyPtr -> PrimIO AnyPtr
+
+zmq_recv_msg_alloc : ZMQSocket -> IO ZMQMsg
+zmq_recv_msg_alloc (MkZMQSocket sock_ptr) = do
+    msg_ptr <- primIO $ prim__zmq_recv_msg_alloc sock_ptr
+    pure (MkZMQMsg msg_ptr)
+
+
+%foreign (gluezmq "glue_zmq_msg_size")
+prim__zmq_msg_size : AnyPtr -> PrimIO Int
+
+zmq_msg_size : ZMQMsg -> IO Int
+zmq_msg_size (MkZMQMsg msg_ptr) = primIO $ prim__zmq_msg_size msg_ptr
+
 
 main : IO ()
 main = do
@@ -94,6 +117,13 @@ main = do
   -- done here to ensure the buffer gets used properly? (maybe even type
   -- state for: not populated, populated by a message which can be read
   -- many times -> delete/reuse?)
-  -- msg <- zmq_recv
+  msg <- zmq_recv_msg_alloc tasks_submit_to_interchange_socket
+
+  putStr "Received message, size "
+  s <- zmq_msg_size msg
+  printLn s
+
+  -- so now we've received a message... we'll need to eventually deallocate
+  -- it... and hopefully have the type system enforce that... TODO
 
   log "Idris2 interchange ending"

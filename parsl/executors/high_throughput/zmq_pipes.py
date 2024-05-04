@@ -120,6 +120,7 @@ class TasksOutgoing:
             if self.zmq_socket in socks and socks[self.zmq_socket] == zmq.POLLOUT:
                 # The copy option adds latency but reduces the risk of ZMQ overflow
                 logger.debug("Sending TasksOutgoing message")
+                logger.error(f"BENC: sending task outgoing object: {message}")
                 self.zmq_socket.send_pyobj(message, copy=True)
                 logger.debug("Sent TasksOutgoing message")
                 return
