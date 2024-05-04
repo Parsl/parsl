@@ -537,7 +537,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         # this is going to leave residual elixirchange around because killing shell won't kill children...
         # self.interchange_proc = subprocess.Popen(args=["cd elixirchange; mix run --no-halt"], shell=True)
 
-        self.interchange_proc = subprocess.Popen(args=["cd idris2interchange; idris2 main.idr -x main"], shell=True)
+        self.interchange_proc = subprocess.Popen(args=["cd idris2interchange ; gcc -shared gluezmq.c -lzmq -o glue_zmq.so && idris2 main.idr -x main"], shell=True)
 
         # TODO: all these arguments below aren't used... so are they necessary? should there be
         # tests discovering they aren't used/passed?
