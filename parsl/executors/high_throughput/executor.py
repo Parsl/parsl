@@ -822,6 +822,21 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             logger.info("Unable to terminate Interchange process; sending SIGKILL")
             self.interchange_proc.kill()
 
+        logger.info("closing context sockets")
+        # this might block if there are outstanding messages (eg if the interchange
+        # has gone away... probably something to do with zmq.LINGER sockopt to remove
+        # this hang risk?
+
+        # these should be initialized to none rather than being absent?
+        if hasattr(self, "incoming_q"):
+            self.incoming_q.close()
+
+        if hasattr(self, "outgoing_q"):
+            self.outgoing_q.close()
+
+        if hasattr(self, "command_client"):
+            self.command_client.close()
+
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 
     def get_usage_information(self):
