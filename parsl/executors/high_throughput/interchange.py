@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import argparse
 import zmq
 import os
 import sys
@@ -674,13 +675,101 @@ def start_file_logger(filename: str, level: int = logging.DEBUG, format_string: 
     logger.addHandler(handler)
 
 
-@wrap_with_logs(target="interchange")
-def starter(*args: Any, **kwargs: Any) -> None:
-    """Start the interchange process
+# @wrap_with_logs(target="interchange")
+# def starter(*args: Any, **kwargs: Any) -> None:
+#    """Start the interchange process
 
-    The executor is expected to call this function. The args, kwargs match that of the Interchange.__init__
-    """
+#    The executor is expected to call this function. The args, kwargs match that of the Interchange.__init__
+#    """
+#    setproctitle("parsl: HTEX interchange")
+#    # logger = multiprocessing.get_logger()
+#    ic = Interchange(*args, **kwargs)
+#    ic.start()
+
+if __name__ == "__main__":
     setproctitle("parsl: HTEX interchange")
-    # logger = multiprocessing.get_logger()
-    ic = Interchange(*args, **kwargs)
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--client-address", required=True,
+                        help="Address to connect back to submitting client")
+    parser.add_argument("--interchange-address", required=True,
+                        help="Address this interchange should listen on")
+    parser.add_argument("--client-ports", required=True,
+                        help="Three ports on submitting client that the interchange should connect back to")
+    parser.add_argument("--worker-ports", required=True,
+                        help="Two ports on this interchange that workers can connect to")
+    parser.add_argument("--worker-port-range", required=True,
+                        help="Low and high port numbers that interchange will select worker ports from")
+    parser.add_argument("--hub-address", required=True,
+                        help="Address to connect to send monitoring info")
+    parser.add_argument("--hub-zmq-port", required=True,
+                        help="Address to connect to send monitoring info")
+    parser.add_argument("--heartbeat-threshold", required=True,
+                        help="Number of seconds without heartbeat after which a worker is considered lost")
+    parser.add_argument("--logdir", required=True,
+                        help="Directory in which to create interchange.log")
+    parser.add_argument("--logging-level", required=True,
+                        help="Level to log at")
+    parser.add_argument("--poll-period", required=True,
+                        help="Main thread polling period, in milliseconds")
+    parser.add_argument("--cert-dir", required=True,
+                        help="Directory in which to find CurveZMQ certificates")
+
+    args = parser.parse_args()
+
+    def parseNone(s: str) -> Optional[str]:
+        if s == "None":
+            return None
+        else:
+            return s
+
+    def parseInt2(s: str) -> Tuple[int, int]:
+        t = [int(v) for v in s.split(',')]
+        if len(t) != 2:
+            raise RuntimeError("Bad parse for 2-tuple of ints")
+        return (t[0], t[1])
+
+    def parseInt2Optional(s: str) -> Optional[Tuple[int, int]]:
+        if s == "None":
+            return None
+        else:
+            t = [int(v) for v in s.split(',')]
+            if len(t) != 2:
+                raise RuntimeError("Bad parse for 2-tuple of ints")
+            return (t[0], t[1])
+
+    def parseInt3(s: str) -> Tuple[int, int, int]:
+        t = [int(v) for v in s.split(',')]
+        if len(t) != 3:
+            raise RuntimeError("Bad parse for 2-tuple of ints")
+        return (t[0], t[1], t[2])
+
+    def parseNoneInt(s: str) -> Optional[int]:
+        if s == "None":
+            return None
+        else:
+            return int(s)
+
+    # TODO: can these parses move into argparse so that argparse handles errors?
+
+    # TODO: all these ad-hoc parsers are pretty horrible - using a command line
+    # is a bit of a horrible way to do this...
+
+    # TODO: initialize logging here and log any exceptions raised during
+    # these two lines into the log file:
+
+    ic = Interchange(client_address=args.client_address,
+                     interchange_address=parseNone(args.interchange_address),
+                     client_ports=parseInt3(args.client_ports),
+                     worker_ports=parseInt2Optional(args.worker_ports),
+                     worker_port_range=parseInt2(args.worker_port_range),
+                     hub_address=parseNone(args.hub_address),
+                     hub_zmq_port=parseNoneInt(args.hub_zmq_port),
+                     heartbeat_threshold=int(args.heartbeat_threshold),
+                     logdir=args.logdir,
+                     logging_level=int(args.logging_level),    # TODO: is this ever None?
+                     poll_period=int(args.poll_period),
+                     cert_dir=parseNone(args.cert_dir),
+                     )
     ic.start()

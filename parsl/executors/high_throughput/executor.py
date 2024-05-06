@@ -5,8 +5,8 @@ import typeguard
 import logging
 import threading
 import pickle
+import subprocess
 from dataclasses import dataclass
-from multiprocessing import Process
 from typing import Dict, Sequence
 from typing import List, Optional, Tuple, Union, Callable
 import math
@@ -19,7 +19,6 @@ from parsl.serialize.errors import SerializationError, DeserializationError
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.jobs.states import JobStatus, JobState, TERMINAL_STATES
 from parsl.executors.high_throughput import zmq_pipes
-from parsl.executors.high_throughput import interchange
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
 from parsl.executors.errors import (
     BadMessage, ScalingFailed,
@@ -36,7 +35,6 @@ from parsl.data_provider.staging import Staging
 from parsl.addresses import get_all_addresses
 from parsl.process_loggers import wrap_with_logs
 
-from parsl.multiprocessing import ForkProcess
 from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
 
@@ -310,7 +308,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self._task_counter = 0
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
-        self.interchange_proc: Optional[Process] = None
+        self.interchange_proc: Optional[subprocess.Popen] = None
         self.interchange_port_range = interchange_port_range
         self.heartbeat_threshold = heartbeat_threshold
         self.heartbeat_period = heartbeat_period
@@ -525,32 +523,51 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         logger.info("Queue management worker finished")
 
-    def _start_local_interchange_process(self):
+    def _start_local_interchange_process(self) -> None:
         """ Starts the interchange process locally
 
-        Starts the interchange process locally and uses an internal command queue to
+        Starts the interchange process locally and uses the command queue to
         get the worker task and result ports that the interchange has bound to.
         """
-        self.interchange_proc = ForkProcess(target=interchange.starter,
-                                            kwargs={"client_address": "127.0.0.1",
-                                                    "client_ports": (self.outgoing_q.port,
-                                                                     self.incoming_q.port,
-                                                                     self.command_client.port),
-                                                    "interchange_address": self.address,
-                                                    "worker_ports": self.worker_ports,
-                                                    "worker_port_range": self.worker_port_range,
-                                                    "hub_address": self.hub_address,
-                                                    "hub_zmq_port": self.hub_zmq_port,
-                                                    "logdir": self.logdir,
-                                                    "heartbeat_threshold": self.heartbeat_threshold,
-                                                    "poll_period": self.poll_period,
-                                                    "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
-                                                    "cert_dir": self.cert_dir,
-                                                    },
-                                            daemon=True,
-                                            name="HTEX-Interchange"
-                                            )
-        self.interchange_proc.start()
+        # self.interchange_proc = ForkProcess(target=interchange.starter,
+        #                                     kwargs={"client_address": "127.0.0.1",
+        #                                           "client_ports": (self.outgoing_q.port,
+        #                                                             self.incoming_q.port,
+        #                                                             self.command_client.port),
+        #                                            "interchange_address": self.address,
+        #                                            "worker_ports": self.worker_ports,
+        #                                            "worker_port_range": self.worker_port_range,
+        #                                            "hub_address": self.hub_address,
+        #                                            "hub_zmq_port": self.hub_zmq_port,
+        #                                            "logdir": self.logdir,
+        #                                            "heartbeat_threshold": self.heartbeat_threshold,
+        #                                            "poll_period": self.poll_period,
+        #                                            "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
+        #                                            "cert_dir": self.cert_dir,
+        #                                            },
+        #                                    daemon=True,
+        #                                    name="HTEX-Interchange"
+        #                                    )
+        # self.interchange_proc.start()
+
+        cli: List[str] = ["interchange.py",
+                          "--client-address", "127.0.0.1",
+                          "--client-ports", f"{self.outgoing_q.port},{self.incoming_q.port},{self.command_client.port}",
+                          "--interchange-address", str(self.address),
+                          "--worker-ports", f"{self.worker_ports[0]},{self.worker_ports[1]}"
+                                            if self.worker_ports else "None",
+                          "--worker-port-range", f"{self.worker_port_range[0]},{self.worker_port_range[1]}"
+                                                 if self.worker_port_range else "None",
+                          "--hub-address", str(self.hub_address),
+                          "--hub-zmq-port", str(self.hub_zmq_port),
+                          "--logdir", self.logdir,
+                          "--heartbeat-threshold", str(self.heartbeat_threshold),
+                          "--poll-period", str(self.poll_period),
+                          "--logging-level", str(logging.DEBUG) if self.worker_debug else str(logging.INFO),
+                          "--cert-dir", str(self.cert_dir)
+                          ]
+        logger.info(f"BENC: cli = {cli}")
+        self.interchange_proc = subprocess.Popen(cli)
 
         try:
             (self.worker_task_port, self.worker_result_port) = self.command_client.run("WORKER_PORTS", timeout_s=120)
@@ -562,7 +579,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         """Method to start the management thread as a daemon.
 
         Checks if a thread already exists, then starts it.
-        Could be used later as a restart if the management thread dies.
+        Could be used later as a restart if the management thread dies
         """
         if self._queue_management_thread is None:
             logger.debug("Starting queue management thread")
@@ -815,12 +832,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         logger.info("Attempting HighThroughputExecutor shutdown")
 
         self.interchange_proc.terminate()
-        self.interchange_proc.join(timeout=timeout)
-        if self.interchange_proc.is_alive():
+        if self.interchange_proc.poll() is None:
             logger.info("Unable to terminate Interchange process; sending SIGKILL")
             self.interchange_proc.kill()
-
-        self.interchange_proc.close()
 
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 
