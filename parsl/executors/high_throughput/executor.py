@@ -834,6 +834,23 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             logger.info("Unable to terminate Interchange process; sending SIGKILL")
             self.interchange_proc.kill()
 
+        logger.info("Closing ZMQ pipes")
+
+        # These pipes are used in a thread unsafe manner. If you have traced a
+        # problem to this block of code, you might consider what is happening
+        # with other threads that access these.
+
+        # incoming_q is not closed here because it is used by the results queue
+        # worker which is not shut down at this point.
+
+        if hasattr(self, 'outgoing_q'):
+            logger.info("Closing outgoing_q")
+            self.outgoing_q.close()
+
+        if hasattr(self, 'command_client'):
+            logger.info("Closing command client")
+            self.command_client.close()
+
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 
     def get_usage_information(self):
