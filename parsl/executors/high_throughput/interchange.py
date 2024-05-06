@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import multiprocessing
 import zmq
 import os
 import sys
@@ -327,6 +326,9 @@ class Interchange:
                         logger.warning("Worker to hold was not in ready managers list")
 
                     reply = None
+
+                elif command_req == "WORKER_PORTS":
+                    reply = (self.worker_task_port, self.worker_result_port)
 
                 else:
                     logger.error(f"Received unknown command: {command_req}")
@@ -672,7 +674,7 @@ def start_file_logger(filename: str, level: int = logging.DEBUG, format_string: 
 
 
 @wrap_with_logs(target="interchange")
-def starter(comm_q: multiprocessing.Queue, *args: Any, **kwargs: Any) -> None:
+def starter(*args: Any, **kwargs: Any) -> None:
     """Start the interchange process
 
     The executor is expected to call this function. The args, kwargs match that of the Interchange.__init__
@@ -680,6 +682,4 @@ def starter(comm_q: multiprocessing.Queue, *args: Any, **kwargs: Any) -> None:
     setproctitle("parsl: HTEX interchange")
     # logger = multiprocessing.get_logger()
     ic = Interchange(*args, **kwargs)
-    comm_q.put((ic.worker_task_port,
-                ic.worker_result_port))
     ic.start()
