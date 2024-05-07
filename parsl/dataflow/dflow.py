@@ -1271,6 +1271,11 @@ class DataFlowKernel:
         atexit.unregister(self.atexit_cleanup)
         logger.info("Unregistered atexit hook")
 
+        if DataFlowKernelLoader._dfk == self:
+            logger.info("Unregistering default DFK")
+            parsl.clear()
+            logger.info("Unregistered default DFK")
+
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks: Optional[Sequence[TaskRecord]] = None) -> str:
@@ -1462,6 +1467,7 @@ class DataFlowKernelLoader:
     @classmethod
     def clear(cls) -> None:
         """Clear the active DataFlowKernel so that a new one can be loaded."""
+        assert cls._dfk is not None, "BENC: temp in this PR, to find redundant clears"
         cls._dfk = None
 
     @classmethod

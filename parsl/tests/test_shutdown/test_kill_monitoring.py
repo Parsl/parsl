@@ -25,7 +25,6 @@ def test_no_kills():
     assert parsl.dfk().monitoring is not None, "This test requires monitoring"
 
     parsl.dfk().cleanup()
-    parsl.clear()
 
 
 @pytest.mark.local
@@ -62,4 +61,3 @@ def test_kill_monitoring_helper_process(sig, process_attr, try_assert):
     simple_app().result()
 
     parsl.dfk().cleanup()
-    parsl.clear()

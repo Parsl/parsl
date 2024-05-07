@@ -44,7 +44,6 @@ def storage_access_parsl():
     yield _setup_config
 
     parsl.dfk().cleanup()
-    parsl.clear()
 
 
 @pytest.mark.local

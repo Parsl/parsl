@@ -5,18 +5,12 @@ from parsl.app.app import python_app
 from parsl.tests.configs.htex_local import fresh_config
 
 
-def local_setup():
+def local_config():
     config = fresh_config()
     config.executors[0].poll_period = 1
     config.executors[0].max_workers_per_node = 1
     config.executors[0].launch_cmd = "executable_that_hopefully_does_not_exist_1030509.py"
-    parsl.load(config)
-
-
-def local_teardown():
-
-    parsl.dfk().cleanup()
-    parsl.clear()
+    return config
 
 
 @python_app
