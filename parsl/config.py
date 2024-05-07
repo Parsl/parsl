@@ -38,6 +38,12 @@ class Config(RepresentationMixin, UsageInformation):
         ``checkpoint_mode='periodic'``.
     dependency_resolver: plugin point for custom dependency resolvers. Default: only resolve Futures,
         using the `SHALLOW_DEPENDENCY_RESOLVER`.
+    exit_mode: str, optional
+        When Parsl is used as a context manager, using ``with parsl.load`` syntax, then this parameter
+        controls what will happen to running tasks and exceptions at exit. The options are:
+        ``cleanup``: cleanup the DFK on exit without waiting for any tasks, ``skip``: skip all shutdown
+        behaviour when exiting the context manager; ``wait``: wait for all tasks to complete when
+        exiting normally, but exit immediately when exiting due to an exception. Default is ``cleanup``.
     garbage_collect : bool. optional.
         Delete task records from DFK when tasks have completed. Default: True
     internal_tasks_max_threads : int, optional
@@ -92,6 +98,7 @@ class Config(RepresentationMixin, UsageInformation):
                                         Literal['manual']] = None,
                  checkpoint_period: Optional[str] = None,
                  dependency_resolver: Optional[DependencyResolver] = None,
+                 exit_mode: Literal['cleanup', 'skip', 'wait'] = 'cleanup',
                  garbage_collect: bool = True,
                  internal_tasks_max_threads: int = 10,
                  retries: int = 0,
@@ -128,6 +135,7 @@ class Config(RepresentationMixin, UsageInformation):
             checkpoint_period = "00:30:00"
         self.checkpoint_period = checkpoint_period
         self.dependency_resolver = dependency_resolver
+        self.exit_mode = exit_mode
         self.garbage_collect = garbage_collect
         self.internal_tasks_max_threads = internal_tasks_max_threads
         self.retries = retries
