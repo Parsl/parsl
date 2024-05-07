@@ -326,8 +326,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         assert mpi_launcher in VALID_LAUNCHERS, \
             f"mpi_launcher must be set to one of {VALID_LAUNCHERS}"
         if self.enable_mpi_mode:
-            assert isinstance(self.provider.launcher, parsl.launchers.SingleNodeLauncher), \
-                "mpi_mode requires the provider to be configured to use a SingleNodeLauncher"
+            assert isinstance(self.provider.launcher, parsl.launchers.SimpleLauncher), \
+                "mpi_mode requires the provider to be configured to use a SimpleLauncher"
 
         self.mpi_launcher = mpi_launcher
 
