@@ -19,25 +19,29 @@ from parsl.utils import RepresentationMixin, wtime_to_minutes
 
 logger = logging.getLogger(__name__)
 
+# From https://slurm.schedmd.com/sacct.html#SECTION_JOB-STATE-CODES
 translate_table = {
-    'PD': JobState.PENDING,
-    'R': JobState.RUNNING,
-    'CA': JobState.CANCELLED,
-    'CF': JobState.PENDING,  # (configuring),
-    'CG': JobState.RUNNING,  # (completing),
-    'CD': JobState.COMPLETED,
-    'F': JobState.FAILED,  # (failed),
-    'TO': JobState.TIMEOUT,  # (timeout),
-    'NF': JobState.FAILED,  # (node failure),
-    'RV': JobState.FAILED,  # (revoked) and
-    'SE': JobState.FAILED   # (special exit state)
+    'PENDING': JobState.PENDING,
+    'RUNNING': JobState.RUNNING,
+    'CANCELLED': JobState.CANCELLED,
+    'COMPLETED': JobState.COMPLETED,
+    'FAILED': JobState.FAILED,
+    'NODE_FAIL': JobState.FAILED,
+    'BOOT_FAIL': JobState.FAILED,
+    'DEADLINE': JobState.TIMEOUT,
+    'TIMEOUT': JobState.TIMEOUT,
+    'REVOKED': JobState.FAILED,
+    'OUT_OF_MEMORY': JobState.FAILED,
+    'SUSPENDED': JobState.HELD,
+    'PREEMPTED': JobState.TIMEOUT,
+    'REQUEUED': JobState.PENDING
 }
 
 
 class SlurmProvider(ClusterProvider, RepresentationMixin):
     """Slurm Execution Provider
 
-    This provider uses sbatch to submit, squeue for status and scancel to cancel
+    This provider uses sbatch to submit, sacct for status and scancel to cancel
     jobs. The sbatch script to be used is created from a template file in this
     same module.
 
@@ -168,14 +172,14 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             logger.debug('No active jobs, skipping status update')
             return
 
-        cmd = "squeue --noheader --format='%i %t' --job '{0}'".format(job_id_list)
+        cmd = "sacct -X --noheader --format=jobid,state%100 --job '{0}'".format(job_id_list)
         logger.debug("Executing %s", cmd)
         retcode, stdout, stderr = self.execute_wait(cmd)
-        logger.debug("squeue returned %s %s", stdout, stderr)
+        logger.debug("sacct returned %s %s", stdout, stderr)
 
         # Execute_wait failed. Do no update
         if retcode != 0:
-            logger.warning("squeue failed with non-zero exit code {}".format(retcode))
+            logger.warning("sacct failed with non-zero exit code {}".format(retcode))
             return
 
         jobs_missing = set(self.resources.keys())
@@ -193,13 +197,15 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                                                          stderr_path=self.resources[job_id]['job_stderr_path'])
             jobs_missing.remove(job_id)
 
+        # TODO: This code can probably be depricated with the use of sacct
+        # since sacct will get status even for completed jobs.
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
             logger.debug("Updating missing job {} to completed status".format(missing_job))
-            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED,
-                                                              stdout_path=self.resources[missing_job]['job_stdout_path'],
-                                                              stderr_path=self.resources[missing_job]['job_stderr_path'])
+            self.resources[missing_job]['status'] = JobStatus(
+                JobState.COMPLETED, stdout_path=self.resources[missing_job]['job_stdout_path'],
+                stderr_path=self.resources[missing_job]['job_stderr_path'])
 
     def submit(self, command: str, tasks_per_node: int, job_name="parsl.slurm") -> str:
         """Submit the command as a slurm job.
