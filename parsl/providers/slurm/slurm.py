@@ -172,7 +172,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             logger.debug('No active jobs, skipping status update')
             return
 
-        cmd = "sacct -X --noheader --format=jobid,state%100 --job '{0}'".format(job_id_list)
+        cmd = "sacct -X --noheader --format=jobid,state%20 --job '{0}'".format(job_id_list)
         logger.debug("Executing %s", cmd)
         retcode, stdout, stderr = self.execute_wait(cmd)
         logger.debug("sacct returned %s %s", stdout, stderr)
@@ -187,7 +187,10 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             if not line:
                 # Blank line
                 continue
-            job_id, slurm_state = line.split()
+            # Sacct includes extra information in some outputs
+            # For example "<job_id> CANCELLED by <user_id>"
+            # This splits and ignores anything past the first two unpacked values
+            job_id, slurm_state, *ignore = line.split()
             if slurm_state not in translate_table:
                 logger.warning(f"Slurm status {slurm_state} is not recognized")
             status = translate_table.get(slurm_state, JobState.UNKNOWN)
