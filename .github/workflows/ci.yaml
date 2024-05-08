@@ -1,11 +1,11 @@
-name: Parsl
+name: Parsl macosX
 
 on:
   pull_request:
     types:
       - opened
       - synchronize
-
+     
 jobs:
   main-test-suite:
     strategy:
@@ -108,3 +108,25 @@ jobs:
           .pytest/
           ci_job_info.txt
         compression-level: 9
+
+  macos-test:
+    runs-on: macos-latest
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Install dependencies
+      run: |
+        make virtualenv
+        source .venv/bin/activate
+        make deps
+
+    - name: Run tests on macOS
+      run: |
+        source .venv/bin/activate
+        make test
