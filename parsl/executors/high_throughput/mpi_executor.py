@@ -1,5 +1,5 @@
 """A simplified interface for HTEx when running in MPI mode"""
-from typing import Optional, Tuple, List, Union, Sequence, Callable, Dict
+from typing import Optional, Tuple, List, Union, Callable, Dict
 from inspect import signature
 import re
 
