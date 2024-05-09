@@ -43,9 +43,6 @@ class BlockProviderExecutor(ParslExecutor):
     invoking scale_out, but it will not initialize the blocks requested by
     any init_blocks parameter. Subclasses must implement that behaviour
     themselves.
-
-    BENC: TODO: block error handling: maybe I want this more user pluggable?
-    I'm not sure of use cases for switchability at the moment beyond "yes or no"
     """
     def __init__(self, *,
                  provider: Optional[ExecutionProvider],

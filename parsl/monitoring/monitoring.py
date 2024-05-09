@@ -244,6 +244,7 @@ class MonitoringHub(RepresentationMixin):
             self.router_exit_event.set()
             logger.info("Waiting for router to terminate")
             self.router_proc.join()
+            self.router_proc.close()
             logger.debug("Finished waiting for router termination")
             if len(exception_msgs) == 0:
                 logger.debug("Sending STOP to DBM")
@@ -252,6 +253,7 @@ class MonitoringHub(RepresentationMixin):
                 logger.debug("Not sending STOP to DBM, because there were DBM exceptions")
             logger.debug("Waiting for DB termination")
             self.dbm_proc.join()
+            self.dbm_proc.close()
             logger.debug("Finished waiting for DBM termination")
 
             # should this be message based? it probably doesn't need to be if
@@ -259,6 +261,7 @@ class MonitoringHub(RepresentationMixin):
             logger.info("Terminating filesystem radio receiver process")
             self.filesystem_proc.terminate()
             self.filesystem_proc.join()
+            self.filesystem_proc.close()
 
             logger.info("Closing monitoring multiprocessing queues")
             self.exception_q.close()
