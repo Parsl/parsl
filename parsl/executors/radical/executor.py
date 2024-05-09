@@ -458,7 +458,11 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
     def _unpack_and_set_parsl_exception(self, parsl_task, exception):
         try:
-            s = rp.utils.deserialize_bson(exception)
+            try:
+                s = rp.utils.deserialize_bson(exception)
+            except Exception:
+                s = exception
+
             if isinstance(s, RemoteExceptionWrapper):
                 try:
                     s.reraise()
@@ -466,6 +470,8 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                     parsl_task.set_exception(e)
             elif isinstance(s, Exception):
                 parsl_task.set_exception(s)
+            elif isinstance(s, str):
+                parsl_task.set_exception(eval(s))
             else:
                 raise ValueError("Unknown exception-like type received: {}".format(type(s)))
         except Exception as e:
