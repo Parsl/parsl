@@ -14,11 +14,19 @@ from parsl.providers.base import ExecutionProvider
 
 
 class MPIExecutor(HighThroughputExecutor):
-    """A version of :class:`~parsl.HighThroughputExecutor` tuned for executing MPI tasks
+    """A version of :class:`~parsl.HighThroughputExecutor` tuned for executing multi-node (e.g., MPI) tasks.
+
+    The Provider _must_ use the :class:`~parsl.launchers.SimpleLauncher`,
+    which places a single pool of workers on the first node of a block.
+    Each worker can then make system calls which use an MPI launcher (e.g., ``mpirun``, ``srun``)
+    to spawn multi-node tasks.
+
+    Specify the maximum number of multi-node tasks to run at once using ``max_workers_per_block``.
+    The maximum number should be smaller than the ``nodes_per_block`` in the Provider.
 
     Parameters
     ----------
-    max_tasks: int
+    max_workers_per_block: int
         Maximum number of MPI applications to run at once per block
     """
 
@@ -34,7 +42,7 @@ class MPIExecutor(HighThroughputExecutor):
                  storage_access: Optional[List[Staging]] = None,
                  working_dir: Optional[str] = None,
                  worker_debug: bool = False,
-                 max_tasks: int = 1,
+                 max_workers_per_block: int = 1,
                  prefetch_capacity: int = 0,
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
@@ -47,9 +55,9 @@ class MPIExecutor(HighThroughputExecutor):
                  encrypted: bool = False):
         super().__init__(
             # Hard-coded settings
-            cores_per_worker=1e-9,  # Ensures there will always be enough workers
+            cores_per_worker=1e-9,  # Ensures there will be at least an absurd number of workers
             enable_mpi_mode=True,
-            max_workers_per_node=max_tasks,
+            max_workers_per_node=max_workers_per_block,
 
             # Everything else
             label=label,
@@ -87,7 +95,7 @@ def _update_from_htex_docstring():
     assert htex_docstring.startswith('\n')  # Using asserts to catch if the HTEx docstring changes
 
     # Gather the documentation by param type
-    by_params = re.split(r"\n {4}(\w+)\s?:", htex_docstring)[1:]  # Follows
+    by_params = re.split(r"\n {4}(\w+)\s?:", htex_docstring)[1:]  # Assumes docstring follows NumPy standards
     htex_params = dict(zip(by_params[::2], by_params[1::2]))
     assert 'label' in htex_params
 
