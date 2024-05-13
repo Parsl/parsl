@@ -133,10 +133,8 @@ class Config(RepresentationMixin, UsageInformation):
         self.strategy = strategy
         self.strategy_period = strategy_period
         self.max_idletime = max_idletime
-
         self.usage_tracking = usage_tracking
         self._validate_usage_tracking()
-
         self.initialize_logging = initialize_logging
         self.monitoring = monitoring
         self.std_autopath: Optional[Callable] = std_autopath
