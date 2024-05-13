@@ -1,10 +1,38 @@
 """Tests for the wrapper class"""
 from inspect import signature
+from pathlib import Path
 
 import pytest
 
-from parsl import HighThroughputExecutor
+import parsl
+from .test_mpi_mode_enabled import get_env_vars
+from parsl import HighThroughputExecutor, Config
+from parsl.launchers import SimpleLauncher
+from parsl.providers import LocalProvider
 from parsl.executors.high_throughput.mpi_executor import MPIExecutor
+
+cwd = Path(__file__).parent.absolute()
+pbs_nodefile = cwd.joinpath("mocks", "pbs_nodefile")
+
+
+def local_setup():
+    config = Config(
+        executors=[
+            MPIExecutor(
+                max_workers_per_block=1,
+                provider=LocalProvider(
+                    worker_init=f"export PBS_NODEFILE={pbs_nodefile}",
+                    launcher=SimpleLauncher()
+                )
+            )
+        ]
+    )
+    parsl.load(config)
+
+
+def local_teardown():
+    parsl.dfk().cleanup()
+    parsl.clear()
 
 
 @pytest.mark.local
@@ -30,3 +58,13 @@ def test_init():
     assert mpix_kwargs.difference(htex_kwargs) == new_kwargs
     assert len(mpix_kwargs.intersection(excluded_kwargs)) == 0
     assert mpix_kwargs.union(excluded_kwargs).difference(new_kwargs) == htex_kwargs
+
+
+@pytest.mark.local
+def test_get_env():
+    future = get_env_vars(parsl_resource_specification={
+        "num_nodes": 2,
+        "ranks_per_node": 2,
+    })
+    env_vars = future.result()
+    assert env_vars['PARSL_NUM_RANKS'] == '4'

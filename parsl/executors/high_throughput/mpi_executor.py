@@ -82,6 +82,8 @@ class MPIExecutor(HighThroughputExecutor):
             encrypted=encrypted
         )
 
+        self.max_workers_per_block = max_workers_per_block
+
 
 # Update the docstring on import
 def _update_from_htex_docstring():
