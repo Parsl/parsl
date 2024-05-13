@@ -27,7 +27,7 @@ The :class:`~parsl.executors.MPIExecutor` is a wrapper over
 :class:`~parsl.executors.high_throughput.executor.HighThroughputExecutor`
 which eliminates options that are irrelevant for MPI applications.
 
-Define an
+Define a configuration for :class:`~parsl.executors.MPIExecutor`
 
 1. Set ``max_workers_per_block`` to maximum number of tasks to run per block of compute nodes.
    This value is typically the number of nodes per task divided by the number of nodes per task.
