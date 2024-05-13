@@ -1,7 +1,9 @@
-from flask import Flask
-from parsl.monitoring.visualization.models import db
 import argparse
 import os
+
+from flask import Flask
+
+from parsl.monitoring.visualization.models import db
 
 
 def cli_run():
@@ -21,6 +23,7 @@ def cli_run():
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = args.db_path
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SECRET_KEY'] = os.urandom(24)
     db.init_app(app)
 
     with app.app_context():

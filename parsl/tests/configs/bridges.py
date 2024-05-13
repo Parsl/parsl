@@ -1,7 +1,8 @@
 from parsl.config import Config
-from parsl.providers import SlurmProvider
-from parsl.launchers import SrunLauncher
 from parsl.executors import HighThroughputExecutor
+from parsl.launchers import SrunLauncher
+from parsl.providers import SlurmProvider
+
 from .user_opts import user_opts
 
 
@@ -13,7 +14,7 @@ def fresh_config():
                 # This is the network interface on the login node to
                 # which compute nodes can communicate
                 # address=address_by_interface('bond0.144'),
-                max_workers=1,
+                max_workers_per_node=1,
                 encrypted=True,
                 provider=SlurmProvider(
                     user_opts['bridges']['partition'],  # Partition / QOS

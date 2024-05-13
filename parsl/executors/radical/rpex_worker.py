@@ -1,10 +1,11 @@
 import sys
+
 import radical.pilot as rp
 
 import parsl.app.errors as pe
 from parsl.app.bash import remote_side_bash_executor
-from parsl.serialize import unpack_res_spec_apply_message, serialize
-from parsl.executors.high_throughput.process_worker_pool import execute_task
+from parsl.executors.execute_task import execute_task
+from parsl.serialize import serialize, unpack_res_spec_apply_message
 
 
 class ParslWorker:
@@ -32,7 +33,7 @@ class ParslWorker:
 
         try:
             buffer = rp.utils.deserialize_bson(task['description']['executable'])
-            func, args, kwargs, _resource_spec = unpack_res_spec_apply_message(buffer, {}, copy=False)
+            func, args, kwargs, _resource_spec = unpack_res_spec_apply_message(buffer)
             ret = remote_side_bash_executor(func, *args, **kwargs)
             exc = (None, None)
             val = None

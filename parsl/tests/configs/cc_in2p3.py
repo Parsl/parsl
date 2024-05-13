@@ -1,7 +1,6 @@
 from parsl.config import Config
-from parsl.channels import LocalChannel
-from parsl.providers import GridEngineProvider
 from parsl.executors import HighThroughputExecutor
+from parsl.providers import GridEngineProvider
 
 from .user_opts import user_opts
 
@@ -11,10 +10,9 @@ def fresh_config():
         executors=[
             HighThroughputExecutor(
                 label='cc_in2p3_htex',
-                max_workers=1,
+                max_workers_per_node=1,
                 encrypted=True,
                 provider=GridEngineProvider(
-                    channel=LocalChannel(),
                     nodes_per_block=2,
                     init_blocks=2,
                     max_blocks=2,

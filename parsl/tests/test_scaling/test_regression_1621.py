@@ -3,11 +3,18 @@ import threading
 import pytest
 
 import parsl
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SimpleLauncher
 from parsl.providers import LocalProvider
+
+# Timing notes:
+# The configured strategy_period must be much smaller than the delay in
+# app() so that multiple iterations of the strategy have had a chance
+# to (mis)behave.
+# The status polling interval in OneShotLocalProvider must be much bigger
+# than the above times, so that the job status cached from the provider
+# will not be updated while the single invocation of app() runs.
 
 
 @parsl.python_app
@@ -35,7 +42,6 @@ def test_one_block(tmpd_cwd):
     one app is invoked. this is a regression test.
     """
     oneshot_provider = OneShotLocalProvider(
-        channel=LocalChannel(),
         init_blocks=0,
         min_blocks=0,
         max_blocks=10,
@@ -55,20 +61,10 @@ def test_one_block(tmpd_cwd):
             )
         ],
         strategy='simple',
+        strategy_period=0.1
     )
 
-    parsl.load(config)
-    dfk = parsl.dfk()
-
-    def poller():
-        import time
-        while True:
-            dfk.job_status_poller.poll()
-            time.sleep(0.1)
-
-    threading.Thread(target=poller, daemon=True).start()
-    app().result()
-    parsl.dfk().cleanup()
-    parsl.clear()
+    with parsl.load(config):
+        app().result()
 
     assert oneshot_provider.recorded_submits == 1

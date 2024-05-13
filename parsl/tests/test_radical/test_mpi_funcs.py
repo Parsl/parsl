@@ -1,6 +1,8 @@
-import parsl
+import os
+
 import pytest
 
+import parsl
 from parsl.tests.configs.local_radical_mpi import fresh_config as local_config
 
 
@@ -16,9 +18,12 @@ def some_mpi_func(msg, sleep, comm=None, parsl_resource_specification={}):
 apps = []
 
 
-@pytest.mark.skip("hangs in CI - waiting for resolution of issue #3029")
 @pytest.mark.local
 @pytest.mark.radical
+@pytest.mark.skipif(
+    os.environ.get("RADICAL_CI") != "1",
+    reason="Only runs in Radical CI workflow"
+)
 def test_radical_mpi(n=7):
     # rank size should be > 1 for the
     # radical runtime system to run this function in MPI env

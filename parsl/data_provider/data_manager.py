@@ -1,13 +1,14 @@
 import logging
 from concurrent.futures import Future
-from typing import Any, Callable, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, List, Optional
 
 from parsl.app.futures import DataFuture
-from parsl.data_provider.files import File
 from parsl.data_provider.file_noop import NoOpFileStaging
+from parsl.data_provider.files import File
 from parsl.data_provider.ftp import FTPSeparateTaskStaging
 from parsl.data_provider.http import HTTPSeparateTaskStaging
 from parsl.data_provider.staging import Staging
+from parsl.data_provider.zip import ZipFileStaging
 
 if TYPE_CHECKING:
     from parsl.dataflow.dflow import DataFlowKernel
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 # these will be shared between all executors that do not explicitly
 # override, so should not contain executor-specific state
 default_staging: List[Staging]
-default_staging = [NoOpFileStaging(), FTPSeparateTaskStaging(), HTTPSeparateTaskStaging()]
+default_staging = [NoOpFileStaging(), FTPSeparateTaskStaging(), HTTPSeparateTaskStaging(), ZipFileStaging()]
 
 
 class DataManager:
@@ -62,7 +63,7 @@ class DataManager:
             # replace the input DataFuture with a new DataFuture which will complete at
             # the same time as the original one, but will contain the newly
             # copied file
-            input = DataFuture(input, file, tid=input.tid)
+            input = DataFuture(input, file, input.tid, track_provenance=self.dfk.file_provenance)
         elif isinstance(input, File):
             file = input.cleancopy()
             input = file

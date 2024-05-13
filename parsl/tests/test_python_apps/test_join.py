@@ -3,7 +3,6 @@ import pytest
 from parsl import join_app, python_app
 from parsl.dataflow.errors import JoinError
 
-
 RESULT_CONSTANT = 3
 
 
@@ -98,7 +97,10 @@ def test_error():
     f = outer_error()
     e = f.exception()
     assert isinstance(e, JoinError)
+
+    assert len(e.dependent_exceptions_tids) == 1
     assert isinstance(e.dependent_exceptions_tids[0][0], InnerError)
+    assert e.dependent_exceptions_tids[0][1].startswith("task ")
 
 
 def test_two_errors():
@@ -110,10 +112,12 @@ def test_two_errors():
     de0 = e.dependent_exceptions_tids[0][0]
     assert isinstance(de0, InnerError)
     assert de0.args[0] == "Error A"
+    assert e.dependent_exceptions_tids[0][1].startswith("task ")
 
     de1 = e.dependent_exceptions_tids[1][0]
     assert isinstance(de1, InnerError)
     assert de1.args[0] == "Error B"
+    assert e.dependent_exceptions_tids[1][1].startswith("task ")
 
 
 def test_one_error_one_result():
@@ -126,6 +130,7 @@ def test_one_error_one_result():
     de0 = e.dependent_exceptions_tids[0][0]
     assert isinstance(de0, InnerError)
     assert de0.args[0] == "Error A"
+    assert e.dependent_exceptions_tids[0][1].startswith("task ")
 
 
 @join_app

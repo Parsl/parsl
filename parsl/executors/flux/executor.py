@@ -1,33 +1,32 @@
 """Defines the FluxExecutor class."""
 
+import collections
 import concurrent.futures as cf
 import functools
-import os
-import sys
-import uuid
-import threading
 import itertools
-import shutil
+import os
 import queue
-from socket import gethostname
-import collections
-from collections.abc import Mapping, Callable
-from typing import Optional, Any, Dict
+import shutil
+import sys
+import threading
+import uuid
 import weakref
+from collections.abc import Callable, Mapping
+from socket import gethostname
+from typing import Any, Dict, Optional
 
 import zmq
 
-from parsl.utils import RepresentationMixin
+from parsl.app.errors import AppException
 from parsl.executors.base import ParslExecutor
+from parsl.executors.errors import ScalingFailed
 from parsl.executors.flux.execute_parsl_task import __file__ as _WORKER_PATH
 from parsl.executors.flux.flux_instance_manager import __file__ as _MANAGER_PATH
-from parsl.executors.errors import ScalingFailed
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
 from parsl.serialize import deserialize, pack_res_spec_apply_message
 from parsl.serialize.errors import SerializationError
-from parsl.app.errors import AppException
-
+from parsl.utils import RepresentationMixin
 
 _WORKER_PATH = os.path.realpath(_WORKER_PATH)
 _MANAGER_PATH = os.path.realpath(_MANAGER_PATH)
@@ -201,7 +200,6 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
                 raise EnvironmentError("Cannot find Flux installation in PATH")
         self.flux_path = os.path.abspath(flux_path)
         self._task_id_counter = itertools.count()
-        self._socket = zmq.Context().socket(zmq.REP)
         # Assumes a launch command cannot be None or empty
         self.launch_cmd = launch_cmd or self.DEFAULT_LAUNCH_CMD
         self._submission_queue: queue.Queue = queue.Queue()
@@ -214,7 +212,6 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
             args=(
                 self._submission_queue,
                 self._stop_event,
-                self._socket,
                 self.working_dir,
                 self.flux_executor_kwargs,
                 self.provider,
@@ -234,6 +231,7 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
 
     def start(self):
         """Called when DFK starts the executor when the config is loaded."""
+        super().start()
         os.makedirs(self.working_dir, exist_ok=True)
         self._submission_thread.start()
 
@@ -249,6 +247,8 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
             self._stop_event.set()
         if wait:
             self._submission_thread.join()
+
+        super().shutdown()
 
     def submit(
         self,
@@ -307,11 +307,13 @@ def _submit_wrapper(
 
     If an exception is thrown, error out all submitted tasks.
     """
-    try:
-        _submit_flux_jobs(submission_queue, stop_event, *args, **kwargs)
-    except Exception as exc:
-        _error_out_jobs(submission_queue, stop_event, exc)
-        raise
+    with zmq.Context() as ctx:
+        with ctx.socket(zmq.REP) as socket:
+            try:
+                _submit_flux_jobs(submission_queue, stop_event, socket, *args, **kwargs)
+            except Exception as exc:
+                _error_out_jobs(submission_queue, stop_event, exc)
+                raise
 
 
 def _error_out_jobs(

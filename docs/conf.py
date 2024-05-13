@@ -19,9 +19,12 @@
 #
 import os
 import sys
+
 import requests
+
 sys.path.insert(0, os.path.abspath('../'))
 import parsl
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -371,3 +374,4 @@ autodoc_default_options = {
     'members': True,
     'undoc-members': True
 }
+autodoc_preserve_defaults = True

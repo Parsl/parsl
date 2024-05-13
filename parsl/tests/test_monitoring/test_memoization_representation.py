@@ -1,8 +1,10 @@
 
 import logging
 import os
-import parsl
+
 import pytest
+
+import parsl
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +18,7 @@ def this_app(x):
 def test_hashsum():
     import sqlalchemy
     from sqlalchemy import text
+
     from parsl.tests.configs.htex_local_alternate import fresh_config
 
     if os.path.exists("runinfo/monitoring.db"):
@@ -47,7 +50,6 @@ def test_hashsum():
 
     logger.info("cleaning up parsl")
     parsl.dfk().cleanup()
-    parsl.clear()
 
     # at this point, we should find one row in the monitoring database.
 

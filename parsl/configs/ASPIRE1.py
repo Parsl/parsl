@@ -1,9 +1,10 @@
-from parsl.providers import PBSProProvider
-from parsl.launchers import MpiRunLauncher
+from parsl.addresses import address_by_interface
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
-from parsl.addresses import address_by_interface
+from parsl.launchers import MpiRunLauncher
 from parsl.monitoring.monitoring import MonitoringHub
+from parsl.providers import PBSProProvider
+from parsl.usage_tracking.levels import LEVEL_1
 
 config = Config(
         executors=[
@@ -12,7 +13,7 @@ config = Config(
                 heartbeat_period=15,
                 heartbeat_threshold=120,
                 worker_debug=True,
-                max_workers=4,
+                max_workers_per_node=4,
                 address=address_by_interface('ib0'),
                 provider=PBSProProvider(
                     launcher=MpiRunLauncher(),
@@ -33,11 +34,11 @@ config = Config(
         ],
         monitoring=MonitoringHub(
             hub_address=address_by_interface('ib0'),
-            hub_port=55055,
             resource_monitoring_interval=10,
         ),
         strategy='simple',
         retries=3,
         app_cache=True,
-        checkpoint_mode='task_exit'
+        checkpoint_mode='task_exit',
+        usage_tracking=LEVEL_1,
 )

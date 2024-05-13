@@ -13,6 +13,7 @@ Alternatively, you can configure the file logger to write to an output file.
 
 .. code-block:: python
 
+   import logging
    import parsl
 
    # Emit log lines to the screen
@@ -208,7 +209,7 @@ For instance, with conda, follow this `cheatsheet <https://conda.io/docs/_downlo
    source activate <my_env>
 
    # Install packages:
-   conda install <ipyparallel, dill, boto3...>
+   conda install <dill, boto3...>
 
 
 How do I run code that uses Python2.X?
@@ -256,15 +257,15 @@ There are a few common situations in which a Parsl script might hang:
 
      .. code-block:: python
 
-        from libsubmit.providers import Cobalt
         from parsl.config import Config
+        from parsl.providers import SlurmProvider
         from parsl.executors import HighThroughputExecutor
 
         config = Config(
             executors=[
                 HighThroughputExecutor(
-                    label='ALCF_theta_local',
-                    provider=Cobalt(),
+                    label='htex',
+                    provider=SlurmProvider(),
                     worer_port_range=('50000,55000'),
                     interchange_port_range=('50000,55000')
                 )
@@ -358,3 +359,22 @@ or
       url          = {https://doi.org/10.1145/3307681.3325400}
     }
 
+
+How can my tasks survive ``WorkerLost`` and ``ManagerLost`` at the end of a batch job?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When a batch job ends, pilot workers will be terminated by the batch system,
+and any tasks running there will fail. With `HighThroughputExecutor`,
+this failure will be reported as a `parsl.executors.high_throughput.errors.WorkerLost` or
+`parsl.executors.high_throughput.errors.ManagerLost` in the task future.
+
+To mitigate against this:
+
+* use retries by setting ``retries=`` in `parsl.config.Config`.
+* if you only want to retry on certain errors such as `WorkerLost` and `ManagerLost`,
+  use ``retry_handler`` in `parsl.config.Config` to implement that policy.
+* avoid sending tasks to batch jobs that will expire soon. With `HighThroughputExecutor`,
+  set drain_period to a little longer than you expect your tasks to take.
+  With `WorkQueueExecutor`, you can configure individual expected task duration using
+  a ``parsl_resource_specification`` and specify a worker ``--wall-time`` using the
+  ``worker_options`` parameter to the `WorkQueueExecutor`.

@@ -1,14 +1,14 @@
 from parsl.config import Config
+from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SrunLauncher
 from parsl.providers import SlurmProvider
-from parsl.executors import HighThroughputExecutor
-
+from parsl.usage_tracking.levels import LEVEL_1
 
 config = Config(
     executors=[
         HighThroughputExecutor(
             label='Expanse_CPU_Multinode',
-            max_workers=32,
+            max_workers_per_node=32,
             provider=SlurmProvider(
                 'compute',
                 account='YOUR_ALLOCATION_ON_EXPANSE',
@@ -25,5 +25,6 @@ config = Config(
                 nodes_per_block=2,
             ),
         )
-    ]
+    ],
+    usage_tracking=LEVEL_1,
 )

@@ -4,7 +4,7 @@ Parsl - Parallel Scripting Library
 Parsl extends parallelism in Python beyond a single computer.
 
 You can use Parsl
-`just like Python's parallel executors <userguide/workflow.html#parallel-workflows-with-loops>`_
+`just like Python's parallel executors <userguide/workflows/workflow.html#parallel-workflows-with-loops>`_
 but across *multiple cores and nodes*.
 However, the real power of Parsl is in expressing multi-step workflows of functions.
 Parsl lets you chain functions together and will launch each function as inputs and computing resources are available.
@@ -23,20 +23,22 @@ Parsl lets you chain functions together and will launch each function as inputs 
         return x + 1
 
     @python_app
-    def g(x):
-        return x * 2
+    def g(x, y):
+        return x + y
 
     # These functions now return Futures, and can be chained
     future = f(1)
     assert future.result() == 2
 
-    future = g(f(1))
-    assert future.result() == 4
+    # Functions run concurrently, can be chained
+    f_a, f_b = f(2), f(3)
+    future = g(f_a, f_b)
+    assert future.result() == 7
 
 
 Start with the `configuration quickstart <quickstart.html#getting-started>`_ to learn how to tell Parsl how to use your computing resource,
-see if `a template configuration for your supercomputer <userguide/configuring.html>`_ is already available,
-then explore the `parallel computing patterns <userguide/workflow.html>`_ to determine how to use parallelism best in your application.
+see if `a template configuration for your supercomputer <userguide/configuration/examples.html>`_ is already available,
+then explore the `parallel computing patterns <userguide/workflows/workflows.html>`_ to determine how to use parallelism best in your application.
 
 Parsl is an open-source code, and available on GitHub: https://github.com/parsl/parsl/
 
@@ -55,7 +57,7 @@ Parsl works everywhere
 
 *Parsl can run parallel functions on a laptop and the world's fastest supercomputers.*
 Scaling from laptop to supercomputer is often as simple as changing the resource configuration.
-Parsl is tested `on many of the top supercomputers <userguide/configuring.html>`_.
+Parsl is tested `on many of the top supercomputers <userguide/configuration/examples.html>`_.
 
 Parsl is flexible
 -----------------
@@ -105,9 +107,11 @@ Table of Contents
    quickstart
    1-parsl-introduction.ipynb
    userguide/index
+   userguide/glossary
    faq
    reference
    devguide/index
+   historical/index
 
 
 Indices and tables

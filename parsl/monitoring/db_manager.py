@@ -1,31 +1,41 @@
-import logging
-import threading
-import queue
-import os
-import time
 import datetime
+import logging
+import multiprocessing.queues as mpq
+import multiprocessing.synchronize as mpe
+import os
+import queue
+import threading
+import time
+from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, Union, cast
 
-from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
+import typeguard
 
-from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
 from parsl.errors import OptionalModuleMissing
+from parsl.log_utils import set_file_logger
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import MonitoringMessage, TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
-logger = logging.getLogger("database_manager")
+logger = logging.getLogger(__name__)
 
 X = TypeVar('X')
 
 try:
     import sqlalchemy as sa
-    from sqlalchemy import Column, Text, Float, Boolean, BigInteger, Integer, DateTime, PrimaryKeyConstraint, Table
-    from sqlalchemy.orm import Mapper
-    from sqlalchemy.orm import mapperlib
-    from sqlalchemy.orm import sessionmaker
-    from sqlalchemy.orm import declarative_base
+    from sqlalchemy import (
+        BigInteger,
+        Boolean,
+        Column,
+        DateTime,
+        Float,
+        Integer,
+        PrimaryKeyConstraint,
+        Table,
+        Text,
+    )
+    from sqlalchemy.orm import Mapper, declarative_base, mapperlib, sessionmaker
 except ImportError:
     _sqlalchemy_enabled = False
 else:
@@ -39,6 +49,11 @@ STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
 BLOCK = 'block'          # Block table include the status for block polling
+FILE = 'file'            # Files table include file info
+INPUT_FILE = 'input_file'  # Input files table include input file info
+OUTPUT_FILE = 'output_file'  # Output files table include output file info
+ENVIRONMENT = 'environment'  # Executor table include executor info
+MISC_INFO = 'misc_info'  # Misc info table include misc info
 
 
 class Database:
@@ -69,7 +84,7 @@ class Database:
 
     def _get_mapper(self, table_obj: Table) -> Mapper:
         all_mappers: Set[Mapper] = set()
-        for mapper_registry in mapperlib._all_registries():  # type: ignore[attr-defined]
+        for mapper_registry in mapperlib._all_registries():
             all_mappers.update(mapper_registry.mappers)
         mapper_gen = (
             mapper for mapper in all_mappers
@@ -103,7 +118,13 @@ class Database:
     def rollback(self) -> None:
         self.session.rollback()
 
-    def _generate_mappings(self, table: Table, columns: Optional[List[str]] = None, messages: List[MonitoringMessage] = []) -> List[Dict[str, Any]]:
+    def _generate_mappings(
+        self,
+        table: Table,
+        columns: Optional[List[str]] = None,
+        messages: List[MonitoringMessage] = [],
+    ) -> List[Dict[str, Any]]:
+
         mappings = []
         for msg in messages:
             m = {}
@@ -149,9 +170,12 @@ class Database:
         task_hashsum = Column('task_hashsum', Text, nullable=True, index=True)
         task_inputs = Column('task_inputs', Text, nullable=True)
         task_outputs = Column('task_outputs', Text, nullable=True)
+        task_args = Column('task_args', Text, nullable=True)
+        task_kwargs = Column('task_kwargs', Text, nullable=True)
         task_stdin = Column('task_stdin', Text, nullable=True)
         task_stdout = Column('task_stdout', Text, nullable=True)
         task_stderr = Column('task_stderr', Text, nullable=True)
+        task_environment = Column('task_environment', Text, nullable=True)
 
         task_time_invoked = Column(
             'task_time_invoked', DateTime, nullable=True)
@@ -221,6 +245,55 @@ class Database:
             PrimaryKeyConstraint('run_id', 'block_id', 'executor_label', 'timestamp'),
         )
 
+    class File(Base):
+        __tablename__ = FILE
+        file_name = Column('file_name', Text, index=True, nullable=False)
+        file_path = Column('file_path', Text, nullable=True)
+        full_path = Column('full_path', Text, index=True, nullable=False)
+        file_id = Column('file_id', Text, index=True, nullable=False)
+        run_id = Column('run_id', Text, index=True, nullable=False)
+        task_id = Column('task_id', Integer, index=True, nullable=True)
+        try_id = Column('try_id', Integer, index=True, nullable=True)
+        timestamp = Column('timestamp', DateTime, index=True, nullable=True)
+        size = Column('size', BigInteger, nullable=True)
+        md5sum = Column('md5sum', Text, nullable=True)
+        __table_args__ = (PrimaryKeyConstraint('file_id'),)
+
+    class Environment(Base):
+        __tablename__ = ENVIRONMENT
+        environment_id = Column('environment_id', Text, index=True, nullable=False)
+        run_id = Column('run_id', Text, index=True, nullable=False)
+        label = Column('label', Text, nullable=False)
+        address = Column('address', Text, nullable=True)
+        provider = Column('provider', Text, nullable=True)
+        launcher = Column('launcher', Text, nullable=True)
+        worker_init = Column('worker_init', Text, nullable=True)
+        __table_args__ = (PrimaryKeyConstraint('environment_id'),)
+
+    class InputFile(Base):
+        __tablename__ = INPUT_FILE
+        file_id = Column('file_id', Text, sa.ForeignKey(FILE + ".file_id"), nullable=False)
+        run_id = Column('run_id', Text, index=True, nullable=False)
+        task_id = Column('task_id', Integer, index=True, nullable=False)
+        try_id = Column('try_id', Integer, index=True, nullable=False)
+        __table_args__ = (PrimaryKeyConstraint('file_id'),)
+
+    class OutputFile(Base):
+        __tablename__ = OUTPUT_FILE
+        file_id = Column('file_id', Text, sa.ForeignKey(FILE + ".file_id"), nullable=False)
+        run_id = Column('run_id', Text, index=True, nullable=False)
+        task_id = Column('task_id', Integer, index=True, nullable=False)
+        try_id = Column('try_id', Integer, index=True, nullable=False)
+        __table_args__ = (PrimaryKeyConstraint('file_id'),)
+
+    class MiscInfo(Base):
+        __tablename__ = MISC_INFO
+        run_id = Column('run_id', Text, index=True, nullable=False)
+        timestamp = Column('timestamp', DateTime, index=True, nullable=False)
+        info = Column('info', Text, nullable=False)
+        __table_args__ = (
+            PrimaryKeyConstraint('run_id', 'timestamp'),)
+
     class Resource(Base):
         __tablename__ = RESOURCE
         try_id = Column('try_id', Integer, nullable=False)
@@ -250,6 +323,12 @@ class Database:
             'psutil_process_disk_write', Float, nullable=True)
         psutil_process_status = Column(
             'psutil_process_status', Text, nullable=True)
+        psutil_cpu_num = Column(
+            'psutil_cpu_num', Text, nullable=True)
+        psutil_process_num_ctx_switches_voluntary = Column(
+            'psutil_process_num_ctx_switches_voluntary', Float, nullable=True)
+        psutil_process_num_ctx_switches_involuntary = Column(
+            'psutil_process_num_ctx_switches_involuntary', Float, nullable=True)
         __table_args__ = (
             PrimaryKeyConstraint('try_id', 'task_id', 'run_id', 'timestamp'),
         )
@@ -257,69 +336,44 @@ class Database:
 
 class DatabaseManager:
     def __init__(self,
+                 *,
                  db_url: str = 'sqlite:///runinfo/monitoring.db',
-                 logdir: str = '.',
+                 run_dir: str = '.',
                  logging_level: int = logging.INFO,
                  batching_interval: float = 1,
                  batching_threshold: float = 99999,
+                 exit_event: mpe.Event
                  ):
 
         self.workflow_end = False
-        self.workflow_start_message = None  # type: Optional[MonitoringMessage]
-        self.logdir = logdir
-        os.makedirs(self.logdir, exist_ok=True)
+        self.workflow_start_message: Optional[MonitoringMessage] = None
+        self.run_dir = run_dir
+        os.makedirs(self.run_dir, exist_ok=True)
 
-        logger.propagate = False
+        set_file_logger(f"{self.run_dir}/database_manager.log", level=logging_level,
+                        format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s")
 
-        set_file_logger("{}/database_manager.log".format(self.logdir), level=logging_level,
-                        format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s",
-                        name="database_manager")
-
-        logger.debug("Initializing Database Manager process")
+        logger.info("Initializing Database Manager process")
 
         self.db = Database(db_url)
         self.batching_interval = batching_interval
         self.batching_threshold = batching_threshold
 
-        self.pending_priority_queue = queue.Queue()  # type: queue.Queue[TaggedMonitoringMessage]
-        self.pending_node_queue = queue.Queue()  # type: queue.Queue[MonitoringMessage]
-        self.pending_block_queue = queue.Queue()  # type: queue.Queue[MonitoringMessage]
-        self.pending_resource_queue = queue.Queue()  # type: queue.Queue[MonitoringMessage]
+        self.pending_priority_queue: queue.Queue[TaggedMonitoringMessage] = queue.Queue()
+        self.pending_node_queue: queue.Queue[MonitoringMessage] = queue.Queue()
+        self.pending_block_queue: queue.Queue[MonitoringMessage] = queue.Queue()
+        self.pending_resource_queue: queue.Queue[MonitoringMessage] = queue.Queue()
+
+        self.external_exit_event = exit_event
 
     def start(self,
-              priority_queue: "queue.Queue[TaggedMonitoringMessage]",
-              node_queue: "queue.Queue[MonitoringMessage]",
-              block_queue: "queue.Queue[MonitoringMessage]",
-              resource_queue: "queue.Queue[MonitoringMessage]") -> None:
+              resource_queue: mpq.Queue) -> None:
 
         self._kill_event = threading.Event()
-        self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
-                                                            args=(
-                                                                priority_queue, 'priority', self._kill_event,),
-                                                            name="Monitoring-migrate-priority",
-                                                            daemon=True,
-                                                            )
-        self._priority_queue_pull_thread.start()
-
-        self._node_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
-                                                        args=(
-                                                            node_queue, 'node', self._kill_event,),
-                                                        name="Monitoring-migrate-node",
-                                                        daemon=True,
-                                                        )
-        self._node_queue_pull_thread.start()
-
-        self._block_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
-                                                         args=(
-                                                             block_queue, 'block', self._kill_event,),
-                                                         name="Monitoring-migrate-block",
-                                                         daemon=True,
-                                                         )
-        self._block_queue_pull_thread.start()
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
-                                                                resource_queue, 'resource', self._kill_event,),
+                                                                resource_queue, self._kill_event,),
                                                             name="Monitoring-migrate-resource",
                                                             daemon=True,
                                                             )
@@ -333,38 +387,44 @@ class DatabaseManager:
         If that happens, the message will be added to deferred_resource_messages and processed later.
 
         """
-        inserted_tasks = set()  # type: Set[object]
+        inserted_tasks: Set[object] = set()
 
         """
         like inserted_tasks but for task,try tuples
         """
-        inserted_tries = set()  # type: Set[Any]
+        inserted_tries: Set[Any] = set()
+
+        """
+        like inserted_tasks but for Files
+        """
+        inserted_files: Dict[str, Dict[str, Union[None, datetime.datetime, str, int]]] = dict()
+        input_inserted_files: Dict[str, List[str]] = dict()
+        output_inserted_files: Dict[str, List[str]] = dict()
+        inserted_envs: Set[object] = set()
 
         # for any task ID, we can defer exactly one message, which is the
         # assumed-to-be-unique first message (with first message flag set).
         # The code prior to this patch will discard previous message in
         # the case of multiple messages to defer.
-        deferred_resource_messages = {}  # type: MonitoringMessage
+        deferred_resource_messages: MonitoringMessage = {}
 
         exception_happened = False
 
         while (not self._kill_event.is_set() or
                self.pending_priority_queue.qsize() != 0 or self.pending_resource_queue.qsize() != 0 or
                self.pending_node_queue.qsize() != 0 or self.pending_block_queue.qsize() != 0 or
-               priority_queue.qsize() != 0 or resource_queue.qsize() != 0 or
-               node_queue.qsize() != 0 or block_queue.qsize() != 0):
+               resource_queue.qsize() != 0):
 
             """
             WORKFLOW_INFO and TASK_INFO messages (i.e. priority messages)
 
             """
             try:
-                logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}, {}, {}, {}, {}""".format(
+                logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}, {}""".format(
                                   self._kill_event.is_set(),
                                   self.pending_priority_queue.qsize() != 0, self.pending_resource_queue.qsize() != 0,
                                   self.pending_node_queue.qsize() != 0, self.pending_block_queue.qsize() != 0,
-                                  priority_queue.qsize() != 0, resource_queue.qsize() != 0,
-                                  node_queue.qsize() != 0, block_queue.qsize() != 0))
+                                  resource_queue.qsize() != 0))
 
                 # This is the list of resource messages which can be reprocessed as if they
                 # had just arrived because the corresponding first task message has been
@@ -385,6 +445,11 @@ class DatabaseManager:
                         "Got {} messages from priority queue".format(len(priority_messages)))
                     task_info_update_messages, task_info_insert_messages, task_info_all_messages = [], [], []
                     try_update_messages, try_insert_messages, try_all_messages = [], [], []
+                    file_update_messages, file_insert_messages, file_all_messages = [], [], []
+                    input_file_insert_messages, input_file_all_messages = [], []
+                    output_file_insert_messages, output_file_all_messages = [], []
+                    environment_insert_messages = []
+                    misc_info_insert_messages = []
                     for msg_type, msg in priority_messages:
                         if msg_type == MessageType.WORKFLOW_INFO:
                             if "python_version" in msg:   # workflow start message
@@ -421,6 +486,86 @@ class DatabaseManager:
                                 if task_try_id in deferred_resource_messages:
                                     reprocessable_first_resource_messages.append(
                                         deferred_resource_messages.pop(task_try_id))
+                        elif msg_type == MessageType.FILE_INFO:
+                            file_id = msg['file_id']
+                            file_all_messages.append(msg)
+                            msg['full_path'] = msg['file_name']
+                            loc = msg['file_name'].rfind("/")
+                            if loc >= 0:
+                                msg['file_path'] = msg['file_name'][:loc]
+                                msg['file_name'] = msg['file_name'][loc + 1:]
+
+                            if file_id in inserted_files:
+                                new_item = False
+                                # once certain items are set, they should not be changed
+                                if inserted_files[file_id]['timestamp'] is None:
+                                    if msg['timestamp'] is not None:
+                                        inserted_files[file_id]['timestamp'] = msg['timestamp']
+                                        new_item = True
+                                else:
+                                    msg['timestamp'] = inserted_files[file_id]['timestamp']
+                                if inserted_files[file_id]['size'] is None:
+                                    if msg['size'] is not None:
+                                        inserted_files[file_id]['size'] = msg['size']
+                                        new_item = True
+                                else:
+                                    msg['size'] = inserted_files[file_id]['size']
+                                if inserted_files[file_id]['md5sum'] is None:
+                                    if msg['md5sum'] is not None:
+                                        inserted_files[file_id]['md5sum'] = msg['md5sum']
+                                        new_item = True
+                                else:
+                                    msg['md5sum'] = inserted_files[file_id]['md5sum']
+                                if inserted_files[file_id]['task_id'] is None:
+                                    if msg['task_id'] is not None:
+                                        inserted_files[file_id]['task_id'] = msg['task_id']
+                                        inserted_files[file_id]['try_id'] = msg['try_id']
+                                        new_item = True
+                                else:
+                                    if msg['task_id'] == inserted_files[file_id]['task_id']:
+                                        if inserted_files[file_id]['try_id'] is None:
+                                            inserted_files[file_id]['try_id'] = msg['try_id']
+                                            new_item = True
+                                        elif msg['try_id'] > inserted_files[file_id]['try_id']:
+                                            inserted_files[file_id]['try_id'] = msg['try_id']
+                                            new_item = True
+                                    else:
+                                        msg['task_id'] = inserted_files[file_id]['task_id']
+                                        msg['try_id'] = inserted_files[file_id]['try_id']
+                                if new_item:
+                                    file_update_messages.append(msg)
+                            else:
+                                inserted_files[file_id] = {'size': msg['size'],
+                                                           'md5sum': msg['md5sum'],
+                                                           'timestamp': msg['timestamp'],
+                                                           'task_id': msg['task_id'],
+                                                           'try_id': msg['try_id']}
+                                file_insert_messages.append(msg)
+                        elif msg_type == MessageType.ENVIRONMENT_INFO:
+                            if msg['environment_id'] not in inserted_envs:
+                                environment_insert_messages.append(msg)
+                                inserted_envs.add(msg['environment_id'])
+                        elif msg_type == MessageType.MISC_INFO:
+                            # no filtering, just insert each message
+                            misc_info_insert_messages.append(msg)
+                        elif msg_type == MessageType.INPUT_FILE:
+                            file_id = msg['file_id']
+                            input_file_all_messages.append(msg)
+                            identifier = f"{msg['run_id']}.{msg['task_id']}.{msg['try_id']}"
+                            if file_id not in input_inserted_files:
+                                input_inserted_files[file_id] = []
+                            if identifier not in input_inserted_files[file_id]:
+                                input_inserted_files[file_id].append(identifier)
+                                input_file_insert_messages.append(msg)
+                        elif msg_type == MessageType.OUTPUT_FILE:
+                            file_id = msg['file_id']
+                            output_file_all_messages.append(msg)
+                            identifier = f"{msg['run_id']}.{msg['task_id']}.{msg['try_id']}"
+                            if file_id not in output_inserted_files:
+                                output_inserted_files[file_id] = []
+                            if identifier not in output_inserted_files[file_id]:
+                                output_inserted_files[file_id].append(identifier)
+                                output_file_insert_messages.append(msg)
                         else:
                             raise RuntimeError("Unexpected message type {} received on priority queue".format(msg_type))
 
@@ -450,6 +595,39 @@ class DatabaseManager:
                     logger.debug("Inserting {} task_info_all_messages into status table".format(len(task_info_all_messages)))
 
                     self._insert(table=STATUS, messages=task_info_all_messages)
+
+                    if file_insert_messages:
+                        logger.debug("Inserting {} FILE_INFO to file table".format(len(file_insert_messages)))
+                        self._insert(table=FILE, messages=file_insert_messages)
+                        logger.debug(
+                            "There are {} inserted file records".format(len(inserted_files)))
+
+                    if environment_insert_messages:
+                        logger.debug("Inserting {} ENVIRONMENT_INFO to environment table".format(len(environment_insert_messages)))
+                        self._insert(table=ENVIRONMENT, messages=environment_insert_messages)
+                        logger.debug(
+                            "There are {} inserted environment records".format(len(inserted_envs)))
+
+                    if file_update_messages:
+                        logger.debug("Updating {} FILE_INFO into file table".format(len(file_update_messages)))
+                        self._update(table=FILE,
+                                     columns=['timestamp', 'size', 'md5sum', 'file_id', 'task_id', 'try_id'],
+                                     messages=file_update_messages)
+
+                    if input_file_insert_messages:
+                        logger.debug("Inserting {} INPUT_FILE to input_files table".format(len(input_file_insert_messages)))
+                        self._insert(table=INPUT_FILE, messages=input_file_insert_messages)
+                        logger.debug("There are {} inserted input file records".format(len(input_inserted_files)))
+
+                    if output_file_insert_messages:
+                        logger.debug("Inserting {} OUTPUT_FILE to output_files table".format(len(output_file_insert_messages)))
+                        self._insert(table=OUTPUT_FILE, messages=output_file_insert_messages)
+                        logger.debug("There are {} inserted output file records".format(len(output_inserted_files)))
+
+                    if misc_info_insert_messages:
+                        logger.debug("Inserting {} MISC_INFO to misc_info table".format(len(misc_info_insert_messages)))
+                        self._insert(table=MISC_INFO, messages=misc_info_insert_messages)
+                        logger.debug("There are {} inserted misc info records".format(len(misc_info_insert_messages)))
 
                     if try_insert_messages:
                         logger.debug("Inserting {} TASK_INFO to try table".format(len(try_insert_messages)))
@@ -487,7 +665,7 @@ class DatabaseManager:
                         "Got {} messages from block queue".format(len(block_info_messages)))
                     # block_info_messages is possibly a nested list of dict (at different polling times)
                     # Each dict refers to the info of a job/block at one polling time
-                    block_messages_to_insert = []  # type: List[Any]
+                    block_messages_to_insert: List[Any] = []
                     for block_msg in block_info_messages:
                         block_messages_to_insert.extend(block_msg)
                     self._insert(table=BLOCK, messages=block_messages_to_insert)
@@ -518,7 +696,10 @@ class DatabaseManager:
                                 reprocessable_first_resource_messages.append(msg)
                             else:
                                 if task_try_id in deferred_resource_messages:
-                                    logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
+                                    logger.error(
+                                        "Task {} already has a deferred resource message. "
+                                        "Discarding previous message.".format(msg['task_id'])
+                                    )
                                 deferred_resource_messages[task_try_id] = msg
                         elif msg['last_msg']:
                             # This assumes that the primary key has been added
@@ -544,48 +725,39 @@ class DatabaseManager:
                 if reprocessable_last_resource_messages:
                     self._insert(table=STATUS, messages=reprocessable_last_resource_messages)
             except Exception:
-                logger.exception("Exception in db loop: this might have been a malformed message, or some other error. monitoring data may have been lost")
+                logger.exception(
+                    "Exception in db loop: this might have been a malformed message, "
+                    "or some other error. monitoring data may have been lost"
+                )
                 exception_happened = True
+
+            if self.external_exit_event.is_set():
+                self.close()
+
         if exception_happened:
             raise RuntimeError("An exception happened sometime during database processing and should have been logged in database_manager.log")
 
-    @wrap_with_logs(target="database_manager")
-    def _migrate_logs_to_internal(self, logs_queue: queue.Queue, queue_tag: str, kill_event: threading.Event) -> None:
-        logger.info("Starting processing for queue {}".format(queue_tag))
+    @wrap_with_logs
+    def _migrate_logs_to_internal(self, logs_queue: mpq.Queue, kill_event: threading.Event) -> None:
+        logger.info("Starting _migrate_logs_to_internal")
 
         while not kill_event.is_set() or logs_queue.qsize() != 0:
-            logger.debug("""Checking STOP conditions for {} threads: {}, {}"""
-                         .format(queue_tag, kill_event.is_set(), logs_queue.qsize() != 0))
+            logger.debug("Checking STOP conditions: kill event: %s, queue has entries: %s",
+                         kill_event.is_set(), logs_queue.qsize() != 0)
+
             try:
-                x, addr = logs_queue.get(timeout=0.1)
+                x = logs_queue.get(timeout=0.1)
             except queue.Empty:
                 continue
             else:
-                if queue_tag == 'priority' and x == 'STOP':
-                    self.close()
-                elif queue_tag == 'priority':  # implicitly not 'STOP'
-                    assert isinstance(x, tuple)
-                    assert len(x) == 2
-                    assert x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO], \
-                        "_migrate_logs_to_internal can only migrate WORKFLOW_,TASK_INFO message from priority queue, got x[0] == {}".format(x[0])
-                    self._dispatch_to_internal(x)
-                elif queue_tag == 'resource':
-                    assert isinstance(x, tuple), "_migrate_logs_to_internal was expecting a tuple, got {}".format(x)
-                    assert x[0] == MessageType.RESOURCE_INFO, \
-                        "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue, got tag {}, message {}".format(x[0], x)
-                    self._dispatch_to_internal(x)
-                elif queue_tag == 'node':
-                    assert len(x) == 2, "expected message tuple to have exactly two elements"
-                    assert x[0] == MessageType.NODE_INFO, "_migrate_logs_to_internal can only migrate NODE_INFO messages from node queue"
-
-                    self._dispatch_to_internal(x)
-                elif queue_tag == "block":
-                    self._dispatch_to_internal(x)
-                else:
-                    logger.error(f"Discarding because unknown queue tag '{queue_tag}', message: {x}")
+                self._dispatch_to_internal(x)
 
     def _dispatch_to_internal(self, x: Tuple) -> None:
-        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO]:
+        assert isinstance(x, tuple)
+        assert len(x) == 2, "expected message tuple to have exactly two elements"
+
+        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO, MessageType.FILE_INFO, MessageType.INPUT_FILE,
+                    MessageType.OUTPUT_FILE, MessageType.ENVIRONMENT_INFO, MessageType.MISC_INFO]:
             self.pending_priority_queue.put(cast(Any, x))
         elif x[0] == MessageType.RESOURCE_INFO:
             body = x[1]
@@ -593,10 +765,10 @@ class DatabaseManager:
         elif x[0] == MessageType.NODE_INFO:
             assert len(x) == 2, "expected NODE_INFO tuple to have exactly two elements"
 
-            logger.info("Will put {} to pending node queue".format(x[1]))
+            logger.debug("Will put {} to pending node queue".format(x[1]))
             self.pending_node_queue.put(x[1])
         elif x[0] == MessageType.BLOCK_INFO:
-            logger.info("Will put {} to pending block queue".format(x[1]))
+            logger.debug("Will put {} to pending block queue".format(x[1]))
             self.pending_block_queue.put(x[-1])
         else:
             logger.error("Discarding message of unknown type {}".format(x[0]))
@@ -613,7 +785,8 @@ class DatabaseManager:
                     # if retried - for example, the database being locked because someone else is readying
                     # the tables we are trying to write to. If that assumption is wrong, then this loop
                     # may go on forever.
-                    logger.warning("Got a database OperationalError. Ignoring and retrying on the assumption that it is recoverable: {}".format(e))
+                    logger.warning("Got a database OperationalError. "
+                                   "Ignoring and retrying on the assumption that it is recoverable: {}".format(e))
                     self.db.rollback()
                     time.sleep(1)  # hard coded 1s wait - this should be configurable or exponential backoff or something
 
@@ -640,7 +813,8 @@ class DatabaseManager:
                     done = True
                 except sa.exc.OperationalError as e:
                     # hoping that this is a database locked error during _update, not some other problem
-                    logger.warning("Got a database OperationalError. Ignoring and retrying on the assumption that it is recoverable: {}".format(e))
+                    logger.warning("Got a database OperationalError. "
+                                   "Ignoring and retrying on the assumption that it is recoverable: {}".format(e))
                     self.db.rollback()
                     time.sleep(1)  # hard coded 1s wait - this should be configurable or exponential backoff or something
         except KeyboardInterrupt:
@@ -658,7 +832,7 @@ class DatabaseManager:
                 logger.exception("Rollback failed")
 
     def _get_messages_in_batch(self, msg_queue: "queue.Queue[X]") -> List[X]:
-        messages = []  # type: List[X]
+        messages: List[X] = []
         start = time.time()
         while True:
             if time.time() - start >= self.batching_interval or len(messages) >= self.batching_threshold:
@@ -690,15 +864,13 @@ class DatabaseManager:
         self._kill_event.set()
 
 
-@wrap_with_logs(target="database_manager")
-def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
-                priority_msgs: "queue.Queue[TaggedMonitoringMessage]",
-                node_msgs: "queue.Queue[MonitoringMessage]",
-                block_msgs: "queue.Queue[MonitoringMessage]",
-                resource_msgs: "queue.Queue[MonitoringMessage]",
+@wrap_with_logs
+@typeguard.typechecked
+def dbm_starter(resource_msgs: mpq.Queue,
                 db_url: str,
-                logdir: str,
-                logging_level: int) -> None:
+                run_dir: str,
+                logging_level: int,
+                exit_event: mpe.Event) -> None:
     """Start the database manager process
 
     The DFK should start this function. The args, kwargs match that of the monitoring config
@@ -708,17 +880,17 @@ def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
 
     try:
         dbm = DatabaseManager(db_url=db_url,
-                              logdir=logdir,
-                              logging_level=logging_level)
+                              run_dir=run_dir,
+                              logging_level=logging_level,
+                              exit_event=exit_event)
         logger.info("Starting dbm in dbm starter")
-        dbm.start(priority_msgs, node_msgs, block_msgs, resource_msgs)
+        dbm.start(resource_msgs)
     except KeyboardInterrupt:
         logger.exception("KeyboardInterrupt signal caught")
         dbm.close()
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("dbm.start exception")
-        exception_q.put(("DBM", str(e)))
         dbm.close()
 
     logger.info("End of dbm_starter")

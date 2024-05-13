@@ -1,11 +1,15 @@
 from flask_sqlalchemy import SQLAlchemy
 
-
 WORKFLOW = 'workflow'    # Workflow table includes workflow metadata
 TASK = 'task'            # Task table includes task metadata
 STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
+FILE = 'file'            # Files table include file info
+INPUT_FILE = 'input_file'  # Input files table include input file info
+OUTPUT_FILE = 'output_file'  # Output files table include output file info
+ENVIRONMENT = 'environment'  # Executor table include executor info
+MISC_INFO = 'misc_info'  # Misc info table include misc info
 
 db = SQLAlchemy()
 
@@ -68,9 +72,63 @@ class Task(db.Model):
     task_stdin = db.Column('task_stdin', db.Text, nullable=True)
     task_stdout = db.Column('task_stdout', db.Text, nullable=True)
     task_stderr = db.Column('task_stderr', db.Text, nullable=True)
+    task_environment = db.Column('task_environment', db.Text, nullable=True)
     __table_args__ = (
         db.PrimaryKeyConstraint('task_id', 'run_id'),
     )
+
+
+class File(db.Model):
+    __tablename__ = FILE
+    file_name = db.Column('file_name', db.Text, index=True, nullable=False)
+    file_path = db.Column('file_path', db.Text, nullable=True)
+    full_path = db.Column('full_path', db.Text, index=True, nullable=False)
+    file_id = db.Column('file_id', db.Text, index=True, nullable=False)
+    run_id = db.Column('run_id', db.Text, index=True, nullable=False)
+    task_id = db.Column('task_id', db.Integer, index=True, nullable=True)
+    try_id = db.Column('try_id', db.Integer, index=True, nullable=True)
+    timestamp = db.Column('timestamp', db.DateTime, index=True, nullable=True)
+    size = db.Column('size', db.BigInteger, nullable=True)
+    md5sum = db.Column('md5sum', db.Text, nullable=True)
+    __table_args__ = (db.PrimaryKeyConstraint('file_id'),)
+
+
+class Environment(db.Model):
+    __tablename__ = ENVIRONMENT
+    environment_id = db.Column('environment_id', db.Text, index=True, nullable=False)
+    run_id = db.Column('run_id', db.Text, index=True, nullable=False)
+    label = db.Column('label', db.Text, nullable=False)
+    address = db.Column('address', db.Text, nullable=True)
+    provider = db.Column('provider', db.Text, nullable=True)
+    launcher = db.Column('launcher', db.Text, nullable=True)
+    worker_init = db.Column('worker_init', db.Text, nullable=True)
+    __table_args__ = (db.PrimaryKeyConstraint('environment_id'),)
+
+
+class InputFile(db.Model):
+    __tablename__ = INPUT_FILE
+    file_id = db.Column('file_id', db.Text, nullable=False)
+    run_id = db.Column('run_id', db.Text, index=True, nullable=False)
+    task_id = db.Column('task_id', db.Integer, index=True, nullable=False)
+    try_id = db.Column('try_id', db.Integer, index=True, nullable=False)
+    __table_args__ = (db.PrimaryKeyConstraint('file_id'),)
+
+
+class OutputFile(db.Model):
+    __tablename__ = OUTPUT_FILE
+    file_id = db.Column('file_id', db.Text, nullable=False)
+    run_id = db. Column('run_id', db.Text, index=True, nullable=False)
+    task_id = db.Column('task_id', db.Integer, index=True, nullable=False)
+    try_id = db.Column('try_id', db.Integer, index=True, nullable=False)
+    __table_args__ = (db.PrimaryKeyConstraint('file_id'),)
+
+
+class MiscInfo(db.Model):
+    __tablename__ = MISC_INFO
+    run_id = db.Column('run_id', db.Text, index=True, nullable=False)
+    timestamp = db.Column('timestamp', db.DateTime, index=True, nullable=False)
+    info = db.Column('info', db.Text, nullable=False)
+    __table_args__ = (db.PrimaryKeyConstraint('run_id', 'timestamp'),)
 
 
 class Resource(db.Model):
@@ -102,5 +160,12 @@ class Resource(db.Model):
         'psutil_process_disk_write', db.Float, nullable=True)
     psutil_process_status = db.Column(
         'psutil_process_status', db.Text, nullable=True)
+    psutil_cpu_num = db.Column(
+        'psutil_cpu_num', db.Text, nullable=True)
+    psutil_process_num_ctx_switches_voluntary = db.Column(
+        'psutil_process_num_ctx_switches_voluntary', db.Float, nullable=True)
+    psutil_process_num_ctx_switches_involuntary = db.Column(
+        'psutil_process_num_ctx_switches_involuntary', db.Float, nullable=True)
+
     __table_args__ = (
         db.PrimaryKeyConstraint('task_id', 'run_id', 'timestamp'),)

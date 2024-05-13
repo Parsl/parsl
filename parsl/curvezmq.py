@@ -144,7 +144,7 @@ class ServerContext(BaseContext):
         auth_thread.start()
         # Only allow certs that are in the cert dir
         assert self.cert_dir  # For mypy
-        auth_thread.configure_curve(domain="*", location=self.cert_dir)
+        auth_thread.configure_curve(domain="*", location=str(self.cert_dir))
         return auth_thread
 
     def socket(self, socket_type: int, *args, **kwargs) -> zmq.Socket:
@@ -160,6 +160,9 @@ class ServerContext(BaseContext):
             except zmq.ZMQError as e:
                 raise ValueError("Invalid CurveZMQ key format") from e
             sock.setsockopt(zmq.CURVE_SERVER, True)  # Must come before bind
+
+        # This flag enables IPV6 in addition to IPV4
+        sock.setsockopt(zmq.IPV6, True)
         return sock
 
     def term(self):
@@ -202,4 +205,5 @@ class ClientContext(BaseContext):
                 sock.setsockopt(zmq.CURVE_SERVERKEY, server_public_key)
             except zmq.ZMQError as e:
                 raise ValueError("Invalid CurveZMQ key format") from e
+        sock.setsockopt(zmq.IPV6, True)
         return sock

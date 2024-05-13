@@ -1,10 +1,11 @@
 """Exceptions raised by Apps."""
-from functools import wraps
-from typing import Callable, List, Optional, TypeVar, Union
-from typing_extensions import ParamSpec
-from types import TracebackType
 import logging
+from functools import wraps
+from types import TracebackType
+from typing import Callable, List, Optional, TypeVar, Union
+
 from tblib import Traceback
+from typing_extensions import ParamSpec
 
 from parsl.data_provider.files import File
 from parsl.errors import ParslError
@@ -69,8 +70,8 @@ class MissingOutputs(ParslError):
         self.reason = reason
         self.outputs = outputs
 
-    def __repr__(self) -> str:
-        return "Missing Outputs: {0}, Reason:{1}".format(self.outputs, self.reason)
+    def __str__(self) -> str:
+        return "Missing Outputs: {0}, Reason: {1}".format(self.outputs, self.reason)
 
 
 class BadStdStreamFile(ParslError):
@@ -78,19 +79,14 @@ class BadStdStreamFile(ParslError):
 
     Contains:
        reason(string)
-       exception object
     """
 
-    def __init__(self, reason: str, exception: Exception) -> None:
-        super().__init__(reason, exception)
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
         self._reason = reason
-        self._exception = exception
-
-    def __repr__(self) -> str:
-        return "Bad Stream File: {} Exception: {}".format(self._reason, self._exception)
 
     def __str__(self) -> str:
-        return self.__repr__()
+        return "Bad Stream File: {}".format(self._reason)
 
 
 class RemoteExceptionWrapper:
@@ -136,6 +132,7 @@ def wrap_error(func: Callable[P, R]) -> Callable[P, Union[R, RemoteExceptionWrap
     @wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> Union[R, RemoteExceptionWrapper]:
         import sys
+
         from parsl.app.errors import RemoteExceptionWrapper
         try:
             return func(*args, **kwargs)

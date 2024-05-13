@@ -1,10 +1,10 @@
-from functools import update_wrapper
-from functools import partial
-from inspect import signature, Parameter
 import logging
+from functools import partial
+from inspect import Parameter, signature
 
-from parsl.app.errors import wrap_error
 from parsl.app.app import AppBase
+from parsl.app.errors import wrap_error
+from parsl.data_provider.files import File
 from parsl.dataflow.dflow import DataFlowKernelLoader
 
 logger = logging.getLogger(__name__)
@@ -16,6 +16,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
     """
     import os
     import subprocess
+
     import parsl.app.errors as pe
     from parsl.utils import get_std_fname_mode
 
@@ -54,13 +55,20 @@ def remote_side_bash_executor(func, *args, **kwargs):
         if stdfspec is None:
             return None
 
-        fname, mode = get_std_fname_mode(fdname, stdfspec)
+        if isinstance(stdfspec, File):
+            # a File is an os.PathLike and so we can use it directly for
+            # the subsequent file operations
+            fname = stdfspec
+            mode = "w"
+        else:
+            fname, mode = get_std_fname_mode(fdname, stdfspec)
+
         try:
             if os.path.dirname(fname):
                 os.makedirs(os.path.dirname(fname), exist_ok=True)
             fd = open(fname, mode)
         except Exception as e:
-            raise pe.BadStdStreamFile(fname, e)
+            raise pe.BadStdStreamFile(str(fname)) from e
         return fd
 
     std_out = open_std_fd('stdout')
@@ -115,11 +123,10 @@ class BashApp(AppBase):
             if sig.parameters[s].default is not Parameter.empty:
                 self.kwargs[s] = sig.parameters[s].default
 
-        # update_wrapper allows remote_side_bash_executor to masquerade as self.func
         # partial is used to attach the first arg the "func" to the remote_side_bash_executor
         # this is done to avoid passing a function type in the args which parsl.serializer
         # doesn't support
-        remote_fn = partial(update_wrapper(remote_side_bash_executor, self.func), self.func)
+        remote_fn = partial(remote_side_bash_executor, self.func)
         remote_fn.__name__ = self.func.__name__
         self.wrapped_remote_function = wrap_error(remote_fn)
 

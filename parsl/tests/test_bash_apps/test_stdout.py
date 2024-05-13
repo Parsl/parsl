@@ -1,3 +1,4 @@
+import logging
 import os
 
 import pytest
@@ -15,7 +16,6 @@ def echo_to_streams(msg, stderr=None, stdout=None):
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
 
 speclist = (
-    '/bad/dir/t.out',
     ['t3.out', 'w'],
     ('t4.out', None),
     (42, 'w'),
@@ -25,7 +25,6 @@ speclist = (
 )
 
 testids = [
-    'nonexistent_dir',
     'list_not_tuple',
     'null_mode',
     'not_a_string',
@@ -35,7 +34,6 @@ testids = [
 ]
 
 
-@pytest.mark.issue363
 @pytest.mark.parametrize('spec', speclist, ids=testids)
 def test_bad_stdout_specs(spec):
     """Testing bad stdout spec cases"""
@@ -54,7 +52,27 @@ def test_bad_stdout_specs(spec):
         assert False, "Did not raise expected exception"
 
 
-@pytest.mark.issue363
+@pytest.mark.issue3328
+@pytest.mark.unix_filesystem_permissions_required
+def test_bad_stdout_file():
+    """Testing bad stderr file"""
+
+    o = "/bad/dir/t2.out"
+
+    fn = echo_to_streams("Hello world", stdout=o, stderr='t.err')
+
+    try:
+        fn.result()
+    except perror.BadStdStreamFile:
+        pass
+    else:
+        assert False, "Did not raise expected exception BadStdStreamFile"
+
+    return
+
+
+@pytest.mark.issue3328
+@pytest.mark.unix_filesystem_permissions_required
 def test_bad_stderr_file():
     """Testing bad stderr file"""
 
@@ -72,8 +90,9 @@ def test_bad_stderr_file():
     return
 
 
-@pytest.mark.issue363
-def test_stdout_truncate(tmpd_cwd):
+@pytest.mark.executor_supports_std_stream_tuples
+@pytest.mark.shared_fs
+def test_stdout_truncate(tmpd_cwd, caplog):
     """Testing truncation of prior content of stdout"""
 
     out = (str(tmpd_cwd / 't1.out'), 'w')
@@ -88,9 +107,12 @@ def test_stdout_truncate(tmpd_cwd):
     assert len1 == 1
     assert len1 == len2
 
+    for record in caplog.records:
+        assert record.levelno < logging.ERROR
 
-@pytest.mark.issue363
-def test_stdout_append(tmpd_cwd):
+
+@pytest.mark.shared_fs
+def test_stdout_append(tmpd_cwd, caplog):
     """Testing appending to prior content of stdout (default open() mode)"""
 
     out = str(tmpd_cwd / 't1.out')
@@ -103,3 +125,6 @@ def test_stdout_append(tmpd_cwd):
     len2 = len(open(out).readlines())
 
     assert len1 == 1 and len2 == 2
+
+    for record in caplog.records:
+        assert record.levelno < logging.ERROR

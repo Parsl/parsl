@@ -9,6 +9,18 @@ class GoodRepr(RepresentationMixin):
         self.y = y
 
 
+class GoodReprDefaults(RepresentationMixin):
+    def __init__(self, x, y="default 2"):
+        self.x = x
+        self.y = y
+
+
+class GoodReprKeywordOnly(RepresentationMixin):
+    def __init__(self, *, x, y):
+        self.x = x
+        self.y = y
+
+
 class BadRepr(RepresentationMixin):
     """This class incorrectly subclasses RepresentationMixin.
     It does not store the parameter x on self.
@@ -24,6 +36,47 @@ def test_repr_good():
 
     # repr should not raise an exception
     r = repr(GoodRepr(p1, p2))
+
+    # representation should contain both values supplied
+    # at object creation.
+    assert p1 in r
+    assert p2 in r
+
+
+@pytest.mark.local
+def test_repr_good_defaults_overridden():
+    p1 = "parameter 1"
+    p2 = "the second parameter"
+
+    # repr should not raise an exception
+    r = repr(GoodReprDefaults(p1, p2))
+
+    # representation should contain both values supplied
+    # at object creation.
+    assert p1 in r
+    assert p2 in r
+
+
+@pytest.mark.local
+def test_repr_good_defaults_defaulted():
+    p1 = "parameter 1"
+
+    # repr should not raise an exception
+    r = repr(GoodReprDefaults(p1))
+
+    # representation should contain one value supplied
+    # at object creation, and the other defaulted.
+    assert p1 in r
+    assert "default 2" in r
+
+
+@pytest.mark.local
+def test_repr_good_keyword_only():
+    p1 = "parameter 1"
+    p2 = "the second parameter"
+
+    # repr should not raise an exception
+    r = repr(GoodReprKeywordOnly(x=p1, y=p2))
 
     # representation should contain both values supplied
     # at object creation.

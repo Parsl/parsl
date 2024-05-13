@@ -1,8 +1,8 @@
+import pytest
+
 import parsl
 from parsl.app.app import python_app
 from parsl.data_provider.files import File
-
-import pytest
 
 # This config is for the local test which will adding an executor.
 # Most tests in this file should be non-local and use the configuration
@@ -48,6 +48,7 @@ def sort_strings_additional_executor(inputs=(), outputs=()):
 
 
 @pytest.mark.cleannet
+@pytest.mark.staging_required
 def test_staging_https_cleannet(tmpd_cwd):
     unsorted_file = File(_unsorted_url)
     sorted_file = File(tmpd_cwd / 'sorted.txt')
@@ -68,6 +69,7 @@ def test_staging_https_local(tmpd_cwd):
 
 
 @pytest.mark.cleannet
+@pytest.mark.staging_required
 def test_staging_https_kwargs(tmpd_cwd):
     unsorted_file = File(_unsorted_url)
     sorted_file = File(tmpd_cwd / 'sorted.txt')
@@ -78,6 +80,7 @@ def test_staging_https_kwargs(tmpd_cwd):
 
 
 @pytest.mark.cleannet
+@pytest.mark.staging_required
 def test_staging_https_args(tmpd_cwd):
     unsorted_file = File(_unsorted_url)
     sorted_file = File(tmpd_cwd / 'sorted.txt')
