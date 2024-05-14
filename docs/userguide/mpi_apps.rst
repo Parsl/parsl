@@ -1,7 +1,7 @@
 MPI and Multi-node Apps
 =======================
 
-The :class:`~parsl.executors.MPIExecutor` support running MPI applications or other computations which can
+The :class:`~parsl.executors.MPIExecutor` supports running MPI applications or other computations which can
 run on multiple compute nodes.
 
 Background
@@ -10,15 +10,14 @@ Background
 MPI applications run multiple copies of a program that complete a single task by
 coordinating using messages passed within or across nodes.
 
-Starting MPI application requires invoking a "launcher" code (e.g., ``mpiexec``) from one node
-with options that define how the copies of a program should be distributed to others.
+Starting MPI application requires invoking a "launcher" code (e.g., ``mpiexec``)
+with options that define how the copies of a program should be distributed.
 
-The launcher includes a series of options that control how copies of the program are distributed
+The launcher includes options that control how copies of the program are distributed
 across the nodes (e.g., how many copies per node) and
-how each copy is configured (e.g., which CPU cores it can use),
-among other options.
+how each copy is configured (e.g., which CPU cores it can use).
 
-The options for launchers vary slightly between MPI implementations and compute clusters.
+The options for launchers vary between MPI implementations and compute clusters.
 
 Configuring ``MPIExecutor``
 ---------------------------
@@ -27,12 +26,12 @@ The :class:`~parsl.executors.MPIExecutor` is a wrapper over
 :class:`~parsl.executors.high_throughput.executor.HighThroughputExecutor`
 which eliminates options that are irrelevant for MPI applications.
 
-Define a configuration for :class:`~parsl.executors.MPIExecutor`
+Define a configuration for :class:`~parsl.executors.MPIExecutor` by
 
-1. Set ``max_workers_per_block`` to maximum number of tasks to run per block of compute nodes.
-   This value is typically the number of nodes per task divided by the number of nodes per task.
-2. Set ``mpi_launcher`` to launcher used for your application.
-3. Specify the provider that matches your cluster and use the :class:`~parsl.launchers.SimpleLauncher`,
+1. Setting ``max_workers_per_block`` to the maximum number of tasks to run per block of compute nodes.
+   This value is typically the number of nodes per block divided by the number of nodes per task.
+2. Setting ``mpi_launcher`` to the launcher used for your application.
+3. Specifying a provider that matches your cluster and use the :class:`~parsl.launchers.SimpleLauncher`,
    which will ensure that no Parsl processes are placed on the compute nodes.
 
 An example for ALCF's Polaris supercomputer:
@@ -43,7 +42,7 @@ An example for ALCF's Polaris supercomputer:
         executors=[
             MPIExecutor(
                 address=address_by_interface('bond0'),
-                max_workers_per_block=4,  # Up to 4 tasks
+                max_workers_per_block=2,  # Assuming 2 nodes per task
                 provider=PBSProProvider(
                     account="parsl",
                     worker_init=f"""module load miniconda; source activate /lus/eagle/projects/parsl/env""",
@@ -67,6 +66,15 @@ Writing an MPI App
 :class:`~parsl.executors.high_throughput.MPIExecutor` can execute both Python or Bash Apps which invoke an MPI application.
 
 Create the app by first defining a function which includes ``parsl_resource_specification`` keyword argument.
+The resource specification is a dictionary which defines the number of nodes and ranks used by the application:
+
+.. code-block:: python
+
+    resource_specification = {
+      'num_nodes': <int>,        # Number of nodes required for the application instance
+      'ranks_per_node': <int>,   # Number of ranks / application elements to be launched per node
+      'num_ranks': <int>,        # Number of ranks in total
+    }
 
 Then, replace the call to the MPI launcher with ``$PARSL_MPI_PREFIX``.
 ``$PARSL_MPI_PREFIX`` references an environmental variable which will be replaced with
@@ -85,10 +93,9 @@ The function can be a Bash app
 
 or a Python app:
 
-
 .. code-block:: python
 
-    @bash_app
+    @python_app
     def lammps_mpi_application(infile: File, parsl_resource_specification: Dict):
         from subprocess import run
         with open('stdout.lmp', 'w') as fp, open('stderr.lmp', 'w') as fe:
@@ -103,9 +110,9 @@ Run either App by calling with its arguments and a resource specification which 
     # Resources in terms of nodes and how ranks are to be distributed are set on a per app
     # basis via the resource_spec dictionary.
     resource_spec = {
-        "num_nodes" = 2,
-        "ranks_per_node" = 2,
-        "num_ranks" = 4,
+        "num_nodes": 2,
+        "ranks_per_node": 2,
+        "num_ranks": 4,
     }
     future = lammps_mpi_application(File('in.file'), parsl_resource_specification=resource_spec)
 
@@ -113,9 +120,9 @@ Advanced: More Environment Variables
 ++++++++++++++++++++++++++++++++++++
 
 Parsl Apps which run using :class:`~parsl.executors.high_throughput.MPIExecutor`
-can make their own MPI invocation by leveraging the other environment variables.
+can make their own MPI invocation using other environment variables.
 
-These include versions of the launch command for different launchers
+These other variables include versions of the launch command for different launchers
 
 - ``PARSL_MPIEXEC_PREFIX``: mpiexec launch command which works for a large number of batch systems especially PBS systems
 - ``PARSL_SRUN_PREFIX``: srun launch command for Slurm based clusters
