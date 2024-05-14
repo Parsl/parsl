@@ -310,6 +310,8 @@ class Interchange:
                                 'tasks': len(m['tasks']),
                                 'idle_duration': idle_duration,
                                 'active': m['active'],
+                                'parsl_version': m['parsl_version'],
+                                'python_version': m['python_version'],
                                 'draining': m['draining']}
                         reply.append(resp)
 
@@ -435,6 +437,8 @@ class Interchange:
                                                     'worker_count': 0,
                                                     'active': True,
                                                     'draining': False,
+                                                    'parsl_version': msg['parsl_v'],
+                                                    'python_version': msg['python_v'],
                                                     'tasks': []}
                 self.connected_block_history.append(msg['block_id'])
 

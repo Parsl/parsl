@@ -177,11 +177,9 @@ class DataFlowKernel:
 
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.
-        radio = self.monitoring.radio if self.monitoring else None
         self.job_status_poller = JobStatusPoller(strategy=self.config.strategy,
                                                  strategy_period=self.config.strategy_period,
-                                                 max_idletime=self.config.max_idletime,
-                                                 monitoring=radio)
+                                                 max_idletime=self.config.max_idletime)
 
         self.executors: Dict[str, ParslExecutor] = {}
 
@@ -1179,12 +1177,9 @@ class DataFlowKernel:
         self.job_status_poller.add_executors(block_executors)
 
     def atexit_cleanup(self) -> None:
-        if not self.cleanup_called:
-            logger.warning("Python is exiting with a DFK still running. "
-                           "You should call parsl.dfk().cleanup() before "
-                           "exiting to release any resources")
-        else:
-            logger.info("python process is exiting, but DFK has already been cleaned up")
+        logger.warning("Python is exiting with a DFK still running. "
+                       "You should call parsl.dfk().cleanup() before "
+                       "exiting to release any resources")
 
     def wait_for_current_tasks(self) -> None:
         """Waits for all tasks in the task list to be completed, by waiting for their
@@ -1271,6 +1266,10 @@ class DataFlowKernel:
             logger.info("Terminating monitoring")
             self.monitoring.close()
             logger.info("Terminated monitoring")
+
+        logger.info("Unregistering atexit hook")
+        atexit.unregister(self.atexit_cleanup)
+        logger.info("Unregistered atexit hook")
 
         logger.info("DFK cleanup complete")
 
