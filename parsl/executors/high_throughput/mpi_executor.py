@@ -1,12 +1,10 @@
 """A simplified interface for HTEx when running in MPI mode"""
 from typing import Optional, Tuple, List, Union, Callable, Dict
-from inspect import signature
-import re
 
 import typeguard
 
 from parsl.data_provider.staging import Staging
-from parsl.executors.high_throughput.executor import HighThroughputExecutor
+from parsl.executors.high_throughput.executor import HighThroughputExecutor, GENERAL_HTEX_PARAM_DOCS
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import JobStatus
 from parsl.providers import LocalProvider
@@ -14,7 +12,7 @@ from parsl.providers.base import ExecutionProvider
 
 
 class MPIExecutor(HighThroughputExecutor):
-    """A version of :class:`~parsl.HighThroughputExecutor` tuned for executing multi-node (e.g., MPI) tasks.
+    __doc__ = f"""A version of :class:`~parsl.HighThroughputExecutor` tuned for executing multi-node (e.g., MPI) tasks.
 
     The Provider _must_ use the :class:`~parsl.launchers.SimpleLauncher`,
     which places a single pool of workers on the first node of a block.
@@ -28,6 +26,8 @@ class MPIExecutor(HighThroughputExecutor):
     ----------
     max_workers_per_block: int
         Maximum number of MPI applications to run at once per block
+
+    {GENERAL_HTEX_PARAM_DOCS}
     """
 
     @typeguard.typechecked
@@ -83,33 +83,3 @@ class MPIExecutor(HighThroughputExecutor):
         )
 
         self.max_workers_per_block = max_workers_per_block
-
-
-# Update the docstring on import
-def _update_from_htex_docstring():
-    """Get the parameters from the HTEx docstring that are used in MPIEx"""
-
-    # Get the portion of the HTEx docstring dealing with parameters (last, by convention)
-    htex_docstring = HighThroughputExecutor.__doc__
-    param_tag = 'Parameters\n    ----------\n'
-    param_start = htex_docstring.index(param_tag)
-    htex_docstring = htex_docstring[param_start + len(param_tag):]
-    assert htex_docstring.startswith('\n')  # Using asserts to catch if the HTEx docstring changes
-
-    # Gather the documentation by param type
-    by_params = re.split(r"\n {4}(\w+)\s?:", htex_docstring)[1:]  # Assumes docstring follows NumPy standards
-    htex_params = dict(zip(by_params[::2], by_params[1::2]))
-    assert 'label' in htex_params
-
-    # Remove those parameters not present in the MPIEx
-    mpi_sig = signature(MPIExecutor.__init__)
-    copied_params = dict((k.strip(), v) for k, v in htex_params.items() if k in mpi_sig.parameters)
-    assert 'label' in copied_params
-    assert 'mpi_mode' not in copied_params
-    new_docstring = ""
-    for name, param in copied_params.items():
-        new_docstring = new_docstring + f"    {name} : {param}\n"
-    MPIExecutor.__doc__ = f'{MPIExecutor.__doc__}\n{new_docstring.rstrip()}'
-
-
-_update_from_htex_docstring()

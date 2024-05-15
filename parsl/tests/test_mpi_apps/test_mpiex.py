@@ -41,6 +41,7 @@ def test_docstring():
     assert 'label' in MPIExecutor.__doc__
     assert 'max_workers_per_block' in MPIExecutor.__doc__
     assert 'available_accelerators' not in MPIExecutor.__doc__
+    print(MPIExecutor.__doc__)
 
 
 @pytest.mark.local
