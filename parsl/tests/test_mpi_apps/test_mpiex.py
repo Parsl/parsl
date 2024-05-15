@@ -57,8 +57,8 @@ def test_init():
 @pytest.mark.local
 def test_get_env():
     future = get_env_vars(parsl_resource_specification={
-        "num_nodes": 2,
-        "ranks_per_node": 2,
+        "num_nodes": 3,
+        "ranks_per_node": 5,
     })
     env_vars = future.result()
-    assert env_vars['PARSL_NUM_RANKS'] == '4'
+    assert env_vars['PARSL_NUM_RANKS'] == '15'

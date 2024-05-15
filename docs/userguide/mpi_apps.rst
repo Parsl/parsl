@@ -34,7 +34,7 @@ Define a configuration for :class:`~parsl.executors.MPIExecutor` by
 3. Specifying a provider that matches your cluster and use the :class:`~parsl.launchers.SimpleLauncher`,
    which will ensure that no Parsl processes are placed on the compute nodes.
 
-An example for ALCF's Polaris supercomputer:
+An example for ALCF's Polaris supercomputer that will run 3 MPI tasks of 2 nodes each at the same time:
 
 .. code-block:: python
 
@@ -42,7 +42,7 @@ An example for ALCF's Polaris supercomputer:
         executors=[
             MPIExecutor(
                 address=address_by_interface('bond0'),
-                max_workers_per_block=2,  # Assuming 2 nodes per task
+                max_workers_per_block=3,  # Assuming 2 nodes per task
                 provider=PBSProProvider(
                     account="parsl",
                     worker_init=f"""module load miniconda; source activate /lus/eagle/projects/parsl/env""",
@@ -51,7 +51,7 @@ An example for ALCF's Polaris supercomputer:
                     scheduler_options="#PBS -l filesystems=home:eagle:grand",
                     launcher=SimpleLauncher(),
                     select_options="ngpus=4",
-                    nodes_per_block=4,
+                    nodes_per_block=6,
                     max_blocks=1,
                     cpus_per_node=64,
                 ),
