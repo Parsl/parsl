@@ -15,8 +15,8 @@ cwd = Path(__file__).parent.absolute()
 pbs_nodefile = cwd.joinpath("mocks", "pbs_nodefile")
 
 
-def local_setup():
-    config = Config(
+def local_config():
+    return Config(
         executors=[
             MPIExecutor(
                 max_workers_per_block=1,
@@ -27,12 +27,6 @@ def local_setup():
             )
         ]
     )
-    parsl.load(config)
-
-
-def local_teardown():
-    parsl.dfk().cleanup()
-    parsl.clear()
 
 
 @pytest.mark.local
@@ -41,7 +35,6 @@ def test_docstring():
     assert 'label' in MPIExecutor.__doc__
     assert 'max_workers_per_block' in MPIExecutor.__doc__
     assert 'available_accelerators' not in MPIExecutor.__doc__
-    print(MPIExecutor.__doc__)
 
 
 @pytest.mark.local
