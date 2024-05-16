@@ -1,4 +1,3 @@
-import logging
 from typing import Dict
 import pytest
 import parsl
