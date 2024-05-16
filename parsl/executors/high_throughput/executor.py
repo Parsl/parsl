@@ -305,9 +305,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             self._workers_per_node = 1  # our best guess-- we do not have any provider hints
 
         self._task_counter = 0
-        self.run_id = None  # set to the correct run_id in dfk
-        self.hub_address = None  # set to the correct hub address in dfk
-        self.hub_port = None  # set to the correct hub port in dfk
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
         self.interchange_proc: Optional[Process] = None
@@ -326,8 +323,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         assert mpi_launcher in VALID_LAUNCHERS, \
             f"mpi_launcher must be set to one of {VALID_LAUNCHERS}"
         if self.enable_mpi_mode:
-            assert isinstance(self.provider.launcher, parsl.launchers.SingleNodeLauncher), \
-                "mpi_mode requires the provider to be configured to use a SingleNodeLauncher"
+            assert isinstance(self.provider.launcher, parsl.launchers.SimpleLauncher), \
+                "mpi_mode requires the provider to be configured to use a SimpleLauncher"
 
         self.mpi_launcher = mpi_launcher
 

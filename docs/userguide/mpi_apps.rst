@@ -15,7 +15,7 @@ The broad strokes of a complete solution involves the following components:
 2. Specify an MPI Launcher from one of the supported launchers ("aprun", "srun", "mpiexec") for the
    :class:`~parsl.executors.high_throughput.executor.HighThroughputExecutor` with: ``mpi_launcher="srun"``
 3. Specify the provider that matches your cluster, (eg. user ``SlurmProvider`` for Slurm clusters)
-4. Set the non-mpi launcher to :class:`~parsl.launchers.SingleNodeLauncher`
+4. Set the non-mpi launcher to :class:`~parsl.launchers.SimpleLauncher`
 5. Specify resources required by the application via ``resource_specification`` as shown below:
 
 
@@ -54,7 +54,7 @@ Configuring the Provider
 
 Parsl must be configured to deploy workers on exactly one node per block. This part is
 simple. Instead of defining a launcher which will place an executor on each node in the
-block, simply use the :class:`~parsl.launchers.SingleNodeLauncher`.
+block, simply use the :class:`~parsl.launchers.SimpleLauncher`.
 The MPI Launcher that the application will use is to be specified via ``HighThroughputExecutor(mpi_launcher="LAUNCHER")``
 
 It is also necessary to specify the desired number of blocks for the executor.
