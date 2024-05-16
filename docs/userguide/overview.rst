@@ -83,7 +83,7 @@ HTEX can be used on a single node (e.g., a laptop) and will make use of
 multiple processes for concurrent execution.
 As shown in the following figure, HTEX uses Parsl's provider abstraction (:py:class:`parsl.providers`) to 
 communicate with a resource manager (e.g., batch scheduler or cloud API) to 
-provision a set of nodes (e.g., Parsl will use Slurm’s qsub command to request
+provision a set of nodes (e.g., Parsl will use Slurm’s sbatch command to request
 nodes on a Slurm cluster) for the duration of execution. 
 HTEX deploys a lightweight worker agent on the nodes which subsequently connects 
 back to the main Parsl process. Parsl tasks are then sent from the main program 
