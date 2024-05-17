@@ -202,10 +202,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                                                          stderr_path=self.resources[job_id]['job_stderr_path'])
             jobs_missing.remove(job_id)
 
-        # TODO: This code can probably be depricated with the use of sacct
-        # since sacct will get status even for completed jobs.
-        # squeue does not report on jobs that are not running. So we are filling in the
-        # blanks for missing jobs, we might lose some information about why the jobs failed.
+        # sacct can get job info after jobs have completed so this path shouldn't be hit
+        # log a warning if there are missing jobs for some reason
         for missing_job in jobs_missing:
             logger.warning("Updating missing job {} to completed status".format(missing_job))
             self.resources[missing_job]['status'] = JobStatus(
