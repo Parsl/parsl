@@ -30,8 +30,10 @@ Parsl lets you chain functions together and will launch each function as inputs 
     future = f(1)
     assert future.result() == 2
 
-    future = g(f(1))
-    assert future.result() == 4
+    # Functions run concurrently, can be chained
+    f_a, f_b = f(2), f(3)
+    future = g(f_a, f_b)
+    assert future.result() == 7
 
 
 Start with the `configuration quickstart <quickstart.html#getting-started>`_ to learn how to tell Parsl how to use your computing resource,
