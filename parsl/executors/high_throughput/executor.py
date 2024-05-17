@@ -541,7 +541,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                                     "worker_ports": self.worker_ports,
                                                     "worker_port_range": self.worker_port_range,
                                                     "hub_address": self.hub_address,
-                                                    "hub_port": self.hub_port,
+                                                    "hub_zmq_port": self.hub_zmq_port,
                                                     "logdir": self.logdir,
                                                     "heartbeat_threshold": self.heartbeat_threshold,
                                                     "poll_period": self.poll_period,
