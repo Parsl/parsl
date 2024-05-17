@@ -74,7 +74,7 @@ class Interchange:
                  worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Tuple[int, int] = (54000, 55000),
                  hub_address: Optional[str] = None,
-                 hub_port: Optional[int] = None,
+                 hub_zmq_port: Optional[int] = None,
                  heartbeat_threshold: int = 60,
                  logdir: str = ".",
                  logging_level: int = logging.INFO,
@@ -105,7 +105,7 @@ class Interchange:
              The IP address at which the interchange can send info about managers to when monitoring is enabled.
              Default: None (meaning monitoring disabled)
 
-        hub_port : str
+        hub_zmq_port : str
              The port at which the interchange can send info about managers to when monitoring is enabled.
              Default: None (meaning monitoring disabled)
 
@@ -151,7 +151,7 @@ class Interchange:
         logger.info("Connected to client")
 
         self.hub_address = hub_address
-        self.hub_port = hub_port
+        self.hub_zmq_port = hub_zmq_port
 
         self.pending_task_queue: queue.Queue[Any] = queue.Queue(maxsize=10 ** 6)
         self.count = 0
@@ -244,12 +244,12 @@ class Interchange:
             logger.debug(f"Fetched {task_counter} tasks so far")
 
     def _create_monitoring_channel(self) -> Optional[zmq.Socket]:
-        if self.hub_address and self.hub_port:
+        if self.hub_address and self.hub_zmq_port:
             logger.info("Connecting to MonitoringHub")
             # This is a one-off because monitoring is unencrypted
             hub_channel = zmq.Context().socket(zmq.DEALER)
             hub_channel.set_hwm(0)
-            hub_channel.connect("tcp://{}:{}".format(self.hub_address, self.hub_port))
+            hub_channel.connect("tcp://{}:{}".format(self.hub_address, self.hub_zmq_port))
             logger.info("Connected to MonitoringHub")
             return hub_channel
         else:
