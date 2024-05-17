@@ -139,7 +139,7 @@ class UsageTracker:
             - 3 : Tracking is enabled with level 3
                   Share info about app count, app fails, execution time + level 2
         """
-        INF = float("inf")
+        INF = sys.maxsize
 
         envvar_level = INF
         envvar = str(os.environ.get("PARSL_TRACKING", 0)).lower()
