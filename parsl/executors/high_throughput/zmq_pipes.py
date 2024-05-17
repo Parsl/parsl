@@ -61,7 +61,7 @@ class CommandClient:
         if not self.ok:
             raise CommandClientBadError()
 
-        end_time_s = time.monotonic() + timeout_s
+        start_time_s = time.monotonic()
 
         reply = '__PARSL_ZMQ_PIPES_MAGIC__'
         with self._lock:
@@ -70,7 +70,7 @@ class CommandClient:
                     logger.debug("Sending command client command")
 
                     if timeout_s is not None:
-                        remaining_time_s = end_time_s - time.monotonic()
+                        remaining_time_s = start_time_s + timeout_s - time.monotonic()
                         poll_result = self.zmq_socket.poll(timeout=remaining_time_s * 1000, flags=zmq.POLLOUT)
                         if poll_result == zmq.POLLOUT:
                             pass  # this is OK, so continue
@@ -83,7 +83,7 @@ class CommandClient:
 
                     if timeout_s is not None:
                         logger.debug("Polling for command client response or timeout")
-                        remaining_time_s = end_time_s - time.monotonic()
+                        remaining_time_s = start_time_s + timeout_s - time.monotonic()
                         poll_result = self.zmq_socket.poll(timeout=remaining_time_s * 1000, flags=zmq.POLLIN)
                         if poll_result == zmq.POLLIN:
                             pass  # this is OK, so continue
