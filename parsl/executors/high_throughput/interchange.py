@@ -329,6 +329,7 @@ class Interchange:
                     reply = None
 
                 else:
+                    logger.error(f"Received unknown command: {command_req}")
                     reply = None
 
                 logger.debug("Reply: {}".format(reply))
