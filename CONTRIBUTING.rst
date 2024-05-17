@@ -60,10 +60,6 @@ a suitable DFK is loaded with that configuration for each test.
 Tests which require their own specially configured DFK, or no DFK at all,
 should be labelled with ``@pytest.mark.local`` and can be run with
 ``--config local``.
-Provide the special configuration creating a ``local_config`` function
-that returns the required configuration in that test file.
-Or, provide both a ``local_setup`` function that loads the proper configuration
-and ``local_teardown`` that stops parsl.
 
 There is more fine-grained enabling and disabling of tests within the
 above categories:
