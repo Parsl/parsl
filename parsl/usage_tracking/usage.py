@@ -139,9 +139,9 @@ class UsageTracker:
             - 3 : Tracking is enabled with level 3
                   Share info about app count, app fails, execution time + level 2
         """
-        INF = sys.maxsize
+        inf = sys.maxsize
 
-        envvar_level = INF
+        envvar_level = inf
         envvar = str(os.environ.get("PARSL_TRACKING", 0)).lower()
         if envvar in {"true", "false"}:
             envvar_level = 1 if envvar == "true" else 0
@@ -149,7 +149,7 @@ class UsageTracker:
         elif envvar in {"0", "1", "2", "3"}:
             envvar_level = int(envvar)
 
-        config_level = INF
+        config_level = inf
         if self.config.usage_tracking is not None and 0 <= int(self.config.usage_tracking) <= 3:
             config_level = int(self.config.usage_tracking)
 
