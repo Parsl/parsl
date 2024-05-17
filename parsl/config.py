@@ -66,8 +66,9 @@ class Config(RepresentationMixin, UsageInformation):
     usage_tracking : int, optional
         Set this field to 1, 2, or 3 to opt-in to Parsl's usage tracking system.
         The value represents the level of usage tracking detail to be collected.
+        Setting this field to 0 will disable usage tracking. Default (this field is not set): usage tracking is not enabled.
         Parsl only collects minimal, non personally-identifiable,
-        information used for reporting to our funding agencies. Default is 0 (disabled).
+        information used for reporting to our funding agencies.
     initialize_logging : bool, optional
         Make DFK optionally not initialize any logging. Log messages
         will still be passed into the python logging system under the
@@ -100,7 +101,7 @@ class Config(RepresentationMixin, UsageInformation):
                  strategy_period: Union[float, int] = 5,
                  max_idletime: float = 120.0,
                  monitoring: Optional[MonitoringHub] = None,
-                 usage_tracking: int = 0,
+                 usage_tracking: Optional[int] = None,
                  initialize_logging: bool = True) -> None:
 
         executors = tuple(executors or [])
@@ -155,7 +156,7 @@ class Config(RepresentationMixin, UsageInformation):
                 ', '.join(['label={}'.format(repr(d)) for d in duplicates])))
 
     def _validate_usage_tracking(self) -> None:
-        if int(self.usage_tracking) not in {0, 1, 2, 3}:
+        if self.usage_tracking is not None and int(self.usage_tracking) not in {0, 1, 2, 3}:
             raise ConfigurationError(
                 f"Usage Tracking values must be 0, 1, 2, or 3 and not {self.usage_tracking}"
             )

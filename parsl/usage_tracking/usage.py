@@ -117,7 +117,7 @@ class UsageTracker:
     def check_tracking_level(self) -> int:
         """Check if tracking is enabled and return level.
 
-        Checks the following in order:
+        Checks the following:
             1. PARSL_TRACKING environment variable
                 - Possible values:
                     ["true", "false", "True", "False", "0", "1", "2", "3"]
@@ -126,7 +126,7 @@ class UsageTracker:
             2. usage_tracking in Config
                 - Possible values: [True, False, 0, 1, 2, 3]
 
-            Config.usage_tracking overrides PARSL_TRACKING if both are set.
+            Parsl will choose the lowest level that is specified by any of the parameters, and 0 if none of them are set
 
             True/False values are treated as Level 1/Level 0 respectively.
 
@@ -139,17 +139,24 @@ class UsageTracker:
             - 3 : Tracking is enabled with level 3
                   Share info about app count, app fails, execution time + level 2
         """
+        INF = float("inf")
 
-        level = 0
-
+        envvar_level = INF
         envvar = str(os.environ.get("PARSL_TRACKING", 0)).lower()
-        if envvar in {"true", "1", "2", "3"}:
-            level = 1 if envvar == "true" else int(envvar)
+        if envvar in {"true", "false"}:
+            envvar_level = 1 if envvar == "true" else 0
 
-        if int(self.config.usage_tracking) > 0:
-            level = int(self.config.usage_tracking)
+        elif envvar in {"0", "1", "2", "3"}:
+            envvar_level = int(envvar)
 
-        return level
+        config_level = INF
+        if self.config.usage_tracking is not None and 0 <= int(self.config.usage_tracking) <= 3:
+            config_level = int(self.config.usage_tracking)
+
+        if min(envvar_level, config_level) > 3:
+            return 0
+
+        return min(envvar_level, config_level)
 
     def construct_start_message(self) -> bytes:
         """Collect preliminary run info at the start of the DFK.
