@@ -106,5 +106,5 @@ class OAuthSSHChannel(SSHChannel):
 
         return exit_status, stdout, stderr
 
-    def close(self):
-        return self.transport.close()
+    def close(self) -> None:
+        self.transport.close()
