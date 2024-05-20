@@ -645,7 +645,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Returns:
               Future
         """
-        validate_resource_spec(resource_specification)
+
+        validate_resource_spec(resource_specification, is_mpi_enabled=self.enable_mpi_mode)
 
         if self.bad_state_is_set:
             raise self.executor_exception

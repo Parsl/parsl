@@ -122,18 +122,22 @@ def test_top_level():
 
 @pytest.mark.local
 @pytest.mark.parametrize(
-    "resource_spec, exception",
+    "resource_spec, is_mpi_enabled, exception",
     (
-        ({"num_nodes": 2, "ranks_per_node": 1}, None),
-        ({"launcher_options": "--debug_foo"}, None),
-        ({"num_nodes": 2, "BAD_OPT": 1}, InvalidResourceSpecification),
-        ({}, None),
+        ({"num_nodes": 2, "ranks_per_node": 1}, False, None),
+        ({"launcher_options": "--debug_foo"}, False, None),
+        ({"num_nodes": 2, "BAD_OPT": 1}, False, InvalidResourceSpecification),
+        ({}, False, None),
+        ({"num_nodes": 2, "ranks_per_node": 1}, True, None),
+        ({"launcher_options": "--debug_foo"}, True, None),
+        ({"num_nodes": 2, "BAD_OPT": 1}, True, InvalidResourceSpecification),
+        ({}, True, InvalidResourceSpecification),
     )
 )
-def test_resource_spec(resource_spec: Dict, exception):
+def test_resource_spec(resource_spec: Dict, is_mpi_enabled: bool, exception):
     if exception:
         with pytest.raises(exception):
-            validate_resource_spec(resource_spec)
+            validate_resource_spec(resource_spec, is_mpi_enabled=is_mpi_enabled)
     else:
-        result = validate_resource_spec(resource_spec)
+        result = validate_resource_spec(resource_spec, is_mpi_enabled=is_mpi_enabled)
         assert result is None
