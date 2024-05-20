@@ -28,9 +28,8 @@ def validate_resource_spec(resource_spec: Dict[str, str], is_mpi_enabled: bool =
 
     # empty resource_spec when mpi_mode is set causes parsl to hang
     # ref issue #3427
-    if is_mpi_enabled and len(user_keys)==0:
+    if is_mpi_enabled and len(user_keys) == 0:
         raise InvalidResourceSpecification({'mpi_mode requires parsl_resource_specification to be configured'})
-    
 
     legal_keys = set(("ranks_per_node",
                       "num_nodes",
