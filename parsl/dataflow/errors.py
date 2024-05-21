@@ -42,12 +42,12 @@ class DependencyError(DataFlowException):
          - task_id: Task ID of the task that failed because of the dependency error
     """
 
-    def __init__(self, dependent_exceptions_tids: Sequence[Tuple[Exception, Optional[str]]], task_id: int) -> None:
+    def __init__(self, dependent_exceptions_tids: Sequence[Tuple[Exception, str]], task_id: int) -> None:
         self.dependent_exceptions_tids = dependent_exceptions_tids
         self.task_id = task_id
 
     def __str__(self) -> str:
-        deps = ", ".join(str(tid) for _exc, tid in self.dependent_exceptions_tids)
+        deps = ", ".join(tid for _exc, tid in self.dependent_exceptions_tids)
         return f"Dependency failure for task {self.task_id} with failed dependencies from {deps}"
 
 
