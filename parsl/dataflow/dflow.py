@@ -870,7 +870,8 @@ class DataFlowKernel:
 
         return depends
 
-    def _unwrap_futures(self, args, kwargs):
+    def _unwrap_futures(self, args: Sequence[Any], kwargs: Dict[str, Any]) \
+            -> Tuple[Sequence[Any], Dict[str, Any], Sequence[Tuple[Exception, str]]]:
         """This function should be called when all dependencies have completed.
 
         It will rewrite the arguments for that task, replacing each Future
@@ -916,10 +917,10 @@ class DataFlowKernel:
                 try:
                     kwargs[key] = dep.result()
                 except Exception as e:
-                    if hasattr(dep, 'task_record'):
-                        tid = dep.task_record['id']
+                    if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
+                        tid = "task " + repr(dep.task_record['id'])
                     else:
-                        tid = None
+                        tid = repr(dep)
                     dep_failures.extend([(e, tid)])
 
         # Check for futures in inputs=[<fut>...]
@@ -930,10 +931,10 @@ class DataFlowKernel:
                     try:
                         new_inputs.extend([dep.result()])
                     except Exception as e:
-                        if hasattr(dep, 'task_record'):
-                            tid = dep.task_record['id']
+                        if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
+                            tid = "task " + dep.task_record['id']
                         else:
-                            tid = None
+                            tid = repr(dep)
                         dep_failures.extend([(e, tid)])
 
                 else:
