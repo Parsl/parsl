@@ -13,11 +13,10 @@ If you have questions or would like to discuss ideas, please post in our Slack's
 Coding conventions
 ------------------
 
-Parsl code should adhere to Python pep-8.  Install `flake8` and run the following code to identify non-compliant code::
+Formatting conventions
+======================
 
-  $ flake8 parsl/
-
-Note: the continuous integration environment will validate all pull requests using this command.
+Parsl code should adhere to Python `PEP-8 <https://peps.python.org/pep-0008/>`_. This is enforced in CI (with some exceptions). You can also run this test yourself using ``make flake8``.
 
 Naming conventions
 ==================
