@@ -877,7 +877,8 @@ class DataFlowKernel:
 
         return depends
 
-    def _unwrap_futures(self, args, kwargs):
+    def _unwrap_futures(self, args: Sequence[Any], kwargs: Dict[str, Any]) \
+            -> Tuple[Sequence[Any], Dict[str, Any], Sequence[Tuple[Exception, str]]]:
         """This function should be called when all dependencies have completed.
 
         It will rewrite the arguments for that task, replacing each Future
@@ -898,17 +899,23 @@ class DataFlowKernel:
         """
         dep_failures = []
 
+        def append_failure(e: Exception, dep: Future) -> None:
+            # If this Future is associated with a task inside this DFK,
+            # then refer to the task ID.
+            # Otherwise make a repr of the Future object.
+            if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
+                tid = "task " + repr(dep.task_record['id'])
+            else:
+                tid = repr(dep)
+            dep_failures.extend([(e, tid)])
+
         # Replace item in args
         new_args = []
         for dep in args:
             try:
                 new_args.extend([self.dependency_resolver.traverse_to_unwrap(dep)])
             except Exception as e:
-                if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
-                    tid = "task " + repr(dep.task_record['id'])
-                else:
-                    tid = repr(dep)
-                dep_failures.extend([(e, tid)])
+                append_failure(e, dep)
 
         # Check for explicit kwargs ex, fu_1=<fut>
         for key in kwargs:
@@ -916,11 +923,7 @@ class DataFlowKernel:
             try:
                 kwargs[key] = self.dependency_resolver.traverse_to_unwrap(dep)
             except Exception as e:
-                if hasattr(dep, 'task_record'):
-                    tid = dep.task_record['id']
-                else:
-                    tid = None
-                dep_failures.extend([(e, tid)])
+                append_failure(e, dep)
 
         # Check for futures in inputs=[<fut>...]
         if 'inputs' in kwargs:
@@ -929,12 +932,7 @@ class DataFlowKernel:
                 try:
                     new_inputs.extend([self.dependency_resolver.traverse_to_unwrap(dep)])
                 except Exception as e:
-                    if hasattr(dep, 'task_record'):
-                        tid = dep.task_record['id']
-                    else:
-                        tid = None
-                    dep_failures.extend([(e, tid)])
-
+                    append_failure(e, dep)
             kwargs['inputs'] = new_inputs
 
         return new_args, kwargs, dep_failures
