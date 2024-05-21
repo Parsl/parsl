@@ -141,17 +141,24 @@ class UsageTracker:
         """
         inf = sys.maxsize
 
-        envvar_level = inf
         envvar = str(os.environ.get("PARSL_TRACKING", 0)).lower()
-        if envvar in {"true", "false"}:
-            envvar_level = 1 if envvar == "true" else 0
+        if envvar == "false":
+            envvar_level = 0
+
+        elif envvar == "true":
+            envvar_level = 1
 
         elif envvar in {"0", "1", "2", "3"}:
             envvar_level = int(envvar)
 
-        config_level = inf
+        else:
+            envvar_level = inf
+
         if self.config.usage_tracking is not None and 0 <= int(self.config.usage_tracking) <= 3:
             config_level = int(self.config.usage_tracking)
+
+        else:
+            config_level = inf
 
         if min(envvar_level, config_level) > 3:
             return 0
