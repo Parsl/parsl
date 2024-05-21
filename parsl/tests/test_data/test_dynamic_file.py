@@ -1,20 +1,31 @@
 from concurrent.futures import Future
 import pytest
+#from pytest_mock import mocker
 
+from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.dynamic_files import DynamicFileList as DFL
 from parsl.data_provider.files import File
 from parsl.app.futures import DataFuture
+from parsl.dataflow.futures import AppFuture
+
+
+class MockDFK:
+    def __init__(self, tasks):
+        self.executors = {'tester': 'test'}
+        self.storage_access = []
+        self.data_manager = DataManager(self)
+        self.tasks = {tasks['id']: tasks}
 
 
 def test_dynamic_file_empty():
-    fut = DFL(fut=Future())
+    fut = DFL()
     df = DFL.DynamicFile(fut, None)
     assert df.file_obj is None
     assert df.empty is True
 
 
 def test_dynamic_file_File():
-    fut = DFL(fut=Future())
+    fut = DFL()
     fl = File('test.txt')
     df = DFL.DynamicFile(fut, fl)
     assert df.file_obj == fl
@@ -26,7 +37,7 @@ def test_dynamic_file_File():
 def test_dynamic_file_DataFuture():
     fut = Future()
     fl = DataFuture(fut, File('test2.txt'))
-    df = DFL.DynamicFile(DFL(fut=fut), fl)
+    df = DFL.DynamicFile(DFL(), fl)
     assert df.file_obj == fl
     assert df.empty is False
     assert df.done() is False
@@ -35,7 +46,7 @@ def test_dynamic_file_DataFuture():
 
 
 def test_dynamic_file_set():
-    fut = DFL(fut=Future())
+    fut = DFL()
     df = DFL.DynamicFile(fut, None)
     assert df.file_obj is None
     assert df.empty is True
@@ -46,7 +57,7 @@ def test_dynamic_file_set():
 
 
 def test_dynamic_file_not_implemented():
-    fut = DFL(fut=Future())
+    fut = DFL()
     fl = DataFuture(fut, File('test2.txt'))
     df = DFL.DynamicFile(fut, fl)
     with pytest.raises(NotImplementedError):
@@ -56,16 +67,19 @@ def test_dynamic_file_not_implemented():
 
 
 def test_dynamic_file_passthrough():
-    f = Future()
-    fut = DFL(fut=f)
+    fut = DFL()
     dfl = DataFuture(fut, File('test3.txt'))
     df = DFL.DynamicFile(fut, dfl)
-    f.set_running_or_notify_cancel()
+    assert df.running() is False
+    af = AppFuture({})
+    fut.set_parent(af)
+    assert df.running() is False
+    af.set_running_or_notify_cancel()
     assert df.running() is True
 
 
 def test_dynamic_file_callback():
-    fut = DFL(fut=Future())
+    fut = DFL()
     dfl = DataFuture(fut, File('test3.txt'))
     df = DFL.DynamicFile(fut, dfl)
     with pytest.raises(Exception):
@@ -77,14 +91,12 @@ def test_dynamic_file_callback():
 
 
 def test_dynamic_file_list():
-    fut = Future()
-    dfl = DFL(fut=fut)
+    dfl = DFL()
     assert len(dfl) == 0
 
 
 def test_dynamic_file_list_append():
-    fut = Future()
-    dfl = DFL(fut=fut)
+    dfl = DFL()
     assert len(dfl) == 0
 
     dfl.append(File('test.txt'))
@@ -93,8 +105,7 @@ def test_dynamic_file_list_append():
 
 
 def test_dynamic_file_list_extend():
-    fut = Future()
-    dfl = DFL(fut=fut)
+    dfl = DFL()
     assert len(dfl) == 0
 
     dfl.extend([File('test.txt'), File('test2.txt')])
@@ -102,8 +113,7 @@ def test_dynamic_file_list_extend():
 
 
 def test_dynamic_file_list_dynamics():
-    fut = Future()
-    dfl = DFL(fut=fut)
+    dfl = DFL()
     assert len(dfl) == 0
 
     dfl[5] = File('test4.txt')
@@ -114,27 +124,26 @@ def test_dynamic_file_list_dynamics():
     assert len(dfl) == 6
     assert id(dfl[3]) == tempid
 
-    dfl[3] = dfl[5]
+    dfl[2] = dfl[5]
     assert len(dfl) == 6
-    assert id(dfl[3]) != tempid
+    assert id(dfl[2]) != tempid
     tempid = id(dfl[5])
-    dfl[5] = File('another.test.dat')
+    with pytest.raises(ValueError):
+        dfl[5] = File('another.test.dat')
     assert len(dfl) == 6
-    assert tempid != id(dfl[5])
+    assert tempid == id(dfl[5])
 
 
 def test_dynamic_file_list_no_op():
-    fut = Future()
-    dfl = DFL(fut=fut)
+    dfl = DFL()
     with pytest.raises(Exception):
         dfl.cancel()
     assert dfl.cancelled() is False
 
 
 def test_dynamic_file_list_dynamic_append():
-    fut = Future()
-    dfl = DFL(fut=fut)
-    fl = dfl[5]
+    dfl = DFL()
+    _ = dfl[5]
     assert len(dfl) == 6
     f0 = File('tester5.dat')
     dfl[0] = f0
@@ -150,9 +159,8 @@ def test_dynamic_file_list_dynamic_append():
 
 
 def test_dynamic_file_list_dynamic_extend():
-    fut = Future()
-    dfl = DFL(fut=fut)
-    fl = dfl[5]
+    dfl = DFL()
+    _ = dfl[5]
     assert len(dfl) == 6
     f0 = File('tester5.dat')
     dfl[0] = f0
@@ -179,9 +187,8 @@ def test_dynamic_file_list_dynamic_extend():
 
 
 def test_dynamic_file_list_insert_and_remove():
-    fut = Future()
     f = [File(f'tester{i}.dat') for i in range(10)]
-    dfl = DFL(f, fut=fut)
+    dfl = DFL(f)
     assert len(dfl) == 10
     dfl.insert(4, File('tester99.dat'))
     assert len(dfl) == 11
@@ -198,18 +205,16 @@ def test_dynamic_file_list_insert_and_remove():
 
 
 def test_dynamic_file_list_clear():
-    fut = Future()
     f = [File(f'tester{i}.dat') for i in range(10)]
-    dfl = DFL(f, fut=fut)
+    dfl = DFL(f)
     assert len(dfl) == 10
     dfl.clear()
     assert len(dfl) == 0
 
 
 def test_dynamic_file_list_pop():
-    fut = Future()
     f = [File(f'tester{i}.dat') for i in range(10)]
-    dfl = DFL(f, fut=fut)
+    dfl = DFL(f)
     assert len(dfl) == 10
     assert dfl.pop().filename == 'tester9.dat'
     assert len(dfl) == 9
@@ -227,9 +232,8 @@ def test_dynamic_file_list_pop():
 
 
 def test_dynamic_file_sub_list_fixed_size():
-    fut = Future()
     f = [File(f'tester{i}.dat') for i in range(10)]
-    dfl = DFL(f, fut=fut)
+    dfl = DFL(f)
     assert len(dfl) == 10
     dfsl = dfl[2:5]
     assert len(dfsl) == 3
@@ -258,9 +262,8 @@ def test_dynamic_file_sub_list_fixed_size():
 
 
 def test_dynamic_file_sub_list_dynamic_size_upper():
-    fut = Future()
     f = [File(f'tester{i}.dat') for i in range(10)]
-    dfl = DFL(f, fut=fut)
+    dfl = DFL(f)
     assert len(dfl) == 10
     dfsl = dfl[2:]
     assert len(dfsl) == 8
@@ -287,9 +290,8 @@ def test_dynamic_file_sub_list_dynamic_size_upper():
 
 
 def test_dynamic_file_sub_list_dynamic_size_lower():
-    fut = Future()
     f = [File(f'tester{i}.dat') for i in range(10)]
-    dfl = DFL(f, fut=fut)
+    dfl = DFL(f)
     assert len(dfl) == 10
     dfsl = dfl[:5]
     assert len(dfsl) == 5
@@ -316,24 +318,97 @@ def test_dynamic_file_sub_list_dynamic_size_lower():
 
 
 def test_dynamic_file_sub_list_dynamic_size_creation():
-    fut = Future()
-    dfl = DFL(fut=fut)
+    dfl = DFL()
     assert len(dfl) == 0
     dfsl = dfl[2:]
     assert len(dfl) == 3
     assert len(dfsl) == 1
 
-    dfl2 = DFL(fut=fut)
+    dfl2 = DFL()
     assert len(dfl2) == 0
     dfsl2 = dfl2[2:5]
     assert len(dfl2) == 5
     assert len(dfsl2) == 3
 
-    dfl3 = DFL(fut=fut)
+    dfl3 = DFL()
     assert len(dfl3) == 0
     dfsl3 = dfl3[:5]
     assert len(dfl3) == 5
     assert len(dfsl3) == 5
+
+
+def test_dynamic_file_list_set_parent():
+    dfl = DFL()
+    assert dfl.parent is None
+    af = AppFuture({})
+    dfl.set_parent(af)
+    assert dfl.parent == af
+    af1 = AppFuture({})
+    with pytest.raises(ValueError):
+        dfl.set_parent(af1)
+
+
+def test_dynamic_file_list_set_dataflow():
+    dfl = DFL()
+    tr = {'id': 101, 'func': None}
+    af = AppFuture(tr)
+    dfl.set_parent(af)
+    dflow = MockDFK(tr)
+    dfl.set_dataflow(dflow, 'tester', False, 101)
+    assert dfl.dataflow == dflow
+    assert dfl.parent._outputs == dfl
+
+
+def test_dynamic_file_list_staging_with_files():
+    dfl = DFL([File(f'tester{i}.dat') for i in range(10)])
+    tr = {'id': 101, 'func': None}
+    af = AppFuture(tr)
+    dfl.set_parent(af)
+    dflow = MockDFK(tr)
+    dfl.set_dataflow(dflow, 'tester', False, 101)
+    assert dfl.dataflow == dflow
+    assert dfl.parent._outputs == dfl
+
+
+def test_dynamic_file_list_staging_with_df():
+    tr = {'id': 101, 'func': None}
+    af = AppFuture(tr)
+    dfl = DFL([DataFuture(af, File(f'tester{i}.dat')) for i in range(10)])
+    dfl.set_parent(af)
+    dflow = MockDFK(tr)
+    dfl.set_dataflow(dflow, 'tester', False, 101)
+    assert dfl.dataflow == dflow
+    assert dfl.parent._outputs == dfl
+
+
+def test_dynamic_filer_list_staging_mix():
+    dfl = DFL([File(f'tester{i}.dat') for i in range(10)])
+    tr = {'id': 101, 'func': None}
+    af = AppFuture(tr)
+    dfl.set_parent(af)
+    dflow = MockDFK(tr)
+    dfl.set_dataflow(dflow, 'tester', False, 101)
+    assert dfl.dataflow == dflow
+    assert dfl.parent._outputs == dfl
+    dfl.append(File('newtester.dat'))
+
+
+def stub_func():
+    pass
+
+
+def test_dynamic_file_list_mock(mocker):
+    path = 'parsl.data_provider.data_manager.DataManager'
+    mocker.patch(f"{path}.stage_out", return_value=stub_func)
+    dfl = DFL([File(f'tester{i}.dat') for i in range(10)])
+    tr = {'id': 101, 'func': None}
+    af = AppFuture(tr)
+    dfl.set_parent(af)
+    dflow = MockDFK(tr)
+    dfl.set_dataflow(dflow, 'tester', False, 101)
+    assert dfl.dataflow == dflow
+    assert dfl.parent._outputs == dfl
+    dfl.append(File('newtester.dat'))
 
 
 if __name__ == '__main__':

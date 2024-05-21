@@ -760,9 +760,15 @@ class DataFlowKernel:
 
         return tuple(newargs), kwargs, func
 
-    def _add_output_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], app_fut: AppFuture, func: Callable) -> Callable:
+    def _add_output_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], app_fut: AppFuture, func: Callable, task_id: int) -> Callable:
         logger.debug("Adding output dependencies")
         outputs = kwargs.get('outputs', [])
+        if isinstance(outputs, DynamicFileList):
+            outputs.set_dataflow(self, executor, self.check_staging_inhibited(kwargs), task_id)
+            outputs.set_parent(app_fut)
+            app_fut._outputs = outputs
+            return func
+
         app_fut._outputs = []
         for idx, f in enumerate(outputs):
             if isinstance(f, File) and not self.check_staging_inhibited(kwargs):

@@ -9,13 +9,14 @@ and have these Files properly treated by Parsl.
 """
 from __future__ import annotations
 from concurrent.futures import Future
-from typing import List, Optional, Union, Callable
+from typing import List, Optional, Union, Callable, Dict
 
 import typeguard
 import logging
 
 from parsl.data_provider.files import File
 from parsl.app.futures import DataFuture
+from parsl.dataflow.futures import AppFuture
 
 logger = logging.getLogger(__name__)
 
@@ -57,13 +58,19 @@ class DynamicFileList(Future, list):
             Args:
                 - fut (AppFuture) : AppFuture that this DynamicFile will track
                 - file_obj (File/DataFuture obj) : Something representing file(s)
-            """
+            """  # TODO need to be able to link output and input dynamic file objects and update when the output changes
             super().__init__()
             self._is_df = isinstance(file_obj, DataFuture)
             self.parent = fut
             self.file_obj = file_obj
             self.parent.add_done_callback(self.parent_callback)
             self._empty = file_obj is None       #: Tracks whether this wrapper is empty
+            self._staged_out = False
+
+        @property
+        def staged(self):
+            """Return whether this file has been staged out."""
+            return self._staged_out
 
         @property
         def empty(self):
@@ -84,6 +91,12 @@ class DynamicFileList(Future, list):
             self._is_df = isinstance(self.file_obj, DataFuture)
             self.parent.add_done_func(self.file_obj.filename, self.done)
 
+        def convert_to_df(self):
+            """Convert the file_obj to a DataFuture."""
+            if not self._is_df:
+                self.file_obj = DataFuture(self.parent, self.file_obj, tid=self.parent._output_task_id)
+                self._is_df = True
+
         def done(self) -> bool:
             """Return whether the file_obj state is `done`.
 
@@ -93,6 +106,11 @@ class DynamicFileList(Future, list):
             if self._is_df:
                 return self.file_obj.done()
             return True  # Files are always done
+
+        @property
+        def is_df(self) -> bool:
+            """Return whether this instance wraps a DataFuture."""
+            return self._is_df
 
         @property
         def tid(self):
@@ -146,33 +164,11 @@ class DynamicFileList(Future, list):
         Returns:
             - None
         """
-        def _stub():
-            return
         e = parent_fu.exception()
         if e:
             self.set_exception(e)
         else:
-            for idx, f in enumerate(self):
-                if isinstance(f, File): ### TODO: and not self.dataflow.check_staging_inhibited()
-                    f_copy = f.cleancopy()
-                    logger.debug("Submitting stage out for output file {}".format(repr(f)))
-                    stageout_fut = self.dataflow.data_manager.stage_out(f_copy, self.executor, parent_fu)
-                    if stageout_fut:
-                        logger.debug("Adding a dependency on stageout future for {}".format(repr(f)))
-                        parent_fu._outputs.append(DataFuture(stageout_fut, f, tid=parent_fu.tid))
-                    else:
-                        logger.debug("No stageout dependency for {}".format(repr(f)))
-                        parent_fu._outputs.append(DataFuture(parent_fu, f, tid=parent_fu.tid))
-
-                    # this is a hook for post-task stageout
-                    # note that nothing depends on the output - which is maybe a bug
-                    # in the not-very-tested stageout system?
-                    func = self.dataflow.data_manager.replace_task_stage_out(f_copy, _stub, self.executor)
-                    func()
-                elif isinstance(f, DataFuture):
-                    logger.debug("Not performing output staging for: {}".format(repr(f)))
-                    parent_fu._outputs.append(DataFuture(parent_fu, f, tid=parent_fu.tid))
-
+            self.parent._outputs = self
             self.set_result(self)
 
     '''''
@@ -196,7 +192,7 @@ class DynamicFileList(Future, list):
             self.files_done[file_fu.filename] = file_fu.done()
     '''
     @typeguard.typechecked
-    def __init__(self, files: Optional[List[Union[File, DataFuture, DynamicFile]]] = None, fut: Optional[Future] = None):
+    def __init__(self, files: Optional[List[Union[File, DataFuture, DynamicFile]]] = None):
         """Construct a DynamicFileList instance
 
         Args:
@@ -204,17 +200,17 @@ class DynamicFileList(Future, list):
             - fut (Future) : Future to set as the parent
         """
         super().__init__()
-        self.files_done = {}      #: dict mapping file names to their "done" status True/False
+        self.files_done: Dict[str, Callable] = {}      #: dict mapping file names to their "done" status True/False
         self._last_idx = -1
-        self.executor = None
-        self.parent = fut
+        self.executor: str = ''
+        self.parent: Union[AppFuture, None] = None
         self.dataflow = None
-        self._sub_callbacks = []
+        self._sub_callbacks: List[Callable] = []
         self._in_callback = False
+        self._staging_inhibited = False
+        self._output_task_id = None
         if files is not None:
             self.extend(files)
-        if fut is not None:
-            self.parent.add_done_callback(self.parent_callback)
 
     def add_done_func(self, name: str, func: Callable):
         """ Add a function to the files_done dict, specifically for when an empty DynamicFile
@@ -226,6 +222,44 @@ class DynamicFileList(Future, list):
         """
         self.files_done[name] = func
 
+    def stage_file(self, idx: int):
+        """ Stage a file at the given index, we do this now becuase so that the app and dataflow
+        can act accordingly when the app finishes.
+
+        Args:
+            - idx (int) : Index of the file to stage
+        """
+        if self.dataflow is None:
+            return
+        out_file = self[idx]
+        if out_file.empty or out_file.staged:
+            return
+        if self.parent is None or not out_file.is_df:
+            return
+        if self._staging_inhibited:
+            logger.debug("Not performing output staging for: {}".format(repr(out_file.file_obj)))
+        else:
+            f_copy = out_file.file_obj.file_obj.cleancopy()
+            self[idx].file_obj.file_obj = f_copy
+            logger.debug("Submitting stage out for output file {}".format(repr(out_file.file_obj)))
+            stageout_fut = self.dataflow.data_manager.stage_out(f_copy, self.executor, self.parent)
+            if stageout_fut:
+                logger.debug("Adding a dependency on stageout future for {}".format(repr(out_file)))
+                self[idx].file_obj.parent = stageout_fut
+                self[idx].file_obj._tid = self.parent.tid
+            else:
+                logger.debug("No stageout dependency for {}".format(repr(f_copy)))
+                # self.parent._outputs.append(DataFuture(self.parent, out_file.file_obj.file_obj, tid=self.parent.tid))
+            func = self.dataflow.tasks[self._output_task_id]['func']
+            # this is a hook for post-task stage-out
+            # note that nothing depends on the output - which is maybe a bug
+            # in the not-very-tested stage-out system?
+            func = self.dataflow.data_manager.replace_task_stage_out(f_copy, func, self.executor)
+            self.dataflow.tasks[self._output_task_id]['func'] = func
+        self.parent._outputs = self
+        self._call_callbacks()
+        # TODO dfk._gather_all_deps
+
     def wrap(self, file_obj: Union[File, DataFuture, None]):
         """ Wrap a file object in a DynamicFile
 
@@ -234,17 +268,22 @@ class DynamicFileList(Future, list):
         """
         return self.DynamicFile(self, file_obj)
 
-    def set_dataflow(self, dataflow, executor: str):
+    def set_dataflow(self, dataflow, executor: str, st_inhibited: bool, task_id: int):
         """ Set the dataflow and executor for this instance
 
         Args:
             - dataflow (DataFlowKernel) : Dataflow kernel that this instance is associated with
             - executor (str) : Executor that this instance is associated with
+            - st_inhibited (bool) : Whether staging is inhibited
         """
         self.executor = executor
         self.dataflow = dataflow
+        self._staging_inhibited = st_inhibited
+        self._output_task_id = task_id
+        for idx in range(self._last_idx + 1):
+            self.stage_file(idx)
 
-    def set_parent(self, fut: Future):
+    def set_parent(self, fut: AppFuture):
         """ Set the parent future for this instance
 
         Args:
@@ -254,6 +293,10 @@ class DynamicFileList(Future, list):
             raise ValueError("Parent future already set")
         self.parent = fut
         self.parent.add_done_callback(self.parent_callback)
+        for idx in range(self._last_idx + 1):
+            self[idx].convert_to_df()
+            self.stage_file(idx)
+        self._call_callbacks()
 
     def cancel(self):
         """ Not implemented """
@@ -293,6 +336,8 @@ class DynamicFileList(Future, list):
             - __object (File/DataFuture) : File or DataFuture to append
         """
         if not isinstance(__object, DynamicFileList.DynamicFile):
+            if self.parent is not None and isinstance(__object, File):
+                __object = DataFuture(self.parent, __object, tid=self._output_task_id)
             __object = self.wrap(__object)
         if self._last_idx == len(self) - 1:
             super().append(__object)
@@ -301,6 +346,7 @@ class DynamicFileList(Future, list):
             super().__getitem__(self._last_idx + 1).set(__object)
         self.files_done[__object.filename] = super().__getitem__(self._last_idx + 1).done
         self._last_idx += 1
+        self.stage_file(self._last_idx)
         self._call_callbacks()
 
     def extend(self, __iterable):
@@ -314,12 +360,16 @@ class DynamicFileList(Future, list):
             if not isinstance(f, (DynamicFileList.DynamicFile, File, DataFuture)):
                 raise ValueError("DynamicFileList can only contain Files or DataFutures")
             if not isinstance(f, DynamicFileList.DynamicFile):
+                if self.parent is not None and isinstance(f, File):
+                    f = DataFuture(self.parent, f, tid=self._output_task_id)
                 f = self.wrap(f)
             self.files_done[f.filename] = f.done
             items.append(f)
         if self._last_idx == len(self) - 1:
             super().extend(items)
-            self._last_idx += len(items)
+            for i in range(len(items)):
+                self._last_idx += 1
+                self.stage_file(self._last_idx)
             self._call_callbacks()
             return
         diff = len(self) - 1 - self._last_idx - len(items)
@@ -329,6 +379,7 @@ class DynamicFileList(Future, list):
             self._last_idx += 1
             self[self._last_idx].set(item)
             self.files_done[item.filename] = super().__getitem__(self._last_idx).done
+            self.stage_file(self._last_idx)
         self._call_callbacks()
 
     def insert(self, __index: int, __object: Union[File, DataFuture, DynamicFile]):
@@ -341,9 +392,12 @@ class DynamicFileList(Future, list):
         if __index > self._last_idx:
             raise ValueError("Cannot insert at index greater than the last index")
         if not isinstance(__object, self.DynamicFile):
+            if self.parent is not None and isinstance(__object, File):
+                __object = DataFuture(self.parent, __object, tid=self._output_task_id)
             __object = self.wrap(__object)
         self.files_done[__object.filename] = __object.done
         super().insert(__index, __object)
+        self.stage_file(__index)
         self._last_idx += 1
         self._call_callbacks()
 
@@ -358,7 +412,7 @@ class DynamicFileList(Future, list):
         self._last_idx -= 1
         self._call_callbacks()
 
-    def pop(self, __index: int = -1) -> Union[File, DataFuture]:
+    def pop(self, __index: int = -1) -> DataFuture:
         """ Pop a file from the list and update the files_done dict
 
         Args:
@@ -383,7 +437,7 @@ class DynamicFileList(Future, list):
         self.files_done.clear()
         self._last_idx = -1
         super().clear()
-        # detach all the callbacks so that sublists can still be used
+        # detach all the callbacks so that sub-lists can still be used
         self._sub_callbacks.clear()
 
     def _call_callbacks(self):
@@ -404,15 +458,21 @@ class DynamicFileList(Future, list):
         if self[key].filename in self.files_done:
             del self.files_done[self[key].filename]
         if super().__getitem__(key).empty:
+            if self.parent is not None and isinstance(value, File):
+                value = DataFuture(self.parent, value, tid=self._output_task_id)
             super().__getitem__(key).set(value)
             self.files_done[super().__getitem__(key).filename] = super().__getitem__(key).done
             self._last_idx = max(self._last_idx, key)
+            self._call_callbacks()
+            self.stage_file(key)
         else:
-            if not isinstance(value, self.DynamicFile):
-                value = self.wrap(value)
-            super().__setitem__(key, value)
-            self.files_done[value.filename] = value.done
-        self._call_callbacks()
+            raise ValueError("Cannot set a value that is not empty")
+            # if not isinstance(value, self.DynamicFile):
+            #    if isinstance(value, File):
+            #        value = DataFuture(self.parent, value, tid=self._output_task_id)
+            #    value = self.wrap(value)
+            # super().__setitem__(key, value)
+            # self.files_done[value.filename] = value.done
 
     def __getitem__(self, key):
         # make sure the list will be long enough when it is filled, so we can return a future
@@ -445,9 +505,10 @@ class DynamicFileList(Future, list):
         return super().__getitem__(key)
 
     def __delitem__(self, key):
-        del self.files_done[self[key].filename]
-        super().__delitem__(key)
-        self._call_callbacks()
+        raise Exception("Cannot delete from a DynamicFileList")
+        # del self.files_done[self[key].filename]
+        # super().__delitem__(key)
+        # self._call_callbacks()
 
     def __repr__(self):
         type_ = type(self)

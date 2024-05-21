@@ -3,6 +3,7 @@ ipyparallel
 pandas
 pytest>=7.4.0,<8
 pytest-cov
+pytest-mock
 pytest-random-order
 nbsphinx
 sphinx_rtd_theme
