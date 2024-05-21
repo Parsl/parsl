@@ -1467,7 +1467,6 @@ class DataFlowKernelLoader:
     @classmethod
     def clear(cls) -> None:
         """Clear the active DataFlowKernel so that a new one can be loaded."""
-        assert cls._dfk is not None, "BENC: temp in this PR, to find redundant clears"
         cls._dfk = None
 
     @classmethod
