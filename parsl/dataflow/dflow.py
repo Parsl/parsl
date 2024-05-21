@@ -892,6 +892,16 @@ class DataFlowKernel:
         """
         dep_failures = []
 
+        def append_failure(e: Exception, dep: Future) -> None:
+            # If this Future is associated with a task inside this DFK,
+            # then refer to the task ID.
+            # Otherwise make a repr of the Future object.
+            if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
+                tid = "task " + repr(dep.task_record['id'])
+            else:
+                tid = repr(dep)
+            dep_failures.extend([(e, tid)])
+
         # Replace item in args
         new_args = []
         for dep in args:
@@ -899,14 +909,7 @@ class DataFlowKernel:
                 try:
                     new_args.extend([dep.result()])
                 except Exception as e:
-                    # If this Future is associated with a task inside this DFK,
-                    # then refer to the task ID.
-                    # Otherwise make a repr of the Future object.
-                    if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
-                        tid = "task " + repr(dep.task_record['id'])
-                    else:
-                        tid = repr(dep)
-                    dep_failures.extend([(e, tid)])
+                    append_failure(e, dep)
             else:
                 new_args.extend([dep])
 
@@ -917,11 +920,7 @@ class DataFlowKernel:
                 try:
                     kwargs[key] = dep.result()
                 except Exception as e:
-                    if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
-                        tid = "task " + repr(dep.task_record['id'])
-                    else:
-                        tid = repr(dep)
-                    dep_failures.extend([(e, tid)])
+                    append_failure(e, dep)
 
         # Check for futures in inputs=[<fut>...]
         if 'inputs' in kwargs:
@@ -931,12 +930,7 @@ class DataFlowKernel:
                     try:
                         new_inputs.extend([dep.result()])
                     except Exception as e:
-                        if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
-                            tid = "task " + dep.task_record['id']
-                        else:
-                            tid = repr(dep)
-                        dep_failures.extend([(e, tid)])
-
+                        append_failure(e, dep)
                 else:
                     new_inputs.extend([dep])
             kwargs['inputs'] = new_inputs
