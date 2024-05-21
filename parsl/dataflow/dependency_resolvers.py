@@ -70,10 +70,6 @@ def _(fut: Future):
     return fut.result()
 
 
-# The above is the traditional Parsl future/non-future behaviour.
-# Below is an example of shallow traversal of iterables.
-
-
 @deep_traverse_to_gather.register(tuple)
 @deep_traverse_to_gather.register(list)
 @deep_traverse_to_gather.register(set)
