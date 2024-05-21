@@ -1052,10 +1052,10 @@ class DataFlowKernel:
 
         self.tasks[task_id] = task_record
 
-        logger.debug("Gathering dependenciess")
+        logger.debug("Gathering dependencies")
         # Get the list of dependencies for the task
         depends = self._gather_all_deps(app_args, app_kwargs)
-        logger.debug("Gathered dependenciess")
+        logger.debug("Gathered dependencies")
         task_record['depends'] = depends
 
         depend_descs = []
