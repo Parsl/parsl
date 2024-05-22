@@ -7,7 +7,11 @@ Please be aware of `Parsl's Code of Conduct <https://github.com/Parsl/parsl/blob
 
 If you are not familiar with GitHub pull requests, the main mechanism to contribute changes to our code, there is `documentation available  <https://opensource.com/article/19/7/create-pull-request-github>`_.
 
-If you have questions or would like to discuss ideas, please post in our Slack's `#parsl-hackers channel <https://parsl-project.slack.com/archives/C02P57G6NCB>`_. You can `join our Slack here <https://join.slack.com/t/parsl-project/shared_invite/zt-4xbquc5t-Ur65ZeVtUOX51Ts~GRN6_g>`_.
+The best places to ask questions or discuss development activities are:
+
+* in our Slack's `#parsl-hackers channel <https://parsl-project.slack.com/archives/C02P57G6NCB>`_. You can `join our Slack here <https://join.slack.com/t/parsl-project/shared_invite/zt-4xbquc5t-Ur65ZeVtUOX51Ts~GRN6_g>`_.
+
+* using `GitHub issues <https://github.com/Parsl/parsl/issues>`_.
 
 
 Coding conventions
@@ -149,10 +153,3 @@ Credit and Contributions
 ----------------------
 
 Parsl wants to make sure that all contributors get credit for their contributions.  When you make your first contribution, it should include updating the codemeta.json file to include yourself as a contributor to the project.
-
-Discussion and Support
-----------------------
-
-The best way to discuss development activities is via Git issues.
-
-To get involved in community discussion please `join <https://join.slack.com/t/parsl-project/shared_invite/zt-4xbquc5t-Ur65ZeVtUOX51Ts~GRN6_g>`_ the Parsl Slack channel.
