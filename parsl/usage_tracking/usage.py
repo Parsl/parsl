@@ -12,6 +12,7 @@ from parsl.utils import setproctitle
 from parsl.multiprocessing import ForkProcess
 from parsl.dataflow.states import States
 from parsl.version import VERSION as PARSL_VERSION
+from parsl.errors import ConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -141,8 +142,11 @@ class UsageTracker:
         """
         inf = sys.maxsize
 
-        envvar = str(os.environ.get("PARSL_TRACKING", 0)).lower()
-        if envvar == "false":
+        envvar = str(os.environ.get("PARSL_TRACKING", None)).lower()
+        if envvar == "none":
+            envvar_level = inf
+
+        elif envvar == "false":
             envvar_level = 0
 
         elif envvar == "true":
@@ -152,13 +156,20 @@ class UsageTracker:
             envvar_level = int(envvar)
 
         else:
-            envvar_level = inf
+            raise ConfigurationError(
+                f"PARSL_TRACKING values must be true, false, 0, 1, 2, or 3 and not {os.environ.get('PARSL_TRACKING')}"
+            )
 
-        if self.config.usage_tracking is not None and 0 <= int(self.config.usage_tracking) <= 3:
+        if self.config.usage_tracking is None:
+            config_level = inf
+
+        elif 0 <= int(self.config.usage_tracking) <= 3:
             config_level = int(self.config.usage_tracking)
 
         else:
-            config_level = inf
+            raise ConfigurationError(
+                f"Usage Tracking values must be 0, 1, 2, or 3 and not {self.config.usage_tracking}"
+            )
 
         if min(envvar_level, config_level) > 3:
             return 0
