@@ -137,7 +137,7 @@ def test_top_level():
 def test_resource_spec(resource_spec: Dict, is_mpi_enabled: bool, exception):
     if exception:
         with pytest.raises(exception):
-            validate_resource_spec(resource_spec, is_mpi_enabled=is_mpi_enabled)
+            validate_resource_spec(resource_spec, is_mpi_enabled)
     else:
-        result = validate_resource_spec(resource_spec, is_mpi_enabled=is_mpi_enabled)
+        result = validate_resource_spec(resource_spec, is_mpi_enabled)
         assert result is None

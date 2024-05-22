@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Tuple, Set
+from typing import Dict, List, Tuple, Set, Union
 
 logger = logging.getLogger(__name__)
 
@@ -9,16 +9,16 @@ VALID_LAUNCHERS = ('srun',
 
 
 class InvalidResourceSpecification(Exception):
-    """Exception raised when Invalid keys are supplied via resource specification"""
+    """Exception raised when Invalid input is supplied via resource specification"""
 
-    def __init__(self, invalid_keys: Set[str]):
+    def __init__(self, invalid_keys: Union[Set[str], str]):
         self.invalid_keys = invalid_keys
 
     def __str__(self):
         return f"Invalid resource specification options supplied: {self.invalid_keys}"
 
 
-def validate_resource_spec(resource_spec: Dict[str, str], is_mpi_enabled: bool = False):
+def validate_resource_spec(resource_spec: Dict[str, str], is_mpi_enabled: bool):
     """Basic validation of keys in the resource_spec
 
     Raises: InvalidResourceSpecification if the resource_spec
@@ -29,7 +29,7 @@ def validate_resource_spec(resource_spec: Dict[str, str], is_mpi_enabled: bool =
     # empty resource_spec when mpi_mode is set causes parsl to hang
     # ref issue #3427
     if is_mpi_enabled and len(user_keys) == 0:
-        raise InvalidResourceSpecification({'mpi_mode requires parsl_resource_specification to be configured'})
+        raise InvalidResourceSpecification('mpi_mode requires parsl_resource_specification to be configured')
 
     legal_keys = set(("ranks_per_node",
                       "num_nodes",

@@ -62,7 +62,9 @@ htmlcov/
 coverage.xml
 *.cover
 .hypothesis/
-/.pytest/
+.pytest/
+runinfo/
+
 
 # Translations
 *.mo
@@ -120,3 +122,7 @@ ENV/
 
 # emacs buffers
 \#*
+
+#deps
+/.deps
+
