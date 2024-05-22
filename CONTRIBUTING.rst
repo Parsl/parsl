@@ -31,7 +31,7 @@ Version increments
 ==================
 
 Parsl follows the `calendar versioning scheme <https://calver.org/#scheme>`_ with ``YYYY.MM.DD`` numbering scheme for versions.
-This scheme was chosen following a switch from semantic versioning and manual release processes to an automated weekly process.
+This scheme was chosen following a switch from ad-hoc versioning and manual release processes to an automated weekly process.
 Releases are pushed from github actions to PyPI and will be picked up automatically by Conda.
 Manual packaging instructions are included in the
 `packaging docs <http://parsl.readthedocs.io/en/latest/devguide/packaging.html>`_
