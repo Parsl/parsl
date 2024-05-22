@@ -7,17 +7,20 @@ Please be aware of `Parsl's Code of Conduct <https://github.com/Parsl/parsl/blob
 
 If you are not familiar with GitHub pull requests, the main mechanism to contribute changes to our code, there is `documentation available  <https://opensource.com/article/19/7/create-pull-request-github>`_.
 
-If you have questions or would like to discuss ideas, please post in our Slack's `#parsl-hackers channel <https://parsl-project.slack.com/archives/C02P57G6NCB>`_. You can `join our Slack here <https://join.slack.com/t/parsl-project/shared_invite/zt-4xbquc5t-Ur65ZeVtUOX51Ts~GRN6_g>`_.
+The best places to ask questions or discuss development activities are:
+
+* in our Slack's `#parsl-hackers channel <https://parsl-project.slack.com/archives/C02P57G6NCB>`_. You can `join our Slack here <https://join.slack.com/t/parsl-project/shared_invite/zt-4xbquc5t-Ur65ZeVtUOX51Ts~GRN6_g>`_.
+
+* using `GitHub issues <https://github.com/Parsl/parsl/issues>`_.
 
 
 Coding conventions
 ------------------
 
-Parsl code should adhere to Python pep-8.  Install `flake8` and run the following code to identify non-compliant code::
+Formatting conventions
+======================
 
-  $ flake8 parsl/
-
-Note: the continuous integration environment will validate all pull requests using this command.
+Parsl code should adhere to Python `PEP-8 <https://peps.python.org/pep-0008/>`_. This is enforced in CI (with some exceptions). You can also run this test yourself using ``make flake8``.
 
 Naming conventions
 ==================
@@ -28,7 +31,7 @@ Version increments
 ==================
 
 Parsl follows the `calendar versioning scheme <https://calver.org/#scheme>`_ with ``YYYY.MM.DD`` numbering scheme for versions.
-This scheme was chosen following a switch from semantic versioning and manual release processes to an automated weekly process.
+This scheme was chosen following a switch from ad-hoc versioning and manual release processes to an automated weekly process.
 Releases are pushed from github actions to PyPI and will be picked up automatically by Conda.
 Manual packaging instructions are included in the
 `packaging docs <http://parsl.readthedocs.io/en/latest/devguide/packaging.html>`_
@@ -147,13 +150,6 @@ Project documentation
 All project documentation is written in reStructuredText. `Sphinx <http://sphinx-doc.org/>`_ is used to generate the HTML documentation from the rst documentation and structured docstrings in Parsl code.  Project documentation is built automatically and added to the `Parsl documentation <https://parsl.readthedocs.io>`_.
 
 Credit and Contributions
-----------------------
+------------------------
 
 Parsl wants to make sure that all contributors get credit for their contributions.  When you make your first contribution, it should include updating the codemeta.json file to include yourself as a contributor to the project.
-
-Discussion and Support
-----------------------
-
-The best way to discuss development activities is via Git issues.
-
-To get involved in community discussion please `join <https://join.slack.com/t/parsl-project/shared_invite/zt-4xbquc5t-Ur65ZeVtUOX51Ts~GRN6_g>`_ the Parsl Slack channel.
