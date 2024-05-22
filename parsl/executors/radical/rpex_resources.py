@@ -6,7 +6,6 @@ from typing import List
 _setup_paths: List[str] = []
 try:
     import radical.pilot as rp
-    import radical.utils as ru
 except ImportError:
     pass
 
