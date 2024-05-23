@@ -216,8 +216,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Use the current run directory from Parsl
         run_dir = self.run_dir
 
-        run_idx = run_dir.split("/")[-1]
-
         # Create directories for data and results
         log_dir = os.path.join(run_dir, self.label)
         self._function_data_dir = os.path.join("/tmp/function_data/", self.label, str(uuid.uuid4()))
