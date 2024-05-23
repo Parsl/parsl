@@ -38,7 +38,6 @@ def local_setup():
 
 def local_teardown():
     parsl.dfk().cleanup()
-    parsl.clear()
 
     methods_for_data.clear()
     methods_for_data.update(previous_methods)

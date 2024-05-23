@@ -60,7 +60,6 @@ def test_1316_local_path_on_execution_side_sp2():
     assert not file.local_path, "The local_path on the submit side should not be set"
 
     parsl.dfk().cleanup()
-    parsl.clear()
 
 
 @pytest.mark.local
@@ -83,4 +82,3 @@ def test_1316_local_path_setting_preserves_dependency_sp2():
     assert not file.local_path, "The local_path on the submit side should not be set"
 
     parsl.dfk().cleanup()
-    parsl.clear()
