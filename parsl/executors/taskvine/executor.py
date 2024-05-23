@@ -220,9 +220,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Create directories for data and results
         log_dir = os.path.join(run_dir, self.label)
-        self._function_data_dir = os.path.join("/tmp/function_data/", self.label, run_idx)
+        self._function_data_dir = os.path.join("/tmp/function_data/", self.label, str(uuid.uuid4()))
         os.makedirs(log_dir)
-        os.makedirs(self._function_data_dir)
+        os.makedirs(self._function_data_dir, exist_ok=True)
 
         # put TaskVine logs outside of a Parsl run as TaskVine caches between runs while
         # Parsl does not.

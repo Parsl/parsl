@@ -25,11 +25,13 @@ class StubStaging(Staging, RepresentationMixin):
     def stage_in(self, dm, executor: str, file: File, parent_fut: Optional[Future]) -> Optional[DataFuture]:
         if file.netloc == '':
             file.netloc = file.filename
-        file.local_path = file.netloc
+        if file.scheme in ["taskvinetemp", "https", "http"]:
+            file.local_path = file.netloc
         return None
 
     def stage_out(self, dm, executor: str, file: File, app_fu: Future) -> Optional[Future]:
         if file.netloc == '':
             file.netloc = file.filename
-        file.local_path = file.netloc
+        if file.scheme in ["taskvinetemp", "https", "http"]:
+            file.local_path = file.netloc
         return None
