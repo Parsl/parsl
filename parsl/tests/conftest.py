@@ -201,7 +201,7 @@ def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
         if parsl.dfk() != dfk:
             raise RuntimeError("DFK changed unexpectedly during test")
         dfk.cleanup()
-        parsl.clear()
+        assert DataFlowKernelLoader._dfk is None
     else:
         yield
 
@@ -253,7 +253,7 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
             if parsl.dfk() != dfk:
                 raise RuntimeError("DFK changed unexpectedly during test")
             dfk.cleanup()
-            parsl.clear()
+            assert DataFlowKernelLoader._dfk is None
 
     else:
         yield
