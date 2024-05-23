@@ -12,7 +12,7 @@ class DependencyResolver:
     the task can be executed (for example, in the case of
     `DEEP_DEPENDENCY_RESOLVER` this traverses structures such as lists to
     find every contained ``Future``), and `traverse_to_unwrap` which turns an
-    app parameter into it's value to be passed to the app on execution
+    app parameter into its value to be passed to the app on execution
     (for example in the case of `DEEP_DEPENDENCY_RESOLVER` this replaces a
     list containing futures with a new list containing the values of those
     resolved futures).
