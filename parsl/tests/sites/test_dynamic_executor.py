@@ -75,4 +75,3 @@ def test_dynamic_executor():
     print("Done testing")
 
     dfk.cleanup()
-    parsl.clear()

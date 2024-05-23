@@ -72,7 +72,5 @@ def test_shutdown_scalein_blocks(tmpd_cwd, try_assert):
         # this will wait for everything to be scaled out fully
         try_assert(lambda: len(htex.connected_managers()) == BLOCK_COUNT)
 
-    parsl.clear()
-
     assert len(accumulating_provider.submit_job_ids) == BLOCK_COUNT, f"Exactly {BLOCK_COUNT} blocks should have been launched"
     assert len(accumulating_provider.cancel_job_ids) == BLOCK_COUNT, f"Exactly {BLOCK_COUNT} blocks should have been scaled in"

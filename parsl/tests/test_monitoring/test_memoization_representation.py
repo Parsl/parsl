@@ -47,7 +47,6 @@ def test_hashsum():
 
     logger.info("cleaning up parsl")
     parsl.dfk().cleanup()
-    parsl.clear()
 
     # at this point, we should find one row in the monitoring database.
 
