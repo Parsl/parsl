@@ -3,24 +3,28 @@ import pytest
 from concurrent.futures import Future
 from parsl import python_app
 
+from typing import TypeVar
+
+T = TypeVar('T')
+
 
 @python_app
-def returns_a_dict():
+def returns_a_dict() -> dict:
     return {"a": "X", "b": "Y"}
 
 
 @python_app
-def returns_a_list():
+def returns_a_list() -> list:
     return ["X", "Y"]
 
 
 @python_app
-def returns_a_tuple():
+def returns_a_tuple() -> tuple:
     return ("X", "Y")
 
 
 @python_app
-def returns_a_class():
+def returns_a_class() -> type:
     from dataclasses import dataclass
 
     @dataclass
@@ -38,7 +42,7 @@ class MyOuterClass():
 
 
 @python_app
-def returns_a_class_instance():
+def returns_a_class_instance() -> object:
     return MyOuterClass()
 
 
@@ -110,7 +114,7 @@ def test_returns_a_class():
 
 
 @python_app
-def passthrough(v):
+def passthrough(v: T) -> T:
     return v
 
 

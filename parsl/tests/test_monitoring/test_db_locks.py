@@ -63,7 +63,6 @@ def test_row_counts():
 
     logger.info("cleaning up parsl")
     parsl.dfk().cleanup()
-    parsl.clear()
 
     # at this point, we should find data consistent with executing one
     # task in the database.
