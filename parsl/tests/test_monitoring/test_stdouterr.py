@@ -103,8 +103,6 @@ def test_stdstream_to_monitoring(stdx, expected_stdx, stream, tmpd_cwd, caplog):
         kwargs = {stream: stdx}
         stdapp(**kwargs).result()
 
-    parsl.clear()
-
     engine = sqlalchemy.create_engine(c.monitoring.logging_endpoint)
     with engine.begin() as connection:
 

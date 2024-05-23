@@ -52,7 +52,6 @@ def test_future_representation(tmpd_cwd):
     # seconds, with the assumption "data will arrive in the DB within
     # 30 seconds, but probably much sooner".
     parsl.dfk().cleanup()
-    parsl.clear()
 
     engine = sqlalchemy.create_engine(monitoring_url)
     with engine.begin() as connection:

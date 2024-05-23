@@ -30,7 +30,6 @@ def local_setup():
 
 def local_teardown():
     parsl.dfk().cleanup()
-    parsl.clear()
 
 
 @python_app
