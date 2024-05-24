@@ -65,8 +65,6 @@ def test_row_counts(tmpd_cwd, strategy):
 
         this_app().result()
 
-    parsl.clear()
-
     engine = sqlalchemy.create_engine(db_url)
     with engine.begin() as connection:
 

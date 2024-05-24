@@ -26,6 +26,7 @@ from parsl.channels import Channel
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
+from parsl.dataflow.dependency_resolvers import SHALLOW_DEPENDENCY_RESOLVER
 from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
@@ -177,11 +178,9 @@ class DataFlowKernel:
 
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.
-        radio = self.monitoring.radio if self.monitoring else None
         self.job_status_poller = JobStatusPoller(strategy=self.config.strategy,
                                                  strategy_period=self.config.strategy_period,
-                                                 max_idletime=self.config.max_idletime,
-                                                 monitoring=radio)
+                                                 max_idletime=self.config.max_idletime)
 
         self.executors: Dict[str, ParslExecutor] = {}
 
@@ -205,6 +204,9 @@ class DataFlowKernel:
         self.tasks: Dict[int, TaskRecord] = {}
         self.submitter_lock = threading.Lock()
 
+        self.dependency_resolver = self.config.dependency_resolver if self.config.dependency_resolver is not None \
+            else SHALLOW_DEPENDENCY_RESOLVER
+
         atexit.register(self.atexit_cleanup)
 
     def __enter__(self):
@@ -219,14 +221,18 @@ class DataFlowKernel:
             task_log_info = self._create_task_log_info(task_record)
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
-    def _create_task_log_info(self, task_record):
+    def _create_task_log_info(self, task_record: TaskRecord) -> Dict[str, Any]:
         """
         Create the dictionary that will be included in the log.
         """
         info_to_monitor = ['func_name', 'memoize', 'hashsum', 'fail_count', 'fail_cost', 'status',
                            'id', 'time_invoked', 'try_time_launched', 'time_returned', 'try_time_returned', 'executor']
 
-        task_log_info = {"task_" + k: task_record[k] for k in info_to_monitor}
+        # mypy cannot verify that these task_record[k] references are valid:
+        # They are valid if all entries in info_to_monitor are declared in the definition of TaskRecord
+        # This type: ignore[literal-required] asserts that fact.
+        task_log_info = {"task_" + k: task_record[k] for k in info_to_monitor}  # type: ignore[literal-required]
+
         task_log_info['run_id'] = self.run_id
         task_log_info['try_id'] = task_record['try_id']
         task_log_info['timestamp'] = datetime.datetime.now()
@@ -238,33 +244,28 @@ class DataFlowKernel:
         task_log_info['task_inputs'] = str(task_record['kwargs'].get('inputs', None))
         task_log_info['task_outputs'] = str(task_record['kwargs'].get('outputs', None))
         task_log_info['task_stdin'] = task_record['kwargs'].get('stdin', None)
-        stdout_spec = task_record['kwargs'].get('stdout', None)
-        stderr_spec = task_record['kwargs'].get('stderr', None)
 
-        # stdout and stderr strings are set to the filename if we can
-        # interpret the specification; otherwise, set to the empty string
-        # (on exception, or when not specified)
+        def std_spec_to_name(name, spec):
+            if spec is None:
+                name = ""
+            elif isinstance(spec, File):
+                name = spec.url
+            else:
+                # fallthrough case is various str, os.PathLike, tuple modes that
+                # can be interpreted by get_std_fname_mode.
+                try:
+                    name, _ = get_std_fname_mode(name, spec)
+                except Exception:
+                    logger.exception(f"Could not parse {name} specification {spec} for task {task_record['id']}")
+                    name = ""
+            return name
 
-        if stdout_spec is not None:
-            try:
-                stdout_name, _ = get_std_fname_mode('stdout', stdout_spec)
-            except Exception:
-                logger.exception("Could not parse stdout specification {} for task {}".format(stdout_spec, task_record['id']))
-                stdout_name = ""
-        else:
-            stdout_name = ""
+        stdout_spec = task_record['kwargs'].get('stdout')
+        task_log_info['task_stdout'] = std_spec_to_name('stdout', stdout_spec)
 
-        if stderr_spec is not None:
-            try:
-                stderr_name, _ = get_std_fname_mode('stderr', stderr_spec)
-            except Exception:
-                logger.exception("Could not parse stderr specification {} for task {}".format(stderr_spec, task_record['id']))
-                stderr_name = ""
-        else:
-            stderr_name = ""
+        stderr_spec = task_record['kwargs'].get('stderr')
+        task_log_info['task_stderr'] = std_spec_to_name('stderr', stderr_spec)
 
-        task_log_info['task_stdout'] = stdout_name
-        task_log_info['task_stderr'] = stderr_name
         task_log_info['task_fail_history'] = ",".join(task_record['fail_history'])
         task_log_info['task_depends'] = None
         if task_record['depends'] is not None:
@@ -774,6 +775,10 @@ class DataFlowKernel:
             (inputs[idx], func) = self.data_manager.optionally_stage_in(f, func, executor)
 
         for kwarg, f in kwargs.items():
+            # stdout and stderr files should not be staging in (they will be staged *out*
+            # in _add_output_deps)
+            if kwarg in ['stdout', 'stderr']:
+                continue
             (kwargs[kwarg], func) = self.data_manager.optionally_stage_in(f, func, executor)
 
         newargs = list(args)
@@ -786,33 +791,55 @@ class DataFlowKernel:
         logger.debug("Adding output dependencies")
         outputs = kwargs.get('outputs', [])
         app_fut._outputs = []
-        for idx, f in enumerate(outputs):
-            if isinstance(f, File) and not self.check_staging_inhibited(kwargs):
+
+        # Pass over all possible outputs: the outputs kwarg, stdout and stderr
+        # and for each of those, perform possible stage-out. This can result in:
+        # a DataFuture to be exposed in app_fut to represent the completion of
+        # that stageout (sometimes backed by a new sub-workflow for separate-task
+        # stageout), a replacement for the function to be executed (intended to
+        # be the original function wrapped with an in-task stageout wrapper), a
+        # rewritten File object to be passed to task to be executed
+
+        def stageout_one_file(file: File, rewritable_func: Callable):
+            if not self.check_staging_inhibited(kwargs):
                 # replace a File with a DataFuture - either completing when the stageout
                 # future completes, or if no stage out future is returned, then when the
                 # app itself completes.
 
                 # The staging code will get a clean copy which it is allowed to mutate,
                 # while the DataFuture-contained original will not be modified by any staging.
-                f_copy = f.cleancopy()
-                outputs[idx] = f_copy
+                f_copy = file.cleancopy()
 
-                logger.debug("Submitting stage out for output file {}".format(repr(f)))
+                logger.debug("Submitting stage out for output file {}".format(repr(file)))
                 stageout_fut = self.data_manager.stage_out(f_copy, executor, app_fut)
                 if stageout_fut:
-                    logger.debug("Adding a dependency on stageout future for {}".format(repr(f)))
-                    app_fut._outputs.append(DataFuture(stageout_fut, f, tid=app_fut.tid))
+                    logger.debug("Adding a dependency on stageout future for {}".format(repr(file)))
+                    df = DataFuture(stageout_fut, file, tid=app_fut.tid)
                 else:
-                    logger.debug("No stageout dependency for {}".format(repr(f)))
-                    app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
+                    logger.debug("No stageout dependency for {}".format(repr(file)))
+                    df = DataFuture(app_fut, file, tid=app_fut.tid)
 
                 # this is a hook for post-task stageout
                 # note that nothing depends on the output - which is maybe a bug
                 # in the not-very-tested stageout system?
-                func = self.data_manager.replace_task_stage_out(f_copy, func, executor)
+                rewritable_func = self.data_manager.replace_task_stage_out(f_copy, rewritable_func, executor)
+                return rewritable_func, f_copy, df
             else:
-                logger.debug("Not performing output staging for: {}".format(repr(f)))
-                app_fut._outputs.append(DataFuture(app_fut, f, tid=app_fut.tid))
+                logger.debug("Not performing output staging for: {}".format(repr(file)))
+                return rewritable_func, file, DataFuture(app_fut, file, tid=app_fut.tid)
+
+        for idx, file in enumerate(outputs):
+            func, outputs[idx], o = stageout_one_file(file, func)
+            app_fut._outputs.append(o)
+
+        file = kwargs.get('stdout')
+        if isinstance(file, File):
+            func, kwargs['stdout'], app_fut._stdout_future = stageout_one_file(file, func)
+
+        file = kwargs.get('stderr')
+        if isinstance(file, File):
+            func, kwargs['stderr'], app_fut._stderr_future = stageout_one_file(file, func)
+
         return func
 
     def _gather_all_deps(self, args: Sequence[Any], kwargs: Dict[str, Any]) -> List[Future]:
@@ -829,8 +856,11 @@ class DataFlowKernel:
         depends: List[Future] = []
 
         def check_dep(d: Any) -> None:
-            if isinstance(d, Future):
-                depends.extend([d])
+            try:
+                depends.extend(self.dependency_resolver.traverse_to_gather(d))
+            except Exception:
+                logger.exception("Exception in dependency_resolver.traverse_to_gather")
+                raise
 
         # Check the positional args
         for dep in args:
@@ -847,7 +877,8 @@ class DataFlowKernel:
 
         return depends
 
-    def _unwrap_futures(self, args, kwargs):
+    def _unwrap_futures(self, args: Sequence[Any], kwargs: Dict[str, Any]) \
+            -> Tuple[Sequence[Any], Dict[str, Any], Sequence[Tuple[Exception, str]]]:
         """This function should be called when all dependencies have completed.
 
         It will rewrite the arguments for that task, replacing each Future
@@ -868,53 +899,40 @@ class DataFlowKernel:
         """
         dep_failures = []
 
+        def append_failure(e: Exception, dep: Future) -> None:
+            # If this Future is associated with a task inside this DFK,
+            # then refer to the task ID.
+            # Otherwise make a repr of the Future object.
+            if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
+                tid = "task " + repr(dep.task_record['id'])
+            else:
+                tid = repr(dep)
+            dep_failures.extend([(e, tid)])
+
         # Replace item in args
         new_args = []
         for dep in args:
-            if isinstance(dep, Future):
-                try:
-                    new_args.extend([dep.result()])
-                except Exception as e:
-                    # If this Future is associated with a task inside this DFK,
-                    # then refer to the task ID.
-                    # Otherwise make a repr of the Future object.
-                    if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
-                        tid = "task " + repr(dep.task_record['id'])
-                    else:
-                        tid = repr(dep)
-                    dep_failures.extend([(e, tid)])
-            else:
-                new_args.extend([dep])
+            try:
+                new_args.extend([self.dependency_resolver.traverse_to_unwrap(dep)])
+            except Exception as e:
+                append_failure(e, dep)
 
         # Check for explicit kwargs ex, fu_1=<fut>
         for key in kwargs:
             dep = kwargs[key]
-            if isinstance(dep, Future):
-                try:
-                    kwargs[key] = dep.result()
-                except Exception as e:
-                    if hasattr(dep, 'task_record'):
-                        tid = dep.task_record['id']
-                    else:
-                        tid = None
-                    dep_failures.extend([(e, tid)])
+            try:
+                kwargs[key] = self.dependency_resolver.traverse_to_unwrap(dep)
+            except Exception as e:
+                append_failure(e, dep)
 
         # Check for futures in inputs=[<fut>...]
         if 'inputs' in kwargs:
             new_inputs = []
             for dep in kwargs['inputs']:
-                if isinstance(dep, Future):
-                    try:
-                        new_inputs.extend([dep.result()])
-                    except Exception as e:
-                        if hasattr(dep, 'task_record'):
-                            tid = dep.task_record['id']
-                        else:
-                            tid = None
-                        dep_failures.extend([(e, tid)])
-
-                else:
-                    new_inputs.extend([dep])
+                try:
+                    new_inputs.extend([self.dependency_resolver.traverse_to_unwrap(dep)])
+                except Exception as e:
+                    append_failure(e, dep)
             kwargs['inputs'] = new_inputs
 
         return new_args, kwargs, dep_failures
@@ -970,32 +988,16 @@ class DataFlowKernel:
         executor = random.choice(choices)
         logger.debug("Task {} will be sent to executor {}".format(task_id, executor))
 
-        # The below uses func.__name__ before it has been wrapped by any staging code.
-
-        label = app_kwargs.get('label')
-        for kw in ['stdout', 'stderr']:
-            if kw in app_kwargs:
-                if app_kwargs[kw] == parsl.AUTO_LOGNAME:
-                    if kw not in ignore_for_cache:
-                        ignore_for_cache += [kw]
-                    app_kwargs[kw] = os.path.join(
-                                self.run_dir,
-                                'task_logs',
-                                str(int(task_id / 10000)).zfill(4),  # limit logs to 10k entries per directory
-                                'task_{}_{}{}.{}'.format(
-                                    str(task_id).zfill(4),
-                                    func.__name__,
-                                    '' if label is None else '_{}'.format(label),
-                                    kw)
-                    )
-
         resource_specification = app_kwargs.get('parsl_resource_specification', {})
 
         task_record: TaskRecord
-        task_record = {'depends': [],
+        task_record = {'args': app_args,
+                       'depends': [],
                        'dfk': self,
                        'executor': executor,
+                       'func': func,
                        'func_name': func.__name__,
+                       'kwargs': app_kwargs,
                        'memoize': cache,
                        'hashsum': None,
                        'exec_fu': None,
@@ -1017,25 +1019,41 @@ class DataFlowKernel:
 
         self.update_task_state(task_record, States.unsched)
 
+        for kw in ['stdout', 'stderr']:
+            if kw in app_kwargs:
+                if app_kwargs[kw] == parsl.AUTO_LOGNAME:
+                    if kw not in ignore_for_cache:
+                        ignore_for_cache += [kw]
+                    if self.config.std_autopath is None:
+                        app_kwargs[kw] = self.default_std_autopath(task_record, kw)
+                    else:
+                        app_kwargs[kw] = self.config.std_autopath(task_record, kw)
+
         app_fu = AppFuture(task_record)
+        task_record['app_fu'] = app_fu
 
         # Transform remote input files to data futures
         app_args, app_kwargs, func = self._add_input_deps(executor, app_args, app_kwargs, func)
 
         func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func)
 
+        logger.debug("Added output dependencies")
+
+        # Replace the function invocation in the TaskRecord with whatever file-staging
+        # substitutions have been made.
         task_record.update({
                     'args': app_args,
                     'func': func,
-                    'kwargs': app_kwargs,
-                    'app_fu': app_fu})
+                    'kwargs': app_kwargs})
 
         assert task_id not in self.tasks
 
         self.tasks[task_id] = task_record
 
+        logger.debug("Gathering dependencies")
         # Get the list of dependencies for the task
         depends = self._gather_all_deps(app_args, app_kwargs)
+        logger.debug("Gathered dependencies")
         task_record['depends'] = depends
 
         depend_descs = []
@@ -1137,11 +1155,9 @@ class DataFlowKernel:
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
             executor.hub_address = self.hub_address
-            executor.hub_port = self.hub_zmq_port
+            executor.hub_zmq_port = self.hub_zmq_port
             if self.monitoring:
                 executor.monitoring_radio = self.monitoring.radio
-            else:
-                executor.monitoring_radio = None
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
@@ -1160,12 +1176,9 @@ class DataFlowKernel:
         self.job_status_poller.add_executors(block_executors)
 
     def atexit_cleanup(self) -> None:
-        if not self.cleanup_called:
-            logger.warning("Python is exiting with a DFK still running. "
-                           "You should call parsl.dfk().cleanup() before "
-                           "exiting to release any resources")
-        else:
-            logger.info("python process is exiting, but DFK has already been cleaned up")
+        logger.warning("Python is exiting with a DFK still running. "
+                       "You should call parsl.dfk().cleanup() before "
+                       "exiting to release any resources")
 
     def wait_for_current_tasks(self) -> None:
         """Waits for all tasks in the task list to be completed, by waiting for their
@@ -1221,8 +1234,10 @@ class DataFlowKernel:
                 self._checkpoint_timer.close()
 
         # Send final stats
+        logger.info("Sending end message for usage tracking")
         self.usage_tracker.send_end_message()
         self.usage_tracker.close()
+        logger.info("Closed usage tracking")
 
         logger.info("Closing job status poller")
         self.job_status_poller.close()
@@ -1250,6 +1265,17 @@ class DataFlowKernel:
             logger.info("Terminating monitoring")
             self.monitoring.close()
             logger.info("Terminated monitoring")
+
+        logger.info("Unregistering atexit hook")
+        atexit.unregister(self.atexit_cleanup)
+        logger.info("Unregistered atexit hook")
+
+        if DataFlowKernelLoader._dfk is self:
+            logger.info("Unregistering default DFK")
+            parsl.clear()
+            logger.info("Unregistered default DFK")
+        else:
+            logger.debug("Cleaning up non-default DFK - not unregistering")
 
         logger.info("DFK cleanup complete")
 
@@ -1402,13 +1428,32 @@ class DataFlowKernel:
                 logger.info(f"{name} for task {tid} will not be redirected.")
             elif isinstance(target, str):
                 logger.info(f"{name} for task {tid} will be redirected to {target}")
-            elif isinstance(target, tuple) and len(target) == 2:
+            elif isinstance(target, os.PathLike):
+                logger.info(f"{name} for task {tid} will be redirected to {os.fspath(target)}")
+            elif isinstance(target, tuple) and len(target) == 2 and isinstance(target[0], str):
                 logger.info(f"{name} for task {tid} will be redirected to {target[0]} with mode {target[1]}")
+            elif isinstance(target, tuple) and len(target) == 2 and isinstance(target[0], os.PathLike):
+                logger.info(f"{name} for task {tid} will be redirected to {os.fspath(target[0])} with mode {target[1]}")
+            elif isinstance(target, DataFuture):
+                logger.info(f"{name} for task {tid} will staged to {target.file_obj.url}")
             else:
                 logger.error(f"{name} for task {tid} has unknown specification: {target!r}")
 
         log_std_stream("Standard out", task_record['app_fu'].stdout)
         log_std_stream("Standard error", task_record['app_fu'].stderr)
+
+    def default_std_autopath(self, taskrecord, kw):
+        label = taskrecord['kwargs'].get('label')
+        task_id = taskrecord['id']
+        return os.path.join(
+            self.run_dir,
+            'task_logs',
+            str(int(task_id / 10000)).zfill(4),  # limit logs to 10k entries per directory
+            'task_{}_{}{}.{}'.format(
+                str(task_id).zfill(4),
+                taskrecord['func_name'],
+                '' if label is None else '_{}'.format(label),
+                kw))
 
 
 class DataFlowKernelLoader:

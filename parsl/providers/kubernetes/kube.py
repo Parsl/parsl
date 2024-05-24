@@ -105,7 +105,26 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         if not _kubernetes_enabled:
             raise OptionalModuleMissing(['kubernetes'],
                                         "Kubernetes provider requires kubernetes module and config.")
-        config.load_kube_config()
+        try:
+            config.load_kube_config()
+        except config.config_exception.ConfigException:
+            # `load_kube_config` assumes a local kube-config file, and fails if not
+            # present, raising:
+            #
+            #     kubernetes.config.config_exception.ConfigException: Invalid
+            #     kube-config file. No configuration found.
+            #
+            # Since running a parsl driver script on a kubernetes cluster is a common
+            # pattern to enable worker-interchange communication, this enables an
+            # in-cluster config to be loaded if a kube-config file isn't found.
+            #
+            # Based on: https://github.com/kubernetes-client/python/issues/1005
+            try:
+                config.load_incluster_config()
+            except config.config_exception.ConfigException:
+                raise config.config_exception.ConfigException(
+                    "Failed to load both kube-config file and in-cluster configuration."
+                )
 
         self.namespace = namespace
         self.image = image

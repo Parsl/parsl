@@ -14,6 +14,9 @@ Core
     parsl.dataflow.futures.AppFuture
     parsl.dataflow.dflow.DataFlowKernelLoader
     parsl.monitoring.MonitoringHub
+    parsl.dataflow.dependency_resolvers.DependencyResolver
+    parsl.dataflow.dependency_resolvers.DEEP_DEPENDENCY_RESOLVER
+    parsl.dataflow.dependency_resolvers.SHALLOW_DEPENDENCY_RESOLVER
 
 Configuration
 =============
@@ -75,6 +78,7 @@ Executors
     parsl.executors.status_handling.BlockProviderExecutor
     parsl.executors.ThreadPoolExecutor
     parsl.executors.HighThroughputExecutor
+    parsl.executors.MPIExecutor
     parsl.executors.WorkQueueExecutor
     parsl.executors.taskvine.TaskVineExecutor
     parsl.executors.FluxExecutor

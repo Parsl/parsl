@@ -1,3 +1,4 @@
+import os
 from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
 from typing import Any, Callable, Dict, Optional
@@ -44,6 +45,21 @@ class ParslExecutor(metaclass=ABCMeta):
 
     label: str = "undefined"
     radio_mode: str = "udp"
+
+    def __init__(
+        self,
+        *,
+        hub_address: Optional[str] = None,
+        hub_zmq_port: Optional[int] = None,
+        monitoring_radio: Optional[MonitoringRadio] = None,
+        run_dir: str = ".",
+        run_id: Optional[str] = None,
+    ):
+        self.hub_address = hub_address
+        self.hub_zmq_port = hub_zmq_port
+        self.monitoring_radio = monitoring_radio
+        self.run_dir = os.path.abspath(run_dir)
+        self.run_id = run_id
 
     def __enter__(self) -> Self:
         return self
@@ -120,14 +136,14 @@ class ParslExecutor(metaclass=ABCMeta):
         self._hub_address = value
 
     @property
-    def hub_port(self) -> Optional[int]:
+    def hub_zmq_port(self) -> Optional[int]:
         """Port to the Hub for monitoring.
         """
-        return self._hub_port
+        return self._hub_zmq_port
 
-    @hub_port.setter
-    def hub_port(self, value: Optional[int]) -> None:
-        self._hub_port = value
+    @hub_zmq_port.setter
+    def hub_zmq_port(self, value: Optional[int]) -> None:
+        self._hub_zmq_port = value
 
     @property
     def monitoring_radio(self) -> Optional[MonitoringRadio]:

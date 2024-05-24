@@ -15,8 +15,7 @@ def local_setup():
 
 
 def local_teardown():
-    parsl.dfk().cleanup
-    parsl.clear()
+    parsl.dfk().cleanup()
 
 
 @python_app(cache=True)

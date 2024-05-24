@@ -30,5 +30,4 @@ def test_parallel_for():
     assert thread_count <= config.executors[0].max_threads, "More threads than allowed"
     assert process_count == 1, "More processes than allowed"
     dfk.cleanup()
-    parsl.clear()
     return d

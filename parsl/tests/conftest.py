@@ -3,8 +3,10 @@ import itertools
 import logging
 import os
 import pathlib
+import random
 import re
 import shutil
+import string
 import time
 import types
 import signal
@@ -139,7 +141,7 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
-        'staging_required: Marks tests that require a staging provider, when there is no sharedFS)'
+        'staging_required: Marks tests that require a staging provider, when there is no sharedFS'
     )
     config.addinivalue_line(
         'markers',
@@ -199,7 +201,7 @@ def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
         if parsl.dfk() != dfk:
             raise RuntimeError("DFK changed unexpectedly during test")
         dfk.cleanup()
-        parsl.clear()
+        assert DataFlowKernelLoader._dfk is None
     else:
         yield
 
@@ -245,12 +247,13 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
 
         if callable(local_teardown):
             local_teardown()
+            assert DataFlowKernelLoader._dfk is None, "Expected teardown to clear DFK"
 
         if local_config:
             if parsl.dfk() != dfk:
                 raise RuntimeError("DFK changed unexpectedly during test")
             dfk.cleanup()
-            parsl.clear()
+            assert DataFlowKernelLoader._dfk is None
 
     else:
         yield
@@ -421,3 +424,11 @@ def try_assert():
             raise AssertionError("Bad assert call: no attempts or timeout period")
 
     yield _impl
+
+
+@pytest.fixture
+def randomstring():
+    def func(length=5, alphabet=string.ascii_letters):
+        return "".join(random.choice(alphabet) for _ in range(length))
+
+    return func

@@ -5,16 +5,18 @@ from typing import Callable, Iterable, Optional, Sequence, Union
 from typing_extensions import Literal
 
 from parsl.utils import RepresentationMixin
+from parsl.dataflow.dependency_resolvers import DependencyResolver
 from parsl.executors.base import ParslExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.errors import ConfigurationError
 from parsl.dataflow.taskrecord import TaskRecord
 from parsl.monitoring import MonitoringHub
+from parsl.usage_tracking.api import UsageInformation
 
 logger = logging.getLogger(__name__)
 
 
-class Config(RepresentationMixin):
+class Config(RepresentationMixin, UsageInformation):
     """
     Specification of Parsl configuration options.
 
@@ -34,6 +36,8 @@ class Config(RepresentationMixin):
     checkpoint_period : str, optional
         Time interval (in "HH:MM:SS") at which to checkpoint completed tasks. Only has an effect if
         ``checkpoint_mode='periodic'``.
+    dependency_resolver: plugin point for custom dependency resolvers. Default: only resolve Futures,
+        using the `SHALLOW_DEPENDENCY_RESOLVER`.
     garbage_collect : bool. optional.
         Delete task records from DFK when tasks have completed. Default: True
     internal_tasks_max_threads : int, optional
@@ -50,6 +54,9 @@ class Config(RepresentationMixin):
         of 1.
     run_dir : str, optional
         Path to run directory. Default is 'runinfo'.
+    std_autopath : function, optional
+        Sets the function used to generate stdout/stderr specifications when parsl.AUTO_LOGPATH is used. If no function
+        is specified, generates paths that look like: ``rundir/NNN/task_logs/X/task_{id}_{name}{label}.{out/err}``
     strategy : str, optional
         Strategy to use for scaling blocks according to workflow needs. Can be 'simple', 'htex_auto_scale', 'none'
         or `None`.
@@ -84,11 +91,13 @@ class Config(RepresentationMixin):
                                         Literal['dfk_exit'],
                                         Literal['manual']] = None,
                  checkpoint_period: Optional[str] = None,
+                 dependency_resolver: Optional[DependencyResolver] = None,
                  garbage_collect: bool = True,
                  internal_tasks_max_threads: int = 10,
                  retries: int = 0,
                  retry_handler: Optional[Callable[[Exception, TaskRecord], float]] = None,
                  run_dir: str = 'runinfo',
+                 std_autopath: Optional[Callable] = None,
                  strategy: Optional[str] = 'simple',
                  strategy_period: Union[float, int] = 5,
                  max_idletime: float = 120.0,
@@ -118,6 +127,7 @@ class Config(RepresentationMixin):
         if checkpoint_mode == 'periodic' and checkpoint_period is None:
             checkpoint_period = "00:30:00"
         self.checkpoint_period = checkpoint_period
+        self.dependency_resolver = dependency_resolver
         self.garbage_collect = garbage_collect
         self.internal_tasks_max_threads = internal_tasks_max_threads
         self.retries = retries
@@ -129,6 +139,7 @@ class Config(RepresentationMixin):
         self.usage_tracking = usage_tracking
         self.initialize_logging = initialize_logging
         self.monitoring = monitoring
+        self.std_autopath: Optional[Callable] = std_autopath
 
     @property
     def executors(self) -> Sequence[ParslExecutor]:
@@ -144,3 +155,7 @@ class Config(RepresentationMixin):
         if len(duplicates) > 0:
             raise ConfigurationError('Executors must have unique labels ({})'.format(
                 ', '.join(['label={}'.format(repr(d)) for d in duplicates])))
+
+    def get_usage_information(self):
+        return {"executors_len": len(self.executors),
+                "dependency_resolver": self.dependency_resolver is not None}

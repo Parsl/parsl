@@ -14,7 +14,6 @@ def local_setup():
 
 def local_teardown():
     parsl.dfk().cleanup()
-    parsl.clear()
 
 
 @python_app
@@ -23,6 +22,6 @@ def dummy():
 
 
 @pytest.mark.local
-def test_that_it_fails():
+def test_app():
     x = dummy()
-    x.result()
+    assert x.result() is None

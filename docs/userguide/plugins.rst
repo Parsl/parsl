@@ -49,6 +49,15 @@ be added in the workflow configuration, in the ``storage`` parameter of the
 relevant `ParslExecutor`. Each provider should subclass the `Staging` class.
 
 
+Default stdout/stderr name generation
+-------------------------------------
+Parsl can choose names for your bash apps stdout and stderr streams
+automatically, with the parsl.AUTO_LOGNAME parameter. The choice of path is
+made by a function which can be configured with the ``std_autopath``
+parameter of Parsl `Config`. By default, ``DataFlowKernel.default_std_autopath``
+will be used.
+
+
 Memoization/checkpointing
 -------------------------
 
@@ -77,3 +86,19 @@ from invoking a Parsl app. This includes as the return value of a
 
 An specific example of this is integrating Globus Compute tasks into a Parsl
 task graph. See :ref:`label-join-globus-compute`
+
+Dependency resolution
+---------------------
+
+When Parsl examines the arguments to an app, it uses a `DependencyResolver`.
+The default `DependencyResolver` will cause Parsl to wait for
+``concurrent.futures.Future`` instances (including `AppFuture` and
+`DataFuture`), and pass through other arguments without waiting.
+
+This behaviour is pluggable: Parsl comes with another dependency resolver,
+`DEEP_DEPENDENCY_RESOLVER` which knows about futures contained with structures
+such as tuples, lists, sets and dicts.
+
+This plugin interface might be used to interface other task-like or future-like
+objects to the Parsl dependency mechanism, by describing how they can be
+interpreted as a Future.
