@@ -138,3 +138,24 @@ def test_dictionary():
 
     # this .result() will fail if the asserts fail
     dictionary_checker({k1: [30, v1], k2: 20}).result()
+
+
+@pytest.mark.local
+def test_dictionary_later():
+    k1 = Future()
+    k2 = Future()
+    v1 = Future()
+
+    f1 = dictionary_checker({k1: [30, v1], k2: 20})
+
+    assert not f1.done()
+    k1.set_result("a")
+    k2.set_result("b")
+    v1.set_result(10)
+
+    # having set the results, f1 should fairly rapidly complete (but not
+    # instantly) so we can't assert on done() here... but we can
+    # check that f1 does "eventually" complete... meaning that
+    # none of the assertions inside test_dictionary have failed
+
+    assert f1.result() is None
