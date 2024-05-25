@@ -93,10 +93,8 @@ def _(iterable):
 def _(dictionary):
     futures = []
     for key, value in dictionary.items():
-        if isinstance(key, Future):
-            futures.append(key)
-        if isinstance(value, Future):
-            futures.append(value)
+        futures.extend(deep_traverse_to_gather(key))
+        futures.extend(deep_traverse_to_gather(value))
     return futures
 
 
