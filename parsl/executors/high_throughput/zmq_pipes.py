@@ -77,7 +77,7 @@ class CommandClient:
                         elif poll_result == 0:
                             raise CommandClientTimeoutError("Waiting for command channel to be ready for a command")
                         else:
-                            raise InternalConsistencyError("ZMQ poll returned unexpected value: {poll_result}")
+                            raise InternalConsistencyError(f"ZMQ poll returned unexpected value: {poll_result}")
 
                     self.zmq_socket.send_pyobj(message, copy=True)
 
