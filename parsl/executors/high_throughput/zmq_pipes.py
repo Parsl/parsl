@@ -92,7 +92,7 @@ class CommandClient:
                             self.ok = False
                             raise CommandClientTimeoutError("Waiting for a reply from command channel")
                         else:
-                            raise InternalConsistencyError("ZMQ poll returned unexpected value: {poll_result}")
+                            raise InternalConsistencyError(f"ZMQ poll returned unexpected value: {poll_result}")
 
                     logger.debug("Receiving command client response")
                     reply = self.zmq_socket.recv_pyobj()
