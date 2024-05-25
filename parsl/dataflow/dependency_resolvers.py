@@ -44,6 +44,7 @@ def _(fut: Future):
 @shallow_traverse_to_unwrap.register
 @singledispatch
 def _(fut: Future):
+    assert fut.done()
     return fut.result()
 
 
@@ -67,6 +68,7 @@ def _(fut: Future):
 @deep_traverse_to_unwrap.register
 @singledispatch
 def _(fut: Future):
+    assert fut.done()
     return fut.result()
 
 
