@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Tuple, Set, Union
+from typing import Dict, List, Tuple, Set
 
 logger = logging.getLogger(__name__)
 
@@ -8,10 +8,20 @@ VALID_LAUNCHERS = ('srun',
                    'mpiexec')
 
 
+class MissingResourceSpecification(Exception):
+    """Exception raised when input is  not supplied a resource specification"""
+
+    def __init__(self, reason: str):
+        self.reason = reason
+
+    def __str__(self):
+        return f"Missing resource specification: {self.reason}"
+
+
 class InvalidResourceSpecification(Exception):
     """Exception raised when Invalid input is supplied via resource specification"""
 
-    def __init__(self, invalid_keys: Union[Set[str], str]):
+    def __init__(self, invalid_keys: Set[str]):
         self.invalid_keys = invalid_keys
 
     def __str__(self):
@@ -29,7 +39,7 @@ def validate_resource_spec(resource_spec: Dict[str, str], is_mpi_enabled: bool):
     # empty resource_spec when mpi_mode is set causes parsl to hang
     # ref issue #3427
     if is_mpi_enabled and len(user_keys) == 0:
-        raise InvalidResourceSpecification('mpi_mode requires parsl_resource_specification to be configured')
+        raise MissingResourceSpecification('MPI mode requires optional parsl_resource_specification keyword argument to be configured')
 
     legal_keys = set(("ranks_per_node",
                       "num_nodes",
