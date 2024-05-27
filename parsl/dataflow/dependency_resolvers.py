@@ -76,7 +76,7 @@ def _(fut: Future):
 @deep_traverse_to_gather.register(list)
 @deep_traverse_to_gather.register(set)
 def _(iterable):
-    return [e for v in iterable for e in deep_traverse_to_gather(v) if isinstance(e, Future)]
+    return [e for v in iterable for e in deep_traverse_to_gather(v)]
 
 
 @deep_traverse_to_unwrap.register(tuple)
