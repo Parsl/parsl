@@ -44,6 +44,7 @@ def _(fut: Future):
 @shallow_traverse_to_unwrap.register
 @singledispatch
 def _(fut: Future):
+    assert fut.done()
     return fut.result()
 
 
@@ -67,6 +68,7 @@ def _(fut: Future):
 @deep_traverse_to_unwrap.register
 @singledispatch
 def _(fut: Future):
+    assert fut.done()
     return fut.result()
 
 
@@ -91,10 +93,8 @@ def _(iterable):
 def _(dictionary):
     futures = []
     for key, value in dictionary.items():
-        if isinstance(key, Future):
-            futures.append(key)
-        if isinstance(value, Future):
-            futures.append(value)
+        futures.extend(deep_traverse_to_gather(key))
+        futures.extend(deep_traverse_to_gather(value))
     return futures
 
 
