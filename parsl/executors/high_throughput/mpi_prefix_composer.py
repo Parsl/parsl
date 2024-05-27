@@ -8,8 +8,18 @@ VALID_LAUNCHERS = ('srun',
                    'mpiexec')
 
 
+class MissingResourceSpecification(Exception):
+    """Exception raised when input is  not supplied a resource specification"""
+
+    def __init__(self, reason: str):
+        self.reason = reason
+
+    def __str__(self):
+        return f"Missing resource specification: {self.reason}"
+
+
 class InvalidResourceSpecification(Exception):
-    """Exception raised when Invalid keys are supplied via resource specification"""
+    """Exception raised when Invalid input is supplied via resource specification"""
 
     def __init__(self, invalid_keys: Set[str]):
         self.invalid_keys = invalid_keys
@@ -18,13 +28,19 @@ class InvalidResourceSpecification(Exception):
         return f"Invalid resource specification options supplied: {self.invalid_keys}"
 
 
-def validate_resource_spec(resource_spec: Dict[str, str]):
+def validate_resource_spec(resource_spec: Dict[str, str], is_mpi_enabled: bool):
     """Basic validation of keys in the resource_spec
 
     Raises: InvalidResourceSpecification if the resource_spec
         is invalid (e.g, contains invalid keys)
     """
     user_keys = set(resource_spec.keys())
+
+    # empty resource_spec when mpi_mode is set causes parsl to hang
+    # ref issue #3427
+    if is_mpi_enabled and len(user_keys) == 0:
+        raise MissingResourceSpecification('MPI mode requires optional parsl_resource_specification keyword argument to be configured')
+
     legal_keys = set(("ranks_per_node",
                       "num_nodes",
                       "num_ranks",
