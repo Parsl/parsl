@@ -1,14 +1,14 @@
 from concurrent.futures import Future
 from dataclasses import dataclass
 from functools import singledispatch
-from typing import Callable
+from typing import Callable, Sequence
 
 
 @dataclass
 class DependencyResolver:
     """A DependencyResolver describes how app dependencies can be resolved.
     It is specified as two functions: `traverse_to_gather` which turns an
-    app parameter into a list of futures which must be waited for before
+    app parameter into a sequence of futures which must be waited for before
     the task can be executed (for example, in the case of
     `DEEP_DEPENDENCY_RESOLVER` this traverses structures such as lists to
     find every contained ``Future``), and `traverse_to_unwrap` which turns an
@@ -20,8 +20,8 @@ class DependencyResolver:
     By default, Parsl will use `SHALLOW_DEPENDENCY_RESOLVER` which only
     resolves Futures passed directly as arguments.
     """
-    traverse_to_gather: Callable
-    traverse_to_unwrap: Callable
+    traverse_to_gather: Callable[[object], Sequence[Future]]
+    traverse_to_unwrap: Callable[[object], object]
 
 
 @singledispatch
