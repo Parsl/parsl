@@ -19,7 +19,8 @@ from parsl.executors.high_throughput.mpi_resource_management import (
 )
 from parsl.executors.high_throughput.mpi_prefix_composer import (
     validate_resource_spec,
-    InvalidResourceSpecification
+    InvalidResourceSpecification,
+    MissingResourceSpecification
 )
 
 EXECUTOR_LABEL = "MPI_TEST"
@@ -131,7 +132,7 @@ def test_top_level():
         ({"num_nodes": 2, "ranks_per_node": 1}, True, None),
         ({"launcher_options": "--debug_foo"}, True, None),
         ({"num_nodes": 2, "BAD_OPT": 1}, True, InvalidResourceSpecification),
-        ({}, True, InvalidResourceSpecification),
+        ({}, True, MissingResourceSpecification),
     )
 )
 def test_resource_spec(resource_spec: Dict, is_mpi_enabled: bool, exception):
