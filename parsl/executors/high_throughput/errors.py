@@ -10,3 +10,13 @@ class WorkerLost(Exception):
 
     def __str__(self):
         return self.__repr__()
+
+
+class CommandClientTimeoutError(Exception):
+    """Raised when the command client times out waiting for a response.
+    """
+
+
+class CommandClientBadError(Exception):
+    """Raised when the command client is bad from an earlier timeout.
+    """
