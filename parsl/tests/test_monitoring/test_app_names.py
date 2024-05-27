@@ -61,7 +61,6 @@ def test_app_name(get_app, expected_name, expected_result, tmpd_cwd):
     assert app().result() == expected_result
 
     parsl.dfk().cleanup()
-    parsl.clear()
 
     engine = sqlalchemy.create_engine(c.monitoring.logging_endpoint)
     with engine.begin() as connection:

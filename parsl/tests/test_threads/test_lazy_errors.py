@@ -24,5 +24,4 @@ def test_lazy_behavior():
         assert f.done()
 
     parsl.dfk().cleanup()
-    parsl.clear()
     return

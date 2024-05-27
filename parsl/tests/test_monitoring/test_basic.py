@@ -66,8 +66,6 @@ def test_row_counts(tmpd_cwd, fresh_config):
     with parsl.load(config):
         assert this_app().result() == 5
 
-    parsl.clear()
-
     # at this point, we should find one row in the monitoring database.
 
     engine = sqlalchemy.create_engine(db_url)

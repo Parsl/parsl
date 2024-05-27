@@ -20,7 +20,7 @@ class MPIExecutor(HighThroughputExecutor):
     to spawn multi-node tasks.
 
     Specify the maximum number of multi-node tasks to run at once using ``max_workers_per_block``.
-    The maximum number should be smaller than the ``nodes_per_block`` in the Provider.
+    The value should be less than or equal to the ``nodes_per_block`` in the Provider.
 
     Parameters
     ----------
