@@ -375,8 +375,11 @@ def _taskvine_submit_wait(ready_task_queue=None,
                         else:
                             task_in_file = _handle_file_declaration_protocol(m, spec.parsl_name, spec.cache)
                             parsl_file_name_to_vine_file[spec.parsl_name] = task_in_file
-                        logger.debug("Adding input file {}, {} to TaskVine".format(task_in_file, task.executor_id))
-                        t.add_input(task_in_file, spec.netloc)
+                        logger.debug("Adding input file {}, {} to TaskVine".format(spec.parsl_name, task.executor_id))
+                        if spec.netloc == '':
+                            t.add_input(task_in_file, spec.parsl_name)
+                        else:
+                            t.add_input(task_in_file, spec.netloc)
 
                 for spec in task.output_files:
                     if spec.stage:
@@ -385,8 +388,11 @@ def _taskvine_submit_wait(ready_task_queue=None,
                         else:
                             task_out_file = _handle_file_declaration_protocol(m, spec.parsl_name, spec.cache)
                             parsl_file_name_to_vine_file[spec.parsl_name] = task_out_file
-                        logger.debug("Adding output file {}, {} to TaskVine".format(task_out_file, task.executor_id))
-                        t.add_output(task_out_file, spec.netloc)
+                        logger.debug("Adding output file {}, {} to TaskVine".format(spec.parsl_name, task.executor_id))
+                        if spec.netloc == '':
+                            t.add_output(task_out_file, spec.parsl_name)
+                        else:
+                            t.add_output(task_out_file, spec.netloc)
 
             # Submit the task to the TaskVine object
             logger.debug("Submitting executor task {}, {} to TaskVine".format(task.executor_id, t))
