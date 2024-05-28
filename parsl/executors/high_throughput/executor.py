@@ -415,13 +415,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             )
 
         self.outgoing_q = zmq_pipes.TasksOutgoing(
-            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+            "127.0.0.1", self.interchange_port_range, self.cert_dir
         )
         self.incoming_q = zmq_pipes.ResultsIncoming(
-            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+            "127.0.0.1", self.interchange_port_range, self.cert_dir
         )
         self.command_client = zmq_pipes.CommandClient(
-            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+            "127.0.0.1", self.interchange_port_range, self.cert_dir
         )
 
         self._queue_management_thread = None

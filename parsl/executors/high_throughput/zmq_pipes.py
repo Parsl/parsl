@@ -4,6 +4,7 @@ import zmq
 import logging
 import threading
 import time
+from typing import Optional
 
 from parsl import curvezmq
 from parsl.errors import InternalConsistencyError
@@ -15,20 +16,23 @@ logger = logging.getLogger(__name__)
 class CommandClient:
     """ CommandClient
     """
-    def __init__(self, zmq_context: curvezmq.ClientContext, ip_address, port_range):
+    def __init__(self, ip_address, port_range, cert_dir: Optional[str] = None):
         """
         Parameters
         ----------
 
-        zmq_context: curvezmq.ClientContext
-            CurveZMQ client context used to create secure sockets
         ip_address: str
            IP address of the client (where Parsl runs)
+
         port_range: tuple(int, int)
            Port range for the comms between client and interchange
 
+        cert_dir: str | None
+            Path to the certificate directory. Setting this to None will disable encryption.
+            default: None
+
         """
-        self.zmq_context = zmq_context
+        self.zmq_context = curvezmq.ClientContext(cert_dir)
         self.ip_address = ip_address
         self.port_range = port_range
         self.port = None
@@ -119,20 +123,23 @@ class CommandClient:
 class TasksOutgoing:
     """ Outgoing task queue from the executor to the Interchange
     """
-    def __init__(self, zmq_context: curvezmq.ClientContext, ip_address, port_range):
+    def __init__(self, ip_address, port_range, cert_dir: Optional[str] = None):
         """
         Parameters
         ----------
 
-        zmq_context: curvezmq.ClientContext
-            CurveZMQ client context used to create secure sockets
         ip_address: str
            IP address of the client (where Parsl runs)
+
         port_range: tuple(int, int)
            Port range for the comms between client and interchange
 
+        cert_dir: str | None
+            Path to the certificate directory. Setting this to None will disable encryption.
+            default: None
+
         """
-        self.zmq_context = zmq_context
+        self.zmq_context = curvezmq.ClientContext(cert_dir)
         self.zmq_socket = self.zmq_context.socket(zmq.DEALER)
         self.zmq_socket.set_hwm(0)
         self.port = self.zmq_socket.bind_to_random_port("tcp://{}".format(ip_address),
@@ -172,20 +179,23 @@ class ResultsIncoming:
     """ Incoming results queue from the Interchange to the executor
     """
 
-    def __init__(self, zmq_context: curvezmq.ClientContext, ip_address, port_range):
+    def __init__(self, ip_address, port_range, cert_dir: Optional[str] = None):
         """
         Parameters
         ----------
 
-        zmq_context: curvezmq.ClientContext
-            CurveZMQ client context used to create secure sockets
         ip_address: str
            IP address of the client (where Parsl runs)
+
         port_range: tuple(int, int)
            Port range for the comms between client and interchange
 
+        cert_dir: str | None
+            Path to the certificate directory. Setting this to None will disable encryption.
+            default: None
+
         """
-        self.zmq_context = zmq_context
+        self.zmq_context = curvezmq.ClientContext(cert_dir)
         self.results_receiver = self.zmq_context.socket(zmq.DEALER)
         self.results_receiver.set_hwm(0)
         self.port = self.results_receiver.bind_to_random_port("tcp://{}".format(ip_address),
