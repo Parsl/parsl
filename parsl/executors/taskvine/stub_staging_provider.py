@@ -9,7 +9,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-known_url_schemes = ["file", "http", "https", "taskvinetemp"]
+known_url_schemes = ["http", "https", "taskvinetemp"]
 
 
 class StubStaging(Staging, RepresentationMixin):
