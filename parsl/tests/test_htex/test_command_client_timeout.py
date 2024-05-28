@@ -18,10 +18,8 @@ T = 0.25
 def test_command_not_sent() -> None:
     """Tests timeout on command send.
     """
-    ctx = curvezmq.ClientContext(None)
-
     # RFC6335 ephemeral port range
-    cc = CommandClient(ctx, "127.0.0.1", (49152, 65535))
+    cc = CommandClient("127.0.0.1", (49152, 65535))
 
     # cc will now wait for a connection, but we won't do anything to make the
     # other side of the connection exist, so any command given to cc should
@@ -43,10 +41,8 @@ def test_command_ignored() -> None:
     htex makes multithreaded use of the command client: see issue #3376 about
     that lack of thread safety.
     """
-    ctx = curvezmq.ClientContext(None)
-
     # RFC6335 ephemeral port range
-    cc = CommandClient(ctx, "127.0.0.1", (49152, 65535))
+    cc = CommandClient("127.0.0.1", (49152, 65535))
 
     ic_ctx = curvezmq.ServerContext(None)
     ic_channel = ic_ctx.socket(zmq.REP)
@@ -63,7 +59,4 @@ def test_command_ignored() -> None:
         cc.run("ANOTHER_COMMAND")
 
     cc.close()
-    ctx.term()
-
     ic_channel.close()
-    ic_ctx.term()
