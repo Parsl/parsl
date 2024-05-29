@@ -1,3 +1,10 @@
+-- for benc dev environment:
+-- apt install chezscheme
+-- (build idris2 if necessary)
+-- export PATH=~/.idris2/bin:$PATH
+-- pytest -s parsl/tests/ --config parsl/tests/configs/htex_idris2.py 
+
+
 
 ||| Output a log message
 |||
