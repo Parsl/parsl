@@ -515,8 +515,20 @@ fn main() {
                 println!("Processing part");
                 // part is a pickled python dict with a 'type' tag
                 // a part here is not necessarily a result: this channel also contains heartbeats and monitoring messages.
+
                 // TODO: implement monitoring handling
+                //   PROBLEM: monitoring messages here cannot be unpickled by serde_pickle:
+                //   serde pickle doesn't know how to unpickle arbitrary globals with REDUCE
+                //   and (according to log messages I added to serde-pickle)
+                //     -  parsl.monitoring.message_type.MessageType
+                //     -  datetime.datetime
+                // We do need to unpickle this message enough to see what kind of message it is to route
+                // it correctly, even though we don't at rust level need to understand those other
+                // un-unpickleable types...
+
                 // TODO: implement heartbeat handling
+
+
                 let p = serde_pickle::de::value_from_slice(
                     &part_pickle_bytes,
                     serde_pickle::de::DeOptions::new(),
