@@ -275,7 +275,9 @@ fn main() {
         std::collections::BTreeMap::new();
 
     // this will maintain the task count for OUTSTANDING_C
-    let mut outstanding_c = 0;
+    // but for now is not implemented, and perhaps can be removed from the protocol
+    // - see issue #3365
+    // let mut outstanding_c = 0;
 
     loop {
         // TODO: unclear to me what it means to share this sockets list across multiple loop iterations?
@@ -453,6 +455,13 @@ fn main() {
                     serde_pickle::ser::SerOptions::new(),
                 )
                 .expect("pickling MANAGERS list")
+            } else if cmd == serde_pickle::Value::String("WORKER_PORTS".to_string()) {
+                serde_pickle::ser::value_to_vec(
+                    // TODO: allocate these ports dynamically - since PR #3461 this has been possible
+                    &serde_pickle::value::Value::Tuple([serde_pickle::value::Value::I64(9003), serde_pickle::value::Value::I64(9004)].to_vec()),
+                    serde_pickle::ser::SerOptions::new(),
+                )
+                .expect("pickling WORKER_PORTS tuple")
             } else if cmd == serde_pickle::Value::String("OUTSTANDING_C".to_string()) {
                 // number of outstanding tasks known to htex: informally, tasks we've received that we havent' processed
                 // a result for. To deal with worker failure, we'll need a structure mapping tasks and managers to each
