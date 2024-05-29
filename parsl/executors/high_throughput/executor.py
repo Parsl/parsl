@@ -260,11 +260,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  enable_mpi_mode: bool = False,
                  mpi_launcher: str = "mpiexec",
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
-                 encrypted: bool = False):
+                 encrypted: bool = False,
+                 benc_interchange_cli: str = "lol"):
 
         logger.debug("Initializing HighThroughputExecutor")
 
         BlockProviderExecutor.__init__(self, provider=provider, block_error_handler=block_error_handler)
+        self.benc_interchange_cli = benc_interchange_cli
         self.label = label
         self.worker_debug = worker_debug
         self.storage_access = storage_access
@@ -532,12 +534,15 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         get the worker task and result ports that the interchange has bound to.
         """
 
-        self.interchange_proc = subprocess.Popen(args=["rusterchange/target/debug/rusterchange", str(self.cert_dir)])
-
-        # this is going to leave residual elixirchange around because killing shell won't kill children...
-        # self.interchange_proc = subprocess.Popen(args=["cd elixirchange; mix run --no-halt"], shell=True)
-
-        # self.interchange_proc = subprocess.Popen(args=["cd idris2interchange ; gcc -shared gluezmq.c -lzmq -o glue_zmq.so && idris2 main.idr -x main"], shell=True)
+        if self.benc_interchange_cli == "rust":
+            self.interchange_proc = subprocess.Popen(args=["rusterchange/target/debug/rusterchange", str(self.cert_dir)])
+        elif self.benc_interchange_cli == "elixir":
+            # this is going to leave residual elixirchange around because killing shell won't kill children...
+            self.interchange_proc = subprocess.Popen(args=["cd elixirchange; mix run --no-halt"], shell=True)
+        elif self.benc_interchange_cli == "idris2":
+            self.interchange_proc = subprocess.Popen(args=["cd idris2interchange ; gcc -shared gluezmq.c -lzmq -o glue_zmq.so && idris2 main.idr -x main"], shell=True)
+        else:
+            raise RuntimeError("unknown benc-interchange type")
 
         # TODO: all these arguments below aren't used... so are they necessary? should there be
         # tests discovering they aren't used/passed?
