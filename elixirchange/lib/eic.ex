@@ -82,11 +82,12 @@ defmodule EIC.CommandChannel do
   end
 
   def loop(socket) do
-    IO.puts("CommandChannel: recv")
+    IO.puts("CommandChannel: blocing recv on zmq command channel")
     {:ok, msg} = :erlzmq.recv(socket)
     # msg is a pickled object that varies depending on the command
-    IO.inspect(msg)
+    # IO.inspect(msg)
     {command, ""} = Unpickler.load!(msg)
+    IO.puts("Received command channel command: ")
     IO.inspect(command)
 
     # now dispatch this command using case matching... TODO
