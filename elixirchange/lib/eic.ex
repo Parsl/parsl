@@ -82,7 +82,7 @@ defmodule EIC.CommandChannel do
   end
 
   def loop(socket) do
-    IO.puts("CommandChannel: blocing recv on zmq command channel")
+    IO.puts("CommandChannel: blocking recv on zmq command channel")
     {:ok, msg} = :erlzmq.recv(socket)
     # msg is a pickled object that varies depending on the command
     # IO.inspect(msg)
