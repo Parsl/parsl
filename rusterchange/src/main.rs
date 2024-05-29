@@ -521,7 +521,7 @@ fn main() {
                     &part_pickle_bytes,
                     serde_pickle::de::DeOptions::new(),
                 )
-                .expect("protocol error");
+                .expect("protocol error: ZMQ message part could not be unpickled");
 
                 let serde_pickle::Value::Dict(part_dict) = p else {
                     panic!("protocol violation")
