@@ -12,6 +12,8 @@ use std::io::BufRead;
 
 // TODO: terminology needs clarifying and consistenifying: managers, pools, workers. are we sending things to/from a "pool" or "manager"? is the ID for a "manager" or for a "pool"? -- issue #3369
 
+// TODO: rename "worker" to "pool" or "manager" throughout this code
+
 // threadedness: single threaded as much as possible. I initially thought I'd use async rust for this, but a poll-loop has been how things have naturally flushed out for me. That perhaps also reflects on how I thought the Python interchange should perhaps use async Python instead of threads, but actually might be better fully poll driven. CURVE in the Python interchange uses an auth thread, but the communications are all done over zmq sockets so does that mean I can implement that socket in my regular poll loop?  libzmq might be using threads internally though? but we hopefully aren't introducing thread related code in the rust interchange implementation itself.   using async might make it easier to understand some of the different bits of code if they start getting too tangled together, but I think everything is message or time driven - there aren't any state machines to manually construct that async would help with, I think? that doesn't mean I can't use it gratuitously, though.
 
 // TODO: there's a multiprocessing Queue used at start-up that this interchange does not implement
@@ -370,7 +372,7 @@ fn main() {
 
         if sockets[1].get_revents().contains(zmq::PollEvents::POLLIN) {
             println!("reverse message on tasks_interchange_to_workers");
-            // this is JSON, not pickle
+            // this is JSON, not pickle (TODO: don't use JSON - issue #3370)
             let message = zmq_tasks_interchange_to_workers
                 .recv_multipart(0)
                 .expect("reading worker message from tasks_submit_to_interchange channel");
@@ -408,6 +410,18 @@ fn main() {
                 }
                 // TODO: it's an error for a manager ID to be used... is that a protocol error? or some other error?
                 manager_info.insert(manager_id.clone(), ());
+            } else if msg_type == "heartbeat" {
+                panic!("don't know how to handle heartbeats from worker to interchange")
+                // Heartbeat protocol:
+                //  Heartbeats are driven by the workers: a worker sends a heartbeat to the
+                //  interchange. The interchange should reply on this same channel with
+                //  a heartbeat response.
+                //  The last heard from time should be updated in the manager record in the
+                //  interchange: if we go more than heartbeat_threshold (a configurable parameter)
+                //  past last heard from, then we *expire* the manager, which involves:
+                //    * sending a failure message (ManagerLost) for all tasks known to be on that manager.
+                //    * telling the monitoring system
+                //    * no longer scheduling tasks onto that manager
             } else {
                 panic!("unknown message type")
             };
