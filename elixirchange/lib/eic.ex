@@ -103,6 +103,11 @@ defmodule EIC.CommandChannel do
     loop(socket)
   end
 
+  def handle_command("WORKER_PORTS") do
+    # TOOD: this can be dynamic... (since #3461)
+    {9003, 9004}
+  end
+
   def handle_command("CONNECTED_BLOCKS") do
     # TODO: talk to some process that will keep track of a set of seen blocks
     []
