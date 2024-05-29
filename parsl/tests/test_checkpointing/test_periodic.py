@@ -9,12 +9,6 @@ def local_setup():
     parsl.load(fresh_config())
 
 
-def local_teardown():
-    # explicit clear without dfk.cleanup here, because the
-    # test does that already
-    parsl.clear()
-
-
 @python_app(cache=True)
 def slow_double(x, sleep_dur=1):
     import time
@@ -39,9 +33,10 @@ def test_periodic():
     with parsl.dfk():
         futs = [slow_double(sleep_for) for _ in range(4)]
         [f.result() for f in futs]
+        run_dir = parsl.dfk().run_dir
 
     # Here we will check if the loglines came back with 5 seconds deltas
-    with open("{}/parsl.log".format(parsl.dfk().run_dir)) as f:
+    with open("{}/parsl.log".format(run_dir)) as f:
         log_lines = f.readlines()
     expected_msg = " Done checkpointing"
     expected_msg2 = " No tasks checkpointed in this pass"

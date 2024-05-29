@@ -37,16 +37,9 @@ def test_cpu_affinity_explicit():
     config.executors[0].max_workers_per_node = 1
 
     logger.debug(f"config: {config}")
-    # TODO: is there a `with` style for this, to properly deal with exceptions?
 
-    parsl.load(config)
-    try:
-
+    with parsl.load(config):
         worker_affinity = my_affinity().result()
         logger.debug(f"worker reported this affinity: {worker_affinity}")
         assert len(worker_affinity) == 1
         assert worker_affinity == set((single_core,))
-
-    finally:
-        parsl.dfk().cleanup()
-        parsl.clear()

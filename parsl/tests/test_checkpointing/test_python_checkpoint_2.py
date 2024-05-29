@@ -19,7 +19,6 @@ def parsl_configured(run_dir, **kw):
     yield dfk
 
     parsl.dfk().cleanup()
-    parsl.clear()
 
 
 @python_app(cache=True)

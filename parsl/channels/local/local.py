@@ -107,13 +107,10 @@ class LocalChannel(Channel, RepresentationMixin):
     def pull_file(self, remote_source, local_dir):
         return self.push_file(remote_source, local_dir)
 
-    def close(self):
-        ''' There's nothing to close here, and this really doesn't do anything
-
-        Returns:
-             - False, because it really did not "close" this channel.
+    def close(self) -> None:
+        ''' There's nothing to close here, and so this doesn't do anything
         '''
-        return False
+        pass
 
     def isdir(self, path):
         """Return true if the path refers to an existing directory.
