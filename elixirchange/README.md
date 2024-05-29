@@ -1,5 +1,13 @@
 # EIC
 
+install in benc dev container with:
+
+apt install elixir libzmq3-dev erlang-dev
+
+then run:
+
+pytest -s parsl/tests/ --config parsl/tests/configs/htex_elixir.py 
+
 **TODO: Add description**
 
 ## Installation
