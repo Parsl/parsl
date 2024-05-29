@@ -275,9 +275,11 @@ fn main() {
         std::collections::BTreeMap::new();
 
     // this will maintain the task count for OUTSTANDING_C
-    // but for now is not implemented, and perhaps can be removed from the protocol
+    // but perhaps can be removed from the protocol
     // - see issue #3365
-    // let mut outstanding_c = 0;
+    // what's the maximum count of tasks we should expect here?
+    // a 64 bit int is almost definitely big enough...
+    let mut outstanding_c = 0;
 
     loop {
         // TODO: unclear to me what it means to share this sockets list across multiple loop iterations?
@@ -344,6 +346,7 @@ fn main() {
             };
 
             println!("Received htex task {}", task_id);
+            outstanding_c += 1;
 
             // perhaps consider that i'll want to do richer matchmaking based on resource stuff contained in protocol (see outreachy internship) and be prepared to use something richer than a queue?
             // if just matchmaking based on queues without looking at the task, don't need to do any deserialization here... the pickle can go into the queue and be dispatched later.
@@ -469,7 +472,11 @@ fn main() {
                 // TODO: the test suite looks like it doesn't ever test the main Python interchange impl of OUTSTANDING_C
                 // (but maybe work is better done *removing* that command rather than testing it - see issue #3365 - and
                 // so I don't need to think about this too much)
-                panic!("OUTSTANDING_C is not implemented")
+                serde_pickle::ser::value_to_vec(
+                    &serde_pickle::value::Value::I64(outstanding_c),
+                    serde_pickle::ser::SerOptions::new(),
+                )
+                .expect("pickling OUTSTANDING_C count")
             } else {
                 panic!("This command is not implemented")
             };
@@ -509,6 +516,8 @@ fn main() {
 
                 println!("Result-like message part type: {}", part_type);
                 if part_type == "result" {
+                    outstanding_c -= 1;
+                    assert!(outstanding_c >= 0);
                     // pass the message on without reserializing it
                     zmq_results_interchange_to_submit
                         .send_multipart([&part_pickle_bytes], 0)
