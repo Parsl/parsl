@@ -529,9 +529,13 @@ fn main() {
                 // TODO: implement heartbeat handling
 
 
+                // replace_unresolved_globals() will replace unknown globals with None,
+                // which will let the code partially deserialize monitoring messages - enough
+                // I hope to be able to ignore them (although possibly not forward them onwards
+                // due to reserialization...)
                 let p = serde_pickle::de::value_from_slice(
                     &part_pickle_bytes,
-                    serde_pickle::de::DeOptions::new(),
+                    serde_pickle::de::DeOptions::new().replace_unresolved_globals(),
                 )
                 .expect("protocol error: ZMQ message part could not be unpickled");
 
@@ -557,6 +561,8 @@ fn main() {
                             manager_id: manager_id.clone(),
                         })
                         .expect("enqueuing slot on result");
+                } else if part_type == "monitoring" {
+                    println!("Ignoring monitoring message part because deserialization is quite difficult")
                 } else {
                     panic!("Unknown result-like message part type");
                 }
