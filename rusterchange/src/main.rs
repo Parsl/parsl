@@ -281,6 +281,16 @@ fn main() {
     // a 64 bit int is almost definitely big enough...
     let mut outstanding_c = 0;
 
+    // a count for the WORKERS command...
+    // TODO: this is used in strategy for a log message, not as part
+    // of strategy, and so could be moved elsewhere in the code - or
+    // even removed, although it is useful to have that information in
+    // a submit side log message somewhere.
+    // TODO: this is not properly implemented: this impl always returns
+    // this constant 0 from here. But nothing inside parsl except a log
+    // message requires it to work.
+    let workers = 0;
+
     loop {
         // TODO: unclear to me what it means to share this sockets list across multiple loop iterations?
 
@@ -477,6 +487,14 @@ fn main() {
                     serde_pickle::ser::SerOptions::new(),
                 )
                 .expect("pickling OUTSTANDING_C count")
+            } else if cmd == serde_pickle::Value::String("WORKERS".to_string()) {
+                // TODO: I think this behaviour is not tested in the test suite?
+                // ... like for outstanding_c
+                serde_pickle::ser::value_to_vec(
+                    &serde_pickle::value::Value::I64(workers),
+                    serde_pickle::ser::SerOptions::new(),
+                )
+                .expect("pickling WORKERS count")
             } else {
                 panic!("This command is not implemented")
             };
