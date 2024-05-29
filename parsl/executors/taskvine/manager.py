@@ -130,6 +130,15 @@ def _prepare_environment_regular(m, manager_config, t, task, poncho_env_to_file,
         t.add_environment(poncho_env_file)
 
 
+def _handle_file_declaration_protocol(m, filename, cache):
+    if "taskvinetemp://" in filename:
+        return m.declare_temp()
+    elif "https://" in filename or "http://" in filename:
+        return m.declare_url(filename, cache=cache, peer_transfer=True)
+    else:
+        return m.declare_file(filename, cache=cache, peer_transfer=True)
+
+
 @wrap_with_logs
 def _taskvine_submit_wait(ready_task_queue=None,
                           finished_task_queue=None,
@@ -366,18 +375,26 @@ def _taskvine_submit_wait(ready_task_queue=None,
                         if spec.parsl_name in parsl_file_name_to_vine_file:
                             task_in_file = parsl_file_name_to_vine_file[spec.parsl_name]
                         else:
-                            task_in_file = m.declare_file(spec.parsl_name, cache=spec.cache, peer_transfer=True)
+                            task_in_file = _handle_file_declaration_protocol(m, spec.parsl_name, spec.cache)
                             parsl_file_name_to_vine_file[spec.parsl_name] = task_in_file
-                        t.add_input(task_in_file, spec.parsl_name)
+                        logger.debug("Adding input file {}, {} to TaskVine".format(spec.parsl_name, task.executor_id))
+                        if spec.netloc == '':
+                            t.add_input(task_in_file, spec.parsl_name)
+                        else:
+                            t.add_input(task_in_file, spec.netloc)
 
                 for spec in task.output_files:
                     if spec.stage:
                         if spec.parsl_name in parsl_file_name_to_vine_file:
                             task_out_file = parsl_file_name_to_vine_file[spec.parsl_name]
                         else:
-                            task_out_file = m.declare_file(spec.parsl_name, cache=spec.cache, peer_transfer=True)
+                            task_out_file = _handle_file_declaration_protocol(m, spec.parsl_name, spec.cache)
                             parsl_file_name_to_vine_file[spec.parsl_name] = task_out_file
-                        t.add_output(task_out_file, spec.parsl_name)
+                        logger.debug("Adding output file {}, {} to TaskVine".format(spec.parsl_name, task.executor_id))
+                        if spec.netloc == '':
+                            t.add_output(task_out_file, spec.parsl_name)
+                        else:
+                            t.add_output(task_out_file, spec.netloc)
 
             # Submit the task to the TaskVine object
             logger.debug("Submitting executor task {}, {} to TaskVine".format(task.executor_id, t))
