@@ -258,6 +258,7 @@ fn main() {
 
     // In the workers to interchange direction, this carries results from tasks which were previously sent over the tasks_workers_to_interchange channel. Messges take the form of arbitrary length multipart messages. The first part as received from recv_multipart will be the manager ID (added by ZMQ because this is a ROUTER socket) and then each subsequent part will be a pickle containing a result. Note that this is different from the wrapping used on tasks_interchange_to_workers, where a single pickle object is sent, containing a pickle/python level list of task definitions. TODO: consistentify the multipart vs python list form.
     // The pickled object is a Python dictionary with a type entry that is one of these strings:  'result' 'monitoring' or 'heartbeat'.
+    // Heartbeat is not used for much - see #3464
     // The rest of the dictionary depends on that type.
     // TODO: this is a pickled dict, vs tasks_interchange_to_workers
     // TODO: this channel could be merged with tasks_interchange_to_workers, issue #3022, #2165
@@ -540,8 +541,8 @@ fn main() {
                 // it correctly, even though we don't at rust level need to understand those other
                 // un-unpickleable types...
 
-                // TODO: implement heartbeat handling
-
+                // TODO: implement heartbeat handling - see issue #3464 that actually nothing much happens here other
+                // than forwarding it on as a result
 
                 // replace_unresolved_globals() will replace unknown globals with None,
                 // which will let the code partially deserialize monitoring messages - enough
