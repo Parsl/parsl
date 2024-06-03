@@ -44,5 +44,9 @@ def test_executor():
         # Make sure only one function was registered
         assert exc.app_count == 1
 
+
+@mark.local
+def test_executor_user_warning():
+    """tests that some kind of warning comes back for some kind of shutdown?"""
     with warns(UserWarning):
         ParslPoolExecutor(make_config()).shutdown(False, cancel_futures=True)
