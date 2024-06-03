@@ -258,7 +258,7 @@ fn main() {
 
     // In the workers to interchange direction, this carries results from tasks which were previously sent over the tasks_workers_to_interchange channel. Messges take the form of arbitrary length multipart messages. The first part as received from recv_multipart will be the manager ID (added by ZMQ because this is a ROUTER socket) and then each subsequent part will be a pickle containing a result. Note that this is different from the wrapping used on tasks_interchange_to_workers, where a single pickle object is sent, containing a pickle/python level list of task definitions. TODO: consistentify the multipart vs python list form.
     // The pickled object is a Python dictionary with a type entry that is one of these strings:  'result' 'monitoring' or 'heartbeat'.
-    // Heartbeat is not used for much - see #3464
+    // This heartbeat is not used for much - see #3464
     // The rest of the dictionary depends on that type.
     // TODO: this is a pickled dict, vs tasks_interchange_to_workers
     // TODO: this channel could be merged with tasks_interchange_to_workers, issue #3022, #2165
@@ -412,7 +412,7 @@ fn main() {
                 // TODO: it's an error for a manager ID to be used... is that a protocol error? or some other error?
                 manager_info.insert(manager_id.clone(), ());
             } else if msg_type == "heartbeat" {
-                panic!("don't know how to handle heartbeats from worker to interchange")
+                panic!("don't know how to handle heartbeats from worker to interchange on task channel")
                 // Heartbeat protocol:
                 //  Heartbeats are driven by the workers: a worker sends a heartbeat to the
                 //  interchange. The interchange should reply on this same channel with
@@ -581,6 +581,10 @@ fn main() {
                 } else {
                     panic!("Unknown result-like message part type");
                 }
+                // TODO: do we ever get a heartbeat here? there is code in the python interchange to do something
+                // (but not much) with such a message: see issue #3464. Is there some functionality to be tested
+                // or does #3464 mean that heartbeat path should be removed (on the way to a single
+                // worker pool <-> interchange zmq channel? see #3022)
             }
         }
 
