@@ -255,7 +255,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  mpi_launcher: str = "mpiexec",
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
                  encrypted: bool = False,
-                 benc_interchange_cli: str = "lol"):
+                 benc_interchange_cli: str = "rust"):
 
         logger.debug("Initializing HighThroughputExecutor")
 
@@ -815,7 +815,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         # because if the interchange is gone away we should do something other than
         # hang.
         if self.interchange_proc.poll() is None:
-            logger.info("Unable to terminate Interchange process; sending SIGKILL")
+            logger.error("Unable to terminate Interchange process; sending SIGKILL")
             self.interchange_proc.kill()
 
         # self.interchange_proc.close()
