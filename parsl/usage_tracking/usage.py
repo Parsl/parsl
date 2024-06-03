@@ -121,12 +121,7 @@ class UsageTracker:
             1. dfk.config.usage_tracking is set to False
 
         """
-        track = True
-
-        if not self.config.usage_tracking:
-            track = False
-
-        return track
+        return self.config.usage_tracking
 
     def construct_start_message(self) -> bytes:
         """Collect preliminary run info at the start of the DFK.
