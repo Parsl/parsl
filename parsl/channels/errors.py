@@ -1,7 +1,8 @@
 ''' Exceptions raise by Apps.
 '''
-from parsl.errors import ParslError
 from typing import Optional
+
+from parsl.errors import ParslError
 
 
 class ChannelError(ParslError):

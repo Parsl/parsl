@@ -7,8 +7,8 @@ import pytest
 
 import parsl
 from parsl.config import Config
-from parsl.dataflow.errors import DependencyError
 from parsl.dataflow.dependency_resolvers import DEEP_DEPENDENCY_RESOLVER
+from parsl.dataflow.errors import DependencyError
 
 
 def local_config():

@@ -1,3 +1,4 @@
+import random
 import threading
 
 import pytest
@@ -8,8 +9,6 @@ from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SimpleLauncher
 from parsl.providers import LocalProvider
-
-import random
 
 # we need some blocks, but it doesn't matter too much how many, as long
 # as they can all start up and get registered within the try_assert

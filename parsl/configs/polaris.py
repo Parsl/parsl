@@ -1,8 +1,8 @@
 from parsl.addresses import address_by_interface
+from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import MpiExecLauncher
 from parsl.providers import PBSProProvider
-from parsl.config import Config
 
 # There are three user parameters to change for the PBSProProvider:
 #  YOUR_ACCOUNT: Account to charge usage

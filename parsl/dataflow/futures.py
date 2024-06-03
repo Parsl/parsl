@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from concurrent.futures import Future
 import logging
 import threading
+from concurrent.futures import Future
 from typing import Any, Optional, Sequence, Union
 
 import parsl.app.app as app
-
 from parsl.app.futures import DataFuture
 from parsl.dataflow.taskrecord import TaskRecord
 

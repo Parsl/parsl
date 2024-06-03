@@ -8,8 +8,7 @@ from enum import Enum
 from typing import Dict, List
 
 from parsl.multiprocessing import SpawnContext
-from parsl.serialize import (pack_res_spec_apply_message,
-                             unpack_res_spec_apply_message)
+from parsl.serialize import pack_res_spec_apply_message, unpack_res_spec_apply_message
 
 logger = logging.getLogger(__name__)
 

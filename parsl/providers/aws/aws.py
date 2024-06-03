@@ -4,13 +4,12 @@ import os
 import time
 from string import Template
 
-from parsl.errors import ConfigurationError
+from parsl.errors import ConfigurationError, OptionalModuleMissing
 from parsl.jobs.states import JobState, JobStatus
+from parsl.launchers import SingleNodeLauncher
 from parsl.providers.aws.template import template_string
 from parsl.providers.base import ExecutionProvider
-from parsl.errors import OptionalModuleMissing
 from parsl.utils import RepresentationMixin
-from parsl.launchers import SingleNodeLauncher
 
 logger = logging.getLogger(__name__)
 

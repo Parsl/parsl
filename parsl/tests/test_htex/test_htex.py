@@ -4,8 +4,7 @@ from unittest import mock
 
 import pytest
 
-from parsl import curvezmq
-from parsl import HighThroughputExecutor
+from parsl import HighThroughputExecutor, curvezmq
 from parsl.multiprocessing import ForkProcess
 
 _MOCK_BASE = "parsl.executors.high_throughput.executor"

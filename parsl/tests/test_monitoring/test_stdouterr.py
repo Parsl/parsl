@@ -3,16 +3,16 @@
 
 import logging
 import os
-import parsl
-import pytest
 import re
 import time
-
 from typing import Union
 
+import pytest
+
+import parsl
 from parsl.config import Config
-from parsl.data_provider.files import File
 from parsl.data_provider.data_manager import default_staging
+from parsl.data_provider.files import File
 from parsl.data_provider.staging import Staging
 from parsl.executors import HighThroughputExecutor
 from parsl.monitoring import MonitoringHub

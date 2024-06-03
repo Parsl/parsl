@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
-
 from typing import Dict, Tuple
 
 

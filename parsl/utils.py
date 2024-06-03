@@ -7,7 +7,19 @@ import threading
 import time
 from contextlib import contextmanager
 from types import TracebackType
-from typing import Any, Callable, List, Sequence, Tuple, Union, Generator, IO, AnyStr, Dict, Optional
+from typing import (
+    IO,
+    Any,
+    AnyStr,
+    Callable,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 import typeguard
 from typing_extensions import Type
@@ -15,7 +27,6 @@ from typing_extensions import Type
 import parsl
 from parsl.app.errors import BadStdStreamFile
 from parsl.version import VERSION
-
 
 try:
     import setproctitle as setproctitle_module

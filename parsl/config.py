@@ -1,17 +1,17 @@
 import logging
-import typeguard
-
 from typing import Callable, Iterable, Optional, Sequence, Union
+
+import typeguard
 from typing_extensions import Literal
 
-from parsl.utils import RepresentationMixin
 from parsl.dataflow.dependency_resolvers import DependencyResolver
+from parsl.dataflow.taskrecord import TaskRecord
+from parsl.errors import ConfigurationError
 from parsl.executors.base import ParslExecutor
 from parsl.executors.threads import ThreadPoolExecutor
-from parsl.errors import ConfigurationError
-from parsl.dataflow.taskrecord import TaskRecord
 from parsl.monitoring import MonitoringHub
 from parsl.usage_tracking.api import UsageInformation
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 

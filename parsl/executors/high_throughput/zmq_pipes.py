@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 
-import zmq
 import logging
 import threading
 import time
 from typing import Optional
 
+import zmq
+
 from parsl import curvezmq
 from parsl.errors import InternalConsistencyError
-from parsl.executors.high_throughput.errors import CommandClientBadError, CommandClientTimeoutError
+from parsl.executors.high_throughput.errors import (
+    CommandClientBadError,
+    CommandClientTimeoutError,
+)
 
 logger = logging.getLogger(__name__)
 
