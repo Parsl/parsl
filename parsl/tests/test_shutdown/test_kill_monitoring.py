@@ -1,9 +1,10 @@
 import os
-import parsl
-import pytest
 import signal
 import time
 
+import pytest
+
+import parsl
 from parsl.tests.configs.htex_local_alternate import fresh_config
 
 # This is a very generous upper bound on expected shutdown time of target

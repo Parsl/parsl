@@ -1,12 +1,13 @@
-import dill
 import functools
-import pickle
 import logging
+import pickle
+
+import dill
 
 logger = logging.getLogger(__name__)
-from parsl.serialize.base import SerializerBase
-
 from typing import Any
+
+from parsl.serialize.base import SerializerBase
 
 
 class PickleSerializer(SerializerBase):

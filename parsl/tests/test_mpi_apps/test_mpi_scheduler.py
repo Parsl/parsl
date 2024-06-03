@@ -1,9 +1,14 @@
 import logging
 import os
-from unittest import mock
-import pytest
 import pickle
-from parsl.executors.high_throughput.mpi_resource_management import TaskScheduler, MPITaskScheduler
+from unittest import mock
+
+import pytest
+
+from parsl.executors.high_throughput.mpi_resource_management import (
+    MPITaskScheduler,
+    TaskScheduler,
+)
 from parsl.multiprocessing import SpawnContext
 from parsl.serialize import pack_res_spec_apply_message, unpack_res_spec_apply_message
 

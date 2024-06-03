@@ -1,11 +1,15 @@
-import pytest
 import threading
 import time
-import zmq
-from parsl import curvezmq
-from parsl.executors.high_throughput.zmq_pipes import CommandClient
-from parsl.executors.high_throughput.errors import CommandClientTimeoutError, CommandClientBadError
 
+import pytest
+import zmq
+
+from parsl import curvezmq
+from parsl.executors.high_throughput.errors import (
+    CommandClientBadError,
+    CommandClientTimeoutError,
+)
+from parsl.executors.high_throughput.zmq_pipes import CommandClient
 
 # Time constant used for timeout tests: various delays and
 # timeouts will be appropriate multiples of this, but the

@@ -1,6 +1,5 @@
 from datetime import datetime
 
-
 DB_DATE_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 

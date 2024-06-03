@@ -1,7 +1,6 @@
+import functools
 import logging
 import threading
-import functools
-
 from typing import Callable, Optional
 
 

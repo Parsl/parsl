@@ -12,10 +12,9 @@ provided for logging:
 """
 import io
 import logging
-import typeguard
-
 from typing import Optional
 
+import typeguard
 
 DEFAULT_FORMAT = (
     "%(created)f %(asctime)s %(processName)s-%(process)d "

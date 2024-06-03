@@ -6,15 +6,15 @@
 # of the globus staging provider
 
 import logging
+
 import pytest
 
 import parsl
-
 from parsl import bash_app, python_app
 from parsl.config import Config
 from parsl.data_provider.files import File
 from parsl.executors.threads import ThreadPoolExecutor
-from parsl.tests.test_staging.staging_provider import NoOpTestingFileStaging, NoOpError
+from parsl.tests.test_staging.staging_provider import NoOpError, NoOpTestingFileStaging
 
 logger = logging.getLogger(__name__)
 

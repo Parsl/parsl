@@ -1,4 +1,5 @@
 import pytest
+
 from parsl import python_app
 from parsl.dataflow.memoization import id_for_memo
 

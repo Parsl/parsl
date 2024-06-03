@@ -6,21 +6,21 @@ import pathlib
 import random
 import re
 import shutil
-import string
-import time
-import types
 import signal
+import string
 import sys
 import tempfile
 import threading
+import time
 import traceback
+import types
 import typing as t
 from datetime import datetime
 from glob import glob
 from itertools import chain
 
-import pytest
 import _pytest.runner as runner
+import pytest
 
 import parsl
 from parsl.dataflow.dflow import DataFlowKernelLoader

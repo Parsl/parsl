@@ -1,7 +1,7 @@
 from typing import Optional
 
-from parsl.errors import ParslError
 from parsl.app.errors import AppException
+from parsl.errors import ParslError
 
 
 class WorkQueueTaskFailure(AppException):

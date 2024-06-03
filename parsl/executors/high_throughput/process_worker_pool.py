@@ -1,39 +1,41 @@
 #!/usr/bin/env python3
 
 import argparse
-import logging
-import os
-import sys
-import platform
-import threading
-import pickle
-import time
-import queue
-import uuid
-from typing import Sequence, Optional, Dict, List
-
-import zmq
-import math
 import json
-import psutil
+import logging
+import math
 import multiprocessing
+import os
+import pickle
+import platform
+import queue
+import sys
+import threading
+import time
+import uuid
 from multiprocessing.managers import DictProxy
 from multiprocessing.sharedctypes import Synchronized
+from typing import Dict, List, Optional, Sequence
+
+import psutil
+import zmq
 
 from parsl import curvezmq
-from parsl.process_loggers import wrap_with_logs
-from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
+from parsl.executors.high_throughput.mpi_prefix_composer import (
+    VALID_LAUNCHERS,
+    compose_all,
+)
+from parsl.executors.high_throughput.mpi_resource_management import (
+    MPITaskScheduler,
+    TaskScheduler,
+)
 from parsl.executors.high_throughput.probe import probe_addresses
 from parsl.multiprocessing import SpawnContext
-from parsl.serialize import unpack_res_spec_apply_message, serialize
-from parsl.executors.high_throughput.mpi_resource_management import (
-    TaskScheduler,
-    MPITaskScheduler
-)
-
-from parsl.executors.high_throughput.mpi_prefix_composer import compose_all, VALID_LAUNCHERS
+from parsl.process_loggers import wrap_with_logs
+from parsl.serialize import serialize, unpack_res_spec_apply_message
+from parsl.version import VERSION as PARSL_VERSION
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 DRAINED_CODE = (2 ** 32) - 2

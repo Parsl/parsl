@@ -1,10 +1,9 @@
-from functools import update_wrapper
-from functools import partial
-from inspect import signature, Parameter
 import logging
+from functools import partial, update_wrapper
+from inspect import Parameter, signature
 
-from parsl.app.errors import wrap_error
 from parsl.app.app import AppBase
+from parsl.app.errors import wrap_error
 from parsl.data_provider.files import File
 from parsl.dataflow.dflow import DataFlowKernelLoader
 
@@ -17,6 +16,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
     """
     import os
     import subprocess
+
     import parsl.app.errors as pe
     from parsl.utils import get_std_fname_mode
 

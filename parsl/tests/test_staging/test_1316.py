@@ -1,8 +1,9 @@
+import time
+
 import pytest
 
 import parsl
-import time
-from parsl import python_app, ThreadPoolExecutor
+from parsl import ThreadPoolExecutor, python_app
 from parsl.config import Config
 from parsl.data_provider.files import File
 from parsl.data_provider.staging import Staging
