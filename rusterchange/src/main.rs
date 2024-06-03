@@ -1,6 +1,7 @@
 use byteorder::ReadBytesExt;
 use queues::IsQueue;
 use std::io::BufRead;
+use std::time::Instant;
 
 // Vocab:
 
@@ -62,6 +63,12 @@ struct Task {
 #[derive(Clone)]
 struct Slot {
     manager_id: Vec<u8>,
+}
+
+
+struct ManagerInfo {
+    alive: bool,
+    last_heard: Instant
 }
 
 fn main() {
@@ -299,7 +306,13 @@ fn main() {
     let mut task_queue: queues::Queue<Task> = queues::Queue::new();
     let mut slot_queue: queues::Queue<Slot> = queues::Queue::new();
 
-    let mut manager_info: std::collections::BTreeMap<Vec<u8>, ()> =
+    // TODO: what's a manager ID? is it an arbitrary byte sequence or is it the
+    // more restricted ASCII-bytes-from-a-UUID-that-are-just-hex-chars that parsl
+    // uses in practice?
+    // What happens to log messages in the former case, where logs take the
+    // arbitrary byte sequence and render it as text?
+
+    let mut manager_info: std::collections::BTreeMap<Vec<u8>, ManagerInfo> =
         std::collections::BTreeMap::new();
 
     // this will maintain the task count for OUTSTANDING_C
@@ -435,9 +448,8 @@ fn main() {
                         .expect("enqueuing slot on registration");
                 }
                 // TODO: it's an error for a manager ID to be used... is that a protocol error? or some other error?
-                manager_info.insert(manager_id.clone(), ());
+                manager_info.insert(manager_id.clone(), ManagerInfo {alive: true, last_heard: Instant::now()});
             } else if msg_type == "heartbeat" {
-                panic!("don't know how to handle heartbeats from worker to interchange on task channel")
                 // Heartbeat protocol:
                 //  Heartbeats are driven by the workers: a worker sends a heartbeat to the
                 //  interchange. The interchange should reply on this same channel with
@@ -448,6 +460,13 @@ fn main() {
                 //    * sending a failure message (ManagerLost) for all tasks known to be on that manager.
                 //    * telling the monitoring system
                 //    * no longer scheduling tasks onto that manager
+
+                let mi = manager_info.get_mut(manager_id).unwrap();
+                let old_instant = mi.last_heard;
+
+                mi.last_heard = Instant::now();
+
+                println!("heartbeat from worker to interchange on task channel: {0:?} -> {1:?}", old_instant, mi.last_heard)
             } else {
                 panic!("unknown message type")
             };
@@ -608,14 +627,18 @@ fn main() {
                         })
                         .expect("enqueuing slot on result");
                 } else if part_type == "monitoring" {
+                    // TODO: this should be implemented and tested
                     println!("Ignoring monitoring message part because deserialization is quite difficult")
+                } else if part_type == "heartbeat" {
+                    // TODO: there is code in the python interchange to do something
+                    // (but not much) with such a message: see issue #3464. Is there some functionality to be tested
+                    // or does #3464 mean that heartbeat path should be removed (on the way to a single
+                    // worker pool <-> interchange zmq channel? see #3022)? This code should perhaps forward it on
+                    // to the executor like the python version does?
+                    println!("Ignoring heartbeat on worker->interchange results channel as it doesn't have any timeout behaviour")
                 } else {
                     panic!("Unknown result-like message part type");
                 }
-                // TODO: do we ever get a heartbeat here? there is code in the python interchange to do something
-                // (but not much) with such a message: see issue #3464. Is there some functionality to be tested
-                // or does #3464 mean that heartbeat path should be removed (on the way to a single
-                // worker pool <-> interchange zmq channel? see #3022)
             }
         }
 
