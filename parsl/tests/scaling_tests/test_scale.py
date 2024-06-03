@@ -5,15 +5,16 @@ import time
 
 import parsl
 
+# parsl.set_stream_logger()
+# config.executors[0].provider.tasks_per_node = 4
+# parsl.load(config)
+from parsl.app.app import python_app  # , bash_app
+
 # from parsl.tests.configs.htex_local import config
 # from htex_local import config
 # from parsl.configs.local_threads import config
 # from parsl.configs.local_ipp import config
 
-# parsl.set_stream_logger()
-# config.executors[0].provider.tasks_per_node = 4
-# parsl.load(config)
-from parsl.app.app import python_app  # , bash_app
 
 
 @python_app

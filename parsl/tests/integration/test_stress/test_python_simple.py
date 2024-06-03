@@ -1,10 +1,12 @@
+import argparse
+import time
+
 import parsl
 from parsl import python_app
 from parsl.configs.htex_local import config
+
 # from parsl.configs.local_threads import config
 
-import time
-import argparse
 
 
 @python_app

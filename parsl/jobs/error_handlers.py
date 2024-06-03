@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Dict, Tuple
 
 import parsl.executors.status_handling as status_handling
-from parsl.jobs.states import JobStatus, JobState
 from parsl.jobs.errors import TooManyJobFailuresError
+from parsl.jobs.states import JobState, JobStatus
 
 
 def noop_error_handler(executor: status_handling.BlockProviderExecutor, status: Dict[str, JobStatus], threshold: int = 3) -> None:

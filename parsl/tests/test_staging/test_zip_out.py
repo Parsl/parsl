@@ -1,18 +1,16 @@
-import parsl
-import pytest
 import zipfile
 
-from parsl.data_provider.files import File
-from parsl.data_provider.data_manager import default_staging
-from parsl.data_provider.zip import ZipAuthorityError, ZipFileStaging
+import pytest
 
-from parsl.providers import LocalProvider
+import parsl
 from parsl.channels import LocalChannel
-from parsl.launchers import SimpleLauncher
-
 from parsl.config import Config
+from parsl.data_provider.data_manager import default_staging
+from parsl.data_provider.files import File
+from parsl.data_provider.zip import ZipAuthorityError, ZipFileStaging
 from parsl.executors import HighThroughputExecutor
-
+from parsl.launchers import SimpleLauncher
+from parsl.providers import LocalProvider
 from parsl.tests.configs.htex_local import fresh_config as local_config
 
 

@@ -1,11 +1,9 @@
 import inspect
-
-from parsl.utils import RepresentationMixin
-
 from abc import abstractmethod
 from functools import singledispatch
 from typing import Any, List, Sequence
 
+from parsl.utils import RepresentationMixin
 
 # Traverse the configuration hierarchy, returning a JSON component
 # for each one. Configuration components which implement

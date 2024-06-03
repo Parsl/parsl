@@ -1,10 +1,13 @@
 """A simplified interface for HTEx when running in MPI mode"""
-from typing import Optional, Tuple, List, Union, Callable, Dict
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import typeguard
 
 from parsl.data_provider.staging import Staging
-from parsl.executors.high_throughput.executor import HighThroughputExecutor, GENERAL_HTEX_PARAM_DOCS
+from parsl.executors.high_throughput.executor import (
+    GENERAL_HTEX_PARAM_DOCS,
+    HighThroughputExecutor,
+)
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import JobStatus
 from parsl.providers import LocalProvider

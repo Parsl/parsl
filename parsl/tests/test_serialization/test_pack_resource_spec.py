@@ -1,5 +1,6 @@
 import pytest
-from parsl.serialize import unpack_res_spec_apply_message, pack_res_spec_apply_message
+
+from parsl.serialize import pack_res_spec_apply_message, unpack_res_spec_apply_message
 
 
 def double(x: int, y: int = 2) -> int:

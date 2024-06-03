@@ -1,9 +1,9 @@
+from concurrent.futures import Future
+from typing import TypeVar
+
 import pytest
 
-from concurrent.futures import Future
 from parsl import python_app
-
-from typing import TypeVar
 
 T = TypeVar('T')
 

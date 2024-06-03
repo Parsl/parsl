@@ -1,9 +1,10 @@
-import dill
 import io
 import typing as t
 
-from parsl.serialize.base import SerializerBase
+import dill
 from proxystore.store import Store
+
+from parsl.serialize.base import SerializerBase
 
 
 class ProxyStoreDeepPickler(dill.Pickler):

@@ -1,10 +1,11 @@
+import os
+
+from parsl.addresses import address_by_route
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.providers import KubernetesProvider
-from parsl.addresses import address_by_route
 
 from .user_opts import user_opts
-import os
 
 
 def fresh_config():

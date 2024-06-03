@@ -4,14 +4,13 @@ import time
 import pytest
 
 import parsl
-
 from parsl import File, python_app
-from parsl.jobs.states import JobState, TERMINAL_STATES
-from parsl.providers import LocalProvider
 from parsl.channels import LocalChannel
-from parsl.launchers import SingleNodeLauncher
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
+from parsl.jobs.states import TERMINAL_STATES, JobState
+from parsl.launchers import SingleNodeLauncher
+from parsl.providers import LocalProvider
 
 logger = logging.getLogger(__name__)
 

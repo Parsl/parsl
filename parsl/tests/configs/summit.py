@@ -4,6 +4,7 @@ from parsl.launchers import JsrunLauncher
 from parsl.providers import LSFProvider
 
 from .user_opts import user_opts
+
 """ This config assumes that it is used to launch parsl tasks from the login nodes
 of Frontera at TACC. Each job submitted to the scheduler will request 2 nodes for 10 minutes.
 """
