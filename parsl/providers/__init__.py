@@ -17,11 +17,6 @@ from parsl.providers.pbspro.pbspro import PBSProProvider
 from parsl.providers.slurm.slurm import SlurmProvider
 from parsl.providers.torque.torque import TorqueProvider
 
-# Cluster Providers
-
-
-
-
 __all__ = ['LocalProvider',
            'CobaltProvider',
            'CondorProvider',

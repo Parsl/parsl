@@ -12,6 +12,7 @@ from parsl.utils import RepresentationMixin
 # are traversed in sequence. Other types default to reporting no
 # usage information.
 
+
 @singledispatch
 def get_parsl_usage(obj) -> List[Any]:
     return []
