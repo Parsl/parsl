@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import platform
 import socket
 import sys
@@ -60,6 +59,7 @@ def udp_messenger(domain_name: str, UDP_PORT: int, sock_timeout: int, message: b
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
         sock.settimeout(sock_timeout)
         sock.sendto(message, (UDP_IP, UDP_PORT))
+        print(message)
         sock.close()
 
     except socket.timeout:
@@ -117,19 +117,14 @@ class UsageTracker:
     def check_tracking_enabled(self):
         """Check if tracking is enabled.
 
-        Tracking will be enabled unless either of these is true:
+        Tracking will be enabled unless the following is true:
 
             1. dfk.config.usage_tracking is set to False
-            2. Environment variable PARSL_TRACKING is set to false (case insensitive)
 
         """
         track = True
 
         if not self.config.usage_tracking:
-            track = False
-
-        envvar = str(os.environ.get("PARSL_TRACKING", True)).lower()
-        if envvar == "false":
             track = False
 
         return track
