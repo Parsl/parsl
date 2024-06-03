@@ -677,7 +677,8 @@ def worker(
     # If desired, set process affinity
     if cpu_affinity != "none":
         # Count the number of cores per worker
-        avail_cores = sorted(os.sched_getaffinity(0))  # Get the available threads
+        # OSX does not implement os.sched_getaffinity
+        avail_cores = sorted(os.sched_getaffinity(0))  # type: ignore[attr-defined, unused-ignore]
         cores_per_worker = len(avail_cores) // pool_size
         assert cores_per_worker > 0, "Affinity does not work if there are more workers than cores"
 
@@ -717,7 +718,15 @@ def worker(
         os.environ["KMP_AFFINITY"] = f"explicit,proclist=[{proc_list}]"  # For Intel OpenMP
 
         # Set the affinity for this worker
-        os.sched_setaffinity(0, my_cores)
+        # OSX does not implement os.sched_setaffinity so type checking
+        # is ignored here in two ways:
+        # On a platform without sched_setaffinity, that attribute will not
+        # be defined, so ignore[attr-defined] will tell mypy to ignore this
+        # incorrect-for-OS X attribute access.
+        # On a platform with sched_setaffinity, that type: ignore message
+        # will be redundant, and ignore[unused-ignore] tells mypy to ignore
+        # that this ignore is unneeded.
+        os.sched_setaffinity(0, my_cores)  # type: ignore[attr-defined, unused-ignore]
         logger.info("Set worker CPU affinity to {}".format(my_cores))
 
     # If desired, pin to accelerator
