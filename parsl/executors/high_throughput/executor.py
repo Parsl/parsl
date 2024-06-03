@@ -1,6 +1,5 @@
 import logging
 import math
-import os
 import pickle
 import subprocess
 import threading
@@ -9,7 +8,6 @@ import warnings
 from collections import defaultdict
 from concurrent.futures import Future
 from dataclasses import dataclass
-from multiprocessing import Process
 from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import typeguard
@@ -20,7 +18,7 @@ from parsl.addresses import get_all_addresses
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.staging import Staging
 from parsl.executors.errors import BadMessage, ScalingFailed
-from parsl.executors.high_throughput import interchange, zmq_pipes
+from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
 from parsl.executors.high_throughput.mpi_prefix_composer import (
     VALID_LAUNCHERS,
@@ -28,7 +26,6 @@ from parsl.executors.high_throughput.mpi_prefix_composer import (
 )
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
-from parsl.multiprocessing import ForkProcess
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
@@ -309,7 +306,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self._task_counter = 0
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
-        self.interchange_proc: Optional[Process] = None
+        self.interchange_proc: Optional[subprocess.Popen] = None
         self.interchange_port_range = interchange_port_range
         self.heartbeat_threshold = heartbeat_threshold
         self.heartbeat_period = heartbeat_period
@@ -537,7 +534,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             # this is going to leave residual elixirchange around because killing shell won't kill children...
             self.interchange_proc = subprocess.Popen(args=["cd elixirchange; mix run --no-halt"], shell=True)
         elif self.benc_interchange_cli == "idris2":
-            self.interchange_proc = subprocess.Popen(args=["cd idris2interchange ; gcc -shared gluezmq.c -lzmq -o glue_zmq.so && idris2 main.idr -x main"], shell=True)
+            self.interchange_proc = subprocess.Popen(args=["cd idris2interchange ; "
+                                                           "gcc -shared gluezmq.c -lzmq -o glue_zmq.so && "
+                                                           "idris2 main.idr -x main"], shell=True)
         else:
             raise RuntimeError("unknown benc-interchange type")
 
