@@ -59,7 +59,6 @@ def udp_messenger(domain_name: str, UDP_PORT: int, sock_timeout: int, message: b
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # UDP
         sock.settimeout(sock_timeout)
         sock.sendto(message, (UDP_IP, UDP_PORT))
-        print(message)
         sock.close()
 
     except socket.timeout:
