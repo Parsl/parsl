@@ -1,5 +1,6 @@
-import pytest
 import uuid
+
+import pytest
 
 
 def policy_example(o):
@@ -13,10 +14,11 @@ def test_proxystore_nonglobal():
     """
     # import in function, because proxystore is not importable in base parsl
     # installation.
-    from parsl.serialize.proxystore import ProxyStoreSerializer
+    from proxystore.connectors.file import FileConnector
     from proxystore.proxy import Proxy
     from proxystore.store import Store, register_store
-    from proxystore.connectors.file import FileConnector
+
+    from parsl.serialize.proxystore import ProxyStoreSerializer
 
     store = Store(name='parsl_store_' + str(uuid.uuid4()), connector=FileConnector(store_dir="/tmp"))
     register_store(store)

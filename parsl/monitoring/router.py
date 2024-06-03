@@ -1,24 +1,21 @@
 from __future__ import annotations
 
+import logging
 import os
+import pickle
+import queue
 import socket
 import time
-import pickle
-import logging
-import zmq
-
-import queue
-
-from parsl.log_utils import set_file_logger
-from parsl.process_loggers import wrap_with_logs
-from parsl.utils import setproctitle
-
-from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.types import AddressedMonitoringMessage, TaggedMonitoringMessage
-
 from multiprocessing.synchronize import Event
 from typing import Optional, Tuple, Union
 
+import zmq
+
+from parsl.log_utils import set_file_logger
+from parsl.monitoring.message_type import MessageType
+from parsl.monitoring.types import AddressedMonitoringMessage, TaggedMonitoringMessage
+from parsl.process_loggers import wrap_with_logs
+from parsl.utils import setproctitle
 
 logger = logging.getLogger(__name__)
 

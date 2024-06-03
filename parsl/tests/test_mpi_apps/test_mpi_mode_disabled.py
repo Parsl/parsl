@@ -1,5 +1,7 @@
 from typing import Dict
+
 import pytest
+
 import parsl
 from parsl import python_app
 from parsl.tests.configs.htex_local import fresh_config
@@ -7,17 +9,12 @@ from parsl.tests.configs.htex_local import fresh_config
 EXECUTOR_LABEL = "MPI_TEST"
 
 
-def local_setup():
+def local_config():
     config = fresh_config()
     config.executors[0].label = EXECUTOR_LABEL
     config.executors[0].max_workers_per_node = 1
     config.executors[0].enable_mpi_mode = False
-    parsl.load(config)
-
-
-def local_teardown():
-    parsl.dfk().cleanup()
-    parsl.clear()
+    return config
 
 
 @python_app

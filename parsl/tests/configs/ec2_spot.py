@@ -1,7 +1,6 @@
-from parsl.providers import AWSProvider
-
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
+from parsl.providers import AWSProvider
 
 # If you are a developer running tests, make sure to update parsl/tests/configs/user_opts.py
 # If you are a user copying-and-pasting this as an example, make sure to either

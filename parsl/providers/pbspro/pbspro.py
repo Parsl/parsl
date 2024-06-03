@@ -1,7 +1,7 @@
+import json
 import logging
 import os
 import time
-import json
 
 from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus

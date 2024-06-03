@@ -1,23 +1,25 @@
 from __future__ import annotations
+
 import atexit
+import datetime
+import inspect
 import logging
 import os
 import pathlib
 import pickle
 import random
-import time
-import typeguard
-import inspect
-import threading
 import sys
-import datetime
-from getpass import getuser
-from typeguard import typechecked
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
-from uuid import uuid4
-from socket import gethostname
+import threading
+import time
 from concurrent.futures import Future
 from functools import partial
+from getpass import getuser
+from socket import gethostname
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from uuid import uuid4
+
+import typeguard
+from typeguard import typechecked
 
 import parsl
 from parsl.app.errors import RemoteExceptionWrapper
@@ -26,25 +28,29 @@ from parsl.channels import Channel
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
+from parsl.dataflow.dependency_resolvers import SHALLOW_DEPENDENCY_RESOLVER
 from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
-from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
+from parsl.dataflow.states import FINAL_FAILURE_STATES, FINAL_STATES, States
 from parsl.dataflow.taskrecord import TaskRecord
-from parsl.errors import ConfigurationError, InternalConsistencyError, NoDataFlowKernelError
-from parsl.jobs.job_status_poller import JobStatusPoller
-from parsl.usage_tracking.usage import UsageTracker
+from parsl.errors import (
+    ConfigurationError,
+    InternalConsistencyError,
+    NoDataFlowKernelError,
+)
 from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
+from parsl.jobs.job_status_poller import JobStatusPoller
 from parsl.monitoring import MonitoringHub
+from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.remote import monitor_wrapper
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers.base import ExecutionProvider
-from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints, Timer
-
-from parsl.monitoring.message_type import MessageType
+from parsl.usage_tracking.usage import UsageTracker
+from parsl.utils import Timer, get_all_checkpoints, get_std_fname_mode, get_version
 
 logger = logging.getLogger(__name__)
 
@@ -202,6 +208,9 @@ class DataFlowKernel:
         self.task_count = 0
         self.tasks: Dict[int, TaskRecord] = {}
         self.submitter_lock = threading.Lock()
+
+        self.dependency_resolver = self.config.dependency_resolver if self.config.dependency_resolver is not None \
+            else SHALLOW_DEPENDENCY_RESOLVER
 
         atexit.register(self.atexit_cleanup)
 
@@ -852,8 +861,11 @@ class DataFlowKernel:
         depends: List[Future] = []
 
         def check_dep(d: Any) -> None:
-            if isinstance(d, Future):
-                depends.extend([d])
+            try:
+                depends.extend(self.dependency_resolver.traverse_to_gather(d))
+            except Exception:
+                logger.exception("Exception in dependency_resolver.traverse_to_gather")
+                raise
 
         # Check the positional args
         for dep in args:
@@ -905,34 +917,27 @@ class DataFlowKernel:
         # Replace item in args
         new_args = []
         for dep in args:
-            if isinstance(dep, Future):
-                try:
-                    new_args.extend([dep.result()])
-                except Exception as e:
-                    append_failure(e, dep)
-            else:
-                new_args.extend([dep])
+            try:
+                new_args.extend([self.dependency_resolver.traverse_to_unwrap(dep)])
+            except Exception as e:
+                append_failure(e, dep)
 
         # Check for explicit kwargs ex, fu_1=<fut>
         for key in kwargs:
             dep = kwargs[key]
-            if isinstance(dep, Future):
-                try:
-                    kwargs[key] = dep.result()
-                except Exception as e:
-                    append_failure(e, dep)
+            try:
+                kwargs[key] = self.dependency_resolver.traverse_to_unwrap(dep)
+            except Exception as e:
+                append_failure(e, dep)
 
         # Check for futures in inputs=[<fut>...]
         if 'inputs' in kwargs:
             new_inputs = []
             for dep in kwargs['inputs']:
-                if isinstance(dep, Future):
-                    try:
-                        new_inputs.extend([dep.result()])
-                    except Exception as e:
-                        append_failure(e, dep)
-                else:
-                    new_inputs.extend([dep])
+                try:
+                    new_inputs.extend([self.dependency_resolver.traverse_to_unwrap(dep)])
+                except Exception as e:
+                    append_failure(e, dep)
             kwargs['inputs'] = new_inputs
 
         return new_args, kwargs, dep_failures
@@ -1037,6 +1042,8 @@ class DataFlowKernel:
 
         func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func)
 
+        logger.debug("Added output dependencies")
+
         # Replace the function invocation in the TaskRecord with whatever file-staging
         # substitutions have been made.
         task_record.update({
@@ -1048,8 +1055,10 @@ class DataFlowKernel:
 
         self.tasks[task_id] = task_record
 
+        logger.debug("Gathering dependencies")
         # Get the list of dependencies for the task
         depends = self._gather_all_deps(app_args, app_kwargs)
+        logger.debug("Gathered dependencies")
         task_record['depends'] = depends
 
         depend_descs = []
@@ -1265,6 +1274,13 @@ class DataFlowKernel:
         logger.info("Unregistering atexit hook")
         atexit.unregister(self.atexit_cleanup)
         logger.info("Unregistered atexit hook")
+
+        if DataFlowKernelLoader._dfk is self:
+            logger.info("Unregistering default DFK")
+            parsl.clear()
+            logger.info("Unregistered default DFK")
+        else:
+            logger.debug("Cleaning up non-default DFK - not unregistering")
 
         logger.info("DFK cleanup complete")
 

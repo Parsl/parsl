@@ -1,5 +1,6 @@
 import argparse
 import os
+
 import pytest
 
 import parsl
@@ -15,8 +16,8 @@ def local_config():
 
 @python_app
 def sleep_then_fail(inputs=[], sleep_dur=0.1):
-    import time
     import math
+    import time
     time.sleep(sleep_dur)
     math.ceil("Trigger TypeError")
     return 0

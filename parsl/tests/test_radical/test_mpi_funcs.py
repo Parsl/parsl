@@ -1,6 +1,6 @@
-import parsl
 import pytest
 
+import parsl
 from parsl.tests.configs.local_radical_mpi import fresh_config as local_config
 
 

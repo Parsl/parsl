@@ -5,11 +5,12 @@ from pathlib import Path
 import pytest
 
 import parsl
-from .test_mpi_mode_enabled import get_env_vars
-from parsl import HighThroughputExecutor, Config
+from parsl import Config, HighThroughputExecutor
+from parsl.executors.high_throughput.mpi_executor import MPIExecutor
 from parsl.launchers import SimpleLauncher
 from parsl.providers import LocalProvider
-from parsl.executors.high_throughput.mpi_executor import MPIExecutor
+
+from .test_mpi_mode_enabled import get_env_vars
 
 cwd = Path(__file__).parent.absolute()
 pbs_nodefile = cwd.joinpath("mocks", "pbs_nodefile")

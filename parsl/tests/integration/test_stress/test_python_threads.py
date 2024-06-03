@@ -1,13 +1,11 @@
 ''' Testing bash apps
 '''
+import argparse
+import time
+
 import parsl
 from parsl import python_app
-
-import time
-import argparse
-
 from parsl.tests.configs.local_threads import config
-
 
 local_config = config
 

@@ -1,16 +1,16 @@
 import logging
 import os
-import parsl
-import pytest
 import time
 
-from parsl.providers import LocalProvider
-from parsl.channels import LocalChannel
-from parsl.launchers import SimpleLauncher
+import pytest
 
+import parsl
+from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
+from parsl.launchers import SimpleLauncher
 from parsl.monitoring import MonitoringHub
+from parsl.providers import LocalProvider
 
 
 def fresh_config(run_dir, strategy, db_url):
@@ -64,8 +64,6 @@ def test_row_counts(tmpd_cwd, strategy):
         run_id = dfk.run_id
 
         this_app().result()
-
-    parsl.clear()
 
     engine = sqlalchemy.create_engine(db_url)
     with engine.begin() as connection:

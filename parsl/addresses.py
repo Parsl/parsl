@@ -8,17 +8,19 @@ so some experimentation will probably be needed to choose the correct one.
 
 import logging
 import platform
-import requests
 import socket
+
+import requests
+
 try:
     import fcntl
 except ImportError:
     fcntl = None  # type: ignore[assignment]
 import struct
-import typeguard
-import psutil
+from typing import Callable, List, Set
 
-from typing import Set, List, Callable
+import psutil
+import typeguard
 
 logger = logging.getLogger(__name__)
 

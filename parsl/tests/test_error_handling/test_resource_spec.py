@@ -1,9 +1,11 @@
 import parsl
 from parsl.app.app import python_app
-from parsl.executors.errors import UnsupportedFeatureError, ExecutorError
 from parsl.executors import WorkQueueExecutor
-from parsl.executors.high_throughput.mpi_prefix_composer import InvalidResourceSpecification
+from parsl.executors.errors import ExecutorError, UnsupportedFeatureError
 from parsl.executors.high_throughput.executor import HighThroughputExecutor
+from parsl.executors.high_throughput.mpi_prefix_composer import (
+    InvalidResourceSpecification,
+)
 
 
 @python_app

@@ -1,9 +1,10 @@
 import os
-import parsl
-import pytest
 import signal
 import time
 
+import pytest
+
+import parsl
 from parsl.tests.configs.htex_local_alternate import fresh_config
 
 # This is a very generous upper bound on expected shutdown time of target
@@ -25,7 +26,6 @@ def test_no_kills():
     assert parsl.dfk().monitoring is not None, "This test requires monitoring"
 
     parsl.dfk().cleanup()
-    parsl.clear()
 
 
 @pytest.mark.local
@@ -62,4 +62,3 @@ def test_kill_monitoring_helper_process(sig, process_attr, try_assert):
     simple_app().result()
 
     parsl.dfk().cleanup()
-    parsl.clear()

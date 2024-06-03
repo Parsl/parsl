@@ -1,39 +1,41 @@
 #!/usr/bin/env python3
 
 import argparse
-import logging
-import os
-import sys
-import platform
-import threading
-import pickle
-import time
-import queue
-import uuid
-from typing import Sequence, Optional, Dict, List
-
-import zmq
-import math
 import json
-import psutil
+import logging
+import math
 import multiprocessing
+import os
+import pickle
+import platform
+import queue
+import sys
+import threading
+import time
+import uuid
 from multiprocessing.managers import DictProxy
 from multiprocessing.sharedctypes import Synchronized
+from typing import Dict, List, Optional, Sequence
+
+import psutil
+import zmq
 
 from parsl import curvezmq
-from parsl.process_loggers import wrap_with_logs
-from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
+from parsl.executors.high_throughput.mpi_prefix_composer import (
+    VALID_LAUNCHERS,
+    compose_all,
+)
+from parsl.executors.high_throughput.mpi_resource_management import (
+    MPITaskScheduler,
+    TaskScheduler,
+)
 from parsl.executors.high_throughput.probe import probe_addresses
 from parsl.multiprocessing import SpawnContext
-from parsl.serialize import unpack_res_spec_apply_message, serialize
-from parsl.executors.high_throughput.mpi_resource_management import (
-    TaskScheduler,
-    MPITaskScheduler
-)
-
-from parsl.executors.high_throughput.mpi_prefix_composer import compose_all, VALID_LAUNCHERS
+from parsl.process_loggers import wrap_with_logs
+from parsl.serialize import serialize, unpack_res_spec_apply_message
+from parsl.version import VERSION as PARSL_VERSION
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 DRAINED_CODE = (2 ** 32) - 2
@@ -677,7 +679,8 @@ def worker(
     # If desired, set process affinity
     if cpu_affinity != "none":
         # Count the number of cores per worker
-        avail_cores = sorted(os.sched_getaffinity(0))  # Get the available threads
+        # OSX does not implement os.sched_getaffinity
+        avail_cores = sorted(os.sched_getaffinity(0))  # type: ignore[attr-defined, unused-ignore]
         cores_per_worker = len(avail_cores) // pool_size
         assert cores_per_worker > 0, "Affinity does not work if there are more workers than cores"
 
@@ -717,7 +720,15 @@ def worker(
         os.environ["KMP_AFFINITY"] = f"explicit,proclist=[{proc_list}]"  # For Intel OpenMP
 
         # Set the affinity for this worker
-        os.sched_setaffinity(0, my_cores)
+        # OSX does not implement os.sched_setaffinity so type checking
+        # is ignored here in two ways:
+        # On a platform without sched_setaffinity, that attribute will not
+        # be defined, so ignore[attr-defined] will tell mypy to ignore this
+        # incorrect-for-OS X attribute access.
+        # On a platform with sched_setaffinity, that type: ignore message
+        # will be redundant, and ignore[unused-ignore] tells mypy to ignore
+        # that this ignore is unneeded.
+        os.sched_setaffinity(0, my_cores)  # type: ignore[attr-defined, unused-ignore]
         logger.info("Set worker CPU affinity to {}".format(my_cores))
 
     # If desired, pin to accelerator

@@ -1,8 +1,9 @@
-import parsl
-from parsl.tests.configs.local_threads import fresh_config
 import pytest
-from parsl.errors import NoDataFlowKernelError
+
+import parsl
 from parsl.dataflow.dflow import DataFlowKernel
+from parsl.errors import NoDataFlowKernelError
+from parsl.tests.configs.local_threads import fresh_config
 
 
 @parsl.python_app
@@ -13,14 +14,6 @@ def square(x):
 @parsl.bash_app
 def foo(x, stdout='foo.stdout'):
     return f"echo {x + 1}"
-
-
-def local_setup():
-    pass
-
-
-def local_teardown():
-    parsl.clear()
 
 
 @pytest.mark.local
@@ -37,4 +30,4 @@ def test_within_context_manger(tmpd_cwd):
 
     with pytest.raises(NoDataFlowKernelError) as excinfo:
         square(2).result()
-    assert str(excinfo.value) == "Cannot submit to a DFK that has been cleaned up"
+    assert str(excinfo.value) == "Must first load config"

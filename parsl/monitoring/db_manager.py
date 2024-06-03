@@ -1,15 +1,14 @@
-import logging
-import threading
-import queue
-import os
-import time
 import datetime
-
+import logging
+import os
+import queue
+import threading
+import time
 from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
 
-from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
 from parsl.errors import OptionalModuleMissing
+from parsl.log_utils import set_file_logger
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import MonitoringMessage, TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
@@ -21,11 +20,18 @@ X = TypeVar('X')
 
 try:
     import sqlalchemy as sa
-    from sqlalchemy import Column, Text, Float, Boolean, BigInteger, Integer, DateTime, PrimaryKeyConstraint, Table
-    from sqlalchemy.orm import Mapper
-    from sqlalchemy.orm import mapperlib
-    from sqlalchemy.orm import sessionmaker
-    from sqlalchemy.orm import declarative_base
+    from sqlalchemy import (
+        BigInteger,
+        Boolean,
+        Column,
+        DateTime,
+        Float,
+        Integer,
+        PrimaryKeyConstraint,
+        Table,
+        Text,
+    )
+    from sqlalchemy.orm import Mapper, declarative_base, mapperlib, sessionmaker
 except ImportError:
     _sqlalchemy_enabled = False
 else:
