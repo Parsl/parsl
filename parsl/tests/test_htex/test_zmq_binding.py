@@ -1,8 +1,8 @@
+import logging
 import pathlib
 from typing import Optional
 from unittest import mock
 
-import logging
 import psutil
 import pytest
 import zmq
