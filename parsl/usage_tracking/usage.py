@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 import platform
 import socket
 import sys
@@ -117,22 +116,12 @@ class UsageTracker:
     def check_tracking_enabled(self):
         """Check if tracking is enabled.
 
-        Tracking will be enabled unless either of these is true:
+        Tracking will be enabled unless the following is true:
 
             1. dfk.config.usage_tracking is set to False
-            2. Environment variable PARSL_TRACKING is set to false (case insensitive)
 
         """
-        track = True
-
-        if not self.config.usage_tracking:
-            track = False
-
-        envvar = str(os.environ.get("PARSL_TRACKING", True)).lower()
-        if envvar == "false":
-            track = False
-
-        return track
+        return self.config.usage_tracking
 
     def construct_start_message(self) -> bytes:
         """Collect preliminary run info at the start of the DFK.
