@@ -97,8 +97,9 @@ fn main() {
     // minimal one that's only enough to read the keys (rather than
     // read arbitrary ZPL files)
 
-    let server_keypair = load_zmq_keypair(&std::path::Path::new(&cert_dir).join(std::path::Path::new(&"server.key_secret")));
-
+    let server_keypair = load_zmq_keypair(
+        &std::path::Path::new(&cert_dir).join(std::path::Path::new(&"server.key_secret")),
+    );
 
     // we've got 8 communication channels:
 
@@ -142,9 +143,18 @@ fn main() {
     let zmq_tasks_submit_to_interchange = zmq_ctx
         .socket(zmq::SocketType::DEALER)
         .expect("could not create task_submit_to_interchange socket");
-    println!("gcs {}", zmq_tasks_submit_to_interchange.is_curve_server().expect("no fail to read"));
-    zmq_tasks_submit_to_interchange.set_curve_server(true).expect("setting as curve server");
-    zmq_tasks_submit_to_interchange.set_curve_secretkey(&server_keypair.secret_key).expect("setting server secret key");
+    println!(
+        "gcs {}",
+        zmq_tasks_submit_to_interchange
+            .is_curve_server()
+            .expect("no fail to read")
+    );
+    zmq_tasks_submit_to_interchange
+        .set_curve_server(true)
+        .expect("setting as curve server");
+    zmq_tasks_submit_to_interchange
+        .set_curve_secretkey(&server_keypair.secret_key)
+        .expect("setting server secret key");
     zmq_tasks_submit_to_interchange
         .connect("tcp://127.0.0.1:9000")
         .expect("could not connect task_submit_to_interchange socket");
@@ -157,7 +167,6 @@ fn main() {
                 .expect("zmq_sys vs zmq API awkwardness"),
         )
         .expect("Configuring zmq monitoring");
-
 
     let zmq_tasks_submit_to_interchange_monitor = zmq_ctx
         .socket(zmq::SocketType::PAIR)
@@ -177,8 +186,12 @@ fn main() {
     let zmq_results_interchange_to_submit = zmq_ctx
         .socket(zmq::SocketType::DEALER)
         .expect("could not create results_interchange_to_submit socket");
-    zmq_results_interchange_to_submit.set_curve_server(true).expect("setting as curve server");
-    zmq_results_interchange_to_submit.set_curve_secretkey(&server_keypair.secret_key).expect("setting server secret key");
+    zmq_results_interchange_to_submit
+        .set_curve_server(true)
+        .expect("setting as curve server");
+    zmq_results_interchange_to_submit
+        .set_curve_secretkey(&server_keypair.secret_key)
+        .expect("setting server secret key");
     zmq_results_interchange_to_submit
         .connect("tcp://127.0.0.1:9001")
         .expect("could not connect results_interchange_to_submit socket");
@@ -218,8 +231,12 @@ fn main() {
     let zmq_command = zmq_ctx
         .socket(zmq::SocketType::REP)
         .expect("could not create command socket");
-    zmq_command.set_curve_server(true).expect("setting as curve server");
-    zmq_command.set_curve_secretkey(&server_keypair.secret_key).expect("setting server secret key");
+    zmq_command
+        .set_curve_server(true)
+        .expect("setting as curve server");
+    zmq_command
+        .set_curve_secretkey(&server_keypair.secret_key)
+        .expect("setting server secret key");
     zmq_command
         .connect("tcp://127.0.0.1:9002")
         .expect("could not connect command socket");
@@ -250,8 +267,12 @@ fn main() {
     let zmq_tasks_interchange_to_workers = zmq_ctx
         .socket(zmq::SocketType::ROUTER)
         .expect("could not create tasks_interchange_to_workers socket");
-    zmq_tasks_interchange_to_workers.set_curve_server(true).expect("setting as curve server");
-    zmq_tasks_interchange_to_workers.set_curve_secretkey(&server_keypair.secret_key).expect("setting server secret key");
+    zmq_tasks_interchange_to_workers
+        .set_curve_server(true)
+        .expect("setting as curve server");
+    zmq_tasks_interchange_to_workers
+        .set_curve_secretkey(&server_keypair.secret_key)
+        .expect("setting server secret key");
     zmq_tasks_interchange_to_workers
         .bind("tcp://127.0.0.1:9003")
         .expect("could not bind tasks_interchange_to_workers");
@@ -265,8 +286,12 @@ fn main() {
     let zmq_results_workers_to_interchange = zmq_ctx
         .socket(zmq::SocketType::ROUTER)
         .expect("could not create results_workers_to_interchange socket");
-    zmq_results_workers_to_interchange.set_curve_server(true).expect("setting as curve server");
-    zmq_results_workers_to_interchange.set_curve_secretkey(&server_keypair.secret_key).expect("setting server secret key");
+    zmq_results_workers_to_interchange
+        .set_curve_server(true)
+        .expect("setting as curve server");
+    zmq_results_workers_to_interchange
+        .set_curve_secretkey(&server_keypair.secret_key)
+        .expect("setting server secret key");
     zmq_results_workers_to_interchange
         .bind("tcp://127.0.0.1:9004")
         .expect("could not bind results_workers_to_interchange");
@@ -486,7 +511,13 @@ fn main() {
             } else if cmd == serde_pickle::Value::String("WORKER_PORTS".to_string()) {
                 serde_pickle::ser::value_to_vec(
                     // TODO: allocate these ports dynamically - since PR #3461 this has been possible
-                    &serde_pickle::value::Value::Tuple([serde_pickle::value::Value::I64(9003), serde_pickle::value::Value::I64(9004)].to_vec()),
+                    &serde_pickle::value::Value::Tuple(
+                        [
+                            serde_pickle::value::Value::I64(9003),
+                            serde_pickle::value::Value::I64(9004),
+                        ]
+                        .to_vec(),
+                    ),
                     serde_pickle::ser::SerOptions::new(),
                 )
                 .expect("pickling WORKER_PORTS tuple")
@@ -659,7 +690,6 @@ fn main() {
     }
 }
 
-
 // TODO: it would be nice if these could be autodecoded...
 // it's a bit horrible transcribing symbol names between universes...
 fn decode_zmq_monitor_event(a_event_type: u16) -> String {
@@ -687,8 +717,6 @@ fn decode_zmq_monitor_event(a_event_type: u16) -> String {
     // TODO can I use strs somehow? to return a &str, needs some lifetime work?
 }
 
-
-
 /* this will attempt to interpret a minimal ZPL format as generated by pyzmq in parsl enough
    to extract the keys, but no more.
 
@@ -696,7 +724,7 @@ fn decode_zmq_monitor_event(a_event_type: u16) -> String {
 
    here's an example:
 
-cat .pytest/parsltest-current/runinfo/000/htex_local/certificates/server.key_secret 
+cat .pytest/parsltest-current/runinfo/000/htex_local/certificates/server.key_secret
 #   ****  Generated on 2024-04-19 12:26:33.192381 by pyzmq  ****
 #   ZeroMQ CURVE **Secret** Certificate
 #   DO NOT PROVIDE THIS FILE TO OTHER USERS nor change its permissions.
@@ -714,13 +742,24 @@ fn load_zmq_keypair(keyfile: &std::path::Path) -> zmq::CurveKeyPair {
 
     // scan till we find a 'curve' top level line
     // TODO: double .expect is a bit ugh
-    while lines.next().expect("more lines, rather than EOF before keys").expect("no io error") != "curve" {
+    while lines
+        .next()
+        .expect("more lines, rather than EOF before keys")
+        .expect("no io error")
+        != "curve"
+    {
         println!("load_zmq_keypair: discarding line")
     }
 
     // we just read the curve line... so the next two lines should be the two keys...
-    let public_key_line = lines.next().expect("iterator can iterate").expect("no io error");
-    let secret_key_line = lines.next().expect("iterator can iterate").expect("no io error");
+    let public_key_line = lines
+        .next()
+        .expect("iterator can iterate")
+        .expect("no io error");
+    let secret_key_line = lines
+        .next()
+        .expect("iterator can iterate")
+        .expect("no io error");
 
     // tokenise these lines by whitespace, so we get three tokens per line, name = and value
     let mut public_key_line_iter = public_key_line.split_whitespace();
@@ -733,7 +772,6 @@ fn load_zmq_keypair(keyfile: &std::path::Path) -> zmq::CurveKeyPair {
     assert!(pk_val_str.len() % 5 == 0); // basic validation of z85 string length, because docs suggest this bit doesn't happen?
     let pk = zmq::z85_decode(pk_val_str).expect("decode z85"); // TODO strip the quotes?
     assert!(pk.len() == 32);
-
 
     let mut secret_key_line_iter = secret_key_line.split_whitespace();
     let sk_name = secret_key_line_iter.next();
@@ -748,6 +786,6 @@ fn load_zmq_keypair(keyfile: &std::path::Path) -> zmq::CurveKeyPair {
 
     zmq::CurveKeyPair {
         public_key: <[u8; 32]>::try_from(pk).expect("unpacking Vec"),
-        secret_key: <[u8; 32]>::try_from(sk).expect("unpacking Vec")
+        secret_key: <[u8; 32]>::try_from(sk).expect("unpacking Vec"),
     }
 }
