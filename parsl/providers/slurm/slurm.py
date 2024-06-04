@@ -172,7 +172,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             logger.debug('No active jobs, skipping status update')
             return
 
-        # Useing state%20 to get enough charicters to not truncate output
+        # Using state%20 to get enough characters to not truncate output
         # of the state. Without output can look like "<job_id>     CANCELLED+"
         cmd = "sacct -X --noheader --format=jobid,state%20 --job '{0}'".format(job_id_list)
         logger.debug("Executing %s", cmd)
