@@ -59,10 +59,13 @@ defmodule EIC.TasksSubmitToInterchange do
     # msg is a pickled dict with keys: task_id and buffer
     IO.inspect(msg)
     {task_dict, ""} = Unpickler.load!(msg)
+    IO.puts("task_dict is:")
     IO.inspect(task_dict)
 
     IO.puts("casting task to task queue")
-    # keep the pickled message around so that we don't need to re-pickle it?
+    # TODO: keep the pickled message around so that we don't need to re-pickle it?
+    # actually can't do that... because it gets repickled differently (as a list)
+    # when going out to the workers...
     GenServer.cast(:task_queue, {:new_task, task_dict, msg})
 
     loop(socket)
@@ -290,7 +293,7 @@ defmodule EIC.TaskQueue do
   # and maybe that means this can't be implemented in function guard style?
   def matchmake(%{:tasks => [t | t_rest], :managers => [m | m_rest]} = state) do
     IO.puts("Made a match")
-    {_dict, pickled} = t
+    {task_dict, _pickled} = t
     # TODO: send this off to execute
     # also, record the pairing somehow so that we do appropriate behaviour on
     # task result or manager failure.
@@ -306,8 +309,11 @@ defmodule EIC.TaskQueue do
     # needed? should message parts always be a single task, with zmq-level part
     # separation instead of python level lists? There's perhaps some pickle-level
     # caching that goes away if so, when multiple tasks are sent to a single
-    # manager at once...)
-    pickled_list_of_tasks = pickled  # TODO: WRONG!
+    # manager at once... but at the same time, it forces more pickle-level
+    # deserialization then re-serialization rather than being able to skip that?
+    # and maybe keeping things binary is a good thing? TODO: look at that
+    # performance-sensitive path, maybe open an issue?
+    pickled_list_of_tasks = :pickle.term_to_pickle([task_dict])  # TODO: WRONG?
     parts = [m["uid"], <<>>, pickled_list_of_tasks] 
 
     send(EIC.TasksInterchangeToWorkers, parts)

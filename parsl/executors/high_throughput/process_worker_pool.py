@@ -353,7 +353,12 @@ class Manager:
 
             if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
                 _, pkl_msg = self.task_incoming.recv_multipart()
-                tasks = pickle.loads(pkl_msg)
+                try:
+                    tasks = pickle.loads(pkl_msg)
+                except:
+                    logger.exception(f"exception unpickling pkl_msg: {pkl_msg!r}")
+                    raise
+
                 last_interchange_contact = time.time()
 
                 if tasks == HEARTBEAT_CODE:
