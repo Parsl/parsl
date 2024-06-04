@@ -32,7 +32,7 @@ will choose to send us this information. The reason is that we need this data - 
 By opting-in, and allowing these statistics to be reported back, you are explicitly supporting the
 further development of Parsl.
 
-If you wish to opt in to usage reporting, set ``PARSL_TRACKING=true`` in your environment or set ``usage_tracking=True`` in the configuration object (`parsl.config.Config`).
+If you wish to opt in to usage reporting, set ``usage_tracking=True`` in the configuration object (`parsl.config.Config`).
 
 
 .. _what-is-sent:

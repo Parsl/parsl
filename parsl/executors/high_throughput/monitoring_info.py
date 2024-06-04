@@ -3,6 +3,7 @@
 # then be acquired by any other code running in
 # a worker context - specifically the monitoring
 # wrapper code.
-from typing import Optional
 from queue import Queue
+from typing import Optional
+
 result_queue: Optional[Queue] = None

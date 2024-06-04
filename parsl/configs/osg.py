@@ -1,6 +1,6 @@
 from parsl.config import Config
-from parsl.providers import CondorProvider
 from parsl.executors import HighThroughputExecutor
+from parsl.providers import CondorProvider
 
 config = Config(
     executors=[

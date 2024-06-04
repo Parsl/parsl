@@ -1,17 +1,18 @@
 from __future__ import annotations
+
 import datetime
 import logging
 import threading
 import time
-from itertools import compress
 from abc import abstractmethod, abstractproperty
 from concurrent.futures import Future
-from typing import List, Any, Dict, Optional, Sequence, Tuple, Union, Callable
+from itertools import compress
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
-from parsl.jobs.states import JobStatus, JobState
-from parsl.jobs.error_handlers import simple_error_handler, noop_error_handler
+from parsl.jobs.error_handlers import noop_error_handler, simple_error_handler
+from parsl.jobs.states import JobState, JobStatus
 from parsl.monitoring.message_type import MessageType
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import AtomicIDCounter

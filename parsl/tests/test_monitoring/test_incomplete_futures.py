@@ -1,10 +1,11 @@
 import logging
 import os
-import parsl
-import pytest
 import random
-
 from concurrent.futures import Future
+
+import pytest
+
+import parsl
 
 
 @parsl.python_app
@@ -16,6 +17,7 @@ def this_app(inputs=()):
 def test_future_representation(tmpd_cwd):
     import sqlalchemy
     from sqlalchemy import text
+
     from parsl.tests.configs.htex_local_alternate import fresh_config
 
     monitoring_db = str(tmpd_cwd / "monitoring.db")
@@ -52,7 +54,6 @@ def test_future_representation(tmpd_cwd):
     # seconds, with the assumption "data will arrive in the DB within
     # 30 seconds, but probably much sooner".
     parsl.dfk().cleanup()
-    parsl.clear()
 
     engine = sqlalchemy.create_engine(monitoring_url)
     with engine.begin() as connection:

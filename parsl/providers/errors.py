@@ -1,6 +1,6 @@
-from parsl.errors import ParslError
-
 import warnings
+
+from parsl.errors import ParslError
 
 
 class ExecutionProviderException(ParslError):

@@ -1,44 +1,39 @@
+import logging
+import math
+import pickle
+import threading
 import typing
+import warnings
 from collections import defaultdict
 from concurrent.futures import Future
-import typeguard
-import logging
-import threading
-import queue
-import pickle
 from dataclasses import dataclass
-from multiprocessing import Process, Queue
-from typing import Dict, Sequence
-from typing import List, Optional, Tuple, Union, Callable
-import math
-import warnings
+from multiprocessing import Process
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+
+import typeguard
 
 import parsl.launchers
-from parsl.usage_tracking.api import UsageInformation
-from parsl.serialize import pack_res_spec_apply_message, deserialize
-from parsl.serialize.errors import SerializationError, DeserializationError
+from parsl import curvezmq
+from parsl.addresses import get_all_addresses
 from parsl.app.errors import RemoteExceptionWrapper
-from parsl.jobs.states import JobStatus, JobState, TERMINAL_STATES
-from parsl.executors.high_throughput import zmq_pipes
-from parsl.executors.high_throughput import interchange
-from parsl.executors.errors import (
-    BadMessage, ScalingFailed,
-)
+from parsl.data_provider.staging import Staging
+from parsl.executors.errors import BadMessage, ScalingFailed
+from parsl.executors.high_throughput import interchange, zmq_pipes
+from parsl.executors.high_throughput.errors import CommandClientTimeoutError
 from parsl.executors.high_throughput.mpi_prefix_composer import (
     VALID_LAUNCHERS,
-    validate_resource_spec
+    validate_resource_spec,
 )
-
-from parsl import curvezmq
 from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.providers.base import ExecutionProvider
-from parsl.data_provider.staging import Staging
-from parsl.addresses import get_all_addresses
-from parsl.process_loggers import wrap_with_logs
-
+from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
 from parsl.multiprocessing import ForkProcess
-from parsl.utils import RepresentationMixin
+from parsl.process_loggers import wrap_with_logs
 from parsl.providers import LocalProvider
+from parsl.providers.base import ExecutionProvider
+from parsl.serialize import deserialize, pack_res_spec_apply_message
+from parsl.serialize.errors import DeserializationError, SerializationError
+from parsl.usage_tracking.api import UsageInformation
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
@@ -62,47 +57,7 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers_per_node} "
                       "--mpi-launcher={mpi_launcher} "
                       "--available-accelerators {accelerators}")
 
-
-class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageInformation):
-    """Executor designed for cluster-scale
-
-    The HighThroughputExecutor system has the following components:
-      1. The HighThroughputExecutor instance which is run as part of the Parsl script.
-      2. The Interchange which acts as a load-balancing proxy between workers and Parsl
-      3. The multiprocessing based worker pool which coordinates task execution over several
-         cores on a node.
-      4. ZeroMQ pipes connect the HighThroughputExecutor, Interchange and the process_worker_pool
-
-    Here is a diagram
-
-    .. code:: python
-
-
-                        |  Data   |  Executor   |  Interchange  | External Process(es)
-                        |  Flow   |             |               |
-                   Task | Kernel  |             |               |
-                 +----->|-------->|------------>|->outgoing_q---|-> process_worker_pool
-                 |      |         |             | batching      |    |         |
-           Parsl<---Fut-|         |             | load-balancing|  result   exception
-                     ^  |         |             | watchdogs     |    |         |
-                     |  |         |   Q_mngmnt  |               |    V         V
-                     |  |         |    Thread<--|-incoming_q<---|--- +---------+
-                     |  |         |      |      |               |
-                     |  |         |      |      |               |
-                     +----update_fut-----+
-
-
-    Each of the workers in each process_worker_pool has access to its local rank through
-    an environmental variable, ``PARSL_WORKER_RANK``. The local rank is unique for each process
-    and is an integer in the range from 0 to the number of workers per in the pool minus 1.
-    The workers also have access to the ID of the worker pool as ``PARSL_WORKER_POOL_ID``
-    and the size of the worker pool as ``PARSL_WORKER_COUNT``.
-
-
-    Parameters
-    ----------
-
-    provider : :class:`~parsl.providers.base.ExecutionProvider`
+GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionProvider`
        Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
         :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
         :class:`~parsl.providers.condor.condor.Condor`,
@@ -148,39 +103,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     worker_debug : Bool
         Enables worker debug logging.
 
-    cores_per_worker : float
-        cores to be assigned to each worker. Oversubscription is possible
-        by setting cores_per_worker < 1.0. Default=1
-
-    mem_per_worker : float
-        GB of memory required per worker. If this option is specified, the node manager
-        will check the available memory at startup and limit the number of workers such that
-        the there's sufficient memory for each worker. Default: None
-
-    max_workers : int
-        Deprecated. Please use max_workers_per_node instead.
-
-    max_workers_per_node : int
-        Caps the number of workers launched per node. Default: None
-
-    cpu_affinity: string
-        Whether or how each worker process sets thread affinity. Options include "none" to forgo
-        any CPU affinity configuration, "block" to assign adjacent cores to workers
-        (ex: assign 0-1 to worker 0, 2-3 to worker 1), and
-        "alternating" to assign cores to workers in round-robin
-        (ex: assign 0,2 to worker 0, 1,3 to worker 1).
-        The "block-reverse" option assigns adjacent cores to workers, but assigns
-        the CPUs with large indices to low index workers (ex: assign 2-3 to worker 1, 0,1 to worker 2)
-
-    available_accelerators: int | list
-        Accelerators available for workers to use. Each worker will be pinned to exactly one of the provided
-        accelerators, and no more workers will be launched than the number of accelerators.
-
-        Either provide the list of accelerator names or the number available. If a number is provided,
-        Parsl will create names as integers starting with 0.
-
-        default: empty list
-
     prefetch_capacity : int
         Number of tasks that could be prefetched over available worker capacity.
         When there are a few tasks (<100) or when tasks are long running, this option should
@@ -214,6 +136,85 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     worker_logdir_root : string
         In case of a remote file system, specify the path to where logs will be kept.
 
+    encrypted : bool
+        Flag to enable/disable encryption (CurveZMQ). Default is False.
+"""  # Documentation for params used by both HTEx and MPIEx
+
+
+class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageInformation):
+    __doc__ = f"""Executor designed for cluster-scale
+
+    The HighThroughputExecutor system has the following components:
+      1. The HighThroughputExecutor instance which is run as part of the Parsl script.
+      2. The Interchange which acts as a load-balancing proxy between workers and Parsl
+      3. The multiprocessing based worker pool which coordinates task execution over several
+         cores on a node.
+      4. ZeroMQ pipes connect the HighThroughputExecutor, Interchange and the process_worker_pool
+
+    Here is a diagram
+
+    .. code:: python
+
+
+                        |  Data   |  Executor   |  Interchange  | External Process(es)
+                        |  Flow   |             |               |
+                   Task | Kernel  |             |               |
+                 +----->|-------->|------------>|->outgoing_q---|-> process_worker_pool
+                 |      |         |             | batching      |    |         |
+           Parsl<---Fut-|         |             | load-balancing|  result   exception
+                     ^  |         |             | watchdogs     |    |         |
+                     |  |         |   Q_mngmnt  |               |    V         V
+                     |  |         |    Thread<--|-incoming_q<---|--- +---------+
+                     |  |         |      |      |               |
+                     |  |         |      |      |               |
+                     +----update_fut-----+
+
+
+    Each of the workers in each process_worker_pool has access to its local rank through
+    an environmental variable, ``PARSL_WORKER_RANK``. The local rank is unique for each process
+    and is an integer in the range from 0 to the number of workers per in the pool minus 1.
+    The workers also have access to the ID of the worker pool as ``PARSL_WORKER_POOL_ID``
+    and the size of the worker pool as ``PARSL_WORKER_COUNT``.
+
+
+    Parameters
+    ----------
+
+    {GENERAL_HTEX_PARAM_DOCS}
+
+    cores_per_worker : float
+        cores to be assigned to each worker. Oversubscription is possible
+        by setting cores_per_worker < 1.0. Default=1
+
+    mem_per_worker : float
+        GB of memory required per worker. If this option is specified, the node manager
+        will check the available memory at startup and limit the number of workers such that
+        the there's sufficient memory for each worker. Default: None
+
+    max_workers : int
+        Deprecated. Please use max_workers_per_node instead.
+
+    max_workers_per_node : int
+        Caps the number of workers launched per node. Default: None
+
+    cpu_affinity: string
+        Whether or how each worker process sets thread affinity. Options include "none" to forgo
+        any CPU affinity configuration, "block" to assign adjacent cores to workers
+        (ex: assign 0-1 to worker 0, 2-3 to worker 1), and
+        "alternating" to assign cores to workers in round-robin
+        (ex: assign 0,2 to worker 0, 1,3 to worker 1).
+        The "block-reverse" option assigns adjacent cores to workers, but assigns
+        the CPUs with large indices to low index workers (ex: assign 2-3 to worker 1, 0,1 to worker 2)
+
+    available_accelerators: int | list
+        Accelerators available for workers to use. Each worker will be pinned to exactly one of the provided
+        accelerators, and no more workers will be launched than the number of accelerators.
+
+        Either provide the list of accelerator names or the number available. If a number is provided,
+        Parsl will create names as integers starting with 0.
+
+        default: empty list
+
     enable_mpi_mode: bool
         If enabled, MPI launch prefixes will be composed for the batch scheduler based on
         the nodes available in each batch job and the resource_specification dict passed
@@ -224,9 +225,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         This field is only used if enable_mpi_mode is set. Select one from the
         list of supported MPI launchers = ("srun", "aprun", "mpiexec").
         default: "mpiexec"
-
-    encrypted : bool
-        Flag to enable/disable encryption (CurveZMQ). Default is False.
     """
 
     @typeguard.typechecked
@@ -305,9 +303,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             self._workers_per_node = 1  # our best guess-- we do not have any provider hints
 
         self._task_counter = 0
-        self.run_id = None  # set to the correct run_id in dfk
-        self.hub_address = None  # set to the correct hub address in dfk
-        self.hub_port = None  # set to the correct hub port in dfk
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
         self.interchange_proc: Optional[Process] = None
@@ -326,8 +321,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         assert mpi_launcher in VALID_LAUNCHERS, \
             f"mpi_launcher must be set to one of {VALID_LAUNCHERS}"
         if self.enable_mpi_mode:
-            assert isinstance(self.provider.launcher, parsl.launchers.SingleNodeLauncher), \
-                "mpi_mode requires the provider to be configured to use a SingleNodeLauncher"
+            assert isinstance(self.provider.launcher, parsl.launchers.SimpleLauncher), \
+                "mpi_mode requires the provider to be configured to use a SimpleLauncher"
 
         self.mpi_launcher = mpi_launcher
 
@@ -415,13 +410,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             )
 
         self.outgoing_q = zmq_pipes.TasksOutgoing(
-            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+            "127.0.0.1", self.interchange_port_range, self.cert_dir
         )
         self.incoming_q = zmq_pipes.ResultsIncoming(
-            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+            "127.0.0.1", self.interchange_port_range, self.cert_dir
         )
         self.command_client = zmq_pipes.CommandClient(
-            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+            "127.0.0.1", self.interchange_port_range, self.cert_dir
         )
 
         self._queue_management_thread = None
@@ -531,9 +526,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Starts the interchange process locally and uses an internal command queue to
         get the worker task and result ports that the interchange has bound to.
         """
-        comm_q = Queue(maxsize=10)
         self.interchange_proc = ForkProcess(target=interchange.starter,
-                                            args=(comm_q,),
                                             kwargs={"client_ports": (self.outgoing_q.port,
                                                                      self.incoming_q.port,
                                                                      self.command_client.port),
@@ -541,7 +534,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                                     "worker_ports": self.worker_ports,
                                                     "worker_port_range": self.worker_port_range,
                                                     "hub_address": self.hub_address,
-                                                    "hub_port": self.hub_port,
+                                                    "hub_zmq_port": self.hub_zmq_port,
                                                     "logdir": self.logdir,
                                                     "heartbeat_threshold": self.heartbeat_threshold,
                                                     "poll_period": self.poll_period,
@@ -552,9 +545,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                             name="HTEX-Interchange"
                                             )
         self.interchange_proc.start()
+
         try:
-            (self.worker_task_port, self.worker_result_port) = comm_q.get(block=True, timeout=120)
-        except queue.Empty:
+            (self.worker_task_port, self.worker_result_port) = self.command_client.run("WORKER_PORTS", timeout_s=120)
+        except CommandClientTimeoutError:
             logger.error("Interchange has not completed initialization in 120s. Aborting")
             raise Exception("Interchange failed to start")
 
@@ -645,7 +639,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Returns:
               Future
         """
-        validate_resource_spec(resource_specification)
+
+        validate_resource_spec(resource_specification, self.enable_mpi_mode)
 
         if self.bad_state_is_set:
             raise self.executor_exception

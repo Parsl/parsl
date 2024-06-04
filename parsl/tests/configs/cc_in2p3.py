@@ -1,7 +1,7 @@
-from parsl.config import Config
 from parsl.channels import LocalChannel
-from parsl.providers import GridEngineProvider
+from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
+from parsl.providers import GridEngineProvider
 
 from .user_opts import user_opts
 

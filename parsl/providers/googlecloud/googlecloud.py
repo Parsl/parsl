@@ -1,8 +1,9 @@
 import atexit
 import logging
 import os
-from parsl.launchers import SingleNodeLauncher
+
 from parsl.jobs.states import JobState, JobStatus
+from parsl.launchers import SingleNodeLauncher
 
 logger = logging.getLogger(__name__)
 

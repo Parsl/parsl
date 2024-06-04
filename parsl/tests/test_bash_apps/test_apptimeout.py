@@ -1,9 +1,9 @@
-import parsl
 import pytest
 
+import parsl
 from parsl.app.app import bash_app
-from parsl.tests.configs.local_threads import config
 from parsl.app.errors import AppTimeout
+from parsl.tests.configs.local_threads import config
 
 
 @bash_app

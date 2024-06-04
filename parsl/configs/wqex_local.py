@@ -1,7 +1,7 @@
+import uuid
+
 from parsl.config import Config
 from parsl.executors import WorkQueueExecutor
-
-import uuid
 
 config = Config(
     executors=[

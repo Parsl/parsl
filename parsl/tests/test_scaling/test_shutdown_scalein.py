@@ -1,3 +1,4 @@
+import random
 import threading
 
 import pytest
@@ -8,8 +9,6 @@ from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SimpleLauncher
 from parsl.providers import LocalProvider
-
-import random
 
 # we need some blocks, but it doesn't matter too much how many, as long
 # as they can all start up and get registered within the try_assert
@@ -71,8 +70,6 @@ def test_shutdown_scalein_blocks(tmpd_cwd, try_assert):
     with parsl.load(config):
         # this will wait for everything to be scaled out fully
         try_assert(lambda: len(htex.connected_managers()) == BLOCK_COUNT)
-
-    parsl.clear()
 
     assert len(accumulating_provider.submit_job_ids) == BLOCK_COUNT, f"Exactly {BLOCK_COUNT} blocks should have been launched"
     assert len(accumulating_provider.cancel_job_ids) == BLOCK_COUNT, f"Exactly {BLOCK_COUNT} blocks should have been scaled in"

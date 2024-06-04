@@ -1,8 +1,8 @@
+import pytest
+
 import parsl
 from parsl.app.app import python_app
 from parsl.data_provider.files import File
-
-import pytest
 
 # This config is for the local test which will adding an executor.
 # Most tests in this file should be non-local and use the configuration

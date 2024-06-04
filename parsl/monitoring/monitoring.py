@@ -1,29 +1,25 @@
 from __future__ import annotations
 
-import os
-import time
 import logging
 import multiprocessing.synchronize as ms
+import os
+import queue
+import time
+from multiprocessing import Event, Process
+from multiprocessing.queues import Queue
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
+
 import typeguard
 
-import queue
-
-from parsl.multiprocessing import ForkProcess, SizedQueue
-from multiprocessing import Process
-from multiprocessing import Event
-from multiprocessing.queues import Queue
 from parsl.log_utils import set_file_logger
-from parsl.utils import RepresentationMixin
-from parsl.process_loggers import wrap_with_logs
-from parsl.utils import setproctitle
-
-from parsl.serialize import deserialize
-
+from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios import MultiprocessingQueueRadio
 from parsl.monitoring.router import router_starter
-from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import AddressedMonitoringMessage
-from typing import cast, Any, Optional, Tuple, Union, TYPE_CHECKING
+from parsl.multiprocessing import ForkProcess, SizedQueue
+from parsl.process_loggers import wrap_with_logs
+from parsl.serialize import deserialize
+from parsl.utils import RepresentationMixin, setproctitle
 
 _db_manager_excepts: Optional[Exception]
 
