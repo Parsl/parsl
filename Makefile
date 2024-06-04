@@ -37,7 +37,7 @@ lint: ## run linter script
 
 .PHONY: isort
 isort: ## run isort on all files
-	isort --check .
+	isort --check parsl/
 
 .PHONY: flake8
 flake8:  ## run flake
