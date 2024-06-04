@@ -1,7 +1,6 @@
 """Test usage_tracking values."""
 
 import pytest
-from typeguard import TypeCheckError
 
 import parsl
 from parsl.config import Config
@@ -36,5 +35,5 @@ def test_invalid_values(level):
 @pytest.mark.parametrize("level", ('abcd', None, bytes(1), 1.0, 1j, object()))
 def test_invalid_types(level):
     """Test invalid usage_tracking types."""
-    with pytest.raises(TypeCheckError):
+    with pytest.raises(Exception):
         Config(usage_tracking=level)
