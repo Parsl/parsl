@@ -1,11 +1,11 @@
 """Test usage_tracking values."""
 
 import pytest
+from typeguard import TypeCheckError
 
 import parsl
 from parsl.config import Config
 from parsl.errors import ConfigurationError
-from typeguard import TypeCheckError
 
 
 @pytest.mark.local

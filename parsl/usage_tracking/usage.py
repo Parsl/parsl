@@ -7,13 +7,13 @@ import time
 import uuid
 
 from parsl.dataflow.states import States
+from parsl.errors import ConfigurationError
 from parsl.multiprocessing import ForkProcess
 from parsl.usage_tracking.api import get_parsl_usage
-from parsl.utils import setproctitle
-from parsl.version import VERSION as PARSL_VERSION
-from parsl.errors import ConfigurationError
 from parsl.usage_tracking.levels import DISABLED as USAGE_TRACKING_DISABLED
 from parsl.usage_tracking.levels import LEVEL_3 as USAGE_TRACKING_LEVEL_3
+from parsl.utils import setproctitle
+from parsl.version import VERSION as PARSL_VERSION
 
 logger = logging.getLogger(__name__)
 
