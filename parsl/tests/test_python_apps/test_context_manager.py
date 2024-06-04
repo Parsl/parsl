@@ -117,5 +117,12 @@ def test_exit_wait_exception():
 
 @pytest.mark.local
 def test_exit_wrong_mode():
-    with pytest.raises(TypeError):
+
+    with pytest.raises(Exception) as ex:
         Config(exit_mode="wrongmode")
+
+    # with typeguard 4.x this is TypeCheckError,
+    # with typeguard 2.x this is TypeError
+    # we can't instantiate TypeCheckError if we're in typeguard 2.x environment
+    # because it does not exist... so check name using strings.
+    assert ex.type.__name__ == "TypeCheckError" or ex.type.__name__ == "TypeError"
