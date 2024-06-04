@@ -362,6 +362,7 @@ class Manager:
                     logger.info("Got fulled drained message from interchange - setting kill flag")
                     kill_event.set()
                 else:
+                    assert isinstance(tasks, list), "if not a code, task message must be a list of tasks"
                     task_recv_counter += len(tasks)
                     logger.debug(f"received task list: {tasks}")
                     logger.debug("Got executor tasks: {}, cumulative count of tasks: {}".format(
