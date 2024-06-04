@@ -134,7 +134,15 @@ defmodule EIC.TasksInterchangeToWorkers do
   singleton process here. That message will be forwarded on through the
   zmq connection.
 
-  Because there's no "poll zmq inbound and process mailbox" facility in
+  TODO: there's a module that lets you poll a socket (and hence a ZMQ connection?)
+  into an erlang message which would allow this kind of message driven stuff
+  perhaps? It might be structured a bit differently though, with a zmq gateway
+  module and then a module for the next level up in the protocol?
+  https://github.com/msantos/inert
+  I'm a little unclear about what can be polled in different OS threads here, but
+  hopefully the poll can happen anywhere as long as no reading happens? the poll
+  is just a chance for the zmq-level poll to happen?
+  WRONG?: Because there's no "poll zmq inbound and process mailbox" facility in
   elixir, this is going to sit in a loop alternating between polling those
   two things separately. That's pretty horrible. Another erlang/zmq
   implementations have the ability to gateway incoming zmq directly into
@@ -144,9 +152,9 @@ defmodule EIC.TasksInterchangeToWorkers do
 
   TODO: this cannot restart properly: when it is restarted by its supervisor,
   the bound socket from the previous process is left open and so it fails to
-  perform the bind.
+  perform the bind. should we fail completely and abandon the workflow?
 
-  should this launch a separate process for each registered manager, to track
+  TODO: should this launch a separate process for each registered manager, to track
   things like heartbeats?
 
   """
@@ -161,13 +169,15 @@ defmodule EIC.TasksInterchangeToWorkers do
     IO.puts("TasksInterchangeToWorkers: in body")
     {:ok, socket_to_workers} = :erlzmq.socket(ctx, :router)
     :ok = :erlzmq.bind(socket_to_workers, "tcp://127.0.0.1:9003")
-    :ok = :erlzmq.setsockopt(socket_to_workers, :rcvtimeo, 100)
+
+    # TODO: this timeout should be 0 and event driven with "inert"
+    :ok = :erlzmq.setsockopt(socket_to_workers, :rcvtimeo, 1000)
 
     loop(socket_to_workers)
   end
 
   def loop(socket) do
-    # IO.puts("TaskInterchangeToWorkers: recv poll")
+    # IO.puts("TasksInterchangeToWorkers: recv poll")
 
     # TODO: this timeout polling mode is going to give a pretty bad
     # rate limit on throughput through the interchange... and pretty
@@ -187,13 +197,16 @@ defmodule EIC.TasksInterchangeToWorkers do
         IO.inspect(decoded_msg)
         handle_message_from_worker(source, decoded_msg)
       {:error, :eagain} ->
-        :whatever
+        IO.puts("timeout no-op / recv from socket")
     end
 
     receive do
-      m -> :erlzmq.send_multipart(socket, m)
+      m -> IO.puts("TasksInterchangeToWorkers: sending a multipart message to workers")
+           :erlzmq.send_multipart(socket, m)
     after 
-      100 -> :whatever
+      # TODO: there should not need to be a timeout here - everything should be driven by
+      # erlang messages
+      1000 -> IO.puts("timeout no-op / send to socket")
     end
 
 
@@ -288,7 +301,14 @@ defmodule EIC.TaskQueue do
 
     # TODO: can't reuse pickled form, I think? maybe I wrote about it in the
     # rusterchange?
-    parts = [m["uid"], <<>>, pickled] 
+    # the third element of this list of parts should itself be a list (of tasks)
+    # rather than a single pickled task... (TODO: is that protocol difference
+    # needed? should message parts always be a single task, with zmq-level part
+    # separation instead of python level lists? There's perhaps some pickle-level
+    # caching that goes away if so, when multiple tasks are sent to a single
+    # manager at once...)
+    pickled_list_of_tasks = pickled  # TODO: WRONG!
+    parts = [m["uid"], <<>>, pickled_list_of_tasks] 
 
     send(EIC.TasksInterchangeToWorkers, parts)
 
