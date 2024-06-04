@@ -3,16 +3,16 @@
 
 import logging
 import os
-import parsl
-import pytest
 import re
 import time
-
 from typing import Union
 
+import pytest
+
+import parsl
 from parsl.config import Config
-from parsl.data_provider.files import File
 from parsl.data_provider.data_manager import default_staging
+from parsl.data_provider.files import File
 from parsl.data_provider.staging import Staging
 from parsl.executors import HighThroughputExecutor
 from parsl.monitoring import MonitoringHub
@@ -102,8 +102,6 @@ def test_stdstream_to_monitoring(stdx, expected_stdx, stream, tmpd_cwd, caplog):
     with parsl.load(c):
         kwargs = {stream: stdx}
         stdapp(**kwargs).result()
-
-    parsl.clear()
 
     engine = sqlalchemy.create_engine(c.monitoring.logging_endpoint)
     with engine.begin() as connection:

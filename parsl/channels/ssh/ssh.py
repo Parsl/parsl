@@ -3,8 +3,16 @@ import logging
 import os
 
 import paramiko
+
 from parsl.channels.base import Channel
-from parsl.channels.errors import BadHostKeyException, AuthException, SSHException, BadScriptPath, BadPermsScriptPath, FileCopyException
+from parsl.channels.errors import (
+    AuthException,
+    BadHostKeyException,
+    BadPermsScriptPath,
+    BadScriptPath,
+    FileCopyException,
+    SSHException,
+)
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -217,9 +225,9 @@ class SSHChannel(Channel, RepresentationMixin):
 
         return local_dest
 
-    def close(self):
+    def close(self) -> None:
         if self._is_connected():
-            return self.ssh_client.close()
+            self.ssh_client.close()
 
     def isdir(self, path):
         """Return true if the path refers to an existing directory.

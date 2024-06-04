@@ -3,10 +3,10 @@ import os
 import time
 
 from parsl.channels import LocalChannel
+from parsl.jobs.states import JobState, JobStatus
+from parsl.launchers import SingleNodeLauncher
 from parsl.providers.cluster_provider import ClusterProvider
 from parsl.providers.grid_engine.template import template_string
-from parsl.launchers import SingleNodeLauncher
-from parsl.jobs.states import JobState, JobStatus
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)

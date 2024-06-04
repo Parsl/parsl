@@ -1,11 +1,11 @@
-import os
-import math
-import time
 import logging
+import math
+import os
 import re
-import typeguard
-
+import time
 from typing import Optional
+
+import typeguard
 
 from parsl.channels import LocalChannel
 from parsl.channels.base import Channel

@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-import threading
 import datetime
-from typing_extensions import TypedDict
+import threading
 from concurrent.futures import Future
 
-
 # only for type checking:
-from typing import Any, Callable, Dict, Optional, List, Sequence, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Union
+
+from typing_extensions import TypedDict
 
 if TYPE_CHECKING:
     from parsl.dataflow.futures import AppFuture
 
 import parsl.dataflow.dflow as dflow
-
 from parsl.dataflow.states import States
 
 

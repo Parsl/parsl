@@ -1,5 +1,5 @@
-from parsl.providers.errors import ExecutionProviderException
 from parsl.launchers.base import Launcher
+from parsl.providers.errors import ExecutionProviderException
 
 
 class BadLauncher(ExecutionProviderException, TypeError):

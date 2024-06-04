@@ -1,14 +1,13 @@
-import logging
-import typeguard
 import concurrent.futures as cf
-
+import logging
 from typing import List, Optional
+
+import typeguard
 
 from parsl.data_provider.staging import Staging
 from parsl.executors.base import ParslExecutor
-from parsl.utils import RepresentationMixin
 from parsl.executors.errors import UnsupportedFeatureError
-
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 

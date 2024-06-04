@@ -1,10 +1,12 @@
-import zmq
 import argparse
-import uuid
-import time
 import logging
-from parsl.addresses import get_all_addresses
+import time
+import uuid
+
+import zmq
 from zmq.utils.monitor import recv_monitor_message
+
+from parsl.addresses import get_all_addresses
 
 logger = logging.getLogger(__name__)
 

@@ -1,13 +1,12 @@
 """Config for Azure"""
-from parsl.providers import AzureProvider
+import getpass
 
 from parsl.config import Config
-from parsl.executors import HighThroughputExecutor
-from parsl.data_provider.http import HTTPInTaskStaging
 from parsl.data_provider.ftp import FTPInTaskStaging
+from parsl.data_provider.http import HTTPInTaskStaging
 from parsl.data_provider.rsync import RSyncStaging
-
-import getpass
+from parsl.executors import HighThroughputExecutor
+from parsl.providers import AzureProvider
 
 # If you are a developer running tests, make sure to update parsl/tests/configs/user_opts.py
 # If you are a user copying-and-pasting this as an example, make sure to either

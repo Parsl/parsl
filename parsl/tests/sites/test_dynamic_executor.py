@@ -1,10 +1,10 @@
+import pytest
+
 import parsl
+from parsl.app.app import python_app
 from parsl.executors import HighThroughputExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.providers import LocalProvider
-from parsl.app.app import python_app
-
-import pytest
 
 
 @python_app(executors=['threads'])
@@ -75,4 +75,3 @@ def test_dynamic_executor():
     print("Done testing")
 
     dfk.cleanup()
-    parsl.clear()

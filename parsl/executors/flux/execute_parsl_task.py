@@ -1,12 +1,12 @@
 """Script for executing tasks inside of Flux jobs."""
 
 import argparse
-import os
 import logging
+import os
 
+from parsl.executors.flux import TaskResult
 from parsl.executors.high_throughput.process_worker_pool import execute_task
 from parsl.serialize import serialize
-from parsl.executors.flux import TaskResult
 
 
 def main():

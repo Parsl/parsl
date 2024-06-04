@@ -1,6 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
 
-
 WORKFLOW = 'workflow'    # Workflow table includes workflow metadata
 TASK = 'task'            # Task table includes task metadata
 STATUS = 'status'        # Status table includes task status

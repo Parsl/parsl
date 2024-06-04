@@ -5,12 +5,12 @@ to transfer the file as well as to give the appropriate filepath depending
 on where (client-side, remote-side, intermediary-side) the File.filepath is
 being called from.
 """
-import os
-
-import typeguard
 import logging
+import os
 from typing import Optional, Union
 from urllib.parse import urlparse
+
+import typeguard
 
 logger = logging.getLogger(__name__)
 

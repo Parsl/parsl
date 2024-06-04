@@ -1,8 +1,9 @@
+import time
+
 import pytest
 
 import parsl
-import time
-from parsl import python_app, ThreadPoolExecutor
+from parsl import ThreadPoolExecutor, python_app
 from parsl.config import Config
 from parsl.data_provider.files import File
 from parsl.data_provider.staging import Staging
@@ -60,7 +61,6 @@ def test_1316_local_path_on_execution_side_sp2():
     assert not file.local_path, "The local_path on the submit side should not be set"
 
     parsl.dfk().cleanup()
-    parsl.clear()
 
 
 @pytest.mark.local
@@ -83,4 +83,3 @@ def test_1316_local_path_setting_preserves_dependency_sp2():
     assert not file.local_path, "The local_path on the submit side should not be set"
 
     parsl.dfk().cleanup()
-    parsl.clear()

@@ -1,10 +1,10 @@
 import os
+
 from parsl.config import Config
 
 
 def fresh_config():
-    from parsl.executors.radical import ResourceConfig
-    from parsl.executors.radical import RadicalPilotExecutor
+    from parsl.executors.radical import RadicalPilotExecutor, ResourceConfig
 
     rpex_cfg = ResourceConfig()
     rpex_cfg.worker_type = "MPI"
