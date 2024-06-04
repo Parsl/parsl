@@ -11,6 +11,8 @@ from parsl.executors.base import ParslExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.monitoring import MonitoringHub
 from parsl.usage_tracking.api import UsageInformation
+from parsl.usage_tracking.levels import DISABLED as USAGE_TRACKING_DISABLED
+from parsl.usage_tracking.levels import LEVEL_3 as USAGE_TRACKING_LEVEL_3
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -105,7 +107,7 @@ class Config(RepresentationMixin, UsageInformation):
                  strategy_period: Union[float, int] = 5,
                  max_idletime: float = 120.0,
                  monitoring: Optional[MonitoringHub] = None,
-                 usage_tracking: Optional[int] = None,
+                 usage_tracking: int = 0,
                  initialize_logging: bool = True) -> None:
 
         executors = tuple(executors or [])
@@ -139,8 +141,8 @@ class Config(RepresentationMixin, UsageInformation):
         self.strategy = strategy
         self.strategy_period = strategy_period
         self.max_idletime = max_idletime
+        self.validate_usage_tracking(usage_tracking)
         self.usage_tracking = usage_tracking
-        self._validate_usage_tracking()
         self.initialize_logging = initialize_logging
         self.monitoring = monitoring
         self.std_autopath: Optional[Callable] = std_autopath
@@ -160,10 +162,10 @@ class Config(RepresentationMixin, UsageInformation):
             raise ConfigurationError('Executors must have unique labels ({})'.format(
                 ', '.join(['label={}'.format(repr(d)) for d in duplicates])))
 
-    def _validate_usage_tracking(self) -> None:
-        if self.usage_tracking is not None and int(self.usage_tracking) not in {0, 1, 2, 3}:
+    def validate_usage_tracking(self, level: int) -> None:
+        if not USAGE_TRACKING_DISABLED <= level <= USAGE_TRACKING_LEVEL_3:
             raise ConfigurationError(
-                f"Usage Tracking values must be 0, 1, 2, or 3 and not {self.usage_tracking}"
+                f"Usage Tracking values must be 0, 1, 2, or 3 and not {level}"
             )
 
     def get_usage_information(self):

@@ -12,6 +12,8 @@ from parsl.usage_tracking.api import get_parsl_usage
 from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.errors import ConfigurationError
+from parsl.usage_tracking.levels import DISABLED as USAGE_TRACKING_DISABLED
+from parsl.usage_tracking.levels import LEVEL_3 as USAGE_TRACKING_LEVEL_3
 
 logger = logging.getLogger(__name__)
 
@@ -118,18 +120,10 @@ class UsageTracker:
     def check_tracking_level(self) -> int:
         """Check if tracking is enabled and return level.
 
-        Checks the following:
-            1. PARSL_TRACKING environment variable
-                - Possible values:
-                    ["true", "false", "True", "False", "0", "1", "2", "3"]
-                - Other values are treated as Level 0 (disabled)
+        Checks usage_tracking in Config
+            - Possible values: [True, False, 0, 1, 2, 3]
 
-            2. usage_tracking in Config
-                - Possible values: [True, False, 0, 1, 2, 3]
-
-            Parsl will choose the lowest level that is specified by any of the parameters, and 0 if none of them are set
-
-            True/False values are treated as Level 1/Level 0 respectively.
+        True/False values are treated as Level 1/Level 0 respectively.
 
         Returns: int
             - 0 : Tracking is disabled
@@ -140,41 +134,12 @@ class UsageTracker:
             - 3 : Tracking is enabled with level 3
                   Share info about app count, app fails, execution time + level 2
         """
-        inf = sys.maxsize
-
-        envvar = str(os.environ.get("PARSL_TRACKING", None)).lower()
-        if envvar == "none":
-            envvar_level = inf
-
-        elif envvar == "false":
-            envvar_level = 0
-
-        elif envvar == "true":
-            envvar_level = 1
-
-        elif envvar in {"0", "1", "2", "3"}:
-            envvar_level = int(envvar)
-
-        else:
-            raise ConfigurationError(
-                f"PARSL_TRACKING values must be true, false, 0, 1, 2, or 3 and not {os.environ.get('PARSL_TRACKING')}"
-            )
-
-        if self.config.usage_tracking is None:
-            config_level = inf
-
-        elif 0 <= int(self.config.usage_tracking) <= 3:
-            config_level = int(self.config.usage_tracking)
-
-        else:
+        if not USAGE_TRACKING_DISABLED <= self.config.usage_tracking <= USAGE_TRACKING_LEVEL_3:
             raise ConfigurationError(
                 f"Usage Tracking values must be 0, 1, 2, or 3 and not {self.config.usage_tracking}"
             )
 
-        if min(envvar_level, config_level) > 3:
-            return 0
-
-        return min(envvar_level, config_level)
+        return self.config.usage_tracking
 
     def construct_start_message(self) -> bytes:
         """Collect preliminary run info at the start of the DFK.
@@ -186,7 +151,7 @@ class UsageTracker:
                    'parsl_v': self.parsl_version,
                    'python_v': self.python_version,
                    'platform.system': platform.system(),
-                   'tracking_level': self.tracking_level}
+                   'tracking_level': int(self.tracking_level)}
 
         if self.tracking_level >= 2:
             message['components'] = get_parsl_usage(self.dfk._config)
