@@ -35,5 +35,11 @@ def test_invalid_values(level):
 @pytest.mark.parametrize("level", ("abcd", None, bytes(1), 1.0, 1j, object()))
 def test_invalid_types(level):
     """Test invalid usage_tracking types."""
-    with pytest.raises(Exception):
+    with pytest.raises(Exception) as ex:
         Config(usage_tracking=level)
+
+    # with typeguard 4.x this is TypeCheckError,
+    # with typeguard 2.x this is TypeError
+    # we can't instantiate TypeCheckError if we're in typeguard 2.x environment
+    # because it does not exist... so check name using strings.
+    assert ex.type.__name__ in ["TypeCheckError", "TypeError"]
