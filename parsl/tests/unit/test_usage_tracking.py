@@ -32,7 +32,7 @@ def test_invalid_values(level):
 
 
 @pytest.mark.local
-@pytest.mark.parametrize("level", ('abcd', None, bytes(1), 1.0, 1j, object()))
+@pytest.mark.parametrize("level", ("abcd", None, bytes(1), 1.0, 1j, object()))
 def test_invalid_types(level):
     """Test invalid usage_tracking types."""
     with pytest.raises(Exception):
