@@ -1,9 +1,10 @@
 import logging
-import parsl
-import pytest
 import zipfile
-
 from functools import partial
+
+import pytest
+
+import parsl
 from parsl.app.futures import DataFuture
 from parsl.data_provider.files import File
 from parsl.executors import ThreadPoolExecutor

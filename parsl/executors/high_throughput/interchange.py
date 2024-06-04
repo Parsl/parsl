@@ -1,31 +1,29 @@
 #!/usr/bin/env python
 import argparse
-import zmq
-import os
-import sys
-import platform
-import random
-import time
 import datetime
-import pickle
-import signal
-import logging
-import queue
-import threading
 import json
+import logging
+import os
+import pickle
+import platform
+import queue
+import random
+import signal
+import sys
+import threading
+import time
+from typing import Any, Dict, List, NoReturn, Optional, Sequence, Set, Tuple, cast
 
-from typing import cast, Any, Dict, NoReturn, Sequence, Set, Optional, Tuple, List
+import zmq
 
 from parsl import curvezmq
-from parsl.utils import setproctitle
-from parsl.version import VERSION as PARSL_VERSION
-from parsl.serialize import serialize as serialize_object
-
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.manager_record import ManagerRecord
 from parsl.monitoring.message_type import MessageType
 from parsl.process_loggers import wrap_with_logs
-
+from parsl.serialize import serialize as serialize_object
+from parsl.utils import setproctitle
+from parsl.version import VERSION as PARSL_VERSION
 
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
 PKL_DRAINED_CODE = pickle.dumps((2 ** 32) - 2)

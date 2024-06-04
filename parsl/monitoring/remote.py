@@ -1,16 +1,20 @@
+import datetime
+import logging
 import os
 import time
-import logging
-import datetime
 from functools import wraps
-
-from parsl.multiprocessing import ForkProcess
 from multiprocessing import Event
-from parsl.process_loggers import wrap_with_logs
+from typing import Any, Callable, Dict, List, Sequence, Tuple
 
 from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.radios import MonitoringRadio, UDPRadio, HTEXRadio, FilesystemRadio
-from typing import Any, Callable, Dict, List, Sequence, Tuple
+from parsl.monitoring.radios import (
+    FilesystemRadio,
+    HTEXRadio,
+    MonitoringRadio,
+    UDPRadio,
+)
+from parsl.multiprocessing import ForkProcess
+from parsl.process_loggers import wrap_with_logs
 
 logger = logging.getLogger(__name__)
 
@@ -135,8 +139,8 @@ def send_first_last_message(try_id: int,
                             monitoring_hub_url: str,
                             run_id: str, radio_mode: str, run_dir: str,
                             is_last: bool) -> None:
-    import platform
     import os
+    import platform
 
     radio = get_radio(radio_mode, monitoring_hub_url, task_id, run_dir)
 
@@ -177,6 +181,7 @@ def monitor(pid: int,
     """
     import logging
     import platform
+
     import psutil
 
     from parsl.utils import setproctitle

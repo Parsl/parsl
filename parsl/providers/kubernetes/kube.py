@@ -1,16 +1,18 @@
 import logging
 import time
+
 from parsl.providers.kubernetes.template import template_string
 
 logger = logging.getLogger(__name__)
+
+from typing import Any, Dict, List, Optional, Tuple
+
+import typeguard
 
 from parsl.errors import OptionalModuleMissing
 from parsl.jobs.states import JobState, JobStatus
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import RepresentationMixin
-
-import typeguard
-from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from kubernetes import client, config

@@ -1,5 +1,5 @@
-from abc import ABCMeta, abstractmethod, abstractproperty
 import logging
+from abc import ABCMeta, abstractmethod, abstractproperty
 from typing import Any, Dict, List, Optional
 
 from parsl.channels.base import Channel

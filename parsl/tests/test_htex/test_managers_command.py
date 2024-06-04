@@ -1,7 +1,8 @@
-import pytest
 import logging
-
 import sys
+
+import pytest
+
 import parsl
 from parsl.app.app import python_app
 from parsl.tests.configs.htex_local import fresh_config

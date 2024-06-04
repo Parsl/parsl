@@ -3,8 +3,16 @@ import logging
 import os
 
 import paramiko
+
 from parsl.channels.base import Channel
-from parsl.channels.errors import BadHostKeyException, AuthException, SSHException, BadScriptPath, BadPermsScriptPath, FileCopyException
+from parsl.channels.errors import (
+    AuthException,
+    BadHostKeyException,
+    BadPermsScriptPath,
+    BadScriptPath,
+    FileCopyException,
+    SSHException,
+)
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)

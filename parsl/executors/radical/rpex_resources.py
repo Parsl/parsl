@@ -1,6 +1,5 @@
-import sys
 import json
-
+import sys
 from typing import List
 
 _setup_paths: List[str] = []

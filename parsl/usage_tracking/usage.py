@@ -1,21 +1,21 @@
-import uuid
-import time
-import os
 import json
 import logging
+import platform
 import socket
 import sys
-import platform
+import time
+import uuid
 
+from parsl.dataflow.states import States
+from parsl.multiprocessing import ForkProcess
 from parsl.usage_tracking.api import get_parsl_usage
 from parsl.utils import setproctitle
-from parsl.multiprocessing import ForkProcess
-from parsl.dataflow.states import States
 from parsl.version import VERSION as PARSL_VERSION
 
 logger = logging.getLogger(__name__)
 
 from typing import Callable
+
 from typing_extensions import ParamSpec
 
 # protocol version byte: when (for example) compression parameters are changed
@@ -116,22 +116,12 @@ class UsageTracker:
     def check_tracking_enabled(self):
         """Check if tracking is enabled.
 
-        Tracking will be enabled unless either of these is true:
+        Tracking will be enabled unless the following is true:
 
             1. dfk.config.usage_tracking is set to False
-            2. Environment variable PARSL_TRACKING is set to false (case insensitive)
 
         """
-        track = True
-
-        if not self.config.usage_tracking:
-            track = False
-
-        envvar = str(os.environ.get("PARSL_TRACKING", True)).lower()
-        if envvar == "false":
-            track = False
-
-        return track
+        return self.config.usage_tracking
 
     def construct_start_message(self) -> bytes:
         """Collect preliminary run info at the start of the DFK.

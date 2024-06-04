@@ -2,7 +2,7 @@ import pytest
 
 from parsl import Config
 from parsl.executors import HighThroughputExecutor
-from parsl.launchers import SrunLauncher, AprunLauncher, SimpleLauncher
+from parsl.launchers import AprunLauncher, SimpleLauncher, SrunLauncher
 from parsl.providers import SlurmProvider
 
 

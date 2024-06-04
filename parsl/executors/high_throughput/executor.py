@@ -1,42 +1,38 @@
-import typing
-from collections import defaultdict
-from concurrent.futures import Future
-import typeguard
 import logging
-import threading
+import math
 import pickle
 import subprocess
-from dataclasses import dataclass
-from typing import Dict, Sequence
-from typing import List, Optional, Tuple, Union, Callable
-import math
+import threading
+import typing
 import warnings
+from collections import defaultdict
+from concurrent.futures import Future
+from dataclasses import dataclass
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+
+import typeguard
 
 import parsl.launchers
-from parsl.usage_tracking.api import UsageInformation
-from parsl.serialize import pack_res_spec_apply_message, deserialize
-from parsl.serialize.errors import SerializationError, DeserializationError
+from parsl import curvezmq
+from parsl.addresses import get_all_addresses
 from parsl.app.errors import RemoteExceptionWrapper
-from parsl.jobs.states import JobStatus, JobState, TERMINAL_STATES
+from parsl.data_provider.staging import Staging
+from parsl.executors.errors import BadMessage, ScalingFailed
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
-from parsl.executors.errors import (
-    BadMessage, ScalingFailed,
-)
 from parsl.executors.high_throughput.mpi_prefix_composer import (
     VALID_LAUNCHERS,
-    validate_resource_spec
+    validate_resource_spec,
 )
-
-from parsl import curvezmq
 from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.providers.base import ExecutionProvider
-from parsl.data_provider.staging import Staging
-from parsl.addresses import get_all_addresses
+from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
 from parsl.process_loggers import wrap_with_logs
-
-from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
+from parsl.providers.base import ExecutionProvider
+from parsl.serialize import deserialize, pack_res_spec_apply_message
+from parsl.serialize.errors import DeserializationError, SerializationError
+from parsl.usage_tracking.api import UsageInformation
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
