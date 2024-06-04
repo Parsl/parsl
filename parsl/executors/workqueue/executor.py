@@ -671,11 +671,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     # of cores as required task slot count, instead of 1 slot.
                     assert isinstance(fut.resource_specification, dict)  # type: ignore[attr-defined]
 
-                    # TODO: functional style defaulting to 1...?
-                    if 'cores' in fut.resource_specification:  # type: ignore[attr-defined]
-                        outstanding += fut.resource_specification['cores']  # type: ignore[attr-defined]
-                    else:
-                        outstanding += 1
+                    outstanding += fut.resource_specification.get('cores',  # type: ignore[attr-defined]
+                                                                  self.scaling_assume_core_slots_per_worker)
                     tasks += 1
         logger.debug(f"Counted {tasks} outstanding tasks with {outstanding} outstanding slots")
         return outstanding
