@@ -4,13 +4,19 @@ import os
 from functools import partial
 from typing import Optional
 
-import globus_sdk
 import typeguard
 
 import parsl
 from parsl.app.app import python_app
 from parsl.data_provider.staging import Staging
+from parsl.errors import OptionalModuleMissing
 from parsl.utils import RepresentationMixin
+
+try:
+    import globus_sdk
+    _globus_enabled = True
+except (ImportError, NameError, FileNotFoundError):
+    _globus_enalbed = False
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +70,10 @@ class Globus:
 
     @classmethod
     def init(cls):
+        if not _globus_enabled:
+            raise OptionalModuleMissing(['globus'],
+                                        "Globus requires the globus module and config.")
+
         token_path = os.path.join(os.path.expanduser('~'), '.parsl')
         if not os.path.isdir(token_path):
             os.mkdir(token_path)
@@ -219,6 +229,10 @@ class GlobusStaging(Staging, RepresentationMixin):
 
     @typeguard.typechecked
     def __init__(self, endpoint_uuid: str, endpoint_path: Optional[str] = None, local_path: Optional[str] = None):
+        if not _globus_enabled:
+            raise OptionalModuleMissing(['globus'],
+                                        "GlobusStaging requires the globus module and config.")
+
         self.endpoint_uuid = endpoint_uuid
         self.endpoint_path = endpoint_path
         self.local_path = local_path
