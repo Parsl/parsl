@@ -7,7 +7,16 @@ import pytest
 import parsl
 from parsl.executors.base import ParslExecutor
 
+# N is the number of tasks to chain
+# With mid-2024 Parsl, N>140 causes Parsl to hang
 N = 100
+
+# MAX_STACK is the maximum Python stack depth allowed for either
+# task submission to an executor or execution of a task.
+# With mid-2024 Parsl, 2-3 stack entries will be used per
+# recursively launched parsl task. So this should be smaller than
+# 2*N, but big enough to allow regular pytest+parsl stuff to
+# happen.
 MAX_STACK = 50 
 
 def local_config():
