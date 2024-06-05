@@ -17,10 +17,12 @@ N = 100
 # recursively launched parsl task. So this should be smaller than
 # 2*N, but big enough to allow regular pytest+parsl stuff to
 # happen.
-MAX_STACK = 50 
+MAX_STACK = 50
+
 
 def local_config():
     return parsl.Config(executors=[ImmediateExecutor()])
+
 
 class ImmediateExecutor(ParslExecutor):
     def start(self):
@@ -32,10 +34,11 @@ class ImmediateExecutor(ParslExecutor):
     def submit(self, func: Callable, resource_specification: Dict[str, Any], *args: Any, **kwargs: Any) -> Future:
         stack_depth = len(inspect.stack())
         assert stack_depth < MAX_STACK, "tasks should not be launched deep in the Python stack"
-        fut = Future()
+        fut: Future[None] = Future()
         res = func(*args, **kwargs)
         fut.set_result(res)
         return fut
+
 
 @parsl.python_app
 def chain(upstream):
