@@ -233,6 +233,7 @@ class BlockProviderExecutor(ParslExecutor):
         job_ids = []  # types: List[Any]
         for bid in block_ids:
             job_ids.append(self.blocks_to_job_id[bid])
+        assert len(block_ids) == len(job_ids)
         return block_ids, job_ids
 
     @abstractproperty
