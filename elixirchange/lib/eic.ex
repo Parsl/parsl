@@ -313,6 +313,10 @@ defmodule EIC.TaskQueue do
     # deserialization then re-serialization rather than being able to skip that?
     # and maybe keeping things binary is a good thing? TODO: look at that
     # performance-sensitive path, maybe open an issue?
+
+    # this pickling here is pickling byte sequences using Python2 pickle formats
+    # which don't unpickle correctly - BINSTRING not BINBYTES - so probably need
+    # to fiddle with the elixir-side pickle library some more.
     pickled_list_of_tasks = :pickle.term_to_pickle([task_dict])  # TODO: WRONG?
     parts = [m["uid"], <<>>, pickled_list_of_tasks] 
 
