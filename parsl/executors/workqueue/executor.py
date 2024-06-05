@@ -672,13 +672,25 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     def scale_in(self, count: int) -> List[str]:
         """Scale in method.
         """
+        logger.debug("Number of jobs requested for scale in: %s", count)
+        logger.debug("Number of jobs in blocks_to_job_id map: %s", len(self.blocks_to_job_id))
+
         # Obtain list of blocks to kill
         to_kill = list(self.blocks_to_job_id.keys())[:count]
+
+        logger.debug("List of blocks to scale in: %s", to_kill)
+        for block_id in to_kill:
+            if block_id in self._status:
+                logger.debug("status of block %s is %s", block_id, self._status[block_id])
+            else:
+                logger.debug("block %s has no recorded status", block_id)
+
         kill_ids = [self.blocks_to_job_id[block] for block in to_kill]
 
         # Cancel the blocks provisioned
         if self.provider:
             logger.info(f"Scaling in jobs: {kill_ids}")
+
             r = self.provider.cancel(kill_ids)
             job_ids = self._filter_scale_in_ids(kill_ids, r)
             block_ids_killed = [self.job_ids_to_block[jid] for jid in job_ids]
