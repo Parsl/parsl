@@ -123,6 +123,8 @@ class BlockProviderExecutor(ParslExecutor):
             status = self._make_status_dict(block_ids, self._provider.status(job_ids))
         else:
             status = {}
+
+        logger.debug("Adding these simulated status entries onto provider-returned status: %s", self._simulated_status)
         status.update(self._simulated_status)
 
         return status
@@ -301,6 +303,8 @@ class BlockProviderExecutor(ParslExecutor):
             for block_id in block_ids:
                 new_status[block_id] = JobStatus(JobState.CANCELLED)
                 del self._status[block_id]
+                if block_id in self._simulated_status:
+                    logger.warning("block %s is in simulated status: not properly deleted", block_id)
             self.send_monitoring_info(new_status)
         return block_ids
 
