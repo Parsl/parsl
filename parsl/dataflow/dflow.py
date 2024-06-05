@@ -11,6 +11,7 @@ import random
 import sys
 import threading
 import time
+import concurrent.futures as cf
 from concurrent.futures import Future
 from functools import partial
 from getpass import getuser
@@ -208,6 +209,8 @@ class DataFlowKernel:
         self.task_count = 0
         self.tasks: Dict[int, TaskRecord] = {}
         self.submitter_lock = threading.Lock()
+
+        self.dependency_launch_pool = cf.ThreadPoolExecutor(max_workers=1, thread_name_prefix="Dependency-Launch")
 
         self.dependency_resolver = self.config.dependency_resolver if self.config.dependency_resolver is not None \
             else SHALLOW_DEPENDENCY_RESOLVER
@@ -1270,6 +1273,10 @@ class DataFlowKernel:
             logger.info("Terminating monitoring")
             self.monitoring.close()
             logger.info("Terminated monitoring")
+
+        logger.info("Terminating dependency launch pool")
+        self.dependency_launch_pool.shutdown(cancel_futures=True)
+        logger.info("Terminated dependency launch pool")
 
         logger.info("Unregistering atexit hook")
         atexit.unregister(self.atexit_cleanup)
