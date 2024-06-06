@@ -28,6 +28,10 @@ defmodule EIC.Supervisor do
         id: EIC.TasksInterchangeToWorkers,
         start: {EIC.TasksInterchangeToWorkers, :start_link, [ctx]}
       },
+      %{
+        id: EIC.ResultsWorkersToInterchange,
+        start: {EIC.ResultsWorkersToInterchange, :start_link, [ctx]}
+      },
       %{id: EIC.TaskQueue, start: {EIC.TaskQueue, :start_link, [ctx]}}
     ]
 
@@ -70,6 +74,32 @@ defmodule EIC.TasksSubmitToInterchange do
 
     loop(socket)
   end
+end
+
+defmodule EIC.ResultsWorkersToInterchange do
+  @moduledoc """
+  This module handles results coming from workers back into the interchange
+  over ZMQ.
+  """
+  def start_link(ctx) do
+    Task.start_link(EIC.ResultsWorkersToInterchange, :body, [ctx])
+  end
+
+  def body(ctx) do
+    {:ok, socket} = :erlzmq.socket(ctx, :router)
+    :ok = :erlzmq.bind(socket, "tcp://127.0.0.1:9004")
+    loop(socket)
+  end
+
+  def loop(socket) do
+    IO.puts("Invoking results receive")
+    {:ok, msgs} = :erlzmq.recv_multipart(socket)
+    # this parts vec will contain first a manager ID, and then an arbitrary number of pickled result-like parts from that manager.
+    IO.puts("Got this results multipart message:")
+    IO.inspect(msgs)
+    loop(socket)
+  end
+
 end
 
 defmodule EIC.CommandChannel do
