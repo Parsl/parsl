@@ -72,6 +72,13 @@ defmodule EIC.TasksSubmitToInterchange do
     IO.puts("task_dict is:")
     IO.inspect(task_dict)
 
+    # TODO: start a new task supervisor process (one per task) to deal
+    # with everything to do with this message - can regard this message
+    # as a bit more "create task in the interchange"
+    # rather than "deliver this task message somewhere".
+    # That task supervisor should also be where the result gets sent
+    # by the workers->interchange zmq handler.
+
     IO.puts("casting task to task queue")
     # TODO: keep the pickled message around so that we don't need to re-pickle it?
     # actually can't do that... because it gets repickled differently (as a list)
