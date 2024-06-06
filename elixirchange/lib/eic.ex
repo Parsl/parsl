@@ -236,6 +236,13 @@ defmodule EIC.TasksInterchangeToWorkers do
    GenServer.cast(:task_queue, {:new_manager, msg})
   end
 
+  # TODO: there can be heartbeat here, but I think the test suite might not be
+  # testing it: it will only get sent (I think) if no tasks have been received
+  # which might be a rare occurence in the task-heavy test environment? maybe
+  # there should be an explicit test?
+  # I encountered it in the test suite when not processing results in elixirchange
+  # and so not sending any more tasks, and so the process worker pool eventually
+  # decides to send a heartbeat on this channel because of the silence, I guess?
   def handle_message_from_worker(source, msg) do
     raise "Unsupported message"
   end
