@@ -7,8 +7,11 @@ import time
 import uuid
 
 from parsl.dataflow.states import States
+from parsl.errors import ConfigurationError
 from parsl.multiprocessing import ForkProcess
 from parsl.usage_tracking.api import get_parsl_usage
+from parsl.usage_tracking.levels import DISABLED as USAGE_TRACKING_DISABLED
+from parsl.usage_tracking.levels import LEVEL_3 as USAGE_TRACKING_LEVEL_3
 from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
 
@@ -110,17 +113,32 @@ class UsageTracker:
         self.python_version = "{}.{}.{}".format(sys.version_info.major,
                                                 sys.version_info.minor,
                                                 sys.version_info.micro)
-        self.tracking_enabled = self.check_tracking_enabled()
-        logger.debug("Tracking status: {}".format(self.tracking_enabled))
+        self.tracking_level = self.check_tracking_level()
+        self.start_time = None
+        logger.debug("Tracking level: {}".format(self.tracking_level))
 
-    def check_tracking_enabled(self):
-        """Check if tracking is enabled.
+    def check_tracking_level(self) -> int:
+        """Check if tracking is enabled and return level.
 
-        Tracking will be enabled unless the following is true:
+        Checks usage_tracking in Config
+            - Possible values: [True, False, 0, 1, 2, 3]
 
-            1. dfk.config.usage_tracking is set to False
+        True/False values are treated as Level 1/Level 0 respectively.
 
+        Returns: int
+            - 0 : Tracking is disabled
+            - 1 : Tracking is enabled with level 1
+                  Share info about Parsl version, Python version, platform
+            - 2 : Tracking is enabled with level 2
+                  Share info about config + level 1
+            - 3 : Tracking is enabled with level 3
+                  Share info about app count, app fails, execution time + level 2
         """
+        if not USAGE_TRACKING_DISABLED <= self.config.usage_tracking <= USAGE_TRACKING_LEVEL_3:
+            raise ConfigurationError(
+                f"Usage Tracking values must be 0, 1, 2, or 3 and not {self.config.usage_tracking}"
+            )
+
         return self.config.usage_tracking
 
     def construct_start_message(self) -> bytes:
@@ -133,18 +151,28 @@ class UsageTracker:
                    'parsl_v': self.parsl_version,
                    'python_v': self.python_version,
                    'platform.system': platform.system(),
-                   'start': int(time.time()),
-                   'components': get_parsl_usage(self.dfk._config)}
+                   'tracking_level': int(self.tracking_level)}
+
+        if self.tracking_level >= 2:
+            message['components'] = get_parsl_usage(self.dfk._config)
+
+        if self.tracking_level == 3:
+            self.start_time = int(time.time())
+            message['start'] = self.start_time
+
         logger.debug(f"Usage tracking start message: {message}")
 
         return self.encode_message(message)
 
     def construct_end_message(self) -> bytes:
         """Collect the final run information at the time of DFK cleanup.
+        This is only called if tracking level is 3.
 
         Returns:
              - Message dict dumped as json string, ready for UDP
         """
+        end_time = int(time.time())
+
         app_count = self.dfk.task_count
 
         app_fails = self.dfk.task_state_counts[States.failed] + self.dfk.task_state_counts[States.dep_fail]
@@ -157,7 +185,8 @@ class UsageTracker:
                          'app_fails': app_fails}
 
         message = {'correlator': self.correlator_uuid,
-                   'end': int(time.time()),
+                   'end': end_time,
+                   'execution_time': end_time - self.start_time,
                    'components': [dfk_component] + get_parsl_usage(self.dfk._config)}
         logger.debug(f"Usage tracking end message (unencoded): {message}")
 
@@ -168,20 +197,22 @@ class UsageTracker:
 
     def send_UDP_message(self, message: bytes) -> None:
         """Send UDP message."""
-        if self.tracking_enabled:
-            try:
-                proc = udp_messenger(self.domain_name, self.UDP_PORT, self.sock_timeout, message)
-                self.procs.append(proc)
-            except Exception as e:
-                logger.debug("Usage tracking failed: {}".format(e))
+        try:
+            proc = udp_messenger(self.domain_name, self.UDP_PORT, self.sock_timeout, message)
+            self.procs.append(proc)
+        except Exception as e:
+            logger.debug("Usage tracking failed: {}".format(e))
 
     def send_start_message(self) -> None:
-        message = self.construct_start_message()
-        self.send_UDP_message(message)
+        if self.tracking_level:
+            self.start_time = time.time()
+            message = self.construct_start_message()
+            self.send_UDP_message(message)
 
     def send_end_message(self) -> None:
-        message = self.construct_end_message()
-        self.send_UDP_message(message)
+        if self.tracking_level == 3:
+            message = self.construct_end_message()
+            self.send_UDP_message(message)
 
     def close(self, timeout: float = 10.0) -> None:
         """First give each process one timeout period to finish what it is
