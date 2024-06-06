@@ -70,7 +70,7 @@ defmodule EIC.TasksSubmitToInterchange do
     # TODO: keep the pickled message around so that we don't need to re-pickle it?
     # actually can't do that... because it gets repickled differently (as a list)
     # when going out to the workers...
-    GenServer.cast(:task_queue, {:new_task, task_dict, msg})
+    GenServer.cast(:matchmaker, {:new_task, task_dict, msg})
 
     loop(socket)
   end
@@ -263,7 +263,7 @@ defmodule EIC.TasksInterchangeToWorkers do
     # "worker_count" => 8
     # }
 
-   GenServer.cast(:task_queue, {:new_manager, msg})
+   GenServer.cast(:matchmaker, {:new_manager, msg})
   end
 
   # TODO: there can be heartbeat here, but I think the test suite might not be
@@ -283,7 +283,7 @@ defmodule EIC.TaskQueue do
 
   def start_link(ctx) do
     IO.puts("TaskQueue: start_link")
-    GenServer.start_link(EIC.TaskQueue, [ctx], name: :task_queue)
+    GenServer.start_link(EIC.TaskQueue, [ctx], name: :matchmaker)
   end
 
   @impl true
