@@ -339,8 +339,11 @@ class Timer:
         self._thread.start()
 
     def _wake_up_timer(self) -> None:
+        logger.info("Wake up timer: before first event wait")
         while not self._kill_event.wait(self.interval):
+            logger.info("Wake up timer: before make_callback")
             self.make_callback()
+            logger.info("Wake up timer: after make_callback, before event wait")
 
     def make_callback(self) -> None:
         """Makes the callback and resets the timer.
@@ -353,8 +356,11 @@ class Timer:
     def close(self, timeout: Optional[float] = None) -> None:
         """Merge the threads and terminate.
         """
+        logger.info("Closing Timer - setting kill event")
         self._kill_event.set()
+        logger.info("Set timer kill event - now joining")
         self._thread.join(timeout=timeout)
+        logger.info("Joined ok")
 
 
 class AutoCancelTimer(threading.Timer):

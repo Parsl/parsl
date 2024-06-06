@@ -5,6 +5,12 @@ defmodule EIC do
   def start(_type, _args) do
     EIC.Supervisor.start_link([])
   end
+
+  @impl true
+  def stop(_) do
+    IO.puts("In EIC.Supervisor stop")
+    System.stop(1)
+  end
 end
 
 defmodule EIC.Supervisor do

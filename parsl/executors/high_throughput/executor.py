@@ -776,6 +776,15 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         return launch_cmd
 
     def status(self) -> Dict[str, JobStatus]:
+
+        # well this is a horrible place to put in a process poll...
+        if self.interchange_proc.poll() is not None:
+            logger.info("Setting bad state and failing")
+            self.set_bad_state_and_fail_all(RuntimeError(f"Interchange process has gone away, exit code {self.interchange_proc.returncode}"))
+            logger.info("Set bad state and fail done")
+            raise RuntimeError("Interchange is gone... cannot ask it for block status")
+            # TODO: because we call connected blocks below, we're going to hang on this status poll (because we know the interchange is gone away... this is similar to (but different from?) issue #2627. Maybe these calls should always check interchange liveness?
+
         job_status = super().status()
         connected_blocks = self.connected_blocks()
         for job_id in job_status:
