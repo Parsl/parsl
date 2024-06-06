@@ -58,7 +58,7 @@ defmodule EIC.TasksSubmitToInterchange do
     {:ok, msg} = :erlzmq.recv(socket)
     # msg is a pickled dict with keys: task_id and buffer
     IO.inspect(msg)
-    {task_dict, ""} = Unpickler.load!(msg)
+    task_dict = :pickle.pickle_to_term(msg)
     IO.puts("task_dict is:")
     IO.inspect(task_dict)
 
@@ -89,7 +89,7 @@ defmodule EIC.CommandChannel do
     {:ok, msg} = :erlzmq.recv(socket)
     # msg is a pickled object that varies depending on the command
     # IO.inspect(msg)
-    {command, ""} = Unpickler.load!(msg)
+    {:pickle_unicode, command} = :pickle.pickle_to_term(msg)
     IO.puts("Received command channel command: ")
     IO.inspect(command)
 

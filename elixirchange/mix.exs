@@ -25,7 +25,7 @@ defmodule EIC.MixProject do
       {:erlzmq, "~> 4.1", hex: :erlzmq_dnif},
       {:json, "~> 1.4.1", hex: :json},
       # TODO: this can only unpickle, which will be a problem when we want to make dictionary structures...
-      {:unpickler, "~> 0.1.0"},
+      # {:unpickler, "~> 0.1.0"},
       # ... so lets try this that hasn't been touched in a decade and needs some hacking
       {:pickle, path: "./pickle"}
 
