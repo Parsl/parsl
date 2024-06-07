@@ -9,6 +9,7 @@ import logging
 import os
 from typing import Optional, Union
 from urllib.parse import urlparse
+import uuid
 
 import typeguard
 
@@ -28,7 +29,7 @@ class File:
     """
 
     @typeguard.typechecked
-    def __init__(self, url: Union[os.PathLike, str]):
+    def __init__(self, url: Union[os.PathLike, str], uu_id: Union[uuid.UUID, None] = None):
         """Construct a File object from a url string.
 
         Args:
@@ -46,6 +47,10 @@ class File:
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
         self.local_path: Optional[str] = None
+        if uu_id is not None:
+            self.uuid = uu_id
+        else:
+            self.uuid = uuid.uuid1()
 
     def cleancopy(self) -> "File":
         """Returns a copy of the file containing only the global immutable state,
@@ -53,7 +58,7 @@ class File:
            object will be as the original object was when it was constructed.
         """
         logger.debug("Making clean copy of File object {}".format(repr(self)))
-        return File(self.url)
+        return File(self.url, self.uuid)
 
     def __str__(self) -> str:
         return self.filepath
@@ -67,7 +72,8 @@ class File:
             f"netloc={self.netloc}",
             f"path={self.path}",
             f"filename={self.filename}",
-        ]
+            f"uuid={self.uuid}",
+            ]
         if self.local_path is not None:
             content.append(f"local_path={self.local_path}")
 
@@ -96,3 +102,7 @@ class File:
             return self.path
         else:
             raise ValueError("No local_path set for {}".format(repr(self)))
+
+    @property
+    def timesatmp(self) -> Optional[str]:
+        return None

@@ -66,6 +66,7 @@ class DynamicFileList(Future, list):
             self.parent.add_done_callback(self.parent_callback)
             self._empty = file_obj is None       #: Tracks whether this wrapper is empty
             self._staged_out = False
+            self._timestamp = None
 
         @property
         def staged(self):
@@ -76,6 +77,20 @@ class DynamicFileList(Future, list):
         def empty(self):
             """Return whether this is an empty wrapper."""
             return self._empty
+
+        @property
+        def uuid(self):
+            """Return the uuid of the file object this datafuture represents."""
+            if self._empty:
+                return None
+            return self.file_obj.uuid
+
+        @property
+        def timestamp(self):
+            """Return the timestamp of the file object this datafuture represents."""
+            if self._empty:
+                return None
+            return self.file_obj.timestamp
 
         @typeguard.typechecked
         def set(self, file_obj: Union[File, DataFuture, 'DynamicFileList.DynamicFile']):

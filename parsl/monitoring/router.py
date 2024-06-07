@@ -134,6 +134,8 @@ class MonitoringRouter:
                             priority_msgs.put(msg_0)
                         elif msg[0] == MessageType.WORKFLOW_INFO:
                             priority_msgs.put(msg_0)
+                        elif msg[0] == MessageType.FILE_INFO:
+                            priority_msgs.put(msg_0)
                         else:
                             # There is a type: ignore here because if msg[0]
                             # is of the correct type, this code is unreachable,

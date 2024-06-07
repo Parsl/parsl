@@ -227,6 +227,28 @@ class DataFlowKernel:
             task_log_info = self._create_task_log_info(task_record)
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
+    def _send_file_log_info(self, file: Union[File, DataFuture, DynamicFileList.DynamicFile],
+                            task_record: TaskRecord) -> None:
+        if self.monitoring:
+            file_log_info = self._create_file_log_info(file, task_record)
+            self.monitoring.send(MessageType.FILE_INFO, file_log_info)
+
+    def _create_file_log_info(self, file: Union[File, DataFuture, DynamicFileList.DynamicFile],
+                              task_record: TaskRecord) -> Dict[str, Any]:
+        """
+        Create the dictionary that will be included in the log.
+        """
+        info_to_monitor = ['file_name', 'file_id', 'run_id', 'task_id', 'timestamp']
+
+        file_log_info = {'file_name': file.filename,
+                         'file_id': file.uuid,
+                         'run_id': self.run_id,
+                         'task_id': task_record['id'],
+                         'try_id': task_record['try_id'],
+                         'timestamp': file.timestamp
+                         }
+        return file_log_info
+
     def _create_task_log_info(self, task_record: TaskRecord) -> Dict[str, Any]:
         """
         Create the dictionary that will be included in the log.
@@ -238,7 +260,7 @@ class DataFlowKernel:
         # They are valid if all entries in info_to_monitor are declared in the definition of TaskRecord
         # This type: ignore[literal-required] asserts that fact.
         task_log_info = {"task_" + k: task_record[k] for k in info_to_monitor}  # type: ignore[literal-required]
-
+        # TODO: MUST ADD ENV AND ARGS INFO
         task_log_info['run_id'] = self.run_id
         task_log_info['try_id'] = task_record['try_id']
         task_log_info['timestamp'] = datetime.datetime.now()

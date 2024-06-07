@@ -3,7 +3,7 @@
 import logging
 from concurrent.futures import Future
 from typing import Optional
-
+from datetime import datetime, timezone
 import typeguard
 
 from parsl.data_provider.files import File
@@ -36,6 +36,7 @@ class DataFuture(Future):
         if e:
             self.set_exception(e)
         else:
+            self._done_timestamp = datetime.now(timezone.utc)
             self.set_result(self.file_obj)
 
     @typeguard.typechecked
@@ -60,6 +61,7 @@ class DataFuture(Future):
         self.parent = fut
 
         self.parent.add_done_callback(self.parent_callback)
+        self._done_timestamp = None
 
         logger.debug("Creating DataFuture with parent: %s and file: %s", self.parent, repr(self.file_obj))
 
@@ -77,6 +79,16 @@ class DataFuture(Future):
     def filename(self):
         """Filepath of the File object this datafuture represents."""
         return self.filepath
+
+    @property
+    def uuid(self):
+        """UUID of the File object this datafuture represents."""
+        return self.file_obj.uuid
+
+    @property
+    def timestamp(self):
+        """Timestamp when the future was marked done."""
+        return self._done_timestamp
 
     def cancel(self):
         raise NotImplementedError("Cancel not implemented")

@@ -17,3 +17,6 @@ class MessageType(Enum):
 
     # Reports of the block info
     BLOCK_INFO = 4
+
+    # Reports file info
+    FILE_INFO = 5
