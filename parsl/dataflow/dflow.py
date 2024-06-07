@@ -26,6 +26,7 @@ from parsl.channels import Channel
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
+from parsl.data_provider.dynamic_files import DynamicFileList
 from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
@@ -826,8 +827,13 @@ class DataFlowKernel:
             check_dep(dep)
 
         # Check for futures in inputs=[<fut>...]
-        for dep in kwargs.get('inputs', []):
-            check_dep(dep)
+        inp = kwargs.get('inputs', [])
+        if isinstance(inp, DynamicFileList):
+            check_dep(inp)
+        else:
+            for dep in inp:
+                print(f" checking inputs: {dep}")
+                check_dep(dep)
 
         return depends
 
@@ -1006,7 +1012,7 @@ class DataFlowKernel:
         # Transform remote input files to data futures
         app_args, app_kwargs, func = self._add_input_deps(executor, app_args, app_kwargs, func)
 
-        func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func)
+        func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func, task_id)
 
         task_record.update({
                     'args': app_args,
