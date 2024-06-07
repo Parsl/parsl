@@ -233,6 +233,8 @@ class Database:
             PrimaryKeyConstraint('run_id', 'block_id', 'executor_label', 'timestamp'),
         )
 
+    class File(Base):
+        __tablename__ = FILE
     class Resource(Base):
         __tablename__ = RESOURCE
         try_id = Column('try_id', Integer, nullable=False)
