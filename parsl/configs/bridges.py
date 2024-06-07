@@ -1,8 +1,8 @@
-from parsl.config import Config
-from parsl.providers import SlurmProvider
-from parsl.launchers import SrunLauncher
-from parsl.executors import HighThroughputExecutor
 from parsl.addresses import address_by_interface
+from parsl.config import Config
+from parsl.executors import HighThroughputExecutor
+from parsl.launchers import SrunLauncher
+from parsl.providers import SlurmProvider
 
 """ This config assumes that it is used to launch parsl tasks from the login nodes
 of Bridges at PSC. Each job submitted to the scheduler will request 2 nodes for 10 minutes.
@@ -13,7 +13,7 @@ config = Config(
         HighThroughputExecutor(
             label='Bridges_HTEX_multinode',
             address=address_by_interface('ens3f0'),
-            max_workers=1,
+            max_workers_per_node=1,
             provider=SlurmProvider(
                 'YOUR_PARTITION_NAME',  # Specify Partition / QOS, for eg. RM-small
                 nodes_per_block=2,

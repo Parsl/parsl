@@ -1,5 +1,7 @@
 from typing import Any, Dict, Tuple, Union
+
 from typing_extensions import TypeAlias
+
 from parsl.monitoring.message_type import MessageType
 
 # A basic parsl monitoring message is wrapped by up to two wrappers:

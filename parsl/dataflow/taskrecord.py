@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-import threading
 import datetime
-from typing_extensions import TypedDict
+import threading
 from concurrent.futures import Future
 
-
 # only for type checking:
-from typing import Any, Callable, Dict, Optional, List, Sequence, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Union
+
+from typing_extensions import TypedDict
 
 if TYPE_CHECKING:
     from parsl.dataflow.futures import AppFuture
 
 import parsl.dataflow.dflow as dflow
-
 from parsl.dataflow.states import States
 
 
@@ -70,7 +69,9 @@ class TaskRecord(TypedDict, total=False):
     # these three could be more strongly typed perhaps but I'm not thinking about that now
     func: Callable
     fn_hash: str
-    args: Sequence[Any]  # in some places we uses a Tuple[Any, ...] and in some places a List[Any]. This is an attempt to correctly type both of those.
+    args: Sequence[Any]
+    # in some places we uses a Tuple[Any, ...] and in some places a List[Any].
+    # This is an attempt to correctly type both of those.
     kwargs: Dict[str, Any]
 
     time_invoked: Optional[datetime.datetime]

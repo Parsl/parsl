@@ -1,8 +1,8 @@
-from parsl.providers import PBSProProvider
-from parsl.executors import HighThroughputExecutor
-from parsl.launchers import MpiRunLauncher
 from parsl.addresses import address_by_interface
 from parsl.config import Config
+from parsl.executors import HighThroughputExecutor
+from parsl.launchers import MpiRunLauncher
+from parsl.providers import PBSProProvider
 
 from .user_opts import user_opts
 
@@ -15,7 +15,7 @@ def fresh_config():
                 heartbeat_period=15,
                 heartbeat_threshold=120,
                 worker_debug=False,
-                max_workers=1,
+                max_workers_per_node=1,
                 address=address_by_interface('ib0'),
                 encrypted=True,
                 provider=PBSProProvider(

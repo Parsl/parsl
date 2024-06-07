@@ -14,7 +14,6 @@ def multiline(inputs=(), outputs=(), stderr=None, stdout=None):
     """.format(inputs=inputs, outputs=outputs)
 
 
-@pytest.mark.issue363
 def test_multiline(tmpd_cwd):
     so, se = tmpd_cwd / "std.out", tmpd_cwd / "std.err"
     f = multiline(

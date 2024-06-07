@@ -2,40 +2,34 @@ import contextlib
 import logging
 import os
 import typing
-
+import unittest
+from typing import Dict
 
 import pytest
-import unittest
 
 import parsl
 from parsl.app.app import python_app
-from parsl.tests.configs.htex_local import fresh_config
-from typing import Dict
+from parsl.executors.high_throughput.mpi_prefix_composer import (
+    InvalidResourceSpecification,
+    MissingResourceSpecification,
+    validate_resource_spec,
+)
 from parsl.executors.high_throughput.mpi_resource_management import (
+    get_nodes_in_batchjob,
     get_pbs_hosts_list,
     get_slurm_hosts_list,
-    get_nodes_in_batchjob,
     identify_scheduler,
 )
-from parsl.executors.high_throughput.mpi_prefix_composer import (
-    validate_resource_spec,
-    InvalidResourceSpecification
-)
+from parsl.tests.configs.htex_local import fresh_config
 
 EXECUTOR_LABEL = "MPI_TEST"
 
 
-def local_setup():
+def local_config():
     config = fresh_config()
     config.executors[0].label = EXECUTOR_LABEL
-    config.executors[0].max_workers = 1
-    parsl.load(config)
-
-
-def local_teardown():
-    logging.warning("Exiting")
-    parsl.dfk().cleanup()
-    parsl.clear()
+    config.executors[0].max_workers_per_node = 1
+    return config
 
 
 @python_app
@@ -128,18 +122,22 @@ def test_top_level():
 
 @pytest.mark.local
 @pytest.mark.parametrize(
-    "resource_spec, exception",
+    "resource_spec, is_mpi_enabled, exception",
     (
-        ({"num_nodes": 2, "ranks_per_node": 1}, None),
-        ({"launcher_options": "--debug_foo"}, None),
-        ({"num_nodes": 2, "BAD_OPT": 1}, InvalidResourceSpecification),
-        ({}, None),
+        ({"num_nodes": 2, "ranks_per_node": 1}, False, None),
+        ({"launcher_options": "--debug_foo"}, False, None),
+        ({"num_nodes": 2, "BAD_OPT": 1}, False, InvalidResourceSpecification),
+        ({}, False, None),
+        ({"num_nodes": 2, "ranks_per_node": 1}, True, None),
+        ({"launcher_options": "--debug_foo"}, True, None),
+        ({"num_nodes": 2, "BAD_OPT": 1}, True, InvalidResourceSpecification),
+        ({}, True, MissingResourceSpecification),
     )
 )
-def test_resource_spec(resource_spec: Dict, exception):
+def test_resource_spec(resource_spec: Dict, is_mpi_enabled: bool, exception):
     if exception:
         with pytest.raises(exception):
-            validate_resource_spec(resource_spec)
+            validate_resource_spec(resource_spec, is_mpi_enabled)
     else:
-        result = validate_resource_spec(resource_spec)
+        result = validate_resource_spec(resource_spec, is_mpi_enabled)
         assert result is None

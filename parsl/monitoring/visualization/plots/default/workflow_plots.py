@@ -1,13 +1,17 @@
 import math
+
+import networkx as nx
 import numpy as np
 import pandas as pd
-import plotly.graph_objs as go
 import plotly.figure_factory as ff
+import plotly.graph_objs as go
 from plotly.offline import plot
-import networkx as nx
 
-from parsl.monitoring.visualization.utils import timestamp_to_int, num_to_timestamp, DB_DATE_FORMAT
-
+from parsl.monitoring.visualization.utils import (
+    DB_DATE_FORMAT,
+    num_to_timestamp,
+    timestamp_to_int,
+)
 
 # gantt_colors must assign a color value for every state name defined
 # in parsl/dataflow/states.py
@@ -26,6 +30,9 @@ gantt_colors = {'unsched': 'rgb(240, 240, 240)',
 
 
 def task_gantt_plot(df_task, df_status, time_completed=None):
+
+    if df_task.empty:
+        return None
 
     # if the workflow is not recorded as completed, then assume
     # that tasks should continue in their last state until now,

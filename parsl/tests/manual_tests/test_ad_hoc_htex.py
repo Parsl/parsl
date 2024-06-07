@@ -1,11 +1,12 @@
 import parsl
 from parsl import python_app
+
 parsl.set_stream_logger()
 
-from parsl.providers import AdHocProvider
 from parsl.channels import SSHChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
+from parsl.providers import AdHocProvider
 
 remotes = ['midway2-login2.rcc.uchicago.edu', 'midway2-login1.rcc.uchicago.edu']
 
@@ -13,7 +14,7 @@ config = Config(
     executors=[
         HighThroughputExecutor(
             label='AdHoc',
-            max_workers=2,
+            max_workers_per_node=2,
             worker_logdir_root="/scratch/midway2/yadunand/parsl_scripts",
             encrypted=True,
             provider=AdHocProvider(

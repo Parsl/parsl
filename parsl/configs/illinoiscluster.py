@@ -1,7 +1,7 @@
 from parsl.config import Config
-from parsl.providers import SlurmProvider
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SrunLauncher
+from parsl.providers import SlurmProvider
 
 """ This config assumes that it is used to launch parsl tasks from the login nodes
 of the Campus Cluster at UIUC. Each job submitted to the scheduler will request 2 nodes for 10 minutes.

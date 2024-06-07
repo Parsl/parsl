@@ -2,7 +2,7 @@ import pickle
 
 import pytest
 
-from parsl import python_app, DataFlowKernel
+from parsl import DataFlowKernel, python_app
 from parsl.utils import time_limited_open
 
 

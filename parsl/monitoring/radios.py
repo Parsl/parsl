@@ -1,11 +1,10 @@
-import os
-import socket
-import pickle
-import uuid
 import logging
-
+import os
+import pickle
+import socket
+import uuid
 from abc import ABCMeta, abstractmethod
-
+from multiprocessing.queues import Queue
 from typing import Optional
 
 from parsl.serialize import serialize
@@ -173,3 +172,17 @@ class UDPRadio(MonitoringRadio):
             logging.error("Could not send message within timeout limit")
             return
         return
+
+
+class MultiprocessingQueueRadio(MonitoringRadio):
+    """A monitoring radio which connects over a multiprocessing Queue.
+    This radio is intended to be used on the submit side, where components
+    in the submit process, or processes launched by multiprocessing, will have
+    access to a Queue shared with the monitoring database code (bypassing the
+    monitoring router).
+    """
+    def __init__(self, queue: Queue) -> None:
+        self.queue = queue
+
+    def send(self, message: object) -> None:
+        self.queue.put((message, 0))

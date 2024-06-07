@@ -5,8 +5,8 @@ import pytest
 
 import parsl
 from parsl.app.app import python_app
-from parsl.utils import time_limited_open
 from parsl.tests.configs.local_threads_checkpoint_task_exit import config
+from parsl.utils import time_limited_open
 
 
 def local_setup():
@@ -15,8 +15,7 @@ def local_setup():
 
 
 def local_teardown():
-    parsl.dfk().cleanup
-    parsl.clear()
+    parsl.dfk().cleanup()
 
 
 @python_app(cache=True)

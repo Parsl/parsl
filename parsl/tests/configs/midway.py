@@ -1,7 +1,7 @@
 from parsl.config import Config
-from parsl.providers import SlurmProvider
-from parsl.launchers import SrunLauncher
 from parsl.executors import HighThroughputExecutor
+from parsl.launchers import SrunLauncher
+from parsl.providers import SlurmProvider
 
 from .user_opts import user_opts
 
@@ -12,7 +12,7 @@ def fresh_config():
             HighThroughputExecutor(
                 label='Midway_HTEX_multinode',
                 worker_debug=False,
-                max_workers=1,
+                max_workers_per_node=1,
                 encrypted=True,
                 provider=SlurmProvider(
                     'broadwl',  # Partition name, e.g 'broadwl'

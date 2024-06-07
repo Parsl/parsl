@@ -1,6 +1,7 @@
-import pytest
 import random
 import string
+
+import pytest
 
 from parsl.providers.errors import SubmitException
 

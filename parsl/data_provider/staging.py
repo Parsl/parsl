@@ -1,9 +1,9 @@
 from concurrent.futures import Future
-from typing import Optional, Callable
+from typing import TYPE_CHECKING, Callable, Optional
+
 from parsl.app.futures import DataFuture
 from parsl.data_provider.files import File
 
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from parsl.data_provider.data_manager import DataManager
 

@@ -1,11 +1,12 @@
 """Tests related to Parsl workers being able to access their worker ID"""
 
-from parsl.providers import LocalProvider
+import pytest
+
+from parsl import python_app
 from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
-from parsl import python_app
-import pytest
+from parsl.providers import LocalProvider
 
 
 def local_config():
@@ -14,7 +15,7 @@ def local_config():
             HighThroughputExecutor(
                 label="htex_Local",
                 worker_debug=True,
-                max_workers=4,
+                max_workers_per_node=4,
                 encrypted=True,
                 provider=LocalProvider(
                     channel=LocalChannel(),

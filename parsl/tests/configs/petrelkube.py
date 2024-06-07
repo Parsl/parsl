@@ -1,10 +1,11 @@
+import os
+
+from parsl.addresses import address_by_route
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.providers import KubernetesProvider
-from parsl.addresses import address_by_route
 
 from .user_opts import user_opts
-import os
 
 
 def fresh_config():
@@ -18,7 +19,7 @@ def fresh_config():
             HighThroughputExecutor(
                 label='kube-htex',
                 cores_per_worker=1,
-                max_workers=1,
+                max_workers_per_node=1,
                 worker_logdir_root='.',
 
                 # Address for the pod worker to connect back

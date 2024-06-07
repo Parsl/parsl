@@ -1,12 +1,12 @@
 from parsl.config import Config
-from parsl.providers import CondorProvider
 from parsl.executors import HighThroughputExecutor
+from parsl.providers import CondorProvider
 
 config = Config(
     executors=[
         HighThroughputExecutor(
             label='OSG_HTEX',
-            max_workers=1,
+            max_workers_per_node=1,
             provider=CondorProvider(
                 nodes_per_block=1,
                 init_blocks=4,
