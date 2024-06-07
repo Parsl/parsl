@@ -16,7 +16,7 @@ def echo_to_streams(msg, stderr=None, stdout=None):
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
 
 speclist = (
-    '/bad/dir/t.out',
+    # '/bad/dir/t.out',  - isn't bad if we're root - should be tagged issue3328 too...
     ['t3.out', 'w'],
     ('t4.out', None),
     (42, 'w'),
@@ -26,7 +26,7 @@ speclist = (
 )
 
 testids = [
-    'nonexistent_dir',
+    # 'nonexistent_dir',  - goes with above /bad/dir/t.out
     'list_not_tuple',
     'null_mode',
     'not_a_string',
