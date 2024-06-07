@@ -614,16 +614,9 @@ class DataFlowKernel:
         return kwargs.get('_parsl_staging_inhibit', False)
 
     def launch_if_ready(self, task_record: TaskRecord) -> None:
-        """schedules a task record for re-inspection to see if it is ready
-        for launch. The call will return immediately, asynchronous to
-        whether than check and launch has happened or not.
-        """
-        self.dependency_launch_pool.submit(self._launch_if_ready_async, task_record)
-
-    def _launch_if_ready_async(self, task_record: TaskRecord) -> None:
-        """
-        launch_if_ready will launch the specified task, if it is ready
-        to run (for example, without dependencies, and in pending state).
+        """Schedules a task record for re-inspection to see if it is ready
+        for launch and for launch if it is ready. The call will return
+        immediately.
 
         This should be called by any piece of the DataFlowKernel that
         thinks a task may have become ready to run.
@@ -632,12 +625,16 @@ class DataFlowKernel:
         ready to run - launch_if_ready will not incorrectly launch that
         task.
 
-        It is also not an error to call launch_if_ready on a task that has
-        already been launched - launch_if_ready will not re-launch that
-        task.
-
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
+        """
+        self.dependency_launch_pool.submit(self._launch_if_ready_async, task_record)
+
+    @wrap_with_logs
+    def _launch_if_ready_async(self, task_record: TaskRecord) -> None:
+        """
+        _launch_if_ready will launch the specified task, if it is ready
+        to run (for example, without dependencies, and in pending state).
         """
         exec_fu = None
 
