@@ -1282,7 +1282,7 @@ class DataFlowKernel:
             logger.info("Terminated monitoring")
 
         logger.info("Terminating dependency launch pool")
-        self.dependency_launch_pool.shutdown(cancel_futures=True)
+        self.dependency_launch_pool.shutdown()
         logger.info("Terminated dependency launch pool")
 
         logger.info("Unregistering atexit hook")
