@@ -31,6 +31,7 @@ from parsl.errors import OptionalModuleMissing
 from parsl.executors.errors import ExecutorError
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.workqueue import exec_parsl_function
+from parsl.jobs.states import TERMINAL_STATES
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import CondorProvider, LocalProvider
 from parsl.providers.base import ExecutionProvider
@@ -685,10 +686,12 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Scale in method.
         """
         logger.debug("Number of jobs requested for scale in: %s", count)
-        logger.debug("Number of jobs in blocks_to_job_id map: %s", len(self.blocks_to_job_id))
+
+        candidate_blocks = [block_id for block_id, job_status in self._status.items() if job_status.state not in TERMINAL_STATES]
+        logger.debug("scale in candidate blocks: %s", candidate_blocks)
 
         # Obtain list of blocks to kill
-        to_kill = list(self._status.keys())[:count]
+        to_kill = candidate_blocks[:count]
 
         logger.debug("List of blocks to scale in: %s", to_kill)
         for block_id in to_kill:
