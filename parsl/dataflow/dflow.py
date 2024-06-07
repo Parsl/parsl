@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import atexit
+import concurrent.futures as cf
 import datetime
 import inspect
 import logging
@@ -11,7 +12,6 @@ import random
 import sys
 import threading
 import time
-import concurrent.futures as cf
 from concurrent.futures import Future
 from functools import partial
 from getpass import getuser
