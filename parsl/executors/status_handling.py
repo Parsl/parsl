@@ -213,28 +213,34 @@ class BlockProviderExecutor(ParslExecutor):
         """
         logger.debug("Number of blocks requested for scale in: %s", count)
 
-        # TODO: prefer pending blocks? because that's the only judgement we have about
-        # which blocks are empty?
-
         # TODO: prefer pending blocks with largest block ID? because they're likely the
-        # ones with least valuable queue position.
+        # ones with least valuable queue position - this assumes the block ID is an integer...
+        # so ugh... that's not type-safe info we have at the moment...
 
-        candidate_blocks = [block_id for block_id, job_status in self._status.items() if job_status.state not in TERMINAL_STATES]
+        candidate_blocks = [(block_id, job_status) for block_id, job_status in self._status.items() if job_status.state not in TERMINAL_STATES]
+
+        # this will prefer pending blocks (TODO: test that)
+        # because this is the only judgement we have here for preferring
+        # empty blocks (blocks with no tasks on them) - and we should prefer
+        # those for scaling in.
+
+        candidate_blocks.sort(key=lambda t: t[1].state)
+
         logger.debug("Candidate blocks for scale in: %s", candidate_blocks)
 
-        # Obtain list of blocks to kill
-        to_kill = candidate_blocks[:count]
+        # Obtain list of block IDs to kill
+        to_kill = [block_id for (block_id, _) in candidate_blocks[:count]]
 
         logger.debug("Blocks chosen to scale in: %s", to_kill)
 
-        kill_ids = [self.blocks_to_job_id[block] for block in to_kill]
+        kill_job_ids = [self.blocks_to_job_id[block] for block in to_kill]
 
         # Cancel the blocks provisioned
         if self.provider:
-            logger.info(f"Scaling in jobs: {kill_ids}")
+            logger.info(f"Scaling in jobs: {kill_job_ids}")
 
-            r = self.provider.cancel(kill_ids)
-            job_ids = self._filter_scale_in_ids(kill_ids, r)
+            r = self.provider.cancel(kill_job_ids)
+            job_ids = self._filter_scale_in_ids(kill_job_ids, r)
             block_ids_killed = [self.job_ids_to_block[jid] for jid in job_ids]
             return block_ids_killed
         else:
