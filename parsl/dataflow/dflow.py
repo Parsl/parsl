@@ -11,6 +11,7 @@ import random
 import sys
 import threading
 import time
+import concurrent.futures as cf
 from concurrent.futures import Future
 from functools import partial
 from getpass import getuser
@@ -208,6 +209,8 @@ class DataFlowKernel:
         self.task_count = 0
         self.tasks: Dict[int, TaskRecord] = {}
         self.submitter_lock = threading.Lock()
+
+        self.dependency_launch_pool = cf.ThreadPoolExecutor(max_workers=1, thread_name_prefix="Dependency-Launch")
 
         self.dependency_resolver = self.config.dependency_resolver if self.config.dependency_resolver is not None \
             else SHALLOW_DEPENDENCY_RESOLVER
@@ -611,6 +614,13 @@ class DataFlowKernel:
         return kwargs.get('_parsl_staging_inhibit', False)
 
     def launch_if_ready(self, task_record: TaskRecord) -> None:
+        """schedules a task record for re-inspection to see if it is ready
+        for launch. The call will return immediately, asynchronous to
+        whether than check and launch has happened or not.
+        """
+        self.dependency_launch_pool.submit(self._launch_if_ready_async, task_record)
+
+    def _launch_if_ready_async(self, task_record: TaskRecord) -> None:
         """
         launch_if_ready will launch the specified task, if it is ready
         to run (for example, without dependencies, and in pending state).
@@ -1270,6 +1280,10 @@ class DataFlowKernel:
             logger.info("Terminating monitoring")
             self.monitoring.close()
             logger.info("Terminated monitoring")
+
+        logger.info("Terminating dependency launch pool")
+        self.dependency_launch_pool.shutdown(cancel_futures=True)
+        logger.info("Terminated dependency launch pool")
 
         logger.info("Unregistering atexit hook")
         atexit.unregister(self.atexit_cleanup)
