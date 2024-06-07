@@ -9,7 +9,6 @@ defmodule EIC do
   @impl true
   def stop(_) do
     IO.puts("In EIC.Supervisor stop")
-    System.stop(1)
   end
 end
 
