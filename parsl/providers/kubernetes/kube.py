@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 
 from parsl.providers.kubernetes.template import template_string
@@ -175,6 +176,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
             pod_name = '{}-{}'.format(self.pod_name,
                                       cur_timestamp)
 
+        pod_name = _sanitizeDNS1123(pod_name)
+
         formatted_cmd = template_string.format(command=cmd_string,
                                                worker_init=self.worker_init)
 
@@ -336,3 +339,25 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
     @property
     def status_polling_interval(self):
         return 60
+
+
+# this is based on:
+# https://github.com/kubernetes/apimachinery/blob/703232ea6da48aed7ac22260dabc6eac01aab896/pkg/util/validation/validation.go#L177C32-L177C62
+DNS_LABEL_REGEXP = "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+
+
+def _sanitizeDNS1123(raw: str) -> str:
+    """Rewrite input string to be a valid RFC1123 DNS label.
+    This is required for Kubernetes pod names.
+    """
+
+    # label must be lowercase
+    raw = raw.lower()
+
+    # label can only contain [-a-z0-9] characters - replace everything
+    # else with -
+    raw = re.sub("[^-a-z0-9]", "-", raw)
+
+    # TODO: sanitize against first and last symbols (no - at start or end?)
+    assert re.match(DNS_LABEL_REGEXP, raw), "sanitized DNS1123 label has not been properly sanitized: " + raw
+    return raw
