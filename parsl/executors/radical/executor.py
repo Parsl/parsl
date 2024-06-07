@@ -1,30 +1,30 @@
 """RadicalPilotExecutor builds on the RADICAL-Pilot/Parsl
 """
-import os
-import sys
-import time
-import parsl
-import queue
-import logging
 import inspect
+import logging
+import os
+import queue
+import sys
+import threading as mt
+import time
+from concurrent.futures import Future
+from functools import partial
+from pathlib import Path, PosixPath
+from typing import Dict, Optional
+
 import requests
 import typeguard
-import threading as mt
 
-from functools import partial
-from typing import Optional, Dict
-from pathlib import Path, PosixPath
-from concurrent.futures import Future
-
+import parsl
+from parsl.app.errors import BashExitFailure, RemoteExceptionWrapper
 from parsl.app.python import timeout
-from .rpex_resources import ResourceConfig
 from parsl.data_provider.files import File
-from parsl.utils import RepresentationMixin
-from parsl.app.errors import BashExitFailure
 from parsl.executors.base import ParslExecutor
-from parsl.app.errors import RemoteExceptionWrapper
 from parsl.serialize import deserialize, pack_res_spec_apply_message
-from parsl.serialize.errors import SerializationError, DeserializationError
+from parsl.serialize.errors import DeserializationError, SerializationError
+from parsl.utils import RepresentationMixin
+
+from .rpex_resources import ResourceConfig
 
 try:
     import radical.pilot as rp

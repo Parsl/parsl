@@ -1,8 +1,9 @@
-import parsl
-from parsl.tests.configs.local_threads import fresh_config
 import pytest
-from parsl.errors import NoDataFlowKernelError
+
+import parsl
 from parsl.dataflow.dflow import DataFlowKernel
+from parsl.errors import NoDataFlowKernelError
+from parsl.tests.configs.local_threads import fresh_config
 
 
 @parsl.python_app

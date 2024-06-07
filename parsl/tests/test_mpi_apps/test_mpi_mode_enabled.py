@@ -1,12 +1,16 @@
 import logging
+import os
 import random
 from typing import Dict
-import pytest
-import parsl
-from parsl import python_app, bash_app
-from parsl.tests.configs.htex_local import fresh_config
 
-import os
+import pytest
+
+import parsl
+from parsl import bash_app, python_app
+from parsl.executors.high_throughput.mpi_prefix_composer import (
+    MissingResourceSpecification,
+)
+from parsl.tests.configs.htex_local import fresh_config
 
 EXECUTOR_LABEL = "MPI_TEST"
 
@@ -168,3 +172,11 @@ def test_simulated_load(rounds: int = 100):
         total_ranks, nodes = future.result(timeout=10)
         assert len(nodes) == futures[future]["num_nodes"]
         assert total_ranks == futures[future]["num_nodes"] * futures[future]["ranks_per_node"]
+
+
+@pytest.mark.local
+def test_missing_resource_spec():
+
+    with pytest.raises(MissingResourceSpecification):
+        future = mock_app(sleep_dur=0.4)
+        future.result(timeout=10)

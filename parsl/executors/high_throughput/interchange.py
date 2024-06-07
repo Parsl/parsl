@@ -1,31 +1,28 @@
 #!/usr/bin/env python
-import multiprocessing
-import zmq
-import os
-import sys
-import platform
-import random
-import time
 import datetime
-import pickle
-import signal
-import logging
-import queue
-import threading
 import json
+import logging
+import os
+import pickle
+import platform
+import queue
+import random
+import signal
+import sys
+import threading
+import time
+from typing import Any, Dict, List, NoReturn, Optional, Sequence, Set, Tuple, cast
 
-from typing import cast, Any, Dict, NoReturn, Sequence, Set, Optional, Tuple, List
+import zmq
 
 from parsl import curvezmq
-from parsl.utils import setproctitle
-from parsl.version import VERSION as PARSL_VERSION
-from parsl.serialize import serialize as serialize_object
-
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.manager_record import ManagerRecord
 from parsl.monitoring.message_type import MessageType
 from parsl.process_loggers import wrap_with_logs
-
+from parsl.serialize import serialize as serialize_object
+from parsl.utils import setproctitle
+from parsl.version import VERSION as PARSL_VERSION
 
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
 PKL_DRAINED_CODE = pickle.dumps((2 ** 32) - 2)
@@ -327,6 +324,9 @@ class Interchange:
                         logger.warning("Worker to hold was not in ready managers list")
 
                     reply = None
+
+                elif command_req == "WORKER_PORTS":
+                    reply = (self.worker_task_port, self.worker_result_port)
 
                 else:
                     logger.error(f"Received unknown command: {command_req}")
@@ -672,7 +672,7 @@ def start_file_logger(filename: str, level: int = logging.DEBUG, format_string: 
 
 
 @wrap_with_logs(target="interchange")
-def starter(comm_q: multiprocessing.Queue, *args: Any, **kwargs: Any) -> None:
+def starter(*args: Any, **kwargs: Any) -> None:
     """Start the interchange process
 
     The executor is expected to call this function. The args, kwargs match that of the Interchange.__init__
@@ -680,6 +680,4 @@ def starter(comm_q: multiprocessing.Queue, *args: Any, **kwargs: Any) -> None:
     setproctitle("parsl: HTEX interchange")
     # logger = multiprocessing.get_logger()
     ic = Interchange(*args, **kwargs)
-    comm_q.put((ic.worker_task_port,
-                ic.worker_result_port))
     ic.start()

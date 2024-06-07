@@ -1,5 +1,7 @@
 from typing import Dict
+
 import pytest
+
 import parsl
 from parsl import python_app
 from parsl.tests.configs.htex_local import fresh_config

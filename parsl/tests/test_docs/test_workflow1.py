@@ -1,11 +1,11 @@
 import os
-import pytest
-import parsl
 
+import pytest
+
+import parsl
 from parsl.app.app import bash_app, python_app
 from parsl.data_provider.files import File
 from parsl.tests.configs.local_threads import config
-
 
 # parsl.set_stream_logger()
 

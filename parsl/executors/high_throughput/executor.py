@@ -1,44 +1,39 @@
+import logging
+import math
+import pickle
+import threading
 import typing
+import warnings
 from collections import defaultdict
 from concurrent.futures import Future
-import typeguard
-import logging
-import threading
-import queue
-import pickle
 from dataclasses import dataclass
-from multiprocessing import Process, Queue
-from typing import Dict, Sequence
-from typing import List, Optional, Tuple, Union, Callable
-import math
-import warnings
+from multiprocessing import Process
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+
+import typeguard
 
 import parsl.launchers
-from parsl.usage_tracking.api import UsageInformation
-from parsl.serialize import pack_res_spec_apply_message, deserialize
-from parsl.serialize.errors import SerializationError, DeserializationError
+from parsl import curvezmq
+from parsl.addresses import get_all_addresses
 from parsl.app.errors import RemoteExceptionWrapper
-from parsl.jobs.states import JobStatus, JobState, TERMINAL_STATES
-from parsl.executors.high_throughput import zmq_pipes
-from parsl.executors.high_throughput import interchange
-from parsl.executors.errors import (
-    BadMessage, ScalingFailed,
-)
+from parsl.data_provider.staging import Staging
+from parsl.executors.errors import BadMessage, ScalingFailed
+from parsl.executors.high_throughput import interchange, zmq_pipes
+from parsl.executors.high_throughput.errors import CommandClientTimeoutError
 from parsl.executors.high_throughput.mpi_prefix_composer import (
     VALID_LAUNCHERS,
-    validate_resource_spec
+    validate_resource_spec,
 )
-
-from parsl import curvezmq
 from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.providers.base import ExecutionProvider
-from parsl.data_provider.staging import Staging
-from parsl.addresses import get_all_addresses
-from parsl.process_loggers import wrap_with_logs
-
+from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
 from parsl.multiprocessing import ForkProcess
-from parsl.utils import RepresentationMixin
+from parsl.process_loggers import wrap_with_logs
 from parsl.providers import LocalProvider
+from parsl.providers.base import ExecutionProvider
+from parsl.serialize import deserialize, pack_res_spec_apply_message
+from parsl.serialize.errors import DeserializationError, SerializationError
+from parsl.usage_tracking.api import UsageInformation
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
@@ -415,13 +410,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             )
 
         self.outgoing_q = zmq_pipes.TasksOutgoing(
-            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+            "127.0.0.1", self.interchange_port_range, self.cert_dir
         )
         self.incoming_q = zmq_pipes.ResultsIncoming(
-            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+            "127.0.0.1", self.interchange_port_range, self.cert_dir
         )
         self.command_client = zmq_pipes.CommandClient(
-            curvezmq.ClientContext(self.cert_dir), "127.0.0.1", self.interchange_port_range
+            "127.0.0.1", self.interchange_port_range, self.cert_dir
         )
 
         self._queue_management_thread = None
@@ -531,9 +526,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Starts the interchange process locally and uses an internal command queue to
         get the worker task and result ports that the interchange has bound to.
         """
-        comm_q = Queue(maxsize=10)
         self.interchange_proc = ForkProcess(target=interchange.starter,
-                                            args=(comm_q,),
                                             kwargs={"client_ports": (self.outgoing_q.port,
                                                                      self.incoming_q.port,
                                                                      self.command_client.port),
@@ -552,9 +545,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                             name="HTEX-Interchange"
                                             )
         self.interchange_proc.start()
+
         try:
-            (self.worker_task_port, self.worker_result_port) = comm_q.get(block=True, timeout=120)
-        except queue.Empty:
+            (self.worker_task_port, self.worker_result_port) = self.command_client.run("WORKER_PORTS", timeout_s=120)
+        except CommandClientTimeoutError:
             logger.error("Interchange has not completed initialization in 120s. Aborting")
             raise Exception("Interchange failed to start")
 
@@ -645,7 +639,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Returns:
               Future
         """
-        validate_resource_spec(resource_specification)
+
+        validate_resource_spec(resource_specification, self.enable_mpi_mode)
 
         if self.bad_state_is_set:
             raise self.executor_exception

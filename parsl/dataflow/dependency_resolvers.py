@@ -1,14 +1,14 @@
 from concurrent.futures import Future
 from dataclasses import dataclass
 from functools import singledispatch
-from typing import Callable
+from typing import Callable, Sequence
 
 
 @dataclass
 class DependencyResolver:
     """A DependencyResolver describes how app dependencies can be resolved.
     It is specified as two functions: `traverse_to_gather` which turns an
-    app parameter into a list of futures which must be waited for before
+    app parameter into a sequence of futures which must be waited for before
     the task can be executed (for example, in the case of
     `DEEP_DEPENDENCY_RESOLVER` this traverses structures such as lists to
     find every contained ``Future``), and `traverse_to_unwrap` which turns an
@@ -20,8 +20,8 @@ class DependencyResolver:
     By default, Parsl will use `SHALLOW_DEPENDENCY_RESOLVER` which only
     resolves Futures passed directly as arguments.
     """
-    traverse_to_gather: Callable
-    traverse_to_unwrap: Callable
+    traverse_to_gather: Callable[[object], Sequence[Future]]
+    traverse_to_unwrap: Callable[[object], object]
 
 
 @singledispatch
@@ -44,6 +44,7 @@ def _(fut: Future):
 @shallow_traverse_to_unwrap.register
 @singledispatch
 def _(fut: Future):
+    assert fut.done()
     return fut.result()
 
 
@@ -67,6 +68,7 @@ def _(fut: Future):
 @deep_traverse_to_unwrap.register
 @singledispatch
 def _(fut: Future):
+    assert fut.done()
     return fut.result()
 
 
@@ -74,7 +76,7 @@ def _(fut: Future):
 @deep_traverse_to_gather.register(list)
 @deep_traverse_to_gather.register(set)
 def _(iterable):
-    return [e for v in iterable for e in deep_traverse_to_gather(v) if isinstance(e, Future)]
+    return [e for v in iterable for e in deep_traverse_to_gather(v)]
 
 
 @deep_traverse_to_unwrap.register(tuple)
@@ -91,10 +93,8 @@ def _(iterable):
 def _(dictionary):
     futures = []
     for key, value in dictionary.items():
-        if isinstance(key, Future):
-            futures.append(key)
-        if isinstance(value, Future):
-            futures.append(value)
+        futures.extend(deep_traverse_to_gather(key))
+        futures.extend(deep_traverse_to_gather(value))
     return futures
 
 

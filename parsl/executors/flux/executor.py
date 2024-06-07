@@ -1,33 +1,32 @@
 """Defines the FluxExecutor class."""
 
+import collections
 import concurrent.futures as cf
 import functools
-import os
-import sys
-import uuid
-import threading
 import itertools
-import shutil
+import os
 import queue
-from socket import gethostname
-import collections
-from collections.abc import Mapping, Callable
-from typing import Optional, Any, Dict
+import shutil
+import sys
+import threading
+import uuid
 import weakref
+from collections.abc import Callable, Mapping
+from socket import gethostname
+from typing import Any, Dict, Optional
 
 import zmq
 
-from parsl.utils import RepresentationMixin
+from parsl.app.errors import AppException
 from parsl.executors.base import ParslExecutor
+from parsl.executors.errors import ScalingFailed
 from parsl.executors.flux.execute_parsl_task import __file__ as _WORKER_PATH
 from parsl.executors.flux.flux_instance_manager import __file__ as _MANAGER_PATH
-from parsl.executors.errors import ScalingFailed
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
 from parsl.serialize import deserialize, pack_res_spec_apply_message
 from parsl.serialize.errors import SerializationError
-from parsl.app.errors import AppException
-
+from parsl.utils import RepresentationMixin
 
 _WORKER_PATH = os.path.realpath(_WORKER_PATH)
 _MANAGER_PATH = os.path.realpath(_MANAGER_PATH)

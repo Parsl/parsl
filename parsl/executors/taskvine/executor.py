@@ -3,46 +3,45 @@ Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant,
 high-throughput system for delegating Parsl tasks to thousands of remote machines
 """
 
-# Import Python built-in libraries
-import threading
-import multiprocessing
-import logging
-import tempfile
 import hashlib
-import subprocess
+import inspect
+import itertools
+import logging
+import multiprocessing
 import os
 import queue
-import inspect
 import shutil
-import itertools
+import subprocess
+import tempfile
+
+# Import Python built-in libraries
+import threading
 import uuid
 from concurrent.futures import Future
-from typing import List, Optional, Union, Literal
-
-# Import Parsl constructs
-import parsl.utils as putils
-from parsl.data_provider.staging import Staging
-from parsl.serialize import serialize, deserialize
-from parsl.data_provider.files import File
-from parsl.errors import OptionalModuleMissing
-from parsl.providers.base import ExecutionProvider
-from parsl.providers import LocalProvider, CondorProvider
-from parsl.process_loggers import wrap_with_logs
-from parsl.addresses import get_any_address
-from parsl.executors.errors import ExecutorError
-from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.executors.taskvine import exec_parsl_function
-from parsl.executors.taskvine.manager_config import TaskVineManagerConfig
-from parsl.executors.taskvine.factory_config import TaskVineFactoryConfig
-from parsl.executors.taskvine.errors import TaskVineTaskFailure
-from parsl.executors.taskvine.errors import TaskVineManagerFailure
-from parsl.executors.taskvine.utils import ParslTaskToVine
-from parsl.executors.taskvine.utils import ParslFileToVine
-from parsl.executors.taskvine.manager import _taskvine_submit_wait
-from parsl.executors.taskvine.factory import _taskvine_factory
+from typing import List, Literal, Optional, Union
 
 # Import other libraries
 import typeguard
+
+# Import Parsl constructs
+import parsl.utils as putils
+from parsl.addresses import get_any_address
+from parsl.data_provider.files import File
+from parsl.data_provider.staging import Staging
+from parsl.errors import OptionalModuleMissing
+from parsl.executors.errors import ExecutorError
+from parsl.executors.status_handling import BlockProviderExecutor
+from parsl.executors.taskvine import exec_parsl_function
+from parsl.executors.taskvine.errors import TaskVineManagerFailure, TaskVineTaskFailure
+from parsl.executors.taskvine.factory import _taskvine_factory
+from parsl.executors.taskvine.factory_config import TaskVineFactoryConfig
+from parsl.executors.taskvine.manager import _taskvine_submit_wait
+from parsl.executors.taskvine.manager_config import TaskVineManagerConfig
+from parsl.executors.taskvine.utils import ParslFileToVine, ParslTaskToVine
+from parsl.process_loggers import wrap_with_logs
+from parsl.providers import CondorProvider, LocalProvider
+from parsl.providers.base import ExecutionProvider
+from parsl.serialize import deserialize, serialize
 
 logger = logging.getLogger(__name__)
 

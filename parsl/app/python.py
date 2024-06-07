@@ -2,6 +2,7 @@ import logging
 import threading
 
 import tblib.pickling_support
+
 tblib.pickling_support.install()
 
 from functools import wraps
@@ -11,7 +12,6 @@ from parsl.app.errors import wrap_error
 from parsl.dataflow.dflow import DataFlowKernelLoader
 from parsl.utils import AutoCancelTimer
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -19,6 +19,7 @@ def timeout(f, seconds: float):
     @wraps(f)
     def wrapper(*args, **kwargs):
         import ctypes
+
         import parsl.app.errors
 
         def inject_exception(thread):

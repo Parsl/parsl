@@ -358,3 +358,22 @@ or
       url          = {https://doi.org/10.1145/3307681.3325400}
     }
 
+
+How can my tasks survive ``WorkerLost`` and ``ManagerLost`` at the end of a batch job?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When a batch job ends, pilot workers will be terminated by the batch system,
+and any tasks running there will fail. With `HighThroughputExecutor`,
+this failure will be reported as a `parsl.executors.high_throughput.errors.WorkerLost` or
+`parsl.executors.high_throughput.interchange.ManagerLost` in the task future.
+
+To mitigate against this:
+
+* use retries by setting ``retries=`` in `parsl.config.Config`.
+* if you only want to retry on certain errors such as `WorkerLost` and `ManagerLost`,
+  use ``retry_handler`` in `parsl.config.Config` to implement that policy.
+* avoid sending tasks to batch jobs that will expire soon. With `HighThroughputExecutor`,
+  set drain_period to a little longer than you expect your tasks to take.
+  With `WorkQueueExecutor`, you can configure individual expected task duration using
+  a ``parsl_resource_specification`` and specify a worker ``--wall-time`` using the
+  ``worker_options`` parameter to the `WorkQueueExecutor`.
