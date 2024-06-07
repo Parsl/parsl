@@ -12,7 +12,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
 from parsl.jobs.error_handlers import noop_error_handler, simple_error_handler
-from parsl.jobs.states import JobState, JobStatus
+from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
 from parsl.monitoring.message_type import MessageType
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import AtomicIDCounter
@@ -199,15 +199,47 @@ class BlockProviderExecutor(ParslExecutor):
                 self._simulated_status[block_id] = JobStatus(JobState.FAILED, "Failed to start block {}: {}".format(block_id, ex))
         return block_ids
 
-    @abstractmethod
-    def scale_in(self, blocks: int) -> List[str]:
-        """Scale in method.
+    def scale_in(self, count: int) -> List[str]:
+        """Scale in a specified number of blocks.
+
+        The default implementation will scale in arbitrary PENDING or RUNNING
+        blocks. Executors which are able to make more useful decisions about
+        which blocks to scale in should override this method - for example,
+        HighThroughputExecutor can choose idle blocks)
 
         Cause the executor to reduce the number of blocks by count.
 
         :return: A list of block ids corresponding to the blocks that were removed.
         """
-        pass
+        logger.debug("Number of blocks requested for scale in: %s", count)
+
+        # TODO: prefer pending blocks? because that's the only judgement we have about
+        # which blocks are empty?
+
+        # TODO: prefer pending blocks with largest block ID? because they're likely the
+        # ones with least valuable queue position.
+
+        candidate_blocks = [block_id for block_id, job_status in self._status.items() if job_status.state not in TERMINAL_STATES]
+        logger.debug("Candidate blocks for scale in: %s", candidate_blocks)
+
+        # Obtain list of blocks to kill
+        to_kill = candidate_blocks[:count]
+
+        logger.debug("Blocks chosen to scale in: %s", to_kill)
+
+        kill_ids = [self.blocks_to_job_id[block] for block in to_kill]
+
+        # Cancel the blocks provisioned
+        if self.provider:
+            logger.info(f"Scaling in jobs: {kill_ids}")
+
+            r = self.provider.cancel(kill_ids)
+            job_ids = self._filter_scale_in_ids(kill_ids, r)
+            block_ids_killed = [self.job_ids_to_block[jid] for jid in job_ids]
+            return block_ids_killed
+        else:
+            logger.error("No execution provider available to scale in")
+            return []
 
     def _launch_block(self, block_id: str) -> Any:
         launch_cmd = self._get_launch_command(block_id)
