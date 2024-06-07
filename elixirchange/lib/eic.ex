@@ -41,7 +41,7 @@ defmodule EIC.Supervisor do
       %{id: EIC.TaskQueue, start: {EIC.TaskQueue, :start_link, [ctx]}}
     ]
 
-    Supervisor.init(children, strategy: :one_for_one)
+    Supervisor.init(children, strategy: :one_for_one, max_restarts: 0)
   end
 end
 
