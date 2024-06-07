@@ -688,7 +688,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Number of jobs in blocks_to_job_id map: %s", len(self.blocks_to_job_id))
 
         # Obtain list of blocks to kill
-        to_kill = list(self.blocks_to_job_id.keys())[:count]
+        to_kill = list(self._status.keys())[:count]
 
         logger.debug("List of blocks to scale in: %s", to_kill)
         for block_id in to_kill:
