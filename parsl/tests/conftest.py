@@ -153,6 +153,10 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
+        'unix_filesystem_permissions_required: Marks tests that require unix-level filesystem permission enforcement'
+    )
+    config.addinivalue_line(
+        'markers',
         'issue3328: Marks tests broken by issue #3328'
     )
     config.addinivalue_line(
