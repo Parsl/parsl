@@ -527,7 +527,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         get the worker task and result ports that the interchange has bound to.
         """
         self.interchange_proc = ForkProcess(target=interchange.starter,
-                                            kwargs={"client_ports": (self.outgoing_q.port,
+                                            kwargs={"client_address": "127.0.0.1",
+                                                    "client_ports": (self.outgoing_q.port,
                                                                      self.incoming_q.port,
                                                                      self.command_client.port),
                                                     "interchange_address": self.address,
