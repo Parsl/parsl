@@ -4,6 +4,7 @@ metadata:
   name: pytest
 spec:
   activeDeadlineSeconds: 600
+  backoffLimit: 1
   template:
     spec:
       restartPolicy: Never
