@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import atexit
+import concurrent.futures as cf
 import datetime
 import inspect
 import logging
@@ -208,6 +209,8 @@ class DataFlowKernel:
         self.task_count = 0
         self.tasks: Dict[int, TaskRecord] = {}
         self.submitter_lock = threading.Lock()
+
+        self.dependency_launch_pool = cf.ThreadPoolExecutor(max_workers=1, thread_name_prefix="Dependency-Launch")
 
         self.dependency_resolver = self.config.dependency_resolver if self.config.dependency_resolver is not None \
             else SHALLOW_DEPENDENCY_RESOLVER
@@ -626,9 +629,9 @@ class DataFlowKernel:
         return kwargs.get('_parsl_staging_inhibit', False)
 
     def launch_if_ready(self, task_record: TaskRecord) -> None:
-        """
-        launch_if_ready will launch the specified task, if it is ready
-        to run (for example, without dependencies, and in pending state).
+        """Schedules a task record for re-inspection to see if it is ready
+        for launch and for launch if it is ready. The call will return
+        immediately.
 
         This should be called by any piece of the DataFlowKernel that
         thinks a task may have become ready to run.
@@ -637,12 +640,16 @@ class DataFlowKernel:
         ready to run - launch_if_ready will not incorrectly launch that
         task.
 
-        It is also not an error to call launch_if_ready on a task that has
-        already been launched - launch_if_ready will not re-launch that
-        task.
-
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
+        """
+        self.dependency_launch_pool.submit(self._launch_if_ready_async, task_record)
+
+    @wrap_with_logs
+    def _launch_if_ready_async(self, task_record: TaskRecord) -> None:
+        """
+        _launch_if_ready will launch the specified task, if it is ready
+        to run (for example, without dependencies, and in pending state).
         """
         exec_fu = None
 
@@ -1285,6 +1292,10 @@ class DataFlowKernel:
             logger.info("Terminating monitoring")
             self.monitoring.close()
             logger.info("Terminated monitoring")
+
+        logger.info("Terminating dependency launch pool")
+        self.dependency_launch_pool.shutdown()
+        logger.info("Terminated dependency launch pool")
 
         logger.info("Unregistering atexit hook")
         atexit.unregister(self.atexit_cleanup)
