@@ -32,4 +32,4 @@ RUN python3.12 -m venv /venv
 ADD . /src
 WORKDIR /src
 
-RUN . /venv/bin/activate && pip3 install . -r test-requirements.txt
+RUN . /venv/bin/activate && pip3 install '.[kubernetes]' -r test-requirements.txt
