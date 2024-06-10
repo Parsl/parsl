@@ -245,13 +245,13 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  worker_executable: str = 'work_queue_worker',
                  function_dir: Optional[str] = None,
                  coprocess: bool = False,
-                 scaling_assume_core_slots_per_worker: int = 1):
+                 scaling_cores_per_worker: int = 1):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
         if not _work_queue_enabled:
             raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
 
-        self.scaling_assume_core_slots_per_worker = scaling_assume_core_slots_per_worker
+        self.scaling_cores_per_worker = scaling_cores_per_worker
         self.label = label
         self.task_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
         self.collector_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
@@ -672,14 +672,14 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     assert isinstance(fut.resource_specification, dict)  # type: ignore[attr-defined]
 
                     outstanding += fut.resource_specification.get('cores',  # type: ignore[attr-defined]
-                                                                  self.scaling_assume_core_slots_per_worker)
+                                                                  self.scaling_cores_per_worker)
                     tasks += 1
         logger.debug(f"Counted {tasks} outstanding tasks with {outstanding} outstanding slots")
         return outstanding
 
     @property
     def workers_per_node(self) -> Union[int, float]:
-        return self.scaling_assume_core_slots_per_worker
+        return self.scaling_cores_per_worker
 
     def scale_in(self, count: int) -> List[str]:
         """Scale in method.
