@@ -1,0 +1,26 @@
+name: Parsl
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+jobs:
+  k8s-kind-suite:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 60
+
+    steps:
+    - uses: actions/checkout@master
+
+    - name: Create k8s Kind Cluster
+      uses: helm/kind-action@v1
+      with:
+        cluster_name: parsl-k8s
+
+    - name: Build and push
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        tags: parsl:ci
