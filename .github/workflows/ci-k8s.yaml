@@ -17,7 +17,9 @@ jobs:
     - name: Create k8s Kind Cluster
       uses: helm/kind-action@v1
       with:
-        cluster_name: parsl-k8s
+        # kind tooling uses this name by default, but kind-action uses
+        # a different default name
+        cluster_name: kind
 
     - name: Build docker image
       uses: docker/build-push-action@v5
