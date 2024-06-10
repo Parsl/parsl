@@ -10,6 +10,7 @@ def fresh_config():
         executors=[
             HighThroughputExecutor(
                 label="executorname",
+                storage_access=[],
                 worker_debug=True,
                 cores_per_worker=1,
                 encrypted=False,  # needs certificate fs to be mounted in same place...
