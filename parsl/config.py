@@ -39,11 +39,14 @@ class Config(RepresentationMixin, UsageInformation):
     dependency_resolver: plugin point for custom dependency resolvers. Default: only resolve Futures,
         using the `SHALLOW_DEPENDENCY_RESOLVER`.
     exit_mode: str, optional
-        When Parsl is used as a context manager, using ``with parsl.load`` syntax, then this parameter
+        When Parsl is used as a context manager (using ``with parsl.load`` syntax) then this parameter
         controls what will happen to running tasks and exceptions at exit. The options are:
-        ``cleanup``: cleanup the DFK on exit without waiting for any tasks, ``skip``: skip all shutdown
-        behaviour when exiting the context manager; ``wait``: wait for all tasks to complete when
-        exiting normally, but exit immediately when exiting due to an exception. Default is ``cleanup``.
+
+        * ``cleanup``: cleanup the DFK on exit without waiting for any tasks
+        * ``skip``: skip all shutdown behaviour when exiting the context manager
+        * ``wait``: wait for all tasks to complete when exiting normally, but exit immediately when exiting due to an exception.
+
+        Default is ``cleanup``.
     garbage_collect : bool. optional.
         Delete task records from DFK when tasks have completed. Default: True
     internal_tasks_max_threads : int, optional
