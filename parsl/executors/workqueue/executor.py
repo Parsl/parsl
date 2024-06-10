@@ -677,7 +677,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     # if a task does not specify a core count, Work Queue will allocate an entire
                     # worker node to that task. That's approximated here by saying that it uses
                     # scaling_cores_per_worker.
-                    resource_spec = fut.get('resource_specification', {})
+                    resource_spec = getattr(fut, 'resource_specification', {})
                     cores = resource_spec.get('cores', self.scaling_cores_per_worker)
 
                     outstanding += cores
