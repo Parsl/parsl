@@ -525,27 +525,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Starts the interchange process locally and uses the command queue to
         get the worker task and result ports that the interchange has bound to.
         """
-        # self.interchange_proc = ForkProcess(target=interchange.starter,
-        #                                     kwargs={"client_address": "127.0.0.1",
-        #                                           "client_ports": (self.outgoing_q.port,
-        #                                                             self.incoming_q.port,
-        #                                                             self.command_client.port),
-        #                                            "interchange_address": self.address,
-        #                                            "worker_ports": self.worker_ports,
-        #                                            "worker_port_range": self.worker_port_range,
-        #                                            "hub_address": self.hub_address,
-        #                                            "hub_zmq_port": self.hub_zmq_port,
-        #                                            "logdir": self.logdir,
-        #                                            "heartbeat_threshold": self.heartbeat_threshold,
-        #                                            "poll_period": self.poll_period,
-        #                                            "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
-        #                                            "cert_dir": self.cert_dir,
-        #                                            },
-        #                                    daemon=True,
-        #                                    name="HTEX-Interchange"
-        #                                    )
-        # self.interchange_proc.start()
-
         cli: List[str] = ["interchange.py",
                           "--client-address", "127.0.0.1",
                           "--client-ports", f"{self.outgoing_q.port},{self.incoming_q.port},{self.command_client.port}",
