@@ -8,7 +8,7 @@ on:
 
 jobs:
   k8s-kind-suite:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
 
     steps:
@@ -19,8 +19,13 @@ jobs:
       with:
         cluster_name: parsl-k8s
 
-    - name: Build and push
+    - name: Build docker image
       uses: docker/build-push-action@v5
       with:
         context: .
         tags: parsl:ci
+
+    - name: Push docker image into kubernetes cluster
+      run: |
+        kind load docker-image parsl:ci
+
