@@ -37,6 +37,7 @@ jobs:
 
     - name: launch pytest Job
       run: |
+        free -h
         kubectl create -f ./pytest-task.yaml 
 
     - name: wait for pytest Job
@@ -48,6 +49,7 @@ jobs:
     - name: report some info
       if: ${{ always() }}
       run: |
+        free -h
         kubectl describe pods
         kubectl describe jobs
         kubectl logs Job/pytest
