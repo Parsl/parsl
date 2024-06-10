@@ -38,5 +38,7 @@ jobs:
     - name: launch pytest Job
       run: |
         kubectl create -f ./pytest-task.yaml 
+
     - name: wait for pytest Job
+      run: |
         kubectl wait --timeout=600s --for=condition=Complete Job pytest
