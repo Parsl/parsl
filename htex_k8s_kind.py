@@ -16,7 +16,7 @@ def fresh_config():
                 provider=KubernetesProvider(
                     worker_init=". /venv/bin/activate",
                     # pod_name="override-pod-name", # can't use default name because of dots, without own bugfix
-                    image="parslimg:a"
+                    image="parsl:ci"
                     ),
             )
         ],

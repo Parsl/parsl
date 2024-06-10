@@ -9,6 +9,6 @@ spec:
       restartPolicy: Never
       containers:
       - name: pytest
-        image: parslimg:a
+        image: parsl:ci
         command: ["bash", "runme.sh"]
 
