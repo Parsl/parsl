@@ -215,6 +215,13 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             This requires a version of Work Queue / cctools after commit
             874df524516441da531b694afc9d591e8b134b73 (release 7.5.0 is too early).
             Default is False.
+
+        scaling_cores_per_worker: int
+            When using Parsl scaling, this specifies the number of cores that a
+            worker is expected to have available for computation. Default 1. This
+            parameter can be ignored when using a fixed number of blocks, or when
+            using one task per worker (by omitting a ``cores`` resource
+            specifiation for each task).
     """
 
     radio_mode = "filesystem"
@@ -667,12 +674,13 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         with self.tasks_lock:
             for fut in self.tasks.values():
                 if not fut.done():
-                    # if a task defines a resource spec with a core count, use the number
-                    # of cores as required task slot count, instead of 1 slot.
-                    assert isinstance(fut.resource_specification, dict)  # type: ignore[attr-defined]
+                    # if a task does not specify a core count, Work Queue will allocate an entire
+                    # worker node to that task. That's approximated here by saying that it uses
+                    # scaling_cores_per_worker.
+                    resource_spec = fut.get('resource_specification', {})
+                    cores = resource_spec.get('cores', self.scaling_cores_per_worker)
 
-                    outstanding += fut.resource_specification.get('cores',  # type: ignore[attr-defined]
-                                                                  self.scaling_cores_per_worker)
+                    outstanding += cores
                     tasks += 1
         logger.debug(f"Counted {tasks} outstanding tasks with {outstanding} outstanding slots")
         return outstanding
