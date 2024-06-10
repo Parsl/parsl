@@ -1,15 +1,14 @@
-import logging
-import threading
-import queue
-import os
-import time
 import datetime
-
+import logging
+import os
+import queue
+import threading
+import time
 from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
 
-from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
 from parsl.errors import OptionalModuleMissing
+from parsl.log_utils import set_file_logger
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import MonitoringMessage, TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
@@ -21,11 +20,18 @@ X = TypeVar('X')
 
 try:
     import sqlalchemy as sa
-    from sqlalchemy import Column, Text, Float, Boolean, BigInteger, Integer, DateTime, PrimaryKeyConstraint, Table
-    from sqlalchemy.orm import Mapper
-    from sqlalchemy.orm import mapperlib
-    from sqlalchemy.orm import sessionmaker
-    from sqlalchemy.orm import declarative_base
+    from sqlalchemy import (
+        BigInteger,
+        Boolean,
+        Column,
+        DateTime,
+        Float,
+        Integer,
+        PrimaryKeyConstraint,
+        Table,
+        Text,
+    )
+    from sqlalchemy.orm import Mapper, declarative_base, mapperlib, sessionmaker
 except ImportError:
     _sqlalchemy_enabled = False
 else:
@@ -633,7 +639,8 @@ class DatabaseManager:
                     # if retried - for example, the database being locked because someone else is readying
                     # the tables we are trying to write to. If that assumption is wrong, then this loop
                     # may go on forever.
-                    logger.warning("Got a database OperationalError. Ignoring and retrying on the assumption that it is recoverable: {}".format(e))
+                    logger.warning("Got a database OperationalError. "
+                                   "Ignoring and retrying on the assumption that it is recoverable: {}".format(e))
                     self.db.rollback()
                     time.sleep(1)  # hard coded 1s wait - this should be configurable or exponential backoff or something
 
@@ -660,7 +667,8 @@ class DatabaseManager:
                     done = True
                 except sa.exc.OperationalError as e:
                     # hoping that this is a database locked error during _update, not some other problem
-                    logger.warning("Got a database OperationalError. Ignoring and retrying on the assumption that it is recoverable: {}".format(e))
+                    logger.warning("Got a database OperationalError. "
+                                   "Ignoring and retrying on the assumption that it is recoverable: {}".format(e))
                     self.db.rollback()
                     time.sleep(1)  # hard coded 1s wait - this should be configurable or exponential backoff or something
         except KeyboardInterrupt:

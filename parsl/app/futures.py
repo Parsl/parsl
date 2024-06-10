@@ -1,12 +1,12 @@
 """This module implements DataFutures.
 """
 import logging
-import typeguard
 from concurrent.futures import Future
+from typing import Optional
+
+import typeguard
 
 from parsl.data_provider.files import File
-
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 

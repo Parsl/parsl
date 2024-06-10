@@ -3,8 +3,8 @@ from typing import List, Union
 
 import numpy as np
 
-from parsl import python_app, HighThroughputExecutor, Config
 import parsl
+from parsl import Config, HighThroughputExecutor, python_app
 
 parsl.load(Config(executors=[HighThroughputExecutor(label='htex_spawn', max_workers_per_node=1, address='127.0.0.1')]))
 

@@ -1,7 +1,9 @@
-from flask import Flask
-from parsl.monitoring.visualization.models import db
 import argparse
 import os
+
+from flask import Flask
+
+from parsl.monitoring.visualization.models import db
 
 
 def cli_run():

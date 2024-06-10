@@ -1,10 +1,8 @@
+from parsl.addresses import address_by_interface
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
-
 from parsl.launchers import JsrunLauncher
 from parsl.providers import LSFProvider
-
-from parsl.addresses import address_by_interface
 
 config = Config(
     executors=[

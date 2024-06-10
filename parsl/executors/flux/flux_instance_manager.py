@@ -1,10 +1,10 @@
 """Script meant to be the initial program of a Flux instance."""
 
 import argparse
+import logging
 import os
 from os.path import dirname
-import logging
-from socket import gethostname, gethostbyname
+from socket import gethostbyname, gethostname
 
 import zmq
 
@@ -16,8 +16,8 @@ def main():
     encapsulating Flux instance.
     """
     # flux imports only available when launched under Flux instance
-    import flux.job
     import flux
+    import flux.job
 
     logging.basicConfig(
         level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(message)s"

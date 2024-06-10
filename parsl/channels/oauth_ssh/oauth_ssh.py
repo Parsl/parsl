@@ -1,13 +1,14 @@
 import logging
-import paramiko
 import socket
 
-from parsl.errors import OptionalModuleMissing
+import paramiko
+
 from parsl.channels.ssh.ssh import SSHChannel
+from parsl.errors import OptionalModuleMissing
 
 try:
-    from oauth_ssh.ssh_service import SSHService
     from oauth_ssh.oauth_ssh_token import find_access_token
+    from oauth_ssh.ssh_service import SSHService
     _oauth_ssh_enabled = True
 except (ImportError, NameError):
     _oauth_ssh_enabled = False
@@ -106,5 +107,5 @@ class OAuthSSHChannel(SSHChannel):
 
         return exit_status, stdout, stderr
 
-    def close(self):
-        return self.transport.close()
+    def close(self) -> None:
+        self.transport.close()

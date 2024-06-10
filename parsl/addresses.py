@@ -8,17 +8,19 @@ so some experimentation will probably be needed to choose the correct one.
 
 import logging
 import platform
-import requests
 import socket
+
+import requests
+
 try:
     import fcntl
 except ImportError:
     fcntl = None  # type: ignore[assignment]
 import struct
-import typeguard
-import psutil
+from typing import Callable, List, Set
 
-from typing import Set, List, Callable
+import psutil
+import typeguard
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +83,9 @@ def address_by_hostname() -> str:
 def address_by_interface(ifname: str) -> str:
     """Returns the IP address of the given interface name, e.g. 'eth0'
 
-    This is from a Stack Overflow answer: https://stackoverflow.com/questions/24196932/how-can-i-get-the-ip-address-of-eth0-in-python#24196955
+    This is taken from a Stack Overflow answer:
+    https://stackoverflow.com/questions/24196932/how-can-i-get-the-ip-address-of-eth0-in-python#24196955
+
 
     Parameters
     ----------
@@ -111,7 +115,7 @@ def get_all_addresses() -> Set[str]:
         try:
             s_addresses.add(address_by_interface(interface))
         except Exception:
-            logger.info("Ignoring failure to fetch address from interface {}".format(interface))
+            logger.debug("Ignoring failure to fetch address from interface {}".format(interface))
 
     resolution_functions: List[Callable[[], str]]
     resolution_functions = [address_by_hostname, address_by_route, address_by_query]
@@ -119,7 +123,7 @@ def get_all_addresses() -> Set[str]:
         try:
             s_addresses.add(f())
         except Exception:
-            logger.info("Ignoring an address finder exception")
+            logger.debug("Ignoring an address finder exception")
 
     return s_addresses
 

@@ -20,7 +20,6 @@ def load_config():
     yield
 
     parsl.dfk().cleanup()
-    parsl.clear()
 
 
 @python_app

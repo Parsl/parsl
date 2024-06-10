@@ -3,12 +3,12 @@ import os
 import time
 import warnings
 
-from parsl.providers.errors import ScaleOutFailed
 from parsl.channels import LocalChannel
-from parsl.launchers import AprunLauncher
-from parsl.providers.cobalt.template import template_string
-from parsl.providers.cluster_provider import ClusterProvider
 from parsl.jobs.states import JobState, JobStatus
+from parsl.launchers import AprunLauncher
+from parsl.providers.cluster_provider import ClusterProvider
+from parsl.providers.cobalt.template import template_string
+from parsl.providers.errors import ScaleOutFailed
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
 logger = logging.getLogger(__name__)

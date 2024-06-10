@@ -1,7 +1,8 @@
 from parsl.config import Config
+from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SrunLauncher
 from parsl.providers import SlurmProvider
-from parsl.executors import HighThroughputExecutor
+
 from .user_opts import user_opts
 
 

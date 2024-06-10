@@ -1,21 +1,26 @@
+import datetime
+import logging
 import os
 import time
-import logging
-import datetime
 from functools import wraps
-
-from parsl.multiprocessing import ForkProcess
 from multiprocessing import Event
-from parsl.process_loggers import wrap_with_logs
+from typing import Any, Callable, Dict, List, Sequence, Tuple
 
 from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.radios import MonitoringRadio, UDPRadio, HTEXRadio, FilesystemRadio
-from typing import Any, Callable, Dict, List, Sequence, Tuple
+from parsl.monitoring.radios import (
+    FilesystemRadio,
+    HTEXRadio,
+    MonitoringRadio,
+    UDPRadio,
+)
+from parsl.multiprocessing import ForkProcess
+from parsl.process_loggers import wrap_with_logs
 
 logger = logging.getLogger(__name__)
 
 
-def monitor_wrapper(f: Any,           # per app
+def monitor_wrapper(*,
+                    f: Any,           # per app
                     args: Sequence,   # per invocation
                     kwargs: Dict,     # per invocation
                     x_try_id: int,    # per invocation
@@ -95,6 +100,22 @@ def monitor_wrapper(f: Any,           # per app
     return (wrapped, args, new_kwargs)
 
 
+def get_radio(radio_mode: str, monitoring_hub_url: str, task_id: int, run_dir: str) -> MonitoringRadio:
+    radio: MonitoringRadio
+    if radio_mode == "udp":
+        radio = UDPRadio(monitoring_hub_url,
+                         source_id=task_id)
+    elif radio_mode == "htex":
+        radio = HTEXRadio(monitoring_hub_url,
+                          source_id=task_id)
+    elif radio_mode == "filesystem":
+        radio = FilesystemRadio(monitoring_url=monitoring_hub_url,
+                                source_id=task_id, run_dir=run_dir)
+    else:
+        raise RuntimeError(f"Unknown radio mode: {radio_mode}")
+    return radio
+
+
 @wrap_with_logs
 def send_first_message(try_id: int,
                        task_id: int,
@@ -118,21 +139,10 @@ def send_first_last_message(try_id: int,
                             monitoring_hub_url: str,
                             run_id: str, radio_mode: str, run_dir: str,
                             is_last: bool) -> None:
-    import platform
     import os
+    import platform
 
-    radio: MonitoringRadio
-    if radio_mode == "udp":
-        radio = UDPRadio(monitoring_hub_url,
-                         source_id=task_id)
-    elif radio_mode == "htex":
-        radio = HTEXRadio(monitoring_hub_url,
-                          source_id=task_id)
-    elif radio_mode == "filesystem":
-        radio = FilesystemRadio(monitoring_url=monitoring_hub_url,
-                                source_id=task_id, run_dir=run_dir)
-    else:
-        raise RuntimeError(f"Unknown radio mode: {radio_mode}")
+    radio = get_radio(radio_mode, monitoring_hub_url, task_id, run_dir)
 
     msg = (MessageType.RESOURCE_INFO,
            {'run_id': run_id,
@@ -171,24 +181,14 @@ def monitor(pid: int,
     """
     import logging
     import platform
+
     import psutil
 
     from parsl.utils import setproctitle
 
     setproctitle("parsl: task resource monitor")
 
-    radio: MonitoringRadio
-    if radio_mode == "udp":
-        radio = UDPRadio(monitoring_hub_url,
-                         source_id=task_id)
-    elif radio_mode == "htex":
-        radio = HTEXRadio(monitoring_hub_url,
-                          source_id=task_id)
-    elif radio_mode == "filesystem":
-        radio = FilesystemRadio(monitoring_url=monitoring_hub_url,
-                                source_id=task_id, run_dir=run_dir)
-    else:
-        raise RuntimeError(f"Unknown radio mode: {radio_mode}")
+    radio = get_radio(radio_mode, monitoring_hub_url, task_id, run_dir)
 
     logging.debug("start of monitor")
 

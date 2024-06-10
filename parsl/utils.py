@@ -7,14 +7,26 @@ import threading
 import time
 from contextlib import contextmanager
 from types import TracebackType
-from typing import Any, Callable, List, Sequence, Tuple, Union, Generator, IO, AnyStr, Dict, Optional
+from typing import (
+    IO,
+    Any,
+    AnyStr,
+    Callable,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 import typeguard
 from typing_extensions import Type
 
 import parsl
+from parsl.app.errors import BadStdStreamFile
 from parsl.version import VERSION
-
 
 try:
     import setproctitle as setproctitle_module
@@ -121,9 +133,17 @@ def get_std_fname_mode(
         if len(stdfspec) != 2:
             msg = (f"std descriptor {fdname} has incorrect tuple length "
                    f"{len(stdfspec)}")
-            raise pe.BadStdStreamFile(msg, TypeError('Bad Tuple Length'))
+            raise pe.BadStdStreamFile(msg)
         fname, mode = stdfspec
-    return str(fname), mode
+
+    path = os.fspath(fname)
+
+    if isinstance(path, str):
+        return path, mode
+    elif isinstance(path, bytes):
+        return path.decode(), mode
+    else:
+        raise BadStdStreamFile(f"fname has invalid type {type(path)}")
 
 
 @contextmanager

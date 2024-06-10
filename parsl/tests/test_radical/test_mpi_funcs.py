@@ -1,6 +1,6 @@
-import parsl
 import pytest
 
+import parsl
 from parsl.tests.configs.local_radical_mpi import fresh_config as local_config
 
 
@@ -16,7 +16,6 @@ def some_mpi_func(msg, sleep, comm=None, parsl_resource_specification={}):
 apps = []
 
 
-@pytest.mark.skip("hangs in CI - waiting for resolution of issue #3029")
 @pytest.mark.local
 @pytest.mark.radical
 def test_radical_mpi(n=7):

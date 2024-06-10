@@ -1,4 +1,5 @@
 import os
+
 import pytest
 
 import parsl
@@ -22,7 +23,6 @@ def no_checkpoint_stdout_app_ignore_args(stdout=None):
     return "echo X"
 
 
-@pytest.mark.issue363
 def test_memo_stdout():
 
     # this should run and create a file named after path_x

@@ -1,14 +1,13 @@
 """Config for Azure"""
-from parsl.config import Config
-
-from parsl.providers import AzureProvider
-from parsl.executors import HighThroughputExecutor
-from parsl.data_provider.http import HTTPInTaskStaging
-from parsl.data_provider.ftp import FTPInTaskStaging
-from parsl.data_provider.rsync import RSyncStaging
-from parsl.addresses import address_by_query
-
 import getpass
+
+from parsl.addresses import address_by_query
+from parsl.config import Config
+from parsl.data_provider.ftp import FTPInTaskStaging
+from parsl.data_provider.http import HTTPInTaskStaging
+from parsl.data_provider.rsync import RSyncStaging
+from parsl.executors import HighThroughputExecutor
+from parsl.providers import AzureProvider
 
 vm_reference = {
     # All fields below are required

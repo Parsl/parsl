@@ -3,46 +3,45 @@ Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant,
 high-throughput system for delegating Parsl tasks to thousands of remote machines
 """
 
-# Import Python built-in libraries
-import threading
-import multiprocessing
-import logging
-import tempfile
 import hashlib
-import subprocess
+import inspect
+import itertools
+import logging
+import multiprocessing
 import os
 import queue
-import inspect
 import shutil
-import itertools
+import subprocess
+import tempfile
+
+# Import Python built-in libraries
+import threading
 import uuid
 from concurrent.futures import Future
-from typing import List, Optional, Union, Literal
-
-# Import Parsl constructs
-import parsl.utils as putils
-from parsl.data_provider.staging import Staging
-from parsl.serialize import serialize, deserialize
-from parsl.data_provider.files import File
-from parsl.errors import OptionalModuleMissing
-from parsl.providers.base import ExecutionProvider
-from parsl.providers import LocalProvider, CondorProvider
-from parsl.process_loggers import wrap_with_logs
-from parsl.addresses import get_any_address
-from parsl.executors.errors import ExecutorError
-from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.executors.taskvine import exec_parsl_function
-from parsl.executors.taskvine.manager_config import TaskVineManagerConfig
-from parsl.executors.taskvine.factory_config import TaskVineFactoryConfig
-from parsl.executors.taskvine.errors import TaskVineTaskFailure
-from parsl.executors.taskvine.errors import TaskVineManagerFailure
-from parsl.executors.taskvine.utils import ParslTaskToVine
-from parsl.executors.taskvine.utils import ParslFileToVine
-from parsl.executors.taskvine.manager import _taskvine_submit_wait
-from parsl.executors.taskvine.factory import _taskvine_factory
+from typing import List, Literal, Optional, Union
 
 # Import other libraries
 import typeguard
+
+# Import Parsl constructs
+import parsl.utils as putils
+from parsl.addresses import get_any_address
+from parsl.data_provider.files import File
+from parsl.data_provider.staging import Staging
+from parsl.errors import OptionalModuleMissing
+from parsl.executors.errors import ExecutorError
+from parsl.executors.status_handling import BlockProviderExecutor
+from parsl.executors.taskvine import exec_parsl_function
+from parsl.executors.taskvine.errors import TaskVineManagerFailure, TaskVineTaskFailure
+from parsl.executors.taskvine.factory import _taskvine_factory
+from parsl.executors.taskvine.factory_config import TaskVineFactoryConfig
+from parsl.executors.taskvine.manager import _taskvine_submit_wait
+from parsl.executors.taskvine.manager_config import TaskVineManagerConfig
+from parsl.executors.taskvine.utils import ParslFileToVine, ParslTaskToVine
+from parsl.process_loggers import wrap_with_logs
+from parsl.providers import CondorProvider, LocalProvider
+from parsl.providers.base import ExecutionProvider
+from parsl.serialize import deserialize, serialize
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +170,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Path to directory that holds all tasks' data and results.
         self._function_data_dir = ""
 
-        # helper scripts to prepare package tarballs for Parsl apps
+        # Helper scripts to prepare package tarballs for Parsl apps
         self._package_analyze_script = shutil.which("poncho_package_analyze")
         self._package_create_script = shutil.which("poncho_package_create")
         if self._package_analyze_script is None or self._package_create_script is None:
@@ -564,13 +563,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self._worker_command = self._construct_worker_command()
         self._patch_providers()
 
-        if hasattr(self.provider, 'init_blocks'):
-            try:
-                self.scale_out(blocks=self.provider.init_blocks)
-            except Exception as e:
-                logger.error("Initial block scaling out failed: {}".format(e))
-                raise e
-
     @property
     def outstanding(self) -> int:
         """Count the number of outstanding tasks."""
@@ -581,18 +573,23 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     def workers_per_node(self) -> Union[int, float]:
         return 1
 
-    def scale_in(self, count):
+    def scale_in(self, count: int) -> List[str]:
         """Scale in method. Cancel a given number of blocks
         """
         # Obtain list of blocks to kill
-        to_kill = list(self.blocks.keys())[:count]
-        kill_ids = [self.blocks[block] for block in to_kill]
+        to_kill = list(self.blocks_to_job_id.keys())[:count]
+        kill_ids = [self.blocks_to_job_id[block] for block in to_kill]
 
         # Cancel the blocks provisioned
         if self.provider:
-            self.provider.cancel(kill_ids)
+            logger.info(f"Scaling in jobs: {kill_ids}")
+            r = self.provider.cancel(kill_ids)
+            job_ids = self._filter_scale_in_ids(kill_ids, r)
+            block_ids_killed = [self.job_ids_to_block[jid] for jid in job_ids]
+            return block_ids_killed
         else:
             logger.error("No execution provider available to scale")
+            return []
 
     def shutdown(self, *args, **kwargs):
         """Shutdown the executor. Sets flag to cancel the submit process and
@@ -602,7 +599,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self._should_stop.set()
 
         # Remove the workers that are still going
-        kill_ids = [self.blocks[block] for block in self.blocks.keys()]
+        kill_ids = [self.blocks_to_job_id[block] for block in self.blocks_to_job_id.keys()]
         if self.provider:
             logger.debug("Cancelling blocks")
             self.provider.cancel(kill_ids)
@@ -615,6 +612,12 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if self.worker_launch_method == 'factory':
             logger.debug("Joining on factory process")
             self._factory_process.join()
+
+        # Shutdown multiprocessing queues
+        self._ready_task_queue.close()
+        self._ready_task_queue.join_thread()
+        self._finished_task_queue.close()
+        self._finished_task_queue.join_thread()
 
         logger.debug("TaskVine shutdown completed")
 

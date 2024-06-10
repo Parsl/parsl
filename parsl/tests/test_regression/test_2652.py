@@ -1,4 +1,5 @@
 import pytest
+
 from parsl.jobs.states import JobState
 
 

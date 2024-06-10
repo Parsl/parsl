@@ -15,8 +15,6 @@ Parsl lets you chain functions together and will launch each function as inputs 
     import parsl
     from parsl import python_app
 
-    # Start Parsl on a single computer
-    parsl.load()
 
     # Make functions parallel by decorating them
     @python_app
@@ -24,15 +22,19 @@ Parsl lets you chain functions together and will launch each function as inputs 
         return x + 1
 
     @python_app
-    def g(x):
-        return x * 2
+    def g(x, y):
+        return x + y
 
-    # These functions now return Futures, and can be chained
-    future = f(1)
-    assert future.result() == 2
+    # Start Parsl on a single computer
+    with parsl.load():
+        # These functions now return Futures
+        future = f(1)
+        assert future.result() == 2
 
-    future = g(f(1))
-    assert future.result() == 4
+        # Functions run concurrently, can be chained
+        f_a, f_b = f(2), f(3)
+        future = g(f_a, f_b)
+        assert future.result() == 7
 
 
 Start with the `configuration quickstart <https://parsl.readthedocs.io/en/stable/quickstart.html#getting-started>`_ to learn how to tell Parsl how to use your computing resource,
@@ -97,6 +99,7 @@ For Developers
 
 2. Build and Test::
 
+    $ cd parsl # navigate to the root directory of the project
     $ make   # show all available makefile targets
     $ make virtualenv # create a virtual environment
     $ source .venv/bin/activate # activate the virtual environment
@@ -119,7 +122,7 @@ Parsl is supported in Python 3.8+. Requirements can be found `here <requirements
 Code of Conduct
 ===============
 
-Parsl seeks to foster an open and welcoming environment - Please see the `Parsl Code of Conduct <https://github.com/Parsl/parsl/blob/master/CoC.md>`_ for more details.
+Parsl seeks to foster an open and welcoming environment - Please see the `Parsl Code of Conduct <https://github.com/Parsl/parsl?tab=coc-ov-file#parsl-code-of-conduct>`_ for more details.
 
 Contributing
 ============

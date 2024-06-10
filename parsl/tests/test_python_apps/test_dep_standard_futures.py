@@ -1,6 +1,7 @@
+from concurrent.futures import Future
+
 import parsl
 from parsl.dataflow.errors import DependencyError
-from concurrent.futures import Future
 
 
 @parsl.python_app
