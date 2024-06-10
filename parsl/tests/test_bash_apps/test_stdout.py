@@ -71,7 +71,6 @@ def test_bad_stdout_file():
     return
 
 
-
 @pytest.mark.issue3328
 @pytest.mark.unix_filesystem_permissions_required
 def test_bad_stderr_file():
