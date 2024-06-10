@@ -120,7 +120,3 @@ ENV/
 
 # emacs buffers
 \#*
-
-.std.out
-.test.memo.stdout.x
-.output.txt
