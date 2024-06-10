@@ -31,3 +31,12 @@ jobs:
       run: |
         kind load docker-image parsl:ci
 
+    - name: set liberal permissions
+      run: |
+        kubectl create clusterrolebinding serviceaccounts-cluster-admin   --clusterrole=cluster-admin   --group=system:serviceaccounts
+
+    - name: launch pytest Job
+      run: |
+        kubectl create -f ./pytest-task.yaml 
+    - name: wait for pytest Job
+        kubectl wait --timeout=600s --for=condition=Complete Job pytest
