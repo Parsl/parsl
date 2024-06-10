@@ -16,7 +16,6 @@ def echo_to_streams(msg, stderr=None, stdout=None):
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
 
 speclist = (
-    '/bad/dir/t.out',
     ['t3.out', 'w'],
     ('t4.out', None),
     (42, 'w'),
@@ -26,7 +25,6 @@ speclist = (
 )
 
 testids = [
-    'nonexistent_dir',
     'list_not_tuple',
     'null_mode',
     'not_a_string',
@@ -52,6 +50,26 @@ def test_bad_stdout_specs(spec):
         assert "TypeCheckError" in str(type(e)) or isinstance(e, TypeError) or isinstance(e, perror.BadStdStreamFile), "Exception is wrong type"
     else:
         assert False, "Did not raise expected exception"
+
+
+@pytest.mark.issue3328
+@pytest.mark.unix_filesystem_permissions_required
+def test_bad_stdout_file():
+    """Testing bad stderr file"""
+
+    o = "/bad/dir/t2.out"
+
+    fn = echo_to_streams("Hello world", stdout=o, stderr='t.err')
+
+    try:
+        fn.result()
+    except perror.BadStdStreamFile:
+        pass
+    else:
+        assert False, "Did not raise expected exception BadStdStreamFile"
+
+    return
+
 
 
 @pytest.mark.issue3328
