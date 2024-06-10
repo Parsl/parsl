@@ -220,9 +220,24 @@ class DataFlowKernel:
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        logger.debug("Exiting the context manager, calling cleanup for DFK")
-        self.cleanup()
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        mode = self.config.exit_mode
+        logger.debug("Exiting context manager, with exit mode '%s'", mode)
+        if mode == "cleanup":
+            logger.info("Calling cleanup for DFK")
+            self.cleanup()
+        elif mode == "skip":
+            logger.info("Skipping all cleanup handling")
+        elif mode == "wait":
+            if exc_type is None:
+                logger.info("Waiting for all tasks to complete")
+                self.wait_for_current_tasks()
+                self.cleanup()
+            else:
+                logger.info("There was an exception - cleaning up without waiting for task completion")
+                self.cleanup()
+        else:
+            raise InternalConsistencyError(f"Exit case for {mode} should be unreachable, validated by typeguard on Config()")
 
     def _send_task_log_info(self, task_record: TaskRecord) -> None:
         if self.monitoring:
