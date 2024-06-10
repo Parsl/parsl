@@ -41,4 +41,13 @@ jobs:
 
     - name: wait for pytest Job
       run: |
-        kubectl wait --timeout=600s --for=condition=Complete Job pytest
+        # this pytest should take around 30 seconds to run, so 180 seconds
+        # should be plenty...
+        kubectl wait --timeout=180s --for=condition=Complete Job pytest
+
+    - name: report some info
+      if: ${{ always() }}
+      run: |
+        kubectl describe pods
+        kubectl describe jobs
+        kubectl logs Job/pytest
