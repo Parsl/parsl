@@ -554,7 +554,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         """Method to start the management thread as a daemon.
 
         Checks if a thread already exists, then starts it.
-        Could be used later as a restart if the management thread dies
+        Could be used later as a restart if the management thread dies.
         """
         if self._queue_management_thread is None:
             logger.debug("Starting queue management thread")
