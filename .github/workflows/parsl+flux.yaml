@@ -34,7 +34,7 @@ jobs:
 
       - name: Verify Parsl Installation
         run: |
-          pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/local_threads.py --random-order --durations 10
+          pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/local_threads.py --random-order --durations 10
 
       - name: Start Flux and Test Parsl with Flux
         run: |
@@ -42,6 +42,6 @@ jobs:
 
       - name: Test Parsl with Flux Config
         run: |
-          flux start pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/flux_local.py --random-order --durations 10
+          flux start pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/flux_local.py --random-order --durations 10
 
 
