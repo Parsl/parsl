@@ -1,11 +1,11 @@
 import pathlib
 import warnings
 from unittest import mock
+from subprocess import Popen
 
 import pytest
 
 from parsl import HighThroughputExecutor, curvezmq
-from parsl.multiprocessing import ForkProcess
 
 _MOCK_BASE = "parsl.executors.high_throughput.executor"
 
@@ -78,16 +78,16 @@ def test_htex_shutdown(
     timeout_expires: bool,
     htex: HighThroughputExecutor,
 ):
-    mock_ix_proc = mock.Mock(spec=ForkProcess)
+    mock_ix_proc = mock.Mock(spec=Popen)
 
     if started:
         htex.interchange_proc = mock_ix_proc
-        mock_ix_proc.is_alive.return_value = True
+        mock_ix_proc.wait.return_value = None
 
     if not timeout_expires:
         # Simulate termination of the Interchange process
         def kill_interchange(*args, **kwargs):
-            mock_ix_proc.is_alive.return_value = False
+            mock_ix_proc.wait.return_value = 0
 
         mock_ix_proc.terminate.side_effect = kill_interchange
 
@@ -96,16 +96,16 @@ def test_htex_shutdown(
     mock_logs = mock_logger.info.call_args_list
     if started:
         assert mock_ix_proc.terminate.called
-        assert mock_ix_proc.join.called
-        assert {"timeout": 10} == mock_ix_proc.join.call_args[1]
+        assert mock_ix_proc.wait.called
+        assert {"timeout": 10} == mock_ix_proc.wait.call_args[1]
         if timeout_expires:
-            assert "Unable to terminate Interchange" in mock_logs[1][0][0]
+            assert "Unable to terminate Interchange" in mock_logs[1][0][0], "here are mock logs: " + repr(mock_logs)
             assert mock_ix_proc.kill.called
         assert "Attempting" in mock_logs[0][0][0]
         assert "Finished" in mock_logs[-1][0][0]
     else:
         assert not mock_ix_proc.terminate.called
-        assert not mock_ix_proc.join.called
+        assert not mock_ix_proc.wait.called
         assert "has not started" in mock_logs[0][0][0]
 
 
