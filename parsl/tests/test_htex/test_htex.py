@@ -1,7 +1,7 @@
 import pathlib
 import warnings
-from unittest import mock
 from subprocess import Popen
+from unittest import mock
 
 import pytest
 
