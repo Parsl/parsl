@@ -743,9 +743,6 @@ if __name__ == "__main__":
     # TODO: all these ad-hoc parsers are pretty horrible - using a command line
     # is a bit of a horrible way to do this...
 
-    # TODO: initialize logging here and log any exceptions raised during
-    # these two lines into the log file:
-
     ic = Interchange(client_address=args.client_address,
                      interchange_address=parseNone(args.interchange_address),
                      client_ports=parseInt3(args.client_ports),
