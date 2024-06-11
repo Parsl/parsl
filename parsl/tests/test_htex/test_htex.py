@@ -80,6 +80,12 @@ def test_htex_shutdown(
 ):
     mock_ix_proc = mock.Mock(spec=Popen)
 
+    # TODO: I think this is implementing the wrong behaviour for wait:
+    # wait is supposed to raise an exception on timeout, but this code
+    # below does not do so, and so I think it is not correctly
+    # detecting a broken impl in htex shutdown in the presence of
+    # wait timeouts...
+
     if started:
         htex.interchange_proc = mock_ix_proc
         mock_ix_proc.wait.return_value = None
