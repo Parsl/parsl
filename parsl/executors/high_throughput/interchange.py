@@ -729,7 +729,7 @@ if __name__ == "__main__":
     def parseInt3(s: str) -> Tuple[int, int, int]:
         t = [int(v) for v in s.split(',')]
         if len(t) != 3:
-            raise RuntimeError("Bad parse for 2-tuple of ints")
+            raise RuntimeError("Bad parse for 3-tuple of ints")
         return (t[0], t[1], t[2])
 
     def parseOptInt(s: str) -> Optional[int]:
