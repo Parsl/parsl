@@ -525,7 +525,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Starts the interchange process locally and uses the command queue to
         get the worker task and result ports that the interchange has bound to.
         """
-        cli: List[str] = ["interchange.py",
+        cmd: List[str] = ["interchange.py",
                           "--client-address", "127.0.0.1",
                           "--client-ports", f"{self.outgoing_q.port},{self.incoming_q.port},{self.command_client.port}",
                           "--interchange-address", str(self.address),
@@ -541,8 +541,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                           "--logging-level", str(logging.DEBUG) if self.worker_debug else str(logging.INFO),
                           "--cert-dir", str(self.cert_dir)
                           ]
-        logger.info(f"BENC: cli = {cli}")
-        self.interchange_proc = subprocess.Popen(cli)
+        self.interchange_proc = subprocess.Popen(cmd)
 
         try:
             (self.worker_task_port, self.worker_result_port) = self.command_client.run("WORKER_PORTS", timeout_s=120)
