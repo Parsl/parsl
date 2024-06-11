@@ -1,3 +1,4 @@
+import base64
 import logging
 import math
 import pickle
@@ -525,22 +526,28 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Starts the interchange process locally and uses the command queue to
         get the worker task and result ports that the interchange has bound to.
         """
-        cmd: List[str] = ["interchange.py",
-                          "--client-address", "127.0.0.1",
-                          "--client-ports", f"{self.outgoing_q.port},{self.incoming_q.port},{self.command_client.port}",
-                          "--interchange-address", str(self.address),
-                          "--worker-ports", f"{self.worker_ports[0]},{self.worker_ports[1]}"
-                                            if self.worker_ports else "None",
-                          "--worker-port-range", f"{self.worker_port_range[0]},{self.worker_port_range[1]}"
-                                                 if self.worker_port_range else "None",
-                          "--hub-address", str(self.hub_address),
-                          "--hub-zmq-port", str(self.hub_zmq_port),
-                          "--logdir", self.logdir,
-                          "--heartbeat-threshold", str(self.heartbeat_threshold),
-                          "--poll-period", str(self.poll_period),
-                          "--logging-level", str(logging.DEBUG) if self.worker_debug else str(logging.INFO),
-                          "--cert-dir", str(self.cert_dir)
-                          ]
+
+        interchange_config = {"client_address": "127.0.0.1",
+                              "client_ports": (self.outgoing_q.port,
+                                               self.incoming_q.port,
+                                               self.command_client.port),
+                              "interchange_address": self.address,
+                              "worker_ports": self.worker_ports,
+                              "worker_port_range": self.worker_port_range,
+                              "hub_address": self.hub_address,
+                              "hub_zmq_port": self.hub_zmq_port,
+                              "logdir": self.logdir,
+                              "heartbeat_threshold": self.heartbeat_threshold,
+                              "poll_period": self.poll_period,
+                              "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
+                              "cert_dir": self.cert_dir,
+                              }
+
+        encoded = base64.b64encode(pickle.dumps(interchange_config))
+
+        cmd: List[bytes] = [b"interchange.py",
+                            encoded
+                            ]
         self.interchange_proc = subprocess.Popen(cmd)
 
         try:
