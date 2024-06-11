@@ -705,7 +705,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    def parseNone(s: str) -> Optional[str]:
+    def parseOptStr(s: str) -> Optional[str]:
         if s == "None":
             return None
         else:
@@ -717,7 +717,7 @@ if __name__ == "__main__":
             raise RuntimeError("Bad parse for 2-tuple of ints")
         return (t[0], t[1])
 
-    def parseInt2Optional(s: str) -> Optional[Tuple[int, int]]:
+    def parseOptInt2(s: str) -> Optional[Tuple[int, int]]:
         if s == "None":
             return None
         else:
@@ -732,7 +732,7 @@ if __name__ == "__main__":
             raise RuntimeError("Bad parse for 2-tuple of ints")
         return (t[0], t[1], t[2])
 
-    def parseNoneInt(s: str) -> Optional[int]:
+    def parseOptInt(s: str) -> Optional[int]:
         if s == "None":
             return None
         else:
@@ -744,16 +744,16 @@ if __name__ == "__main__":
     # is a bit of a horrible way to do this...
 
     ic = Interchange(client_address=args.client_address,
-                     interchange_address=parseNone(args.interchange_address),
+                     interchange_address=parseOptStr(args.interchange_address),
                      client_ports=parseInt3(args.client_ports),
-                     worker_ports=parseInt2Optional(args.worker_ports),
+                     worker_ports=parseOptInt2(args.worker_ports),
                      worker_port_range=parseInt2(args.worker_port_range),
-                     hub_address=parseNone(args.hub_address),
-                     hub_zmq_port=parseNoneInt(args.hub_zmq_port),
+                     hub_address=parseOptStr(args.hub_address),
+                     hub_zmq_port=parseOptInt(args.hub_zmq_port),
                      heartbeat_threshold=int(args.heartbeat_threshold),
                      logdir=args.logdir,
                      logging_level=int(args.logging_level),    # TODO: is this ever None?
                      poll_period=int(args.poll_period),
-                     cert_dir=parseNone(args.cert_dir),
+                     cert_dir=parseOptStr(args.cert_dir),
                      )
     ic.start()
