@@ -807,7 +807,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         logger.info("Attempting HighThroughputExecutor shutdown")
 
         self.interchange_proc.terminate()
-        if self.interchange_proc.wait(timeout=timeout) is None:
+        try:
+            self.interchange_proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
             logger.info("Unable to terminate Interchange process; sending SIGKILL")
             self.interchange_proc.kill()
 

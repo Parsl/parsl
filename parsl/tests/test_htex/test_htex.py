@@ -1,6 +1,6 @@
 import pathlib
 import warnings
-from subprocess import Popen
+from subprocess import Popen, TimeoutExpired
 from unittest import mock
 
 import pytest
@@ -80,20 +80,31 @@ def test_htex_shutdown(
 ):
     mock_ix_proc = mock.Mock(spec=Popen)
 
-    # TODO: I think this is implementing the wrong behaviour for wait:
-    # wait is supposed to raise an exception on timeout, but this code
-    # below does not do so, and so I think it is not correctly
-    # detecting a broken impl in htex shutdown in the presence of
-    # wait timeouts...
-
     if started:
         htex.interchange_proc = mock_ix_proc
-        mock_ix_proc.wait.return_value = None
+
+    # This will, in the absence of any exit trigger, block forever if
+    # no timeout is given and if the interchange does not terminate.
+    # Raise an exception to report that, rather than actually block,
+    # and hope that nothing is catching that exception.
+
+    # this function implements the behaviour if the interchange has
+    # not received a termination call
+    def proc_wait_alive(timeout):
+        if timeout:
+            raise TimeoutExpired(cmd="mock-interchange", timeout=timeout)
+        else:
+            raise RuntimeError("This wait call would hang forever")
+
+    def proc_wait_terminated(timeout):
+        return 0
+
+    mock_ix_proc.wait.side_effect = proc_wait_alive
 
     if not timeout_expires:
         # Simulate termination of the Interchange process
         def kill_interchange(*args, **kwargs):
-            mock_ix_proc.wait.return_value = 0
+            mock_ix_proc.wait.side_effect = proc_wait_terminated
 
         mock_ix_proc.terminate.side_effect = kill_interchange
 
@@ -105,7 +116,7 @@ def test_htex_shutdown(
         assert mock_ix_proc.wait.called
         assert {"timeout": 10} == mock_ix_proc.wait.call_args[1]
         if timeout_expires:
-            assert "Unable to terminate Interchange" in mock_logs[1][0][0], "here are mock logs: " + repr(mock_logs)
+            assert "Unable to terminate Interchange" in mock_logs[1][0][0]
             assert mock_ix_proc.kill.called
         assert "Attempting" in mock_logs[0][0][0]
         assert "Finished" in mock_logs[-1][0][0]
