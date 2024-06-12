@@ -1,4 +1,3 @@
-import base64
 import logging
 import math
 import pickle
@@ -543,18 +542,22 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                               "cert_dir": self.cert_dir,
                               }
 
-        encoded = base64.b64encode(pickle.dumps(interchange_config))
+        config_pickle = pickle.dumps(interchange_config)
 
-        cmd: List[bytes] = [b"interchange.py",
-                            encoded
-                            ]
-        self.interchange_proc = subprocess.Popen(cmd)
+        self.interchange_proc = subprocess.Popen(b"interchange.py", stdin=subprocess.PIPE)
+        stdin = self.interchange_proc.stdin
+        assert stdin is not None, "Popen should have created an IO object (vs default None) because of PIPE mode"
 
+        logger.debug("Popened interchange process. Writing config object")
+        stdin.write(config_pickle)
+        stdin.flush()
+        logger.debug("Sent config object. Requesting worker ports")
         try:
             (self.worker_task_port, self.worker_result_port) = self.command_client.run("WORKER_PORTS", timeout_s=120)
         except CommandClientTimeoutError:
-            logger.error("Interchange has not completed initialization in 120s. Aborting")
+            logger.error("Interchange has not completed initialization. Aborting")
             raise Exception("Interchange failed to start")
+        logger.debug("Got worker ports")
 
     def _start_queue_management_thread(self):
         """Method to start the management thread as a daemon.

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import base64
 import datetime
 import json
 import logging
@@ -676,7 +675,7 @@ def start_file_logger(filename: str, level: int = logging.DEBUG, format_string: 
 if __name__ == "__main__":
     setproctitle("parsl: HTEX interchange")
 
-    config = pickle.loads(base64.b64decode(sys.argv[1]))
+    config = pickle.load(sys.stdin.buffer)
 
     ic = Interchange(**config)
     ic.start()
