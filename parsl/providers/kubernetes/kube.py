@@ -243,13 +243,13 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         for jid in to_poll_job_ids:
             phase = None
             try:
-                pod_status = self.kube_client.read_namespaced_pod_status(name=jid, namespace=self.namespace)
+                pod = self.kube_client.read_namespaced_pod(name=jid, namespace=self.namespace)
             except Exception:
                 logger.exception("Failed to poll pod {} status, most likely because pod was terminated".format(jid))
                 if self.resources[jid]['status'] is JobStatus(JobState.RUNNING):
                     phase = 'Unknown'
             else:
-                phase = pod_status.status.phase
+                phase = pod.status.phase
             if phase:
                 status = translate_table.get(phase, JobState.UNKNOWN)
                 logger.debug("Updating pod {} with status {} to parsl status {}".format(jid,
