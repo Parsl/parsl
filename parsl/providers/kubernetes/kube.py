@@ -286,7 +286,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         # Create the environment variables and command to initiate IPP
         environment_vars = client.V1EnvVar(name="TEST", value="SOME DATA")
 
-        launch_args = ["-c", "{0};".format(cmd_string)]
+        launch_args = ["-c", "{0}".format(cmd_string)]
 
         volume_mounts = []
         # Create mount paths for the volumes
