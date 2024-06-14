@@ -249,18 +249,46 @@ class DataFlowKernel:
                          }
         return file_log_info
 
+    def register_as_input(self, f: Union(DynamicFileList.DynamicFile, File, DataFuture),
+                          task_record: TaskRecord):
+        if self.monitoring:
+            self._send_file_log_info(f, task_record)
+            file_input_info = self._create_file_io_info(f, task_record)
+            self.monitoring.send(MessageType.INPUT_FILE, file_input_info)
+
+    def register_as_output(self, f: Union(DynamicFileList.DynamicFile, File, DataFuture),
+                           task_record: TaskRecord):
+        if self.monitoring:
+            self._send_file_log_info(f, task_record)
+            file_output_info = self._create_file_io_info(f, task_record)
+            self.monitoring.send(MessageType.OUTPUT_FILE, file_output_info)
+
+    def _create_file_io_info(self, file: Union[File, DataFuture, DynamicFileList.DynamicFile],
+                                task_record: TaskRecord) -> Dict[str, Any]:
+            """
+            Create the dictionary that will be included in the log.
+            """
+            file_io_info = {'file_id': file.uuid,
+                            'run_id': self.run_id,
+                            'task_id': task_record['id'],
+                            'try_id': task_record['try_id'],
+                            }
+            return file_io_info
+
     def _create_task_log_info(self, task_record: TaskRecord) -> Dict[str, Any]:
         """
         Create the dictionary that will be included in the log.
         """
         info_to_monitor = ['func_name', 'memoize', 'hashsum', 'fail_count', 'fail_cost', 'status',
-                           'id', 'time_invoked', 'try_time_launched', 'time_returned', 'try_time_returned', 'executor']
+                           'id', 'time_invoked', 'try_time_launched', 'time_returned', 'try_time_returned', 'executor',
+                           'env']
 
         # mypy cannot verify that these task_record[k] references are valid:
         # They are valid if all entries in info_to_monitor are declared in the definition of TaskRecord
         # This type: ignore[literal-required] asserts that fact.
         task_log_info = {"task_" + k: task_record[k] for k in info_to_monitor}  # type: ignore[literal-required]
-        # TODO: MUST ADD ENV AND ARGS INFO
+        task_log_info['task_args'] = str(task_record['args'])
+        task_log_info['task_kwargs'] = str(task_record['kwargs'])
         task_log_info['run_id'] = self.run_id
         task_log_info['try_id'] = task_record['try_id']
         task_log_info['timestamp'] = datetime.datetime.now()
@@ -780,7 +808,8 @@ class DataFlowKernel:
 
         return exec_fu
 
-    def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable) -> Tuple[Sequence[Any], Dict[str, Any],
+    def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable,
+                        task_record: TaskRecord) -> Tuple[Sequence[Any], Dict[str, Any],
                                                                                                                    Callable]:
         """Look for inputs of the app that are files. Give the data manager
         the opportunity to replace a file with a data future for that file,
@@ -801,6 +830,7 @@ class DataFlowKernel:
         inputs = kwargs.get('inputs', [])
         for idx, f in enumerate(inputs):
             (inputs[idx], func) = self.data_manager.optionally_stage_in(f, func, executor)
+            self.register_as_input(f, task_record)
 
         for kwarg, f in kwargs.items():
             # stdout and stderr files should not be staging in (they will be staged *out*
@@ -808,18 +838,23 @@ class DataFlowKernel:
             if kwarg in ['stdout', 'stderr']:
                 continue
             (kwargs[kwarg], func) = self.data_manager.optionally_stage_in(f, func, executor)
+            if isinstance(f, (DynamicFileList.DynamicFile, File, DataFuture)):
+                self.register_as_input(f, task_record)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
             (newargs[idx], func) = self.data_manager.optionally_stage_in(f, func, executor)
+            if isinstance(f, (DynamicFileList.DynamicFile, File, DataFuture)):
+                self.register_as_input(f, task_record)
 
         return tuple(newargs), kwargs, func
 
-    def _add_output_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], app_fut: AppFuture, func: Callable, task_id: int) -> Callable:
+    def _add_output_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], app_fut: AppFuture,
+                         func: Callable, task_id: int, task_record: TaskRecord) -> Callable:
         logger.debug("Adding output dependencies")
         outputs = kwargs.get('outputs', [])
         if isinstance(outputs, DynamicFileList):
-            outputs.set_dataflow(self, executor, self.check_staging_inhibited(kwargs), task_id)
+            outputs.set_dataflow(self, executor, self.check_staging_inhibited(kwargs), task_id, task_record)
             outputs.set_parent(app_fut)
             app_fut._outputs = outputs
             return func
@@ -1054,7 +1089,16 @@ class DataFlowKernel:
                        'time_returned': None,
                        'try_time_launched': None,
                        'try_time_returned': None,
-                       'resource_specification': resource_specification}
+                       'resource_specification': resource_specification,
+                       'env': None}
+
+        exec_instance = self.executors[executor]
+        provider = getattr(exec_instance, 'provider', None)
+        if provider is not None:
+            worker_init = getattr(provider, 'worker_init', None)
+            if worker_init is not None:
+                task_record['env'] = worker_init
+
 
         self.update_task_state(task_record, States.unsched)
 
@@ -1072,9 +1116,9 @@ class DataFlowKernel:
         task_record['app_fu'] = app_fu
 
         # Transform remote input files to data futures
-        app_args, app_kwargs, func = self._add_input_deps(executor, app_args, app_kwargs, func)
+        app_args, app_kwargs, func = self._add_input_deps(executor, app_args, app_kwargs, func, task_record)
 
-        func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func, task_id)
+        func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func, task_id, task_record)
 
         logger.debug("Added output dependencies")
 

@@ -20,3 +20,5 @@ class MessageType(Enum):
 
     # Reports file info
     FILE_INFO = 5
+    INPUT_FILE = 6
+    OUTPUT_FILE = 7

@@ -46,7 +46,8 @@ RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
 BLOCK = 'block'          # Block table include the status for block polling
 FILES = 'files'          # Files table include file info
-
+INPUT_FILES = 'input_files'  # Input files table include input file info
+OUTPUT_FILES = 'output_files'  # Output files table include output file info
 
 class Database:
 
@@ -163,6 +164,7 @@ class Database:
         task_inputs = Column('task_inputs', Text, nullable=True)
         task_outputs = Column('task_outputs', Text, nullable=True)
         task_args = Column('task_args', Text, nullable=True)
+        task_kwargs = Column('task_kwargs', Text, nullable=True)
         task_stdin = Column('task_stdin', Text, nullable=True)
         task_stdout = Column('task_stdout', Text, nullable=True)
         task_stderr = Column('task_stderr', Text, nullable=True)
@@ -240,15 +242,39 @@ class Database:
         __tablename__ = FILES
         file_name = Column('file_name', Text, index=True, nullable=False)
         file_id = Column('file_id', Text, index=True, nullable=False)
-        task_run_id = Column('run_id', Text, ForeignKey(TASK + ".run_id"),
+        task_run_id = Column('run_id', Text, sa.ForeignKey(TASK + ".run_id"),
                              nullable=False)
-        task_id = Column('task_id', Integer, ForeignKey(TASK + ".task_id"),
+        task_id = Column('task_id', Integer, sa.ForeignKey(TASK + ".task_id"),
                          nullable=False)
-        try_id = Column('try_id', Integer, ForeignKey(TRY + ".try_id"),
+        try_id = Column('try_id', Integer, sa.ForeignKey(TRY + ".try_id"),
                         nullable=False)
         timestamp = Column('timestamp', DateTime, nullable=True)
-        Index("files_task_run_id_idx", "task_run_id", "task_id", "try_id")
-        __table_args__ = (PrimaryKeyConstraint('file_id'))
+        sa.Index("files_task_run_id_idx", "task_run_id", "task_id", "try_id")
+        __table_args__ = (PrimaryKeyConstraint('file_id'),)
+
+    class InputFiles(Base):
+        __tablename__ = INPUT_FILES
+        file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"),
+                         nullable=False)
+        task_run_id = Column('run_id', Text, sa.ForeignKey(TASK + ".run_id"),
+                             nullable=False)
+        task_id = Column('task_id', Integer, sa.ForeignKey(TASK + ".task_id"),
+                        nullable=False)
+        try_id = Column('try_id', Integer, sa.ForeignKey(TRY + ".try_id"),
+                        nullable=False)
+        __table_args__ = (PrimaryKeyConstraint('file_id'),)
+
+    class OutputFiles(Base):
+        __tablename__ = OUTPUT_FILES
+        file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"),
+                         nullable=False)
+        task_run_id = Column('run_id', Text, sa.ForeignKey(TASK + ".run_id"),
+                             nullable=False)
+        task_id = Column('task_id', Integer, sa.ForeignKey(TASK + ".task_id"),
+                        nullable=False)
+        try_id = Column('try_id', Integer, sa.ForeignKey(TRY + ".try_id"),
+                        nullable=False)
+        __table_args__ = (PrimaryKeyConstraint('file_id'),)
 
     class Resource(Base):
         __tablename__ = RESOURCE
@@ -379,6 +405,8 @@ class DatabaseManager:
         like inserted_tasks but for Files
         """
         inserted_files = set()  # type: Set[Any]
+        input_inserted_files = dict()  # type: Dict[Str, List[Str]]
+        output_inserted_files = dict()  # type: Dict[Str, List[Str]]
 
         # for any task ID, we can defer exactly one message, which is the
         # assumed-to-be-unique first message (with first message flag set).
@@ -426,6 +454,8 @@ class DatabaseManager:
                     task_info_update_messages, task_info_insert_messages, task_info_all_messages = [], [], []
                     try_update_messages, try_insert_messages, try_all_messages = [], [], []
                     file_update_messages, file_insert_messages, file_all_messages = [], [], []
+                    input_file_update_messages, input_file_insert_messages, input_file_all_messages = [], [], []
+                    output_file_update_messages, output_file_insert_messages, output_file_all_messages = [], [], []
                     for msg_type, msg in priority_messages:
                         if msg_type == MessageType.WORKFLOW_INFO:
                             if "python_version" in msg:   # workflow start message
@@ -470,6 +500,24 @@ class DatabaseManager:
                             else:
                                 inserted_files.add(file_id)
                                 file_insert_messages.append(msg)
+                        elif msg_type == MessageType.INPUT_FILE:
+                            file_id = msg['file_id']
+                            input_file_all_messages.append(msg)
+                            identifier = f"{msg['run_it']}.{msg['task_id']}.{msg['try_id']}"
+                            if file_id not in input_inserted_files:
+                                input_inserted_files[file_id] = []
+                            if identifier not in input_inserted_files[file_id]:
+                                input_inserted_files[file_id].append(identifier)
+                                input_file_insert_messages.append(msg)
+                        elif msg_type == MessageType.OUTPUT_FILE:
+                            file_id = msg['file_id']
+                            output_file_all_messages.append(msg)
+                            identifier = f"{msg['run_it']}.{msg['task_id']}.{msg['try_id']}"
+                            if file_id not in output_inserted_files:
+                                output_inserted_files[file_id] = []
+                            if identifier not in output_inserted_files[file_id]:
+                                output_inserted_files[file_id].append(identifier)
+                                output_file_insert_messages.append(msg)
                         else:
                             raise RuntimeError("Unexpected message type {} received on priority queue".format(msg_type))
 
@@ -511,6 +559,17 @@ class DatabaseManager:
                         self._update(table=FILES,
                                      columns=['timestamp'],
                                      messages=file_update_messages)
+
+                    if input_file_insert_messages:
+                        logger.debug("Inserting {} INPUT_FILE to input_files table".format(len(input_file_insert_messages)))
+                        self._insert(table=INPUT_FILES, messages=input_file_insert_messages)
+                        logger.debug("There are {} inserted input file records".format(len(input_inserted_files)))
+
+                    if output_file_insert_messages:
+                        logger.debug("Inserting {} OUTPUT_FILE to output_files table".format(len(output_file_insert_messages)))
+                        self._insert(table=OUTPUT_FILES, messages=output_file_insert_messages)
+                        logger.debug("There are {} inserted output file records".format(len(output_inserted_files)))
+
                     if try_insert_messages:
                         logger.debug("Inserting {} TASK_INFO to try table".format(len(try_insert_messages)))
                         self._insert(table=TRY, messages=try_insert_messages)

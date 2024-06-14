@@ -7,6 +7,7 @@ being called from.
 """
 import logging
 import os
+import datetime
 from typing import Optional, Union
 from urllib.parse import urlparse
 import uuid
@@ -29,7 +30,8 @@ class File:
     """
 
     @typeguard.typechecked
-    def __init__(self, url: Union[os.PathLike, str], uu_id: Union[uuid.UUID, None] = None):
+    def __init__(self, url: Union[os.PathLike, str], uu_id: Union[uuid.UUID, None] = None,
+                 timestamp: Optional[datetime.datetime] = None):
         """Construct a File object from a url string.
 
         Args:
@@ -46,6 +48,7 @@ class File:
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
+        self.timestamp = timestamp
         self.local_path: Optional[str] = None
         if uu_id is not None:
             self.uuid = uu_id
@@ -58,7 +61,7 @@ class File:
            object will be as the original object was when it was constructed.
         """
         logger.debug("Making clean copy of File object {}".format(repr(self)))
-        return File(self.url, self.uuid)
+        return File(self.url, self.uuid, self.timestamp)
 
     def __str__(self) -> str:
         return self.filepath
