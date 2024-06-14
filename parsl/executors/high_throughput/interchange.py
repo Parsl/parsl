@@ -65,18 +65,19 @@ class Interchange:
     3. Detect workers that have failed using heartbeats
     """
     def __init__(self,
-                 client_address: str = "127.0.0.1",
-                 interchange_address: Optional[str] = None,
-                 client_ports: Tuple[int, int, int] = (50055, 50056, 50057),
-                 worker_ports: Optional[Tuple[int, int]] = None,
-                 worker_port_range: Tuple[int, int] = (54000, 55000),
-                 hub_address: Optional[str] = None,
-                 hub_zmq_port: Optional[int] = None,
-                 heartbeat_threshold: int = 60,
-                 logdir: str = ".",
-                 logging_level: int = logging.INFO,
-                 poll_period: int = 10,
-                 cert_dir: Optional[str] = None,
+                 *,
+                 client_address: str,
+                 interchange_address: Optional[str],
+                 client_ports: Tuple[int, int, int],
+                 worker_ports: Optional[Tuple[int, int]],
+                 worker_port_range: Tuple[int, int],
+                 hub_address: Optional[str],
+                 hub_zmq_port: Optional[int],
+                 heartbeat_threshold: int,
+                 logdir: str,
+                 logging_level: int,
+                 poll_period: int,
+                 cert_dir: Optional[str],
                  ) -> None:
         """
         Parameters
@@ -92,34 +93,34 @@ class Interchange:
              The ports at which the client can be reached
 
         worker_ports : tuple(int, int)
-             The specific two ports at which workers will connect to the Interchange. Default: None
+             The specific two ports at which workers will connect to the Interchange.
 
         worker_port_range : tuple(int, int)
              The interchange picks ports at random from the range which will be used by workers.
-             This is overridden when the worker_ports option is set. Default: (54000, 55000)
+             This is overridden when the worker_ports option is set.
 
         hub_address : str
              The IP address at which the interchange can send info about managers to when monitoring is enabled.
-             Default: None (meaning monitoring disabled)
+             When None, monitoring is disabled.
 
         hub_zmq_port : str
              The port at which the interchange can send info about managers to when monitoring is enabled.
-             Default: None (meaning monitoring disabled)
+             When None, monitoring is disabled.
 
         heartbeat_threshold : int
              Number of seconds since the last heartbeat after which worker is considered lost.
 
         logdir : str
-             Parsl log directory paths. Logs and temp files go here. Default: '.'
+             Parsl log directory paths. Logs and temp files go here.
 
         logging_level : int
-             Logging level as defined in the logging module. Default: logging.INFO
+             Logging level as defined in the logging module.
 
         poll_period : int
-             The main thread polling period, in milliseconds. Default: 10ms
+             The main thread polling period, in milliseconds.
 
         cert_dir : str | None
-            Path to the certificate directory. Default: None
+            Path to the certificate directory.
         """
         self.cert_dir = cert_dir
         self.logdir = logdir
