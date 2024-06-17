@@ -492,7 +492,7 @@ class DatabaseManager:
                                 if task_try_id in deferred_resource_messages:
                                     reprocessable_first_resource_messages.append(
                                         deferred_resource_messages.pop(task_try_id))
-                        elif msg_type == MessageType.FILES_INFO:
+                        elif msg_type == MessageType.FILE_INFO:
                             file_id = msg['file_id']
                             file_all_messages.append(msg)
                             if file_id in inserted_files:
@@ -503,7 +503,7 @@ class DatabaseManager:
                         elif msg_type == MessageType.INPUT_FILE:
                             file_id = msg['file_id']
                             input_file_all_messages.append(msg)
-                            identifier = f"{msg['run_it']}.{msg['task_id']}.{msg['try_id']}"
+                            identifier = f"{msg['run_id']}.{msg['task_id']}.{msg['try_id']}"
                             if file_id not in input_inserted_files:
                                 input_inserted_files[file_id] = []
                             if identifier not in input_inserted_files[file_id]:
@@ -512,7 +512,7 @@ class DatabaseManager:
                         elif msg_type == MessageType.OUTPUT_FILE:
                             file_id = msg['file_id']
                             output_file_all_messages.append(msg)
-                            identifier = f"{msg['run_it']}.{msg['task_id']}.{msg['try_id']}"
+                            identifier = f"{msg['run_id']}.{msg['task_id']}.{msg['try_id']}"
                             if file_id not in output_inserted_files:
                                 output_inserted_files[file_id] = []
                             if identifier not in output_inserted_files[file_id]:
@@ -555,7 +555,7 @@ class DatabaseManager:
                             "There are {} inserted file records".format(len(inserted_files)))
 
                     if file_update_messages:
-                        logger.debug("Updating {} FILES_INFO into files table".format(len(file_update_messages)))
+                        logger.debug("Updating {} FILE_INFO into files table".format(len(file_update_messages)))
                         self._update(table=FILES,
                                      columns=['timestamp'],
                                      messages=file_update_messages)
@@ -712,7 +712,7 @@ class DatabaseManager:
                     logger.error(f"Discarding because unknown queue tag '{queue_tag}', message: {x}")
 
     def _dispatch_to_internal(self, x: Tuple) -> None:
-        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO]:
+        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO, MessageType.FILE_INFO, MessageType.INPUT_FILE]:
             self.pending_priority_queue.put(cast(Any, x))
         elif x[0] == MessageType.RESOURCE_INFO:
             body = x[1]
@@ -725,9 +725,6 @@ class DatabaseManager:
         elif x[0] == MessageType.BLOCK_INFO:
             logger.info("Will put {} to pending block queue".format(x[1]))
             self.pending_block_queue.put(x[-1])
-        elif x[0] == MessageType.FILE_INFO:
-            logger.info("Will put {} to pending file queue".format(x[1]))
-            self.pending_file_queue.put(x[-1])
         else:
             logger.error("Discarding message of unknown type {}".format(x[0]))
 
