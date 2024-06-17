@@ -85,7 +85,6 @@ class DataFlowKernel:
             A specification of all configuration options. For more details see the
             :class:~`parsl.config.Config` documentation.
         """
-
         # this will be used to check cleanup only happens once
         self.cleanup_called = False
 
@@ -241,7 +240,7 @@ class DataFlowKernel:
         info_to_monitor = ['file_name', 'file_id', 'run_id', 'task_id', 'timestamp']
 
         file_log_info = {'file_name': file.filename,
-                         'file_id': file.uuid,
+                         'file_id': str(file.uuid),
                          'run_id': self.run_id,
                          'task_id': task_record['id'],
                          'try_id': task_record['try_id'],
@@ -268,7 +267,7 @@ class DataFlowKernel:
             """
             Create the dictionary that will be included in the log.
             """
-            file_io_info = {'file_id': file.uuid,
+        file_io_info = {'file_id': str(file.uuid),
                             'run_id': self.run_id,
                             'task_id': task_record['id'],
                             'try_id': task_record['try_id'],
