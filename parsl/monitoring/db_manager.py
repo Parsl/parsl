@@ -242,11 +242,11 @@ class Database:
         __tablename__ = FILES
         file_name = Column('file_name', Text, index=True, nullable=False)
         file_id = Column('file_id', Text, index=True, nullable=False)
-        task_run_id = Column('run_id', Text, sa.ForeignKey(TASK + ".run_id"),
+        run_id = Column('run_id', Text,
                              nullable=False)
-        task_id = Column('task_id', Integer, sa.ForeignKey(TASK + ".task_id"),
+        task_id = Column('task_id', Integer,
                          nullable=False)
-        try_id = Column('try_id', Integer, sa.ForeignKey(TRY + ".try_id"),
+        try_id = Column('try_id', Integer,
                         nullable=False)
         timestamp = Column('timestamp', DateTime, nullable=True)
         sa.Index("files_task_run_id_idx", "task_run_id", "task_id", "try_id")
@@ -256,11 +256,11 @@ class Database:
         __tablename__ = INPUT_FILES
         file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"),
                          nullable=False)
-        task_run_id = Column('run_id', Text, sa.ForeignKey(TASK + ".run_id"),
+        run_id = Column('run_id', Text,
                              nullable=False)
-        task_id = Column('task_id', Integer, sa.ForeignKey(TASK + ".task_id"),
+        task_id = Column('task_id', Integer,
                         nullable=False)
-        try_id = Column('try_id', Integer, sa.ForeignKey(TRY + ".try_id"),
+        try_id = Column('try_id', Integer,
                         nullable=False)
         __table_args__ = (PrimaryKeyConstraint('file_id'),)
 
@@ -268,11 +268,11 @@ class Database:
         __tablename__ = OUTPUT_FILES
         file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"),
                          nullable=False)
-        task_run_id = Column('run_id', Text, sa.ForeignKey(TASK + ".run_id"),
+        run_id = Column('run_id', Text,
                              nullable=False)
-        task_id = Column('task_id', Integer, sa.ForeignKey(TASK + ".task_id"),
+        task_id = Column('task_id', Integer,
                         nullable=False)
-        try_id = Column('try_id', Integer, sa.ForeignKey(TRY + ".try_id"),
+        try_id = Column('try_id', Integer,
                         nullable=False)
         __table_args__ = (PrimaryKeyConstraint('file_id'),)
 
@@ -404,7 +404,7 @@ class DatabaseManager:
         """
         like inserted_tasks but for Files
         """
-        inserted_files = set()  # type: Set[Any]
+        inserted_files = dict()  # type: Dict[Str, DateTime]
         input_inserted_files = dict()  # type: Dict[Str, List[Str]]
         output_inserted_files = dict()  # type: Dict[Str, List[Str]]
 
@@ -495,10 +495,11 @@ class DatabaseManager:
                         elif msg_type == MessageType.FILE_INFO:
                             file_id = msg['file_id']
                             file_all_messages.append(msg)
-                            if file_id in inserted_files:
+                            if file_id in inserted_files and inserted_files[file_id] is None:
+                                inserted_files[file_id] = msg['timestamp']
                                 file_update_messages.append(msg)
                             else:
-                                inserted_files.add(file_id)
+                                inserted_files[file_id] = None
                                 file_insert_messages.append(msg)
                         elif msg_type == MessageType.INPUT_FILE:
                             file_id = msg['file_id']
@@ -712,7 +713,7 @@ class DatabaseManager:
                     logger.error(f"Discarding because unknown queue tag '{queue_tag}', message: {x}")
 
     def _dispatch_to_internal(self, x: Tuple) -> None:
-        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO, MessageType.FILE_INFO, MessageType.INPUT_FILE]:
+        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO, MessageType.FILE_INFO, MessageType.INPUT_FILE, MessageType.OUTPUT_FILE]:
             self.pending_priority_queue.put(cast(Any, x))
         elif x[0] == MessageType.RESOURCE_INFO:
             body = x[1]

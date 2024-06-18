@@ -2,7 +2,7 @@
 """
 import logging
 from concurrent.futures import Future
-from typing import Optional
+from typing import Optional, Any
 from datetime import datetime
 import typeguard
 
@@ -31,15 +31,18 @@ class DataFuture(Future):
         Returns:
             - None
         """
-
         e = parent_fu._exception
         if e:
             self.set_exception(e)
         else:
             self.set_result(self.file_obj)
+            self.file_obj.timestamp = datetime.now()
+            if self.data_flow_kernel:
+                self.data_flow_kernel.register_as_output(self.file_obj, self.app_fut.task_record)
 
     @typeguard.typechecked
-    def __init__(self, fut: Future, file_obj: File, tid: Optional[int] = None) -> None:
+    def __init__(self, fut: Future, file_obj: File, tid: Optional[int] = None, app_fut: Optional[Future] = None,
+                 dfk: Optional[Any] = None) -> None:
         """Construct the DataFuture object.
 
         If the file_obj is a string convert to a File.
@@ -58,7 +61,11 @@ class DataFuture(Future):
         else:
             raise ValueError("DataFuture must be initialized with a File, not {}".format(type(file_obj)))
         self.parent = fut
-
+        if app_fut:
+            self.app_fut = app_fut
+        else:
+            self.app_fut = fut
+        self.data_flow_kernel = dfk
         self.parent.add_done_callback(self.parent_callback)
 
         logger.debug("Creating DataFuture with parent: %s and file: %s", self.parent, repr(self.file_obj))
