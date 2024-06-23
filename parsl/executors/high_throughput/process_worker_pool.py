@@ -355,7 +355,7 @@ class Manager:
                 _, pkl_msg = self.task_incoming.recv_multipart()
                 try:
                     tasks = pickle.loads(pkl_msg)
-                except:
+                except Exception:
                     logger.exception(f"exception unpickling pkl_msg: {pkl_msg!r}")
                     raise
 

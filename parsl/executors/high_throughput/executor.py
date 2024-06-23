@@ -255,7 +255,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  mpi_launcher: str = "mpiexec",
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
                  encrypted: bool = False,
-                 benc_interchange_cli: str = "rust"):
+                 benc_interchange_cli: str = "python"):
 
         logger.debug("Initializing HighThroughputExecutor")
 
@@ -521,10 +521,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         logger.info("Queue management worker finished")
 
-    def _start_local_interchange_process(self):
+    def _start_local_interchange_process(self) -> None:
         """ Starts the interchange process locally
 
-        Starts the interchange process locally and uses an internal command queue to
+        Starts the interchange process locally and uses the command queue to
         get the worker task and result ports that the interchange has bound to.
         """
 
@@ -537,17 +537,45 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             self.interchange_proc = subprocess.Popen(args=["cd idris2interchange ; "
                                                            "gcc -shared gluezmq.c -lzmq -o glue_zmq.so && "
                                                            "idris2 main.idr -x main"], shell=True)
+
+        elif self.benc_interchange_cli == "python":
+            # TODO: all these arguments below aren't used... so are they necessary? should there be
+            # tests discovering they aren't used/passed?
+            interchange_config = {"client_address": "127.0.0.1",
+                                  "client_ports": (9000, 9001, 9002),
+                                  "interchange_address": self.address,
+                                  "worker_ports": self.worker_ports,
+                                  "worker_port_range": self.worker_port_range,
+                                  "hub_address": self.hub_address,
+                                  "hub_zmq_port": self.hub_zmq_port,
+                                  "logdir": self.logdir,
+                                  "heartbeat_threshold": self.heartbeat_threshold,
+                                  "poll_period": self.poll_period,
+                                  "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
+                                  "cert_dir": self.cert_dir,
+                                  }
+
+            logger.error(f"BENC: interchange_config = {interchange_config}")
+            config_pickle = pickle.dumps(interchange_config)
+
+            self.interchange_proc = subprocess.Popen(b"interchange.py", stdin=subprocess.PIPE)
+            stdin = self.interchange_proc.stdin
+            assert stdin is not None, "Popen should have created an IO object (vs default None) because of PIPE mode"
+
+            logger.debug("Popened interchange process. Writing config object")
+            stdin.write(config_pickle)
+            stdin.flush()
+
         else:
             raise RuntimeError("unknown benc-interchange type")
 
-        # TODO: all these arguments below aren't used... so are they necessary? should there be
-        # tests discovering they aren't used/passed?
-
+        logger.debug("Sent config object. Requesting worker ports")
         try:
             (self.worker_task_port, self.worker_result_port) = self.command_client.run("WORKER_PORTS", timeout_s=120)
         except CommandClientTimeoutError:
-            logger.error("Interchange has not completed initialization in 120s. Aborting")
+            logger.error("Interchange has not completed initialization. Aborting")
             raise Exception("Interchange failed to start")
+        logger.debug("Got worker ports")
 
     def _start_queue_management_thread(self):
         """Method to start the management thread as a daemon.
@@ -778,12 +806,14 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     def status(self) -> Dict[str, JobStatus]:
 
         # well this is a horrible place to put in a process poll...
-        if self.interchange_proc.poll() is not None:
+        if self.interchange_proc is not None and self.interchange_proc.poll() is not None:
             logger.info("Setting bad state and failing")
             self.set_bad_state_and_fail_all(RuntimeError(f"Interchange process has gone away, exit code {self.interchange_proc.returncode}"))
             logger.info("Set bad state and fail done")
             raise RuntimeError("Interchange is gone... cannot ask it for block status")
-            # TODO: because we call connected blocks below, we're going to hang on this status poll (because we know the interchange is gone away... this is similar to (but different from?) issue #2627. Maybe these calls should always check interchange liveness?
+            # TODO: because we call connected blocks below, we're going to hang on this
+            # status poll (because we know the interchange is gone away... this is similar
+            # to (but different from?) issue #2627. Maybe these calls should always check interchange liveness?
 
         job_status = super().status()
         connected_blocks = self.connected_blocks()
@@ -818,16 +848,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         logger.info("Attempting HighThroughputExecutor shutdown")
 
         self.interchange_proc.terminate()
-        self.interchange_proc.wait(timeout=timeout)
-
-        # TODO: this liveness check should also be happening throughout execution,
-        # because if the interchange is gone away we should do something other than
-        # hang.
-        if self.interchange_proc.poll() is None:
-            logger.error("Unable to terminate Interchange process; sending SIGKILL")
+        try:
+            self.interchange_proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            logger.info("Unable to terminate Interchange process; sending SIGKILL")
             self.interchange_proc.kill()
-
-        # self.interchange_proc.close()
 
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 
