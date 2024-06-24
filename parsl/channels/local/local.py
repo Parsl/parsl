@@ -68,13 +68,13 @@ class LocalChannel(Channel, RepresentationMixin):
             logger.debug("Created process with pid %s. Performing communicate", proc.pid)
             (stdout, stderr) = proc.communicate(timeout=walltime)
             retcode = proc.returncode
-            logger.debug("Process returned %s", proc.returncode)
+            logger.debug("Process %s returned %s", proc.pid, proc.returncode)
 
         except Exception:
-            logger.exception(f"Execution of command '{cmd}' failed")
+            logger.exception(f"Execution of command failed:\n{cmd}")
             raise
         else:
-            logger.debug("Execution of command completed normally")
+            logger.debug("Execution of command in process %s completed normally", proc.pid)
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
