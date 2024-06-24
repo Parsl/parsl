@@ -2,6 +2,7 @@ from parsl.addresses import address_by_route
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.providers import KubernetesProvider
+from parsl.usage_tracking.levels import LEVEL_1
 
 config = Config(
     executors=[
@@ -36,5 +37,6 @@ config = Config(
                 max_blocks=10,
             ),
         ),
-    ]
+    ],
+    usage_tracking=LEVEL_1,
 )
