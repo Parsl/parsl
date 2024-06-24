@@ -4,6 +4,7 @@ from parsl.data_provider.globus import GlobusStaging
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SrunLauncher
 from parsl.providers import SlurmProvider
+from parsl.usage_tracking.levels import LEVEL_1
 
 config = Config(
     executors=[
@@ -34,4 +35,5 @@ config = Config(
         )
 
     ],
+    usage_tracking=LEVEL_1,
 )

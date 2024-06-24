@@ -1,6 +1,7 @@
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.providers import CondorProvider
+from parsl.usage_tracking.levels import LEVEL_1
 
 config = Config(
     executors=[
@@ -26,5 +27,6 @@ python3 -m venv parsl_env; source parsl_env/bin/activate; python3 -m pip install
             worker_logdir_root='$OSG_WN_TMP',
             worker_ports=(31000, 31001)
         )
-    ]
+    ],
+    usage_tracking=LEVEL_1,
 )
