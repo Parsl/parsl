@@ -39,7 +39,13 @@ defmodule EIC.Supervisor do
         id: EIC.ResultsWorkersToInterchange,
         start: {EIC.ResultsWorkersToInterchange, :start_link, [ctx]}
       },
-      %{id: EIC.TaskQueue, start: {EIC.TaskQueue, :start_link, [ctx]}}
+      %{id: EIC.TaskQueue, start: {EIC.TaskQueue, :start_link, [ctx]}},
+
+      # Getting the syntax right for the arguments to this was very fiddly...
+      # maybe because I was paging back into Elixir syntax...
+      %{id: EIC.TaskSupervisor,
+        start: {DynamicSupervisor, :start_link, [[name: EIC.TaskSupervisor, strategy: :one_for_one]]}
+      }
     ]
 
     Supervisor.init(children, strategy: :one_for_one, max_restarts: 0)
@@ -69,22 +75,16 @@ defmodule EIC.TasksSubmitToInterchange do
     Logger.debug("Invoking task receive")
     {:ok, msg} = :erlzmq.recv(socket)
     # msg is a pickled dict with keys: task_id and buffer
+
+    # This is always a new task, because this channel doesn't convey
+    # any other message types - so unpickling doesn't have to happen
+    # before dispatch into a new ParslTask process
     Logger.debug(["Received ", inspect(msg)])
-    task_dict = :pickle.pickle_to_term(msg)
-    Logger.debug(["task_dict is:", inspect(task_dict)])
 
-    # TODO: start a new task supervisor process (one per task) to deal
-    # with everything to do with this message - can regard this message
-    # as a bit more "create task in the interchange"
-    # rather than "deliver this task message somewhere".
-    # That task supervisor should also be where the result gets sent
-    # by the workers->interchange zmq handler.
-
-    Logger.debug("casting task to task queue")
-    # TODO: keep the pickled message around so that we don't need to re-pickle it?
-    # actually can't do that... because it gets repickled differently (as a list)
-    # when going out to the workers...
-    GenServer.cast(:matchmaker, {:new_task, task_dict, msg})
+    Logger.debug("Starting new ParslTask process")
+    {:ok, pid} = DynamicSupervisor.start_child(EIC.TaskSupervisor, {EIC.ParslTask, msg})
+    Logger.debug(["Started new ParslTask process, pid ", inspect(pid)])
+    # this pid should get registered against the contained task ID... eventually... but not here, because we have to do an (expensive?) unpickle?
 
     loop(socket)
   end
@@ -115,6 +115,8 @@ defmodule EIC.ResultsWorkersToInterchange do
     Logger.debug(["Got this results multipart message:", inspect(msgs)])
 
     Logger.warn("NOTIMPL: not doing anything with result message")
+    # TODO: if there are per-task processes, send this message onwards to
+    # the relevant task process... which I haven't implemented...
     loop(socket)
   end
 
@@ -387,4 +389,50 @@ defmodule EIC.TaskQueue do
     Logger.debug("No match made between any manager or task")
     state
   end
+end
+
+defmodule EIC.ParslTask do
+  use GenServer
+  # I guess I'll implement this with GenServer, dealing mostly with
+  # handle_cast rather than handle_call?
+  require Logger
+
+  def start_link(args) do
+    GenServer.start_link(__MODULE__, args)
+  end
+
+  def init(pickled_message) do
+    # This call is synchronous, so don't do anything heavy... otherwise will
+    # block the message loop that started this ParslTask and stop it starting
+    # others, which potentially will lose some concurrency?
+
+    Logger.info(["ParslTask starting with pickled task message ", inspect(pickled_message)])
+    initial_state = [pkl: pickled_message]
+    # TODO: maybe don't want to keep pkl around after we've submitted the task?
+
+    # by the time we're here, we have a pickled task message. we don't know
+    # the task ID yet, so there's no way to lookup a result message and get
+    # it back to this ParslTask...
+
+    # carry on the initialization inside the process...
+    GenServer.cast(self(), :init_in_process)
+    {:ok, initial_state}
+  end
+
+  def handle_cast(:init_in_process, state) do
+    Logger.info("Task deferred initialization")
+
+    Logger.debug("unpickling")
+    {:ok, pkl} = Keyword.fetch(state, :pkl)
+    task_dict = :pickle.pickle_to_term(pkl)
+    Logger.debug(["unpickled task_dict is:", inspect(task_dict)])
+
+    # TODO: figure out the task ID here and register it
+
+    GenServer.cast(:matchmaker, {:new_task, task_dict, :unused})
+
+    # new state does not have pkl in it, because we don't need it any more
+    {:noreply, []}
+  end
+
 end
