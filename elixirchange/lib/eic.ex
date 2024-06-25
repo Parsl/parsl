@@ -39,7 +39,7 @@ defmodule EIC.Supervisor do
         id: EIC.ResultsWorkersToInterchange,
         start: {EIC.ResultsWorkersToInterchange, :start_link, [ctx]}
       },
-      %{id: EIC.TaskQueue, start: {EIC.TaskQueue, :start_link, [ctx]}},
+      %{id: EIC.Matchmaker, start: {EIC.Matchmaker, :start_link, [ctx]}},
 
       # Getting the syntax right for the arguments to this was very fiddly...
       # maybe because I was paging back into Elixir syntax...
@@ -302,25 +302,25 @@ defmodule EIC.TasksInterchangeToWorkers do
   end
 end
 
-defmodule EIC.TaskQueue do
+defmodule EIC.Matchmaker do
   use GenServer
   require Logger
 
   def start_link(ctx) do
-    Logger.info("TaskQueue: start_link")
-    GenServer.start_link(EIC.TaskQueue, [ctx], name: :matchmaker)
+    Logger.info("Matchmaker: start_link")
+    GenServer.start_link(EIC.Matchmaker, [ctx], name: :matchmaker)
   end
 
   @impl true
   def init([_ctx]) do
-    Logger.info("TaskQueue: initializing")
+    Logger.info("Matchmaker: initializing")
 
     {:ok, %{:tasks => [], :managers => []}}
   end
 
   @impl true
   def handle_cast({:new_task, task_dict}, state) do
-    Logger.debug("TaskQueue: received a task")
+    Logger.debug("Matchmaker: received a task")
 
     # TODO: better syntax for updating individual entries in map rather than
     # listing them all copy style?
@@ -332,20 +332,20 @@ defmodule EIC.TaskQueue do
 
   def handle_cast({:new_manager, registration_msg}, state) do
     new_state = %{:tasks => state[:tasks], :managers => [registration_msg | state[:managers]]}
-    Logger.debug(["TaskQueue: new state:", inspect(new_state)])
+    Logger.debug(["Matchmaker: new state:", inspect(new_state)])
     new_state2 = matchmake(new_state)
     {:noreply, new_state2}
   end
 
   def handle_cast(rest, state) do
-    Logger.error(["TaskQueue: ERROR: leftover handle_cast", inspect(rest)])
-    raise "Unhandled TaskQueue cast"
+    Logger.error(["Matchmaker: ERROR: leftover handle_cast", inspect(rest)])
+    raise "Unhandled Matchmaker cast"
   end
 
   @impl true
   def handle_call(_what, _from, state) do
-    Logger.error("TaskQueue: ERROR: handle call")
-    raise "Unhandled TaskQueue call"
+    Logger.error("Matchmaker: ERROR: handle call")
+    raise "Unhandled Matchmaker call"
   end
 
   # TODO: manager should be guarded by available capacity and new state should
