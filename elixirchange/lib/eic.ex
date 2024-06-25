@@ -39,6 +39,10 @@ defmodule EIC.Supervisor do
         id: EIC.ResultsWorkersToInterchange,
         start: {EIC.ResultsWorkersToInterchange, :start_link, [ctx]}
       },
+      %{
+        id: EIC.ResultsInterchangeToSubmit,
+        start: {EIC.ResultsInterchangeToSubmit, :start_link, [ctx]}
+      },
       %{id: EIC.Matchmaker, start: {EIC.Matchmaker, :start_link, [ctx]}},
 
       # Getting the syntax right for the arguments to this was very fiddly...
@@ -151,6 +155,36 @@ defmodule EIC.ResultsWorkersToInterchange do
     Logger.info(["Delivering result to ParslTask id ", inspect(task_id)])
     [{task_process, :whatever}] = Registry.lookup(EIC.TaskRegistry, task_id)
     GenServer.cast(task_process, {:result, result_dict})
+  end
+
+end
+
+defmodule EIC.ResultsInterchangeToSubmit do
+  require Logger
+
+  def start_link(ctx) do
+    {:ok, pid} = Task.start_link(EIC.ResultsInterchangeToSubmit, :body, [ctx])
+    Process.register(pid, EIC.ResultsInterchangeToSubmit)
+    {:ok, pid}
+  end
+
+  def body(ctx) do
+    Logger.info("Starting results interchange to submit handler")
+    {:ok, socket} = :erlzmq.socket(ctx, :dealer)
+    :ok = :erlzmq.connect(socket, "tcp://127.0.0.1:9001")
+    loop(socket)
+  end
+
+  def loop(socket) do
+    receive do
+      m -> Logger.debug("sending result message to submit side")
+           :erlzmq.send(socket, m)
+    after 
+      # TODO: there should not need to be a timeout here - everything should be driven by
+      # erlang messages
+      1000 -> Logger.debug("timeout no-op / send to socket")
+    end
+    loop(socket)
   end
 
 end
@@ -479,8 +513,9 @@ defmodule EIC.ParslTask do
   end
 
   def handle_cast({:result, result_dict}, []) do
-    Logger.warn("in ParslTask result handler - NOTIMPL")
-    # TODO: send this out on the results interchange to submit side channel...
+    Logger.warn("in ParslTask result handler")
+    pickled_result = :pickle.term_to_pickle(result_dict)
+    send(EIC.ResultsInterchangeToSubmit, pickled_result)
     {:noreply, []}
   end
 
