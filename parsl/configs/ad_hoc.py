@@ -4,6 +4,7 @@ from parsl.channels import SSHChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.providers import AdHocProvider
+from parsl.usage_tracking.levels import LEVEL_1
 
 user_opts: Dict[str, Dict[str, Any]]
 user_opts = {'adhoc':
@@ -33,4 +34,5 @@ config = Config(
     ],
     #  AdHoc Clusters should not be setup with scaling strategy.
     strategy='none',
+    usage_tracking=LEVEL_1,
 )

@@ -4,6 +4,7 @@ from parsl.executors import HighThroughputExecutor
 from parsl.launchers import MpiRunLauncher
 from parsl.monitoring.monitoring import MonitoringHub
 from parsl.providers import PBSProProvider
+from parsl.usage_tracking.levels import LEVEL_1
 
 config = Config(
         executors=[
@@ -39,5 +40,6 @@ config = Config(
         strategy='simple',
         retries=3,
         app_cache=True,
-        checkpoint_mode='task_exit'
+        checkpoint_mode='task_exit',
+        usage_tracking=LEVEL_1,
 )

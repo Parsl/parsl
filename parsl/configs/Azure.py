@@ -8,6 +8,7 @@ from parsl.data_provider.http import HTTPInTaskStaging
 from parsl.data_provider.rsync import RSyncStaging
 from parsl.executors import HighThroughputExecutor
 from parsl.providers import AzureProvider
+from parsl.usage_tracking.levels import LEVEL_1
 
 vm_reference = {
     # All fields below are required
@@ -33,5 +34,6 @@ config = Config(
                             FTPInTaskStaging(),
                             RSyncStaging(getpass.getuser() + "@" + address_by_query())],
         )
-    ]
+    ],
+    usage_tracking=LEVEL_1,
 )
