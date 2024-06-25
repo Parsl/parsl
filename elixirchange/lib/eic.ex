@@ -45,6 +45,9 @@ defmodule EIC.Supervisor do
       # maybe because I was paging back into Elixir syntax...
       %{id: EIC.TaskSupervisor,
         start: {DynamicSupervisor, :start_link, [[name: EIC.TaskSupervisor, strategy: :one_for_one]]}
+      },
+      %{id: EIC.TaskRegistry,
+       start: {Registry, :start_link, [[name: EIC.TaskRegistry, keys: :unique]]}
       }
     ]
 
@@ -114,10 +117,40 @@ defmodule EIC.ResultsWorkersToInterchange do
     # this parts vec will contain first a manager ID, and then an arbitrary number of pickled result-like parts from that manager.
     Logger.debug(["Got this results multipart message:", inspect(msgs)])
 
-    Logger.warn("NOTIMPL: not doing anything with result message")
-    # TODO: if there are per-task processes, send this message onwards to
-    # the relevant task process... which I haven't implemented...
+    # unpack the results message here - if its expensive, what would it be like to send each part into its own task
+    # that routed the result onwards?
+
+    [manager_id | results] = msgs
+
+    Logger.info(["Results messages are from manager id: ", inspect(manager_id)])
+    Logger.info(["There are ", inspect(length(results)), " results in this multipart message"])
+
+    # each element in results is a pickled dict, with a "type" key that can be
+    # result, heartbeat or monitoring.
+
+    Enum.each(results, fn msg ->
+      Logger.debug(["msg to unpickle: ", inspect(msg)])
+      result_dict = :pickle.pickle_to_term(msg)
+      result_type = :dict.fetch({:pickle_unicode, "type"}, result_dict)
+
+      Logger.info(["result message type is: ", inspect(result_type)])
+
+      # now we can dispatch on result_type...
+      case result_type do
+          {:pickle_unicode, "result"} -> deliver_result(result_dict)
+          x -> raise "Unknown result message type"
+      end
+
+    end)
+
     loop(socket)
+  end
+
+  def deliver_result(result_dict) do
+    task_id = :dict.fetch({:pickle_unicode, "task_id"}, result_dict)
+    Logger.info(["Delivering result to ParslTask id ", inspect(task_id)])
+    [{task_process, :whatever}] = Registry.lookup(EIC.TaskRegistry, task_id)
+    GenServer.cast(task_process, {:result, result_dict})
   end
 
 end
@@ -392,6 +425,9 @@ end
 
 defmodule EIC.ParslTask do
   use GenServer
+  # TODO: the supervisor for this should not relaunch task on failure, but fail fast
+  # because I don't want in-interchange task retry style behaviour.
+
   # I guess I'll implement this with GenServer, dealing mostly with
   # handle_cast rather than handle_call?
   require Logger
@@ -425,12 +461,26 @@ defmodule EIC.ParslTask do
     {:ok, pkl} = Keyword.fetch(state, :pkl)
     task_dict = :pickle.pickle_to_term(pkl)
     Logger.debug(["unpickled task_dict is:", inspect(task_dict)])
+    # this inspect representation of task_dict is pretty hard to read: there is a lot
+    # of erlang-level noise in there from the erlang :dict module, rather than it
+    # looking like a "simple" translation...
+    # so here's a little bit of pretty-logging:
+    Logger.debug(["task_dict has these keys: ", inspect(:dict.fetch_keys(task_dict))])
 
-    # TODO: figure out the task ID here and register it
+    task_id = :dict.fetch({:pickle_unicode, "task_id"}, task_dict)
+    Logger.info(["Task ID is: ", inspect(task_id)])
+
+    {:ok, _owner} = Registry.register(EIC.TaskRegistry, task_id, :whatever)
 
     GenServer.cast(:matchmaker, {:new_task, task_dict})
 
     # new state does not have pkl in it, because we don't need it any more
+    {:noreply, []}
+  end
+
+  def handle_cast({:result, result_dict}, []) do
+    Logger.warn("in ParslTask result handler - NOTIMPL")
+    # TODO: send this out on the results interchange to submit side channel...
     {:noreply, []}
   end
 
