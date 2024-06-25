@@ -319,12 +319,12 @@ defmodule EIC.TaskQueue do
   end
 
   @impl true
-  def handle_cast({:new_task, task_dict, pickled_msg}, state) do
+  def handle_cast({:new_task, task_dict}, state) do
     Logger.debug("TaskQueue: received a task")
 
     # TODO: better syntax for updating individual entries in map rather than
     # listing them all copy style?
-    new_state = %{:tasks => [{task_dict, pickled_msg} | state[:tasks]], :managers => state[:managers]}
+    new_state = %{:tasks => [task_dict | state[:tasks]], :managers => state[:managers]}
 
     new_state2 = matchmake(new_state)
     {:noreply, new_state}
@@ -351,9 +351,8 @@ defmodule EIC.TaskQueue do
   # TODO: manager should be guarded by available capacity and new state should
   # modify that capacity, rather than forgetting the whole manager...
   # and maybe that means this can't be implemented in function guard style?
-  def matchmake(%{:tasks => [t | t_rest], :managers => [m | m_rest]} = state) do
+  def matchmake(%{:tasks => [task_dict | t_rest], :managers => [m | m_rest]} = state) do
     Logger.info("Made a match")
-    {task_dict, _pickled} = t
     # TODO: send this off to execute
     # also, record the pairing somehow so that we do appropriate behaviour on
     # task result or manager failure.
@@ -429,7 +428,7 @@ defmodule EIC.ParslTask do
 
     # TODO: figure out the task ID here and register it
 
-    GenServer.cast(:matchmaker, {:new_task, task_dict, :unused})
+    GenServer.cast(:matchmaker, {:new_task, task_dict})
 
     # new state does not have pkl in it, because we don't need it any more
     {:noreply, []}
