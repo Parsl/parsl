@@ -109,6 +109,8 @@ defmodule EIC.ResultsWorkersToInterchange do
     # this parts vec will contain first a manager ID, and then an arbitrary number of pickled result-like parts from that manager.
     IO.puts("Got this results multipart message:")
     IO.inspect(msgs)
+
+    IO.puts("NOTIMPL: not doing anything with result message")
     loop(socket)
   end
 
