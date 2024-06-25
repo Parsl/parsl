@@ -1,6 +1,8 @@
 defmodule EIC do
   use Application
 
+  require Logger
+
   @impl true
   def start(_type, _args) do
     EIC.Supervisor.start_link([])
@@ -8,7 +10,7 @@ defmodule EIC do
 
   @impl true
   def stop(_) do
-    IO.puts("In EIC.Supervisor stop")
+    Logger.info("In EIC.Supervisor stop")
   end
 end
 
@@ -50,26 +52,26 @@ defmodule EIC.TasksSubmitToInterchange do
   This module handles tasks coming from the submit side into the interchange
   over ZMQ.
   """
+  require Logger
 
   def start_link(ctx) do
     Task.start_link(EIC.TasksSubmitToInterchange, :body, [ctx])
   end
 
   def body(ctx) do
-    IO.puts("Starting tasks submit to interchange ZMQ handler")
+    Logger.info("Starting tasks submit to interchange ZMQ handler")
     {:ok, socket} = :erlzmq.socket(ctx, :dealer)
     :ok = :erlzmq.connect(socket, "tcp://127.0.0.1:9000")
     loop(socket)
   end
 
   def loop(socket) do
-    IO.puts("Invoking task receive")
+    Logger.debug("Invoking task receive")
     {:ok, msg} = :erlzmq.recv(socket)
     # msg is a pickled dict with keys: task_id and buffer
-    IO.inspect(msg)
+    Logger.debug(["Received ", inspect(msg)])
     task_dict = :pickle.pickle_to_term(msg)
-    IO.puts("task_dict is:")
-    IO.inspect(task_dict)
+    Logger.debug(["task_dict is:", inspect(task_dict)])
 
     # TODO: start a new task supervisor process (one per task) to deal
     # with everything to do with this message - can regard this message
@@ -78,7 +80,7 @@ defmodule EIC.TasksSubmitToInterchange do
     # That task supervisor should also be where the result gets sent
     # by the workers->interchange zmq handler.
 
-    IO.puts("casting task to task queue")
+    Logger.debug("casting task to task queue")
     # TODO: keep the pickled message around so that we don't need to re-pickle it?
     # actually can't do that... because it gets repickled differently (as a list)
     # when going out to the workers...
@@ -93,6 +95,9 @@ defmodule EIC.ResultsWorkersToInterchange do
   This module handles results coming from workers back into the interchange
   over ZMQ.
   """
+
+  require Logger
+
   def start_link(ctx) do
     Task.start_link(EIC.ResultsWorkersToInterchange, :body, [ctx])
   end
@@ -104,38 +109,39 @@ defmodule EIC.ResultsWorkersToInterchange do
   end
 
   def loop(socket) do
-    IO.puts("Invoking results receive")
+    Logger.debug("Invoking results receive")
     {:ok, msgs} = :erlzmq.recv_multipart(socket)
     # this parts vec will contain first a manager ID, and then an arbitrary number of pickled result-like parts from that manager.
-    IO.puts("Got this results multipart message:")
-    IO.inspect(msgs)
+    Logger.debug(["Got this results multipart message:", inspect(msgs)])
 
-    IO.puts("NOTIMPL: not doing anything with result message")
+    Logger.warn("NOTIMPL: not doing anything with result message")
     loop(socket)
   end
 
 end
 
 defmodule EIC.CommandChannel do
+
+  require Logger
+
   def start_link(ctx) do
     Task.start_link(EIC.CommandChannel, :body, [ctx])
   end
 
   def body(ctx) do
-    IO.puts("CommandChannel: Starting command channel ZMQ handler")
+    Logger.info("CommandChannel: Starting command channel ZMQ handler")
     {:ok, socket} = :erlzmq.socket(ctx, :rep)
     :ok = :erlzmq.connect(socket, "tcp://127.0.0.1:9002")
     loop(socket)
   end
 
   def loop(socket) do
-    IO.puts("CommandChannel: blocking recv on zmq command channel")
+    Logger.debug("CommandChannel: blocking recv on zmq command channel")
     {:ok, msg} = :erlzmq.recv(socket)
     # msg is a pickled object that varies depending on the command
     # IO.inspect(msg)
     {:pickle_unicode, command} = :pickle.pickle_to_term(msg)
-    IO.puts("Received command channel command: ")
-    IO.inspect(command)
+    Logger.debug(["Received command channel command: ", inspect(command)])
 
     # now dispatch this command using case matching... TODO
 
@@ -143,7 +149,7 @@ defmodule EIC.CommandChannel do
 
     pickled_response = :pickle.term_to_pickle(response)
 
-    IO.inspect(pickled_response)
+    Logger.debug(["pickled response: ", inspect(pickled_response)])
 
     :erlzmq.send(socket, pickled_response)
 
@@ -206,6 +212,8 @@ defmodule EIC.TasksInterchangeToWorkers do
 
   """
 
+  require Logger
+
   def start_link(ctx) do
     {:ok, pid} = Task.start_link(EIC.TasksInterchangeToWorkers, :body, [ctx])
     Process.register(pid, EIC.TasksInterchangeToWorkers)
@@ -213,7 +221,7 @@ defmodule EIC.TasksInterchangeToWorkers do
   end
 
   def body(ctx) do
-    IO.puts("TasksInterchangeToWorkers: in body")
+    Logger.info("TasksInterchangeToWorkers: in body")
     {:ok, socket_to_workers} = :erlzmq.socket(ctx, :router)
     :ok = :erlzmq.bind(socket_to_workers, "tcp://127.0.0.1:9003")
 
@@ -239,21 +247,21 @@ defmodule EIC.TasksInterchangeToWorkers do
     # when we hit timeout, where we would then loop around again
     case :erlzmq.recv_multipart(socket) do
       {:ok, [source, msg]} -> 
-        IO.inspect(msg)
+        Logger.debug(inspect(msg))
         decoded_msg = JSON.decode!(msg)
-        IO.inspect(decoded_msg)
+        Logger.debug(inspect(decoded_msg))
         handle_message_from_worker(source, decoded_msg)
       {:error, :eagain} ->
-        IO.puts("timeout no-op / recv from socket")
+        Logger.debug("timeout no-op / recv from socket")
     end
 
     receive do
-      m -> IO.puts("TasksInterchangeToWorkers: sending a multipart message to workers")
+      m -> Logger.debug("TasksInterchangeToWorkers: sending a multipart message to workers")
            :erlzmq.send_multipart(socket, m)
     after 
       # TODO: there should not need to be a timeout here - everything should be driven by
       # erlang messages
-      1000 -> IO.puts("timeout no-op / send to socket")
+      1000 -> Logger.debug("timeout no-op / send to socket")
     end
 
 
@@ -294,22 +302,23 @@ end
 
 defmodule EIC.TaskQueue do
   use GenServer
+  require Logger
 
   def start_link(ctx) do
-    IO.puts("TaskQueue: start_link")
+    Logger.info("TaskQueue: start_link")
     GenServer.start_link(EIC.TaskQueue, [ctx], name: :matchmaker)
   end
 
   @impl true
   def init([_ctx]) do
-    IO.puts("TaskQueue: initializing")
+    Logger.info("TaskQueue: initializing")
 
     {:ok, %{:tasks => [], :managers => []}}
   end
 
   @impl true
   def handle_cast({:new_task, task_dict, pickled_msg}, state) do
-    IO.puts("TaskQueue: received a task")
+    Logger.debug("TaskQueue: received a task")
 
     # TODO: better syntax for updating individual entries in map rather than
     # listing them all copy style?
@@ -321,21 +330,19 @@ defmodule EIC.TaskQueue do
 
   def handle_cast({:new_manager, registration_msg}, state) do
     new_state = %{:tasks => state[:tasks], :managers => [registration_msg | state[:managers]]}
-    IO.puts("TaskQueue: new state:")
-    IO.inspect(new_state)
+    Logger.debug(["TaskQueue: new state:", inspect(new_state)])
     new_state2 = matchmake(new_state)
     {:noreply, new_state2}
   end
 
   def handle_cast(rest, state) do
-    IO.puts("TaskQueue: ERROR: leftover handle_cast")
-    IO.inspect(rest)
+    Logger.error(["TaskQueue: ERROR: leftover handle_cast", inspect(rest)])
     raise "Unhandled TaskQueue cast"
   end
 
   @impl true
   def handle_call(_what, _from, state) do
-    IO.puts("TaskQueue: ERROR: handle call")
+    Logger.error("TaskQueue: ERROR: handle call")
     raise "Unhandled TaskQueue call"
   end
 
@@ -343,7 +350,7 @@ defmodule EIC.TaskQueue do
   # modify that capacity, rather than forgetting the whole manager...
   # and maybe that means this can't be implemented in function guard style?
   def matchmake(%{:tasks => [t | t_rest], :managers => [m | m_rest]} = state) do
-    IO.puts("Made a match")
+    Logger.info("Made a match")
     {task_dict, _pickled} = t
     # TODO: send this off to execute
     # also, record the pairing somehow so that we do appropriate behaviour on
@@ -377,7 +384,7 @@ defmodule EIC.TaskQueue do
   end
 
   def matchmake(state) do
-    IO.puts("No match made between any manager or task")
+    Logger.debug("No match made between any manager or task")
     state
   end
 end
