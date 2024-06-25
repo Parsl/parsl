@@ -1,5 +1,4 @@
 import copy
-import os
 from typing import List
 
 import pytest
@@ -30,21 +29,17 @@ def no_checkpoint_stdout_app(stdout=None):
     return "echo X"
 
 
-def test_memo_stdout():
-
+def test_memo_stdout(tmpd_cwd):
     assert const_list_x == const_list_x_arg
 
-    path_x = "test.memo.stdout.x"
-    if os.path.exists(path_x):
-        os.remove(path_x)
+    path_x = tmpd_cwd / "test.memo.stdout.x"
 
     # this should run and create a file named after path_x
-    no_checkpoint_stdout_app(stdout=path_x).result()
-    assert os.path.exists(path_x)
+    no_checkpoint_stdout_app(stdout=str(path_x)).result()
+    path_x.unlink(missing_ok=False)
 
-    os.remove(path_x)
-    no_checkpoint_stdout_app(stdout=path_x).result()
-    assert not os.path.exists(path_x)
+    no_checkpoint_stdout_app(stdout=str(path_x)).result()
+    assert not path_x.exists(), "For memoization, expected NO file written"
 
     # this should also be memoized, so not create an arbitrary name
     z_fut = no_checkpoint_stdout_app(stdout=parsl.AUTO_LOGNAME)

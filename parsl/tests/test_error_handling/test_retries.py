@@ -1,9 +1,7 @@
-import argparse
 import os
 
 import pytest
 
-import parsl
 from parsl import bash_app, python_app
 from parsl.tests.configs.local_threads import fresh_config
 
@@ -68,8 +66,6 @@ def test_fail_nowait(numtasks=10):
         assert isinstance(
             e, TypeError), "Expected a TypeError, got {}".format(e)
 
-    print("Done")
-
 
 @pytest.mark.local
 def test_fail_delayed(numtasks=10):
@@ -94,19 +90,12 @@ def test_fail_delayed(numtasks=10):
         assert isinstance(
             e, TypeError), "Expected a TypeError, got {}".format(e)
 
-    print("Done")
-
 
 @pytest.mark.local
-def test_retry():
+def test_retry(tmpd_cwd):
     """Test retries via app that succeeds on the Nth retry.
     """
 
-    fname = "retry.out"
-    try:
-        os.remove(fname)
-    except OSError:
-        pass
-    fu = succeed_on_retry(fname)
-
-    fu.result()
+    fpath = tmpd_cwd / "retry.out"
+    sout = str(tmpd_cwd / "stdout")
+    succeed_on_retry(str(fpath), stdout=sout).result()

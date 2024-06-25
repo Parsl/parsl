@@ -22,11 +22,11 @@ def test_files():
 
 
 @pytest.mark.local
-def test_open():
-    with open('test-open.txt', 'w') as tfile:
-        tfile.write('Hello')
+def test_open(tmpd_cwd):
+    fpath = tmpd_cwd / 'test-open.txt'
+    fpath.write_text('Hello')
 
-    pfile = File('test-open.txt')
+    pfile = File(fpath)
 
-    with open(str(pfile), 'r') as opfile:
-        assert (opfile.readlines()[0] == 'Hello')
+    with open(pfile) as opfile:
+        assert (opfile.read() == 'Hello')
