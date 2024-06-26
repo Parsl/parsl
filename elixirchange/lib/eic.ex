@@ -516,6 +516,10 @@ defmodule EIC.ParslTask do
     Logger.warn("in ParslTask result handler")
     pickled_result = :pickle.term_to_pickle(result_dict)
     send(EIC.ResultsInterchangeToSubmit, pickled_result)
+
+    # TODO - do something to make that worker available for allocation again
+    # - interact with the Matchmaker?
+
     {:noreply, []}
   end
 
