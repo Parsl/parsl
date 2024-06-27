@@ -108,6 +108,11 @@ class DynamicFileList(Future, list):
             self._is_df = isinstance(self.file_obj, DataFuture)
             self.parent.add_done_func(self.file_obj.filename, self.done)
 
+        def cleancopy(self):
+            if self._is_df:
+                return self.file_obj.file_obj.cleancopy()
+            return self.file_obj.cleancopy()
+
         def convert_to_df(self):
             """Convert the file_obj to a DataFuture."""
             if not self._is_df:
@@ -146,6 +151,22 @@ class DynamicFileList(Future, list):
             if self.file_obj is None:
                 return None
             return self.file_obj.filepath
+
+        @property
+        def size(self):
+            if self._empty:
+                return None
+            if self._is_df:
+                return self.file_obj.file_obj.size
+            return self.file_obj.size
+
+        @property
+        def md5sum(self):
+            if self._empty:
+                return None
+            if self._is_df:
+                return self.file_obj.file_obj.md5sum
+            return self.file_obj.md5sum
 
         def cancel(self):
             """Not implemented"""
@@ -484,6 +505,11 @@ class DynamicFileList(Future, list):
             self._last_idx = max(self._last_idx, key)
             self._call_callbacks()
             self.stage_file(key)
+        elif value.uuid == super().__getitem__(key).uuid:
+            if isinstance(value, DynamicFileList.DynamicFile):
+                super().__getitem__(key).set(value.file_obj)
+            else:
+                super().__getitem__(key).set(value)
         else:
             raise ValueError("Cannot set a value that is not empty")
             # if not isinstance(value, self.DynamicFile):

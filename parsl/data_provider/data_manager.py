@@ -65,7 +65,7 @@ class DataManager:
                 # TODO NEED TO TRACK FILE IF IT IS EMPTY
                 pass
             else:
-                file = input.file_obj.file_obj.cleancopy()
+                file = input.cleancopy()
                 # replace the input DataFuture with a new DataFuture which will complete at
                 # the same time as the original one, but will contain the newly
                 # copied file
