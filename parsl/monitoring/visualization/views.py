@@ -1,26 +1,36 @@
 import pandas as pd
 from flask import current_app as app
-from flask import render_template
+from flask import render_template, request
 
 import parsl.monitoring.queries.pandas as queries
-from parsl.monitoring.visualization.models import Status, Task, Workflow, db
+from parsl.monitoring.visualization.models import (
+    Status,
+    Task,
+    Workflow,
+    db,
+    Files,
+    InputFiles,
+    OutputFiles
+    )
 from parsl.monitoring.visualization.plots.default.task_plots import (
     time_series_memory_per_task_plot,
-)
+    )
 from parsl.monitoring.visualization.plots.default.workflow_plots import (
     task_gantt_plot,
     task_per_app_plot,
     workflow_dag_plot,
-)
+    )
 from parsl.monitoring.visualization.plots.default.workflow_resource_plots import (
     resource_distribution_plot,
     resource_efficiency,
     worker_efficiency,
-)
+    )
 
-dummy = True
+from parsl.monitoring.visualization.form_fields import FileForm
 
 import datetime
+
+dummy = True
 
 
 def format_time(value):
@@ -57,6 +67,61 @@ def index():
         if workflow.time_completed is not None:
             workflow.status = 'Completed'
     return render_template('workflows_summary.html', workflows=workflows)
+
+
+@app.route('/files/<file_id>/')
+def file(file_id):
+    file_details = Files.query.filter_by(file_id=file_id).first()
+    input_files = InputFiles.query.filter_by(file_id=file_id).all()
+    output_file = OutputFiles.query.filter_by(file_id=file_id).first()
+    task_ids = set()
+    for f in input_files:
+        task_ids.add(f.task_id)
+    if output_file:
+        task_ids.add(output_file.task_id)
+    tasks = {}
+    for tid in task_ids:
+        tasks[tid] = Task.query.filter_by(run_id=file_details.run_id, task_id=tid).first()
+    workflow_details = Workflow.query.filter_by(run_id=file_details.run_id).first()
+
+    return render_template('file_detail.html', file_details=file_details,
+                           input_files=input_files, output_file=output_file,
+                           tasks=tasks, workflow=workflow_details)
+
+
+@app.route('/files', methods=['GET', 'POST'])
+def files():
+    form = FileForm()
+    if request.method == 'POST':
+        file_list = []
+        if form.validate_on_submit():
+            if '%' in form.file_name.data:
+                file_list = Files.query.filter(Files.file_name.like(form.file_name.data)).all()
+            else:
+                file_list = Files.query.filter_by(file_name=form.file_name.data).all()
+        return render_template('files.html', form=form, file_list=file_list)
+    return render_template('files.html', form=form)
+
+
+@app.route('/files/workflow/<workflow_id>/')
+def files_workflow(workflow_id):
+    workflow_files = Files.query.filter_by(run_id=workflow_id).all()
+    workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
+    task_ids = set()
+    files_by_task = {}
+    file_details = {}
+    for wf in workflow_files:
+        file_details[wf.file_id] = wf
+        task_ids.add(wf.task_id)
+    tasks = {}
+
+    for tid in task_ids:
+        tasks[tid] = Task.query.filter_by(run_id=workflow_id, task_id=tid).first()
+        files_by_task[tid] = {'inputs': InputFiles.query.filter_by(run_id=workflow_id, task_id=tid).all(),
+                              'outputs': OutputFiles.query.filter_by(run_id=workflow_id, task_id=tid).all()}
+
+    return render_template('files_workflow.html', workflow=workflow_details,
+                           task_files=files_by_task, tasks=tasks)
 
 
 @app.route('/workflow/<workflow_id>/')

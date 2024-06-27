@@ -67,9 +67,41 @@ class Task(db.Model):
     task_stdin = db.Column('task_stdin', db.Text, nullable=True)
     task_stdout = db.Column('task_stdout', db.Text, nullable=True)
     task_stderr = db.Column('task_stderr', db.Text, nullable=True)
+    task_env = db.Column('task_env', db.Text, nullable=True)
     __table_args__ = (
         db.PrimaryKeyConstraint('task_id', 'run_id'),
     )
+
+
+class Files(db.Model):
+    __tablename__ = 'files'
+    file_name = db.Column('file_name', db.Text, index=True, nullable=False)
+    file_id = db.Column('file_id', db.Text, index=True, nullable=False)
+    run_id = db.Column('run_id', db.Text, nullable=False)
+    task_id = db.Column('task_id', db.Integer, nullable=False)
+    try_id = db.Column('try_id', db.Integer, nullable=False)
+    timestamp = db.Column('timestamp', db.DateTime, nullable=True)
+    size = db.Column('size', db.BigInteger, nullable=True)
+    md5sum = db.Column('md5sum', db.Text, nullable=True)
+    __table_args__ = (db.PrimaryKeyConstraint('file_id'),)
+
+
+class InputFiles(db.Model):
+    __tablename__ = 'input_files'
+    file_id = db.Column('file_id', db.Text, nullable=False)
+    run_id = db.Column('run_id', db.Text, nullable=False)
+    task_id = db.Column('task_id', db.Integer, nullable=False)
+    try_id = db.Column('try_id', db.Integer, nullable=False)
+    __table_args__ = (db.PrimaryKeyConstraint('file_id'),)
+
+
+class OutputFiles(db.Model):
+    __tablename__ = 'output_files'
+    file_id = db.Column('file_id', db.Text, nullable=False)
+    run_id = db. Column('run_id', db.Text, nullable=False)
+    task_id = db.Column('task_id', db.Integer, nullable=False)
+    try_id = db.Column('try_id', db.Integer, nullable=False)
+    __table_args__ = (db.PrimaryKeyConstraint('file_id'),)
 
 
 class Resource(db.Model):

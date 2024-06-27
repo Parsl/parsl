@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<br />
+    <h2>File Provenance</h2>
+
+     Files by <a href="/">workflow</a>.
+    <p>
+    Search for a specific file:
+<form method="POST" action="/files">
+    {{ form.hidden_tag() }}
+    {{ form.file_name.label }} {{ form.file_name(size=32) }}
+    {{ form.submit() }}
+</form>
+    {% if form.file_name.errors %}
+        <ul>
+        {% for error in form.file_name.errors %}
+            <li>{{ error }}</li>
+        {% endfor %}
+        </ul>
+{% endif %}
+{% if file_list is defined and file_list %}
+    <table class="table table-hover">
+      <thead>
+        <tr>
+           <th>File Name</th>
+           <th>File Size</th>
+           <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for file in file_list %}
+          <tr>
+            <td><a href="/files/{{ file['file_id'] }}/">{{ file['file_name'] }}</a></td>
+            <td>{{ file['file_size'] }}</td>
+            <td>{{ file['timestamp'] | timeformat }}</td>
+          </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+{% endif %}
+
+{% endblock %}

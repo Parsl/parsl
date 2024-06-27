@@ -14,6 +14,7 @@
         <th>Status</th>
         <th>Runtime (s)</th>
         <th>Tasks</th>
+        <th>Files</th>
       </tr>
     </thead>
     <tbody>
@@ -29,6 +30,7 @@
              <span class="task task-failed">{{ w['tasks_failed_count'] }}</span>
 
         </td>
+        <td><a href="files/workflow/{{ w['run_id'] }}/">files</a></td>
       </tr>
     {% endfor %}
     </tbody>

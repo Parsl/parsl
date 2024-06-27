@@ -120,3 +120,13 @@ ENV/
 
 # emacs buffers
 \#*
+
+runinfo*
+parsl/tests/.pytest*
+
+# documentation generation
+docs/stubs/*
+docs/1-parsl-introduction.ipynb
+
+/tmp
+parsl/data_provider/dyn.new.py

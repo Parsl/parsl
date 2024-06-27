@@ -249,6 +249,8 @@ class Database:
         try_id = Column('try_id', Integer,
                         nullable=False)
         timestamp = Column('timestamp', DateTime, nullable=True)
+        size = Column('size', BigInteger, nullable=True)
+        md5sum = Column('md5sum', Text, nullable=True)
         sa.Index("files_task_run_id_idx", "task_run_id", "task_id", "try_id")
         __table_args__ = (PrimaryKeyConstraint('file_id'),)
 
@@ -404,7 +406,7 @@ class DatabaseManager:
         """
         like inserted_tasks but for Files
         """
-        inserted_files = dict()  # type: Dict[Str, DateTime]
+        inserted_files = dict()  # type: Dict[Str, Dict[Str, Union[None, datetime.datetime, Str, int]]]
         input_inserted_files = dict()  # type: Dict[Str, List[Str]]
         output_inserted_files = dict()  # type: Dict[Str, List[Str]]
 
@@ -495,11 +497,18 @@ class DatabaseManager:
                         elif msg_type == MessageType.FILE_INFO:
                             file_id = msg['file_id']
                             file_all_messages.append(msg)
-                            if file_id in inserted_files and inserted_files[file_id] is None:
-                                inserted_files[file_id] = msg['timestamp']
+                            if file_id in inserted_files:
+                                if inserted_files[file_id]['timestamp'] is None:
+                                    inserted_files[file_id] = msg['timestamp']
+                                if inserted_files[file_id]['size'] is None:
+                                    inserted_files[file_id] = msg['size']
+                                if inserted_files[file_id]['md5sum'] is None:
+                                    inserted_files[file_id] = msg['md5sum']
                                 file_update_messages.append(msg)
                             else:
-                                inserted_files[file_id] = None
+                                inserted_files[file_id] = {'size': msg['size'],
+                                                           'md5sum': msg['md5sum'],
+                                                           'timestamp': msg['timestamp']}
                                 file_insert_messages.append(msg)
                         elif msg_type == MessageType.INPUT_FILE:
                             file_id = msg['file_id']
