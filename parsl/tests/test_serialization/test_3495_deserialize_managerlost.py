@@ -5,6 +5,7 @@ import pytest
 
 import parsl
 from parsl import Config, HighThroughputExecutor
+from parsl.executors.high_throughput.errors import ManagerLost
 
 
 @parsl.python_app
@@ -38,9 +39,8 @@ def test_manager_lost_system_failure(tmpd_cwd):
     with parsl.load(c):
         manager_pgid = get_manager_pgid().result()
         try:
-            lose_manager().result()
-        except Exception as e:
-            assert "ManagerLost" not in str(e), f"Issue 3495: {e}"
+            with pytest.raises(ManagerLost):
+                lose_manager().result()
         finally:
             # Allow process to clean itself up
             os.killpg(manager_pgid, signal.SIGCONT)
