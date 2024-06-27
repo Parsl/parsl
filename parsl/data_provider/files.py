@@ -49,6 +49,8 @@ class File:
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
         self.timestamp = timestamp
+        self.size = None
+        self.md5sum = None
         self.local_path: Optional[str] = None
         if uu_id is not None:
             self.uuid = uu_id

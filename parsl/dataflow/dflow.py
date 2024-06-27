@@ -237,14 +237,14 @@ class DataFlowKernel:
         """
         Create the dictionary that will be included in the log.
         """
-        info_to_monitor = ['file_name', 'file_id', 'run_id', 'task_id', 'timestamp']
-
         file_log_info = {'file_name': file.filename,
                          'file_id': str(file.uuid),
                          'run_id': self.run_id,
                          'task_id': task_record['id'],
                          'try_id': task_record['try_id'],
-                         'timestamp': file.timestamp
+                         'timestamp': file.timestamp,
+                         'size': file.size,
+                         'md5sum': file.md5sum
                          }
         return file_log_info
 

@@ -1,6 +1,8 @@
 """This module implements DataFutures.
 """
+from hashlib import md5
 import logging
+from os import stat
 from concurrent.futures import Future
 from typing import Optional, Any
 from datetime import datetime
@@ -37,6 +39,8 @@ class DataFuture(Future):
         else:
             self.set_result(self.file_obj)
             self.file_obj.timestamp = datetime.now()
+            self.file_obj.size = stat(self.file_obj.filepath).st_size
+            self.file_obj.md5sum = md5(open(self.file_obj, 'rb').read()).hexdigest()
             if self.data_flow_kernel:
                 self.data_flow_kernel.register_as_output(self.file_obj, self.app_fut.task_record)
 
