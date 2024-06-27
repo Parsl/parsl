@@ -1,8 +1,8 @@
-from parsl.config import Config
-from parsl.providers import SlurmProvider
-from parsl.launchers import SrunLauncher
-from parsl.executors import HighThroughputExecutor
 from parsl.addresses import address_by_interface
+from parsl.config import Config
+from parsl.executors import HighThroughputExecutor
+from parsl.launchers import SrunLauncher
+from parsl.providers import SlurmProvider
 
 config = Config(
     executors=[
@@ -10,7 +10,7 @@ config = Config(
             label='Midway_HTEX_multinode',
             address=address_by_interface('bond0'),
             worker_debug=False,
-            max_workers=2,
+            max_workers_per_node=2,
             provider=SlurmProvider(
                 'YOUR_PARTITION',  # Partition name, e.g 'broadwl'
                 launcher=SrunLauncher(),

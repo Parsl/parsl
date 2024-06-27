@@ -1,12 +1,14 @@
 """Tests related to assigning workers to specific compute units"""
 
-from parsl.providers import LocalProvider
+import os
+
+import pytest
+
+from parsl import python_app
 from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
-from parsl import python_app
-import pytest
-import os
+from parsl.providers import LocalProvider
 
 
 def local_config():
@@ -15,7 +17,7 @@ def local_config():
             HighThroughputExecutor(
                 label="htex_Local",
                 worker_debug=True,
-                max_workers=2,
+                max_workers_per_node=2,
                 cpu_affinity='block',
                 available_accelerators=2,
                 encrypted=True,
@@ -32,8 +34,8 @@ def local_config():
 
 @python_app
 def get_worker_info():
-    from time import sleep
     import os
+    from time import sleep
     rank = int(os.environ['PARSL_WORKER_RANK'])
     aff = os.sched_getaffinity(0)
     device = os.environ.get('CUDA_VISIBLE_DEVICES')

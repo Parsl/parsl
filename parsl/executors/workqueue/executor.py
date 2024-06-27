@@ -3,50 +3,49 @@ Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant,
 high-throughput system for delegating Parsl tasks to thousands of remote machines
 """
 
-import threading
-import multiprocessing
-import logging
-from concurrent.futures import Future
-from ctypes import c_bool
-
-import tempfile
 import hashlib
-import subprocess
+import inspect
+import itertools
+import logging
+import multiprocessing
 import os
-import socket
-import time
 import pickle
 import queue
-import inspect
 import shutil
-import itertools
-
-from parsl.serialize import pack_apply_message, deserialize
-import parsl.utils as putils
-from parsl.executors.errors import ExecutorError
-from parsl.data_provider.files import File
-from parsl.errors import OptionalModuleMissing
-from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.providers.base import ExecutionProvider
-from parsl.providers import LocalProvider, CondorProvider
-from parsl.executors.workqueue import exec_parsl_function
-from parsl.process_loggers import wrap_with_logs
-from parsl.utils import setproctitle
+import socket
+import subprocess
+import tempfile
+import threading
+import time
+from collections import namedtuple
+from concurrent.futures import Future
+from ctypes import c_bool
+from typing import Dict, List, Optional, Set, Union
 
 import typeguard
-from typing import Dict, List, Optional, Set, Union
+
+import parsl.utils as putils
+from parsl.data_provider.files import File
 from parsl.data_provider.staging import Staging
+from parsl.errors import OptionalModuleMissing
+from parsl.executors.errors import ExecutorError
+from parsl.executors.status_handling import BlockProviderExecutor
+from parsl.executors.workqueue import exec_parsl_function
+from parsl.process_loggers import wrap_with_logs
+from parsl.providers import CondorProvider, LocalProvider
+from parsl.providers.base import ExecutionProvider
+from parsl.serialize import deserialize, pack_apply_message
+from parsl.utils import setproctitle
 
-from .errors import WorkQueueTaskFailure
-from .errors import WorkQueueFailure
-
-from collections import namedtuple
+from .errors import WorkQueueFailure, WorkQueueTaskFailure
 
 try:
     import work_queue as wq
-    from work_queue import WorkQueue
-    from work_queue import WORK_QUEUE_DEFAULT_PORT
-    from work_queue import WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT
+    from work_queue import (
+        WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT,
+        WORK_QUEUE_DEFAULT_PORT,
+        WorkQueue,
+    )
 except ImportError:
     _work_queue_enabled = False
     WORK_QUEUE_DEFAULT_PORT = 0
@@ -61,8 +60,11 @@ logger = logging.getLogger(__name__)
 
 
 # Support structure to communicate parsl tasks to the work queue submit thread.
-ParslTaskToWq = namedtuple('ParslTaskToWq',
-                           'id category cores memory disk gpus priority running_time_min env_pkg map_file function_file result_file input_files output_files')
+ParslTaskToWq = namedtuple(
+                        'ParslTaskToWq',
+                        'id '
+                        'category '
+                        'cores memory disk gpus priority running_time_min env_pkg map_file function_file result_file input_files output_files')
 
 # Support structure to communicate final status of work queue tasks to parsl
 # if result_received is True:
@@ -251,7 +253,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.label = label
         self.task_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
         self.collector_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
-        self.blocks = {}  # type: Dict[str, str]
         self.address = address
         self.port = port
         self.executor_task_counter = -1
@@ -651,13 +652,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.worker_command = self._construct_worker_command()
         self._patch_providers()
 
-        if hasattr(self.provider, 'init_blocks'):
-            try:
-                self.scale_out(blocks=self.provider.init_blocks)
-            except Exception as e:
-                logger.error("Initial block scaling out failed: {}".format(e))
-                raise e
-
     @property
     def outstanding(self) -> int:
         """Count the number of outstanding tasks. This is inefficiently
@@ -675,18 +669,23 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     def workers_per_node(self) -> Union[int, float]:
         return 1
 
-    def scale_in(self, count):
+    def scale_in(self, count: int) -> List[str]:
         """Scale in method.
         """
         # Obtain list of blocks to kill
-        to_kill = list(self.blocks.keys())[:count]
-        kill_ids = [self.blocks[block] for block in to_kill]
+        to_kill = list(self.blocks_to_job_id.keys())[:count]
+        kill_ids = [self.blocks_to_job_id[block] for block in to_kill]
 
         # Cancel the blocks provisioned
         if self.provider:
-            self.provider.cancel(kill_ids)
+            logger.info(f"Scaling in jobs: {kill_ids}")
+            r = self.provider.cancel(kill_ids)
+            job_ids = self._filter_scale_in_ids(kill_ids, r)
+            block_ids_killed = [self.job_ids_to_block[jid] for jid in job_ids]
+            return block_ids_killed
         else:
-            logger.error("No execution provider available to scale")
+            logger.error("No execution provider available to scale in")
+            return []
 
     def shutdown(self, *args, **kwargs):
         """Shutdown the executor. Sets flag to cancel the submit process and
@@ -696,7 +695,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.should_stop.value = True
 
         # Remove the workers that are still going
-        kill_ids = [self.blocks[block] for block in self.blocks.keys()]
+        kill_ids = [self.blocks_to_job_id[block] for block in self.blocks_to_job_id.keys()]
         if self.provider:
             logger.debug("Cancelling blocks")
             self.provider.cancel(kill_ids)
@@ -705,6 +704,12 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.submit_process.join()
         logger.debug("Joining on collector thread")
         self.collector_thread.join()
+
+        logger.debug("Closing multiprocessing queues")
+        self.task_queue.close()
+        self.task_queue.join_thread()
+        self.collector_queue.close()
+        self.collector_queue.join_thread()
 
         logger.debug("Work Queue shutdown completed")
 

@@ -1,6 +1,5 @@
 from parsl.config import Config
-from parsl.executors.taskvine import TaskVineExecutor
-from parsl.executors.taskvine import TaskVineManagerConfig
+from parsl.executors.taskvine import TaskVineExecutor, TaskVineManagerConfig
 from parsl.providers import LocalProvider
 
 config = Config(

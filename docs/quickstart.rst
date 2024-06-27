@@ -93,8 +93,6 @@ with hello world Python and Bash apps.
     import parsl
     from parsl import python_app, bash_app
 
-    parsl.load()
-
     @python_app
     def hello_python (message):
         return 'Hello %s' % message
@@ -103,11 +101,13 @@ with hello world Python and Bash apps.
     def hello_bash(message, stdout='hello-stdout'):
         return 'echo "Hello %s"' % message
 
-    # invoke the Python app and print the result
-    print(hello_python('World (Python)').result())
+    
+    with parsl.load():
+        # invoke the Python app and print the result
+        print(hello_python('World (Python)').result())
 
-    # invoke the Bash app and read the result from a file
-    hello_bash('World (Bash)').result()
+        # invoke the Bash app and read the result from a file
+        hello_bash('World (Bash)').result()
 
     with open('hello-stdout', 'r') as f:
         print(f.read())
@@ -236,8 +236,7 @@ for reporting purposes.
 
 As an NSF-funded project, our ability to track usage metrics is important for continued funding. 
 
-You can opt-in by setting ``PARSL_TRACKING=true`` in your environment or by 
-setting ``usage_tracking=True`` in the configuration object (`parsl.config.Config`). 
+You can opt-in by setting ``usage_tracking=True`` in the configuration object (`parsl.config.Config`). 
 
 To read more about what information is collected and how it is used see :ref:`label-usage-tracking`.
 

@@ -4,13 +4,12 @@ import time
 import pytest
 
 import parsl
-
 from parsl import File, python_app
-from parsl.providers import LocalProvider
 from parsl.channels import LocalChannel
-from parsl.launchers import SingleNodeLauncher
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
+from parsl.launchers import SingleNodeLauncher
+from parsl.providers import LocalProvider
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +26,7 @@ def local_config():
                 poll_period=100,
                 label="htex_local",
                 address="127.0.0.1",
-                max_workers=1,
+                max_workers_per_node=1,
                 encrypted=True,
                 provider=LocalProvider(
                     channel=LocalChannel(),
@@ -39,7 +38,7 @@ def local_config():
             )
         ],
         max_idletime=0.5,
-        strategy='htex_auto_scale',
+        strategy='simple',
     )
 
 

@@ -1,15 +1,16 @@
-import logging
 import json
-import globus_sdk
+import logging
 import os
-import parsl
-import typeguard
-
 from functools import partial
 from typing import Optional
+
+import globus_sdk
+import typeguard
+
+import parsl
 from parsl.app.app import python_app
-from parsl.utils import RepresentationMixin
 from parsl.data_provider.staging import Staging
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 

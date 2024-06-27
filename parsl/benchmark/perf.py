@@ -1,7 +1,8 @@
 import argparse
+import concurrent.futures
 import importlib
 import time
-import concurrent.futures
+
 import parsl
 
 min_iterations = 2

@@ -9,6 +9,7 @@ and have these Files properly treated by Parsl.
 """
 from __future__ import annotations
 from concurrent.futures import Future
+from datetime import datetime, timezone
 from typing import List, Optional, Union, Callable, Dict
 
 import typeguard
@@ -48,6 +49,8 @@ class DynamicFileList(Future, list):
             if e:
                 self.set_exception(e)
             else:
+                self.file_obj.timestamp = datetime.now(timezone.utc)
+                self.parent.dataflow.register_as_output(self.file_obj, self.parent.task_record)
                 self.set_result(self.file_obj)
 
         def __init__(self, fut: DynamicFileList, file_obj: Optional[Union[File, DataFuture]] = None):
@@ -76,6 +79,20 @@ class DynamicFileList(Future, list):
         def empty(self):
             """Return whether this is an empty wrapper."""
             return self._empty
+
+        @property
+        def uuid(self):
+            """Return the uuid of the file object this datafuture represents."""
+            if self._empty:
+                return None
+            return self.file_obj.uuid
+
+        @property
+        def timestamp(self):
+            """Return the timestamp of the file object this datafuture represents."""
+            if self._empty:
+                return None
+            return self.file_obj.timestamp
 
         @typeguard.typechecked
         def set(self, file_obj: Union[File, DataFuture, 'DynamicFileList.DynamicFile']):
@@ -209,6 +226,7 @@ class DynamicFileList(Future, list):
         self._in_callback = False
         self._staging_inhibited = False
         self._output_task_id = None
+        self.task_record = None
         if files is not None:
             self.extend(files)
 
@@ -268,7 +286,7 @@ class DynamicFileList(Future, list):
         """
         return self.DynamicFile(self, file_obj)
 
-    def set_dataflow(self, dataflow, executor: str, st_inhibited: bool, task_id: int):
+    def set_dataflow(self, dataflow, executor: str, st_inhibited: bool, task_id: int, task_record: dict):
         """ Set the dataflow and executor for this instance
 
         Args:
@@ -280,6 +298,7 @@ class DynamicFileList(Future, list):
         self.dataflow = dataflow
         self._staging_inhibited = st_inhibited
         self._output_task_id = task_id
+        self.task_record = task_record
         for idx in range(self._last_idx + 1):
             self.stage_file(idx)
 

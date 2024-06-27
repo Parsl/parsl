@@ -1,25 +1,23 @@
-import logging
 import hashlib
-import subprocess
+import logging
 import os
 import queue
 import shutil
+import subprocess
 import uuid
 
-from parsl.utils import setproctitle
-from parsl.process_loggers import wrap_with_logs
 from parsl.executors.taskvine import exec_parsl_function
-from parsl.executors.taskvine.utils import VineTaskToParsl
-from parsl.executors.taskvine.utils import run_parsl_function
+from parsl.executors.taskvine.utils import VineTaskToParsl, run_parsl_function
+from parsl.process_loggers import wrap_with_logs
+from parsl.utils import setproctitle
 
 try:
-    from ndcctools.taskvine import cvine
-    from ndcctools.taskvine import Manager
-    from ndcctools.taskvine import Task
-    from ndcctools.taskvine import FunctionCall
-    from ndcctools.taskvine.cvine import VINE_ALLOCATION_MODE_MAX_THROUGHPUT
-    from ndcctools.taskvine.cvine import VINE_ALLOCATION_MODE_EXHAUSTIVE_BUCKETING
-    from ndcctools.taskvine.cvine import VINE_ALLOCATION_MODE_MAX
+    from ndcctools.taskvine import FunctionCall, Manager, Task, cvine
+    from ndcctools.taskvine.cvine import (
+        VINE_ALLOCATION_MODE_EXHAUSTIVE_BUCKETING,
+        VINE_ALLOCATION_MODE_MAX,
+        VINE_ALLOCATION_MODE_MAX_THROUGHPUT,
+    )
 except ImportError:
     _taskvine_enabled = False
 else:
@@ -376,6 +374,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
                             task_out_file = parsl_file_name_to_vine_file[spec.parsl_name]
                         else:
                             task_out_file = m.declare_file(spec.parsl_name, cache=spec.cache, peer_transfer=True)
+                            parsl_file_name_to_vine_file[spec.parsl_name] = task_out_file
                         t.add_output(task_out_file, spec.parsl_name)
 
             # Submit the task to the TaskVine object

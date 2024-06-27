@@ -1,11 +1,13 @@
 import logging
-import parsl
+
 import pytest
-from parsl.executors import HighThroughputExecutor
+
+import parsl
 from parsl import Config
-from parsl.providers import LocalProvider
+from parsl.executors import HighThroughputExecutor
 from parsl.executors.errors import BadStateException
-from parsl.jobs.states import JobStatus, JobState
+from parsl.jobs.states import JobState, JobStatus
+from parsl.providers import LocalProvider
 
 
 def local_config():
@@ -17,7 +19,7 @@ def local_config():
                 heartbeat_period=1,
                 heartbeat_threshold=2,
                 poll_period=100,
-                max_workers=1,
+                max_workers_per_node=1,
                 provider=LocalProvider(
                     worker_init="conda deactivate; export PATH=''; which python; exit 0",
                     init_blocks=2,

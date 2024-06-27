@@ -15,8 +15,8 @@ def local_config():
 
 @python_app
 def sleep_fail(sleep_dur, sleep_rand_max, fail_prob, inputs=[]):
-    import time
     import random
+    import time
 
     s = sleep_dur + random.randint(-sleep_rand_max, sleep_rand_max)
 
@@ -144,8 +144,8 @@ def test_deps(numtasks=10):
 
 @python_app
 def sleep_then_fail(sleep_dur=0.1):
-    import time
     import math
+    import time
     time.sleep(sleep_dur)
     math.ceil("Trigger TypeError")
     return 0

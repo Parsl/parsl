@@ -1,9 +1,9 @@
-from parsl.providers import AdHocProvider
-from parsl.channels import SSHChannel
-from parsl.executors import HighThroughputExecutor
-from parsl.config import Config
-
 from typing import Any, Dict
+
+from parsl.channels import SSHChannel
+from parsl.config import Config
+from parsl.executors import HighThroughputExecutor
+from parsl.providers import AdHocProvider
 
 user_opts = {'adhoc':
              {'username': 'YOUR_USERNAME',
@@ -16,7 +16,7 @@ config = Config(
     executors=[
         HighThroughputExecutor(
             label='remote_htex',
-            max_workers=2,
+            max_workers_per_node=2,
             worker_logdir_root=user_opts['adhoc']['script_dir'],
             encrypted=True,
             provider=AdHocProvider(

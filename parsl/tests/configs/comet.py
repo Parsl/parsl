@@ -1,7 +1,8 @@
 from parsl.config import Config
+from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SrunLauncher
 from parsl.providers import SlurmProvider
-from parsl.executors import HighThroughputExecutor
+
 from .user_opts import user_opts
 
 
@@ -10,7 +11,7 @@ def fresh_config():
         executors=[
             HighThroughputExecutor(
                 label='Comet_HTEX_multinode',
-                max_workers=1,
+                max_workers_per_node=1,
                 encrypted=True,
                 provider=SlurmProvider(
                     'debug',

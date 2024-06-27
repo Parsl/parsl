@@ -1,15 +1,14 @@
-import logging
-import threading
-import queue
-import os
-import time
 import datetime
-
+import logging
+import os
+import queue
+import threading
+import time
 from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
 
-from parsl.log_utils import set_file_logger
 from parsl.dataflow.states import States
 from parsl.errors import OptionalModuleMissing
+from parsl.log_utils import set_file_logger
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import MonitoringMessage, TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
@@ -21,11 +20,18 @@ X = TypeVar('X')
 
 try:
     import sqlalchemy as sa
-    from sqlalchemy import Column, Text, Float, Boolean, BigInteger, Integer, DateTime, PrimaryKeyConstraint, Table
-    from sqlalchemy.orm import Mapper
-    from sqlalchemy.orm import mapperlib
-    from sqlalchemy.orm import sessionmaker
-    from sqlalchemy.orm import declarative_base
+    from sqlalchemy import (
+        BigInteger,
+        Boolean,
+        Column,
+        DateTime,
+        Float,
+        Integer,
+        PrimaryKeyConstraint,
+        Table,
+        Text,
+    )
+    from sqlalchemy.orm import Mapper, declarative_base, mapperlib, sessionmaker
 except ImportError:
     _sqlalchemy_enabled = False
 else:
@@ -39,7 +45,9 @@ STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
 BLOCK = 'block'          # Block table include the status for block polling
-
+FILES = 'files'          # Files table include file info
+INPUT_FILES = 'input_files'  # Input files table include input file info
+OUTPUT_FILES = 'output_files'  # Output files table include output file info
 
 class Database:
 
@@ -103,7 +111,13 @@ class Database:
     def rollback(self) -> None:
         self.session.rollback()
 
-    def _generate_mappings(self, table: Table, columns: Optional[List[str]] = None, messages: List[MonitoringMessage] = []) -> List[Dict[str, Any]]:
+    def _generate_mappings(
+        self,
+        table: Table,
+        columns: Optional[List[str]] = None,
+        messages: List[MonitoringMessage] = [],
+    ) -> List[Dict[str, Any]]:
+
         mappings = []
         for msg in messages:
             m = {}
@@ -149,9 +163,12 @@ class Database:
         task_hashsum = Column('task_hashsum', Text, nullable=True, index=True)
         task_inputs = Column('task_inputs', Text, nullable=True)
         task_outputs = Column('task_outputs', Text, nullable=True)
+        task_args = Column('task_args', Text, nullable=True)
+        task_kwargs = Column('task_kwargs', Text, nullable=True)
         task_stdin = Column('task_stdin', Text, nullable=True)
         task_stdout = Column('task_stdout', Text, nullable=True)
         task_stderr = Column('task_stderr', Text, nullable=True)
+        task_env = Column('task_env', Text, nullable=True)
 
         task_time_invoked = Column(
             'task_time_invoked', DateTime, nullable=True)
@@ -221,6 +238,44 @@ class Database:
             PrimaryKeyConstraint('run_id', 'block_id', 'executor_label', 'timestamp'),
         )
 
+    class Files(Base):
+        __tablename__ = FILES
+        file_name = Column('file_name', Text, index=True, nullable=False)
+        file_id = Column('file_id', Text, index=True, nullable=False)
+        run_id = Column('run_id', Text,
+                             nullable=False)
+        task_id = Column('task_id', Integer,
+                         nullable=False)
+        try_id = Column('try_id', Integer,
+                        nullable=False)
+        timestamp = Column('timestamp', DateTime, nullable=True)
+        sa.Index("files_task_run_id_idx", "task_run_id", "task_id", "try_id")
+        __table_args__ = (PrimaryKeyConstraint('file_id'),)
+
+    class InputFiles(Base):
+        __tablename__ = INPUT_FILES
+        file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"),
+                         nullable=False)
+        run_id = Column('run_id', Text,
+                             nullable=False)
+        task_id = Column('task_id', Integer,
+                        nullable=False)
+        try_id = Column('try_id', Integer,
+                        nullable=False)
+        __table_args__ = (PrimaryKeyConstraint('file_id'),)
+
+    class OutputFiles(Base):
+        __tablename__ = OUTPUT_FILES
+        file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"),
+                         nullable=False)
+        run_id = Column('run_id', Text,
+                             nullable=False)
+        task_id = Column('task_id', Integer,
+                        nullable=False)
+        try_id = Column('try_id', Integer,
+                        nullable=False)
+        __table_args__ = (PrimaryKeyConstraint('file_id'),)
+
     class Resource(Base):
         __tablename__ = RESOURCE
         try_id = Column('try_id', Integer, nullable=False)
@@ -250,6 +305,12 @@ class Database:
             'psutil_process_disk_write', Float, nullable=True)
         psutil_process_status = Column(
             'psutil_process_status', Text, nullable=True)
+        psutil_cpu_num = Column(
+            'psutil_cpu_num', Text, nullable=True)
+        psutil_process_num_ctx_switches_voluntary = Column(
+            'psutil_process_num_ctx_switches_voluntary', Float, nullable=True)
+        psutil_process_num_ctx_switches_involuntary = Column(
+            'psutil_process_num_ctx_switches_involuntary', Float, nullable=True)
         __table_args__ = (
             PrimaryKeyConstraint('try_id', 'task_id', 'run_id', 'timestamp'),
         )
@@ -340,6 +401,13 @@ class DatabaseManager:
         """
         inserted_tries = set()  # type: Set[Any]
 
+        """
+        like inserted_tasks but for Files
+        """
+        inserted_files = dict()  # type: Dict[Str, DateTime]
+        input_inserted_files = dict()  # type: Dict[Str, List[Str]]
+        output_inserted_files = dict()  # type: Dict[Str, List[Str]]
+
         # for any task ID, we can defer exactly one message, which is the
         # assumed-to-be-unique first message (with first message flag set).
         # The code prior to this patch will discard previous message in
@@ -385,6 +453,9 @@ class DatabaseManager:
                         "Got {} messages from priority queue".format(len(priority_messages)))
                     task_info_update_messages, task_info_insert_messages, task_info_all_messages = [], [], []
                     try_update_messages, try_insert_messages, try_all_messages = [], [], []
+                    file_update_messages, file_insert_messages, file_all_messages = [], [], []
+                    input_file_update_messages, input_file_insert_messages, input_file_all_messages = [], [], []
+                    output_file_update_messages, output_file_insert_messages, output_file_all_messages = [], [], []
                     for msg_type, msg in priority_messages:
                         if msg_type == MessageType.WORKFLOW_INFO:
                             if "python_version" in msg:   # workflow start message
@@ -421,6 +492,33 @@ class DatabaseManager:
                                 if task_try_id in deferred_resource_messages:
                                     reprocessable_first_resource_messages.append(
                                         deferred_resource_messages.pop(task_try_id))
+                        elif msg_type == MessageType.FILE_INFO:
+                            file_id = msg['file_id']
+                            file_all_messages.append(msg)
+                            if file_id in inserted_files and inserted_files[file_id] is None:
+                                inserted_files[file_id] = msg['timestamp']
+                                file_update_messages.append(msg)
+                            else:
+                                inserted_files[file_id] = None
+                                file_insert_messages.append(msg)
+                        elif msg_type == MessageType.INPUT_FILE:
+                            file_id = msg['file_id']
+                            input_file_all_messages.append(msg)
+                            identifier = f"{msg['run_id']}.{msg['task_id']}.{msg['try_id']}"
+                            if file_id not in input_inserted_files:
+                                input_inserted_files[file_id] = []
+                            if identifier not in input_inserted_files[file_id]:
+                                input_inserted_files[file_id].append(identifier)
+                                input_file_insert_messages.append(msg)
+                        elif msg_type == MessageType.OUTPUT_FILE:
+                            file_id = msg['file_id']
+                            output_file_all_messages.append(msg)
+                            identifier = f"{msg['run_id']}.{msg['task_id']}.{msg['try_id']}"
+                            if file_id not in output_inserted_files:
+                                output_inserted_files[file_id] = []
+                            if identifier not in output_inserted_files[file_id]:
+                                output_inserted_files[file_id].append(identifier)
+                                output_file_insert_messages.append(msg)
                         else:
                             raise RuntimeError("Unexpected message type {} received on priority queue".format(msg_type))
 
@@ -450,6 +548,28 @@ class DatabaseManager:
                     logger.debug("Inserting {} task_info_all_messages into status table".format(len(task_info_all_messages)))
 
                     self._insert(table=STATUS, messages=task_info_all_messages)
+
+                    if file_insert_messages:
+                        logger.debug("Inserting {} FILES_INFO to files table".format(len(file_insert_messages)))
+                        self._insert(table=FILES, messages=file_insert_messages)
+                        logger.debug(
+                            "There are {} inserted file records".format(len(inserted_files)))
+
+                    if file_update_messages:
+                        logger.debug("Updating {} FILE_INFO into files table".format(len(file_update_messages)))
+                        self._update(table=FILES,
+                                     columns=['timestamp'],
+                                     messages=file_update_messages)
+
+                    if input_file_insert_messages:
+                        logger.debug("Inserting {} INPUT_FILE to input_files table".format(len(input_file_insert_messages)))
+                        self._insert(table=INPUT_FILES, messages=input_file_insert_messages)
+                        logger.debug("There are {} inserted input file records".format(len(input_inserted_files)))
+
+                    if output_file_insert_messages:
+                        logger.debug("Inserting {} OUTPUT_FILE to output_files table".format(len(output_file_insert_messages)))
+                        self._insert(table=OUTPUT_FILES, messages=output_file_insert_messages)
+                        logger.debug("There are {} inserted output file records".format(len(output_inserted_files)))
 
                     if try_insert_messages:
                         logger.debug("Inserting {} TASK_INFO to try table".format(len(try_insert_messages)))
@@ -518,7 +638,10 @@ class DatabaseManager:
                                 reprocessable_first_resource_messages.append(msg)
                             else:
                                 if task_try_id in deferred_resource_messages:
-                                    logger.error("Task {} already has a deferred resource message. Discarding previous message.".format(msg['task_id']))
+                                    logger.error(
+                                        "Task {} already has a deferred resource message. "
+                                        "Discarding previous message.".format(msg['task_id'])
+                                    )
                                 deferred_resource_messages[task_try_id] = msg
                         elif msg['last_msg']:
                             # This assumes that the primary key has been added
@@ -544,7 +667,10 @@ class DatabaseManager:
                 if reprocessable_last_resource_messages:
                     self._insert(table=STATUS, messages=reprocessable_last_resource_messages)
             except Exception:
-                logger.exception("Exception in db loop: this might have been a malformed message, or some other error. monitoring data may have been lost")
+                logger.exception(
+                    "Exception in db loop: this might have been a malformed message, "
+                    "or some other error. monitoring data may have been lost"
+                )
                 exception_happened = True
         if exception_happened:
             raise RuntimeError("An exception happened sometime during database processing and should have been logged in database_manager.log")
@@ -571,8 +697,10 @@ class DatabaseManager:
                     self._dispatch_to_internal(x)
                 elif queue_tag == 'resource':
                     assert isinstance(x, tuple), "_migrate_logs_to_internal was expecting a tuple, got {}".format(x)
-                    assert x[0] == MessageType.RESOURCE_INFO, \
-                        "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue, got tag {}, message {}".format(x[0], x)
+                    assert x[0] == MessageType.RESOURCE_INFO, (
+                        "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue, "
+                        "got tag {}, message {}".format(x[0], x)
+                    )
                     self._dispatch_to_internal(x)
                 elif queue_tag == 'node':
                     assert len(x) == 2, "expected message tuple to have exactly two elements"
@@ -585,7 +713,7 @@ class DatabaseManager:
                     logger.error(f"Discarding because unknown queue tag '{queue_tag}', message: {x}")
 
     def _dispatch_to_internal(self, x: Tuple) -> None:
-        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO]:
+        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO, MessageType.FILE_INFO, MessageType.INPUT_FILE, MessageType.OUTPUT_FILE]:
             self.pending_priority_queue.put(cast(Any, x))
         elif x[0] == MessageType.RESOURCE_INFO:
             body = x[1]
@@ -613,7 +741,8 @@ class DatabaseManager:
                     # if retried - for example, the database being locked because someone else is readying
                     # the tables we are trying to write to. If that assumption is wrong, then this loop
                     # may go on forever.
-                    logger.warning("Got a database OperationalError. Ignoring and retrying on the assumption that it is recoverable: {}".format(e))
+                    logger.warning("Got a database OperationalError. "
+                                   "Ignoring and retrying on the assumption that it is recoverable: {}".format(e))
                     self.db.rollback()
                     time.sleep(1)  # hard coded 1s wait - this should be configurable or exponential backoff or something
 
@@ -640,7 +769,8 @@ class DatabaseManager:
                     done = True
                 except sa.exc.OperationalError as e:
                     # hoping that this is a database locked error during _update, not some other problem
-                    logger.warning("Got a database OperationalError. Ignoring and retrying on the assumption that it is recoverable: {}".format(e))
+                    logger.warning("Got a database OperationalError. "
+                                   "Ignoring and retrying on the assumption that it is recoverable: {}".format(e))
                     self.db.rollback()
                     time.sleep(1)  # hard coded 1s wait - this should be configurable or exponential backoff or something
         except KeyboardInterrupt:

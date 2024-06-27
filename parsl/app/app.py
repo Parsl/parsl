@@ -3,18 +3,15 @@
 The App class encapsulates a generic leaf task that can be executed asynchronously.
 """
 import logging
-import typeguard
 from abc import ABCMeta, abstractmethod
 from inspect import signature
-from typing import List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+
+import typeguard
 from typing_extensions import Literal
 
 from parsl.dataflow.dflow import DataFlowKernel
-
-from typing import Any, Callable, Dict
-
 from parsl.dataflow.futures import AppFuture
-
 
 logger = logging.getLogger(__name__)
 

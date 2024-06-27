@@ -1,11 +1,16 @@
+from functools import partial
+from unittest.mock import Mock
+
 import pytest
 
 from parsl.executors import HighThroughputExecutor
+from parsl.jobs.error_handlers import (
+    noop_error_handler,
+    simple_error_handler,
+    windowed_error_handler,
+)
+from parsl.jobs.states import JobState, JobStatus
 from parsl.providers import LocalProvider
-from unittest.mock import Mock
-from parsl.jobs.states import JobStatus, JobState
-from parsl.jobs.error_handlers import simple_error_handler, windowed_error_handler, noop_error_handler
-from functools import partial
 
 
 @pytest.mark.local
