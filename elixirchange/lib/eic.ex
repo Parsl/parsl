@@ -429,7 +429,11 @@ defmodule EIC.Matchmaker do
     # we use ZMQ messaging from inside matchmake instead of erlang messaging?
 
     # TODO: can't reuse pickled form, I think? maybe I wrote about it in the
-    # rusterchange?
+    # rusterchange? - this could become an issue for interchange protocol in the
+    # parsl issue tracking, including a question about if its worth it (double
+    # memory usage per queued task vs re-pickle speed, but the re-pickling is quite
+    # a simple (2 element) dict)
+
     # the third element of this list of parts should itself be a list (of tasks)
     # rather than a single pickled task... (TODO: is that protocol difference
     # needed? should message parts always be a single task, with zmq-level part
@@ -518,7 +522,9 @@ defmodule EIC.ParslTask do
     send(EIC.ResultsInterchangeToSubmit, pickled_result)
 
     # TODO - do something to make that worker available for allocation again
-    # - interact with the Matchmaker?
+    # - interact with the Matchmaker? Perhaps a "return worker" cast that increments the
+    # worker count on that manager? We'd need to not be throwing away entire managers
+    # as we do now... which is the right way anyway I think...
 
     {:noreply, []}
   end
