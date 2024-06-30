@@ -276,22 +276,6 @@ defmodule EIC.TasksInterchangeToWorkers do
   singleton process here. That message will be forwarded on through the
   zmq connection.
 
-  TODO: there's a module that lets you poll a socket (and hence a ZMQ connection?)
-  into an erlang message which would allow this kind of message driven stuff
-  perhaps? It might be structured a bit differently though, with a zmq gateway
-  module and then a module for the next level up in the protocol?
-  https://github.com/msantos/inert
-  I'm a little unclear about what can be polled in different OS threads here, but
-  hopefully the poll can happen anywhere as long as no reading happens? the poll
-  is just a chance for the zmq-level poll to happen?
-  WRONG?: Because there's no "poll zmq inbound and process mailbox" facility in
-  elixir, this is going to sit in a loop alternating between polling those
-  two things separately. That's pretty horrible. Another erlang/zmq
-  implementations have the ability to gateway incoming zmq directly into
-  process mailbox, but is pretty out of date, and that functionality
-  was removed in the erlzmq_dnif fork of that code. It would let this process
-  be much more message driven, I think, if it existed.
-
   TODO: this cannot restart properly: when it is restarted by its supervisor,
   the bound socket from the previous process is left open and so it fails to
   perform the bind. should we fail completely and abandon the workflow?
@@ -314,8 +298,22 @@ defmodule EIC.TasksInterchangeToWorkers do
     {:ok, socket_to_workers} = :erlzmq.socket(ctx, :router)
     :ok = :erlzmq.bind(socket_to_workers, "tcp://127.0.0.1:9003")
 
-    # TODO: this timeout should be 0 and event driven with "inert"
-    :ok = :erlzmq.setsockopt(socket_to_workers, :rcvtimeo, 1000)
+    # set timeout to zero, because a poll doesn't necessarily mean
+    # a result will be readable - just that it's time to try, without
+    # blocking.
+    :ok = :erlzmq.setsockopt(socket_to_workers, :rcvtimeo, 0)
+    {:ok, fd} = :erlzmq.getsockopt(socket_to_workers, :fd)
+
+    Logger.debug(["ZMQ fd to poll is ", inspect(fd)])
+
+    # Here's someones note about using fd socket options:
+    # https://github.com/zeromq/libzmq/issues/2941
+    # to work with an fd-driven event loop (which is kinda what
+    # is happening here, but with inert to gateway the fd based
+    # stuff into erlang messages / erlang's "event loop"
+
+    :ok = :inert.start()
+    :ok = :inert.fdset(fd)
 
     loop(socket_to_workers)
   end
@@ -323,34 +321,23 @@ defmodule EIC.TasksInterchangeToWorkers do
   def loop(socket) do
     # IO.puts("TasksInterchangeToWorkers: recv poll")
 
-    # TODO: this timeout polling mode is going to give a pretty bad
-    # rate limit on throughput through the interchange... and pretty
-    # ugly to do more fancy stuff like while loops that also try to
-    # be fair on each direction. The active gatewaying stuff mentioned
-    # above would be nicer... or being able to do a zmq poll on two
-    # sockets and use inproc zmq sockets, which I started prototyping
-    # then discovered you can't do zmq poll on multiple sockets in this
-    # zmq implementation.
-
-    case :erlzmq.recv_multipart(socket) do
-      {:ok, [source, msg]} -> 
-        Logger.debug(inspect(msg))
-        decoded_msg = JSON.decode!(msg)
-        Logger.debug(inspect(decoded_msg))
-        handle_message_from_worker(source, decoded_msg)
-      {:error, :eagain} ->
-        Logger.debug("timeout no-op / recv from socket")
-    end
-
     receive do
+      {:inert_read, _, fd} -> 
+        Logger.debug(["inert poll message for fd ", inspect(fd)])
+        :ok = :inert.fdset(fd)
+        case :erlzmq.recv_multipart(socket) do
+          {:ok, [source, msg]} -> 
+            Logger.debug(inspect(msg))
+            decoded_msg = JSON.decode!(msg)
+            Logger.debug(inspect(decoded_msg))
+            handle_message_from_worker(source, decoded_msg)
+          {:error, :eagain} ->
+            Logger.debug("EAGAIN on recv from socket - harmless ignoring of poll")
+        end
+          
       m -> Logger.debug("TasksInterchangeToWorkers: sending a multipart message to workers")
            :erlzmq.send_multipart(socket, m)
-    after 
-      # TODO: there should not need to be a timeout here - everything should be driven by
-      # erlang messages
-      1000 -> Logger.debug("timeout no-op / send to socket")
     end
-
 
     loop(socket)
   end

@@ -27,7 +27,8 @@ defmodule EIC.MixProject do
       # TODO: this can only unpickle, which will be a problem when we want to make dictionary structures...
       # {:unpickler, "~> 0.1.0"},
       # ... so lets try this that hasn't been touched in a decade and needs some hacking
-      {:pickle, path: "./pickle"}
+      {:pickle, path: "./pickle"},
+      {:inert, path: "./inert"}
 
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
