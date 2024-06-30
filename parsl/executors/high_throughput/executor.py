@@ -573,7 +573,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         try:
             (self.worker_task_port, self.worker_result_port) = self.command_client.run("WORKER_PORTS", timeout_s=120)
         except CommandClientTimeoutError:
-            logger.error("Interchange has not completed initialization. Aborting")
+            logger.error("Interchange has not completed initialization")
+            # TODO: use a parsl exception...
             raise Exception("Interchange failed to start")
         logger.debug("Got worker ports")
 
