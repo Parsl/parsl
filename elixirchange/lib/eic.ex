@@ -242,7 +242,7 @@ defmodule EIC.CommandChannel do
   end
 
   def handle_command("WORKER_PORTS") do
-    # TOOD: this can be dynamic... (since #3461)
+    # TODO: this can be dynamic... (since #3461)
     {9003, 9004}
   end
 
