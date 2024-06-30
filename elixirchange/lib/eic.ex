@@ -169,6 +169,9 @@ defmodule EIC.ResultsWorkersToInterchange do
     # (specifically VersionMismatch) rather than a task-specific result.
     # There's no handling for that here. And no testing for it in the
     # test suite, I think... but it should go in the protocol documentation...
+    # TODO: this -1 could turn into a different typed result, in the same
+    # way as heartbeats are - rather than overloading "result" with magic
+    # values. TODO: open an issue, #NNNN
 
     Logger.info(["Delivering result to ParslTask id ", inspect(task_id)])
     [{task_process, :whatever}] = Registry.lookup(EIC.TaskRegistry, task_id)
