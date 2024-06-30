@@ -332,8 +332,6 @@ defmodule EIC.TasksInterchangeToWorkers do
     # then discovered you can't do zmq poll on multiple sockets in this
     # zmq implementation.
 
-    # TODO: this can now be: {:error, :eagain}
-    # when we hit timeout, where we would then loop around again
     case :erlzmq.recv_multipart(socket) do
       {:ok, [source, msg]} -> 
         Logger.debug(inspect(msg))
