@@ -126,6 +126,16 @@ defmodule EIC.ResultsWorkersToInterchange do
 
     [manager_id | results] = msgs
 
+    # I guess the protocol implicitly assumes that results come from the manager that we sent the task to...
+    # but what happens if not? does everything still behave right?
+    # If we don't care, then we can drop the manager ID from the message sequence and move to a less
+    # complicated message protocol here, that does not need to be a DEALER+multipart message...
+    # and if we do care... how does the Python implementation deal with a different manager ID?
+    # For example, in insecure mode (and other such badnesses), perhaps we'd get a task from a manager
+    # we don't even know about? In which case, a bunch of code possibly might break because it makes
+    # the assumption that there will be some appropriate state for that particular manager...
+    # TODO: protocol clarification: open an issue? write a test?
+
     Logger.info(["Results messages are from manager id: ", inspect(manager_id)])
     Logger.info(["There are ", inspect(length(results)), " results in this multipart message"])
 
@@ -141,7 +151,7 @@ defmodule EIC.ResultsWorkersToInterchange do
 
       # now we can dispatch on result_type...
       case result_type do
-          {:pickle_unicode, "result"} -> deliver_result(result_dict)
+          {:pickle_unicode, "result"} -> deliver_result(result_dict, manager_id)
           x -> raise "Unknown result message type"
       end
 
@@ -150,11 +160,11 @@ defmodule EIC.ResultsWorkersToInterchange do
     loop(socket)
   end
 
-  def deliver_result(result_dict) do
+  def deliver_result(result_dict, manager_id) do
     task_id = :dict.fetch({:pickle_unicode, "task_id"}, result_dict)
     Logger.info(["Delivering result to ParslTask id ", inspect(task_id)])
     [{task_process, :whatever}] = Registry.lookup(EIC.TaskRegistry, task_id)
-    GenServer.cast(task_process, {:result, result_dict})
+    GenServer.cast(task_process, {:result, result_dict, manager_id})
   end
 
 end
@@ -394,7 +404,7 @@ defmodule EIC.Matchmaker do
     new_state = %{:tasks => [task_dict | state[:tasks]], :managers => state[:managers]}
 
     new_state2 = matchmake(new_state)
-    {:noreply, new_state}
+    {:noreply, new_state2}
   end
 
   def handle_cast({:new_manager, registration_msg}, state) do
@@ -404,8 +414,29 @@ defmodule EIC.Matchmaker do
     {:noreply, new_state2}
   end
 
+  def handle_cast({:return_worker, manager_id}, state) do
+    Logger.debug(["Matchmaker: return worker to manager ", inspect(manager_id)])
+    %{tasks: ts, managers: ms} = state
+    # TODO: implement me...
+    #        ... pull out the relevant manager
+    #        ... increase its capacity
+    #        ... and put it at the head of the manager list
+
+    # assumption that there is exactly one matching manager, m
+    # which is untrue in the case of unknown managers or other bugs
+    {[m], m_rest} = Enum.split_with(ms, fn m_ -> m_["uid"] == manager_id end)
+
+    c = m["max_capacity"]
+    new_capacity = c + 1
+    modified_m = Map.put(m, "max_capacity", new_capacity)
+
+    new_state = %{:tasks => ts, :managers => [modified_m | m_rest]}
+    new_state2 = matchmake(new_state)
+    {:noreply, new_state2}
+  end
+
   def handle_cast(rest, state) do
-    Logger.error(["Matchmaker: ERROR: leftover handle_cast", inspect(rest)])
+    Logger.error(["Matchmaker: ERROR: unmatched handle_cast: ", inspect(rest)])
     raise "Unhandled Matchmaker cast"
   end
 
@@ -447,12 +478,48 @@ defmodule EIC.Matchmaker do
     # this pickling here is pickling byte sequences using Python2 pickle formats
     # which don't unpickle correctly - BINSTRING not BINBYTES - so probably need
     # to fiddle with the elixir-side pickle library some more.
-    pickled_list_of_tasks = :pickle.term_to_pickle([task_dict])  # TODO: WRONG?
-    parts = [m["uid"], <<>>, pickled_list_of_tasks] 
 
-    send(EIC.TasksInterchangeToWorkers, parts)
+    # TODO: should this pickle happen in the task process? In the Python interchange,
+    # we might be sending multiple tasks here in this list, but in this impl,
+    # we're only ever sending one... concurrency unlock potential in pickling
+    # in task-specific code?
 
-    %{:tasks => t_rest, :managers => m_rest}
+    # TODO: case for when we don't have a live manager... so we need to defer
+    # (until the matchmaker gets tickled again by a worker being released)
+
+    c = m["max_capacity"]
+    if c < 1 do
+      Logger.debug("Head manager has no capacity... no match to make")  
+
+      # TODO: is there a syntax to avoid reconstructing these args?
+      %{:tasks => [task_dict | t_rest], :managers => [m | m_rest]}
+    else
+
+      Logger.debug(["Selected manager has max_capacity: ", inspect(c)])
+      pickled_list_of_tasks = :pickle.term_to_pickle([task_dict])
+      parts = [m["uid"], <<>>, pickled_list_of_tasks] 
+
+      send(EIC.TasksInterchangeToWorkers, parts)
+
+      new_capacity = c - 1
+      modified_m = Map.put(m, "max_capacity", new_capacity)
+
+      new_managers_state = if new_capacity < 1 do
+        # move this manager to the end of the list, so that other managers
+        # potentially with task slots, are earlier in the list (specifically,
+        # if any manager has an available task slot, then the head of the list must
+        # have an available task slot - would be interesting to assert that
+        # somewhere? eg. at the start of each handle_cast?
+        new_managers_state = m_rest ++ [modified_m]
+      else
+        # if we still have capactity, keep this manager at the head of the
+        # list - because we know it is a manager with capacity, so that is a
+        # suitable list head... 
+        new_managers_state = [modified_m | m_rest]
+      end
+
+      %{:tasks => t_rest, :managers => new_managers_state}
+    end
   end
 
   def matchmake(state) do
@@ -516,15 +583,15 @@ defmodule EIC.ParslTask do
     {:noreply, []}
   end
 
-  def handle_cast({:result, result_dict}, []) do
+  def handle_cast({:result, result_dict, manager_id}, []) do
     Logger.warn("in ParslTask result handler")
     pickled_result = :pickle.term_to_pickle(result_dict)
     send(EIC.ResultsInterchangeToSubmit, pickled_result)
+   
+    # we can assume (see TODO issue #NNNN) that the manager_id here is the
+    # manger that should be released - although there's no test for it...
 
-    # TODO - do something to make that worker available for allocation again
-    # - interact with the Matchmaker? Perhaps a "return worker" cast that increments the
-    # worker count on that manager? We'd need to not be throwing away entire managers
-    # as we do now... which is the right way anyway I think...
+    GenServer.cast(:matchmaker, {:return_worker, manager_id})
 
     {:noreply, []}
   end
