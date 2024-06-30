@@ -17,6 +17,7 @@ import zmq
 
 from parsl import curvezmq
 from parsl.app.errors import RemoteExceptionWrapper
+from parsl.executors.high_throughput.errors import ManagerLost, VersionMismatch
 from parsl.executors.high_throughput.manager_record import ManagerRecord
 from parsl.monitoring.message_type import MessageType
 from parsl.process_loggers import wrap_with_logs
@@ -29,32 +30,6 @@ PKL_DRAINED_CODE = pickle.dumps((2 ** 32) - 2)
 
 LOGGER_NAME = "interchange"
 logger = logging.getLogger(LOGGER_NAME)
-
-
-class ManagerLost(Exception):
-    ''' Task lost due to manager loss. Manager is considered lost when multiple heartbeats
-    have been missed.
-    '''
-    def __init__(self, manager_id: bytes, hostname: str) -> None:
-        self.manager_id = manager_id
-        self.tstamp = time.time()
-        self.hostname = hostname
-
-    def __str__(self) -> str:
-        return "Task failure due to loss of manager {} on host {}".format(self.manager_id.decode(), self.hostname)
-
-
-class VersionMismatch(Exception):
-    ''' Manager and Interchange versions do not match
-    '''
-    def __init__(self, interchange_version: str, manager_version: str):
-        self.interchange_version = interchange_version
-        self.manager_version = manager_version
-
-    def __str__(self) -> str:
-        return "Manager version info {} does not match interchange version info {}, causing a critical failure".format(
-            self.manager_version,
-            self.interchange_version)
 
 
 class Interchange:
