@@ -48,7 +48,7 @@ defmodule EIC.Supervisor do
       # Getting the syntax right for the arguments to this was very fiddly...
       # maybe because I was paging back into Elixir syntax...
       %{id: EIC.TaskSupervisor,
-        start: {DynamicSupervisor, :start_link, [[name: EIC.TaskSupervisor, strategy: :one_for_one]]}
+        start: {DynamicSupervisor, :start_link, [[name: EIC.TaskSupervisor, strategy: :one_for_one, max_restarts: 0]]}
       },
       %{id: EIC.TaskRegistry,
        start: {Registry, :start_link, [[name: EIC.TaskRegistry, keys: :unique]]}
@@ -152,6 +152,7 @@ defmodule EIC.ResultsWorkersToInterchange do
       # now we can dispatch on result_type...
       case result_type do
           {:pickle_unicode, "result"} -> deliver_result(result_dict, manager_id)
+          {:pickle_unicode, "heartbeat"} -> Logger.info("Result-channel heartbeat, no need for implementation - see #3464")
           x -> raise "Unknown result message type"
       end
 
@@ -367,6 +368,10 @@ defmodule EIC.TasksInterchangeToWorkers do
    GenServer.cast(:matchmaker, {:new_manager, msg})
   end
 
+  def handle_message_from_worker(source, %{"type" => "heartbeat"} = msg) do
+    Logger.error("NOTIMPL: task side heartbeat... will probably cause worker pools to time out... and also will cause hangs when a worker pool dies")
+  end
+
   # TODO: there can be heartbeat here, but I think the test suite might not be
   # testing it: it will only get sent (I think) if no tasks have been received
   # which might be a rare occurence in the task-heavy test environment? maybe
@@ -374,8 +379,12 @@ defmodule EIC.TasksInterchangeToWorkers do
   # I encountered it in the test suite when not processing results in elixirchange
   # and so not sending any more tasks, and so the process worker pool eventually
   # decides to send a heartbeat on this channel because of the silence, I guess?
+  def handle_message_from_worker(source, %{"type" => t} = msg) do
+    raise "Unsupported message type: #{t}"
+  end
+
   def handle_message_from_worker(source, msg) do
-    raise "Unsupported message"
+    raise "Unsupported message without type tag: #{msg}"
   end
 end
 
