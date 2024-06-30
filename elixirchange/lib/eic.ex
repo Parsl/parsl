@@ -228,8 +228,6 @@ defmodule EIC.CommandChannel do
     {:pickle_unicode, command} = :pickle.pickle_to_term(msg)
     Logger.debug(["Received command channel command: ", inspect(command)])
 
-    # now dispatch this command using case matching... TODO
-
     response = handle_command(command)
 
     pickled_response = :pickle.term_to_pickle(response)
