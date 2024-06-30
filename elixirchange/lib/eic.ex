@@ -247,6 +247,12 @@ defmodule EIC.CommandChannel do
     # as supplied by manager registration messages
   end
 
+  def handle_command("MANAGERS") do
+    # TODO: scaling in won't work right for this... but that hasn't caused any
+    # test failures so far...
+    []
+  end
+
   def handle_command(_bad) do
     # TODO: what should happen when we receive a bad command, protocol-wise?
     # The rusterchange, at this point, dies. But perhaps we should be sending
