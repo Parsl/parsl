@@ -163,6 +163,13 @@ defmodule EIC.ResultsWorkersToInterchange do
 
   def deliver_result(result_dict, manager_id) do
     task_id = :dict.fetch({:pickle_unicode, "task_id"}, result_dict)
+
+    # TODO: task_id might be -1 here...
+    # which is used when sending back a pool-wide exception at startup
+    # (specifically VersionMismatch) rather than a task-specific result.
+    # There's no handling for that here. And no testing for it in the
+    # test suite, I think... but it should go in the protocol documentation...
+
     Logger.info(["Delivering result to ParslTask id ", inspect(task_id)])
     [{task_process, :whatever}] = Registry.lookup(EIC.TaskRegistry, task_id)
     GenServer.cast(task_process, {:result, result_dict, manager_id})
