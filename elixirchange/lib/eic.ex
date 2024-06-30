@@ -200,14 +200,9 @@ defmodule EIC.ResultsInterchangeToSubmit do
     receive do
       m -> Logger.debug("sending result message to submit side")
            :erlzmq.send(socket, m)
-    after 
-      # TODO: there should not need to be a timeout here - everything should be driven by
-      # erlang messages
-      1000 -> Logger.debug("timeout no-op / send to socket")
     end
     loop(socket)
   end
-
 end
 
 defmodule EIC.CommandChannel do
