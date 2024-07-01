@@ -23,8 +23,8 @@ Parsl lets you chain functions together and will launch each function as inputs 
         return x + 1
 
     @python_app
-    def g(x):
-        return x * 2
+    def g(x, y):
+        return x + y
 
     # These functions now return Futures, and can be chained
     future = f(1)
