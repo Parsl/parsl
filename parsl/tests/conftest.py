@@ -239,6 +239,8 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
     config = pytestconfig.getoption('config')[0]
 
     if config == 'local':
+        logger.error(f"BENC: start threads: {threading.active_count()}")
+
         local_setup = getattr(request.module, "local_setup", None)
         local_teardown = getattr(request.module, "local_teardown", None)
         local_config = getattr(request.module, "local_config", None)
@@ -270,6 +272,7 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
                 raise RuntimeError("DFK changed unexpectedly during test")
             dfk.cleanup()
             assert DataFlowKernelLoader._dfk is None
+        logger.error(f"BENC: end threads: {threading.active_count()}")
 
     else:
         yield
