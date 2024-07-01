@@ -236,6 +236,7 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
         this_process = psutil.Process()
         start_fds = this_process.num_fds()
         logger.error(f"BENC: start open fds: {start_fds}")
+        logger.error(f"BENC: start threads: {threading.active_count()}")
 
         local_setup = getattr(request.module, "local_setup", None)
         local_teardown = getattr(request.module, "local_teardown", None)
@@ -270,6 +271,7 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
             assert DataFlowKernelLoader._dfk is None
         end_fds = this_process.num_fds()
         logger.error(f"BENC: end open fds: {end_fds} (vs start {start_fds}")
+        logger.error(f"BENC: end threads: {threading.active_count()}")
 
     else:
         yield
