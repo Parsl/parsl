@@ -1,8 +1,9 @@
 """This module implements DataFutures.
 """
+import os.path
 from hashlib import md5
 import logging
-from os import stat
+from os import stat, path
 from concurrent.futures import Future
 from typing import Optional, Any
 from datetime import datetime
@@ -38,9 +39,12 @@ class DataFuture(Future):
             self.set_exception(e)
         else:
             self.set_result(self.file_obj)
-            self.file_obj.timestamp = datetime.now()
-            self.file_obj.size = stat(self.file_obj.filepath).st_size
-            self.file_obj.md5sum = md5(open(self.file_obj, 'rb').read()).hexdigest()
+            if not self.file_obj.timestamp:
+                self.file_obj.timestamp = datetime.now()
+            if not self.file_obj.size:
+                self.file_obj.size = stat(self.file_obj.filepath).st_size
+            if not self.file_obj.md5sum:
+                self.file_obj.md5sum = md5(open(self.file_obj, 'rb').read()).hexdigest()
             if self.data_flow_kernel:
                 self.data_flow_kernel.register_as_output(self.file_obj, self.app_fut.task_record)
 
@@ -71,6 +75,11 @@ class DataFuture(Future):
             self.app_fut = fut
         self.data_flow_kernel = dfk
         self.parent.add_done_callback(self.parent_callback)
+        if os.path.exists(file_obj.path):
+            file_stat = os.stat(file_obj.path)
+            self.file_obj.timestamp = file_stat.st_ctime
+            self.file_obj.size = file_stat.st_size
+            self.file_obj.md5sum = md5(open(self.file_obj, 'rb').read()).hexdigest()
 
         logger.debug("Creating DataFuture with parent: %s and file: %s", self.parent, repr(self.file_obj))
 
@@ -102,6 +111,16 @@ class DataFuture(Future):
     @timestamp.setter
     def timestamp(self, value: Optional[datetime]) -> None:
         self.file_obj.timestamp = value
+
+    @property
+    def size(self):
+        """Size of the file."""
+        return self.file_obj.size
+
+    @property
+    def md5sum(self):
+        """MD5 sum of the file."""
+        return self.file_obj.md5sum
 
     def cancel(self):
         raise NotImplementedError("Cancel not implemented")

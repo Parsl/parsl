@@ -498,13 +498,18 @@ class DatabaseManager:
                             file_id = msg['file_id']
                             file_all_messages.append(msg)
                             if file_id in inserted_files:
+                                changed = False
                                 if inserted_files[file_id]['timestamp'] is None:
-                                    inserted_files[file_id] = msg['timestamp']
+                                    inserted_files[file_id]['timestamp'] = msg['timestamp']
+                                    changed = True
                                 if inserted_files[file_id]['size'] is None:
-                                    inserted_files[file_id] = msg['size']
+                                    inserted_files[file_id]['size'] = msg['size']
+                                    changed = True
                                 if inserted_files[file_id]['md5sum'] is None:
-                                    inserted_files[file_id] = msg['md5sum']
-                                file_update_messages.append(msg)
+                                    inserted_files[file_id]['md5sum'] = msg['md5sum']
+                                    changed = True
+                                if changed:
+                                    file_update_messages.append(msg)
                             else:
                                 inserted_files[file_id] = {'size': msg['size'],
                                                            'md5sum': msg['md5sum'],
@@ -567,7 +572,7 @@ class DatabaseManager:
                     if file_update_messages:
                         logger.debug("Updating {} FILE_INFO into files table".format(len(file_update_messages)))
                         self._update(table=FILES,
-                                     columns=['timestamp'],
+                                     columns=['timestamp', 'size', 'md5sum', 'file_id'],
                                      messages=file_update_messages)
 
                     if input_file_insert_messages:
