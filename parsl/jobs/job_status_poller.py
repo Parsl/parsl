@@ -1,12 +1,9 @@
 import logging
-from typing import List, Sequence, Optional, Union
+from typing import List, Optional, Sequence, Union
 
-from parsl.jobs.strategy import Strategy
 from parsl.executors.status_handling import BlockProviderExecutor
-
-
+from parsl.jobs.strategy import Strategy
 from parsl.utils import Timer
-
 
 logger = logging.getLogger(__name__)
 

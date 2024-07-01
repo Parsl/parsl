@@ -1,5 +1,5 @@
-import os
 import concurrent.futures as cf
+import os
 
 import pytest
 

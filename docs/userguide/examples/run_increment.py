@@ -1,6 +1,7 @@
-import parsl
 from config import htex_config
 from library import increment
+
+import parsl
 
 parsl.load(htex_config)
 

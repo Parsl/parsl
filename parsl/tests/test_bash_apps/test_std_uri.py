@@ -1,9 +1,10 @@
 import logging
-import parsl
-import pytest
 import zipfile
-
 from functools import partial
+
+import pytest
+
+import parsl
 from parsl.app.futures import DataFuture
 from parsl.data_provider.files import File
 from parsl.executors import ThreadPoolExecutor
@@ -34,8 +35,6 @@ def const_with_cpath(autopath_specifier, content_path, caplog):
 
     for record in caplog.records:
         assert record.levelno < logging.ERROR
-
-    parsl.clear()
 
 
 @pytest.mark.local
@@ -73,8 +72,6 @@ def test_std_autopath_fail(caplog):
     with parsl.load(parsl.Config(std_autopath=fail_uri)):
         with pytest.raises(URIFailError):
             app_stdout()
-
-    parsl.clear()
 
 
 @parsl.bash_app
@@ -124,5 +121,3 @@ def test_std_autopath_zip(caplog, tmpd_cwd):
 
     for record in caplog.records:
         assert record.levelno < logging.ERROR
-
-    parsl.clear()

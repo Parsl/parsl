@@ -6,21 +6,21 @@ import pathlib
 import random
 import re
 import shutil
-import string
-import time
-import types
 import signal
+import string
 import sys
 import tempfile
 import threading
+import time
 import traceback
+import types
 import typing as t
 from datetime import datetime
 from glob import glob
 from itertools import chain
 
-import pytest
 import _pytest.runner as runner
+import pytest
 
 import parsl
 from parsl.dataflow.dflow import DataFlowKernelLoader
@@ -153,6 +153,10 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
+        'unix_filesystem_permissions_required: Marks tests that require unix-level filesystem permission enforcement'
+    )
+    config.addinivalue_line(
+        'markers',
         'issue3328: Marks tests broken by issue #3328'
     )
     config.addinivalue_line(
@@ -201,7 +205,7 @@ def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
         if parsl.dfk() != dfk:
             raise RuntimeError("DFK changed unexpectedly during test")
         dfk.cleanup()
-        parsl.clear()
+        assert DataFlowKernelLoader._dfk is None
     else:
         yield
 
@@ -253,7 +257,7 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
             if parsl.dfk() != dfk:
                 raise RuntimeError("DFK changed unexpectedly during test")
             dfk.cleanup()
-            parsl.clear()
+            assert DataFlowKernelLoader._dfk is None
 
     else:
         yield

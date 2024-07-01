@@ -1,8 +1,8 @@
 """Interfaces modeled after Python's `concurrent library <https://docs.python.org/3/library/concurrent.html>`_"""
-from typing import Callable, Dict, Optional, Iterator, Iterable
-from concurrent.futures import Executor
-from warnings import warn
 import time
+from concurrent.futures import Executor
+from typing import Callable, Dict, Iterable, Iterator, Optional
+from warnings import warn
 
 from parsl import Config, DataFlowKernel
 from parsl.app.python import PythonApp

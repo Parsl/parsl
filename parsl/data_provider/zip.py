@@ -1,15 +1,14 @@
-import filelock
 import logging
 import os
-import parsl
 import zipfile
-
 from typing import Tuple
 
-from parsl.data_provider.staging import Staging
-from parsl.data_provider.files import File
-from parsl.errors import ParslError
+import filelock
 
+import parsl
+from parsl.data_provider.files import File
+from parsl.data_provider.staging import Staging
+from parsl.errors import ParslError
 
 logger = logging.getLogger(__name__)
 

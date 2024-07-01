@@ -1,12 +1,12 @@
 import os
-import parsl
-import pytest
 import time
 
+import pytest
+
+import parsl
 from parsl import HighThroughputExecutor
 from parsl.config import Config
-from parsl.executors.taskvine import TaskVineExecutor
-from parsl.executors.taskvine import TaskVineManagerConfig
+from parsl.executors.taskvine import TaskVineExecutor, TaskVineManagerConfig
 from parsl.monitoring import MonitoringHub
 
 
@@ -65,8 +65,6 @@ def test_row_counts(tmpd_cwd, fresh_config):
 
     with parsl.load(config):
         assert this_app().result() == 5
-
-    parsl.clear()
 
     # at this point, we should find one row in the monitoring database.
 

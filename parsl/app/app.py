@@ -3,18 +3,15 @@
 The App class encapsulates a generic leaf task that can be executed asynchronously.
 """
 import logging
-import typeguard
 from abc import ABCMeta, abstractmethod
 from inspect import signature
-from typing import List, Optional, Sequence, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+
+import typeguard
 from typing_extensions import Literal
 
 from parsl.dataflow.dflow import DataFlowKernel
-
-from typing import Any, Callable, Dict
-
 from parsl.dataflow.futures import AppFuture
-
 
 logger = logging.getLogger(__name__)
 
@@ -69,8 +66,6 @@ class AppBase(metaclass=ABCMeta):
             self.kwargs['walltime'] = params['walltime'].default
         if 'parsl_resource_specification' in params:
             self.kwargs['parsl_resource_specification'] = params['parsl_resource_specification'].default
-        self.outputs = params['outputs'].default if 'outputs' in params else []
-        self.inputs = params['inputs'].default if 'inputs' in params else []
 
     @abstractmethod
     def __call__(self, *args: Any, **kwargs: Any) -> AppFuture:

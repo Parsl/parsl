@@ -1,13 +1,13 @@
-import parsl
-import pytest
 import time
 
-from parsl.providers import LocalProvider
-from parsl.channels import LocalChannel
-from parsl.launchers import SimpleLauncher
+import pytest
 
+import parsl
+from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
+from parsl.launchers import SimpleLauncher
+from parsl.providers import LocalProvider
 
 # this constant is used to scale some durations that happen
 # based around the expected drain period: the drain period

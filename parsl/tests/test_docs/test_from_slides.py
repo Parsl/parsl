@@ -1,7 +1,7 @@
+import os
+
 from parsl.app.app import bash_app, python_app
 from parsl.data_provider.files import File
-
-import os
 
 
 @bash_app

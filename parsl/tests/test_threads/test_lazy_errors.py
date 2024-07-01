@@ -1,5 +1,6 @@
-import parsl
 import pytest
+
+import parsl
 from parsl import python_app
 from parsl.tests.configs.local_threads import fresh_config
 
@@ -24,5 +25,4 @@ def test_lazy_behavior():
         assert f.done()
 
     parsl.dfk().cleanup()
-    parsl.clear()
     return

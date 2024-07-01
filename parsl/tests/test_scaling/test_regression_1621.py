@@ -69,6 +69,4 @@ def test_one_block(tmpd_cwd):
     with parsl.load(config):
         app().result()
 
-    parsl.clear()
-
     assert oneshot_provider.recorded_submits == 1
