@@ -264,15 +264,15 @@ class DataFlowKernel:
 
     def _create_file_io_info(self, file: Union[File, DataFuture, DynamicFileList.DynamicFile],
                                 task_record: TaskRecord) -> Dict[str, Any]:
-            """
-            Create the dictionary that will be included in the log.
-            """
+        """
+        Create the dictionary that will be included in the log.
+        """
         file_io_info = {'file_id': str(file.uuid),
                             'run_id': self.run_id,
                             'task_id': task_record['id'],
                             'try_id': task_record['try_id'],
                             }
-            return file_io_info
+        return file_io_info
 
     def _create_task_log_info(self, task_record: TaskRecord) -> Dict[str, Any]:
         """
