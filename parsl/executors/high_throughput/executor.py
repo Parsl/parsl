@@ -551,6 +551,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         logger.debug("Popened interchange process. Writing config object")
         stdin.write(config_pickle)
         stdin.flush()
+        stdin.close()
         logger.debug("Sent config object. Requesting worker ports")
         try:
             (self.worker_task_port, self.worker_result_port) = self.command_client.run("WORKER_PORTS", timeout_s=120)
