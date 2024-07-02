@@ -814,12 +814,13 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
                         "[%(levelname)s]  %(message)s"
 
     logger = logging.getLogger(name)
+    logger2 = logging.getLogger("")
     logger.setLevel(logging.DEBUG)
     handler = logging.FileHandler(filename)
     handler.setLevel(level)
     formatter = logging.Formatter(format_string, datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    logger2.addHandler(handler)
     return logger
 
 

@@ -44,8 +44,8 @@ def test_row_counts():
     #   the latter is what i'm most suspicious of in my present investigation
 
     # dig out the interchange port...
-    hub_address = parsl.dfk().hub_address
-    hub_zmq_port = parsl.dfk().hub_zmq_port
+    hub_address = parsl.dfk().monitoring.hub_address
+    hub_zmq_port = parsl.dfk().monitoring.hub_zmq_port
 
     # this will send a string to a new socket connection
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

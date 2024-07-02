@@ -113,14 +113,10 @@ class DataFlowKernel:
         self.monitoring: Optional[MonitoringHub]
         self.monitoring = config.monitoring
 
-        # hub address and port for interchange to connect
-        self.hub_address = None  # type: Optional[str]
-        self.hub_zmq_port = None  # type: Optional[int]
         if self.monitoring:
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
-            self.hub_address = self.monitoring.hub_address
-            self.hub_zmq_port = self.monitoring.start(self.run_id, self.run_dir, self.config.run_dir)
+            self.monitoring.start(self.run_id, self.run_dir, self.config.run_dir)
 
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
@@ -748,16 +744,21 @@ class DataFlowKernel:
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
+
+            # this is only for UDP... it should be some kind of config-specific initialisation
+            # which could also start threads, and this should be one-shot
+            # executor.monitoring_radio.ip = self.monitoring.hub_address  # type: ignore[attr-defined]
+            # executor.monitoring_radio.port = self.monitoring.udp_port  # type: ignore[attr-defined]
+
             (function, args, kwargs) = monitor_wrapper(f=function,
                                                        args=args,
                                                        kwargs=kwargs,
                                                        x_try_id=try_id,
                                                        x_task_id=task_id,
-                                                       monitoring_hub_url=self.monitoring.monitoring_hub_url,
+                                                       radio_config=executor.remote_monitoring_radio_config,
                                                        run_id=self.run_id,
                                                        logging_level=wrapper_logging_level,
                                                        sleep_dur=self.monitoring.resource_monitoring_interval,
-                                                       radio_mode=executor.radio_mode,
                                                        monitor_resources=executor.monitor_resources(),
                                                        run_dir=self.run_dir)
 
@@ -1181,10 +1182,22 @@ class DataFlowKernel:
         for executor in executors:
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
-            executor.hub_address = self.hub_address
-            executor.hub_zmq_port = self.hub_zmq_port
             if self.monitoring:
-                executor.monitoring_radio = self.monitoring.radio
+                executor.hub_address = self.monitoring.hub_address
+                executor.hub_zmq_port = self.monitoring.hub_zmq_port
+                executor.submit_monitoring_radio = self.monitoring.radio
+                # this will modify the radio config object: it will add relevant parameters needed
+                # for the particular remote radio sender to communicate back
+                logger.info("starting monitoring receiver "
+                            f"for executor {executor} "
+                            f"with remote monitoring radio config {executor.remote_monitoring_radio_config}")
+                executor.monitoring_receiver = self.monitoring.start_receiver(executor.remote_monitoring_radio_config,
+                                                                              ip=self.monitoring.hub_address)
+                # TODO: this is a weird way to start the receiver.
+                # Rather than in executor.start, but there's a tangle here
+                # trying to make the executors usable in a non-pure-parsl
+                # context where there is no DFK to grab config out of?
+                # (and no monitoring...)
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')

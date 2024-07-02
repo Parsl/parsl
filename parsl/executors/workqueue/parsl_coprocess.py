@@ -147,6 +147,8 @@ def name():
 @remote_execute
 def run_parsl_task(a, b, c):
     import parsl.executors.workqueue.exec_parsl_function as epf
+    from parsl.app.errors import RemoteExceptionWrapper
+ 
     try:
         (map_file, function_file, result_file) = (a, b, c)
         try:
