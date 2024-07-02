@@ -1,9 +1,15 @@
 import getpass
 import logging
 
-import paramiko
-
 from parsl.channels.ssh.ssh import SSHChannel
+from parsl.errors import OptionalModuleMissing
+
+try:
+    import paramiko
+    _ssh_enabled = True
+except (ImportError, NameError, FileNotFoundError):
+    _ssh_enabled = False
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +36,10 @@ class SSHInteractiveLoginChannel(SSHChannel):
 
         Raises:
         '''
+        if not _ssh_enabled:
+            raise OptionalModuleMissing(['ssh'],
+                                        "SSHInteractiveLoginChannel requires the ssh module and config.")
+
         self.hostname = hostname
         self.username = username
         self.password = password
