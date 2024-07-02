@@ -122,4 +122,4 @@ coverage: ## show the coverage report
 
 .PHONY: clean
 clean: ## clean up the environment by deleting the .venv, dist, eggs, mypy caches, coverage info, etc
-	rm -rf .venv $(DEPS) dist *.egg-info .mypy_cache build .pytest_cache .coverage runinfo_* $(WORKQUEUE_INSTALL)
+	rm -rf .venv $(DEPS) dist *.egg-info .mypy_cache build .pytest_cache .coverage runinfo $(WORKQUEUE_INSTALL)

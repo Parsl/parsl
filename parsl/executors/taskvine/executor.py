@@ -196,8 +196,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if self.manager_config.port == 0 and self.manager_config.project_name is None:
             self.manager_config.project_name = "parsl-vine-" + str(uuid.uuid4())
 
-        # guess the host name if the project name is not given
-        if not self.manager_config.project_name:
+        # guess the host name if the project name is not given and none has been supplied
+        # explicitly in the manager config.
+        if not self.manager_config.project_name and self.manager_config.address is None:
             self.manager_config.address = get_any_address()
 
         # Factory communication settings are overridden by manager communication settings.
@@ -228,7 +229,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # factory logs go with manager logs regardless
         self.factory_config.scratch_dir = self.manager_config.vine_log_dir
         logger.debug(f"Function data directory: {self._function_data_dir}, log directory: {log_dir}")
-        logger.debug(f"TaskVine manager log directory: {self.manager_config.vine_log_dir}, factory log directory: {self.factory_config.scratch_dir}")
+        logger.debug(
+            f"TaskVine manager log directory: {self.manager_config.vine_log_dir}, "
+            f"factory log directory: {self.factory_config.scratch_dir}")
 
     def start(self):
         """Create submit process and collector thread to create, send, and

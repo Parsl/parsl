@@ -5,8 +5,6 @@ Developer documentation
    :maxdepth: 3
 
    contributing
-   changelog
-   design
    roadmap
    packaging
    ../README

@@ -296,12 +296,12 @@ class Timer:
 
     """
 
-    def __init__(self, callback: Callable, *args: Any, interval: int = 5, name: Optional[str] = None) -> None:
+    def __init__(self, callback: Callable, *args: Any, interval: Union[float, int] = 5, name: Optional[str] = None) -> None:
         """Initialize the Timer object.
         We start the timer thread here
 
         KWargs:
-             - interval (int) : number of seconds between callback events
+             - interval (int or float) : number of seconds between callback events
              - name (str) : a base name to use when naming the started thread
         """
 
