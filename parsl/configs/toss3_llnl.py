@@ -2,6 +2,7 @@ from parsl.config import Config
 from parsl.executors import FluxExecutor
 from parsl.launchers import SrunLauncher
 from parsl.providers import SlurmProvider
+from parsl.usage_tracking.levels import LEVEL_1
 
 config = Config(
     executors=[
@@ -24,5 +25,6 @@ config = Config(
                 cmd_timeout=120,
             ),
         )
-    ]
+    ],
+    usage_tracking=LEVEL_1,
 )

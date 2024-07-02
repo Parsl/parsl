@@ -11,6 +11,8 @@ from parsl.executors.base import ParslExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.monitoring import MonitoringHub
 from parsl.usage_tracking.api import UsageInformation
+from parsl.usage_tracking.levels import DISABLED as USAGE_TRACKING_DISABLED
+from parsl.usage_tracking.levels import LEVEL_3 as USAGE_TRACKING_LEVEL_3
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -38,6 +40,15 @@ class Config(RepresentationMixin, UsageInformation):
         ``checkpoint_mode='periodic'``.
     dependency_resolver: plugin point for custom dependency resolvers. Default: only resolve Futures,
         using the `SHALLOW_DEPENDENCY_RESOLVER`.
+    exit_mode: str, optional
+        When Parsl is used as a context manager (using ``with parsl.load`` syntax) then this parameter
+        controls what will happen to running tasks and exceptions at exit. The options are:
+
+        * ``cleanup``: cleanup the DFK on exit without waiting for any tasks
+        * ``skip``: skip all shutdown behaviour when exiting the context manager
+        * ``wait``: wait for all tasks to complete when exiting normally, but exit immediately when exiting due to an exception.
+
+        Default is ``cleanup``.
     garbage_collect : bool. optional.
         Delete task records from DFK when tasks have completed. Default: True
     internal_tasks_max_threads : int, optional
@@ -66,9 +77,12 @@ class Config(RepresentationMixin, UsageInformation):
         How often the scaling strategy should be executed. Default is 5 seconds.
     max_idletime : float, optional
         The maximum idle time allowed for an executor before strategy could shut down unused blocks. Default is 120.0 seconds.
-    usage_tracking : bool, optional
-        Set this field to True to opt-in to Parsl's usage tracking system. Parsl only collects minimal, non personally-identifiable,
-        information used for reporting to our funding agencies. Default is False.
+    usage_tracking : int, optional
+        Set this field to 1, 2, or 3 to opt-in to Parsl's usage tracking system.
+        The value represents the level of usage tracking detail to be collected.
+        Setting this field to 0 will disable usage tracking. Default (this field is not set): usage tracking is not enabled.
+        Parsl only collects minimal, non personally-identifiable,
+        information used for reporting to our funding agencies.
     initialize_logging : bool, optional
         Make DFK optionally not initialize any logging. Log messages
         will still be passed into the python logging system under the
@@ -92,6 +106,7 @@ class Config(RepresentationMixin, UsageInformation):
                                         Literal['manual']] = None,
                  checkpoint_period: Optional[str] = None,
                  dependency_resolver: Optional[DependencyResolver] = None,
+                 exit_mode: Literal['cleanup', 'skip', 'wait'] = 'cleanup',
                  garbage_collect: bool = True,
                  internal_tasks_max_threads: int = 10,
                  retries: int = 0,
@@ -102,7 +117,7 @@ class Config(RepresentationMixin, UsageInformation):
                  strategy_period: Union[float, int] = 5,
                  max_idletime: float = 120.0,
                  monitoring: Optional[MonitoringHub] = None,
-                 usage_tracking: bool = False,
+                 usage_tracking: int = 0,
                  initialize_logging: bool = True) -> None:
 
         executors = tuple(executors or [])
@@ -128,6 +143,7 @@ class Config(RepresentationMixin, UsageInformation):
             checkpoint_period = "00:30:00"
         self.checkpoint_period = checkpoint_period
         self.dependency_resolver = dependency_resolver
+        self.exit_mode = exit_mode
         self.garbage_collect = garbage_collect
         self.internal_tasks_max_threads = internal_tasks_max_threads
         self.retries = retries
@@ -136,6 +152,7 @@ class Config(RepresentationMixin, UsageInformation):
         self.strategy = strategy
         self.strategy_period = strategy_period
         self.max_idletime = max_idletime
+        self.validate_usage_tracking(usage_tracking)
         self.usage_tracking = usage_tracking
         self.initialize_logging = initialize_logging
         self.monitoring = monitoring
@@ -155,6 +172,12 @@ class Config(RepresentationMixin, UsageInformation):
         if len(duplicates) > 0:
             raise ConfigurationError('Executors must have unique labels ({})'.format(
                 ', '.join(['label={}'.format(repr(d)) for d in duplicates])))
+
+    def validate_usage_tracking(self, level: int) -> None:
+        if not USAGE_TRACKING_DISABLED <= level <= USAGE_TRACKING_LEVEL_3:
+            raise ConfigurationError(
+                f"Usage Tracking values must be 0, 1, 2, or 3 and not {level}"
+            )
 
     def get_usage_information(self):
         return {"executors_len": len(self.executors),

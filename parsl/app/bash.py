@@ -1,5 +1,5 @@
 import logging
-from functools import partial, update_wrapper
+from functools import partial
 from inspect import Parameter, signature
 
 from parsl.app.app import AppBase
@@ -123,11 +123,10 @@ class BashApp(AppBase):
             if sig.parameters[s].default is not Parameter.empty:
                 self.kwargs[s] = sig.parameters[s].default
 
-        # update_wrapper allows remote_side_bash_executor to masquerade as self.func
         # partial is used to attach the first arg the "func" to the remote_side_bash_executor
         # this is done to avoid passing a function type in the args which parsl.serializer
         # doesn't support
-        remote_fn = partial(update_wrapper(remote_side_bash_executor, self.func), self.func)
+        remote_fn = partial(remote_side_bash_executor, self.func)
         remote_fn.__name__ = self.func.__name__
         self.wrapped_remote_function = wrap_error(remote_fn)
 

@@ -3,6 +3,7 @@ from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import MpiExecLauncher
 from parsl.providers import PBSProProvider
+from parsl.usage_tracking.levels import LEVEL_1
 
 # There are three user parameters to change for the PBSProProvider:
 #  YOUR_ACCOUNT: Account to charge usage
@@ -34,5 +35,6 @@ config = Config(
                 cpus_per_node=64,
             ),
         ),
-    ]
+    ],
+    usage_tracking=LEVEL_1,
 )
