@@ -35,7 +35,7 @@ def test_resource(n=2):
 
     # Specify resources with wrong types
     # 'cpus' is incorrect, should be 'cores'
-    spec = {'cpus': 2, 'memory': 1000, 'disk': 1000}
+    spec = {'cpus': 2, 'memory': 1000, 'disk': 10}
     fut = double(n, parsl_resource_specification=spec)
     try:
         fut.result()
