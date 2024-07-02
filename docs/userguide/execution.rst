@@ -39,7 +39,7 @@ parameters include access keys, instance type, and spot bid price
 Parsl currently supports the following providers:
 
 1. `parsl.providers.LocalProvider`: The provider allows you to run locally on your laptop or workstation.
-2. `parsl.providers.CobaltProvider`: This provider allows you to schedule resources via the Cobalt scheduler.
+2. `parsl.providers.CobaltProvider`: This provider allows you to schedule resources via the Cobalt scheduler. **This provider is deprecated and will be removed by 2024.04**.
 3. `parsl.providers.SlurmProvider`: This provider allows you to schedule resources via the Slurm scheduler.
 4. `parsl.providers.CondorProvider`: This provider allows you to schedule resources via the Condor scheduler.
 5. `parsl.providers.GridEngineProvider`: This provider allows you to schedule resources via the GridEngine scheduler.
@@ -48,7 +48,8 @@ Parsl currently supports the following providers:
 8. `parsl.providers.GoogleCloudProvider`: This provider allows you to provision and manage cloud nodes from Google Cloud.
 9. `parsl.providers.KubernetesProvider`: This provider allows you to provision and manage containers on a Kubernetes cluster.
 10. `parsl.providers.AdHocProvider`: This provider allows you manage execution over a collection of nodes to form an ad-hoc cluster.
-11. `parsl.providers.LSFProvider`: This provider allows you to schedule resources via IBM's LSF scheduler
+11. `parsl.providers.LSFProvider`: This provider allows you to schedule resources via IBM's LSF scheduler.
+
 
 
 Executors
@@ -342,3 +343,50 @@ The following code snippet shows how apps can specify suitable executors in the 
      def visualize(inputs=(), outputs=()):
          bash_array = " ".join(inputs)
          return "viz {} -o {}".format(bash_array, outputs[0])
+
+
+Encryption
+----------
+
+Users can enable encryption for the ``HighThroughputExecutor`` by setting its ``encrypted``
+initialization argument to ``True``.
+
+For example,
+
+.. code-block:: python
+
+    from parsl.config import Config
+    from parsl.executors import HighThroughputExecutor
+
+    config = Config(
+        executors=[
+            HighThroughputExecutor(
+                encrypted=True
+            )
+        ]
+    )
+
+Under the hood, we use `CurveZMQ <http://curvezmq.org/>`_ to encrypt all communication channels
+between the executor and related nodes.
+
+Encryption performance
+^^^^^^^^^^^^^^^^^^^^^^
+
+CurveZMQ depends on `libzmq <https://github.com/zeromq/libzmq>`_ and  `libsodium <https://github.com/jedisct1/libsodium>`_,
+which `pyzmq <https://github.com/zeromq/pyzmq>`_ (a Parsl dependency) includes as part of its
+installation via ``pip``. This installation path should work on most systems, but users have
+reported significant performance degradation as a result.
+
+If you experience a significant performance hit after enabling encryption, we recommend installing
+``pyzmq`` with conda:
+
+.. code-block:: bash
+
+    conda install conda-forge::pyzmq
+
+Alternatively, you can `install libsodium <https://doc.libsodium.org/installation>`_, then
+`install libzmq <https://zeromq.org/download/>`_, then build ``pyzmq`` from source:
+
+.. code-block:: bash
+
+    pip3 install parsl --no-binary pyzmq

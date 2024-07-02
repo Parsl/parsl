@@ -10,7 +10,7 @@ import pickle
 import time
 import queue
 import uuid
-from typing import Sequence, Optional, Union
+from typing import Sequence, Optional, Dict, List
 
 import zmq
 import math
@@ -20,14 +20,20 @@ import multiprocessing
 from multiprocessing.managers import DictProxy
 from multiprocessing.sharedctypes import Synchronized
 
+from parsl import curvezmq
 from parsl.process_loggers import wrap_with_logs
-
 from parsl.version import VERSION as PARSL_VERSION
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.probe import probe_addresses
 from parsl.multiprocessing import SpawnContext
-from parsl.serialize import unpack_apply_message, serialize
+from parsl.serialize import unpack_res_spec_apply_message, serialize
+from parsl.executors.high_throughput.mpi_resource_management import (
+    TaskScheduler,
+    MPITaskScheduler
+)
+
+from parsl.executors.high_throughput.mpi_prefix_composer import compose_all, VALID_LAUNCHERS
 
 HEARTBEAT_CODE = (2 ** 32) - 1
 
@@ -37,7 +43,8 @@ class Manager:
 
                 |         zmq              |    Manager         |   Worker Processes
                 |                          |                    |
-                | <-----Request N task-----+--Count task reqs   |      Request task<--+
+                | <-----Register with -----+                    |      Request task<--+
+                |       N task capacity    |                    |          |          |
     Interchange | -------------------------+->Receive task batch|          |          |
                 |                          |  Distribute tasks--+----> Get(block) &   |
                 |                          |                    |      Execute task   |
@@ -48,22 +55,25 @@ class Manager:
                 |                          |                IPC-Qeueues
 
     """
-    def __init__(self,
-                 addresses="127.0.0.1",
-                 address_probe_timeout=30,
-                 task_port="50097",
-                 result_port="50098",
-                 cores_per_worker=1,
-                 mem_per_worker=None,
-                 max_workers=float('inf'),
-                 prefetch_capacity=0,
-                 uid=None,
-                 block_id=None,
-                 heartbeat_threshold=120,
-                 heartbeat_period=30,
-                 poll_period=10,
-                 cpu_affinity=False,
-                 available_accelerators: Sequence[str] = ()):
+    def __init__(self, *,
+                 addresses,
+                 address_probe_timeout,
+                 task_port,
+                 result_port,
+                 cores_per_worker,
+                 mem_per_worker,
+                 max_workers_per_node,
+                 prefetch_capacity,
+                 uid,
+                 block_id,
+                 heartbeat_threshold,
+                 heartbeat_period,
+                 poll_period,
+                 cpu_affinity,
+                 enable_mpi_mode: bool = False,
+                 mpi_launcher: str = "mpiexec",
+                 available_accelerators: Sequence[str],
+                 cert_dir: Optional[str]):
         """
         Parameters
         ----------
@@ -72,7 +82,7 @@ class Manager:
 
         address_probe_timeout : int
              Timeout in seconds for the address probe to detect viable addresses
-             to the interchange. Default : 30s
+             to the interchange.
 
         uid : str
              string unique identifier
@@ -82,47 +92,57 @@ class Manager:
 
         cores_per_worker : float
              cores to be assigned to each worker. Oversubscription is possible
-             by setting cores_per_worker < 1.0. Default=1
+             by setting cores_per_worker < 1.0.
 
         mem_per_worker : float
              GB of memory required per worker. If this option is specified, the node manager
              will check the available memory at startup and limit the number of workers such that
              the there's sufficient memory for each worker. If set to None, memory on node is not
              considered in the determination of workers to be launched on node by the manager.
-             Default: None
 
-        max_workers : int
-             caps the maximum number of workers that can be launched.
-             default: infinity
+        max_workers_per_node : int | float
+             Caps the maximum number of workers that can be launched.
 
         prefetch_capacity : int
              Number of tasks that could be prefetched over available worker capacity.
              When there are a few tasks (<100) or when tasks are long running, this option should
-             be set to 0 for better load balancing. Default is 0.
+             be set to 0 for better load balancing.
 
         heartbeat_threshold : int
              Seconds since the last message from the interchange after which the
-             interchange is assumed to be un-available, and the manager initiates shutdown. Default:120s
+             interchange is assumed to be un-available, and the manager initiates shutdown.
 
              Number of seconds since the last message from the interchange after which the worker
-             assumes that the interchange is lost and the manager shuts down. Default:120
+             assumes that the interchange is lost and the manager shuts down.
 
         heartbeat_period : int
              Number of seconds after which a heartbeat message is sent to the interchange, and workers
              are checked for liveness.
 
         poll_period : int
-             Timeout period used by the manager in milliseconds. Default: 10ms
+             Timeout period used by the manager in milliseconds.
 
         cpu_affinity : str
              Whether or how each worker should force its affinity to different CPUs
 
         available_accelerators: list of str
-            List of accelerators available to the workers. Default: Empty list
+            List of accelerators available to the workers.
 
+        enable_mpi_mode: bool
+            When set to true, the manager assumes ownership of the batch job and each worker
+            claims a subset of nodes from a shared pool to execute multi-node mpi tasks. Node
+            info is made available to workers via env vars.
+
+        mpi_launcher: str
+            Set to one of the supported MPI launchers: ("srun", "aprun", "mpiexec")
+
+        cert_dir : str | None
+            Path to the certificate directory.
         """
 
-        logger.info("Manager started")
+        logger.info("Manager initializing")
+
+        self._start_time = time.time()
 
         try:
             ix_address = probe_addresses(addresses.split(','), task_port, timeout=address_probe_timeout)
@@ -139,15 +159,16 @@ class Manager:
             print("Failed to find a viable address to connect to interchange. Exiting")
             exit(5)
 
-        self.context = zmq.Context()
-        self.task_incoming = self.context.socket(zmq.DEALER)
+        self.cert_dir = cert_dir
+        self.zmq_context = curvezmq.ClientContext(self.cert_dir)
+        self.task_incoming = self.zmq_context.socket(zmq.DEALER)
         self.task_incoming.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         # Linger is set to 0, so that the manager can exit even when there might be
         # messages in the pipe
         self.task_incoming.setsockopt(zmq.LINGER, 0)
         self.task_incoming.connect(task_q_url)
 
-        self.result_outgoing = self.context.socket(zmq.DEALER)
+        self.result_outgoing = self.zmq_context.socket(zmq.DEALER)
         self.result_outgoing.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
         self.result_outgoing.setsockopt(zmq.LINGER, 0)
         self.result_outgoing.connect(result_q_url)
@@ -155,6 +176,9 @@ class Manager:
 
         self.uid = uid
         self.block_id = block_id
+
+        self.enable_mpi_mode = enable_mpi_mode
+        self.mpi_launcher = mpi_launcher
 
         if os.environ.get('PARSL_CORES'):
             cores_on_node = int(os.environ['PARSL_CORES'])
@@ -166,15 +190,15 @@ class Manager:
         else:
             available_mem_on_node = round(psutil.virtual_memory().available / (2**30), 1)
 
-        self.max_workers = max_workers
+        self.max_workers_per_node = max_workers_per_node
         self.prefetch_capacity = prefetch_capacity
 
-        mem_slots = max_workers
+        mem_slots = max_workers_per_node
         # Avoid a divide by 0 error.
         if mem_per_worker and mem_per_worker > 0:
             mem_slots = math.floor(available_mem_on_node / mem_per_worker)
 
-        self.worker_count: int = min(max_workers,
+        self.worker_count: int = min(max_workers_per_node,
                                      mem_slots,
                                      math.floor(cores_on_node / cores_per_worker))
 
@@ -183,6 +207,17 @@ class Manager:
         self.monitoring_queue = self._mp_manager.Queue()
         self.pending_task_queue = SpawnContext.Queue()
         self.pending_result_queue = SpawnContext.Queue()
+        self.task_scheduler: TaskScheduler
+        if self.enable_mpi_mode:
+            self.task_scheduler = MPITaskScheduler(
+                self.pending_task_queue,
+                self.pending_result_queue,
+            )
+        else:
+            self.task_scheduler = TaskScheduler(
+                self.pending_task_queue,
+                self.pending_result_queue
+            )
         self.ready_worker_count = SpawnContext.Value("i", 0)
 
         self.max_queue_size = self.prefetch_capacity + self.worker_count
@@ -204,7 +239,8 @@ class Manager:
     def create_reg_message(self):
         """ Creates a registration message to identify the worker to the interchange
         """
-        msg = {'parsl_v': PARSL_VERSION,
+        msg = {'type': 'registration',
+               'parsl_v': PARSL_VERSION,
                'python_v': "{}.{}.{}".format(sys.version_info.major,
                                              sys.version_info.minor,
                                              sys.version_info.micro),
@@ -225,8 +261,9 @@ class Manager:
     def heartbeat_to_incoming(self):
         """ Send heartbeat to the incoming task queue
         """
-        heartbeat = (HEARTBEAT_CODE).to_bytes(4, "little")
-        self.task_incoming.send(heartbeat)
+        msg = {'type': 'heartbeat'}
+        b_msg = json.dumps(msg).encode('utf-8')
+        self.task_incoming.send(b_msg)
         logger.debug("Sent heartbeat")
 
     @wrap_with_logs
@@ -251,9 +288,17 @@ class Manager:
         last_interchange_contact = time.time()
         task_recv_counter = 0
 
-        poll_timer = self.poll_period
-
         while not kill_event.is_set():
+
+            # This loop will sit inside poller.poll until either a message
+            # arrives or one of these event times is reached. This code
+            # assumes that the event times won't change except on iteration
+            # of this loop - so will break if a different thread does
+            # anything to bring one of the event times earlier - and that the
+            # time here are correctly copy-pasted from the relevant if
+            # statements.
+            next_interesting_event_time = min(last_beat + self.heartbeat_period,
+                                              last_interchange_contact + self.heartbeat_threshold)
             try:
                 pending_task_count = self.pending_task_queue.qsize()
             except NotImplementedError:
@@ -263,14 +308,14 @@ class Manager:
             logger.debug("ready workers: {}, pending tasks: {}".format(self.ready_worker_count.value,
                                                                        pending_task_count))
 
-            if time.time() > last_beat + self.heartbeat_period:
+            if time.time() >= last_beat + self.heartbeat_period:
                 self.heartbeat_to_incoming()
                 last_beat = time.time()
 
-            socks = dict(poller.poll(timeout=poll_timer))
+            poll_duration_s = max(0, next_interesting_event_time - time.time())
+            socks = dict(poller.poll(timeout=poll_duration_s * 1000))
 
             if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
-                poll_timer = 0
                 _, pkl_msg = self.task_incoming.recv_multipart()
                 tasks = pickle.loads(pkl_msg)
                 last_interchange_contact = time.time()
@@ -283,20 +328,13 @@ class Manager:
                     logger.debug("Got executor tasks: {}, cumulative count of tasks: {}".format([t['task_id'] for t in tasks], task_recv_counter))
 
                     for task in tasks:
-                        self.pending_task_queue.put(task)
-                        # logger.debug("Ready tasks: {}".format(
-                        #    [i['task_id'] for i in self.pending_task_queue]))
+                        self.task_scheduler.put_task(task)
 
             else:
                 logger.debug("No incoming tasks")
-                # Limit poll duration to heartbeat_period
-                # heartbeat_period is in s vs poll_timer in ms
-                if not poll_timer:
-                    poll_timer = self.poll_period
-                poll_timer = min(self.heartbeat_period * 1000, poll_timer * 2)
 
                 # Only check if no messages were received.
-                if time.time() > last_interchange_contact + self.heartbeat_threshold:
+                if time.time() >= last_interchange_contact + self.heartbeat_threshold:
                     logger.critical("Missing contact with interchange beyond heartbeat_threshold")
                     kill_event.set()
                     logger.critical("Exiting")
@@ -324,7 +362,7 @@ class Manager:
         while not kill_event.is_set():
             try:
                 logger.debug("Starting pending_result_queue get")
-                r = self.pending_result_queue.get(block=True, timeout=push_poll_period)
+                r = self.task_scheduler.get_result(block=True, timeout=push_poll_period)
                 logger.debug("Got a result item")
                 items.append(r)
             except queue.Empty:
@@ -333,7 +371,8 @@ class Manager:
                 logger.exception("Got an exception: {}".format(e))
 
             if time.time() > last_result_beat + self.heartbeat_period:
-                logger.info(f"Sending heartbeat via results connection: last_result_beat={last_result_beat} heartbeat_period={self.heartbeat_period} seconds")
+                heartbeat_message = f"last_result_beat={last_result_beat} heartbeat_period={self.heartbeat_period} seconds"
+                logger.info(f"Sending heartbeat via results connection: {heartbeat_message}")
                 last_result_beat = time.time()
                 items.append(pickle.dumps({'type': 'heartbeat'}))
 
@@ -374,7 +413,9 @@ class Manager:
                             raise WorkerLost(worker_id, platform.node())
                         except Exception:
                             logger.info("Putting exception for executor task {} in the pending result queue".format(task['task_id']))
-                            result_package = {'type': 'result', 'task_id': task['task_id'], 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
+                            result_package = {'type': 'result',
+                                              'task_id': task['task_id'],
+                                              'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
                             pkl_package = pickle.dumps(result_package)
                             self.pending_result_queue.put(pkl_package)
                     except KeyError:
@@ -421,7 +462,6 @@ class Manager:
 
         TODO: Move task receiving to a thread
         """
-        start = time.time()
         self._kill_event = threading.Event()
         self._tasks_in_progress = self._mp_manager.dict()
 
@@ -470,8 +510,8 @@ class Manager:
 
         self.task_incoming.close()
         self.result_outgoing.close()
-        self.context.term()
-        delta = time.time() - start
+        self.zmq_context.term()
+        delta = time.time() - self._start_time
         logger.info("process_worker_pool ran for {} seconds".format(delta))
         return
 
@@ -490,8 +530,11 @@ class Manager:
                 self.cpu_affinity,
                 self.available_accelerators[worker_id] if self.accelerators_available else None,
                 self.block_id,
+                self.heartbeat_period,
+                os.getpid(),
                 args.logdir,
                 args.debug,
+                self.mpi_launcher,
             ),
             name="HTEX-Worker-{}".format(worker_id),
         )
@@ -499,7 +542,13 @@ class Manager:
         return p
 
 
-def execute_task(bufs):
+def update_resource_spec_env_vars(mpi_launcher: str, resource_spec: Dict, node_info: List[str]) -> None:
+    prefix_table = compose_all(mpi_launcher, resource_spec=resource_spec, node_hostnames=node_info)
+    for key in prefix_table:
+        os.environ[key] = prefix_table[key]
+
+
+def execute_task(bufs, mpi_launcher: Optional[str] = None):
     """Deserialize the buffer and execute the task.
 
     Returns the result or throws exception.
@@ -507,8 +556,20 @@ def execute_task(bufs):
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})
 
-    f, args, kwargs = unpack_apply_message(bufs, user_ns, copy=False)
+    f, args, kwargs, resource_spec = unpack_res_spec_apply_message(bufs, user_ns, copy=False)
 
+    for varname in resource_spec:
+        envname = "PARSL_" + str(varname).upper()
+        os.environ[envname] = str(resource_spec[varname])
+
+    if resource_spec.get("MPI_NODELIST"):
+        worker_id = os.environ['PARSL_WORKER_RANK']
+        nodes_for_task = resource_spec["MPI_NODELIST"].split(',')
+        logger.info(f"Launching task on provisioned nodes: {nodes_for_task}")
+        assert mpi_launcher
+        update_resource_spec_env_vars(mpi_launcher,
+                                      resource_spec=resource_spec,
+                                      node_info=nodes_for_task)
     # We might need to look into callability of the function from itself
     # since we change it's name in the new namespace
     prefix = "parsl_"
@@ -538,11 +599,14 @@ def worker(
     monitoring_queue: queue.Queue,
     ready_worker_count: Synchronized,
     tasks_in_progress: DictProxy,
-    cpu_affinity: Union[str, bool],
+    cpu_affinity: str,
     accelerator: Optional[str],
     block_id: str,
+    task_queue_timeout: int,
+    manager_pid: int,
     logdir: str,
     debug: bool,
+    mpi_launcher: str,
 ):
     """
 
@@ -576,7 +640,7 @@ def worker(
     # If desired, set process affinity
     if cpu_affinity != "none":
         # Count the number of cores per worker
-        avail_cores = sorted(os.sched_getaffinity(0))  # Get the available processors
+        avail_cores = sorted(os.sched_getaffinity(0))  # Get the available threads
         cores_per_worker = len(avail_cores) // pool_size
         assert cores_per_worker > 0, "Affinity does not work if there are more workers than cores"
 
@@ -588,6 +652,23 @@ def worker(
             my_cores = avail_cores[cores_per_worker * cpu_worker_id:cores_per_worker * (cpu_worker_id + 1)]
         elif cpu_affinity == "alternating":
             my_cores = avail_cores[worker_id::pool_size]
+        elif cpu_affinity[0:4] == "list":
+            thread_ranks = cpu_affinity.split(":")[1:]
+            if len(thread_ranks) != pool_size:
+                raise ValueError("Affinity list {} has wrong number of thread ranks".format(cpu_affinity))
+            threads = thread_ranks[worker_id]
+            thread_list = threads.split(",")
+            my_cores = []
+            for tl in thread_list:
+                thread_range = tl.split("-")
+                if len(thread_range) == 1:
+                    my_cores.append(int(thread_range[0]))
+                elif len(thread_range) == 2:
+                    start_thread = int(thread_range[0])
+                    end_thread = int(thread_range[1]) + 1
+                    my_cores += list(range(start_thread, end_thread))
+                else:
+                    raise ValueError("Affinity list formatting is not expected {}".format(cpu_affinity))
         else:
             raise ValueError("Affinity strategy {} is not supported".format(cpu_affinity))
 
@@ -611,21 +692,40 @@ def worker(
 
         logger.info(f'Pinned worker to accelerator: {accelerator}')
 
-    while True:
-        with ready_worker_count.get_lock():
-            ready_worker_count.value += 1
+    def manager_is_alive():
+        try:
+            # This does not kill the process, but instead raises
+            # an exception if the process doesn't exist
+            os.kill(manager_pid, 0)
+        except OSError:
+            logger.critical(f"Manager ({manager_pid}) died; worker {worker_id} shutting down")
+            return False
+        else:
+            return True
 
-        # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
-        req = task_queue.get()
+    worker_enqueued = False
+    while manager_is_alive():
+        if not worker_enqueued:
+            with ready_worker_count.get_lock():
+                ready_worker_count.value += 1
+            worker_enqueued = True
+
+        try:
+            # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
+            req = task_queue.get(timeout=task_queue_timeout)
+        except queue.Empty:
+            continue
+
         tasks_in_progress[worker_id] = req
         tid = req['task_id']
         logger.info("Received executor task {}".format(tid))
 
         with ready_worker_count.get_lock():
             ready_worker_count.value -= 1
+        worker_enqueued = False
 
         try:
-            result = execute_task(req['buffer'])
+            result = execute_task(req['buffer'], mpi_launcher=mpi_launcher)
             serialized_result = serialize(result, buffer_threshold=1000000)
         except Exception as e:
             logger.info('Caught an exception: {}'.format(e))
@@ -682,6 +782,8 @@ if __name__ == "__main__":
                         help="Enable logging at DEBUG level")
     parser.add_argument("-a", "--addresses", default='',
                         help="Comma separated list of addresses at which the interchange could be reached")
+    parser.add_argument("--cert_dir", required=True,
+                        help="Path to certificate directory.")
     parser.add_argument("-l", "--logdir", default="process_worker_pool_logs",
                         help="Process worker pool log directory")
     parser.add_argument("-u", "--uid", default=str(uuid.uuid4()).split('-')[-1],
@@ -694,7 +796,7 @@ if __name__ == "__main__":
                         help="GB of memory assigned to each worker process. Default=0, no assignment")
     parser.add_argument("-t", "--task_port", required=True,
                         help="REQUIRED: Task port for receiving tasks from the interchange")
-    parser.add_argument("--max_workers", default=float('inf'),
+    parser.add_argument("--max_workers_per_node", default=float('inf'),
                         help="Caps the maximum workers that can be launched, default:infinity")
     parser.add_argument("-p", "--prefetch_capacity", default=0,
                         help="Number of tasks that can be prefetched to the manager. Default is 0.")
@@ -708,10 +810,25 @@ if __name__ == "__main__":
                         help="Poll period used in milliseconds")
     parser.add_argument("-r", "--result_port", required=True,
                         help="REQUIRED: Result port for posting results to the interchange")
-    parser.add_argument("--cpu-affinity", type=str, choices=["none", "block", "alternating", "block-reverse"],
+
+    def strategyorlist(s: str):
+        allowed_strategies = ["none", "block", "alternating", "block-reverse"]
+        if s in allowed_strategies:
+            return s
+        elif s[0:4] == "list":
+            return s
+        else:
+            raise argparse.ArgumentTypeError("cpu-affinity must be one of {} or a list format".format(allowed_strategies))
+
+    parser.add_argument("--cpu-affinity", type=strategyorlist,
+                        required=True,
                         help="Whether/how workers should control CPU affinity.")
     parser.add_argument("--available-accelerators", type=str, nargs="*",
                         help="Names of available accelerators")
+    parser.add_argument("--enable_mpi_mode", action='store_true',
+                        help="Enable MPI mode")
+    parser.add_argument("--mpi-launcher", type=str, choices=VALID_LAUNCHERS,
+                        help="MPI launcher to use iff enable_mpi_mode=true")
 
     args = parser.parse_args()
 
@@ -724,6 +841,7 @@ if __name__ == "__main__":
 
         logger.info("Python version: {}".format(sys.version))
         logger.info("Debug logging: {}".format(args.debug))
+        logger.info("Certificates dir: {}".format(args.cert_dir))
         logger.info("Log dir: {}".format(args.logdir))
         logger.info("Manager ID: {}".format(args.uid))
         logger.info("Block ID: {}".format(args.block_id))
@@ -732,7 +850,7 @@ if __name__ == "__main__":
         logger.info("task_port: {}".format(args.task_port))
         logger.info("result_port: {}".format(args.result_port))
         logger.info("addresses: {}".format(args.addresses))
-        logger.info("max_workers: {}".format(args.max_workers))
+        logger.info("max_workers_per_node: {}".format(args.max_workers_per_node))
         logger.info("poll_period: {}".format(args.poll))
         logger.info("address_probe_timeout: {}".format(args.address_probe_timeout))
         logger.info("Prefetch capacity: {}".format(args.prefetch_capacity))
@@ -740,6 +858,8 @@ if __name__ == "__main__":
         logger.info("Heartbeat period: {}".format(args.hb_period))
         logger.info("CPU affinity: {}".format(args.cpu_affinity))
         logger.info("Accelerators: {}".format(" ".join(args.available_accelerators)))
+        logger.info("enable_mpi_mode: {}".format(args.enable_mpi_mode))
+        logger.info("mpi_launcher: {}".format(args.mpi_launcher))
 
         manager = Manager(task_port=args.task_port,
                           result_port=args.result_port,
@@ -749,13 +869,19 @@ if __name__ == "__main__":
                           block_id=args.block_id,
                           cores_per_worker=float(args.cores_per_worker),
                           mem_per_worker=None if args.mem_per_worker == 'None' else float(args.mem_per_worker),
-                          max_workers=args.max_workers if args.max_workers == float('inf') else int(args.max_workers),
+                          max_workers_per_node=(
+                              args.max_workers_per_node if args.max_workers_per_node == float('inf')
+                              else int(args.max_workers_per_node)
+                          ),
                           prefetch_capacity=int(args.prefetch_capacity),
                           heartbeat_threshold=int(args.hb_threshold),
                           heartbeat_period=int(args.hb_period),
                           poll_period=int(args.poll),
                           cpu_affinity=args.cpu_affinity,
-                          available_accelerators=args.available_accelerators)
+                          enable_mpi_mode=args.enable_mpi_mode,
+                          mpi_launcher=args.mpi_launcher,
+                          available_accelerators=args.available_accelerators,
+                          cert_dir=None if args.cert_dir == "None" else args.cert_dir)
         manager.start()
 
     except Exception:

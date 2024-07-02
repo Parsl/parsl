@@ -1,6 +1,7 @@
 import os
 
 import pytest
+import typeguard
 
 import parsl.app.errors as perror
 from parsl.app.app import bash_app
@@ -44,7 +45,11 @@ def test_bad_stdout_specs(spec):
     try:
         fn.result()
     except Exception as e:
-        assert isinstance(e, TypeError) or isinstance(e, perror.BadStdStreamFile), "Exception is wrong type"
+        # This tests for TypeCheckError by string matching on the type name
+        # because that class does not exist in typeguard 2.x - it is new in
+        # typeguard 4.x. When typeguard 2.x support is dropped, this test can
+        # become an isinstance check.
+        assert "TypeCheckError" in str(type(e)) or isinstance(e, TypeError) or isinstance(e, perror.BadStdStreamFile), "Exception is wrong type"
     else:
         assert False, "Did not raise expected exception"
 

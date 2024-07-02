@@ -72,8 +72,9 @@ def address_by_hostname() -> str:
     """
     logger.debug("Finding address by using local hostname")
     addr = platform.node()
-    logger.debug("Address found: {}".format(addr))
-    return addr
+    ip_addr = socket.gethostbyname(addr)
+    logger.debug("Address found: {}".format(ip_addr))
+    return ip_addr
 
 
 @typeguard.typechecked

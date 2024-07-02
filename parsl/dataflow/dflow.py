@@ -113,7 +113,7 @@ class DataFlowKernel:
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
             self.hub_address = self.monitoring.hub_address
-            self.hub_interchange_port = self.monitoring.start(self.run_id, self.run_dir)
+            self.hub_interchange_port = self.monitoring.start(self.run_id, self.run_dir, self.config.run_dir)
 
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
@@ -177,7 +177,9 @@ class DataFlowKernel:
 
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.
-        self.job_status_poller = JobStatusPoller(self)
+        self.job_status_poller = JobStatusPoller(strategy=self.config.strategy,
+                                                 max_idletime=self.config.max_idletime,
+                                                 dfk=self)
 
         self.executors: Dict[str, ParslExecutor] = {}
 
@@ -262,9 +264,8 @@ class DataFlowKernel:
         """
         count = 0
         for dep in depends:
-            if isinstance(dep, Future):
-                if not dep.done():
-                    count += 1
+            if not dep.done():
+                count += 1
 
         return count
 
@@ -301,7 +302,7 @@ class DataFlowKernel:
             res = self._unwrap_remote_exception_wrapper(future)
 
         except Exception as e:
-            logger.debug("Task {} try {} failed".format(task_id, task_record['try_id']))
+            logger.info(f"Task {task_id} try {task_record['try_id']} failed with exception of type {type(e).__name__}")
             # We keep the history separately, since the future itself could be
             # tossed.
             task_record['fail_history'].append(repr(e))
@@ -527,9 +528,7 @@ class DataFlowKernel:
         # or do nothing?
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint(tasks=[task_record])
-        elif self.checkpoint_mode == 'manual' or \
-                self.checkpoint_mode == 'periodic' or \
-                self.checkpoint_mode == 'dfk_exit':
+        elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
             with self.checkpoint_lock:
                 self.checkpointable_tasks.append(task_record)
         elif self.checkpoint_mode is None:
@@ -679,10 +678,10 @@ class DataFlowKernel:
             task_record : The task record
 
         Returns:
-            Future that tracks the execution of the submitted executable
+            Future that tracks the execution of the submitted function
         """
         task_id = task_record['id']
-        executable = task_record['func']
+        function = task_record['func']
         args = task_record['args']
         kwargs = task_record['kwargs']
 
@@ -707,17 +706,17 @@ class DataFlowKernel:
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
-            (executable, args, kwargs) = self.monitoring.monitor_wrapper(executable, args, kwargs, try_id, task_id,
-                                                                         self.monitoring.monitoring_hub_url,
-                                                                         self.run_id,
-                                                                         wrapper_logging_level,
-                                                                         self.monitoring.resource_monitoring_interval,
-                                                                         executor.radio_mode,
-                                                                         executor.monitor_resources(),
-                                                                         self.run_dir)
+            (function, args, kwargs) = self.monitoring.monitor_wrapper(function, args, kwargs, try_id, task_id,
+                                                                       self.monitoring.monitoring_hub_url,
+                                                                       self.run_id,
+                                                                       wrapper_logging_level,
+                                                                       self.monitoring.resource_monitoring_interval,
+                                                                       executor.radio_mode,
+                                                                       executor.monitor_resources(),
+                                                                       self.run_dir)
 
         with self.submitter_lock:
-            exec_fu = executor.submit(executable, task_record['resource_specification'], *args, **kwargs)
+            exec_fu = executor.submit(function, task_record['resource_specification'], *args, **kwargs)
         self.update_task_state(task_record, States.launched)
 
         self._send_task_log_info(task_record)
@@ -731,7 +730,8 @@ class DataFlowKernel:
 
         return exec_fu
 
-    def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable) -> Tuple[Sequence[Any], Dict[str, Any], Callable]:
+    def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable) -> Tuple[Sequence[Any], Dict[str, Any],
+                                                                                                                   Callable]:
         """Look for inputs of the app that are files. Give the data manager
         the opportunity to replace a file with a data future for that file,
         for example wrapping the result of a staging action.
@@ -854,10 +854,13 @@ class DataFlowKernel:
                 try:
                     new_args.extend([dep.result()])
                 except Exception as e:
-                    if hasattr(dep, 'task_record'):
-                        tid = dep.task_record['id']
+                    # If this Future is associated with a task inside this DFK,
+                    # then refer to the task ID.
+                    # Otherwise make a repr of the Future object.
+                    if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
+                        tid = "task " + repr(dep.task_record['id'])
                     else:
-                        tid = None
+                        tid = repr(dep)
                     dep_failures.extend([(e, tid)])
             else:
                 new_args.extend([dep])
@@ -1296,11 +1299,7 @@ class DataFlowKernel:
                         hashsum = task_record['hashsum']
                         if not hashsum:
                             continue
-                        t = {'hash': hashsum,
-                             'exception': None,
-                             'result': None}
-
-                        t['result'] = app_fu.result()
+                        t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
 
                         # We are using pickle here since pickle dumps to a file in 'ab'
                         # mode behave like a incremental log.

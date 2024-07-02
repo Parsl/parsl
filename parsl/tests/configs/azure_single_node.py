@@ -40,6 +40,7 @@ config = Config(
             storage_access=[HTTPInTaskStaging(), FTPInTaskStaging(), RSyncStaging(getpass.getuser() + "@" + user_opts['public_ip'])],
             label='azure_single_node',
             address=user_opts['public_ip'],
+            encrypted=True,
             provider=provider
         )
     ]

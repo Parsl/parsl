@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+import warnings
 
 from parsl.providers.errors import ScaleOutFailed
 from parsl.channels import LocalChannel
@@ -23,6 +24,8 @@ translate_table = {
 
 class CobaltProvider(ClusterProvider, RepresentationMixin):
     """ Cobalt Execution Provider
+
+    WARNING: CobaltProvider is deprecated and will be removed by 2024.04
 
     This provider uses cobalt to submit (qsub), obtain the status of (qstat), and cancel (qdel)
     jobs. Theo script to be used is created from a template file in this
@@ -86,6 +89,9 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         self.queue = queue
         self.scheduler_options = scheduler_options
         self.worker_init = worker_init
+        warnings.warn("CobaltProvider is deprecated; This will be removed after 2024-04",
+                      DeprecationWarning,
+                      stacklevel=2)
 
     def _status(self):
         """Returns the status list for a list of job_ids

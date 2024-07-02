@@ -18,6 +18,7 @@ config = Config(
             label="cooley_htex",
             worker_debug=False,
             cores_per_worker=1,
+            encrypted=True,
             provider=CobaltProvider(
                 queue='debug',
                 account=user_opts['cooley']['account'],

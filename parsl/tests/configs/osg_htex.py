@@ -13,7 +13,8 @@ config = Config(
     executors=[
         HighThroughputExecutor(
             label='OSG_HTEX',
-            max_workers=1,
+            max_workers_per_node=1,
+            encrypted=True,
             provider=CondorProvider(
                 nodes_per_block=1,
                 init_blocks=4,

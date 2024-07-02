@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 @bash_app
-def touch(filename, inputs=[], outputs=[]):
-    return "touch {}".format(filename)
+def touch(filename, outputs=()):
+    return f"touch {filename}"
 
 
 @python_app
@@ -31,52 +31,47 @@ def app_test_in(file):
     pass
 
 
-@pytest.mark.local
-def test_regression_stage_out_does_not_stage_in():
-    no_stageout_config = Config(
-        executors=[
-            ThreadPoolExecutor(
-                label='local_threads',
-                storage_access=[NoOpTestingFileStaging(allow_stage_in=False)]
-            )
-        ]
-    )
+@pytest.fixture
+def storage_access_parsl():
+    def _setup_config(*args, **kwargs):
+        tpe = ThreadPoolExecutor(
+            label='local_threads',
+            storage_access=[NoOpTestingFileStaging(*args, **kwargs)]
+        )
+        config = Config(executors=[tpe])
+        parsl.load(config)
 
-    parsl.load(no_stageout_config)
-
-    # Test that the helper app runs with no staging
-    touch("test.1", outputs=[]).result()
-
-    # Test with stage-out, checking that provider stage in is never
-    # invoked. If stage-in is invoked, the the NoOpTestingFileStaging
-    # provider will raise an exception, which should propagate to
-    # .result() here.
-    touch("test.2", outputs=[File("test.2")]).result()
-
-    # Test that stage-in exceptions propagate out to user code.
-    with pytest.raises(NoOpError):
-        touch("test.3", inputs=[File("test.3")]).result()
+    yield _setup_config
 
     parsl.dfk().cleanup()
     parsl.clear()
 
 
 @pytest.mark.local
-def test_regression_stage_in_does_not_stage_out():
-    no_stageout_config = Config(
-        executors=[
-            ThreadPoolExecutor(
-                label='local_threads',
-                storage_access=[NoOpTestingFileStaging(allow_stage_out=False)]
-            )
-        ],
-    )
+def test_regression_stage_out_does_not_stage_in(storage_access_parsl, tmpd_cwd):
+    storage_access_parsl(allow_stage_in=False)
 
-    parsl.load(no_stageout_config)
+    # Test that the helper app runs with no staging
+    touch(str(tmpd_cwd / "test.1"), outputs=[]).result()
 
-    f = open("test.4", "a")
-    f.write("test")
-    f.close()
+    # Test with stage-out, checking that provider stage-in is never
+    # invoked. If stage-in is invoked, then the NoOpTestingFileStaging
+    # provider will raise an exception, which should propagate to
+    # .result() here.
+    fpath = tmpd_cwd / "test.2"
+    touch(str(fpath), outputs=[File(fpath)]).result()
+
+    # Test that stage-in exceptions propagate out to user code.
+    with pytest.raises(NoOpError):
+        touch("test.3", inputs=[File("test.3")]).result()
+
+
+@pytest.mark.local
+def test_regression_stage_in_does_not_stage_out(storage_access_parsl, tmpd_cwd):
+    storage_access_parsl(allow_stage_out=False)
+
+    fpath = tmpd_cwd / "test.4"
+    fpath.write_text("test")
 
     # Test that stage in does not invoke stage out. If stage out is
     # attempted, then the NoOpTestingFileStaging provider will raise
@@ -86,6 +81,3 @@ def test_regression_stage_in_does_not_stage_out():
     # Test that stage out exceptions propagate to user code.
     with pytest.raises(NoOpError):
         touch("test.5", outputs=[File("test.5")]).result()
-
-    parsl.dfk().cleanup()
-    parsl.clear()

@@ -24,6 +24,7 @@ config = Config(
     executors=[
         HighThroughputExecutor(
             label='swan_htex',
+            encrypted=True,
             provider=TorqueProvider(
                 channel=SSHChannel(
                     hostname='swan.cray.com',

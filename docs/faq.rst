@@ -196,9 +196,9 @@ possible to miss the installation of some dependent libraries. In this configura
 
 ``ModuleNotFoundError: No module named 'ipyparallel'``
 
-In this situation, please install the required packages. If you are on a machine with
-sudo privileges you could install the packages for all users, or if you choose, install
-to a virtual environment using packages such as virtualenv and conda.
+You should usually install parsl using a package managment tool such as ``pip`` or
+``conda``, ideally in a restricted environment such a virtualenv or a conda
+environment.
 
 For instance, with conda, follow this `cheatsheet <https://conda.io/docs/_downloads/conda-cheatsheet.pdf>`_ to create a virtual environment:
 

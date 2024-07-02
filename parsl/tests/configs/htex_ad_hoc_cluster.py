@@ -13,6 +13,7 @@ config = Config(
             cores_per_worker=1,
             worker_debug=False,
             address=user_opts['public_ip'],
+            encrypted=True,
             provider=AdHocProvider(
                 move_files=False,
                 parallelism=1,

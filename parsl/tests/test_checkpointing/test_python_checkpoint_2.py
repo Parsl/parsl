@@ -1,45 +1,42 @@
-import argparse
+import contextlib
 import os
 import pytest
 import parsl
 from parsl import python_app
 
-from parsl.tests.configs.local_threads import config
 from parsl.tests.configs.local_threads_checkpoint import fresh_config
 
 
+@contextlib.contextmanager
+def parsl_configured(run_dir, **kw):
+    c = fresh_config()
+    c.run_dir = run_dir
+    for config_attr, config_val in kw.items():
+        setattr(c, config_attr, config_val)
+    dfk = parsl.load(c)
+    for ex in dfk.executors.values():
+        ex.working_dir = run_dir
+    yield dfk
+
+    parsl.dfk().cleanup()
+    parsl.clear()
+
+
 @python_app(cache=True)
-def random_app(i):
-    import random
-    return random.randint(i, 100000)
-
-
-def launch_n_random(n=2):
-    """1. Launch a few apps and write the checkpoint once a few have completed
-    """
-    d = [random_app(i) for i in range(0, n)]
-    return [i.result() for i in d]
+def uuid_app():
+    import uuid
+    return uuid.uuid4()
 
 
 @pytest.mark.local
-def test_loading_checkpoint(n=2):
+def test_loading_checkpoint(tmpd_cwd):
     """Load memoization table from previous checkpoint
     """
-    config.checkpoint_mode = 'task_exit'
-    parsl.load(config)
-    results = launch_n_random(n)
-    rundir = parsl.dfk().run_dir
-    parsl.dfk().cleanup()
-    parsl.clear()
+    with parsl_configured(tmpd_cwd, checkpoint_mode="task_exit"):
+        checkpoint_files = [os.path.join(parsl.dfk().run_dir, "checkpoint")]
+        result = uuid_app().result()
 
-    local_config = fresh_config()
-    local_config.checkpoint_files = [os.path.join(rundir, 'checkpoint')]
-    parsl.load(local_config)
+    with parsl_configured(tmpd_cwd, checkpoint_files=checkpoint_files):
+        relaunched = uuid_app().result()
 
-    relaunched = launch_n_random(n)
-    assert len(relaunched) == len(results) == n, "Expected all results to have n items"
-
-    for i in range(n):
-        assert relaunched[i] == results[i], "Expected relaunched to contain cached results from first run"
-    parsl.dfk().cleanup()
-    parsl.clear()
+    assert result == relaunched, "Expected following call to uuid_app to return cached uuid"

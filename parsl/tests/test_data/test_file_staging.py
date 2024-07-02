@@ -11,10 +11,10 @@ def cat(inputs=(), outputs=(), stdout=None, stderr=None):
 
 
 @pytest.mark.staging_required
-def test_regression_200(tmp_path):
+def test_regression_200(tmpd_cwd):
     """Regression test for #200. Pickleablility of Files"""
-    opath = tmp_path / "test_output.txt"
-    fpath = tmp_path / "test.txt"
+    opath = tmpd_cwd / "test_output.txt"
+    fpath = tmpd_cwd / "test.txt"
 
     fpath.write_text("Hello World")
     f = cat(inputs=[File(fpath)], outputs=[File(opath)])

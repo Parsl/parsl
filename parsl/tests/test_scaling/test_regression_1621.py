@@ -49,6 +49,7 @@ def test_one_block(tmpd_cwd):
                 address="127.0.0.1",
                 worker_debug=True,
                 cores_per_worker=1,
+                encrypted=True,
                 provider=oneshot_provider,
                 worker_logdir_root=str(tmpd_cwd)
             )

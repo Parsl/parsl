@@ -16,8 +16,9 @@ config = Config(
     executors=[
         HighThroughputExecutor(
             label='remote_htex',
-            max_workers=2,
+            max_workers_per_node=2,
             worker_logdir_root=user_opts['adhoc']['script_dir'],
+            encrypted=True,
             provider=AdHocProvider(
                 # Command to be run before starting a worker, such as:
                 # 'module load Anaconda; source activate parsl_env'.

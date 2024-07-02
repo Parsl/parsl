@@ -13,6 +13,7 @@ from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.launchers.base import Launcher
 from parsl.providers.cluster_provider import ClusterProvider
+from parsl.providers.errors import SubmitException
 from parsl.providers.slurm.template import template_string
 from parsl.utils import RepresentationMixin, wtime_to_minutes
 
@@ -47,6 +48,10 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     account : str
         Slurm account to which to charge resources used by the job. If unspecified or ``None``, the job will use the
         user's default account.
+    qos : str
+        Slurm queue to place job in. If unspecified or ``None``, no queue slurm directive will be specified.
+    constraint : str
+        Slurm job constraint, often used to choose cpu or gpu type. If unspecified or ``None``, no constraint slurm directive will be added.
     channel : Channel
         Channel for accessing this provider. Possible channels include
         :class:`~parsl.channels.LocalChannel` (the default),
@@ -60,6 +65,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     mem_per_node : int
         Specify the real memory to provision per node in GB. If set to None, no
         explicit request to the scheduler will be made. Default is None.
+    init_blocks : int
+        Number of blocks to provision at the start of the run. Default is 1.
     min_blocks : int
         Minimum number of blocks to maintain.
     max_blocks : int
@@ -92,6 +99,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     def __init__(self,
                  partition: Optional[str] = None,
                  account: Optional[str] = None,
+                 qos: Optional[str] = None,
+                 constraint: Optional[str] = None,
                  channel: Channel = LocalChannel(),
                  nodes_per_block: int = 1,
                  cores_per_node: Optional[int] = None,
@@ -126,6 +135,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         self.exclusive = exclusive
         self.move_files = move_files
         self.account = account
+        self.qos = qos
+        self.constraint = constraint
         self.scheduler_options = scheduler_options + '\n'
         if exclusive:
             self.scheduler_options += "#SBATCH --exclusive\n"
@@ -133,6 +144,11 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             self.scheduler_options += "#SBATCH --partition={}\n".format(partition)
         if account:
             self.scheduler_options += "#SBATCH --account={}\n".format(account)
+        if qos:
+            self.scheduler_options += "#SBATCH --qos={}\n".format(qos)
+        if constraint:
+            self.scheduler_options += "#SBATCH --constraint={}\n".format(constraint)
+
         self.regex_job_id = regex_job_id
         self.worker_init = worker_init + '\n'
 
@@ -172,16 +188,20 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                 logger.warning(f"Slurm status {slurm_state} is not recognized")
             status = translate_table.get(slurm_state, JobState.UNKNOWN)
             logger.debug("Updating job {} with slurm status {} to parsl state {!s}".format(job_id, slurm_state, status))
-            self.resources[job_id]['status'] = JobStatus(status)
+            self.resources[job_id]['status'] = JobStatus(status,
+                                                         stdout_path=self.resources[job_id]['job_stdout_path'],
+                                                         stderr_path=self.resources[job_id]['job_stderr_path'])
             jobs_missing.remove(job_id)
 
         # squeue does not report on jobs that are not running. So we are filling in the
         # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
             logger.debug("Updating missing job {} to completed status".format(missing_job))
-            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED)
+            self.resources[missing_job]['status'] = JobStatus(JobState.COMPLETED,
+                                                              stdout_path=self.resources[missing_job]['job_stdout_path'],
+                                                              stderr_path=self.resources[missing_job]['job_stderr_path'])
 
-    def submit(self, command, tasks_per_node, job_name="parsl.slurm"):
+    def submit(self, command: str, tasks_per_node: int, job_name="parsl.slurm") -> str:
         """Submit the command as a slurm job.
 
         Parameters
@@ -194,8 +214,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             Name for the job
         Returns
         -------
-        None or str
-            If at capacity, returns None; otherwise, a string identifier for the job
+        job id : str
+            A string identifier for the job
         """
 
         scheduler_options = self.scheduler_options
@@ -210,8 +230,11 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         job_name = "{0}.{1}".format(job_name, time.time())
 
-        script_path = "{0}/{1}.submit".format(self.script_dir, job_name)
+        assert self.script_dir, "Expected script_dir to be set"
+        script_path = os.path.join(self.script_dir, job_name)
         script_path = os.path.abspath(script_path)
+        job_stdout_path = script_path + ".stdout"
+        job_stderr_path = script_path + ".stderr"
 
         logger.debug("Requesting one block with {} nodes".format(self.nodes_per_block))
 
@@ -223,6 +246,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         job_config["scheduler_options"] = scheduler_options
         job_config["worker_init"] = worker_init
         job_config["user_script"] = command
+        job_config["job_stdout_path"] = job_stdout_path
+        job_config["job_stderr_path"] = job_stderr_path
 
         # Wrap the command
         job_config["user_script"] = self.launcher(command,
@@ -241,21 +266,31 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         retcode, stdout, stderr = self.execute_wait("sbatch {0}".format(channel_script_path))
 
-        job_id = None
         if retcode == 0:
             for line in stdout.split('\n'):
                 match = re.match(self.regex_job_id, line)
                 if match:
                     job_id = match.group("id")
-                    self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
-                    break
+                    self.resources[job_id] = {'job_id': job_id,
+                                              'status': JobStatus(JobState.PENDING),
+                                              'job_stdout_path': job_stdout_path,
+                                              'job_stderr_path': job_stderr_path,
+                                              }
+                    return job_id
             else:
                 logger.error("Could not read job ID from submit command standard output.")
                 logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
+                raise SubmitException(
+                    job_name,
+                    "Could not read job ID from submit command standard output",
+                    stdout=stdout,
+                    stderr=stderr,
+                    retcode=retcode
+                )
         else:
             logger.error("Submit command failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
-        return job_id
+            raise SubmitException(job_name, "Could not read job ID from submit command standard output", stdout=stdout, stderr=stderr, retcode=retcode)
 
     def cancel(self, job_ids):
         ''' Cancels the jobs specified by a list of job ids

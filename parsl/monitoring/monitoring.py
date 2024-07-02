@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import socket
 import time
@@ -11,7 +13,8 @@ import queue
 import parsl.monitoring.remote
 
 from parsl.multiprocessing import ForkProcess, SizedQueue
-from multiprocessing import Process, Queue
+from multiprocessing import Process
+from multiprocessing.queues import Queue
 from parsl.utils import RepresentationMixin
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
@@ -20,7 +23,7 @@ from parsl.serialize import deserialize
 
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import AddressedMonitoringMessage, TaggedMonitoringMessage
-from typing import cast, Any, Callable, Dict, Optional, Sequence, Tuple, Union
+from typing import cast, Any, Callable, Dict, Optional, Sequence, Tuple, Union, TYPE_CHECKING
 
 _db_manager_excepts: Optional[Exception]
 
@@ -81,7 +84,7 @@ class MonitoringHub(RepresentationMixin):
 
                  workflow_name: Optional[str] = None,
                  workflow_version: Optional[str] = None,
-                 logging_endpoint: str = 'sqlite:///runinfo/monitoring.db',
+                 logging_endpoint: Optional[str] = None,
                  logdir: Optional[str] = None,
                  monitoring_debug: bool = False,
                  resource_monitoring_enabled: bool = True,
@@ -115,7 +118,7 @@ class MonitoringHub(RepresentationMixin):
         logging_endpoint : str
              The database connection url for monitoring to log the information.
              These URLs follow RFC-1738, and can include username, password, hostname, database name.
-             Default: 'sqlite:///monitoring.db'
+             Default: sqlite, in the configured run_dir.
         logdir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         monitoring_debug : Bool
@@ -125,7 +128,10 @@ class MonitoringHub(RepresentationMixin):
              This will include environment information such as start time, hostname and block id,
              along with periodic resource usage of each task. Default: True
         resource_monitoring_interval : float
-             The time interval, in seconds, at which the monitoring records the resource usage of each task. Default: 30 seconds
+             The time interval, in seconds, at which the monitoring records the resource usage of each task.
+             If set to 0, only start and end information will be logged, and no periodic monitoring will
+             be made.
+             Default: 30 seconds
         """
 
         self.logger = logger
@@ -156,10 +162,13 @@ class MonitoringHub(RepresentationMixin):
         self.resource_monitoring_enabled = resource_monitoring_enabled
         self.resource_monitoring_interval = resource_monitoring_interval
 
-    def start(self, run_id: str, run_dir: str) -> int:
+    def start(self, run_id: str, dfk_run_dir: str, config_run_dir: Union[str, os.PathLike]) -> int:
 
         if self.logdir is None:
             self.logdir = "."
+
+        if self.logging_endpoint is None:
+            self.logging_endpoint = f"sqlite:///{os.fspath(config_run_dir)}/monitoring.db"
 
         os.makedirs(self.logdir, exist_ok=True)
 
@@ -168,7 +177,19 @@ class MonitoringHub(RepresentationMixin):
         self.logger.debug("Initializing ZMQ Pipes to client")
         self.monitoring_hub_active = True
 
-        comm_q: Queue[Union[Tuple[int, int], str]]
+        # This annotation is incompatible with typeguard 4.x instrumentation
+        # of local variables: Queue is not subscriptable at runtime, as far
+        # as typeguard is concerned. The more general Queue annotation works,
+        # but does not restrict the contents of the Queue. Using TYPE_CHECKING
+        # here allows the stricter definition to be seen by mypy, and the
+        # simpler definition to be seen by typeguard. Hopefully at some point
+        # in the future, Queue will allow runtime subscripts.
+
+        if TYPE_CHECKING:
+            comm_q: Queue[Union[Tuple[int, int], str]]
+        else:
+            comm_q: Queue
+
         comm_q = SizedQueue(maxsize=10)
 
         self.exception_q: Queue[Tuple[str, str]]
@@ -213,7 +234,7 @@ class MonitoringHub(RepresentationMixin):
         self.logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
         self.filesystem_proc = Process(target=filesystem_receiver,
-                                       args=(self.logdir, self.resource_msgs, run_dir),
+                                       args=(self.logdir, self.resource_msgs, dfk_run_dir),
                                        name="Monitoring-Filesystem-Process",
                                        daemon=True
                                        )
@@ -269,8 +290,12 @@ class MonitoringHub(RepresentationMixin):
             self._dfk_channel.close()
             if exception_msgs:
                 for exception_msg in exception_msgs:
-                    self.logger.error("{} process delivered an exception: {}. Terminating all monitoring processes immediately.".format(exception_msg[0],
-                                      exception_msg[1]))
+                    self.logger.error(
+                        "{} process delivered an exception: {}. Terminating all monitoring processes immediately.".format(
+                            exception_msg[0],
+                            exception_msg[1]
+                        )
+                    )
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
                 self.filesystem_proc.terminate()

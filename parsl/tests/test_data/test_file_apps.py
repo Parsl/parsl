@@ -35,10 +35,10 @@ def increment(inputs=(), outputs=(), stdout=None, stderr=None):
 
 
 @pytest.mark.staging_required
-def test_increment(tmp_path, depth=5):
+def test_increment(tmpd_cwd, depth=5):
     """Test simple pipeline A->B...->N"""
     # Test setup
-    first_fpath = tmp_path / "test0.txt"
+    first_fpath = tmpd_cwd / "test0.txt"
     first_fpath.write_text("0\n")
 
     prev = [File(first_fpath)]
@@ -46,9 +46,9 @@ def test_increment(tmp_path, depth=5):
     for i in range(1, depth):
         f = increment(
             inputs=prev,
-            outputs=[File(tmp_path / f"test{i}.txt")],
-            stdout=tmp_path / f"incr{i}.out",
-            stderr=tmp_path / f"incr{i}.err",
+            outputs=[File(tmpd_cwd / f"test{i}.txt")],
+            stdout=tmpd_cwd / f"incr{i}.out",
+            stderr=tmpd_cwd / f"incr{i}.err",
         )
         prev = f.outputs
         futs.append((i, prev[0]))

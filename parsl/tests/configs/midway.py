@@ -12,7 +12,8 @@ def fresh_config():
             HighThroughputExecutor(
                 label='Midway_HTEX_multinode',
                 worker_debug=False,
-                max_workers=1,
+                max_workers_per_node=1,
+                encrypted=True,
                 provider=SlurmProvider(
                     'broadwl',  # Partition name, e.g 'broadwl'
                     launcher=SrunLauncher(),

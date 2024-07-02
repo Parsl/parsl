@@ -191,6 +191,8 @@ class RepresentationMixin:
     """
     __max_width__ = 80
 
+    _validate_repr = False
+
     def __repr__(self) -> str:
         init = self.__init__  # type: ignore[misc]
 
@@ -211,18 +213,21 @@ class RepresentationMixin:
         else:
             defaults = {}
 
-        for arg in argspec.args[1:]:
-            if not hasattr(self, arg):
-                template = (f'class {self.__class__.__name__} uses {arg} in the'
-                            f' constructor, but does not define it as an '
-                            f'attribute')
-                raise AttributeError(template)
+        if self._validate_repr:
+            for arg in argspec.args[1:]:
+                if not hasattr(self, arg):
+                    template = (f'class {self.__class__.__name__} uses {arg} in the'
+                                f' constructor, but does not define it as an '
+                                f'attribute')
+                    raise AttributeError(template)
+
+        default = "<unrecorded>"
 
         if len(defaults) != 0:
-            args = [getattr(self, a) for a in argspec.args[1:-len(defaults)]]
+            args = [getattr(self, a, default) for a in argspec.args[1:-len(defaults)]]
         else:
-            args = [getattr(self, a) for a in argspec.args[1:]]
-        kwargs = {key: getattr(self, key) for key in defaults}
+            args = [getattr(self, a, default) for a in argspec.args[1:]]
+        kwargs = {key: getattr(self, key, default) for key in defaults}
 
         def assemble_multiline(args: List[str], kwargs: Dict[str, object]) -> str:
             def indent(text: str) -> str:
@@ -300,59 +305,36 @@ class Timer:
              - name (str) : a base name to use when naming the started thread
         """
 
-        self.interval = interval
+        self.interval = max(0, interval)
         self.cb_args = args
         self.callback = callback
-        self._wake_up_time = time.time() + 1
 
         self._kill_event = threading.Event()
-        if name is None:
-            name = "Timer-Thread-{}".format(id(self))
-        else:
-            name = "{}-Timer-Thread-{}".format(name, id(self))
-        self._thread = threading.Thread(target=self._wake_up_timer, args=(self._kill_event,), name=name)
-        self._thread.daemon = True
+        tname = f"Timer-Thread-{id(self)}"
+        if name:
+            tname = f"{name}-{tname}"
+        self._thread = threading.Thread(
+            target=self._wake_up_timer, name=tname, daemon=True
+        )
         self._thread.start()
 
-    def _wake_up_timer(self, kill_event: threading.Event) -> None:
-        """Internal. This is the function that the thread will execute.
-        waits on an event so that the thread can make a quick exit when close() is called
-
-        Args:
-            - kill_event (threading.Event) : Event to wait on
-        """
-
-        # Sleep till time to wake up
-        while True:
-            prev = self._wake_up_time
-
-            # Waiting for the event returns True only when the event
-            # is set, usually by the parent thread
-            time_to_die = kill_event.wait(float(max(prev - time.time(), 0)))
-
-            if time_to_die:
-                return
-
-            if prev == self._wake_up_time:
-                self.make_callback()
-            else:
-                print("Sleeping a bit more")
+    def _wake_up_timer(self) -> None:
+        while not self._kill_event.wait(self.interval):
+            self.make_callback()
 
     def make_callback(self) -> None:
         """Makes the callback and resets the timer.
         """
-        self._wake_up_time = time.time() + self.interval
-
         try:
             self.callback(*self.cb_args)
         except Exception:
             logger.error("Callback threw an exception - logging and proceeding anyway", exc_info=True)
 
-    def close(self) -> None:
+    def close(self, timeout: Optional[float] = None) -> None:
         """Merge the threads and terminate.
         """
         self._kill_event.set()
-        self._thread.join()
+        self._thread.join(timeout=timeout)
 
 
 class AutoCancelTimer(threading.Timer):

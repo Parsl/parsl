@@ -59,17 +59,19 @@ class File:
         return self.filepath
 
     def __repr__(self) -> str:
-        content = f"{type(self).__name__} " \
-                  f"at 0x{id(self):x} " \
-                  f"url={self.url} " \
-                  f"scheme={self.scheme} " \
-                  f"netloc={self.netloc} " \
-                  f"path={self.path} " \
-                  f"filename={self.filename}"
+        content = [
+            f"{type(self).__name__}",
+            f"at 0x{id(self):x}",
+            f"url={self.url}",
+            f"scheme={self.scheme}",
+            f"netloc={self.netloc}",
+            f"path={self.path}",
+            f"filename={self.filename}",
+        ]
         if self.local_path is not None:
-            content += f" local_path={self.local_path}"
+            content.append(f"local_path={self.local_path}")
 
-        return "<{}>".format(content)
+        return f"<{' '.join(content)}>"
 
     def __fspath__(self) -> str:
         return self.filepath
