@@ -290,7 +290,12 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         else:
             logger.error("Submit command failed")
             logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
-            raise SubmitException(job_name, "Could not read job ID from submit command standard output", stdout=stdout, stderr=stderr, retcode=retcode)
+            raise SubmitException(
+                job_name, "Could not read job ID from submit command standard output",
+                stdout=stdout,
+                stderr=stderr,
+                retcode=retcode
+            )
 
     def cancel(self, job_ids):
         ''' Cancels the jobs specified by a list of job ids
