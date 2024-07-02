@@ -168,7 +168,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
              - tasks_per_node (int) : command invocations to be launched per node
 
         Kwargs:
-             - job_name (String): Name for job, must be unique
+             - job_name (String): Name for job
 
         Returns:
              - job_id: (string) Identifier for the job
