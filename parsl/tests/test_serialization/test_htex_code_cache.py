@@ -17,9 +17,9 @@ def test_caching() -> None:
     # for future serializer devs: if this is failing because you added another
     # code serializer, you'll also probably need to re-think what is being tested
     # about serialization caching here.
-    assert len(methods_for_code) == 1
-
-    serializer = methods_for_code[b'C2']
+    assert len(methods_for_code) == 1, "This test expects one default code serializer"
+    serializer = methods_for_code[0]
+    assert serializer.identifier == b'C2', "This test expects the default code serializer to have identifier C2"
 
     # force type to Any here because a serializer method coming from
     # methods_for_code doesn't statically have any cache management

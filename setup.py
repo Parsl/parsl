@@ -33,6 +33,7 @@ extras_require = {
     'azure' : ['azure<=4', 'msrestazure'],
     'workqueue': ['work_queue'],
     'flux': ['pyyaml', 'cffi', 'jsonschema'],
+    'serializer_demos': ['proxystore', 'serpent'],
     'proxystore': ['proxystore'],
     'radical-pilot': ['radical.pilot==1.60', 'radical.utils==1.60'],
     # Disabling psi-j since github direct links are not allowed by pypi

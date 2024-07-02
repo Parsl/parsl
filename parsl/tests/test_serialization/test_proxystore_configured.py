@@ -5,7 +5,7 @@ import pytest
 
 import parsl
 from parsl.serialize.facade import (
-    additional_methods_for_deserialization,
+    deserializers,
     methods_for_data,
     register_method_for_data,
 )
@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def local_setup():
+    global s
     from proxystore.connectors.file import FileConnector
     from proxystore.store import Store, register_store
 
@@ -30,11 +31,6 @@ def local_setup():
     global previous_methods
     previous_methods = methods_for_data.copy()
 
-    # get rid of all data serialization methods, in preparation for using only
-    # proxystore. put all the old methods as additional methods used only for
-    # deserialization, because those will be needed to deserialize the results,
-    # which will be serialized using the default serializer set.
-    additional_methods_for_deserialization.update(previous_methods)
     methods_for_data.clear()
 
     register_method_for_data(s)
@@ -42,12 +38,13 @@ def local_setup():
 
 
 def local_teardown():
+    global s
     parsl.dfk().cleanup()
 
     methods_for_data.clear()
-    methods_for_data.update(previous_methods)
+    methods_for_data.extend(previous_methods)
 
-    additional_methods_for_deserialization.clear()
+    del deserializers[s.identifier]
 
 
 @parsl.python_app
