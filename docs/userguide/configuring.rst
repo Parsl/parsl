@@ -60,9 +60,11 @@ All Parsl applications start by creating or importing a configuration then calli
     from parsl.configs.htex_local import config
     import parsl
 
-    parsl.load(config)
+    with parsl.load(config):
 
 The ``load`` statement can happen after Apps are defined but must occur before tasks are started.
+Loading the Config object within context manager like ``with`` is recommended
+for implicit cleaning of DFK on exiting the context manager  
 
 The :class:`~parsl.config.Config` object may not be used again after loaded.
 Consider a configuration function if the application will shut down and re-launch the DFK.
@@ -75,9 +77,11 @@ Consider a configuration function if the application will shut down and re-launc
     def make_config() -> Config:
         return Config(...)
 
-    parsl.load(make_config())
+    with parsl.load(make_config()):
+        # Your workflow here
     parsl.clear()  # Stops Parsl
-    parsl.load(make_config())  # Re-launches with a fresh configuration
+    with parsl.load(make_config()):  # Re-launches with a fresh configuration
+        # Your workflow here
 
 
 How to Configure

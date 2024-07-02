@@ -61,7 +61,7 @@ class BlockProviderExecutor(ParslExecutor):
         # errors can happen during the submit call to the provider; this is used
         # to keep track of such errors so that they can be handled in one place
         # together with errors reported by status()
-        self._simulated_status: Dict[Any, JobStatus] = {}
+        self._simulated_status: Dict[str, JobStatus] = {}
         self._executor_bad_state = threading.Event()
         self._executor_exception: Optional[Exception] = None
 
@@ -102,13 +102,10 @@ class BlockProviderExecutor(ParslExecutor):
         else:
             return self._provider.status_polling_interval
 
-    def _fail_job_async(self, block_id: Any, message: str):
+    def _fail_job_async(self, block_id: str, message: str):
         """Marks a job that has failed to start but would not otherwise be included in status()
         as failed and report it in status()
         """
-        if block_id is None:
-            block_id = str(self._block_id_counter.get_id())
-            logger.info(f"Allocated block ID {block_id} for simulated failure")
         self._simulated_status[block_id] = JobStatus(JobState.FAILED, message)
 
     @abstractproperty
@@ -210,10 +207,6 @@ class BlockProviderExecutor(ParslExecutor):
         """Scale in method.
 
         Cause the executor to reduce the number of blocks by count.
-
-        We should have the scale in method simply take resource object
-        which will have the scaling methods, scale_in itself should be a coroutine, since
-        scaling tasks can be slow.
 
         :return: A list of block ids corresponding to the blocks that were removed.
         """
