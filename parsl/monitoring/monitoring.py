@@ -8,8 +8,6 @@ import zmq
 
 import queue
 
-import parsl.monitoring.remote
-
 from parsl.multiprocessing import ForkProcess, SizedQueue
 from multiprocessing import Process
 from multiprocessing.queues import Queue
@@ -23,7 +21,7 @@ from parsl.serialize import deserialize
 from parsl.monitoring.router import router_starter
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import AddressedMonitoringMessage
-from typing import cast, Any, Callable, Dict, Optional, Sequence, Tuple, Union, TYPE_CHECKING
+from typing import cast, Any, Optional, Tuple, Union, TYPE_CHECKING
 
 _db_manager_excepts: Optional[Exception]
 
@@ -268,23 +266,6 @@ class MonitoringHub(RepresentationMixin):
             logger.info("Terminating filesystem radio receiver process")
             self.filesystem_proc.terminate()
             self.filesystem_proc.join()
-
-    @staticmethod
-    def monitor_wrapper(f: Any,
-                        args: Sequence,
-                        kwargs: Dict,
-                        try_id: int,
-                        task_id: int,
-                        monitoring_hub_url: str,
-                        run_id: str,
-                        logging_level: int,
-                        sleep_dur: float,
-                        radio_mode: str,
-                        monitor_resources: bool,
-                        run_dir: str) -> Tuple[Callable, Sequence, Dict]:
-        return parsl.monitoring.remote.monitor_wrapper(f, args, kwargs, try_id, task_id, monitoring_hub_url,
-                                                       run_id, logging_level, sleep_dur, radio_mode,
-                                                       monitor_resources, run_dir)
 
 
 @wrap_with_logs

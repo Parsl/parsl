@@ -15,7 +15,8 @@ from typing import Any, Callable, Dict, List, Sequence, Tuple
 logger = logging.getLogger(__name__)
 
 
-def monitor_wrapper(f: Any,           # per app
+def monitor_wrapper(*,
+                    f: Any,           # per app
                     args: Sequence,   # per invocation
                     kwargs: Dict,     # per invocation
                     x_try_id: int,    # per invocation
