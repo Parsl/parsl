@@ -3,6 +3,12 @@ import parsl
 import pytest
 import time
 
+from parsl import HighThroughputExecutor
+from parsl.config import Config
+from parsl.executors.taskvine import TaskVineExecutor
+from parsl.executors.taskvine import TaskVineManagerConfig
+from parsl.monitoring import MonitoringHub
+
 
 @parsl.python_app
 def this_app():
@@ -15,23 +21,49 @@ def this_app():
     return 5
 
 
+# The below fresh configs are for use in parametrization, and should return
+# a configuration that is suitably configured for monitoring.
+
+def htex_config():
+    from parsl.tests.configs.htex_local_alternate import fresh_config
+    return fresh_config()
+
+
+def workqueue_config():
+    from parsl.tests.configs.workqueue_ex import fresh_config
+    c = fresh_config()
+    c.monitoring = MonitoringHub(
+                        hub_address="localhost",
+                        resource_monitoring_interval=1)
+    return c
+
+
+def taskvine_config():
+    c = Config(executors=[TaskVineExecutor(manager_config=TaskVineManagerConfig(port=9000),
+                                           worker_launch_method='provider')],
+
+               monitoring=MonitoringHub(hub_address="localhost",
+                                        resource_monitoring_interval=1))
+    return c
+
+
 @pytest.mark.local
-def test_row_counts(tmpd_cwd):
+@pytest.mark.parametrize("fresh_config", [htex_config, workqueue_config, taskvine_config])
+def test_row_counts(tmpd_cwd, fresh_config):
     # this is imported here rather than at module level because
     # it isn't available in a plain parsl install, so this module
     # would otherwise fail to import and break even a basic test
     # run.
     import sqlalchemy
     from sqlalchemy import text
-    from parsl.tests.configs.htex_local_alternate import fresh_config
 
     db_url = f"sqlite:///{tmpd_cwd}/monitoring.db"
 
-    c = fresh_config()
-    c.run_dir = tmpd_cwd
-    c.monitoring.logging_endpoint = db_url
+    config = fresh_config()
+    config.run_dir = tmpd_cwd
+    config.monitoring.logging_endpoint = db_url
 
-    with parsl.load(c):
+    with parsl.load(config):
         assert this_app().result() == 5
 
     parsl.clear()
@@ -60,10 +92,12 @@ def test_row_counts(tmpd_cwd):
         (c, ) = result.first()
         assert c == 0
 
-        # Two entries: one showing manager active, one inactive
-        result = connection.execute(text("SELECT COUNT(*) FROM node"))
-        (c, ) = result.first()
-        assert c == 2
+        if isinstance(config.executors[0], HighThroughputExecutor):
+            # The node table is specific to the HighThroughputExecutor
+            # Two entries: one showing manager active, one inactive
+            result = connection.execute(text("SELECT COUNT(*) FROM node"))
+            (c, ) = result.first()
+            assert c == 2
 
         # There should be one block polling status
         # local provider has a status_polling_interval of 5s
