@@ -1266,6 +1266,13 @@ class DataFlowKernel:
         atexit.unregister(self.atexit_cleanup)
         logger.info("Unregistered atexit hook")
 
+        if DataFlowKernelLoader._dfk is self:
+            logger.info("Unregistering default DFK")
+            parsl.clear()
+            logger.info("Unregistered default DFK")
+        else:
+            logger.debug("Cleaning up non-default DFK - not unregistering")
+
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks: Optional[Sequence[TaskRecord]] = None) -> str:
