@@ -215,6 +215,13 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             This requires a version of Work Queue / cctools after commit
             874df524516441da531b694afc9d591e8b134b73 (release 7.5.0 is too early).
             Default is False.
+
+        scaling_cores_per_worker: int
+            When using Parsl scaling, this specifies the number of cores that a
+            worker is expected to have available for computation. Default 1. This
+            parameter can be ignored when using a fixed number of blocks, or when
+            using one task per worker (by omitting a ``cores`` resource
+            specifiation for each task).
     """
 
     radio_mode = "filesystem"
@@ -244,12 +251,14 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  full_debug: bool = True,
                  worker_executable: str = 'work_queue_worker',
                  function_dir: Optional[str] = None,
-                 coprocess: bool = False):
+                 coprocess: bool = False,
+                 scaling_cores_per_worker: int = 1):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
         if not _work_queue_enabled:
             raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
 
+        self.scaling_cores_per_worker = scaling_cores_per_worker
         self.label = label
         self.task_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
         self.collector_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
@@ -469,6 +478,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Create a Future object and have it be mapped from the task ID in the tasks dictionary
         fu = Future()
         fu.parsl_executor_task_id = executor_task_id
+        assert isinstance(resource_specification, dict)
+        fu.resource_specification = resource_specification
         logger.debug("Getting tasks_lock to set WQ-level task entry")
         with self.tasks_lock:
             logger.debug("Got tasks_lock to set WQ-level task entry")
@@ -654,20 +665,29 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
     @property
     def outstanding(self) -> int:
-        """Count the number of outstanding tasks. This is inefficiently
+        """Count the number of outstanding slots required. This is inefficiently
         implemented and probably could be replaced with a counter.
         """
+        logger.debug("Calculating outstanding task slot load")
         outstanding = 0
+        tasks = 0  # only for log message...
         with self.tasks_lock:
             for fut in self.tasks.values():
                 if not fut.done():
-                    outstanding += 1
-        logger.debug(f"Counted {outstanding} outstanding tasks")
+                    # if a task does not specify a core count, Work Queue will allocate an entire
+                    # worker node to that task. That's approximated here by saying that it uses
+                    # scaling_cores_per_worker.
+                    resource_spec = getattr(fut, 'resource_specification', {})
+                    cores = resource_spec.get('cores', self.scaling_cores_per_worker)
+
+                    outstanding += cores
+                    tasks += 1
+        logger.debug(f"Counted {tasks} outstanding tasks with {outstanding} outstanding slots")
         return outstanding
 
     @property
     def workers_per_node(self) -> Union[int, float]:
-        return 1
+        return self.scaling_cores_per_worker
 
     def scale_in(self, count: int) -> List[str]:
         """Scale in method.

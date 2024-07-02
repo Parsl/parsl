@@ -1,13 +1,13 @@
 import logging
 import math
 import pickle
+import subprocess
 import threading
 import typing
 import warnings
 from collections import defaultdict
 from concurrent.futures import Future
 from dataclasses import dataclass
-from multiprocessing import Process
 from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import typeguard
@@ -18,7 +18,7 @@ from parsl.addresses import get_all_addresses
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.staging import Staging
 from parsl.executors.errors import BadMessage, ScalingFailed
-from parsl.executors.high_throughput import interchange, zmq_pipes
+from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
 from parsl.executors.high_throughput.mpi_prefix_composer import (
     VALID_LAUNCHERS,
@@ -26,7 +26,6 @@ from parsl.executors.high_throughput.mpi_prefix_composer import (
 )
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
-from parsl.multiprocessing import ForkProcess
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
@@ -305,7 +304,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self._task_counter = 0
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
-        self.interchange_proc: Optional[Process] = None
+        self.interchange_proc: Optional[subprocess.Popen] = None
         self.interchange_port_range = interchange_port_range
         self.heartbeat_threshold = heartbeat_threshold
         self.heartbeat_period = heartbeat_period
@@ -520,38 +519,46 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         logger.info("Queue management worker finished")
 
-    def _start_local_interchange_process(self):
+    def _start_local_interchange_process(self) -> None:
         """ Starts the interchange process locally
 
-        Starts the interchange process locally and uses an internal command queue to
+        Starts the interchange process locally and uses the command queue to
         get the worker task and result ports that the interchange has bound to.
         """
-        self.interchange_proc = ForkProcess(target=interchange.starter,
-                                            kwargs={"client_address": "127.0.0.1",
-                                                    "client_ports": (self.outgoing_q.port,
-                                                                     self.incoming_q.port,
-                                                                     self.command_client.port),
-                                                    "interchange_address": self.address,
-                                                    "worker_ports": self.worker_ports,
-                                                    "worker_port_range": self.worker_port_range,
-                                                    "hub_address": self.hub_address,
-                                                    "hub_zmq_port": self.hub_zmq_port,
-                                                    "logdir": self.logdir,
-                                                    "heartbeat_threshold": self.heartbeat_threshold,
-                                                    "poll_period": self.poll_period,
-                                                    "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
-                                                    "cert_dir": self.cert_dir,
-                                                    },
-                                            daemon=True,
-                                            name="HTEX-Interchange"
-                                            )
-        self.interchange_proc.start()
 
+        interchange_config = {"client_address": "127.0.0.1",
+                              "client_ports": (self.outgoing_q.port,
+                                               self.incoming_q.port,
+                                               self.command_client.port),
+                              "interchange_address": self.address,
+                              "worker_ports": self.worker_ports,
+                              "worker_port_range": self.worker_port_range,
+                              "hub_address": self.hub_address,
+                              "hub_zmq_port": self.hub_zmq_port,
+                              "logdir": self.logdir,
+                              "heartbeat_threshold": self.heartbeat_threshold,
+                              "poll_period": self.poll_period,
+                              "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
+                              "cert_dir": self.cert_dir,
+                              }
+
+        config_pickle = pickle.dumps(interchange_config)
+
+        self.interchange_proc = subprocess.Popen(b"interchange.py", stdin=subprocess.PIPE)
+        stdin = self.interchange_proc.stdin
+        assert stdin is not None, "Popen should have created an IO object (vs default None) because of PIPE mode"
+
+        logger.debug("Popened interchange process. Writing config object")
+        stdin.write(config_pickle)
+        stdin.flush()
+        stdin.close()
+        logger.debug("Sent config object. Requesting worker ports")
         try:
             (self.worker_task_port, self.worker_result_port) = self.command_client.run("WORKER_PORTS", timeout_s=120)
         except CommandClientTimeoutError:
-            logger.error("Interchange has not completed initialization in 120s. Aborting")
+            logger.error("Interchange has not completed initialization. Aborting")
             raise Exception("Interchange failed to start")
+        logger.debug("Got worker ports")
 
     def _start_queue_management_thread(self):
         """Method to start the management thread as a daemon.
@@ -810,12 +817,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         logger.info("Attempting HighThroughputExecutor shutdown")
 
         self.interchange_proc.terminate()
-        self.interchange_proc.join(timeout=timeout)
-        if self.interchange_proc.is_alive():
+        try:
+            self.interchange_proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
             logger.info("Unable to terminate Interchange process; sending SIGKILL")
             self.interchange_proc.kill()
-
-        self.interchange_proc.close()
 
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 

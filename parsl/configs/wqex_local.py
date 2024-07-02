@@ -2,6 +2,7 @@ import uuid
 
 from parsl.config import Config
 from parsl.executors import WorkQueueExecutor
+from parsl.usage_tracking.levels import LEVEL_1
 
 config = Config(
     executors=[
@@ -21,5 +22,6 @@ config = Config(
             # A shared filesystem is not needed when using Work Queue.
             shared_fs=False
         )
-    ]
+    ],
+    usage_tracking=LEVEL_1,
 )
