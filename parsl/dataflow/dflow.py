@@ -1186,6 +1186,12 @@ class DataFlowKernel:
             if self.monitoring:
                 executor.monitoring_radio = self.monitoring.radio
             if hasattr(executor, 'provider'):
+
+                assert hasattr(executor.provider, 'channel') or hasattr(executor.provider, 'channels'), \
+                    "The provider model assumes a provider has channel(s)"
+                assert not (hasattr(executor.provider, 'channel') and hasattr(executor.provider, 'channels')), \
+                    "The provider model assumes a provider does not have both .channel and .channels"
+
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
                     os.makedirs(executor.provider.script_dir, exist_ok=True)
