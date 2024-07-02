@@ -1,4 +1,4 @@
-"""Helpers for cross-plaform multiprocessing support.
+"""Helpers for cross-platform multiprocessing support.
 """
 
 import logging
@@ -10,10 +10,12 @@ from typing import Callable, Type
 
 logger = logging.getLogger(__name__)
 
+ForkContext = multiprocessing.get_context("fork")
+SpawnContext = multiprocessing.get_context("spawn")
+
 # maybe ForkProcess should be: Callable[..., Process] so as to make
 # it clear that it returns a Process always to the type checker?
-ForkProcess: Type = multiprocessing.get_context('fork').Process
-SpawnProcess: Type = multiprocessing.get_context('spawn').Process
+ForkProcess: Type = ForkContext.Process
 
 
 class MacSafeQueue(multiprocessing.queues.Queue):

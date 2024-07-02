@@ -6,10 +6,15 @@ import logging
 import typeguard
 from abc import ABCMeta, abstractmethod
 from inspect import signature
-from typing import List, Optional, Union
+from typing import List, Optional, Sequence, Union
 from typing_extensions import Literal
 
 from parsl.dataflow.dflow import DataFlowKernel
+
+from typing import Any, Callable, Dict
+
+from parsl.dataflow.futures import AppFuture
+
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +27,12 @@ class AppBase(metaclass=ABCMeta):
 
     """
 
-    def __init__(self, func, data_flow_kernel=None, executors='all', cache=False, ignore_for_cache=None):
+    @typeguard.typechecked
+    def __init__(self, func: Callable,
+                 data_flow_kernel: Optional[DataFlowKernel] = None,
+                 executors: Union[List[str], Literal['all']] = 'all',
+                 cache: bool = False,
+                 ignore_for_cache: Optional[Sequence[str]] = None) -> None:
         """Construct the App object.
 
         Args:
@@ -34,7 +44,7 @@ class AppBase(metaclass=ABCMeta):
                after calling :meth:`parsl.dataflow.dflow.DataFlowKernelLoader.load`.
              - executors (str|list) : Labels of the executors that this app can execute over. Default is 'all'.
              - cache (Bool) : Enable caching of this app ?
-             - ignore_for_cache (list|None): Names of arguments which will be ignored by the caching mechanism.
+             - ignore_for_cache (sequence|None): Names of arguments which will be ignored by the caching mechanism.
 
         Returns:
              - App object.
@@ -46,12 +56,10 @@ class AppBase(metaclass=ABCMeta):
         self.executors = executors
         self.cache = cache
         self.ignore_for_cache = ignore_for_cache
-        if not (isinstance(executors, list) or isinstance(executors, str)):
-            logger.error("App {} specifies invalid executor option, expects string or list".format(
-                func.__name__))
 
         params = signature(func).parameters
 
+        self.kwargs: Dict[str, Any]
         self.kwargs = {}
         if 'stdout' in params:
             self.kwargs['stdout'] = params['stdout'].default
@@ -65,16 +73,16 @@ class AppBase(metaclass=ABCMeta):
         self.inputs = params['inputs'].default if 'inputs' in params else []
 
     @abstractmethod
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> AppFuture:
         pass
 
 
 @typeguard.typechecked
-def python_app(function=None,
+def python_app(function: Optional[Callable] = None,
                data_flow_kernel: Optional[DataFlowKernel] = None,
                cache: bool = False,
                executors: Union[List[str], Literal['all']] = 'all',
-               ignore_for_cache: Optional[List[str]] = None):
+               ignore_for_cache: Optional[Sequence[str]] = None) -> Callable:
     """Decorator function for making python apps.
 
     Parameters
@@ -91,13 +99,13 @@ def python_app(function=None,
         Labels of the executors that this app can execute over. Default is 'all'.
     cache : bool
         Enable caching of the app call. Default is False.
-    ignore_for_cache : (list|None)
+    ignore_for_cache : (sequence|None)
         Names of arguments which will be ignored by the caching mechanism.
     """
     from parsl.app.python import PythonApp
 
-    def decorator(func):
-        def wrapper(f):
+    def decorator(func: Callable) -> Callable:
+        def wrapper(f: Callable) -> PythonApp:
             return PythonApp(f,
                              data_flow_kernel=data_flow_kernel,
                              cache=cache,
@@ -111,10 +119,10 @@ def python_app(function=None,
 
 
 @typeguard.typechecked
-def join_app(function=None,
+def join_app(function: Optional[Callable] = None,
              data_flow_kernel: Optional[DataFlowKernel] = None,
              cache: bool = False,
-             ignore_for_cache: Optional[List[str]] = None):
+             ignore_for_cache: Optional[Sequence[str]] = None) -> Callable:
     """Decorator function for making join apps
 
     Parameters
@@ -129,13 +137,13 @@ def join_app(function=None,
         be omitted only after calling :meth:`parsl.dataflow.dflow.DataFlowKernelLoader.load`. Default is None.
     cache : bool
         Enable caching of the app call. Default is False.
-    ignore_for_cache : (list|None)
+    ignore_for_cache : (sequence|None)
         Names of arguments which will be ignored by the caching mechanism.
     """
     from parsl.app.python import PythonApp
 
-    def decorator(func):
-        def wrapper(f):
+    def decorator(func: Callable) -> Callable:
+        def wrapper(f: Callable) -> PythonApp:
             return PythonApp(f,
                              data_flow_kernel=data_flow_kernel,
                              cache=cache,
@@ -149,11 +157,11 @@ def join_app(function=None,
 
 
 @typeguard.typechecked
-def bash_app(function=None,
+def bash_app(function: Optional[Callable] = None,
              data_flow_kernel: Optional[DataFlowKernel] = None,
              cache: bool = False,
              executors: Union[List[str], Literal['all']] = 'all',
-             ignore_for_cache: Optional[List[str]] = None):
+             ignore_for_cache: Optional[Sequence[str]] = None) -> Callable:
     """Decorator function for making bash apps.
 
     Parameters
@@ -177,8 +185,8 @@ def bash_app(function=None,
     """
     from parsl.app.bash import BashApp
 
-    def decorator(func):
-        def wrapper(f):
+    def decorator(func: Callable) -> Callable:
+        def wrapper(f: Callable) -> BashApp:
             return BashApp(f,
                            data_flow_kernel=data_flow_kernel,
                            cache=cache,

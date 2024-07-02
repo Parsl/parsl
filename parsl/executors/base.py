@@ -5,8 +5,6 @@ from typing_extensions import Literal, Self
 
 from parsl.jobs.states import JobStatus
 
-import parsl  # noqa F401
-
 
 class ParslExecutor(metaclass=ABCMeta):
     """Executors are abstractions that represent available compute resources
@@ -74,7 +72,7 @@ class ParslExecutor(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def shutdown(self) -> bool:
+    def shutdown(self) -> None:
         """Shutdown the executor.
 
         This includes all attached resources such as workers and controllers.

@@ -18,7 +18,6 @@ config = Config(
             address=address_by_interface('bond0'),
             cpu_affinity="alternating",  # Prevents thread contention
             prefetch_capacity=0,  # Increase if you have many more tasks than workers
-            start_method="spawn",  # Needed to avoid interactions between MPI and os.fork
             provider=PBSProProvider(
                 account="YOUR_ACCOUNT",
                 worker_init="module load conda; conda activate YOUR_ENV",

@@ -187,7 +187,6 @@ An example which launches 512 workers on 128 nodes of the Polaris supercomputer 
                 available_accelerators=4,  # Maps one worker per GPU
                 address=address_by_hostname(),
                 cpu_affinity="alternating",  # Prevents thread contention
-                start_method="spawn",  # Needed to avoid interactions between MPI and os.fork
                 provider=PBSProProvider(
                     account="example",
                     worker_init="module load conda; conda activate parsl",

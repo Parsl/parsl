@@ -51,6 +51,7 @@ def main():
             "port": s.getsockname()[1],
             }
     send_configuration(config)
+    abs_working_dir = os.getcwd()
     while True:
         s.listen()
         conn, addr = s.accept()
@@ -76,7 +77,7 @@ def main():
                     # see if the user specified an execution method
                     exec_method = event.get("remote_task_exec_method", None)
                     print('Network function: recieved event: {}'.format(event), file=sys.stderr)
-                    os.chdir(f"t.{task_id}")
+                    os.chdir(os.path.join(abs_working_dir, f't.{task_id}'))
                     if exec_method == "thread":
                         # create a forked process for function handler
                         q = queue.Queue()
@@ -112,10 +113,22 @@ def main():
                     conn.sendall(size_msg.encode('utf-8'))
                     # send response
                     conn.sendall(response)
-                    os.chdir("..")
                     break
             except Exception as e:
                 print("Network function encountered exception ", str(e), file=sys.stderr)
+                response = {
+                    'Result': f'network function encountered exception {e}',
+                    'Status Code': 500
+                }
+                response = json.dumps(response).encode('utf-8')
+                response_size = len(response)
+                size_msg = "{}\n".format(response_size)
+                # send the size of response
+                conn.sendall(size_msg.encode('utf-8'))
+                # send response
+                conn.sendall(response)
+            finally:
+                os.chdir(abs_working_dir)
     return 0
 def name():
     return 'parsl_coprocess'

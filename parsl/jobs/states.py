@@ -8,14 +8,36 @@ logger = logging.getLogger(__name__)
 
 class JobState(IntEnum):
     """Defines a set of states that a job can be in"""
+
     UNKNOWN = 0
+    """The batch provider is unable to determinate a state for this job"""
+
     PENDING = 1
+    """"This job is in the batch queue but has not started running"""
+
     RUNNING = 2
+    """This job is running in the batch system"""
+
     CANCELLED = 3
+    """This job has been cancelled"""
+
     COMPLETED = 4
+    """This job has completed"""
+
     FAILED = 5
+    """This job has failed"""
+
     TIMEOUT = 6
+    """This job has ended due to walltime expiry. This is different from
+    other error states, because in the pilot job model, a timeout is usually
+    expected and not a failure. Timeouts should not be reported with FAILED
+    state: if they are reported as FAILED, Parsl's error handling code
+    in `simple_error_handler` will eventually regard the batch system as
+    broken and shut down.
+    """
+
     HELD = 7
+    """This job is held/suspended in the batch system"""
 
     def __str__(self) -> str:
         return self.__class__.__name__ + "." + self.name

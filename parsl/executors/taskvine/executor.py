@@ -614,7 +614,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             self._factory_process.join()
 
         logger.debug("TaskVine shutdown completed")
-        return True
 
     @wrap_with_logs
     def _collect_taskvine_results(self):

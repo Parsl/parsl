@@ -23,7 +23,7 @@ def test_staging_ftp():
     Create a remote input file (ftp) that points to file_test_cpt.txt.
     """
 
-    unsorted_file = File('ftp://www.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
+    unsorted_file = File('ftp://ftp.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
 
     # Create a local file for output data
     sorted_file = File('sorted.txt')

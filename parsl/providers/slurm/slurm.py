@@ -250,7 +250,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                     self.resources[job_id] = {'job_id': job_id, 'status': JobStatus(JobState.PENDING)}
                     break
             else:
-                logger.error("Could not read job ID from sumbit command standard output.")
+                logger.error("Could not read job ID from submit command standard output.")
                 logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
         else:
             logger.error("Submit command failed")

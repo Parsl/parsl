@@ -6,9 +6,8 @@ import threading
 import queue
 import datetime
 import pickle
-import warnings
 from multiprocessing import Queue
-from typing import Dict, Sequence  # noqa F401 (used in type annotation)
+from typing import Dict, Sequence
 from typing import List, Optional, Tuple, Union, Callable
 import math
 
@@ -34,8 +33,6 @@ from parsl.utils import RepresentationMixin
 from parsl.providers import LocalProvider
 
 logger = logging.getLogger(__name__)
-
-_start_methods = ['fork', 'spawn', 'thread']
 
 
 class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
@@ -153,16 +150,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         default: empty list
 
-    start_method: str
-        What method to use to start new worker processes.
-        HTEx supports "spawn," "fork," and "thread" workers.
-        "Spawn" and "fork" workers are launched in separate processes using different mechanisms,
-        which are described in `Python's multiprocessing documentation.
-        <https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods>`_.
-        "Thread" workers are separate threads of the ``process_worker_pool``, which saves on memory but is
-        only recommended for workloads that involving launching other processes (e.g., ``bash_app`` s).
-        Default: fork
-
     prefetch_capacity : int
         Number of tasks that could be prefetched over available worker capacity.
         When there are a few tasks (<100) or when tasks are long running, this option should
@@ -206,7 +193,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                  max_workers: Union[int, float] = float('inf'),
                  cpu_affinity: str = 'none',
                  available_accelerators: Union[int, Sequence[str]] = (),
-                 start_method: str = 'spawn',
                  prefetch_capacity: int = 0,
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
@@ -229,7 +215,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
         self.prefetch_capacity = prefetch_capacity
         self.address = address
         self.address_probe_timeout = address_probe_timeout
-        self.start_method = start_method
         if self.address:
             self.all_addresses = address
         else:
@@ -251,17 +236,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             # If the user provide an integer, create some names for them
             available_accelerators = list(map(str, range(available_accelerators)))
         self.available_accelerators = list(available_accelerators)
-
-        # Raise errors for incompatible settings
-        if start_method not in _start_methods:
-            raise ValueError(f'Start method "{start_method}" not recognized. Expected one of: {", ".join(_start_methods)}')
-        if start_method == "thread" and cpu_affinity != "none":
-            raise ValueError('Thread affinity is not available with start method: "thread"')
-        if start_method == "thread" and len(available_accelerators) > 0:
-            raise ValueError('Accelerator pinning not available with start method: "thread"')
-        if start_method == "fork":
-            logger.warning("The 'fork' start method is deprecated")
-            warnings.warn("The 'fork' start method is deprecated")
 
         # Determine the number of workers per node
         self._workers_per_node = min(max_workers, mem_slots, cpu_slots)
@@ -299,8 +273,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                "{address_probe_timeout_string} "
                                "--hb_threshold={heartbeat_threshold} "
                                "--cpu-affinity {cpu_affinity} "
-                               "--available-accelerators {accelerators} "
-                               "--start-method {start_method}")
+                               "--available-accelerators {accelerators}")
 
     radio_mode = "htex"
 
@@ -332,8 +305,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
                                        poll_period=self.poll_period,
                                        logdir=worker_logdir,
                                        cpu_affinity=self.cpu_affinity,
-                                       accelerators=" ".join(self.available_accelerators),
-                                       start_method=self.start_method)
+                                       accelerators=" ".join(self.available_accelerators))
         self.launch_cmd = l_cmd
         logger.debug("Launch command: {}".format(self.launch_cmd))
 

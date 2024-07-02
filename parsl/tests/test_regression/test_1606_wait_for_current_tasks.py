@@ -4,7 +4,7 @@ import time
 import pytest
 
 import parsl
-from parsl.tests.configs.local_threads import fresh_config as local_config  # noqa
+from parsl.tests.configs.local_threads import fresh_config as local_config
 
 
 @parsl.python_app
