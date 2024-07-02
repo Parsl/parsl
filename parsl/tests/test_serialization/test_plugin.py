@@ -3,7 +3,12 @@
 import pytest
 
 from parsl.serialize.base import SerializerBase
-from parsl.serialize.facade import serialize, deserialize, register_method_for_data, unregister_serializer
+from parsl.serialize.facade import (
+    deserialize,
+    register_method_for_data,
+    serialize,
+    unregister_serializer,
+)
 
 B_MAGIC = b'3626874628368432'  # arbitrary const bytestring
 V_MAGIC = 777  # arbitrary const object

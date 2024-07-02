@@ -5,25 +5,23 @@ future parsl stuff done in the same process as this configuration
 will not see the default serializer environment...
 """
 
-# imports for monitoring:
-from parsl.monitoring import MonitoringHub
-
 import os
 
-from parsl.providers import LocalProvider
 from parsl.channels import LocalChannel
+from parsl.config import Config
+from parsl.data_provider.file_noop import NoOpFileStaging
+from parsl.data_provider.ftp import FTPInTaskStaging
+from parsl.data_provider.http import HTTPInTaskStaging
+from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SingleNodeLauncher
 
-from parsl.config import Config
-from parsl.executors import HighThroughputExecutor
-
-
-from parsl.data_provider.http import HTTPInTaskStaging
-from parsl.data_provider.ftp import FTPInTaskStaging
-from parsl.data_provider.file_noop import NoOpFileStaging
-
-from parsl.serialize.facade import methods_for_data, register_method_for_data  # TODO: move this into parsl.serialize root as its user exposed
-
+# imports for monitoring:
+from parsl.monitoring import MonitoringHub
+from parsl.providers import LocalProvider
+from parsl.serialize.facade import (  # TODO: move this into parsl.serialize root as its user exposed
+    methods_for_data,
+    register_method_for_data,
+)
 from parsl.serialize.plugin_serpent import SerpentSerializer
 
 working_dir = os.getcwd() + "/" + "test_htex_alternate"

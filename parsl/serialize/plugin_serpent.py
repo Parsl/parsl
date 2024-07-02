@@ -1,7 +1,8 @@
-from parsl.serialize.base import SerializerBase
+from typing import Any
+
 import serpent
 
-from typing import Any
+from parsl.serialize.base import SerializerBase
 
 
 class SerpentSerializer(SerializerBase):

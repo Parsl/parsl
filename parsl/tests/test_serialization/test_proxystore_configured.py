@@ -5,8 +5,7 @@ import pytest
 
 import parsl
 from parsl.serialize.facade import (
-    additional_methods_for_deserialization,
-    deserializers
+    deserializers,
     methods_for_data,
     register_method_for_data,
 )

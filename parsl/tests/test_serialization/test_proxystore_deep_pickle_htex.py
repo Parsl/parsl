@@ -1,14 +1,20 @@
 # test the serializer plugin API
 import logging
+
 import pytest
+
 import parsl
-
-from parsl.tests.configs.htex_local import fresh_config as local_config
-
 from parsl.serialize.base import SerializerBase
-from parsl.serialize.facade import serialize, deserialize, register_method_for_data, unregister_serializer
-
-from parsl.serialize.plugin_proxystore_deep_pickle import create_deep_proxystore_serializer
+from parsl.serialize.facade import (
+    deserialize,
+    register_method_for_data,
+    serialize,
+    unregister_serializer,
+)
+from parsl.serialize.plugin_proxystore_deep_pickle import (
+    create_deep_proxystore_serializer,
+)
+from parsl.tests.configs.htex_local import fresh_config as local_config
 
 logger = logging.getLogger(__name__)
 

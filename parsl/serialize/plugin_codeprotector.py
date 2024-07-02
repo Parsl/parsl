@@ -1,12 +1,12 @@
-from parsl.serialize.base import SerializerBase
-
-from typing import Any
-
-import dill
 import io
 import logging
 import sys
 import types
+from typing import Any
+
+import dill
+
+from parsl.serialize.base import SerializerBase
 
 logger = logging.getLogger(__name__)
 
