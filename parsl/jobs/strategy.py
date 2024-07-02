@@ -9,7 +9,6 @@ import parsl.jobs.job_status_poller as jsp
 
 from parsl.executors import HighThroughputExecutor
 from parsl.executors.base import ParslExecutor
-from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import JobState
 from parsl.process_loggers import wrap_with_logs
 
@@ -183,15 +182,12 @@ class Strategy:
         self._general_strategy(executor_facades, strategy_type='htex')
 
     @wrap_with_logs
-    def _general_strategy(self, executor_facades, *, strategy_type):
+    def _general_strategy(self, executor_facades: List[jsp.PolledExecutorFacade], *, strategy_type: str) -> None:
         logger.debug(f"general strategy starting with strategy_type {strategy_type} for {len(executor_facades)} executors")
 
         for ef in executor_facades:
             executor = ef.executor
             label = executor.label
-            if not isinstance(executor, BlockProviderExecutor):
-                logger.debug(f"Not strategizing for executor {label} because scaling not enabled")
-                continue
             logger.debug(f"Strategizing for executor {label}")
 
             if self.executors[label]['first']:
@@ -253,8 +249,9 @@ class Strategy:
                     if not self.executors[executor.label]['idle_since']:
                         logger.debug(f"Starting idle timer for executor. If idle time exceeds {self.max_idletime}s, blocks will be scaled in")
                         self.executors[executor.label]['idle_since'] = time.time()
-
                     idle_since = self.executors[executor.label]['idle_since']
+                    assert idle_since is not None, "The `if` statement above this assert should have forced idle time to be not-None"
+
                     idle_duration = time.time() - idle_since
                     if idle_duration > self.max_idletime:
                         # We have resources idle for the max duration,
