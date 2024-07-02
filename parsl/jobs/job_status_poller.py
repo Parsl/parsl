@@ -1,5 +1,4 @@
 import logging
-import parsl
 from typing import List, Sequence, Optional, Union
 
 from parsl.jobs.strategy import Strategy
@@ -14,8 +13,7 @@ logger = logging.getLogger(__name__)
 
 class JobStatusPoller(Timer):
     def __init__(self, *, strategy: Optional[str], max_idletime: float,
-                 strategy_period: Union[float, int],
-                 monitoring: Optional["parsl.monitoring.radios.MonitoringRadio"] = None) -> None:
+                 strategy_period: Union[float, int]) -> None:
         self._executors = []  # type: List[BlockProviderExecutor]
         self._strategy = Strategy(strategy=strategy,
                                   max_idletime=max_idletime)

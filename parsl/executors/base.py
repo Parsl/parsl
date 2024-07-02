@@ -1,3 +1,4 @@
+import os
 from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
 from typing import Any, Callable, Dict, Optional
@@ -44,6 +45,21 @@ class ParslExecutor(metaclass=ABCMeta):
 
     label: str = "undefined"
     radio_mode: str = "udp"
+
+    def __init__(
+        self,
+        *,
+        hub_address: Optional[str] = None,
+        hub_port: Optional[int] = None,
+        monitoring_radio: Optional[MonitoringRadio] = None,
+        run_dir: str = ".",
+        run_id: Optional[str] = None,
+    ):
+        self.hub_address = hub_address
+        self.hub_port = hub_port
+        self.monitoring_radio = monitoring_radio
+        self.run_dir = os.path.abspath(run_dir)
+        self.run_id = run_id
 
     def __enter__(self) -> Self:
         return self
