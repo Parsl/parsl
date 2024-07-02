@@ -1278,16 +1278,17 @@ class DataFlowKernel:
             logger.info(f"Shut down executor {executor.label}")
 
             if hasattr(executor, 'provider'):
-                logger.info(f"Closing channel(s) for {executor.label}")
+                if hasattr(executor.provider, 'script_dir'):
+                    logger.info(f"Closing channel(s) for {executor.label}")
 
-                if hasattr(executor.provider, 'channels'):
-                    for channel in executor.provider.channels:
-                        channel.close()
-                else:
-                    assert hasattr(executor.provider, 'channel'), "If provider has no .channels, it must have .channel"
-                    executor.provider.channel.close()
+                    if hasattr(executor.provider, 'channels'):
+                        for channel in executor.provider.channels:
+                            channel.close()
+                    else:
+                        assert hasattr(executor.provider, 'channel'), "If provider has no .channels, it must have .channel"
+                        executor.provider.channel.close()
 
-                logger.info(f"Closed executor channel(s) for {executor.label}")
+                    logger.info(f"Closed executor channel(s) for {executor.label}")
 
         logger.info("Terminated executors")
         self.time_completed = datetime.datetime.now()
