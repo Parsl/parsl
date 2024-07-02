@@ -18,6 +18,7 @@ def my_affinity():
 
 @pytest.mark.local
 @pytest.mark.multiple_cores_required
+@pytest.mark.skipif('sched_getaffinity' not in dir(os), reason='System does not support sched_setaffinity')
 def test_cpu_affinity_explicit():
     available_cores = os.sched_getaffinity(0)
 
