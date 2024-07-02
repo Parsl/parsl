@@ -858,7 +858,7 @@ if __name__ == "__main__":
                         required=True,
                         help="Whether/how workers should control CPU affinity.")
     parser.add_argument("--available-accelerators", type=str, nargs="*",
-                        help="Names of available accelerators")
+                        help="Names of available accelerators, if not given assumed to be zero accelerators available", default=[])
     parser.add_argument("--enable_mpi_mode", action='store_true',
                         help="Enable MPI mode")
     parser.add_argument("--mpi-launcher", type=str, choices=VALID_LAUNCHERS,
