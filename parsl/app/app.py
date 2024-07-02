@@ -66,6 +66,10 @@ class AppBase(metaclass=ABCMeta):
             self.kwargs['walltime'] = params['walltime'].default
         if 'parsl_resource_specification' in params:
             self.kwargs['parsl_resource_specification'] = params['parsl_resource_specification'].default
+        if 'outputs' in params:
+            self.kwargs['outputs'] = params['outputs'].default
+        if 'inputs' in params:
+            self.kwargs['inputs'] = params['inputs'].default
 
     @abstractmethod
     def __call__(self, *args: Any, **kwargs: Any) -> AppFuture:
