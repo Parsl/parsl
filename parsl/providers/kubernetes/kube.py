@@ -189,7 +189,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         formatted_cmd = template_string.format(command=cmd_string,
                                                worker_init=self.worker_init)
 
-        logger.debug("Pod name: {}".format(pod_name))
+        logger.debug("Pod name: %s", pod_name)
+
         self._create_pod(image=self.image,
                          pod_name=pod_name,
                          job_name=job_name,
