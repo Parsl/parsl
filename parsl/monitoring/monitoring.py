@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import time
 import logging
+import multiprocessing.synchronize as ms
 import typeguard
 import zmq
 
@@ -10,6 +11,7 @@ import queue
 
 from parsl.multiprocessing import ForkProcess, SizedQueue
 from multiprocessing import Process
+from multiprocessing import Event
 from multiprocessing.queues import Queue
 from parsl.log_utils import set_file_logger
 from parsl.utils import RepresentationMixin
@@ -157,8 +159,12 @@ class MonitoringHub(RepresentationMixin):
         self.block_msgs: Queue[AddressedMonitoringMessage]
         self.block_msgs = SizedQueue()
 
+        self.router_exit_event: ms.Event
+        self.router_exit_event = Event()
+
         self.router_proc = ForkProcess(target=router_starter,
-                                       args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs),
+                                       args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs,
+                                             self.block_msgs, self.resource_msgs, self.router_exit_event),
                                        kwargs={"hub_address": self.hub_address,
                                                "udp_port": self.hub_port,
                                                "zmq_port_range": self.hub_port_range,
@@ -249,6 +255,8 @@ class MonitoringHub(RepresentationMixin):
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
                 self.filesystem_proc.terminate()
+            logger.info("Setting router termination event")
+            self.router_exit_event.set()
             logger.info("Waiting for router to terminate")
             self.router_proc.join()
             logger.debug("Finished waiting for router termination")
