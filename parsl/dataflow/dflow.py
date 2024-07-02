@@ -207,7 +207,7 @@ class DataFlowKernel:
         atexit.register(self.atexit_cleanup)
 
     def __enter__(self):
-        pass
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         logger.debug("Exiting the context manager, calling cleanup for DFK")
@@ -1141,14 +1141,7 @@ class DataFlowKernel:
                         self._create_remote_dirs_over_channel(executor.provider, executor.provider.channel)
 
             self.executors[executor.label] = executor
-            block_ids = executor.start()
-            if self.monitoring and block_ids:
-                new_status = {}
-                for bid in block_ids:
-                    new_status[bid] = JobStatus(JobState.PENDING)
-                msg = executor.create_monitoring_info(new_status)
-                logger.debug("Sending monitoring message {} to hub from DFK".format(msg))
-                self.monitoring.send(MessageType.BLOCK_INFO, msg)
+            executor.start()
         block_executors = [e for e in executors if isinstance(e, BlockProviderExecutor)]
         self.job_status_poller.add_executors(block_executors)
 
@@ -1238,7 +1231,7 @@ class DataFlowKernel:
                             logger.debug("Sending message {} to hub from DFK".format(msg))
                             self.monitoring.send(MessageType.BLOCK_INFO, msg)
                 else:  # and bad_state_is_set
-                    logger.warning(f"Not shutting down executor {executor.label} because it is in bad state")
+                    logger.warning(f"Not scaling in executor {executor.label} because it is in bad state")
             logger.info(f"Shutting down executor {executor.label}")
             executor.shutdown()
             logger.info(f"Shut down executor {executor.label}")

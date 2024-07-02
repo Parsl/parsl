@@ -35,6 +35,7 @@ def local_config():
             )
         ],
         strategy='none',
+        strategy_period=0.1
     )
 
 

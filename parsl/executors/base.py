@@ -53,7 +53,7 @@ class ParslExecutor(metaclass=ABCMeta):
         return False
 
     @abstractmethod
-    def start(self) -> Optional[List[str]]:
+    def start(self) -> None:
         """Start the executor.
 
         Any spin-up operations (for example: starting thread pools) should be performed here.

@@ -1,4 +1,5 @@
 import typing
+from collections import defaultdict
 from concurrent.futures import Future
 import typeguard
 import logging
@@ -400,16 +401,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         logger.debug("Starting HighThroughputExecutor with provider:\n%s", self.provider)
 
-        # TODO: why is this a provider property?
-        block_ids = []
-        if hasattr(self.provider, 'init_blocks'):
-            try:
-                block_ids = self.scale_out(blocks=self.provider.init_blocks)
-            except Exception as e:
-                logger.error("Scaling out failed: {}".format(e))
-                raise e
-        return block_ids
-
     def start(self):
         """Create the Interchange process and connect to it.
         """
@@ -439,8 +430,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
 
         logger.debug("Created management thread: {}".format(self._queue_management_thread))
 
-        block_ids = self.initialize_scaling()
-        return block_ids
+        self.initialize_scaling()
 
     @wrap_with_logs
     def _queue_management_worker(self):
@@ -744,13 +734,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin):
             idle: float  # shortest idle time of any manager in this block
 
         managers = self.connected_managers()
-        block_info: Dict[str, BlockInfo] = {}
+        block_info: Dict[str, BlockInfo] = defaultdict(lambda: BlockInfo(tasks=0, idle=float('inf')))
         for manager in managers:
             if not manager['active']:
                 continue
             b_id = manager['block_id']
-            if b_id not in block_info:
-                block_info[b_id] = BlockInfo(tasks=0, idle=float('inf'))
             block_info[b_id].tasks += manager['tasks']
             block_info[b_id].idle = min(block_info[b_id].idle, manager['idle_duration'])
 
