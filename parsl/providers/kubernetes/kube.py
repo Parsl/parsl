@@ -171,7 +171,6 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
              - job_name (String): Name for job, must be unique
 
         Returns:
-             - None: At capacity, cannot provision more
              - job_id: (string) Identifier for the job
         """
 
