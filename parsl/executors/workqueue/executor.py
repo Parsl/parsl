@@ -3,6 +3,7 @@ Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant,
 high-throughput system for delegating Parsl tasks to thousands of remote machines
 """
 
+import atexit
 import threading
 import multiprocessing
 import logging
@@ -298,6 +299,18 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
 
+        # register atexit handler to cleanup when Python shuts down
+        atexit.register(self.atexit_cleanup)
+
+        # Attribute indicating whether this executor was started to shut it down properly.
+        # This safeguards cases where an object of this executor is created but
+        # the executor never starts, so it shouldn't be shutdowned.
+        self.started = False
+
+    def atexit_cleanup(self):
+        # Calls this executor's shutdown method upon Python exiting the process.
+        self.shutdown()
+
     def _get_launch_command(self, block_id):
         # this executor uses different terminology for worker/launch
         # commands than in htex
@@ -307,6 +320,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Create submit process and collector thread to create, send, and
         retrieve Parsl tasks within the Work Queue system.
         """
+        # Mark this executor object as started
+        self.started = True
         self.tasks_lock = threading.Lock()
 
         # Create directories for data and results
@@ -695,6 +710,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the Work Queue system submission.
         """
+        if not self.started:
+            # Don't shutdown if the executor never starts.
+            return
+
         logger.debug("Work Queue shutdown started")
         self.should_stop.value = True
 

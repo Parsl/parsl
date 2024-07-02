@@ -41,11 +41,11 @@ def test_row_counts():
 
     # dig out the interchange port...
     hub_address = parsl.dfk().hub_address
-    hub_interchange_port = parsl.dfk().hub_interchange_port
+    hub_zmq_port = parsl.dfk().hub_zmq_port
 
     # this will send a string to a new socket connection
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((hub_address, hub_interchange_port))
+        s.connect((hub_address, hub_zmq_port))
         s.sendall(b'fuzzing\r')
 
     # this will send a non-object down the DFK's existing ZMQ connection

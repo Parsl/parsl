@@ -108,12 +108,12 @@ class DataFlowKernel:
 
         # hub address and port for interchange to connect
         self.hub_address = None  # type: Optional[str]
-        self.hub_interchange_port = None  # type: Optional[int]
+        self.hub_zmq_port = None  # type: Optional[int]
         if self.monitoring:
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
             self.hub_address = self.monitoring.hub_address
-            self.hub_interchange_port = self.monitoring.start(self.run_id, self.run_dir, self.config.run_dir)
+            self.hub_zmq_port = self.monitoring.start(self.run_id, self.run_dir, self.config.run_dir)
 
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
@@ -1120,7 +1120,7 @@ class DataFlowKernel:
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
             executor.hub_address = self.hub_address
-            executor.hub_port = self.hub_interchange_port
+            executor.hub_port = self.hub_zmq_port
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
@@ -1171,7 +1171,8 @@ class DataFlowKernel:
             fut = task_record['app_fu']
             if not fut.done():
                 fut.exception()
-            # now app future is done, poll until DFK state is final: a DFK state being final and the app future being done do not imply each other.
+            # now app future is done, poll until DFK state is final: a
+            # DFK state being final and the app future being done do not imply each other.
             while task_record['status'] not in FINAL_STATES:
                 time.sleep(0.1)
 
