@@ -47,7 +47,8 @@ class MonitoringHub(RepresentationMixin):
                  logdir: Optional[str] = None,
                  monitoring_debug: bool = False,
                  resource_monitoring_enabled: bool = True,
-                 resource_monitoring_interval: float = 30):  # in seconds
+                 resource_monitoring_interval: float = 30,  # in seconds
+                 udp_atexit_timeout: float = 3):
         """
         Parameters
         ----------
@@ -86,6 +87,10 @@ class MonitoringHub(RepresentationMixin):
              If set to 0, only start and end information will be logged, and no periodic monitoring will
              be made.
              Default: 30 seconds
+        udp_atexit_timeout : float
+             The amount of time in seconds to wait for more UDP messages at shutdown, after the last DFK
+             workflow message is received.
+
         """
 
         if _db_manager_excepts:
@@ -104,6 +109,8 @@ class MonitoringHub(RepresentationMixin):
 
         self.resource_monitoring_enabled = resource_monitoring_enabled
         self.resource_monitoring_interval = resource_monitoring_interval
+
+        self.udp_atexit_timeout = udp_atexit_timeout
 
     def start(self, run_id: str, dfk_run_dir: str, config_run_dir: Union[str, os.PathLike]) -> int:
 
@@ -160,7 +167,8 @@ class MonitoringHub(RepresentationMixin):
                                                "zmq_port_range": self.hub_port_range,
                                                "logdir": self.logdir,
                                                "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                               "run_id": run_id
+                                               "run_id": run_id,
+                                               "udp_atexit_timeout": self.udp_atexit_timeout
                                                },
                                        name="Monitoring-Router-Process",
                                        daemon=True,
@@ -275,9 +283,9 @@ class MonitoringHub(RepresentationMixin):
 
 @wrap_with_logs
 def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]", run_dir: str) -> None:
-    logger = set_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
-                             name="monitoring_filesystem_radio",
-                             level=logging.INFO)
+    logger, _ = set_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
+                                name="monitoring_filesystem_radio",
+                                level=logging.INFO)
 
     logger.info("Starting filesystem radio receiver")
     setproctitle("parsl: monitoring filesystem receiver")

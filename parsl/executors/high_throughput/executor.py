@@ -329,6 +329,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             launch_cmd = DEFAULT_LAUNCH_CMD
         self.launch_cmd = launch_cmd
 
+        self._queue_management_thread_exit = threading.Event()
+        self._queue_management_thread: Optional[threading.Thread] = None
+
     radio_mode = "htex"
 
     def _warn_deprecated(self, old: str, new: str):
@@ -450,9 +453,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         """
         logger.debug("Queue management worker starting")
 
-        while not self.bad_state_is_set:
+        while not self.bad_state_is_set and not self._queue_management_thread_exit.is_set():
             try:
-                msgs = self.incoming_q.get()
+                msgs = self.incoming_q.get(timeout_ms=1000)
 
             except IOError as e:
                 logger.exception("Caught broken queue with exception code {}: {}".format(e.errno, e))
@@ -465,57 +468,55 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             else:
 
                 if msgs is None:
-                    logger.debug("Got None, exiting")
-                    return
+                    continue
 
-                else:
-                    for serialized_msg in msgs:
+                for serialized_msg in msgs:
+                    try:
+                        msg = pickle.loads(serialized_msg)
+                    except pickle.UnpicklingError:
+                        raise BadMessage("Message received could not be unpickled")
+
+                    if msg['type'] == 'heartbeat':
+                        continue
+                    elif msg['type'] == 'result':
                         try:
-                            msg = pickle.loads(serialized_msg)
-                        except pickle.UnpicklingError:
-                            raise BadMessage("Message received could not be unpickled")
+                            tid = msg['task_id']
+                        except Exception:
+                            raise BadMessage("Message received does not contain 'task_id' field")
 
-                        if msg['type'] == 'heartbeat':
-                            continue
-                        elif msg['type'] == 'result':
+                        if tid == -1 and 'exception' in msg:
+                            logger.warning("Executor shutting down due to exception from interchange")
+                            exception = deserialize(msg['exception'])
+                            self.set_bad_state_and_fail_all(exception)
+                            break
+
+                        task_fut = self.tasks.pop(tid)
+
+                        if 'result' in msg:
+                            result = deserialize(msg['result'])
+                            task_fut.set_result(result)
+
+                        elif 'exception' in msg:
                             try:
-                                tid = msg['task_id']
-                            except Exception:
-                                raise BadMessage("Message received does not contain 'task_id' field")
-
-                            if tid == -1 and 'exception' in msg:
-                                logger.warning("Executor shutting down due to exception from interchange")
-                                exception = deserialize(msg['exception'])
-                                self.set_bad_state_and_fail_all(exception)
-                                break
-
-                            task_fut = self.tasks.pop(tid)
-
-                            if 'result' in msg:
-                                result = deserialize(msg['result'])
-                                task_fut.set_result(result)
-
-                            elif 'exception' in msg:
-                                try:
-                                    s = deserialize(msg['exception'])
-                                    # s should be a RemoteExceptionWrapper... so we can reraise it
-                                    if isinstance(s, RemoteExceptionWrapper):
-                                        try:
-                                            s.reraise()
-                                        except Exception as e:
-                                            task_fut.set_exception(e)
-                                    elif isinstance(s, Exception):
-                                        task_fut.set_exception(s)
-                                    else:
-                                        raise ValueError("Unknown exception-like type received: {}".format(type(s)))
-                                except Exception as e:
-                                    # TODO could be a proper wrapped exception?
-                                    task_fut.set_exception(
-                                        DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
-                            else:
-                                raise BadMessage("Message received is neither result or exception")
+                                s = deserialize(msg['exception'])
+                                # s should be a RemoteExceptionWrapper... so we can reraise it
+                                if isinstance(s, RemoteExceptionWrapper):
+                                    try:
+                                        s.reraise()
+                                    except Exception as e:
+                                        task_fut.set_exception(e)
+                                elif isinstance(s, Exception):
+                                    task_fut.set_exception(s)
+                                else:
+                                    raise ValueError("Unknown exception-like type received: {}".format(type(s)))
+                            except Exception as e:
+                                # TODO could be a proper wrapped exception?
+                                task_fut.set_exception(
+                                    DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
                         else:
-                            raise BadMessage("Message received with unknown type {}".format(msg['type']))
+                            raise BadMessage("Message received is neither result or exception")
+                    else:
+                        raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
         logger.info("Queue management worker finished")
 
@@ -816,12 +817,33 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         logger.info("Attempting HighThroughputExecutor shutdown")
 
+        logger.info("Terminating interchange and queue management thread")
+        self._queue_management_thread_exit.set()
         self.interchange_proc.terminate()
         try:
             self.interchange_proc.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
-            logger.info("Unable to terminate Interchange process; sending SIGKILL")
+            logger.warning("Unable to terminate Interchange process; sending SIGKILL")
             self.interchange_proc.kill()
+
+        logger.info("Waiting for queue management thread exit")
+        if self._queue_management_thread:
+            self._queue_management_thread.join()
+
+        logger.info("closing context sockets")
+        # this might block if there are outstanding messages (eg if the interchange
+        # has gone away... probably something to do with zmq.LINGER sockopt to remove
+        # this hang risk?
+
+        # these should be initialized to none rather than being absent?
+        if hasattr(self, "incoming_q"):
+            self.incoming_q.close()
+
+        if hasattr(self, "outgoing_q"):
+            self.outgoing_q.close()
+
+        if hasattr(self, "command_client"):
+            self.command_client.close()
 
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 

@@ -32,7 +32,7 @@ class MonitoringRouter:
                  logdir: str = ".",
                  run_id: str,
                  logging_level: int = logging.INFO,
-                 atexit_timeout: int = 3    # in seconds
+                 atexit_timeout: float
                  ):
         """ Initializes a monitoring configuration class.
 
@@ -50,13 +50,14 @@ class MonitoringRouter:
         logging_level : int
              Logging level as defined in the logging module. Default: logging.INFO
         atexit_timeout : float, optional
-            The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
+            The amount of time in seconds to wait for more UDP messages at shutdown, after the last DFK
+            workflow message is received.
 
         """
         os.makedirs(logdir, exist_ok=True)
-        self.logger = set_file_logger("{}/monitoring_router.log".format(logdir),
-                                      name="monitoring_router",
-                                      level=logging_level)
+        self.logger, _ = set_file_logger("{}/monitoring_router.log".format(logdir),
+                                         name="monitoring_router",
+                                         level=logging_level)
         self.logger.debug("Monitoring router starting")
 
         self.hub_address = hub_address
@@ -181,6 +182,8 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    udp_port: Optional[int],
                    zmq_port_range: Tuple[int, int],
 
+                   udp_atexit_timeout: float,
+
                    logdir: str,
                    logging_level: int,
                    run_id: str) -> None:
@@ -191,7 +194,8 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                                   zmq_port_range=zmq_port_range,
                                   logdir=logdir,
                                   logging_level=logging_level,
-                                  run_id=run_id)
+                                  run_id=run_id,
+                                  atexit_timeout=udp_atexit_timeout)
     except Exception as e:
         logger.error("MonitoringRouter construction failed.", exc_info=True)
         comm_q.put(f"Monitoring router construction failed: {e}")

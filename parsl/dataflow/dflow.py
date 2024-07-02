@@ -93,7 +93,7 @@ class DataFlowKernel:
         self.run_dir = make_rundir(config.run_dir)
 
         if config.initialize_logging:
-            parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
+            _, self.logging_handler = parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
 
         logger.info("Starting DataFlowKernel with config\n{}".format(config))
 
@@ -1277,7 +1277,39 @@ class DataFlowKernel:
             executor.shutdown()
             logger.info(f"Shut down executor {executor.label}")
 
+            if hasattr(executor, 'provider'):
+                logger.info(f"Closing channel(s) for {executor.label}")
+
+                # The reasoning about which of .channel or .channels should
+                # be present is not well described (or describable) in the
+                # type system, so there are a lot of asserts here that
+                # attempt to describe the non-checked assumptions.
+
+                # This logic is based on the logic in add_executors.
+
+                # These two asserts could be an XOR but the 'and' and 'or'
+                # components of the XOR are separated here to give different
+                # error text.
+                assert hasattr(executor.provider, 'channel') or hasattr(executor.provider, 'channels'), \
+                    "The provider model assumes a provider has channel(s)"
+                assert not (hasattr(executor.provider, 'channel') and hasattr(executor.provider, 'channels')), \
+                    "The provider model assumes a provider does not have .channel and .channels"
+
+                if hasattr(executor.provider, 'channels'):
+                    for channel in executor.provider.channels:
+                        channel.close()
+                else:
+                    assert hasattr(executor.provider, 'channel'), "If provider has no .channels, it must have .channel"
+                    executor.provider.channel.close()
+
+                logger.info(f"Closed executor channel(s) for {executor.label}")
+
         logger.info("Terminated executors")
+
+        logger.info("Closing channels")
+
+        logger.info("Closed channels")
+
         self.time_completed = datetime.datetime.now()
 
         if self.monitoring:
@@ -1308,7 +1340,13 @@ class DataFlowKernel:
         else:
             logger.debug("Cleaning up non-default DFK - not unregistering")
 
-        logger.info("DFK cleanup complete")
+        # TODO: do this in parsl/logutils.py
+        logger.info("DFK cleanup complete - removing parsl.log handler")
+        logger_to_remove = logging.getLogger("parsl")
+        logger_to_remove.removeHandler(self.logging_handler)
+        self.logging_handler.close()
+
+        logger.info("handler closed - is this going to break things?")
 
     def checkpoint(self, tasks: Optional[Sequence[TaskRecord]] = None) -> str:
         """Checkpoint the dfk incrementally to a checkpoint file.

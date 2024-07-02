@@ -116,7 +116,7 @@ def test_htex_shutdown(
         assert mock_ix_proc.wait.called
         assert {"timeout": 10} == mock_ix_proc.wait.call_args[1]
         if timeout_expires:
-            assert "Unable to terminate Interchange" in mock_logs[1][0][0]
+            assert "Unable to terminate Interchange" in mock_logs[3][0][0]
             assert mock_ix_proc.kill.called
         assert "Attempting" in mock_logs[0][0][0]
         assert "Finished" in mock_logs[-1][0][0]
