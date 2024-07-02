@@ -674,14 +674,6 @@ class DataFlowKernel:
     def launch_task(self, task_record: TaskRecord) -> Future:
         """Handle the actual submission of the task to the executor layer.
 
-        If the app task has the executors attributes not set (default=='all')
-        the task is launched on a randomly selected executor from the
-        list of executors. This behavior could later be updated to support
-        binding to executors based on user specified criteria.
-
-        If the app task specifies a particular set of executors, it will be
-        targeted at those specific executors.
-
         Args:
             task_record : The task record
 

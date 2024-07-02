@@ -247,7 +247,8 @@ class Strategy:
                 else:
                     # We want to make sure that max_idletime is reached
                     # before killing off resources
-                    logger.debug(f"Strategy case 1b: Executor has no active tasks, and more ({active_blocks}) than minimum blocks ({min_blocks})")
+                    logger.debug(f"Strategy case 1b: Executor has no active tasks, and more ({active_blocks})"
+                                 f" than minimum blocks ({min_blocks})")
 
                     if not self.executors[executor.label]['idle_since']:
                         logger.debug(f"Starting idle timer for executor. If idle time exceeds {self.max_idletime}s, blocks will be scaled in")
@@ -263,7 +264,8 @@ class Strategy:
 
                     else:
                         logger.debug(
-                                f"Idle time {idle_duration}s is less than max_idletime {self.max_idletime}s for executor {label}; not scaling in")
+                                f"Idle time {idle_duration}s is less than max_idletime {self.max_idletime}s"
+                                f" for executor {label}; not scaling in")
 
             # Case 2
             # More tasks than the available slots.
