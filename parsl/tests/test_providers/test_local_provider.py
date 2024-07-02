@@ -105,6 +105,7 @@ def test_ssh_channel():
 
 def _stop_sshd(sshd_thread):
     sshd_thread.stop()
+    sshd_thread.join()
 
 
 class SSHDThread(threading.Thread):
