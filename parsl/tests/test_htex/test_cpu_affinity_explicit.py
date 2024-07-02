@@ -1,8 +1,10 @@
 import logging
 import os
-import parsl
-import pytest
 import random
+
+import pytest
+
+import parsl
 from parsl.tests.configs.htex_local import fresh_config
 
 logger = logging.getLogger(__name__)

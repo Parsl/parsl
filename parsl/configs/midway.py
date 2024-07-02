@@ -1,8 +1,8 @@
-from parsl.config import Config
-from parsl.providers import SlurmProvider
-from parsl.launchers import SrunLauncher
-from parsl.executors import HighThroughputExecutor
 from parsl.addresses import address_by_interface
+from parsl.config import Config
+from parsl.executors import HighThroughputExecutor
+from parsl.launchers import SrunLauncher
+from parsl.providers import SlurmProvider
 
 config = Config(
     executors=[

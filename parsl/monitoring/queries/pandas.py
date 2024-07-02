@@ -1,7 +1,6 @@
-import pandas as pd
-
 from typing import Any
 
+import pandas as pd
 
 # pandas can take several different types of database connection,
 # and itself exposes its connection parameters as "Any".

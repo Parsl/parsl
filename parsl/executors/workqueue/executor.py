@@ -3,50 +3,49 @@ Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant,
 high-throughput system for delegating Parsl tasks to thousands of remote machines
 """
 
-import threading
-import multiprocessing
-import logging
-from concurrent.futures import Future
-from ctypes import c_bool
-
-import tempfile
 import hashlib
-import subprocess
+import inspect
+import itertools
+import logging
+import multiprocessing
 import os
-import socket
-import time
 import pickle
 import queue
-import inspect
 import shutil
-import itertools
-
-from parsl.serialize import pack_apply_message, deserialize
-import parsl.utils as putils
-from parsl.executors.errors import ExecutorError
-from parsl.data_provider.files import File
-from parsl.errors import OptionalModuleMissing
-from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.providers.base import ExecutionProvider
-from parsl.providers import LocalProvider, CondorProvider
-from parsl.executors.workqueue import exec_parsl_function
-from parsl.process_loggers import wrap_with_logs
-from parsl.utils import setproctitle
+import socket
+import subprocess
+import tempfile
+import threading
+import time
+from collections import namedtuple
+from concurrent.futures import Future
+from ctypes import c_bool
+from typing import Dict, List, Optional, Set, Union
 
 import typeguard
-from typing import Dict, List, Optional, Set, Union
+
+import parsl.utils as putils
+from parsl.data_provider.files import File
 from parsl.data_provider.staging import Staging
+from parsl.errors import OptionalModuleMissing
+from parsl.executors.errors import ExecutorError
+from parsl.executors.status_handling import BlockProviderExecutor
+from parsl.executors.workqueue import exec_parsl_function
+from parsl.process_loggers import wrap_with_logs
+from parsl.providers import CondorProvider, LocalProvider
+from parsl.providers.base import ExecutionProvider
+from parsl.serialize import deserialize, pack_apply_message
+from parsl.utils import setproctitle
 
-from .errors import WorkQueueTaskFailure
-from .errors import WorkQueueFailure
-
-from collections import namedtuple
+from .errors import WorkQueueFailure, WorkQueueTaskFailure
 
 try:
     import work_queue as wq
-    from work_queue import WorkQueue
-    from work_queue import WORK_QUEUE_DEFAULT_PORT
-    from work_queue import WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT
+    from work_queue import (
+        WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT,
+        WORK_QUEUE_DEFAULT_PORT,
+        WorkQueue,
+    )
 except ImportError:
     _work_queue_enabled = False
     WORK_QUEUE_DEFAULT_PORT = 0

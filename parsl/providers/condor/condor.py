@@ -2,20 +2,22 @@ import logging
 import os
 import re
 import time
+
 import typeguard
 
 from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
-from parsl.utils import RepresentationMixin
 from parsl.launchers import SingleNodeLauncher
 from parsl.launchers.base import Launcher
-from parsl.providers.condor.template import template_string
 from parsl.providers.cluster_provider import ClusterProvider
+from parsl.providers.condor.template import template_string
 from parsl.providers.errors import ScaleOutFailed
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 from typing import Dict, List, Optional
+
 from parsl.channels.base import Channel
 
 # See http://pages.cs.wisc.edu/~adesmet/status.html

@@ -3,7 +3,6 @@ import pytest
 from parsl import join_app, python_app
 from parsl.dataflow.errors import JoinError
 
-
 RESULT_CONSTANT = 3
 
 

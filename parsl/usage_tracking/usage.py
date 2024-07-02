@@ -1,21 +1,22 @@
-import uuid
-import time
-import os
 import json
 import logging
+import os
+import platform
 import socket
 import sys
-import platform
+import time
+import uuid
 
+from parsl.dataflow.states import States
+from parsl.multiprocessing import ForkProcess
 from parsl.usage_tracking.api import get_parsl_usage
 from parsl.utils import setproctitle
-from parsl.multiprocessing import ForkProcess
-from parsl.dataflow.states import States
 from parsl.version import VERSION as PARSL_VERSION
 
 logger = logging.getLogger(__name__)
 
 from typing import Callable
+
 from typing_extensions import ParamSpec
 
 # protocol version byte: when (for example) compression parameters are changed

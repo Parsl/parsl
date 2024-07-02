@@ -1,12 +1,12 @@
 import os
-import parsl
-import pytest
 import time
 
+import pytest
+
+import parsl
 from parsl import HighThroughputExecutor
 from parsl.config import Config
-from parsl.executors.taskvine import TaskVineExecutor
-from parsl.executors.taskvine import TaskVineManagerConfig
+from parsl.executors.taskvine import TaskVineExecutor, TaskVineManagerConfig
 from parsl.monitoring import MonitoringHub
 
 

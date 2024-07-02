@@ -1,14 +1,16 @@
 import logging
+import os
 import random
 from typing import Dict
+
 import pytest
+
 import parsl
-from parsl import python_app, bash_app
+from parsl import bash_app, python_app
+from parsl.executors.high_throughput.mpi_prefix_composer import (
+    MissingResourceSpecification,
+)
 from parsl.tests.configs.htex_local import fresh_config
-
-from parsl.executors.high_throughput.mpi_prefix_composer import MissingResourceSpecification
-
-import os
 
 EXECUTOR_LABEL = "MPI_TEST"
 

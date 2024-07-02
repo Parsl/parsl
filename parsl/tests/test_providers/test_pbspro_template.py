@@ -1,6 +1,6 @@
 import random
-
 from unittest import mock
+
 import pytest
 
 from parsl.channels import LocalChannel

@@ -1,7 +1,7 @@
-from parsl.config import Config
-from parsl.executors.taskvine import TaskVineExecutor
-from parsl.executors.taskvine import TaskVineManagerConfig
 import uuid
+
+from parsl.config import Config
+from parsl.executors.taskvine import TaskVineExecutor, TaskVineManagerConfig
 
 config = Config(
     executors=[

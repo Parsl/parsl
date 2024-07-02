@@ -21,3 +21,5 @@ sqlalchemy2-stubs
 Sphinx==4.5.0
 twine
 wheel
+isort
+

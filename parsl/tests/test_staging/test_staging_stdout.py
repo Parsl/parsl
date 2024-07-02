@@ -1,12 +1,13 @@
 import logging
 import os
-import parsl
-import pytest
 import zipfile
 
+import pytest
+
+import parsl
 from parsl.app.futures import DataFuture
-from parsl.tests.configs.htex_local import fresh_config as local_config
 from parsl.data_provider.files import File
+from parsl.tests.configs.htex_local import fresh_config as local_config
 
 
 @parsl.bash_app

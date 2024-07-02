@@ -1,15 +1,14 @@
+from threading import Event
+
 import pytest
 
 import parsl
-
 from parsl import File, python_app
-from parsl.providers import LocalProvider
 from parsl.channels import LocalChannel
-from parsl.launchers import SingleNodeLauncher
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
-
-from threading import Event
+from parsl.launchers import SingleNodeLauncher
+from parsl.providers import LocalProvider
 
 _max_blocks = 5
 _min_blocks = 0

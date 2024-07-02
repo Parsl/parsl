@@ -1,6 +1,6 @@
+import logging
 import os
 from enum import IntEnum
-import logging
 from typing import Optional
 
 logger = logging.getLogger(__name__)
