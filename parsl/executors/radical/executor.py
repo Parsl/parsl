@@ -5,7 +5,6 @@ import logging
 import os
 import queue
 import sys
-import tempfile
 import threading as mt
 import time
 from concurrent.futures import Future
@@ -227,13 +226,8 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                    'resource': self.resource}
 
         if not self.resource or 'local' in self.resource:
-            # set the agent dir to /temp as a fix for #3029
-            if os.environ.get("RADICAL_TEMP_SANDBOX"):
-                os.environ["RADICAL_LOG_LVL"] = "DEBUG"
-                pd_init['sandbox'] = agent_dir = tempfile.gettempdir()
-                logger.debug(f'RPEX will be running in test mode, agent sandbox will be located in {agent_dir}')
-            else:
-                logger.info("RPEX will be running in local mode")
+            os.environ["RADICAL_LOG_LVL"] = "DEBUG"
+            logger.info("RPEX will be running in local mode")
 
         pd = rp.PilotDescription(pd_init)
         pd.verify()
