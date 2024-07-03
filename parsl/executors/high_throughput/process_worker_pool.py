@@ -731,9 +731,19 @@ def worker(
         os.sched_setaffinity(0, my_cores)  # type: ignore[attr-defined, unused-ignore]
         logger.info("Set worker CPU affinity to {}".format(my_cores))
 
+    # If CUDA devices, find total number of devices to allow for MPS
+    # See: https://developer.nvidia.com/system-management-interface
+    try:
+        mod_factor = int(os.popen("nvidia-smi -L | wc -l").read())
+    except:
+        mod_factor = None
+        
     # If desired, pin to accelerator
     if accelerator is not None:
-        os.environ["CUDA_VISIBLE_DEVICES"] = accelerator
+        try:
+            os.environ["CUDA_VISIBLE_DEVICES"] = str(int(accelerator)%mod_factor) # multiple workers will share a GPU
+        except:
+            os.environ["CUDA_VISIBLE_DEVICES"] = accelerator
         os.environ["ROCR_VISIBLE_DEVICES"] = accelerator
         os.environ["ZE_AFFINITY_MASK"] = accelerator
         os.environ["ZE_ENABLE_PCI_ID_DEVICE_ORDER"] = '1'
