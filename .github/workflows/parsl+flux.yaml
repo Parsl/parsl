@@ -19,6 +19,11 @@ jobs:
 
     name: ${{ matrix.container }}
     steps:
+      - name: Dump the process tree for inspection
+        run: |
+          apt-get update && apt-get install -y psmisc
+          pstree -aplu
+
       - name: Make Space
         run: |
           rm -rf /usr/share/dotnet
