@@ -1,7 +1,7 @@
-import os
-import time
 import logging
 import math
+import os
+import time
 
 from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus

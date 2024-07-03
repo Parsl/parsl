@@ -1,11 +1,9 @@
 import inspect
-
-from parsl.utils import RepresentationMixin
-
 from abc import abstractmethod
 from functools import singledispatch
 from typing import Any, List, Sequence
 
+from parsl.utils import RepresentationMixin
 
 # Traverse the configuration hierarchy, returning a JSON component
 # for each one. Configuration components which implement
@@ -13,6 +11,7 @@ from typing import Any, List, Sequence
 # object attributes. Configuration components which are lists or tuples
 # are traversed in sequence. Other types default to reporting no
 # usage information.
+
 
 @singledispatch
 def get_parsl_usage(obj) -> List[Any]:

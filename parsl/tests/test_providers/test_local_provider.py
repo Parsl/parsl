@@ -1,7 +1,6 @@
 import logging
 import os
 import pathlib
-import pytest
 import random
 import shutil
 import socket
@@ -9,6 +8,8 @@ import subprocess
 import tempfile
 import threading
 import time
+
+import pytest
 
 from parsl.channels import LocalChannel, SSHChannel
 from parsl.jobs.states import JobState
@@ -104,6 +105,7 @@ def test_ssh_channel():
 
 def _stop_sshd(sshd_thread):
     sshd_thread.stop()
+    sshd_thread.join()
 
 
 class SSHDThread(threading.Thread):

@@ -1,5 +1,6 @@
-from parsl import python_app
 import pytest
+
+from parsl import python_app
 from parsl.tests.configs.htex_local import fresh_config as local_config
 
 

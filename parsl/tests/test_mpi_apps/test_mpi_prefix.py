@@ -1,14 +1,14 @@
 import logging
+
 import pytest
 
-from parsl.executors.high_throughput.mpi_resource_management import Scheduler
 from parsl.executors.high_throughput.mpi_prefix_composer import (
-    compose_srun_launch_cmd,
+    compose_all,
     compose_aprun_launch_cmd,
     compose_mpiexec_launch_cmd,
-    compose_all,
+    compose_srun_launch_cmd,
 )
-
+from parsl.executors.high_throughput.mpi_resource_management import Scheduler
 
 resource_spec = {"num_nodes": 2,
                  "num_ranks": 8,

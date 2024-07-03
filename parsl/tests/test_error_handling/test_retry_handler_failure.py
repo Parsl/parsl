@@ -1,5 +1,6 @@
-import parsl
 import pytest
+
+import parsl
 
 
 @parsl.python_app

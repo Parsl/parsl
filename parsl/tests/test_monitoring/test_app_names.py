@@ -2,10 +2,11 @@
 """
 
 import os
-import parsl
-import pytest
 import time
 
+import pytest
+
+import parsl
 from parsl.tests.configs.htex_local_alternate import fresh_config
 
 
@@ -61,7 +62,6 @@ def test_app_name(get_app, expected_name, expected_result, tmpd_cwd):
     assert app().result() == expected_result
 
     parsl.dfk().cleanup()
-    parsl.clear()
 
     engine = sqlalchemy.create_engine(c.monitoring.logging_endpoint)
     with engine.begin() as connection:

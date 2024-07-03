@@ -1,7 +1,6 @@
+import logging
 from abc import abstractmethod
 from functools import cached_property
-import logging
-
 from typing import Any
 
 logger = logging.getLogger(__name__)
