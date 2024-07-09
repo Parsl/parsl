@@ -13,13 +13,14 @@ Alternatively, you can configure the file logger to write to an output file.
 
 .. code-block:: python
 
+   import logging
    import parsl
 
    # Emit log lines to the screen
    parsl.set_stream_logger()
 
    # Write log to file, specify level of detail for logs
-   parsl.set_file_logger(FILENAME, level=parsl.logging.DEBUG)
+   parsl.set_file_logger(FILENAME, level=logging.DEBUG)
 
 .. note::
    Parsl's logging will not capture STDOUT/STDERR from the apps themselves.
