@@ -2,6 +2,7 @@ import os
 from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
 from typing import Any, Callable, Dict, Optional
+import uuid
 
 from typing_extensions import Literal, Self
 
@@ -61,6 +62,7 @@ class ParslExecutor(metaclass=ABCMeta):
         self.monitoring_radio = monitoring_radio
         self.run_dir = os.path.abspath(run_dir)
         self.run_id = run_id
+        self.uu_id = uuid.uuid1()
 
     def __enter__(self) -> Self:
         return self

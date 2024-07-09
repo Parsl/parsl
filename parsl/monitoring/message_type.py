@@ -22,3 +22,4 @@ class MessageType(Enum):
     FILE_INFO = 5
     INPUT_FILE = 6
     OUTPUT_FILE = 7
+    ENVIRONMENT_INFO = 8

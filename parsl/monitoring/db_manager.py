@@ -48,6 +48,7 @@ BLOCK = 'block'          # Block table include the status for block polling
 FILES = 'files'          # Files table include file info
 INPUT_FILES = 'input_files'  # Input files table include input file info
 OUTPUT_FILES = 'output_files'  # Output files table include output file info
+ENVIRONMENT = 'environment'    # Executor table include executor info
 
 class Database:
 
@@ -168,7 +169,7 @@ class Database:
         task_stdin = Column('task_stdin', Text, nullable=True)
         task_stdout = Column('task_stdout', Text, nullable=True)
         task_stderr = Column('task_stderr', Text, nullable=True)
-        task_env = Column('task_env', Text, nullable=True)
+        task_environment = Column('task_environment', Text, nullable=True)
 
         task_time_invoked = Column(
             'task_time_invoked', DateTime, nullable=True)
@@ -241,6 +242,7 @@ class Database:
     class Files(Base):
         __tablename__ = FILES
         file_name = Column('file_name', Text, index=True, nullable=False)
+        file_path = Column('file_path', Text, nullable=True)
         file_id = Column('file_id', Text, index=True, nullable=False)
         run_id = Column('run_id', Text,
                              nullable=False)
@@ -253,6 +255,18 @@ class Database:
         md5sum = Column('md5sum', Text, nullable=True)
         sa.Index("files_task_run_id_idx", "task_run_id", "task_id", "try_id")
         __table_args__ = (PrimaryKeyConstraint('file_id'),)
+
+    class Environment(Base):
+        __tablename__ = ENVIRONMENT
+        environment_id = Column('environment_id', Text, nullable=False)
+        run_id = Column('run_id', Text, nullable=False)
+        label = Column('label', Text, nullable=False)
+        address = Column('address', Text, nullable=True)
+        provider = Column('provider', Text, nullable=True)
+        launcher = Column('launcher', Text, nullable=True)
+        worker_init = Column('worker_init', Text, nullable=True)
+        __table_args__ = (PrimaryKeyConstraint('environment_id'),)
+
 
     class InputFiles(Base):
         __tablename__ = INPUT_FILES
@@ -409,6 +423,7 @@ class DatabaseManager:
         inserted_files = dict()  # type: Dict[Str, Dict[Str, Union[None, datetime.datetime, Str, int]]]
         input_inserted_files = dict()  # type: Dict[Str, List[Str]]
         output_inserted_files = dict()  # type: Dict[Str, List[Str]]
+        inserted_envs = set()  # type: Set[object]
 
         # for any task ID, we can defer exactly one message, which is the
         # assumed-to-be-unique first message (with first message flag set).
@@ -458,6 +473,7 @@ class DatabaseManager:
                     file_update_messages, file_insert_messages, file_all_messages = [], [], []
                     input_file_update_messages, input_file_insert_messages, input_file_all_messages = [], [], []
                     output_file_update_messages, output_file_insert_messages, output_file_all_messages = [], [], []
+                    environment_insert_messages = []
                     for msg_type, msg in priority_messages:
                         if msg_type == MessageType.WORKFLOW_INFO:
                             if "python_version" in msg:   # workflow start message
@@ -514,7 +530,13 @@ class DatabaseManager:
                                 inserted_files[file_id] = {'size': msg['size'],
                                                            'md5sum': msg['md5sum'],
                                                            'timestamp': msg['timestamp']}
+
                                 file_insert_messages.append(msg)
+                        elif msg_type == MessageType.ENVIRONMENT_INFO:
+                            if msg['environment_id'] not in inserted_envs:
+                                environment_insert_messages.append(msg)
+                                inserted_envs.add(msg['environment_id'])
+
                         elif msg_type == MessageType.INPUT_FILE:
                             file_id = msg['file_id']
                             input_file_all_messages.append(msg)
@@ -568,6 +590,12 @@ class DatabaseManager:
                         self._insert(table=FILES, messages=file_insert_messages)
                         logger.debug(
                             "There are {} inserted file records".format(len(inserted_files)))
+
+                    if environment_insert_messages:
+                        logger.debug("Inserting {} ENVIRONMENT_INFO to environment table".format(len(environment_insert_messages)))
+                        self._insert(table=ENVIRONMENT, messages=environment_insert_messages)
+                        logger.debug(
+                            "There are {} inserted environment records".format(len(inserted_envs)))
 
                     if file_update_messages:
                         logger.debug("Updating {} FILE_INFO into files table".format(len(file_update_messages)))
@@ -727,7 +755,7 @@ class DatabaseManager:
                     logger.error(f"Discarding because unknown queue tag '{queue_tag}', message: {x}")
 
     def _dispatch_to_internal(self, x: Tuple) -> None:
-        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO, MessageType.FILE_INFO, MessageType.INPUT_FILE, MessageType.OUTPUT_FILE]:
+        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO, MessageType.FILE_INFO, MessageType.INPUT_FILE, MessageType.OUTPUT_FILE, MessageType.ENVIRONMENT_INFO]:
             self.pending_priority_queue.put(cast(Any, x))
         elif x[0] == MessageType.RESOURCE_INFO:
             body = x[1]

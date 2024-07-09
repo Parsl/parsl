@@ -248,6 +248,28 @@ class DataFlowKernel:
                          }
         return file_log_info
 
+    def _create_env_log_info(self, environ: ParslExecutor) -> Dict[str, Any]:
+        """
+        Create the dictionary that will be included in the log.
+        """
+        env_log_info = {'run_id': environ.run_id,
+                        'environment_id': str(environ.uu_id),
+                        'label': environ.label
+                        }
+
+        env_log_info['address'] = getattr(environ, 'address', None)
+        provider= getattr(environ, 'provider', None)
+        if provider is not None:
+            env_log_info['provider'] = provider.label
+            env_log_info['launcher'] = type(getattr(provider, 'launcher', None))
+            env_log_info['worker_init'] = getattr(provider, 'worker_init', None)
+        return env_log_info
+
+    def _register_env(self, environ: ParslExecutor) -> None:
+        if self.monitoring:
+            environ_info = self._create_env_log_info(environ)
+            self.monitoring.send(MessageType.ENVIRONMENT_INFO, environ_info)
+
     def register_as_input(self, f: Union(DynamicFileList.DynamicFile, File, DataFuture),
                           task_record: TaskRecord):
         if self.monitoring:
@@ -280,7 +302,7 @@ class DataFlowKernel:
         """
         info_to_monitor = ['func_name', 'memoize', 'hashsum', 'fail_count', 'fail_cost', 'status',
                            'id', 'time_invoked', 'try_time_launched', 'time_returned', 'try_time_returned', 'executor',
-                           'env']
+                           'environment']
 
         # mypy cannot verify that these task_record[k] references are valid:
         # They are valid if all entries in info_to_monitor are declared in the definition of TaskRecord
@@ -1089,16 +1111,8 @@ class DataFlowKernel:
                        'try_time_launched': None,
                        'try_time_returned': None,
                        'resource_specification': resource_specification,
-                       'env': None}
-
-        exec_instance = self.executors[executor]
-        provider = getattr(exec_instance, 'provider', None)
-        if provider is not None:
-            worker_init = getattr(provider, 'worker_init', None)
-            if worker_init is not None:
-                task_record['env'] = worker_init
-
-
+                       'environment': str(self.executors[executor].uu_id)}
+        self._register_env(self.executors[executor])
         self.update_task_state(task_record, States.unsched)
 
         for kw in ['stdout', 'stderr']:

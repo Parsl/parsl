@@ -10,7 +10,8 @@ from parsl.monitoring.visualization.models import (
     db,
     Files,
     InputFiles,
-    OutputFiles
+    OutputFiles,
+    Environment
     )
 from parsl.monitoring.visualization.plots.default.task_plots import (
     time_series_memory_per_task_plot,
@@ -95,10 +96,14 @@ def files():
     if request.method == 'POST':
         file_list = []
         if form.validate_on_submit():
-            if '%' in form.file_name.data:
-                file_list = Files.query.filter(Files.file_name.like(form.file_name.data)).all()
+            if not form.file_name.data.startswith('%'):
+                filename = '%' + form.file_name.data
             else:
-                file_list = Files.query.filter_by(file_name=form.file_name.data).all()
+                filename = form.file_name.data
+            #if '%' in form.file_name.data:
+            file_list = Files.query.filter(Files.file_name.like(filename)).all()
+            #else:
+            #    file_list = Files.query.filter_by(file_name=form.file_name.data).all()
         return render_template('files.html', form=form, file_list=file_list)
     return render_template('files.html', form=form)
 
@@ -143,6 +148,12 @@ def workflow(workflow_id):
                            task_per_app=task_per_app_plot(df_task_tries, df_status, time_completed=workflow_details.time_completed))
 
 
+@app.route('/workflow/<workflow_id>/environment/<environment_id>')
+def environment(workflow_id, environment_id):
+    environment_details = Environment.query.filter_by(environment_id=environment_id).first()
+    return render_template('env.html', environment_details=environment_details)
+
+
 @app.route('/workflow/<workflow_id>/app/<app_name>')
 def parsl_app(workflow_id, app_name):
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
@@ -179,11 +190,11 @@ def task(workflow_id, task_id):
     if workflow_details is None:
         return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
 
-    task_details = Task.query.filter_by(
-        run_id=workflow_id, task_id=task_id).first()
+    task_details = queries.full_task_info(workflow_id, task_id, db.engine)
     task_status = Status.query.filter_by(
         run_id=workflow_id, task_id=task_id).order_by(Status.timestamp)
 
+    print(task_details['task_inputs'])
     df_resources = queries.resources_for_task(workflow_id, task_id, db.engine)
 
     return render_template('task.html',
@@ -191,7 +202,7 @@ def task(workflow_id, task_id):
                            task_details=task_details,
                            task_status=task_status,
                            time_series_memory_resident=time_series_memory_per_task_plot(
-                               df_resources, 'psutil_process_memory_resident', 'Memory Usage'),
+                               df_resources, 'psutil_process_memory_resident', 'Memory Usage')
                            )
 
 

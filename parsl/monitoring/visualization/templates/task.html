@@ -9,13 +9,14 @@
   <div class="row">
     <div class="col">
 <ul>
-    <li><b>Workflow name:</b>  <a href="/workflow/{{ workflow_details['run_id'] }}/">{{ workflow_details['workflow_name'] }}<a/></li>
+    <li><b>Workflow name:</b>  <a href="/workflow/{{ workflow_details['run_id'] }}/">{{ workflow_details['workflow_name'] }}</a></li>
     <li><b>Started:</b>  {{ workflow_details['time_began'] | timeformat }}</li>
     <li><b>Completed:</b>  {{ workflow_details['time_completed'] | timeformat }}</li>
     <li><b>Workflow duration:</b>  {{ (workflow_details['time_began'], workflow_details['time_completed']) | durationformat }}</li>
     <li><b>Owner:</b>  {{ workflow_details['user'] }}</li>
     <li><b>task_func_name:</b>   <a href="/workflow/{{ workflow_details['run_id'] }}/app/{{ task_details['task_func_name'] }}">{{ task_details['task_func_name'] }}</a></li>
     <li><b>task_id:</b>  {{ task_details['task_id'] }}</li>
+    <li><b>Task executor:</b>  <a href="/workflow/{{ workflow_details['run_id'] }}/environment/{{ task_details['task_environment'] }}">{{ task_details['task_environment'] }}</a></li>
     <li><b>task_depends:</b>
         {% if task_details['task_depends'] %}
             {% for id in task_details['task_depends'].split(",") %}
@@ -27,8 +28,30 @@
     </li>
     <li><b>task_time_invoked:</b>  {{ task_details['task_time_invoked'] | timeformat }}</li>
     <li><b>task_time_returned:</b>  {{ task_details['task_time_returned'] | timeformat }}</li>
-    <li><b>task_inputs:</b>  {{ task_details['task_inputs'] }}</li>
-    <li><b>task_outputs:</b>  {{ task_details['task_outputs'] }}</li>
+    <li><b>File inputs:</b>
+        {% if not task_details['task_inputs'].empty %}
+          <ul>
+            {% for ifile in task_details['task_inputs'].itertuples() %}
+                <li><a href="/files/{{ ifile.file_id }}">{{ ifile.file_name }}</a></li>
+            {% endfor %}
+          </ul>
+        {% else %}
+            None
+        {% endif %}
+    </li>
+    <li><b>File outputs:</b>
+        {% if not task_details['task_outputs'].empty %}
+          <ul>
+            {% for ofile in task_details['task_outputs'].itertuples() %}
+                <li><a href="/files/{{ ofile.file_id }}">{{ ofile.file_name }}</a></li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          None
+        {% endif %}
+    </li>
+    <li><b>task_args:</b>  {{ task_details['task_args'] }}</li>
+    <li><b>task_kwargs:</b>  {{ task_details['task_kwargs'] }}</li>
     <li><b>task_stdin:</b>  {{ task_details['task_stdin'] }}</li>
     <li><b>task_stdout:</b>  {{ task_details['task_stdout'] }}</li>
     <li><b>task_stderr:</b>  {{ task_details['task_stderr'] }}</li>

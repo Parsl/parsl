@@ -3,7 +3,7 @@
 import os.path
 from hashlib import md5
 import logging
-from os import stat, path
+from os import stat
 from concurrent.futures import Future
 from typing import Optional, Any
 from datetime import datetime
@@ -18,7 +18,7 @@ class DataFuture(Future):
     """A datafuture points at an AppFuture.
 
     We are simply wrapping a AppFuture, and adding the specific case where, if
-    the future is resolved i.e file exists, then the DataFuture is assumed to be
+    the future is resolved i.e. file exists, then the DataFuture is assumed to be
     resolved.
     """
 

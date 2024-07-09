@@ -8,6 +8,38 @@ import pandas as pd
 DB = Any
 
 
+def input_files_for_task(workflow_id: Any, task_id: Any, db: DB) -> pd.DataFrame:
+    return pd.read_sql_query("""
+        SELECT *
+          FROM input_files, files
+         WHERE input_files.run_id='%s' AND input_files.task_id='%s'
+           AND input_files.file_id = files.file_id;
+        """ % (workflow_id, task_id), db)
+
+
+def output_files_for_task(workflow_id: Any, task_id: Any, db: DB) -> pd.DataFrame:
+    return pd.read_sql_query("""
+        SELECT *
+          FROM output_files, files
+         WHERE output_files.run_id='%s' AND output_files.task_id='%s'
+           AND output_files.file_id = files.file_id;
+        """ % (workflow_id, task_id), db)
+
+
+def full_task_info(workflow_id: Any, task_id: Any, db: DB) -> pd.DataFrame:
+    task_details = pd.read_sql_query("""
+        SELECT *
+          FROM task
+        WHERE run_id='%s' AND task_id='%s';
+    """ % (workflow_id, task_id), db)
+    print(task_details)
+    if not task_details.empty:
+        task_details = task_details.iloc[0]
+        task_details['task_inputs'] = input_files_for_task(workflow_id, task_id, db)
+        task_details['task_outputs'] = output_files_for_task(workflow_id, task_id, db)
+    return task_details
+
+
 def app_counts_for_workflow(workflow_id: Any, db: DB) -> pd.DataFrame:
     return pd.read_sql_query("""
         SELECT task_func_name, count(*) as 'frequency'

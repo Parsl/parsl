@@ -20,7 +20,8 @@
         {% endfor %}
         </ul>
 {% endif %}
-{% if file_list is defined and file_list %}
+{% if file_list is defined %}
+    {% if file_list %}
     <table class="table table-hover">
       <thead>
         <tr>
@@ -39,7 +40,9 @@
       {% endfor %}
       </tbody>
     </table>
-
+    {% else %}
+    <p>No files found.</p>
+    {% endif %}
 {% endif %}
 
 {% endblock %}

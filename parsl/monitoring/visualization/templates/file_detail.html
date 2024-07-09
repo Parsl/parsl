@@ -7,7 +7,7 @@
     <table class="table table-hover">
         <tr><td>Name:</td><td>{{ file_details['file_name'] }}</td></tr>
         <tr><td>Id:</td><td>{{ file_details['file_id'] }}</td></tr>
-        <tr><td>Size:</td><td>{{ file_details['file_size'] }}</td></tr>
+        <tr><td>Size:</td><td>{{ file_details['size'] }} bytes</td></tr>
         <tr><td>md5sum:</td><td>{{ file_details['md5sum'] }}</td></tr>
         {% if file_details['timestamp'] %}
         <tr><td>Creation date:</td><td>{{ file_details['timestamp'] | timeformat }}</td></tr>
