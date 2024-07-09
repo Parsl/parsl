@@ -733,16 +733,24 @@ def worker(
 
     # If CUDA devices, find total number of devices to allow for MPS
     # See: https://developer.nvidia.com/system-management-interface
-    try:
-        mod_factor = int(os.popen("nvidia-smi -L | wc -l").read())
-    except:
-        mod_factor = None
-        
+    nvidia_smi_cmd = "nvidia-smi -L > /dev/null && nvidia-smi -L | wc -l"
+    nvidia_smi_ret = subprocess.run(nvidia_smi_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if nvidia_smi_ret.returncode == 0:
+        num_cuda_devices = int(nvidia_smi_ret.stdout.split()[0])
+    else:
+        num_cuda_devices = None
+
     # If desired, pin to accelerator
     if accelerator is not None:
         try:
-            os.environ["CUDA_VISIBLE_DEVICES"] = str(int(accelerator)%mod_factor) # multiple workers will share a GPU
-        except:
+            procs_per_cuda_device = pool_size//num_cuda_devices
+            partitioned_accelerator = str(int(accelerator)//procs_per_cuda_device) # multiple workers will share a GPU
+            os.environ["CUDA_VISIBLE_DEVICES"] = partitioned_accelerator
+            logger.info(f'Pinned worker to partitioned cuda device: {partitioned_accelerator}')
+        except (TypeError, ValueError, ZeroDivisionError):
+            os.environ["CUDA_VISIBLE_DEVICES"] = accelerator
+        except Exception as e:
+            print(f"Unrecognized exception in setting cuda affinity: {e}\n")
             os.environ["CUDA_VISIBLE_DEVICES"] = accelerator
         os.environ["ROCR_VISIBLE_DEVICES"] = accelerator
         os.environ["ZE_AFFINITY_MASK"] = accelerator
