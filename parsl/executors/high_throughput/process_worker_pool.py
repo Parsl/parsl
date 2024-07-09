@@ -744,8 +744,8 @@ def worker(
     # If desired, pin to accelerator
     if accelerator is not None:
         try:
-            procs_per_cuda_device = pool_size//num_cuda_devices
-            partitioned_accelerator = str(int(accelerator)//procs_per_cuda_device) # multiple workers will share a GPU
+            procs_per_cuda_device = pool_size // num_cuda_devices
+            partitioned_accelerator = str(int(accelerator) // procs_per_cuda_device)  # multiple workers will share a GPU
             os.environ["CUDA_VISIBLE_DEVICES"] = partitioned_accelerator
             logger.info(f'Pinned worker to partitioned cuda device: {partitioned_accelerator}')
         except (TypeError, ValueError, ZeroDivisionError):
