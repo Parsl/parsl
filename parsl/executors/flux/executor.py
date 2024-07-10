@@ -300,17 +300,19 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
 
 
 def _submit_wrapper(
-    submission_queue: queue.Queue, stop_event: threading.Event, *args, **kwargs
+    submission_queue: queue.Queue, stop_event: threading.Event, socket, *args, **kwargs
 ):
     """Wrap the ``_submit_flux_jobs`` function in a try/except.
 
     If an exception is thrown, error out all submitted tasks.
     """
     try:
-        _submit_flux_jobs(submission_queue, stop_event, *args, **kwargs)
+        _submit_flux_jobs(submission_queue, stop_event, socket, *args, **kwargs)
     except Exception as exc:
         _error_out_jobs(submission_queue, stop_event, exc)
         raise
+    finally:
+        socket.close()
 
 
 def _error_out_jobs(
