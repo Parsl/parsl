@@ -136,3 +136,16 @@ def test_max_workers_per_node():
 
     # Ensure max_workers_per_node takes precedence
     assert htex.max_workers_per_node == htex.max_workers == 1
+
+
+@pytest.mark.local
+def test_htex_launch_cmd():
+    htex = HighThroughputExecutor()
+    assert htex.launch_cmd.startswith("process_worker_pool.py")
+    assert htex.interchange_launch_cmd == "interchange.py"
+
+    launch_cmd = "custom-launch-cmd"
+    ix_launch_cmd = "custom-ix-launch-cmd"
+    htex = HighThroughputExecutor(launch_cmd=launch_cmd, interchange_launch_cmd=ix_launch_cmd)
+    assert htex.launch_cmd == launch_cmd
+    assert htex.interchange_launch_cmd == ix_launch_cmd
