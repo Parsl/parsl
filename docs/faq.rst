@@ -13,6 +13,7 @@ Alternatively, you can configure the file logger to write to an output file.
 
 .. code-block:: python
 
+   import logging
    import parsl
 
    # Emit log lines to the screen
