@@ -1283,10 +1283,14 @@ class DataFlowKernel:
 
                     if hasattr(executor.provider, 'channels'):
                         for channel in executor.provider.channels:
+                            logger.info(f"Closing channel {channel}")
                             channel.close()
+                            logger.info(f"Closed channel {channel}")
                     else:
                         assert hasattr(executor.provider, 'channel'), "If provider has no .channels, it must have .channel"
+                        logger.info(f"Closing channel {executor.provider.channel}")
                         executor.provider.channel.close()
+                        logger.info(f"Closed channel {executor.provider.channel}")
 
                     logger.info(f"Closed executor channel(s) for {executor.label}")
 
