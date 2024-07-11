@@ -227,7 +227,19 @@ class SSHChannel(Channel, RepresentationMixin):
 
     def close(self) -> None:
         if self._is_connected():
+            transport = self.ssh_client.get_transport()
             self.ssh_client.close()
+
+            # ssh_client.close calls transport.close, but transport.close does
+            # not always wait for the transport thread to be stopped. See impl
+            # of Transport.close in paramiko and issue
+            # https://github.com/paramiko/paramiko/issues/520
+            logger.debug("Waiting for transport thread to stop")
+            transport.join(30)
+            if transport.is_alive():
+                logger.warning("SSH transport thread did not shut down")
+            else:
+                logger.debug("SSH transport thread stopped")
 
     def isdir(self, path):
         """Return true if the path refers to an existing directory.
