@@ -8,7 +8,7 @@ from enum import Enum
 from typing import Dict, List
 
 from parsl.multiprocessing import SpawnContext
-from parsl.serialize import pack_res_spec_apply_message, unpack_res_spec_apply_message
+from parsl.serialize import pack_res_spec_apply_message, unpack_res_spec_apply_message, serialize
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,6 @@ class MPINodesUnavailable(Exception):
     def __str__(self):
         return f"MPINodesUnavailable(requested={self.requested} available={self.available})"
 
-
 class TaskScheduler:
     """Default TaskScheduler that does no taskscheduling
 
@@ -94,9 +93,43 @@ class TaskScheduler:
     ):
         self.pending_task_q = pending_task_q
         self.pending_result_q = pending_result_q
+        self.serialized_result = serialize(7)
 
     def put_task(self, task) -> None:
         return self.pending_task_q.put(task)
+
+    def get_result(self, block: bool, timeout: float):
+        return self.pending_result_q.get(block, timeout=timeout)
+
+
+# TODO: maybe this should be more pluggable?
+class FakeTaskScheduler:
+    """Default TaskScheduler that does no taskscheduling
+
+    This class simply acts as an abstraction over the task_q and result_q
+    that can be extended to implement more complex task scheduling logic
+    """
+    def __init__(
+        self,
+        pending_task_q: multiprocessing.Queue,
+        pending_result_q: multiprocessing.Queue,
+    ):
+        self.pending_task_q = pending_task_q
+        self.pending_result_q = pending_result_q
+        self.serialized_result = serialize(7)
+
+    def put_task(self, task) -> None:
+        # don't queue this for running, instead put a result on
+        # the result queue immediately
+        task_id = task['task_id']
+        # we'll ignore the buffer, which is the executor, and
+        # return a constant result
+        result_package = {'type': 'result', 'task_id': task_id, 'result': self.serialized_result}
+
+        # TODO: we don't necessarily need to pickle this here, when the _q implementation (multiprocessing queue) will pickle this anyway...? (except we need to re-pickle it later to go into ZMQ...?)
+        self.pending_result_q.put(pickle.dumps(result_package))
+
+        # return self.pending_task_q.put(task)
 
     def get_result(self, block: bool, timeout: float):
         return self.pending_result_q.get(block, timeout=timeout)

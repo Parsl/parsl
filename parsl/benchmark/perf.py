@@ -33,7 +33,7 @@ def performance(*, resources: dict, target_t: float, args_extra_size: int):
     delta_t: float
     delta_t = 0
 
-    threshold_t = int(0.75 * target_t)
+    threshold_t = target_t
 
     iteration = 1
 
@@ -65,7 +65,20 @@ def performance(*, resources: dict, target_t: float, args_extra_size: int):
         print(f"Runtime: actual {delta_t:.3f}s vs target {target_t}s")
         print(f"Tasks per second: {rate:.3f}")
 
-        n = max(1, int(target_t * rate))
+        # n = max(1, int(target_t * rate))
+        # I'm suspicious about performance dropping off as task numbers get bigger:
+        # i've seen that with WQ, for example,
+        # so this hack, which could be an optional mode, performs a determininistic
+        # increase in numbers of tasks up to the time limit - so that non-linear behaviour
+        # can be seen a bit better - this is specially for comparing parsl-perf runs which
+        # otherwise might be picking a random sweet-ish spot...
+        # the threshold, in this case, could also be expressed in terms of task count,
+        # rather than max time (to give the same number of readings, rather than up to around
+        # the same task time) but using time can give more constant execution time in the
+        # presence of wildly different per-task performances (which is the case with parsl...)
+        # switching to these modes could all be parameters...
+
+        n = int(n * 1.4142135623730951)  # (doesn't have to be 2... could also be parameterised... sqrt(2) would be nice?)
 
         iteration += 1
 
