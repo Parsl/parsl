@@ -832,7 +832,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         try:
             self.interchange_proc.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
-            logger.info("Unable to terminate Interchange process; sending SIGKILL")
+            logger.warning("Unable to terminate Interchange process; sending SIGKILL")
             self.interchange_proc.kill()
 
         logger.info("Closing ZMQ pipes")
