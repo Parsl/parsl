@@ -56,6 +56,8 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers_per_node} "
                       "--mpi-launcher={mpi_launcher} "
                       "--available-accelerators {accelerators}")
 
+DEFAULT_INTERCHANGE_LAUNCH_CMD = "interchange.py"
+
 GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionProvider`
        Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
         :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
@@ -75,6 +77,10 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
         will be formatted with appropriate values for the following values (debug, task_url, result_url,
         cores_per_worker, nodes_per_block, heartbeat_period ,heartbeat_threshold, logdir). For example:
         launch_cmd="process_worker_pool.py {debug} -c {cores_per_worker} --task_url={task_url} --result_url={result_url}"
+
+    interchange_launch_cmd : str
+        Custom command line string to launch the interchange process from the executor. If undefined,
+        the executor will use the default "interchange.py" command.
 
     address : string
         An address to connect to the main Parsl process which is reachable from the network in which
@@ -231,6 +237,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  label: str = 'HighThroughputExecutor',
                  provider: ExecutionProvider = LocalProvider(),
                  launch_cmd: Optional[str] = None,
+                 interchange_launch_cmd: Optional[str] = None,
                  address: Optional[str] = None,
                  worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
@@ -330,6 +337,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         if not launch_cmd:
             launch_cmd = DEFAULT_LAUNCH_CMD
         self.launch_cmd = launch_cmd
+
+        if not interchange_launch_cmd:
+            interchange_launch_cmd = DEFAULT_INTERCHANGE_LAUNCH_CMD
+        self.interchange_launch_cmd = interchange_launch_cmd
 
     radio_mode = "htex"
 
@@ -565,11 +576,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             logger.debug("Popened interchange process. Writing config object")
             stdin.write(config_pickle)
             stdin.flush()
+            stdin.close()
+            logger.debug("Sent config object")
 
         else:
             raise RuntimeError("unknown benc-interchange type")
 
-        logger.debug("Sent config object. Requesting worker ports")
+        logger.debug("Requesting worker ports")
         try:
             (self.worker_task_port, self.worker_result_port) = self.command_client.run("WORKER_PORTS", timeout_s=20)
         except CommandClientTimeoutError:

@@ -168,10 +168,9 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
              - tasks_per_node (int) : command invocations to be launched per node
 
         Kwargs:
-             - job_name (String): Name for job, must be unique
+             - job_name (String): Name for job
 
         Returns:
-             - None: At capacity, cannot provision more
              - job_id: (string) Identifier for the job
         """
 
@@ -187,7 +186,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         formatted_cmd = template_string.format(command=cmd_string,
                                                worker_init=self.worker_init)
 
-        logger.debug("Pod name :{}".format(pod_name))
+        logger.debug("Pod name: %s", pod_name)
         self._create_pod(image=self.image,
                          pod_name=pod_name,
                          job_name=job_name,
