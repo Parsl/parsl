@@ -29,6 +29,10 @@ defmodule EIC.Supervisor do
   def init(:ok) do
     {:ok, ctx} = :erlzmq.context()
     children = [
+      # does this need to start before we receive any tasks?
+      %{id: EIC.TaskRegistry,
+       start: {Registry, :start_link, [[name: EIC.TaskRegistry, keys: :unique]]}
+      },
       %{id: EIC.TasksSubmitToInterchange, start: {EIC.TasksSubmitToInterchange, :start_link, [ctx]}},
       %{id: EIC.CommandChannel, start: {EIC.CommandChannel, :start_link, [ctx]}},
       %{
@@ -49,9 +53,6 @@ defmodule EIC.Supervisor do
       # maybe because I was paging back into Elixir syntax...
       %{id: EIC.TaskSupervisor,
         start: {DynamicSupervisor, :start_link, [[name: EIC.TaskSupervisor, strategy: :one_for_one, max_restarts: 0]]}
-      },
-      %{id: EIC.TaskRegistry,
-       start: {Registry, :start_link, [[name: EIC.TaskRegistry, keys: :unique]]}
       }
     ]
 
@@ -587,7 +588,7 @@ defmodule EIC.ParslTask do
   end
 
   def handle_cast({:result, result_dict, manager_id}, []) do
-    Logger.warn("in ParslTask result handler")
+    Logger.info("in ParslTask result handler")
     pickled_result = :pickle.term_to_pickle(result_dict)
     send(EIC.ResultsInterchangeToSubmit, pickled_result)
    
