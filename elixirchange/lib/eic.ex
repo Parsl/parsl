@@ -535,7 +535,8 @@ end
 defmodule EIC.ParslTask do
   use GenServer
   # TODO: the supervisor for this should not relaunch task on failure, but fail fast
-  # because I don't want in-interchange task retry style behaviour.
+  # because I don't want in-interchange task retry style behaviour - which is what is
+  # happening with default restart behaviour...
 
   # I guess I'll implement this with GenServer, dealing mostly with
   # handle_cast rather than handle_call?
@@ -598,6 +599,8 @@ defmodule EIC.ParslTask do
     GenServer.cast(:matchmaker, {:return_worker, manager_id})
 
     {:noreply, []}
+    # TODO: should shut down now, somehow! there's no need for this idle task
+    # to continue existing forever...
   end
 
 end
