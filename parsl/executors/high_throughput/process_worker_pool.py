@@ -753,9 +753,6 @@ def worker(
                 os.environ["CUDA_VISIBLE_DEVICES"] = accelerator
         except (TypeError, ValueError, ZeroDivisionError):
             os.environ["CUDA_VISIBLE_DEVICES"] = accelerator
-        except Exception as e:
-            print(f"Unrecognized exception in setting cuda affinity: {e}\n")
-            os.environ["CUDA_VISIBLE_DEVICES"] = accelerator
         os.environ["ROCR_VISIBLE_DEVICES"] = accelerator
         os.environ["ZE_AFFINITY_MASK"] = accelerator
         os.environ["ZE_ENABLE_PCI_ID_DEVICE_ORDER"] = '1'
