@@ -111,21 +111,60 @@ main = do
 
   log "Creating tasks submit->interchange socket"
   tasks_submit_to_interchange_socket <- new_zmq_socket zmq_ctx ZMQSocketDEALER
-  -- no options set here in rusterchange, though Python version might set HWM?
-  -- now connect like this:         .connect("tcp://127.0.0.1:9000")
-  -- which will give us a socket that we can send receive messages on, and
-  -- maybe want to do some linear typing on?
+  -- TODO: no options set here in rusterchange, though Python version might
+  -- set HWM?
+  -- TODO: maybe want to do some linear typing on?
+  -- TODO: configuration for these ports, by reading in the configuration
+  -- over stdin, as introduced in #3463?
   zmq_connect tasks_submit_to_interchange_socket "tcp://127.0.0.1:9000"
+  log "Connected interchange tasks submit->interchange channel"
 
-  -- now receive a message without polling, just blocking forever until that
-  -- message arrives. that should be enough to see a task arrive from the
-  -- submit side.
+  -- TODO: in req/rep socket pair, the rep socket can be in two states:
+  -- it's ready to recv a req, or it's received a req and is ready to send
+  -- a reply. Can I encoded that state into the command channel so that
+  -- it alternates? The goal would be to prove at a type level that
+  -- every req gets a rep, or something like that...
+  -- in Parsl submit-side, for example, what happens when things break?
+  -- there's this ugly:
+  --
+  --            except zmq.ZMQError:
+  --                logger.exception("Potential ZMQ REQ-REP deadlock caught")
+  --                logger.info("Trying to reestablish context")
+  --                self.zmq_context.recreate()
+  --                self.create_socket_and_bind()
+  -- ... and I have no particular believe that that is resilient (having
+  -- never consciously seen it fire...) - that feels to me like a
+  -- prototype-era "saw weird exception, put in a hack"
+
+  log "Creating interchange command channel socket"
+  command_socket <- new_zmq_socket zmq_ctx ZMQSocketREP
+  zmq_connect tasks_submit_to_interchange_socket "tcp://127.0.0.1:9002"
+  log "Connected interchange command channel"
+
+  -- TODO: probably should create result socket here
+
+  -- TODO: polling of some kind here to decide which socket we're going to
+  -- ask for a message (or other kind of event that might happen - eg.
+  -- the heartbeat timeouts or system shutdown signals?)
+  -- Right now this code will use ZMQ polling, but I think it would be fine
+  -- to use fd based polling like the elixirchange does, too...
+  -- tempting to use some kind of co-routine behaviour to drive things,
+  -- but from rusterchange experience, there maybe isn't enough complexity
+  -- to move away from looping and processing each message - for the idris2
+  -- implementation, choices there should be driven by what makes things
+  -- easiest and/or most novel in terms of types...
 
   -- Semantics of buffer ownership: the caller must allocate a buffer and
   -- describe the size to zmq_recv. Probably some linear type stuff to be
   -- done here to ensure the buffer gets used properly? (maybe even type
   -- state for: not populated, populated by a message which can be read
-  -- many times -> delete/reuse?)
+  -- many times -> delete/reuse? or perhaps something region based to let
+  -- the buffer be usable inside the region but not outside it?)
+  -- TODO: biggest danger is making sure it is freed safely/appropriately...
+  -- (after all uses, and eventually - pretty much 1-multiplicity semantics?)
+  -- imagine an API: recvAndThen which takes a linear continuation?
+
+  log "Waiting to receive a message from task submit->interchange channel"
   msg <- zmq_recv_msg_alloc tasks_submit_to_interchange_socket
 
   putStr "Received message, size "
