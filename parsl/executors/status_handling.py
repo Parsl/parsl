@@ -62,17 +62,21 @@ class BlockProviderExecutor(ParslExecutor):
         # errors can happen during the submit call to the provider; this is used
         # to keep track of such errors so that they can be handled in one place
         # together with errors reported by status()
-        self._simulated_status: Dict[str, JobStatus] = {}
         self._executor_bad_state = threading.Event()
         self._executor_exception: Optional[Exception] = None
 
         self._block_id_counter = AtomicIDCounter()
 
         self._tasks = {}  # type: Dict[object, Future]
-        self.blocks_to_job_id = {}  # type: Dict[str, str]
-        self.job_ids_to_block = {}  # type: Dict[str, str]
 
         self._last_poll_time = 0.0
+
+        # these four structures track, in loosely coordinated fashion, the
+        # existence of blocks and jobs and how to map between their
+        # identifiers.
+        self.blocks_to_job_id = {}  # type: Dict[str, str]
+        self.job_ids_to_block = {}  # type: Dict[str, str]
+        self._simulated_status: Dict[str, JobStatus] = {}
         self._status = {}  # type: Dict[str, JobStatus]
 
     def _make_status_dict(self, block_ids: List[str], status_list: List[JobStatus]) -> Dict[str, JobStatus]:
