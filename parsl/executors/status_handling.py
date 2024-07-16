@@ -202,7 +202,9 @@ class BlockProviderExecutor(ParslExecutor):
                 block_ids.append(block_id)
 
             except Exception as ex:
-                self._simulated_status[block_id] = JobStatus(JobState.FAILED, "Failed to start block {}: {}".format(block_id, ex))
+                failed_status = JobStatus(JobState.FAILED, "Failed to start block {}: {}".format(block_id, ex))
+                self._simulated_status[block_id] = failed_status
+                self._status[block_id] = failed_status
 
         self.send_monitoring_info(monitoring_status_changes)
         return block_ids
