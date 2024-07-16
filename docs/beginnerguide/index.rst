@@ -8,6 +8,7 @@ Chapter 1 - Introduction to Parsl
 - What is Parsl and what can it be used for?
 - Script vs Workflow
 - Key Features and Benefits
+- Infographic: Script vs. Workflow 
 - Understanding Concurrency and Parallelism
 - Concurrency vs. Parallelism
 - How Parsl Facilitates Parallel Computing
