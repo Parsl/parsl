@@ -31,6 +31,11 @@ In Parsl, there's a distinction between a script and a workflow.
 
 Understanding the role of a Parsl script and a workflow is like understanding the difference between a recipe and the cooking process. A Parsl script can be thought of as a recipe, where the ingredients are the tasks and the steps are the dependencies. The workflow, on the other hand, is the process of cooking that recipe. It orchestrates the actual cooking process, ensuring that the steps are followed correctly and the ingredients are combined at the right time. This analogy helps in understanding the concept better and applying it effectively.
 
+.. image:: images/script_vs_workflow.png
+   :width: 800px
+   :align: center
+   :alt: Infographic - Script vs Workflow
+
 Key Features and Benefits
 -------------------------
 
