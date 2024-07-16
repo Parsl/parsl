@@ -184,23 +184,27 @@ class BlockProviderExecutor(ParslExecutor):
         if not self.provider:
             raise ScalingFailed(self, "No execution provider available")
         block_ids = []
+        monitoring_status_changes = {}
         logger.info(f"Scaling out by {n} blocks")
         for _ in range(n):
             block_id = str(self._block_id_counter.get_id())
             logger.info(f"Allocated block ID {block_id}")
             try:
                 job_id = self._launch_block(block_id)
+
+                pending_status = JobStatus(JobState.PENDING)
+
                 self.blocks_to_job_id[block_id] = job_id
                 self.job_ids_to_block[job_id] = block_id
+                self._status[block_id] = pending_status
+
+                monitoring_status_changes[block_id] = pending_status
                 block_ids.append(block_id)
+
             except Exception as ex:
                 self._simulated_status[block_id] = JobStatus(JobState.FAILED, "Failed to start block {}: {}".format(block_id, ex))
 
-        new_status = {}
-        for block_id in block_ids:
-            new_status[block_id] = JobStatus(JobState.PENDING)
-        self.send_monitoring_info(new_status)
-        self._status.update(new_status)
+        self.send_monitoring_info(monitoring_status_changes)
         return block_ids
 
     def scale_in(self, blocks: int) -> List[str]:
