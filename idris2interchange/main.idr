@@ -41,10 +41,14 @@ new_zmq_context = do
 -- Zmq.Socket.DEALER?
 -- can I find notation like Python's IntEnum where the
 -- equivalent C number is written close to the constructor name?
-data ZMQSocketType = ZMQSocketDEALER
+-- Can I import them more directly from zmq.h? (involving the
+-- horror that others have described of how awful it is to properly
+-- parse C code?)
+data ZMQSocketType = ZMQSocketDEALER | ZMQSocketREP
 
 ||| the equivalent of the #defines for socket types in /usr/include/zmq.h
 zmq_socket_to_int : ZMQSocketType -> Int
+zmq_socket_to_int ZMQSocketREP = 4
 zmq_socket_to_int ZMQSocketDEALER = 5
 
 -- TODO: all these AnyPtrs could be made tighter perhaps - they're all
@@ -88,6 +92,16 @@ zmq_msg_size : ZMQMsg -> IO Int
 zmq_msg_size (MkZMQMsg msg_ptr) = primIO $ prim__zmq_msg_size msg_ptr
 
 
+-- bits for interfacing to linux poll
+
+-- TODO: can we do something to protect the lifetime of this int,
+-- eg to treat it linearly (or linearly with dup-ing?) so that we
+-- don't end up with bad lifetimes?
+data FD = FD Int
+
+
+
+
 main : IO ()
 main = do
   log "Idris2 interchange starting"
@@ -116,6 +130,9 @@ main = do
   -- TODO: maybe want to do some linear typing on?
   -- TODO: configuration for these ports, by reading in the configuration
   -- over stdin, as introduced in #3463?
+  -- TODO: represent this unconnected state in the types from ZMQ, with
+  -- whatever ZMQ's requirements are for connecting? or at least as much
+  -- of those requirements as we need for the interchange...
   zmq_connect tasks_submit_to_interchange_socket "tcp://127.0.0.1:9000"
   log "Connected interchange tasks submit->interchange channel"
 
@@ -138,7 +155,8 @@ main = do
 
   log "Creating interchange command channel socket"
   command_socket <- new_zmq_socket zmq_ctx ZMQSocketREP
-  zmq_connect tasks_submit_to_interchange_socket "tcp://127.0.0.1:9002"
+  -- TODO: represent unconnected state here?
+  zmq_connect command_socket "tcp://127.0.0.1:9002"
   log "Connected interchange command channel"
 
   -- TODO: probably should create result socket here
@@ -153,6 +171,37 @@ main = do
   -- to move away from looping and processing each message - for the idris2
   -- implementation, choices there should be driven by what makes things
   -- easiest and/or most novel in terms of types...
+  -- we've got command_socket and tasks_submit_to_interchange socket to poll on...
+  -- let's do it fd driven right from the start... might be fun to try some
+  -- special fd types etc... it can be linux specific and that's ok in this
+  -- prototyping context... signalfd for exits, timerfd for timing? epoll for
+  -- gratuitous complication? this bit is experimenting with modern linux
+  -- file descriptor behaviour...
+
+  -- does a file descriptor need any additions to a basic FileDescriptor type?
+  -- is there anything to statically permit/prohibit etc?
+  -- in the rusterchange i was a bit concerned
+  -- about the relationship between zmq_poller results and what was done with
+  -- those polled results...
+  log "poll()ing for activity"
+
+  -- poll looks like this:
+  --        int poll(struct pollfd *fds, nfds_t nfds, int timeout);
+  -- with pollfd like this:
+  --       struct pollfd {
+  --           int   fd;         /* file descriptor */
+  --           short events;     /* requested events */
+  --           short revents;    /* returned events */
+  --       };
+
+  -- these pollfd structures are both an input and an output... .events
+  -- is an input and .revents is a return, so I guess I want to model this
+  -- API in something that looks more like a function... (eg take an fd
+  -- and events list, and return a list of fd, revents?)
+
+  XXX
+
+  log "polling NOTIMPL"
 
   -- Semantics of buffer ownership: the caller must allocate a buffer and
   -- describe the size to zmq_recv. Probably some linear type stuff to be
