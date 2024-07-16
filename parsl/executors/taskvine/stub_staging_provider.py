@@ -1,11 +1,11 @@
 import logging
-
-from parsl.utils import RepresentationMixin
-from parsl.data_provider.staging import Staging
-from parsl.data_provider.files import File
 from concurrent.futures import Future
-from parsl.app.futures import DataFuture
 from typing import Optional
+
+from parsl.app.futures import DataFuture
+from parsl.data_provider.files import File
+from parsl.data_provider.staging import Staging
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
