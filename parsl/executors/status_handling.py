@@ -76,7 +76,7 @@ class BlockProviderExecutor(ParslExecutor):
 
         # errors can happen during the submit call to the provider; this is used
         # to keep track of such errors so that they can be handled in one place
-        # together with errors reported by status()
+        # together with errors reported by _regenerate_combined_status()
         self._simulated_status: Dict[str, JobStatus] = {}
 
         # this stores an approximation (sometimes delayed) of the latest status
@@ -106,7 +106,7 @@ class BlockProviderExecutor(ParslExecutor):
         In practice, at least given the current situation, the executor uses a single task provider
         and this method is a delegate to the corresponding method in the provider.
 
-        :return: the number of seconds to wait between calls to status() or zero if no polling
+        :return: the number of seconds to wait between calls to _regenerate_combined_status() or zero if no polling
                  should be done
         """
         if self._provider is None:
@@ -296,7 +296,7 @@ class BlockProviderExecutor(ParslExecutor):
         now = time.time()
         if now >= self._last_poll_time + self.status_polling_interval:
             previous_status = self._status
-            self._status = self.status()
+            self._status = self._regenerate_combined_status()
             self._last_poll_time = now
             delta_status = {}
             for block_id in self._status:
@@ -307,7 +307,7 @@ class BlockProviderExecutor(ParslExecutor):
             if delta_status:
                 self.send_monitoring_info(delta_status)
 
-    def status(self) -> Dict[str, JobStatus]:
+    def _regenerate_combined_status(self) -> Dict[str, JobStatus]:
         """Return the status of all jobs/blocks currently known to this executor.
 
         :return: a dictionary mapping block ids (in string) to job status
