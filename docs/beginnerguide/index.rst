@@ -1,7 +1,22 @@
 Table of Contents
 =================
 
-Chapter 1 - Getting Started with Parsl 
+Chapter 1 - Introduction to Parsl  
+------------------------------------------------
+
+- Introduction to Parsl
+- Overview of Parsl
+- What is Parsl and what can it be used for?
+- Script vs Workflow
+- Key Features and Benefits
+- Understanding Concurrency and Parallelism
+- Concurrency vs. Parallelism
+- How Parsl Facilitates Parallel Computing
+- Getting Started Tutorial
+- Practical Example: Setting Up Your First Parsl Workflow
+- Infographic: Script vs Workflow
+
+Chapter 2 - Getting Started with Parsl
 ------------------------------------------------
 
 - Getting Started with Parsl
@@ -17,21 +32,6 @@ Chapter 1 - Getting Started with Parsl
 - Glossary of Terms
 - Quick Reference of Key Terms
 - Linking to Quickstart and Detailed Explanations
-
-Chapter 2 - Introduction to Parsl 
-------------------------------------------------
-
-- Introduction to Parsl
-- Overview of Parsl
-- What is Parsl and what can it be used for?
-- Script vs Workflow
-- Key Features and Benefits
-- Understanding Concurrency and Parallelism
-- Concurrency vs. Parallelism
-- How Parsl Facilitates Parallel Computing
-- Getting Started Tutorial
-- Practical Example: Setting Up Your First Parsl Workflow
-- Infographic: Script vs Workflow
 
 Chapter 3 - Core Concepts 
 ------------------------------------------------
