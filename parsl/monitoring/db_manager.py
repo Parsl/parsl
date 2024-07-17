@@ -6,6 +6,8 @@ import threading
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
 
+import typeguard
+
 from parsl.dataflow.states import States
 from parsl.errors import OptionalModuleMissing
 from parsl.log_utils import set_file_logger
@@ -719,6 +721,7 @@ class DatabaseManager:
 
 
 @wrap_with_logs(target="database_manager")
+@typeguard.typechecked
 def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
                 priority_msgs: "queue.Queue[TaggedMonitoringMessage]",
                 node_msgs: "queue.Queue[MonitoringMessage]",

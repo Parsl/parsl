@@ -10,6 +10,7 @@ import time
 from multiprocessing.synchronize import Event
 from typing import Optional, Tuple, Union
 
+import typeguard
 import zmq
 
 from parsl.log_utils import set_file_logger
@@ -209,6 +210,7 @@ class MonitoringRouter:
 
 
 @wrap_with_logs
+@typeguard.typechecked
 def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    exception_q: "queue.Queue[Tuple[str, str]]",
                    priority_msgs: "queue.Queue[AddressedMonitoringMessage]",
