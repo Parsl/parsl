@@ -36,7 +36,6 @@ class MonitoringRouter:
                  logging_level: int = logging.INFO,
                  atexit_timeout: int = 3,   # in seconds
                  priority_msgs: "Queue[AddressedMonitoringMessage]",
-                 node_msgs: "Queue[AddressedMonitoringMessage]",
                  resource_msgs: "Queue[AddressedMonitoringMessage]",
                  exit_event: Event,
                  ):
@@ -104,7 +103,6 @@ class MonitoringRouter:
                                                                                max_port=zmq_port_range[1])
 
         self.priority_msgs = priority_msgs
-        self.node_msgs = node_msgs
         self.resource_msgs = resource_msgs
         self.exit_event = exit_event
 
@@ -176,7 +174,7 @@ class MonitoringRouter:
 
                         if msg[0] == MessageType.NODE_INFO:
                             msg[1]['run_id'] = self.run_id
-                            self.node_msgs.put(msg_0)
+                            self.resource_msgs.put(msg_0)
                         elif msg[0] == MessageType.RESOURCE_INFO or msg[0] == MessageType.BLOCK_INFO:
                             self.resource_msgs.put(msg_0)
                         elif msg[0] == MessageType.TASK_INFO:
@@ -211,7 +209,6 @@ def router_starter(*,
                    comm_q: "Queue[Union[Tuple[int, int], str]]",
                    exception_q: "Queue[Tuple[str, str]]",
                    priority_msgs: "Queue[AddressedMonitoringMessage]",
-                   node_msgs: "Queue[AddressedMonitoringMessage]",
                    resource_msgs: "Queue[AddressedMonitoringMessage]",
                    exit_event: Event,
 
@@ -231,7 +228,6 @@ def router_starter(*,
                                   logging_level=logging_level,
                                   run_id=run_id,
                                   priority_msgs=priority_msgs,
-                                  node_msgs=node_msgs,
                                   resource_msgs=resource_msgs,
                                   exit_event=exit_event)
     except Exception as e:

@@ -144,9 +144,6 @@ class MonitoringHub(RepresentationMixin):
         self.resource_msgs: Queue[AddressedMonitoringMessage]
         self.resource_msgs = SizedQueue()
 
-        self.node_msgs: Queue[AddressedMonitoringMessage]
-        self.node_msgs = SizedQueue()
-
         self.router_exit_event: ms.Event
         self.router_exit_event = Event()
 
@@ -154,7 +151,6 @@ class MonitoringHub(RepresentationMixin):
                                        kwargs={"comm_q": comm_q,
                                                "exception_q": self.exception_q,
                                                "priority_msgs": self.priority_msgs,
-                                               "node_msgs": self.node_msgs,
                                                "resource_msgs": self.resource_msgs,
                                                "exit_event": self.router_exit_event,
                                                "hub_address": self.hub_address,
@@ -170,7 +166,7 @@ class MonitoringHub(RepresentationMixin):
         self.router_proc.start()
 
         self.dbm_proc = ForkProcess(target=dbm_starter,
-                                    args=(self.exception_q, self.priority_msgs, self.node_msgs, self.resource_msgs,),
+                                    args=(self.exception_q, self.priority_msgs, self.resource_msgs,),
                                     kwargs={"logdir": self.logdir,
                                             "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                             "db_url": self.logging_endpoint,
@@ -268,8 +264,6 @@ class MonitoringHub(RepresentationMixin):
             self.priority_msgs.join_thread()
             self.resource_msgs.close()
             self.resource_msgs.join_thread()
-            self.node_msgs.close()
-            self.node_msgs.join_thread()
             logger.info("Closed monitoring multiprocessing queues")
 
 
