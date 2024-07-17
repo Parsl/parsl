@@ -34,7 +34,6 @@ class MonitoringRouter:
                  logdir: str = ".",
                  logging_level: int = logging.INFO,
                  atexit_timeout: int = 3,   # in seconds
-                 priority_msgs: mpq.Queue,
                  resource_msgs: mpq.Queue,
                  exit_event: Event,
                  ):
@@ -55,7 +54,7 @@ class MonitoringRouter:
              Logging level as defined in the logging module. Default: logging.INFO
         atexit_timeout : float, optional
             The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
-        *_msgs : Queue
+        XXX TODO not-so-many-left-now... *_msgs : Queue
             Four multiprocessing queues to receive messages, routed by type tag, and sometimes modified according to type tag.
 
         exit_event : Event
@@ -100,7 +99,6 @@ class MonitoringRouter:
                                                                                min_port=zmq_port_range[0],
                                                                                max_port=zmq_port_range[1])
 
-        self.priority_msgs = priority_msgs
         self.resource_msgs = resource_msgs
         self.exit_event = exit_event
 
@@ -171,9 +169,9 @@ class MonitoringRouter:
                         elif msg[0] == MessageType.RESOURCE_INFO or msg[0] == MessageType.BLOCK_INFO:
                             self.resource_msgs.put(msg_0)
                         elif msg[0] == MessageType.TASK_INFO:
-                            self.priority_msgs.put(msg_0)
+                            self.resource_msgs.put(msg_0)
                         elif msg[0] == MessageType.WORKFLOW_INFO:
-                            self.priority_msgs.put(msg_0)
+                            self.resource_msgs.put(msg_0)
                         else:
                             # There is a type: ignore here because if msg[0]
                             # is of the correct type, this code is unreachable,
@@ -201,7 +199,6 @@ class MonitoringRouter:
 def router_starter(*,
                    comm_q: mpq.Queue,
                    exception_q: mpq.Queue,
-                   priority_msgs: mpq.Queue,
                    resource_msgs: mpq.Queue,
                    exit_event: Event,
 
@@ -218,7 +215,6 @@ def router_starter(*,
                                   zmq_port_range=zmq_port_range,
                                   logdir=logdir,
                                   logging_level=logging_level,
-                                  priority_msgs=priority_msgs,
                                   resource_msgs=resource_msgs,
                                   exit_event=exit_event)
     except Exception as e:

@@ -308,17 +308,9 @@ class DatabaseManager:
         self.pending_resource_queue: queue.Queue[MonitoringMessage] = queue.Queue()
 
     def start(self,
-              priority_queue: mpq.Queue,
               resource_queue: mpq.Queue) -> None:
 
         self._kill_event = threading.Event()
-        self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
-                                                            args=(
-                                                                priority_queue, self._kill_event,),
-                                                            name="Monitoring-migrate-priority",
-                                                            daemon=True,
-                                                            )
-        self._priority_queue_pull_thread.start()
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
@@ -354,18 +346,18 @@ class DatabaseManager:
         while (not self._kill_event.is_set() or
                self.pending_priority_queue.qsize() != 0 or self.pending_resource_queue.qsize() != 0 or
                self.pending_node_queue.qsize() != 0 or self.pending_block_queue.qsize() != 0 or
-               priority_queue.qsize() != 0 or resource_queue.qsize() != 0):
+               resource_queue.qsize() != 0):
 
             """
             WORKFLOW_INFO and TASK_INFO messages (i.e. priority messages)
 
             """
             try:
-                logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}, {}, {}""".format(
+                logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}, {}""".format(
                                   self._kill_event.is_set(),
                                   self.pending_priority_queue.qsize() != 0, self.pending_resource_queue.qsize() != 0,
                                   self.pending_node_queue.qsize() != 0, self.pending_block_queue.qsize() != 0,
-                                  priority_queue.qsize() != 0, resource_queue.qsize() != 0))
+                                  resource_queue.qsize() != 0))
 
                 # This is the list of resource messages which can be reprocessed as if they
                 # had just arrived because the corresponding first task message has been
@@ -687,7 +679,6 @@ class DatabaseManager:
 @wrap_with_logs(target="database_manager")
 @typeguard.typechecked
 def dbm_starter(exception_q: mpq.Queue,
-                priority_msgs: mpq.Queue,
                 resource_msgs: mpq.Queue,
                 db_url: str,
                 logdir: str,
@@ -704,7 +695,7 @@ def dbm_starter(exception_q: mpq.Queue,
                               logdir=logdir,
                               logging_level=logging_level)
         logger.info("Starting dbm in dbm starter")
-        dbm.start(priority_msgs, resource_msgs)
+        dbm.start(resource_msgs)
     except KeyboardInterrupt:
         logger.exception("KeyboardInterrupt signal caught")
         dbm.close()
