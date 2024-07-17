@@ -1,5 +1,6 @@
 import datetime
 import logging
+import multiprocessing.queues as mpq
 import os
 import queue
 import threading
@@ -307,10 +308,10 @@ class DatabaseManager:
         self.pending_resource_queue = queue.Queue()  # type: queue.Queue[MonitoringMessage]
 
     def start(self,
-              priority_queue: "queue.Queue[TaggedMonitoringMessage]",
-              node_queue: "queue.Queue[MonitoringMessage]",
-              block_queue: "queue.Queue[MonitoringMessage]",
-              resource_queue: "queue.Queue[MonitoringMessage]") -> None:
+              priority_queue: "mpq.Queue[TaggedMonitoringMessage]",
+              node_queue: "mpq.Queue[MonitoringMessage]",
+              block_queue: "mpq.Queue[MonitoringMessage]",
+              resource_queue: "mpq.Queue[MonitoringMessage]") -> None:
 
         self._kill_event = threading.Event()
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
@@ -722,11 +723,11 @@ class DatabaseManager:
 
 @wrap_with_logs(target="database_manager")
 @typeguard.typechecked
-def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
-                priority_msgs: "queue.Queue[TaggedMonitoringMessage]",
-                node_msgs: "queue.Queue[MonitoringMessage]",
-                block_msgs: "queue.Queue[MonitoringMessage]",
-                resource_msgs: "queue.Queue[MonitoringMessage]",
+def dbm_starter(exception_q: "mpq.Queue[Tuple[str, str]]",
+                priority_msgs: "mpq.Queue[TaggedMonitoringMessage]",
+                node_msgs: "mpq.Queue[MonitoringMessage]",
+                block_msgs: "mpq.Queue[MonitoringMessage]",
+                resource_msgs: "mpq.Queue[MonitoringMessage]",
                 db_url: str,
                 logdir: str,
                 logging_level: int) -> None:

@@ -3,10 +3,10 @@ from __future__ import annotations
 import logging
 import os
 import pickle
-import queue
 import socket
 import threading
 import time
+from multiprocessing.queues import Queue
 from multiprocessing.synchronize import Event
 from typing import Optional, Tuple, Union
 
@@ -34,10 +34,10 @@ class MonitoringRouter:
                  logdir: str = ".",
                  logging_level: int = logging.INFO,
                  atexit_timeout: int = 3,   # in seconds
-                 priority_msgs: "queue.Queue[AddressedMonitoringMessage]",
-                 node_msgs: "queue.Queue[AddressedMonitoringMessage]",
-                 block_msgs: "queue.Queue[AddressedMonitoringMessage]",
-                 resource_msgs: "queue.Queue[AddressedMonitoringMessage]",
+                 priority_msgs: "Queue[AddressedMonitoringMessage]",
+                 node_msgs: "Queue[AddressedMonitoringMessage]",
+                 block_msgs: "Queue[AddressedMonitoringMessage]",
+                 resource_msgs: "Queue[AddressedMonitoringMessage]",
                  exit_event: Event,
                  ):
         """ Initializes a monitoring configuration class.
@@ -204,12 +204,12 @@ class MonitoringRouter:
 
 @wrap_with_logs
 @typeguard.typechecked
-def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
-                   exception_q: "queue.Queue[Tuple[str, str]]",
-                   priority_msgs: "queue.Queue[AddressedMonitoringMessage]",
-                   node_msgs: "queue.Queue[AddressedMonitoringMessage]",
-                   block_msgs: "queue.Queue[AddressedMonitoringMessage]",
-                   resource_msgs: "queue.Queue[AddressedMonitoringMessage]",
+def router_starter(comm_q: "Queue[Union[Tuple[int, int], str]]",
+                   exception_q: "Queue[Tuple[str, str]]",
+                   priority_msgs: "Queue[AddressedMonitoringMessage]",
+                   node_msgs: "Queue[AddressedMonitoringMessage]",
+                   block_msgs: "Queue[AddressedMonitoringMessage]",
+                   resource_msgs: "Queue[AddressedMonitoringMessage]",
                    exit_event: Event,
 
                    hub_address: str,
