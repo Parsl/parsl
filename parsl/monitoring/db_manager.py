@@ -310,7 +310,6 @@ class DatabaseManager:
     def start(self,
               priority_queue: "mpq.Queue[TaggedMonitoringMessage]",
               node_queue: "mpq.Queue[MonitoringMessage]",
-              block_queue: "mpq.Queue[MonitoringMessage]",
               resource_queue: "mpq.Queue[MonitoringMessage]") -> None:
 
         self._kill_event = threading.Event()
@@ -329,14 +328,6 @@ class DatabaseManager:
                                                         daemon=True,
                                                         )
         self._node_queue_pull_thread.start()
-
-        self._block_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
-                                                         args=(
-                                                             block_queue, 'block', self._kill_event,),
-                                                         name="Monitoring-migrate-block",
-                                                         daemon=True,
-                                                         )
-        self._block_queue_pull_thread.start()
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
@@ -373,19 +364,19 @@ class DatabaseManager:
                self.pending_priority_queue.qsize() != 0 or self.pending_resource_queue.qsize() != 0 or
                self.pending_node_queue.qsize() != 0 or self.pending_block_queue.qsize() != 0 or
                priority_queue.qsize() != 0 or resource_queue.qsize() != 0 or
-               node_queue.qsize() != 0 or block_queue.qsize() != 0):
+               node_queue.qsize() != 0):
 
             """
             WORKFLOW_INFO and TASK_INFO messages (i.e. priority messages)
 
             """
             try:
-                logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}, {}, {}, {}, {}""".format(
+                logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}, {}, {}, {}""".format(
                                   self._kill_event.is_set(),
                                   self.pending_priority_queue.qsize() != 0, self.pending_resource_queue.qsize() != 0,
                                   self.pending_node_queue.qsize() != 0, self.pending_block_queue.qsize() != 0,
                                   priority_queue.qsize() != 0, resource_queue.qsize() != 0,
-                                  node_queue.qsize() != 0, block_queue.qsize() != 0))
+                                  node_queue.qsize() != 0))
 
                 # This is the list of resource messages which can be reprocessed as if they
                 # had just arrived because the corresponding first task message has been
@@ -597,18 +588,11 @@ class DatabaseManager:
                         "_migrate_logs_to_internal can only migrate WORKFLOW_,TASK_INFO message from priority queue, got x[0] == {}".format(x[0])
                     self._dispatch_to_internal(x)
                 elif queue_tag == 'resource':
-                    assert isinstance(x, tuple), "_migrate_logs_to_internal was expecting a tuple, got {}".format(x)
-                    assert x[0] == MessageType.RESOURCE_INFO, (
-                        "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue, "
-                        "got tag {}, message {}".format(x[0], x)
-                    )
                     self._dispatch_to_internal(x)
                 elif queue_tag == 'node':
                     assert len(x) == 2, "expected message tuple to have exactly two elements"
                     assert x[0] == MessageType.NODE_INFO, "_migrate_logs_to_internal can only migrate NODE_INFO messages from node queue"
 
-                    self._dispatch_to_internal(x)
-                elif queue_tag == "block":
                     self._dispatch_to_internal(x)
                 else:
                     logger.error(f"Discarding because unknown queue tag '{queue_tag}', message: {x}")
@@ -726,7 +710,6 @@ class DatabaseManager:
 def dbm_starter(exception_q: "mpq.Queue[Tuple[str, str]]",
                 priority_msgs: "mpq.Queue[TaggedMonitoringMessage]",
                 node_msgs: "mpq.Queue[MonitoringMessage]",
-                block_msgs: "mpq.Queue[MonitoringMessage]",
                 resource_msgs: "mpq.Queue[MonitoringMessage]",
                 db_url: str,
                 logdir: str,
@@ -743,7 +726,7 @@ def dbm_starter(exception_q: "mpq.Queue[Tuple[str, str]]",
                               logdir=logdir,
                               logging_level=logging_level)
         logger.info("Starting dbm in dbm starter")
-        dbm.start(priority_msgs, node_msgs, block_msgs, resource_msgs)
+        dbm.start(priority_msgs, node_msgs, resource_msgs)
     except KeyboardInterrupt:
         logger.exception("KeyboardInterrupt signal caught")
         dbm.close()

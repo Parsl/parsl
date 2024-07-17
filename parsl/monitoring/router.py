@@ -37,7 +37,6 @@ class MonitoringRouter:
                  atexit_timeout: int = 3,   # in seconds
                  priority_msgs: "Queue[AddressedMonitoringMessage]",
                  node_msgs: "Queue[AddressedMonitoringMessage]",
-                 block_msgs: "Queue[AddressedMonitoringMessage]",
                  resource_msgs: "Queue[AddressedMonitoringMessage]",
                  exit_event: Event,
                  ):
@@ -106,7 +105,6 @@ class MonitoringRouter:
 
         self.priority_msgs = priority_msgs
         self.node_msgs = node_msgs
-        self.block_msgs = block_msgs
         self.resource_msgs = resource_msgs
         self.exit_event = exit_event
 
@@ -179,10 +177,8 @@ class MonitoringRouter:
                         if msg[0] == MessageType.NODE_INFO:
                             msg[1]['run_id'] = self.run_id
                             self.node_msgs.put(msg_0)
-                        elif msg[0] == MessageType.RESOURCE_INFO:
+                        elif msg[0] == MessageType.RESOURCE_INFO or msg[0] == MessageType.BLOCK_INFO:
                             self.resource_msgs.put(msg_0)
-                        elif msg[0] == MessageType.BLOCK_INFO:
-                            self.block_msgs.put(msg_0)
                         elif msg[0] == MessageType.TASK_INFO:
                             self.priority_msgs.put(msg_0)
                         elif msg[0] == MessageType.WORKFLOW_INFO:
@@ -216,7 +212,6 @@ def router_starter(*,
                    exception_q: "Queue[Tuple[str, str]]",
                    priority_msgs: "Queue[AddressedMonitoringMessage]",
                    node_msgs: "Queue[AddressedMonitoringMessage]",
-                   block_msgs: "Queue[AddressedMonitoringMessage]",
                    resource_msgs: "Queue[AddressedMonitoringMessage]",
                    exit_event: Event,
 
@@ -237,7 +232,6 @@ def router_starter(*,
                                   run_id=run_id,
                                   priority_msgs=priority_msgs,
                                   node_msgs=node_msgs,
-                                  block_msgs=block_msgs,
                                   resource_msgs=resource_msgs,
                                   exit_event=exit_event)
     except Exception as e:
