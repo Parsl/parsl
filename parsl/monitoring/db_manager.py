@@ -314,7 +314,7 @@ class DatabaseManager:
         self._kill_event = threading.Event()
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
-                                                                priority_queue, 'priority', self._kill_event,),
+                                                                priority_queue, self._kill_event,),
                                                             name="Monitoring-migrate-priority",
                                                             daemon=True,
                                                             )
@@ -322,7 +322,7 @@ class DatabaseManager:
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
-                                                                resource_queue, 'resource', self._kill_event,),
+                                                                resource_queue, self._kill_event,),
                                                             name="Monitoring-migrate-resource",
                                                             daemon=True,
                                                             )
@@ -557,29 +557,21 @@ class DatabaseManager:
             raise RuntimeError("An exception happened sometime during database processing and should have been logged in database_manager.log")
 
     @wrap_with_logs(target="database_manager")
-    def _migrate_logs_to_internal(self, logs_queue: queue.Queue, queue_tag: str, kill_event: threading.Event) -> None:
-        logger.info("Starting processing for queue {}".format(queue_tag))
+    def _migrate_logs_to_internal(self, logs_queue: queue.Queue, kill_event: threading.Event) -> None:
+        logger.info("Starting _migrate_logs_to_internal")
 
         while not kill_event.is_set() or logs_queue.qsize() != 0:
-            logger.debug("""Checking STOP conditions for {} threads: {}, {}"""
-                         .format(queue_tag, kill_event.is_set(), logs_queue.qsize() != 0))
+            logger.debug("Checking STOP conditions: kill event: %s, queue has entries: %s",
+                         kill_event.is_set(), logs_queue.qsize() != 0)
             try:
                 x, addr = logs_queue.get(timeout=0.1)
             except queue.Empty:
                 continue
             else:
-                if queue_tag == 'priority' and x == 'STOP':
+                if x == 'STOP':
                     self.close()
-                elif queue_tag == 'priority':  # implicitly not 'STOP'
-                    assert isinstance(x, tuple)
-                    assert len(x) == 2
-                    assert x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO], \
-                        "_migrate_logs_to_internal can only migrate WORKFLOW_,TASK_INFO message from priority queue, got x[0] == {}".format(x[0])
-                    self._dispatch_to_internal(x)
-                elif queue_tag == 'resource':
-                    self._dispatch_to_internal(x)
                 else:
-                    logger.error(f"Discarding because unknown queue tag '{queue_tag}', message: {x}")
+                    self._dispatch_to_internal(x)
 
     def _dispatch_to_internal(self, x: Tuple) -> None:
         if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO]:
