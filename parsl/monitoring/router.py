@@ -14,7 +14,6 @@ import typeguard
 import zmq
 
 from parsl.log_utils import set_file_logger
-from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import AddressedMonitoringMessage, TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
@@ -168,22 +167,7 @@ class MonitoringRouter:
                         msg_0: AddressedMonitoringMessage
                         msg_0 = (msg, 0)
 
-                        if msg[0] == MessageType.NODE_INFO:
-                            self.resource_msgs.put(msg_0)
-                        elif msg[0] == MessageType.RESOURCE_INFO or msg[0] == MessageType.BLOCK_INFO:
-                            self.resource_msgs.put(msg_0)
-                        elif msg[0] == MessageType.TASK_INFO:
-                            self.resource_msgs.put(msg_0)
-                        elif msg[0] == MessageType.WORKFLOW_INFO:
-                            self.resource_msgs.put(msg_0)
-                        else:
-                            # There is a type: ignore here because if msg[0]
-                            # is of the correct type, this code is unreachable,
-                            # but there is no verification that the message
-                            # received from zmq_receiver_channel.recv_pyobj() is actually
-                            # of that type.
-                            self.logger.error("Discarding message "  # type: ignore[unreachable]
-                                              f"with unknown type {msg[0].value}")
+                        self.resource_msgs.put(msg_0)
                 except zmq.Again:
                     pass
                 except Exception:
