@@ -544,6 +544,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                               "poll_period": self.poll_period,
                               "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
                               "cert_dir": self.cert_dir,
+                              "run_id": self.run_id,
                               }
 
         config_pickle = pickle.dumps(interchange_config)
