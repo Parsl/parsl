@@ -106,7 +106,7 @@ class MonitoringHub(RepresentationMixin):
         self.resource_monitoring_enabled = resource_monitoring_enabled
         self.resource_monitoring_interval = resource_monitoring_interval
 
-    def start(self, run_id: str, dfk_run_dir: str, config_run_dir: Union[str, os.PathLike]) -> None:
+    def start(self, dfk_run_dir: str, config_run_dir: Union[str, os.PathLike]) -> None:
 
         logger.debug("Starting MonitoringHub")
 
@@ -161,7 +161,6 @@ class MonitoringHub(RepresentationMixin):
                                                "zmq_port_range": self.hub_port_range,
                                                "logdir": self.logdir,
                                                "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                               "run_id": run_id
                                                },
                                        name="Monitoring-Router-Process",
                                        daemon=True,

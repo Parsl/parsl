@@ -31,7 +31,6 @@ class MonitoringRouter:
 
                  monitoring_hub_address: str = "127.0.0.1",
                  logdir: str = ".",
-                 run_id: str,
                  logging_level: int = logging.INFO,
                  atexit_timeout: int = 3,   # in seconds
                  priority_msgs: "queue.Queue[AddressedMonitoringMessage]",
@@ -71,7 +70,6 @@ class MonitoringRouter:
 
         self.hub_address = hub_address
         self.atexit_timeout = atexit_timeout
-        self.run_id = run_id
 
         self.loop_freq = 10.0  # milliseconds
 
@@ -172,7 +170,6 @@ class MonitoringRouter:
                         msg_0 = (msg, 0)
 
                         if msg[0] == MessageType.NODE_INFO:
-                            msg[1]['run_id'] = self.run_id
                             self.node_msgs.put(msg_0)
                         elif msg[0] == MessageType.RESOURCE_INFO:
                             self.resource_msgs.put(msg_0)
@@ -218,8 +215,7 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                    zmq_port_range: Tuple[int, int],
 
                    logdir: str,
-                   logging_level: int,
-                   run_id: str) -> None:
+                   logging_level: int) -> None:
     setproctitle("parsl: monitoring router")
     try:
         router = MonitoringRouter(hub_address=hub_address,
@@ -227,7 +223,6 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
                                   zmq_port_range=zmq_port_range,
                                   logdir=logdir,
                                   logging_level=logging_level,
-                                  run_id=run_id,
                                   priority_msgs=priority_msgs,
                                   node_msgs=node_msgs,
                                   block_msgs=block_msgs,
