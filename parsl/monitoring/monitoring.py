@@ -154,9 +154,14 @@ class MonitoringHub(RepresentationMixin):
         self.router_exit_event = Event()
 
         self.router_proc = ForkProcess(target=router_starter,
-                                       args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs,
-                                             self.block_msgs, self.resource_msgs, self.router_exit_event),
-                                       kwargs={"hub_address": self.hub_address,
+                                       kwargs={"comm_q": comm_q,
+                                               "exception_q": self.exception_q,
+                                               "priority_msgs": self.priority_msgs,
+                                               "node_msgs": self.node_msgs,
+                                               "block_msgs": self.block_msgs,
+                                               "resource_msgs": self.resource_msgs,
+                                               "exit_event": self.router_exit_event,
+                                               "hub_address": self.hub_address,
                                                "udp_port": self.hub_port,
                                                "zmq_port_range": self.hub_port_range,
                                                "logdir": self.logdir,

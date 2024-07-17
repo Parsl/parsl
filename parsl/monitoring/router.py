@@ -211,7 +211,8 @@ class MonitoringRouter:
 
 @wrap_with_logs
 @typeguard.typechecked
-def router_starter(comm_q: "Queue[Union[Tuple[int, int], str]]",
+def router_starter(*,
+                   comm_q: "Queue[Union[Tuple[int, int], str]]",
                    exception_q: "Queue[Tuple[str, str]]",
                    priority_msgs: "Queue[AddressedMonitoringMessage]",
                    node_msgs: "Queue[AddressedMonitoringMessage]",
