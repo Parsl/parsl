@@ -45,7 +45,7 @@ Chapter 3 - Core Concepts
 - Parsl and Communication
 - Parameter Passing
 - File Passing Mechanisms
-- Running Your First Parallel Task
+- Interactive Tutorials: Running Your First Parallel Task
 - Practical Guide: How Parsl Manages Concurrency
 
 Chapter 4 - Working with Apps 
