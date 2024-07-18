@@ -113,20 +113,6 @@ class BlockProviderExecutor(ParslExecutor):
         raise NotImplementedError("Classes inheriting from BlockProviderExecutor must implement "
                                   "outstanding()")
 
-    def status(self) -> Dict[str, JobStatus]:
-        """Return the status of all jobs/blocks currently known to this executor.
-
-        :return: a dictionary mapping block ids (in string) to job status
-        """
-        if self._provider:
-            block_ids, job_ids = self._get_block_and_job_ids()
-            status = self._make_status_dict(block_ids, self._provider.status(job_ids))
-        else:
-            status = {}
-        status.update(self._simulated_status)
-
-        return status
-
     def set_bad_state_and_fail_all(self, exception: Exception):
         """Allows external error handlers to mark this executor as irrecoverably bad and cause
         all tasks submitted to it now and in the future to fail. The executor is responsible
@@ -275,6 +261,20 @@ class BlockProviderExecutor(ParslExecutor):
 
             if delta_status:
                 self.send_monitoring_info(delta_status)
+
+    def status(self) -> Dict[str, JobStatus]:
+        """Return the status of all jobs/blocks currently known to this executor.
+
+        :return: a dictionary mapping block ids (in string) to job status
+        """
+        if self._provider:
+            block_ids, job_ids = self._get_block_and_job_ids()
+            status = self._make_status_dict(block_ids, self._provider.status(job_ids))
+        else:
+            status = {}
+        status.update(self._simulated_status)
+
+        return status
 
     @property
     def status_facade(self) -> Dict[str, JobStatus]:
