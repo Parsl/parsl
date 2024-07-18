@@ -69,7 +69,6 @@ Here are links to Parsl documentation that will help guide you through the tutor
 Visual Guide: How Parsl Manages Concurrency
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. image:: images/concurrency_management.png
-   :width: 800px
-   :align: center
-   :alt: Visual Guide - How Parsl Manages Concurrency
+.. raw:: html
+
+    <iframe src="https://github.com/Kanegraffiti/parsl/blob/beginner-user-guide/notebooks/Parsl_and_Concurrency.ipynb" width="700" height="400"></iframe>
