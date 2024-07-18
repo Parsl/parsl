@@ -109,6 +109,7 @@ Common Errors
 Here are some common errors you might encounter during installation and how to fix them:
 
 * **Dependency errors**: Parsl has several dependencies, such as pyzmq, dill, and globus-sdk. If you encounter errors related to these dependencies, try installing them manually using pip. For example:
+
   .. code-block:: bash
 
      python3 -m pip install pyzmq dill globus-sdk
