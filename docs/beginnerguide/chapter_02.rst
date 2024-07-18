@@ -243,11 +243,10 @@ This script demonstrates the core components of a Parsl program:
 * **Getting the Result**: The `.result()` method waits for the app to finish and then returns the result, which is the string "Hello, World!".
 * **Printing the Result**: The last line prints the result to the console.
 
-.. image:: images/graphic.png
+.. image:: images/BasicParslScriptFlow.jpg
    :width: 800px
    :align: center
-   :alt: Graphic Style- Description of Graphic
-
+   :alt: Infographic - Basic Parsl Script Flow
 Practical Example: Setting Up Your First Parsl Workflow
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 To set up your first Parsl workflow, you'll need to:
