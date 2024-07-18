@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 import logging
 from typing import Callable, Iterable, Optional, Sequence, Union
 
 import typeguard
 from typing_extensions import Literal
 
+import parsl.dataflow.taskrecord as taskrecord
 from parsl.dataflow.dependency_resolvers import DependencyResolver
-from parsl.dataflow.taskrecord import TaskRecord
 from parsl.errors import ConfigurationError
 from parsl.executors.base import ParslExecutor
 from parsl.executors.threads import ThreadPoolExecutor
@@ -110,7 +112,7 @@ class Config(RepresentationMixin, UsageInformation):
                  garbage_collect: bool = True,
                  internal_tasks_max_threads: int = 10,
                  retries: int = 0,
-                 retry_handler: Optional[Callable[[Exception, TaskRecord], float]] = None,
+                 retry_handler: Optional[Callable[[Exception, taskrecord.TaskRecord], float]] = None,
                  run_dir: str = 'runinfo',
                  std_autopath: Optional[Callable] = None,
                  strategy: Optional[str] = 'simple',
@@ -172,6 +174,8 @@ class Config(RepresentationMixin, UsageInformation):
         if len(duplicates) > 0:
             raise ConfigurationError('Executors must have unique labels ({})'.format(
                 ', '.join(['label={}'.format(repr(d)) for d in duplicates])))
+        if 'all' in labels:
+            raise ConfigurationError('Executor cannot be labelled "all"')
 
     def validate_usage_tracking(self, level: int) -> None:
         if not USAGE_TRACKING_DISABLED <= level <= USAGE_TRACKING_LEVEL_3:

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Definitions for the @App decorator and the App classes.
 
 The App class encapsulates a generic leaf task that can be executed asynchronously.
@@ -8,10 +10,9 @@ from inspect import signature
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 import typeguard
-from typing_extensions import Literal
 
-from parsl.dataflow.dflow import DataFlowKernel
-from parsl.dataflow.futures import AppFuture
+import parsl.dataflow.dflow as dflow
+import parsl.dataflow.futures
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,8 @@ class AppBase(metaclass=ABCMeta):
 
     @typeguard.typechecked
     def __init__(self, func: Callable,
-                 data_flow_kernel: Optional[DataFlowKernel] = None,
-                 executors: Union[List[str], Literal['all']] = 'all',
+                 data_flow_kernel: Optional[dflow.DataFlowKernel] = None,
+                 executors: Union[List[str], str] = 'all',
                  cache: bool = False,
                  ignore_for_cache: Optional[Sequence[str]] = None) -> None:
         """Construct the App object.
@@ -72,15 +73,15 @@ class AppBase(metaclass=ABCMeta):
             self.kwargs['inputs'] = params['inputs'].default
 
     @abstractmethod
-    def __call__(self, *args: Any, **kwargs: Any) -> AppFuture:
+    def __call__(self, *args: Any, **kwargs: Any) -> parsl.dataflow.futures.AppFuture:
         pass
 
 
 @typeguard.typechecked
 def python_app(function: Optional[Callable] = None,
-               data_flow_kernel: Optional[DataFlowKernel] = None,
+               data_flow_kernel: Optional[dflow.DataFlowKernel] = None,
                cache: bool = False,
-               executors: Union[List[str], Literal['all']] = 'all',
+               executors: Union[List[str], str] = 'all',
                ignore_for_cache: Optional[Sequence[str]] = None) -> Callable:
     """Decorator function for making python apps.
 
@@ -119,7 +120,7 @@ def python_app(function: Optional[Callable] = None,
 
 @typeguard.typechecked
 def join_app(function: Optional[Callable] = None,
-             data_flow_kernel: Optional[DataFlowKernel] = None,
+             data_flow_kernel: Optional[dflow.DataFlowKernel] = None,
              cache: bool = False,
              ignore_for_cache: Optional[Sequence[str]] = None) -> Callable:
     """Decorator function for making join apps
@@ -146,7 +147,7 @@ def join_app(function: Optional[Callable] = None,
             return PythonApp(f,
                              data_flow_kernel=data_flow_kernel,
                              cache=cache,
-                             executors=["_parsl_internal"],
+                             executors="_parsl_internal",
                              ignore_for_cache=ignore_for_cache,
                              join=True)
         return wrapper(func)
@@ -157,9 +158,9 @@ def join_app(function: Optional[Callable] = None,
 
 @typeguard.typechecked
 def bash_app(function: Optional[Callable] = None,
-             data_flow_kernel: Optional[DataFlowKernel] = None,
+             data_flow_kernel: Optional[dflow.DataFlowKernel] = None,
              cache: bool = False,
-             executors: Union[List[str], Literal['all']] = 'all',
+             executors: Union[List[str], str] = 'all',
              ignore_for_cache: Optional[Sequence[str]] = None) -> Callable:
     """Decorator function for making bash apps.
 
