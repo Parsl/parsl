@@ -11,6 +11,7 @@ lazys = {
     'ThreadPoolExecutor': 'parsl.executors.threads',
     'WorkQueueExecutor': 'parsl.executors.workqueue.executor',
     'HighThroughputExecutor': 'parsl.executors.high_throughput.executor',
+    'MPIExecutor': 'parsl.executors.high_throughput.mpi_executor',
     'FluxExecutor': 'parsl.executors.flux.executor',
 }
 
