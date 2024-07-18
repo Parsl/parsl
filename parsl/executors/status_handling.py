@@ -1,17 +1,18 @@
 from __future__ import annotations
+
 import datetime
 import logging
 import threading
 import time
-from itertools import compress
 from abc import abstractmethod, abstractproperty
 from concurrent.futures import Future
-from typing import List, Any, Dict, Optional, Sequence, Tuple, Union, Callable
+from itertools import compress
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
-from parsl.jobs.states import JobStatus, JobState
-from parsl.jobs.error_handlers import simple_error_handler, noop_error_handler
+from parsl.jobs.error_handlers import noop_error_handler, simple_error_handler
+from parsl.jobs.states import JobState, JobStatus
 from parsl.monitoring.message_type import MessageType
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import AtomicIDCounter
@@ -43,9 +44,6 @@ class BlockProviderExecutor(ParslExecutor):
     invoking scale_out, but it will not initialize the blocks requested by
     any init_blocks parameter. Subclasses must implement that behaviour
     themselves.
-
-    BENC: TODO: block error handling: maybe I want this more user pluggable?
-    I'm not sure of use cases for switchability at the moment beyond "yes or no"
     """
     def __init__(self, *,
                  provider: Optional[ExecutionProvider],
@@ -114,20 +112,6 @@ class BlockProviderExecutor(ParslExecutor):
 
         raise NotImplementedError("Classes inheriting from BlockProviderExecutor must implement "
                                   "outstanding()")
-
-    def status(self) -> Dict[str, JobStatus]:
-        """Return the status of all jobs/blocks currently known to this executor.
-
-        :return: a dictionary mapping block ids (in string) to job status
-        """
-        if self._provider:
-            block_ids, job_ids = self._get_block_and_job_ids()
-            status = self._make_status_dict(block_ids, self._provider.status(job_ids))
-        else:
-            status = {}
-        status.update(self._simulated_status)
-
-        return status
 
     def set_bad_state_and_fail_all(self, exception: Exception):
         """Allows external error handlers to mark this executor as irrecoverably bad and cause
@@ -277,6 +261,20 @@ class BlockProviderExecutor(ParslExecutor):
 
             if delta_status:
                 self.send_monitoring_info(delta_status)
+
+    def status(self) -> Dict[str, JobStatus]:
+        """Return the status of all jobs/blocks currently known to this executor.
+
+        :return: a dictionary mapping block ids (in string) to job status
+        """
+        if self._provider:
+            block_ids, job_ids = self._get_block_and_job_ids()
+            status = self._make_status_dict(block_ids, self._provider.status(job_ids))
+        else:
+            status = {}
+        status.update(self._simulated_status)
+
+        return status
 
     @property
     def status_facade(self) -> Dict[str, JobStatus]:

@@ -1,18 +1,18 @@
 from __future__ import annotations
+
 import hashlib
-from functools import lru_cache, singledispatch
 import logging
 import pickle
-import parsl.dataflow.taskrecord as taskrecord
+from functools import lru_cache, singledispatch
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from typing import Dict, Any, List, Optional, TYPE_CHECKING
+import parsl.dataflow.taskrecord as taskrecord
 
 if TYPE_CHECKING:
     from parsl import DataFlowKernel  # import loop at runtime - needed for typechecking - TODO turn into "if typing:"
 
-from concurrent.futures import Future
-
 import types
+from concurrent.futures import Future
 
 logger = logging.getLogger(__name__)
 

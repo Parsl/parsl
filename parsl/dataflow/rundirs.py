@@ -1,8 +1,8 @@
-import os
-from glob import glob
 import logging
+import os
 import random
 import time
+from glob import glob
 
 from parsl.dataflow.errors import RundirCreateError
 

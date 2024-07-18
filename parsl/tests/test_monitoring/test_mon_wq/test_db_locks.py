@@ -1,9 +1,11 @@
 
 import logging
 import os
-import parsl
-import pytest
 import time
+
+import pytest
+
+import parsl
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +18,7 @@ def this_app():
 @pytest.mark.local
 def test_row_counts():
     import sqlalchemy
+
     from parsl.tests.configs.workqueue_monitoring import fresh_config
 
     if os.path.exists("runinfo/monitoring.db"):

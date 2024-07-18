@@ -1,5 +1,6 @@
-from parsl.errors import ParslError
 from typing import Optional, Sequence, Tuple
+
+from parsl.errors import ParslError
 
 
 class DataFlowException(ParslError):

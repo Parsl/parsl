@@ -1,9 +1,11 @@
 import logging
 import os
-import parsl
-import pytest
 import signal
 import time
+
+import pytest
+
+import parsl
 
 logger = logging.getLogger(__name__)
 

@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from concurrent.futures import Future
 import logging
 import threading
+from concurrent.futures import Future
 from typing import Any, Optional, Sequence, Union
 
 import parsl.app.app as app
-
-from parsl.app.futures import DataFuture
 import parsl.dataflow.taskrecord as taskrecord
+from parsl.app.futures import DataFuture
 
 logger = logging.getLogger(__name__)
 

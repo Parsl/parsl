@@ -6,8 +6,7 @@ from typing import Any, Dict, List, Optional, Union
 import parsl.serialize.concretes as concretes
 from parsl.serialize.base import SerializerBase
 from parsl.serialize.errors import DeserializerPluginError
-from parsl.trace import span_bind_sub, event, Span
-
+from parsl.trace import Span, event, span_bind_sub
 
 logger = logging.getLogger(__name__)
 

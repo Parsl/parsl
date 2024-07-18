@@ -55,6 +55,7 @@ class LocalChannel(Channel, RepresentationMixin):
         current_env.update(envs)
 
         try:
+            logger.debug("Creating process with command '%s'", cmd)
             proc = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
@@ -64,12 +65,16 @@ class LocalChannel(Channel, RepresentationMixin):
                 shell=True,
                 preexec_fn=os.setpgrp
             )
+            logger.debug("Created process with pid %s. Performing communicate", proc.pid)
             (stdout, stderr) = proc.communicate(timeout=walltime)
             retcode = proc.returncode
+            logger.debug("Process %s returned %s", proc.pid, proc.returncode)
 
-        except Exception as e:
-            logger.warning("Execution of command '{}' failed due to \n{}".format(cmd, e))
+        except Exception:
+            logger.exception(f"Execution of command failed:\n{cmd}")
             raise
+        else:
+            logger.debug("Execution of command in process %s completed normally", proc.pid)
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
@@ -107,13 +112,10 @@ class LocalChannel(Channel, RepresentationMixin):
     def pull_file(self, remote_source, local_dir):
         return self.push_file(remote_source, local_dir)
 
-    def close(self):
-        ''' There's nothing to close here, and this really doesn't do anything
-
-        Returns:
-             - False, because it really did not "close" this channel.
+    def close(self) -> None:
+        ''' There's nothing to close here, and so this doesn't do anything
         '''
-        return False
+        pass
 
     def isdir(self, path):
         """Return true if the path refers to an existing directory.

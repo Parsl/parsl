@@ -3,8 +3,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from parsl.channels.base import Channel
     from parsl.channels.local.local import LocalChannel
-    from parsl.channels.ssh.ssh import SSHChannel
     from parsl.channels.oauth_ssh.oauth_ssh import OAuthSSHChannel
+    from parsl.channels.ssh.ssh import SSHChannel
+    from parsl.channels.ssh_il.ssh_il import SSHInteractiveLoginChannel
 
 lazys = {
         'Channel': 'parsl.channels.base',

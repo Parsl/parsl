@@ -1,10 +1,11 @@
 """Exceptions raised by Apps."""
-from functools import wraps
-from typing import Callable, List, Optional, TypeVar, Union
-from typing_extensions import ParamSpec
-from types import TracebackType
 import logging
+from functools import wraps
+from types import TracebackType
+from typing import Callable, List, Optional, TypeVar, Union
+
 from tblib import Traceback
+from typing_extensions import ParamSpec
 
 from parsl.data_provider.files import File
 from parsl.errors import ParslError
@@ -134,6 +135,7 @@ def wrap_error(func: Callable[P, R]) -> Callable[P, Union[R, RemoteExceptionWrap
     @wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> Union[R, RemoteExceptionWrapper]:
         import sys
+
         from parsl.app.errors import RemoteExceptionWrapper
         try:
             return func(*args, **kwargs)

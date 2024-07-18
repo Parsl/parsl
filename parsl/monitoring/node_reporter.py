@@ -13,12 +13,13 @@ such as the block ID.
 import logging
 import os
 import platform
-import psutil
 import subprocess
 import sys
 import uuid
-
 from datetime import datetime
+
+import psutil
+
 from parsl.log_utils import set_stream_logger
 from parsl.monitoring.radios import FilesystemRadio
 

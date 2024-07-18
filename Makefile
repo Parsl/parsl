@@ -35,6 +35,10 @@ deps: $(DEPS) ## install the dependencies
 lint: ## run linter script
 	parsl/tests/lint-inits.sh
 
+.PHONY: isort
+isort: ## run isort on all files
+	isort --check parsl/
+
 .PHONY: flake8
 flake8:  ## run flake
 	flake8 parsl/
@@ -99,7 +103,7 @@ perf_test:
 	parsl-perf --time 5 --config parsl/tests/configs/local_threads.py
 
 .PHONY: test ## run all tests with all config types
-test: clean_coverage lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test wqex_local_test workqueue_mon_test vineex_local_test radical_local_test perf_test ## run all tests
+test: clean_coverage isort lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test wqex_local_test workqueue_mon_test vineex_local_test radical_local_test perf_test ## run all tests
 
 .PHONY: tag
 tag: ## create a tag in git. to run, do a 'make VERSION="version string" tag
@@ -129,3 +133,8 @@ coverage: ## show the coverage report
 .PHONY: clean
 clean: ## clean up the environment by deleting the .venv, dist, eggs, mypy caches, coverage info, etc
 	rm -rf .venv $(DEPS) dist *.egg-info .mypy_cache build .pytest_cache .coverage runinfo $(WORKQUEUE_INSTALL)
+
+.PHONY: flux_local_test
+flux_local_test: ## Test Parsl with Flux Executor
+	pip3 install .
+	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/flux_local.py --random-order --durations 10

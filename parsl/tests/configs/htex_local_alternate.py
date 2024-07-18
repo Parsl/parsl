@@ -15,24 +15,21 @@ will cause substantially different behaviour on whatever
 those timing parameters control.
 """
 
-# imports for monitoring:
-from parsl.monitoring import MonitoringHub
-
 import os
 
-from parsl.providers import LocalProvider
 from parsl.channels import LocalChannel
-from parsl.launchers import SingleNodeLauncher
-
 from parsl.config import Config
+from parsl.data_provider.file_noop import NoOpFileStaging
+from parsl.data_provider.ftp import FTPInTaskStaging
+from parsl.data_provider.http import HTTPInTaskStaging
+from parsl.data_provider.zip import ZipFileStaging
 from parsl.executors import HighThroughputExecutor
 from parsl.executors.high_throughput.executor import DEFAULT_LAUNCH_CMD
+from parsl.launchers import SingleNodeLauncher
 
-
-from parsl.data_provider.http import HTTPInTaskStaging
-from parsl.data_provider.ftp import FTPInTaskStaging
-from parsl.data_provider.file_noop import NoOpFileStaging
-from parsl.data_provider.zip import ZipFileStaging
+# imports for monitoring:
+from parsl.monitoring import MonitoringHub
+from parsl.providers import LocalProvider
 
 working_dir = os.getcwd() + "/" + "test_htex_alternate"
 

@@ -1,5 +1,4 @@
 import os
-import pytest
 
 import parsl
 from parsl.app.app import bash_app
@@ -22,24 +21,18 @@ def no_checkpoint_stdout_app_ignore_args(stdout=None):
     return "echo X"
 
 
-def test_memo_stdout():
+def test_memo_stdout(tmpd_cwd):
+    path_x = tmpd_cwd / "test.memo.stdout.x"
 
     # this should run and create a file named after path_x
-    path_x = "test.memo.stdout.x"
-    if os.path.exists(path_x):
-        os.remove(path_x)
+    no_checkpoint_stdout_app_ignore_args(stdout=str(path_x)).result()
+    assert path_x.exists()
 
-    no_checkpoint_stdout_app_ignore_args(stdout=path_x).result()
-    assert os.path.exists(path_x)
-
-    # this should be memoized, so not create benc.test.y
-    path_y = "test.memo.stdout.y"
-
-    if os.path.exists(path_y):
-        os.remove(path_y)
+    # this should be memoized, so should not get created
+    path_y = tmpd_cwd / "test.memo.stdout.y"
 
     no_checkpoint_stdout_app_ignore_args(stdout=path_y).result()
-    assert not os.path.exists(path_y)
+    assert not path_y.exists(), "For memoization, expected NO file written"
 
     # this should also be memoized, so not create an arbitrary name
     z_fut = no_checkpoint_stdout_app_ignore_args(stdout=parsl.AUTO_LOGNAME)

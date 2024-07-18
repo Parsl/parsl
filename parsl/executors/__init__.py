@@ -1,10 +1,11 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from parsl.executors.workqueue.executor import WorkQueueExecutor
-    from parsl.executors.high_throughput.executor import HighThroughputExecutor
-    from parsl.executors.threads import ThreadPoolExecutor
     from parsl.executors.flux.executor import FluxExecutor
+    from parsl.executors.high_throughput.executor import HighThroughputExecutor
+    from parsl.executors.high_throughput.mpi_executor import MPIExecutor
+    from parsl.executors.threads import ThreadPoolExecutor
+    from parsl.executors.workqueue.executor import WorkQueueExecutor
 
 lazys = {
     'ThreadPoolExecutor': 'parsl.executors.threads',
@@ -34,5 +35,6 @@ px.__getattr__ = lazy_loader  # type: ignore[method-assign]
 
 __all__ = ['ThreadPoolExecutor',
            'HighThroughputExecutor',
+           'MPIExecutor',
            'WorkQueueExecutor',
            'FluxExecutor']

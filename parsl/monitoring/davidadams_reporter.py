@@ -11,12 +11,13 @@ such as the block ID.
 
 import logging
 import platform
-import psutil
 import subprocess
 import sys
 import time
-
 from typing import Any
+
+import psutil
+
 from parsl.log_utils import set_stream_logger
 
 logger = logging.getLogger("parsl.monitoring.davidadams_reporter")

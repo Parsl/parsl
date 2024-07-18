@@ -15,18 +15,22 @@ AUTO_LOGNAME
 
 """
 import logging
+import multiprocessing as _multiprocessing
 import os
 import platform
-
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
-    from parsl.executors import HighThroughputExecutor
-    from parsl.executors import ThreadPoolExecutor
+    from parsl.app.app import bash_app, join_app, python_app
+    from parsl.config import Config
     from parsl.data_provider.files import File
     from parsl.dataflow.dflow import DataFlowKernel
-    from parsl.app.app import bash_app, join_app, python_app
+    from parsl.executors import (
+        HighThroughputExecutor,
+        ThreadPoolExecutor,
+        WorkQueueExecutor,
+    )
     from parsl.log_utils import set_file_logger, set_stream_logger
-    from parsl.config import Config
     from parsl.monitoring import MonitoringHub
 
 lazys = {
@@ -65,7 +69,6 @@ def lazy_loader(name):
 # parsl/__init__.py:61: error: Cannot assign to a method
 parsl.__getattr__ = lazy_loader  # type: ignore[method-assign]
 
-import multiprocessing as _multiprocessing
 if platform.system() == 'Darwin':
     _multiprocessing.set_start_method('fork', force=True)
 
@@ -104,6 +107,7 @@ if platform.system() == 'Darwin':
 __author__ = 'The Parsl Team'
 
 from parsl.version import VERSION
+
 __version__ = VERSION
 
 __all__ = [

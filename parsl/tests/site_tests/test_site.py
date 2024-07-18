@@ -1,5 +1,7 @@
 import argparse
+
 import pytest
+
 import parsl
 from parsl.app.app import python_app  # , bash_app
 from parsl.tests.site_tests.site_config_selector import fresh_config

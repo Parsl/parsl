@@ -1,7 +1,9 @@
 import time
+
 t_start = time.time()
 import sys
 from typing import Any, List
+
 metas = []
 
 
@@ -19,13 +21,14 @@ if __name__ == "__main__":
 
 t_postmeta = time.time()
 
+import pickle
+import sys
+import traceback
+
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.files import File
-from parsl.utils import get_std_fname_mode
-import traceback
-import sys
-import pickle
 from parsl.serialize import serialize
+from parsl.utils import get_std_fname_mode
 
 t_postimport = time.time()
 # This scripts executes a parsl function which is pickled in a file:

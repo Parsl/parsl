@@ -1,29 +1,25 @@
 from __future__ import annotations
 
-import os
-import time
 import logging
 import multiprocessing.synchronize as ms
+import os
+import queue
+import time
+from multiprocessing import Event, Process
+from multiprocessing.queues import Queue
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
+
 import typeguard
 
-import queue
-
-from parsl.multiprocessing import ForkProcess, SizedQueue
-from multiprocessing import Process
-from multiprocessing import Event
-from multiprocessing.queues import Queue
 from parsl.log_utils import set_file_logger
-from parsl.utils import RepresentationMixin
-from parsl.process_loggers import wrap_with_logs
-from parsl.utils import setproctitle
-
-from parsl.serialize import deserialize
-
+from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios import MultiprocessingQueueRadio
 from parsl.monitoring.router import router_starter
-from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.types import AddressedMonitoringMessage
-from typing import cast, Any, Optional, Tuple, Union, TYPE_CHECKING
+from parsl.multiprocessing import ForkProcess, SizedQueue
+from parsl.process_loggers import wrap_with_logs
+from parsl.serialize import deserialize
+from parsl.utils import RepresentationMixin, setproctitle
 
 _db_manager_excepts: Optional[Exception]
 
@@ -256,6 +252,7 @@ class MonitoringHub(RepresentationMixin):
             self.router_exit_event.set()
             logger.info("Waiting for router to terminate")
             self.router_proc.join()
+            self.router_proc.close()
             logger.debug("Finished waiting for router termination")
             if len(exception_msgs) == 0:
                 logger.debug("Sending STOP to DBM")
@@ -264,6 +261,7 @@ class MonitoringHub(RepresentationMixin):
                 logger.debug("Not sending STOP to DBM, because there were DBM exceptions")
             logger.debug("Waiting for DB termination")
             self.dbm_proc.join()
+            self.dbm_proc.close()
             logger.debug("Finished waiting for DBM termination")
 
             # should this be message based? it probably doesn't need to be if
@@ -271,6 +269,7 @@ class MonitoringHub(RepresentationMixin):
             logger.info("Terminating filesystem radio receiver process")
             self.filesystem_proc.terminate()
             self.filesystem_proc.join()
+            self.filesystem_proc.close()
 
             logger.info("Closing monitoring multiprocessing queues")
             self.exception_q.close()

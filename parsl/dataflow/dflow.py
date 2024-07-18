@@ -1,51 +1,58 @@
 from __future__ import annotations
+
 import atexit
+import concurrent.futures as cf
+import datetime
+import inspect
 import logging
 import os
 import pathlib
 import pickle
 import random
-import time
-import typeguard
-import inspect
-import threading
 import sys
-import datetime
-from getpass import getuser
-from typeguard import typechecked
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
-from uuid import uuid4
-from socket import gethostname
+import threading
+import time
 from concurrent.futures import Future
 from functools import partial
+from getpass import getuser
+from socket import gethostname
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from uuid import uuid4
+
+import typeguard
+from typeguard import typechecked
 
 import parsl
-from parsl.trace import event, span_bind_sub, output_event_stats, Span
+import parsl.dataflow.memoization as memoization
+import parsl.dataflow.taskrecord as taskrecord
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.app.futures import DataFuture
 from parsl.channels import Channel
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
+from parsl.dataflow.dependency_resolvers import SHALLOW_DEPENDENCY_RESOLVER
 from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
-import parsl.dataflow.memoization as memoization
 from parsl.dataflow.rundirs import make_rundir
-from parsl.dataflow.states import States, FINAL_STATES, FINAL_FAILURE_STATES
-import parsl.dataflow.taskrecord as taskrecord
-from parsl.errors import ConfigurationError, InternalConsistencyError, NoDataFlowKernelError
-from parsl.jobs.job_status_poller import JobStatusPoller
-from parsl.usage_tracking.usage import UsageTracker
+from parsl.dataflow.states import FINAL_FAILURE_STATES, FINAL_STATES, States
+from parsl.errors import (
+    ConfigurationError,
+    InternalConsistencyError,
+    NoDataFlowKernelError,
+)
 from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
+from parsl.jobs.job_status_poller import JobStatusPoller
 from parsl.monitoring import MonitoringHub
+from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.remote import monitor_wrapper
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers.base import ExecutionProvider
-from parsl.utils import get_version, get_std_fname_mode, get_all_checkpoints, Timer
-
-from parsl.monitoring.message_type import MessageType
+from parsl.trace import Span, event, output_event_stats, span_bind_sub
+from parsl.usage_tracking.usage import UsageTracker
+from parsl.utils import Timer, get_all_checkpoints, get_std_fname_mode, get_version
 
 logger = logging.getLogger(__name__)
 
@@ -178,11 +185,9 @@ class DataFlowKernel:
 
         # this must be set before executors are added since add_executors calls
         # job_status_poller.add_executors.
-        radio = self.monitoring.radio if self.monitoring else None
         self.job_status_poller = JobStatusPoller(strategy=self.config.strategy,
                                                  strategy_period=self.config.strategy_period,
-                                                 max_idletime=self.config.max_idletime,
-                                                 monitoring=radio)
+                                                 max_idletime=self.config.max_idletime)
 
         self.executors: Dict[str, ParslExecutor] = {}
 
@@ -206,14 +211,34 @@ class DataFlowKernel:
         self.tasks: Dict[int, taskrecord.TaskRecord] = {}
         self.submitter_lock = threading.Lock()
 
+        self.dependency_launch_pool = cf.ThreadPoolExecutor(max_workers=1, thread_name_prefix="Dependency-Launch")
+
+        self.dependency_resolver = self.config.dependency_resolver if self.config.dependency_resolver is not None \
+            else SHALLOW_DEPENDENCY_RESOLVER
+
         atexit.register(self.atexit_cleanup)
 
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        logger.debug("Exiting the context manager, calling cleanup for DFK")
-        self.cleanup()
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        mode = self.config.exit_mode
+        logger.debug("Exiting context manager, with exit mode '%s'", mode)
+        if mode == "cleanup":
+            logger.info("Calling cleanup for DFK")
+            self.cleanup()
+        elif mode == "skip":
+            logger.info("Skipping all cleanup handling")
+        elif mode == "wait":
+            if exc_type is None:
+                logger.info("Waiting for all tasks to complete")
+                self.wait_for_current_tasks()
+                self.cleanup()
+            else:
+                logger.info("There was an exception - cleaning up without waiting for task completion")
+                self.cleanup()
+        else:
+            raise InternalConsistencyError(f"Exit case for {mode} should be unreachable, validated by typeguard on Config()")
 
     def _send_task_log_info(self, task_record: taskrecord.TaskRecord) -> None:
         if self.monitoring:
@@ -627,9 +652,9 @@ class DataFlowKernel:
         return kwargs.get('_parsl_staging_inhibit', False)
 
     def launch_if_ready(self, task_record: taskrecord.TaskRecord) -> None:
-        """
-        launch_if_ready will launch the specified task, if it is ready
-        to run (for example, without dependencies, and in pending state).
+        """Schedules a task record for re-inspection to see if it is ready
+        for launch and for launch if it is ready. The call will return
+        immediately.
 
         This should be called by any piece of the DataFlowKernel that
         thinks a task may have become ready to run.
@@ -638,12 +663,16 @@ class DataFlowKernel:
         ready to run - launch_if_ready will not incorrectly launch that
         task.
 
-        It is also not an error to call launch_if_ready on a task that has
-        already been launched - launch_if_ready will not re-launch that
-        task.
-
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
+        """
+        self.dependency_launch_pool.submit(self._launch_if_ready_async, task_record)
+
+    @wrap_with_logs
+    def _launch_if_ready_async(self, task_record: taskrecord.TaskRecord) -> None:
+        """
+        _launch_if_ready will launch the specified task, if it is ready
+        to run (for example, without dependencies, and in pending state).
         """
         task_id = task_record['id']
         event("DFK_LAUNCH_IF_READY_START", task_record['span'])
@@ -901,8 +930,11 @@ class DataFlowKernel:
         depends: List[Future] = []
 
         def check_dep(d: Any) -> None:
-            if isinstance(d, Future):
-                depends.extend([d])
+            try:
+                depends.extend(self.dependency_resolver.traverse_to_gather(d))
+            except Exception:
+                logger.exception("Exception in dependency_resolver.traverse_to_gather")
+                raise
 
         # Check the positional args
         for dep in args:
@@ -919,7 +951,8 @@ class DataFlowKernel:
 
         return depends
 
-    def _unwrap_futures(self, args, kwargs):
+    def _unwrap_futures(self, args: Sequence[Any], kwargs: Dict[str, Any]) \
+            -> Tuple[Sequence[Any], Dict[str, Any], Sequence[Tuple[Exception, str]]]:
         """This function should be called when all dependencies have completed.
 
         It will rewrite the arguments for that task, replacing each Future
@@ -940,53 +973,40 @@ class DataFlowKernel:
         """
         dep_failures = []
 
+        def append_failure(e: Exception, dep: Future) -> None:
+            # If this Future is associated with a task inside this DFK,
+            # then refer to the task ID.
+            # Otherwise make a repr of the Future object.
+            if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
+                tid = "task " + repr(dep.task_record['id'])
+            else:
+                tid = repr(dep)
+            dep_failures.extend([(e, tid)])
+
         # Replace item in args
         new_args = []
         for dep in args:
-            if isinstance(dep, Future):
-                try:
-                    new_args.extend([dep.result()])
-                except Exception as e:
-                    # If this Future is associated with a task inside this DFK,
-                    # then refer to the task ID.
-                    # Otherwise make a repr of the Future object.
-                    if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
-                        tid = "task " + repr(dep.task_record['id'])
-                    else:
-                        tid = repr(dep)
-                    dep_failures.extend([(e, tid)])
-            else:
-                new_args.extend([dep])
+            try:
+                new_args.extend([self.dependency_resolver.traverse_to_unwrap(dep)])
+            except Exception as e:
+                append_failure(e, dep)
 
         # Check for explicit kwargs ex, fu_1=<fut>
         for key in kwargs:
             dep = kwargs[key]
-            if isinstance(dep, Future):
-                try:
-                    kwargs[key] = dep.result()
-                except Exception as e:
-                    if hasattr(dep, 'task_record'):
-                        tid = dep.task_record['id']
-                    else:
-                        tid = None
-                    dep_failures.extend([(e, tid)])
+            try:
+                kwargs[key] = self.dependency_resolver.traverse_to_unwrap(dep)
+            except Exception as e:
+                append_failure(e, dep)
 
         # Check for futures in inputs=[<fut>...]
         if 'inputs' in kwargs:
             new_inputs = []
             for dep in kwargs['inputs']:
-                if isinstance(dep, Future):
-                    try:
-                        new_inputs.extend([dep.result()])
-                    except Exception as e:
-                        if hasattr(dep, 'task_record'):
-                            tid = dep.task_record['id']
-                        else:
-                            tid = None
-                        dep_failures.extend([(e, tid)])
-
-                else:
-                    new_inputs.extend([dep])
+                try:
+                    new_inputs.extend([self.dependency_resolver.traverse_to_unwrap(dep)])
+                except Exception as e:
+                    append_failure(e, dep)
             kwargs['inputs'] = new_inputs
 
         return new_args, kwargs, dep_failures
@@ -1103,6 +1123,8 @@ class DataFlowKernel:
         func = self._add_output_deps(executor, app_args, app_kwargs, app_fu, func)
         event("DFK_SUBMIT_ADD_DEPS_END", task_span)
 
+        logger.debug("Added output dependencies")
+
         # Replace the function invocation in the TaskRecord with whatever file-staging
         # substitutions have been made.
 
@@ -1115,9 +1137,11 @@ class DataFlowKernel:
 
         self.tasks[task_id] = task_record
 
+        logger.debug("Gathering dependencies")
         # Get the list of dependencies for the task
         event("DFK_SUBMIT_EXAMINE_DEPS_START", task_span)
         depends = self._gather_all_deps(app_args, app_kwargs)
+        logger.debug("Gathered dependencies")
         task_record['depends'] = depends
 
         depend_descs = []
@@ -1230,7 +1254,7 @@ class DataFlowKernel:
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
             executor.hub_address = self.hub_address
-            executor.hub_port = self.hub_zmq_port
+            executor.hub_zmq_port = self.hub_zmq_port
             if self.monitoring:
                 executor.monitoring_radio = self.monitoring.radio
             if hasattr(executor, 'provider'):
@@ -1251,12 +1275,9 @@ class DataFlowKernel:
         self.job_status_poller.add_executors(block_executors)
 
     def atexit_cleanup(self) -> None:
-        if not self.cleanup_called:
-            logger.warning("Python is exiting with a DFK still running. "
-                           "You should call parsl.dfk().cleanup() before "
-                           "exiting to release any resources")
-        else:
-            logger.info("python process is exiting, but DFK has already been cleaned up")
+        logger.warning("Python is exiting with a DFK still running. "
+                       "You should call parsl.dfk().cleanup() before "
+                       "exiting to release any resources")
 
     def wait_for_current_tasks(self) -> None:
         """Waits for all tasks in the task list to be completed, by waiting for their
@@ -1328,6 +1349,23 @@ class DataFlowKernel:
             executor.shutdown()
             logger.info(f"Shut down executor {executor.label}")
 
+            if hasattr(executor, 'provider'):
+                if hasattr(executor.provider, 'script_dir'):
+                    logger.info(f"Closing channel(s) for {executor.label}")
+
+                    if hasattr(executor.provider, 'channels'):
+                        for channel in executor.provider.channels:
+                            logger.info(f"Closing channel {channel}")
+                            channel.close()
+                            logger.info(f"Closed channel {channel}")
+                    else:
+                        assert hasattr(executor.provider, 'channel'), "If provider has no .channels, it must have .channel"
+                        logger.info(f"Closing channel {executor.provider.channel}")
+                        executor.provider.channel.close()
+                        logger.info(f"Closed channel {executor.provider.channel}")
+
+                    logger.info(f"Closed executor channel(s) for {executor.label}")
+
         logger.info("Terminated executors")
         self.time_completed = datetime.datetime.now()
 
@@ -1343,6 +1381,21 @@ class DataFlowKernel:
             logger.info("Terminating monitoring")
             self.monitoring.close()
             logger.info("Terminated monitoring")
+
+        logger.info("Terminating dependency launch pool")
+        self.dependency_launch_pool.shutdown()
+        logger.info("Terminated dependency launch pool")
+
+        logger.info("Unregistering atexit hook")
+        atexit.unregister(self.atexit_cleanup)
+        logger.info("Unregistered atexit hook")
+
+        if DataFlowKernelLoader._dfk is self:
+            logger.info("Unregistering default DFK")
+            parsl.clear()
+            logger.info("Unregistered default DFK")
+        else:
+            logger.debug("Cleaning up non-default DFK - not unregistering")
 
         # TODO: enabling based on whether dict tracing is enabled or not.
         logger.info("Writing tracing pickle file")

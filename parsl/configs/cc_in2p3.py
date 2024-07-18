@@ -1,7 +1,8 @@
-from parsl.config import Config
 from parsl.channels import LocalChannel
-from parsl.providers import GridEngineProvider
+from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
+from parsl.providers import GridEngineProvider
+from parsl.usage_tracking.levels import LEVEL_1
 
 config = Config(
     executors=[
@@ -19,4 +20,5 @@ config = Config(
             ),
         )
     ],
+    usage_tracking=LEVEL_1,
 )

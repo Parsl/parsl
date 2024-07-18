@@ -1,10 +1,10 @@
 import pickle
-import psutil
 import random
 import signal
 import time
-
 from typing import Any, List
+
+import psutil
 
 records: List
 records = []

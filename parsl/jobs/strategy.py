@@ -1,7 +1,8 @@
 from __future__ import annotations
+
 import logging
-import time
 import math
+import time
 import warnings
 from typing import Dict, List, Optional, Sequence, TypedDict
 
@@ -10,7 +11,6 @@ from parsl.executors.base import ParslExecutor
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import JobState
 from parsl.process_loggers import wrap_with_logs
-
 
 logger = logging.getLogger(__name__)
 
