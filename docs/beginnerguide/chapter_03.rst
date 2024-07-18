@@ -69,7 +69,7 @@ Here are links to Parsl documentation that will help guide you through the tutor
 Practical Guide: How Parsl Manages Concurrency
 ==============================================
 
-The code below is a simple demonstration of how to use Parsl to execute functions concurrently on multiple cores or nodes. Let's break down what each part of the code does:
+This `code <https://github.com/Kanegraffiti/parsl/blob/beginner-user-guide/docs/beginnerguide/notebooks/Parsl_and_Concurrency.ipynb>`_ is a simple demonstration of how to use Parsl to execute functions concurrently on multiple cores or nodes. Let's break down what each part of the code does:
 
 1. Importing Libraries and Configuring Parsl
 ============================================
@@ -146,7 +146,3 @@ Configuration Setup:
 - ``print`` Statements: These lines display the results of the operations. They show how to access the results from asynchronous operations and print them out.
 
 This example demonstrates the basic concepts of nonsimultaneous execution using Parsl, which is particularly useful for parallel processing tasks that can be distributed across multiple cores or nodes to improve computational efficiency.
-
-.. raw:: html
-
-<iframe src="https://github.com/Kanegraffiti/parsl/blob/beginner-user-guide/notebooks/Parsl_and_Concurrency.ipynb" width="700" height="400"></iframe>
