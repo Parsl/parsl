@@ -25,7 +25,7 @@ def test_initial_checkpoint_write():
     """
     uuid_app().result()
 
-    cpt_dir = parsl.dfk().checkpoint()
+    cpt_dir = parsl.dfk().invoke_checkpoint()
 
     cptpath = cpt_dir + '/dfk.pkl'
     assert os.path.exists(cptpath), f"DFK checkpoint missing: {cptpath}"

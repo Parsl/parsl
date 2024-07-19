@@ -36,7 +36,7 @@ def test_checkpointing():
     # Wait for the results
     [i.result() for i in d]
 
-    checkpoint_dir = dfk.checkpoint()
+    checkpoint_dir = dfk.invoke_checkpoint()
     print(checkpoint_dir)
 
     assert os.path.exists(checkpoint_dir), "Checkpoint dir does not exist"
