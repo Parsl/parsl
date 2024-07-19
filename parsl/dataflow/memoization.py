@@ -176,6 +176,9 @@ class Memoizer:
         """
         raise NotImplementedError
 
+    def start(self, *, run_dir: str) -> None:
+        raise NotImplementedError
+
     def checkpoint_queue(self) -> None:
         """Called by the DFK when the user calls dfk.checkpoint(). This
         indicates that the checkpoint system should explicitly process any
@@ -232,18 +235,17 @@ class BasicMemoizer(Memoizer):
     run_dir: str
 
     def __init__(self, *,
-                 memoize: bool = True,
-                 checkpoint_files: Sequence[str] | None,
-                 checkpoint_period: Optional[str],
-                 checkpoint_mode: Literal['task_exit', 'periodic', 'dfk_exit', 'manual'] | None):
+                 checkpoint_files: Sequence[str] | None = None,
+                 checkpoint_period: Optional[str] = None,
+                 checkpoint_mode: Literal['task_exit', 'periodic', 'dfk_exit', 'manual'] | None = None,
+                 memoize: bool = True):
         """Initialize the memoizer.
 
         KWargs:
             - memoize (Bool): enable memoization or not.
             - checkpoint (Dict): A checkpoint loaded as a dict.
+            TODO: update
         """
-        self.memoize = memoize
-
         self.checkpointed_tasks = 0
 
         # this lock must be held when:
@@ -258,8 +260,12 @@ class BasicMemoizer(Memoizer):
         self.checkpointable_tasks: List[CheckpointCommand] = []
 
         self._checkpoint_timer: Timer | None = None
+        self.memoize = memoize
 
-    def start(self) -> None:
+    def start(self, *, run_dir: str) -> None:
+
+        self.run_dir = run_dir
+
         if self.checkpoint_files is not None:
             checkpoint_files = self.checkpoint_files
         elif self.checkpoint_files is None and self.checkpoint_mode is not None:
