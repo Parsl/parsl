@@ -121,6 +121,9 @@ def id_for_memo_function(f: types.FunctionType, output_ref: bool = False) -> byt
 
 
 class Memoizer:
+    def start(self, *, dfk: DataFlowKernel, memoize: bool = True, checkpoint_files: Sequence[str], run_dir: str) -> None:
+        raise NotImplementedError
+
     def update_memo(self, task: TaskRecord, r: Future[Any]) -> None:
         raise NotImplementedError
 
@@ -164,7 +167,10 @@ class BasicMemoizer(Memoizer):
 
     run_dir: str
 
-    def __init__(self, dfk: DataFlowKernel, *, memoize: bool = True, checkpoint_files: Sequence[str]):
+    def __init__(self) -> None:
+        pass
+
+    def start(self, *, dfk: DataFlowKernel, memoize: bool = True, checkpoint_files: Sequence[str], run_dir: str) -> None:
         """Initialize the memoizer.
 
         Args:
@@ -176,6 +182,7 @@ class BasicMemoizer(Memoizer):
         """
         self.dfk = dfk
         self.memoize = memoize
+        self.run_dir = run_dir
 
         self.checkpointed_tasks = 0
 

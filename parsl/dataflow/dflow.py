@@ -169,9 +169,16 @@ class DataFlowKernel:
         else:
             checkpoint_files = []
 
-        self.memoizer: Memoizer = BasicMemoizer(self, memoize=config.app_cache, checkpoint_files=checkpoint_files)
-        self.memoizer.run_dir = self.run_dir
+        # self.memoizer: Memoizer = BasicMemoizer(self, memoize=config.app_cache, checkpoint_files=checkpoint_files)
+        # the memoize flag might turn into the user choosing different instances
+        # of the Memoizer interface
+        self.memoizer: Memoizer
+        if config.memoizer is not None:
+            self.memoizer = config.memoizer
+        else:
+            self.memoizer = BasicMemoizer()
 
+        self.memoizer.start(dfk=self, memoize=config.app_cache, checkpoint_files=checkpoint_files, run_dir=self.run_dir)
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
 
