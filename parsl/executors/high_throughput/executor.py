@@ -33,6 +33,7 @@ from parsl.serialize import deserialize, pack_res_spec_apply_message
 from parsl.serialize.errors import DeserializationError, SerializationError
 from parsl.usage_tracking.api import UsageInformation
 from parsl.utils import RepresentationMixin
+from parsl.executors.high_throughput.manager_selector import ManagerSelectorBase, ManagerSelectorRandom
 
 logger = logging.getLogger(__name__)
 
@@ -261,6 +262,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_logdir_root: Optional[str] = None,
                  enable_mpi_mode: bool = False,
                  mpi_launcher: str = "mpiexec",
+                 manager_selector: Optional[ManagerSelectorBase] = ManagerSelectorRandom(),
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
                  encrypted: bool = False):
 
@@ -276,6 +278,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.prefetch_capacity = prefetch_capacity
         self.address = address
         self.address_probe_timeout = address_probe_timeout
+        self.manager_selector = manager_selector
         if self.address:
             self.all_addresses = address
         else:
@@ -551,6 +554,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                               "poll_period": self.poll_period,
                               "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
                               "cert_dir": self.cert_dir,
+                              "manager_selector": self.manager_selector,
                               }
 
         config_pickle = pickle.dumps(interchange_config)

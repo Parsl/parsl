@@ -24,6 +24,7 @@ from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize as serialize_object
 from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
+from parsl.executors.high_throughput.manager_selector import ManagerSelectorBase
 
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
 PKL_DRAINED_CODE = pickle.dumps((2 ** 32) - 2)
@@ -53,6 +54,7 @@ class Interchange:
                  logging_level: int,
                  poll_period: int,
                  cert_dir: Optional[str],
+                 manager_selector: Optional[ManagerSelectorBase] = None,
                  ) -> None:
         """
         Parameters
@@ -104,6 +106,7 @@ class Interchange:
         start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
         logger.propagate = False
         logger.debug("Initializing Interchange process")
+        logger.warning(f"YADU: Got {manager_selector=}")
 
         self.client_address = client_address
         self.interchange_address: str = interchange_address or "*"
