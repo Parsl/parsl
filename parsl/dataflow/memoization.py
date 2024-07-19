@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
 import pickle
 from functools import lru_cache, singledispatch
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 
+import typeguard
+
+from parsl.dataflow.errors import BadCheckpoint
 from parsl.dataflow.taskrecord import TaskRecord
 
 if TYPE_CHECKING:
@@ -146,7 +150,7 @@ class Memoizer:
 
     """
 
-    def __init__(self, dfk: DataFlowKernel, memoize: bool = True, checkpoint: Dict[str, Future[Any]] = {}):
+    def __init__(self, dfk: DataFlowKernel, *, memoize: bool = True, checkpoint_files: Sequence[str]):
         """Initialize the memoizer.
 
         Args:
@@ -158,6 +162,10 @@ class Memoizer:
         """
         self.dfk = dfk
         self.memoize = memoize
+
+        # TODO: we always load checkpoints even if we then discard them...
+        # this is more obvious here, less obvious in previous Parsl...
+        checkpoint = self.load_checkpoints(checkpoint_files)
 
         if self.memoize:
             logger.info("App caching initialized")
@@ -274,3 +282,71 @@ class Memoizer:
         else:
             logger.debug(f"Storing app cache entry {task['hashsum']} with result from task {task_id}")
         self.memo_lookup_table[task['hashsum']] = r
+
+    def _load_checkpoints(self, checkpointDirs: Sequence[str]) -> Dict[str, Future[Any]]:
+        """Load a checkpoint file into a lookup table.
+
+        The data being loaded from the pickle file mostly contains input
+        attributes of the task: func, args, kwargs, env...
+        To simplify the check of whether the exact task has been completed
+        in the checkpoint, we hash these input params and use it as the key
+        for the memoized lookup table.
+
+        Args:
+            - checkpointDirs (list) : List of filepaths to checkpoints
+              Eg. ['runinfo/001', 'runinfo/002']
+
+        Returns:
+            - memoized_lookup_table (dict)
+        """
+        memo_lookup_table = {}
+
+        for checkpoint_dir in checkpointDirs:
+            logger.info("Loading checkpoints from {}".format(checkpoint_dir))
+            checkpoint_file = os.path.join(checkpoint_dir, 'tasks.pkl')
+            try:
+                with open(checkpoint_file, 'rb') as f:
+                    while True:
+                        try:
+                            data = pickle.load(f)
+                            # Copy and hash only the input attributes
+                            memo_fu: Future = Future()
+                            assert data['exception'] is None
+                            memo_fu.set_result(data['result'])
+                            memo_lookup_table[data['hash']] = memo_fu
+
+                        except EOFError:
+                            # Done with the checkpoint file
+                            break
+            except FileNotFoundError:
+                reason = "Checkpoint file was not found: {}".format(
+                    checkpoint_file)
+                logger.error(reason)
+                raise BadCheckpoint(reason)
+            except Exception:
+                reason = "Failed to load checkpoint: {}".format(
+                    checkpoint_file)
+                logger.error(reason)
+                raise BadCheckpoint(reason)
+
+            logger.info("Completed loading checkpoint: {0} with {1} tasks".format(checkpoint_file,
+                                                                                  len(memo_lookup_table.keys())))
+        return memo_lookup_table
+
+    @typeguard.typechecked
+    def load_checkpoints(self, checkpointDirs: Optional[Sequence[str]]) -> Dict[str, Future]:
+        """Load checkpoints from the checkpoint files into a dictionary.
+
+        The results are used to pre-populate the memoizer's lookup_table
+
+        Kwargs:
+             - checkpointDirs (list) : List of run folder to use as checkpoints
+               Eg. ['runinfo/001', 'runinfo/002']
+
+        Returns:
+             - dict containing, hashed -> future mappings
+        """
+        if checkpointDirs:
+            return self._load_checkpoints(checkpointDirs)
+        else:
+            return {}
