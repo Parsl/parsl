@@ -165,15 +165,8 @@ class DataFlowKernel:
             self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
                                        workflow_info))
 
-        # TODO: the parameters that remain here should be parameters that are going to be configured by
-        # the user as part of checkpoint/memo configuration object.
-        self.memoizer: Memoizer = BasicMemoizer(memoize=config.app_cache,
-                                                checkpoint_mode=config.checkpoint_mode,
-                                                checkpoint_files=config.checkpoint_files,
-                                                checkpoint_period=config.checkpoint_period)
-        self.memoizer.run_dir = self.run_dir
-
-        self.memoizer.start()
+        self.memoizer: Memoizer = config.memoizer if config.memoizer is not None else BasicMemoizer()
+        self.memoizer.start(run_dir=self.run_dir)
 
         self._modify_checkpointable_tasks_lock = threading.Lock()
 
