@@ -147,6 +147,23 @@ def id_for_memo_function(f: types.FunctionType, output_ref: bool = False) -> byt
 
 
 class Memoizer:
+    def update_memo_exception(self, task: TaskRecord, e: BaseException) -> None:
+        raise NotImplementedError
+
+    def update_memo_result(self, task: TaskRecord, r: Any) -> None:
+        raise NotImplementedError
+
+    def checkpoint_queue(self) -> None:
+        raise NotImplementedError
+
+    def check_memo(self, task: TaskRecord) -> Optional[Future[Any]]:
+        raise NotImplementedError
+
+    def close(self) -> None:
+        raise NotImplementedError
+
+
+class BasicMemoizer(Memoizer):
     """Memoizer is responsible for ensuring that identical work is not repeated.
 
     When a task is repeated, i.e., the same function is called with the same exact arguments, the
