@@ -31,7 +31,7 @@ from parsl.data_provider.files import File
 from parsl.dataflow.dependency_resolvers import SHALLOW_DEPENDENCY_RESOLVER
 from parsl.dataflow.errors import DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
-from parsl.dataflow.memoization import Memoizer
+from parsl.dataflow.memoization import BasicMemoizer, Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import FINAL_FAILURE_STATES, FINAL_STATES, States
 from parsl.dataflow.taskrecord import TaskRecord
@@ -169,7 +169,7 @@ class DataFlowKernel:
         else:
             checkpoint_files = []
 
-        self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint_files=checkpoint_files)
+        self.memoizer: Memoizer = BasicMemoizer(self, memoize=config.app_cache, checkpoint_files=checkpoint_files)
         self.memoizer.run_dir = self.run_dir
 
         self._checkpoint_timer = None
