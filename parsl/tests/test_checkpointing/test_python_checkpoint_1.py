@@ -26,7 +26,7 @@ def test_initial_checkpoint_write() -> None:
     """
     uuid_app().result()
 
-    parsl.dfk().checkpoint()
+    parsl.dfk().invoke_checkpoint()
 
     cpt_dir = Path(parsl.dfk().run_dir) / 'checkpoint'
 

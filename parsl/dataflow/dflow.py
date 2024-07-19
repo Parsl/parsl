@@ -171,6 +171,8 @@ class DataFlowKernel:
         self.checkpointed_tasks = 0
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
+
+        self._modify_checkpointable_tasks_lock = threading.Lock()
         self.checkpointable_tasks: List[TaskRecord] = []
 
         # this must be set before executors are added since add_executors calls
@@ -195,7 +197,7 @@ class DataFlowKernel:
                 except Exception:
                     raise ConfigurationError("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(config.checkpoint_period))
                 checkpoint_period = (h * 3600) + (m * 60) + s
-                self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period, name="Checkpoint")
+                self._checkpoint_timer = Timer(self.invoke_checkpoint, interval=checkpoint_period, name="Checkpoint")
 
         self.task_count = 0
         self.tasks: Dict[int, TaskRecord] = {}
@@ -560,7 +562,7 @@ class DataFlowKernel:
         if self.checkpoint_mode == 'task_exit':
             self.checkpoint(tasks=[task_record])
         elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
-            with self.checkpoint_lock:
+            with self._modify_checkpointable_tasks_lock:
                 self.checkpointable_tasks.append(task_record)
         elif self.checkpoint_mode is None:
             pass
@@ -1193,7 +1195,10 @@ class DataFlowKernel:
         # Checkpointing takes priority over the rest of the tasks
         # checkpoint if any valid checkpoint method is specified
         if self.checkpoint_mode is not None:
-            self.checkpoint()
+
+            # TODO: accesses to self.checkpointable_tasks should happen
+            # under a lock?
+            self.checkpoint(self.checkpointable_tasks)
 
             if self._checkpoint_timer:
                 logger.info("Stopping checkpoint timer")
@@ -1247,7 +1252,12 @@ class DataFlowKernel:
 
         logger.info("DFK cleanup complete")
 
-    def checkpoint(self, tasks: Optional[Sequence[TaskRecord]] = None) -> None:
+    def invoke_checkpoint(self) -> None:
+        with self._modify_checkpointable_tasks_lock:
+            self.checkpoint(self.checkpointable_tasks)
+            self.checkpointable_tasks = []
+
+    def checkpoint(self, tasks: Sequence[TaskRecord]) -> None:
         """Checkpoint the dfk incrementally to a checkpoint file.
 
         When called, every task that has been completed yet not
@@ -1266,11 +1276,7 @@ class DataFlowKernel:
             run under RUNDIR/checkpoints/tasks.pkl
         """
         with self.checkpoint_lock:
-            if tasks:
-                checkpoint_queue = tasks
-            else:
-                checkpoint_queue = self.checkpointable_tasks
-                self.checkpointable_tasks = []
+            checkpoint_queue = tasks
 
             checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
             checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
