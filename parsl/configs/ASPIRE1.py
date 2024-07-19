@@ -1,5 +1,6 @@
 from parsl.addresses import address_by_interface
 from parsl.config import Config
+from parsl.dataflow.memoization import BasicMemoizer
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import MpiRunLauncher
 from parsl.monitoring.monitoring import MonitoringHub
@@ -38,7 +39,6 @@ config = Config(
         ),
         strategy='simple',
         retries=3,
-        app_cache=True,
-        checkpoint_mode='task_exit',
+        memoizer=BasicMemoizer(checkpoint_mode='task_exit'),
         usage_tracking=LEVEL_1,
 )
