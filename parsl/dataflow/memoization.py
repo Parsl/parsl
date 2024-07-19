@@ -4,6 +4,7 @@ import hashlib
 import logging
 import os
 import pickle
+import threading
 import types
 from concurrent.futures import Future
 from functools import lru_cache, singledispatch
@@ -146,6 +147,8 @@ class Memoizer:
 
     """
 
+    run_dir: str
+
     def __init__(self, *, memoize: bool = True, checkpoint_files: Sequence[str]):
         """Initialize the memoizer.
 
@@ -155,6 +158,12 @@ class Memoizer:
         """
         self.memoize = memoize
 
+        self.checkpointed_tasks = 0
+
+        self.checkpoint_lock = threading.Lock()
+
+        # TODO: we always load checkpoints even if we then discard them...
+        # this is more obvious here, less obvious in previous Parsl...
         checkpoint = self.load_checkpoints(checkpoint_files)
 
         if self.memoize:
@@ -324,3 +333,60 @@ class Memoizer:
             return self._load_checkpoints(checkpointDirs)
         else:
             return {}
+
+    def checkpoint(self, tasks: Sequence[TaskRecord]) -> None:
+        """Checkpoint the dfk incrementally to a checkpoint file.
+
+        When called, every task that has been completed yet not
+        checkpointed is checkpointed to a file.
+
+        Kwargs:
+            - tasks (List of task records) : List of task ids to checkpoint. Default=None
+                                         if set to None, we iterate over all tasks held by the DFK.
+
+        .. note::
+            Checkpointing only works if memoization is enabled
+
+        Returns:
+            Checkpoint dir if checkpoints were written successfully.
+            By default the checkpoints are written to the RUNDIR of the current
+            run under RUNDIR/checkpoints/tasks.pkl
+        """
+        with self.checkpoint_lock:
+            checkpoint_queue = tasks
+
+            checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
+            checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
+
+            if not os.path.exists(checkpoint_dir):
+                os.makedirs(checkpoint_dir, exist_ok=True)
+
+            count = 0
+
+            with open(checkpoint_tasks, 'ab') as f:
+                for task_record in checkpoint_queue:
+                    task_id = task_record['id']
+
+                    app_fu = task_record['app_fu']
+
+                    if app_fu.done() and app_fu.exception() is None:
+                        hashsum = task_record['hashsum']
+                        if not hashsum:
+                            continue
+                        t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
+
+                        # We are using pickle here since pickle dumps to a file in 'ab'
+                        # mode behave like a incremental log.
+                        pickle.dump(t, f)
+                        count += 1
+                        logger.debug("Task {} checkpointed".format(task_id))
+
+            self.checkpointed_tasks += count
+
+            if count == 0:
+                if self.checkpointed_tasks == 0:
+                    logger.warning("No tasks checkpointed so far in this run. Please ensure caching is enabled")
+                else:
+                    logger.debug("No tasks checkpointed in this pass.")
+            else:
+                logger.info("Done checkpointing {} tasks".format(count))

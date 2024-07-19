@@ -6,7 +6,6 @@ import datetime
 import inspect
 import logging
 import os
-import pickle
 import random
 import sys
 import threading
@@ -101,8 +100,6 @@ class DataFlowKernel:
 
         logger.info("Parsl version: {}".format(get_version()))
 
-        self.checkpoint_lock = threading.Lock()
-
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_start_message()
 
@@ -176,7 +173,8 @@ class DataFlowKernel:
             checkpoint_files = []
 
         self.memoizer = Memoizer(memoize=config.app_cache, checkpoint_files=checkpoint_files)
-        self.checkpointed_tasks = 0
+        self.memoizer.run_dir = self.run_dir
+
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
 
@@ -571,7 +569,7 @@ class DataFlowKernel:
         # Do we need to checkpoint now, or queue for later,
         # or do nothing?
         if self.checkpoint_mode == 'task_exit':
-            self._do_checkpoint(tasks=[task_record])
+            self.memoizer.checkpoint(tasks=[task_record])
         elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
             with self._modify_checkpointable_tasks_lock:
                 self.checkpointable_tasks.append(task_record)
@@ -1212,7 +1210,7 @@ class DataFlowKernel:
 
             # TODO: accesses to self.checkpointable_tasks should happen
             # under a lock?
-            self._do_checkpoint(self.checkpointable_tasks)
+            self.memoizer.checkpoint(self.checkpointable_tasks)
 
             if self._checkpoint_timer:
                 logger.info("Stopping checkpoint timer")
@@ -1276,65 +1274,8 @@ class DataFlowKernel:
 
     def checkpoint(self) -> None:
         with self._modify_checkpointable_tasks_lock:
-            self._do_checkpoint(self.checkpointable_tasks)
+            self.memoizer.checkpoint(self.checkpointable_tasks)
             self.checkpointable_tasks = []
-
-    def _do_checkpoint(self, tasks: Sequence[TaskRecord]) -> None:
-        """Checkpoint the dfk incrementally to a checkpoint file.
-
-        When called, every task that has been completed yet not
-        checkpointed is checkpointed to a file.
-
-        Kwargs:
-            - tasks (List of task records) : List of task ids to checkpoint. Default=None
-                                         if set to None, we iterate over all tasks held by the DFK.
-
-        .. note::
-            Checkpointing only works if memoization is enabled
-
-        Returns:
-            Checkpoint dir if checkpoints were written successfully.
-            By default the checkpoints are written to the RUNDIR of the current
-            run under RUNDIR/checkpoints/tasks.pkl
-        """
-        with self.checkpoint_lock:
-            checkpoint_queue = tasks
-
-            checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
-            checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
-
-            if not os.path.exists(checkpoint_dir):
-                os.makedirs(checkpoint_dir, exist_ok=True)
-
-            count = 0
-
-            with open(checkpoint_tasks, 'ab') as f:
-                for task_record in checkpoint_queue:
-                    task_id = task_record['id']
-
-                    app_fu = task_record['app_fu']
-
-                    if app_fu.done() and app_fu.exception() is None:
-                        hashsum = task_record['hashsum']
-                        if not hashsum:
-                            continue
-                        t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
-
-                        # We are using pickle here since pickle dumps to a file in 'ab'
-                        # mode behave like a incremental log.
-                        pickle.dump(t, f)
-                        count += 1
-                        logger.debug("Task {} checkpointed".format(task_id))
-
-            self.checkpointed_tasks += count
-
-            if count == 0:
-                if self.checkpointed_tasks == 0:
-                    logger.warning("No tasks checkpointed so far in this run. Please ensure caching is enabled")
-                else:
-                    logger.debug("No tasks checkpointed in this pass.")
-            else:
-                logger.info("Done checkpointing {} tasks".format(count))
 
     @staticmethod
     def _log_std_streams(task_record: TaskRecord) -> None:
