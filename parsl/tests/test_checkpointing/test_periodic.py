@@ -3,6 +3,7 @@ import pytest
 import parsl
 from parsl.app.app import python_app
 from parsl.config import Config
+from parsl.dataflow.memoization import BasicMemoizer
 from parsl.executors.threads import ThreadPoolExecutor
 
 
@@ -10,8 +11,10 @@ def fresh_config():
     tpe = ThreadPoolExecutor(label='local_threads_checkpoint_periodic', max_threads=1)
     return Config(
         executors=[tpe],
-        checkpoint_mode='periodic',
-        checkpoint_period='00:00:02'
+        memoizer=BasicMemoizer(
+            checkpoint_mode='periodic',
+            checkpoint_period='00:00:02'
+        )
     )
 
 
@@ -32,7 +35,8 @@ def test_periodic():
     """Test checkpointing with task_periodic behavior
     """
     with parsl.load(fresh_config()):
-        h, m, s = map(int, parsl.dfk().config.checkpoint_period.split(":"))
+        memoizer = parsl.dfk().memoizer
+        h, m, s = map(int, memoizer.checkpoint_period.split(":"))
         assert h == 0, "Verify test setup"
         assert m == 0, "Verify test setup"
         assert s > 0, "Verify test setup"

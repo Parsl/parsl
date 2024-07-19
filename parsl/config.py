@@ -5,6 +5,7 @@ import typeguard
 from typing_extensions import Literal
 
 from parsl.dataflow.dependency_resolvers import DependencyResolver
+from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.taskrecord import TaskRecord
 from parsl.errors import ConfigurationError
 from parsl.executors.base import ParslExecutor
@@ -27,17 +28,6 @@ class Config(RepresentationMixin, UsageInformation):
     executors : sequence of ParslExecutor, optional
         List (or other iterable) of `ParslExecutor` instances to use for executing tasks.
         Default is (:class:`~parsl.executors.threads.ThreadPoolExecutor()`,).
-    app_cache : bool, optional
-        Enable app caching. Default is True.
-    checkpoint_files : sequence of str, optional
-        List of paths to checkpoint files. See :func:`parsl.utils.get_all_checkpoints` and
-        :func:`parsl.utils.get_last_checkpoint` for helpers. Default is None.
-    checkpoint_mode : str, optional
-        Checkpoint mode to use, can be ``'dfk_exit'``, ``'task_exit'``, ``'periodic'`` or ``'manual'``.
-        If set to `None`, checkpointing will be disabled. Default is None.
-    checkpoint_period : str, optional
-        Time interval (in "HH:MM:SS") at which to checkpoint completed tasks. Only has an effect if
-        ``checkpoint_mode='periodic'``.
     dependency_resolver: plugin point for custom dependency resolvers. Default: only resolve Futures,
         using the `SHALLOW_DEPENDENCY_RESOLVER`.
     exit_mode: str, optional
@@ -100,14 +90,7 @@ class Config(RepresentationMixin, UsageInformation):
     @typeguard.typechecked
     def __init__(self,
                  executors: Optional[Iterable[ParslExecutor]] = None,
-                 app_cache: bool = True,
-                 checkpoint_files: Optional[Sequence[str]] = None,
-                 checkpoint_mode: Union[None,
-                                        Literal['task_exit'],
-                                        Literal['periodic'],
-                                        Literal['dfk_exit'],
-                                        Literal['manual']] = None,
-                 checkpoint_period: Optional[str] = None,
+                 memoizer: Optional[Memoizer] = None,
                  dependency_resolver: Optional[DependencyResolver] = None,
                  exit_mode: Literal['cleanup', 'skip', 'wait'] = 'cleanup',
                  garbage_collect: bool = True,
@@ -131,21 +114,7 @@ class Config(RepresentationMixin, UsageInformation):
         self._executors: Sequence[ParslExecutor] = executors
         self._validate_executors()
 
-        self.app_cache = app_cache
-        self.checkpoint_files = checkpoint_files
-        self.checkpoint_mode = checkpoint_mode
-        if checkpoint_period is not None:
-            if checkpoint_mode is None:
-                logger.debug('The requested `checkpoint_period={}` will have no effect because `checkpoint_mode=None`'.format(
-                    checkpoint_period)
-                )
-            elif checkpoint_mode != 'periodic':
-                logger.debug("Requested checkpoint period of {} only has an effect with checkpoint_mode='periodic'".format(
-                    checkpoint_period)
-                )
-        if checkpoint_mode == 'periodic' and checkpoint_period is None:
-            checkpoint_period = "00:30:00"
-        self.checkpoint_period = checkpoint_period
+        self.memoizer = memoizer
         self.dependency_resolver = dependency_resolver
         self.exit_mode = exit_mode
         self.garbage_collect = garbage_collect
