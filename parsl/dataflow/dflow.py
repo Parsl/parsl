@@ -1460,8 +1460,6 @@ class DataFlowKernel:
         Returns:
              - dict containing, hashed -> future mappings
         """
-        self.memo_lookup_table = None
-
         if checkpointDirs:
             return self._load_checkpoints(checkpointDirs)
         else:
