@@ -200,7 +200,6 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
                 raise EnvironmentError("Cannot find Flux installation in PATH")
         self.flux_path = os.path.abspath(flux_path)
         self._task_id_counter = itertools.count()
-        self._socket = zmq.Context().socket(zmq.REP)
         # Assumes a launch command cannot be None or empty
         self.launch_cmd = launch_cmd or self.DEFAULT_LAUNCH_CMD
         self._submission_queue: queue.Queue = queue.Queue()
@@ -213,7 +212,6 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
             args=(
                 self._submission_queue,
                 self._stop_event,
-                self._socket,
                 self.working_dir,
                 self.flux_executor_kwargs,
                 self.provider,
@@ -306,11 +304,13 @@ def _submit_wrapper(
 
     If an exception is thrown, error out all submitted tasks.
     """
-    try:
-        _submit_flux_jobs(submission_queue, stop_event, *args, **kwargs)
-    except Exception as exc:
-        _error_out_jobs(submission_queue, stop_event, exc)
-        raise
+    with zmq.Context() as ctx:
+        with ctx.socket(zmq.REP) as socket:
+            try:
+                _submit_flux_jobs(submission_queue, stop_event, socket, *args, **kwargs)
+            except Exception as exc:
+                _error_out_jobs(submission_queue, stop_event, exc)
+                raise
 
 
 def _error_out_jobs(
