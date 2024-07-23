@@ -106,6 +106,7 @@ Table of Contents
 
    quickstart
    1-parsl-introduction.ipynb
+   beginnerguide/index
    userguide/index
    faq
    reference
