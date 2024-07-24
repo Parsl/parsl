@@ -13,7 +13,7 @@ import typeguard
 
 from parsl.log_utils import set_file_logger
 from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.radios import MultiprocessingQueueRadio
+from parsl.monitoring.radios import MultiprocessingQueueRadioSender
 from parsl.monitoring.router import router_starter
 from parsl.monitoring.types import AddressedMonitoringMessage
 from parsl.multiprocessing import ForkProcess, SizedQueue
@@ -187,7 +187,7 @@ class MonitoringHub(RepresentationMixin):
         self.filesystem_proc.start()
         logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
 
-        self.radio = MultiprocessingQueueRadio(self.block_msgs)
+        self.radio = MultiprocessingQueueRadioSender(self.block_msgs)
 
         try:
             comm_q_result = comm_q.get(block=True, timeout=120)
