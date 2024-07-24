@@ -60,6 +60,13 @@ An example for ALCF's Polaris supercomputer that will run 3 MPI tasks of 2 nodes
     )
 
 
+.. warning::
+   Please note that ``Provider`` options that specify per-task or per-node resources, for example,
+   ``SlurmProvider(cores_per_node=N, ...)`` should not be used with :class:`~parsl.executors.high_throughput.MPIExecutor`.
+   Parsl primarily uses a pilot job model and assumptions from that context do not translate to the MPI context. For
+   more info refer to :
+   `github issue #3006 <https://github.com/Parsl/parsl/issues/3006>`_
+
 Writing an MPI App
 ------------------
 
