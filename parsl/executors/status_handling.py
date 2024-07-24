@@ -243,7 +243,7 @@ class BlockProviderExecutor(ParslExecutor):
         # Send monitoring info for HTEX when monitoring enabled
         if self.monitoring_radio:
             msg = self.create_monitoring_info(status)
-            logger.debug("Sending block monitoring message: %s", repr(msg))
+            logger.debug("Sending block monitoring message: %r", msg)
             self.monitoring_radio.send((MessageType.BLOCK_INFO, msg))
 
     def create_monitoring_info(self, status: Dict[str, JobStatus]) -> Sequence[object]:
