@@ -94,7 +94,7 @@ Attempting to cache apps invoked with other, non-hashable, data types will
 lead to an exception at invocation.
 
 In that case, mechanisms to hash new types can be registered by a program by
-implementing the ``parsl.dataflow.memoization.id_for_memo`` function for
+implementing the `parsl.dataflow.memoization.id_for_memo` function for
 the new type.
 
 Ignoring arguments
