@@ -49,14 +49,16 @@ during development. Using app caching will ensure that only modified apps are re
 App equivalence 
 ^^^^^^^^^^^^^^^
 
-Parsl determines app equivalence by storing the hash
-of the app function. Thus, any changes to the app code (e.g., 
-its signature, its body, or even the docstring within the body)
-will invalidate cached values. 
+Parsl determines app equivalence using the name of the app function:
+if two apps have the same name, then they are equivalent under this
+relation.
 
-However, Parsl does not traverse the call graph of the app function,
-so changes inside functions called by an app will not invalidate
+Changes inside the app, or by functions called by an app will not invalidate
 cached values.
+
+There are lots of other ways functions might be compared for equivalence,
+and `parsl.dataflow.memoization.id_for_memo` provides a hook to plug in
+alternate application-specific implementations.
 
 
 Invocation equivalence 

@@ -689,24 +689,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     def workers_per_node(self) -> Union[int, float]:
         return self.scaling_cores_per_worker
 
-    def scale_in(self, count: int) -> List[str]:
-        """Scale in method.
-        """
-        # Obtain list of blocks to kill
-        to_kill = list(self.blocks_to_job_id.keys())[:count]
-        kill_ids = [self.blocks_to_job_id[block] for block in to_kill]
-
-        # Cancel the blocks provisioned
-        if self.provider:
-            logger.info(f"Scaling in jobs: {kill_ids}")
-            r = self.provider.cancel(kill_ids)
-            job_ids = self._filter_scale_in_ids(kill_ids, r)
-            block_ids_killed = [self.job_ids_to_block[jid] for jid in job_ids]
-            return block_ids_killed
-        else:
-            logger.error("No execution provider available to scale in")
-            return []
-
     def shutdown(self, *args, **kwargs):
         """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the Work Queue system submission.
