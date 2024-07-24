@@ -732,17 +732,18 @@ def worker(
         os.sched_setaffinity(0, my_cores)  # type: ignore[attr-defined, unused-ignore]
         logger.info("Set worker CPU affinity to {}".format(my_cores))
 
-    # If CUDA devices, find total number of devices to allow for MPS
-    # See: https://developer.nvidia.com/system-management-interface
-    nvidia_smi_cmd = "nvidia-smi -L > /dev/null && nvidia-smi -L | wc -l"
-    nvidia_smi_ret = subprocess.run(nvidia_smi_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if nvidia_smi_ret.returncode == 0:
-        num_cuda_devices = int(nvidia_smi_ret.stdout.split()[0])
-    else:
-        num_cuda_devices = None
-
     # If desired, pin to accelerator
     if accelerator is not None:
+
+        # If CUDA devices, find total number of devices to allow for MPS
+        # See: https://developer.nvidia.com/system-management-interface
+        nvidia_smi_cmd = "nvidia-smi -L > /dev/null && nvidia-smi -L | wc -l"
+        nvidia_smi_ret = subprocess.run(nvidia_smi_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if nvidia_smi_ret.returncode == 0:
+            num_cuda_devices = int(nvidia_smi_ret.stdout.split()[0])
+        else:
+            num_cuda_devices = None
+
         try:
             if num_cuda_devices is not None:
                 procs_per_cuda_device = pool_size // num_cuda_devices

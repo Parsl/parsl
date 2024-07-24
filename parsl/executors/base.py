@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, Optional
 
 from typing_extensions import Literal, Self
 
-from parsl.monitoring.radios import MonitoringRadio
+from parsl.monitoring.radios import MonitoringRadioSender
 
 
 class ParslExecutor(metaclass=ABCMeta):
@@ -52,7 +52,7 @@ class ParslExecutor(metaclass=ABCMeta):
         *,
         hub_address: Optional[str] = None,
         hub_zmq_port: Optional[int] = None,
-        monitoring_radio: Optional[MonitoringRadio] = None,
+        monitoring_radio: Optional[MonitoringRadioSender] = None,
         run_dir: str = ".",
         run_id: Optional[str] = None,
     ):
@@ -147,11 +147,11 @@ class ParslExecutor(metaclass=ABCMeta):
         self._hub_zmq_port = value
 
     @property
-    def monitoring_radio(self) -> Optional[MonitoringRadio]:
+    def monitoring_radio(self) -> Optional[MonitoringRadioSender]:
         """Local radio for sending monitoring messages
         """
         return self._monitoring_radio
 
     @monitoring_radio.setter
-    def monitoring_radio(self, value: Optional[MonitoringRadio]) -> None:
+    def monitoring_radio(self, value: Optional[MonitoringRadioSender]) -> None:
         self._monitoring_radio = value
