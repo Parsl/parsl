@@ -57,7 +57,7 @@ Changes inside the app, or by functions called by an app will not invalidate
 cached values.
 
 There are lots of other ways functions might be compared for equivalence,
-and ``parsl.dataflow.memoization.id_for_memo`` provides a hook to plug in
+and `parsl.dataflow.memoization.id_for_memo` provides a hook to plug in
 alternate application-specific implementations.
 
 
