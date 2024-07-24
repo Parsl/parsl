@@ -193,15 +193,32 @@ class BlockProviderExecutor(ParslExecutor):
                 self._simulated_status[block_id] = JobStatus(JobState.FAILED, "Failed to start block {}: {}".format(block_id, ex))
         return block_ids
 
-    @abstractmethod
     def scale_in(self, blocks: int) -> List[str]:
         """Scale in method.
 
         Cause the executor to reduce the number of blocks by count.
 
+        The default implementation will kill blocks without regard to their
+        status or whether they are executing tasks. Executors with more
+        nuanced scaling strategies might overload this method to work with
+        that strategy - see the HighThroughputExecutor for an example of that.
+
         :return: A list of block ids corresponding to the blocks that were removed.
         """
-        pass
+        # Obtain list of blocks to kill
+        to_kill = list(self.blocks_to_job_id.keys())[:blocks]
+        kill_ids = [self.blocks_to_job_id[block] for block in to_kill]
+
+        # Cancel the blocks provisioned
+        if self.provider:
+            logger.info(f"Scaling in jobs: {kill_ids}")
+            r = self.provider.cancel(kill_ids)
+            job_ids = self._filter_scale_in_ids(kill_ids, r)
+            block_ids_killed = [self.job_ids_to_block[jid] for jid in job_ids]
+            return block_ids_killed
+        else:
+            logger.error("No execution provider available to scale in")
+            return []
 
     def _launch_block(self, block_id: str) -> Any:
         launch_cmd = self._get_launch_command(block_id)
