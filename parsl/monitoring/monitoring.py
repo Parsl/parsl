@@ -105,7 +105,7 @@ class MonitoringHub(RepresentationMixin):
         self.resource_monitoring_enabled = resource_monitoring_enabled
         self.resource_monitoring_interval = resource_monitoring_interval
 
-    def start(self, run_id: str, dfk_run_dir: str, config_run_dir: Union[str, os.PathLike]) -> int:
+    def start(self, run_id: str, dfk_run_dir: str, config_run_dir: Union[str, os.PathLike]) -> None:
 
         logger.debug("Starting MonitoringHub")
 
@@ -207,7 +207,7 @@ class MonitoringHub(RepresentationMixin):
 
         logger.info("Monitoring Hub initialized")
 
-        return zmq_port
+        self.hub_zmq_port = zmq_port
 
     # TODO: tighten the Any message format
     def send(self, mtype: MessageType, message: Any) -> None:

@@ -113,14 +113,10 @@ class DataFlowKernel:
         self.monitoring: Optional[MonitoringHub]
         self.monitoring = config.monitoring
 
-        # hub address and port for interchange to connect
-        self.hub_address = None  # type: Optional[str]
-        self.hub_zmq_port = None  # type: Optional[int]
         if self.monitoring:
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
-            self.hub_address = self.monitoring.hub_address
-            self.hub_zmq_port = self.monitoring.start(self.run_id, self.run_dir, self.config.run_dir)
+            self.monitoring.start(self.run_id, self.run_dir, self.config.run_dir)
 
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
@@ -1181,9 +1177,9 @@ class DataFlowKernel:
         for executor in executors:
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
-            executor.hub_address = self.hub_address
-            executor.hub_zmq_port = self.hub_zmq_port
             if self.monitoring:
+                executor.hub_address = self.monitoring.hub_address
+                executor.hub_zmq_port = self.monitoring.hub_zmq_port
                 executor.monitoring_radio = self.monitoring.radio
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
