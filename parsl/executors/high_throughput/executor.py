@@ -548,7 +548,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         config_pickle = pickle.dumps(interchange_config)
 
-        self.interchange_proc = subprocess.Popen(self.interchange_launch_cmd.encode("utf-8"), stdin=subprocess.PIPE)
+        self.interchange_proc = subprocess.Popen(self.interchange_launch_cmd, stdin=subprocess.PIPE)
         stdin = self.interchange_proc.stdin
         assert stdin is not None, "Popen should have created an IO object (vs default None) because of PIPE mode"
 
