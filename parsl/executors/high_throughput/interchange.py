@@ -410,6 +410,7 @@ class Interchange:
                 self._ready_managers[manager_id] = {'last_heartbeat': time.time(),
                                                     'idle_since': time.time(),
                                                     'block_id': None,
+                                                    'start_time': msg['start_time'],
                                                     'max_capacity': 0,
                                                     'worker_count': 0,
                                                     'active': True,
