@@ -53,7 +53,7 @@ class Interchange:
                  logging_level: int,
                  poll_period: int,
                  cert_dir: Optional[str],
-                 manager_selector: Optional[ManagerSelectorBase] = None,
+                 manager_selector: ManagerSelectorBase,
                  ) -> None:
         """
         Parameters
@@ -161,7 +161,6 @@ class Interchange:
 
         self.heartbeat_threshold = heartbeat_threshold
 
-        assert manager_selector is not None, "Undefined manager_selector"
         self.manager_selector = manager_selector
 
         self.current_platform = {'parsl_v': PARSL_VERSION,
@@ -489,8 +488,7 @@ class Interchange:
             interesting=len(interesting_managers)))
 
         if interesting_managers and not self.pending_task_queue.empty():
-            unsorted_managers = list(interesting_managers)
-            shuffled_managers = self.manager_selector.sort_managers(self._ready_managers, unsorted_managers)
+            shuffled_managers = self.manager_selector.sort_managers(self._ready_managers, interesting_managers)
 
             while shuffled_managers and not self.pending_task_queue.empty():  # cf. the if statement above...
                 manager_id = shuffled_managers.pop()

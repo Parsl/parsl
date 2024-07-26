@@ -265,7 +265,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_logdir_root: Optional[str] = None,
                  enable_mpi_mode: bool = False,
                  mpi_launcher: str = "mpiexec",
-                 manager_selector: Optional[ManagerSelectorBase] = ManagerSelectorRandom(),
+                 manager_selector: ManagerSelectorBase = ManagerSelectorRandom(),
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
                  encrypted: bool = False):
 
