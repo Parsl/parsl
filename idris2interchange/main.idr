@@ -281,6 +281,7 @@ zmq_get_socket_fd (MkZMQSocket sock_ptr) = do
   printLn fd
   pure $ MkFD fd
 
+poll_loop : ZMQSocket -> ZMQSocket -> IO ()
 
 main : IO ()
 main = do
@@ -339,6 +340,11 @@ main = do
   zmq_connect command_socket "tcp://127.0.0.1:9002"
   log "Connected interchange command channel"
 
+  poll_loop command_socket tasks_submit_to_interchange_socket
+
+  -- TODO move these sockets into elixir style single state object
+
+poll_loop command_socket tasks_submit_to_interchange_socket = do
   -- TODO: probably should create result socket here
 
   -- TODO: polling of some kind here to decide which socket we're going to
@@ -414,20 +420,25 @@ main = do
   -- (after all uses, and eventually - pretty much 1-multiplicity semantics?)
   -- imagine an API: recvAndThen which takes a linear continuation?
 
-  log "Trying to receive a message from task submit->interchange channel"
-  maybe_msg <- zmq_recv_msg_alloc tasks_submit_to_interchange_socket
-  case maybe_msg of
-    Nothing => putStrLn "No message received."
-    Just msg => do
-      putStr "Received message, size "
-      s <- zmq_msg_size msg
-      printLn s
+  when ((index 1 poll_outputs).revents /= 0) $ do
+    log "Trying to receive a message from task submit->interchange channel"
+    maybe_msg <- zmq_recv_msg_alloc tasks_submit_to_interchange_socket
+    case maybe_msg of
+      Nothing => do putStrLn "No message received."
+                    poll_loop command_socket tasks_submit_to_interchange_socket
+      Just msg => do
+        putStr "Received message, size "
+        s <- zmq_msg_size msg
+        printLn s
 
-      -- so now we've received a message... we'll need to eventually deallocate
-      -- it... and hopefully have the type system enforce that... TODO
+        -- so now we've received a message... we'll need to eventually deallocate
+        -- it... and hopefully have the type system enforce that... TODO
 
-      -- what msg contains here is a pickle-encoded two element dictionary,
-      -- the task ID and the buffer.
-      -- so... now its time to write a pickle decoder?
+        -- what msg contains here is a pickle-encoded two element dictionary,
+        -- the task ID and the buffer.
+        -- so... now its time to write a pickle decoder?
+
+  poll_loop command_socket tasks_submit_to_interchange_socket
+      
 
   log "Idris2 interchange ending"
