@@ -432,11 +432,26 @@ poll_loop command_socket tasks_submit_to_interchange_socket = do
         printLn s
 
         -- so now we've received a message... we'll need to eventually deallocate
+        -- and also do something with the message
+
+  when ((index 0 poll_outputs).revents /= 0) $ do
+    log "Trying to receive a message from command channel"
+    maybe_msg <- zmq_recv_msg_alloc command_socket
+    case maybe_msg of
+      Nothing => do putStrLn "No message received."
+                    poll_loop command_socket tasks_submit_to_interchange_socket
+      Just msg => do
+        putStr "Received message, size "
+        s <- zmq_msg_size msg
+        printLn s
+
+        -- so now we've received a message... we'll need to eventually deallocate
         -- it... and hopefully have the type system enforce that... TODO
 
         -- what msg contains here is a pickle-encoded two element dictionary,
         -- the task ID and the buffer.
         -- so... now its time to write a pickle decoder?
+
 
   poll_loop command_socket tasks_submit_to_interchange_socket
       
