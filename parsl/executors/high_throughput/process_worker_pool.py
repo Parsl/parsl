@@ -663,7 +663,6 @@ def worker(
     global logger
     logger = start_file_logger('{}/block-{}/{}/worker_{}.log'.format(logdir, block_id, pool_id, worker_id),
                                worker_id,
-                               name="worker_log",
                                level=logging.DEBUG if debug else logging.INFO)
 
     # Store worker ID as an environment variable
@@ -836,6 +835,15 @@ def start_file_logger(filename, rank, name='parsl', level=logging.DEBUG, format_
                         "[%(levelname)s]  %(message)s"
 
     logger = logging.getLogger(name)
+
+    # remove handlers from named context - this is only going to help when
+    # the parent process attached to exactly the same logger name...
+    # so it should always be 'parsl'. ugh. this is a horrific artefact
+    # of using fork-without-exec...
+
+    for h in logger.handlers:
+        logger.removeHandler(h)
+
     logger.setLevel(logging.DEBUG)
     handler = logging.FileHandler(filename)
     handler.setLevel(level)

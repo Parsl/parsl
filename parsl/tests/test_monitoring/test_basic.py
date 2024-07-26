@@ -8,6 +8,8 @@ from parsl import HighThroughputExecutor
 from parsl.config import Config
 from parsl.executors.taskvine import TaskVineExecutor, TaskVineManagerConfig
 from parsl.monitoring import MonitoringHub
+from parsl.monitoring.radios.base import HTEXRadio
+from parsl.monitoring.radios.udp import UDPRadio
 
 
 @parsl.python_app
@@ -25,8 +27,22 @@ def this_app():
 # a configuration that is suitably configured for monitoring.
 
 def htex_config():
+    """This config will use htex's default htex specific mode"""
     from parsl.tests.configs.htex_local_alternate import fresh_config
     return fresh_config()
+
+
+def htex_udp_config():
+    """This config will force UDP"""
+    from parsl.tests.configs.htex_local_alternate import fresh_config
+    c = fresh_config()
+    assert len(c.executors) == 1
+    ex = c.executors[0]
+
+    assert isinstance(ex.remote_monitoring_radio_config, HTEXRadio)
+    ex.remote_monitoring_radio_config = UDPRadio()
+
+    return c
 
 
 def workqueue_config():
@@ -48,7 +64,7 @@ def taskvine_config():
 
 
 @pytest.mark.local
-@pytest.mark.parametrize("fresh_config", [htex_config, workqueue_config, taskvine_config])
+@pytest.mark.parametrize("fresh_config", [htex_config, htex_udp_config, workqueue_config, taskvine_config])
 def test_row_counts(tmpd_cwd, fresh_config):
     # this is imported here rather than at module level because
     # it isn't available in a plain parsl install, so this module

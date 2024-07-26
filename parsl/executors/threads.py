@@ -72,6 +72,7 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
         """
         logger.debug("Shutting down executor, which involves waiting for running tasks to complete")
         self.executor.shutdown(wait=block)
+        super().shutdown()
         logger.debug("Done with executor shutdown")
 
     def monitor_resources(self):

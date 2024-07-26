@@ -23,7 +23,8 @@ def make_interchange(*, interchange_address: Optional[str], cert_dir: Optional[s
                        heartbeat_threshold=60,
                        logdir=".",
                        logging_level=logging.INFO,
-                       poll_period=10)
+                       poll_period=10,
+                       run_id="test_run_id")
 
 
 @pytest.fixture
