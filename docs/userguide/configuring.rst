@@ -346,7 +346,8 @@ Provide either the number of executors (Parsl will assume they are named in inte
         strategy='none',
     )
 
-
+For hardware that uses Nvidia devices, Parsl allows for the oversubscription of workers to GPUS.  This is intended to make use of Nvidia's `Multi-Process Service (MPS) <https://docs.nvidia.com/deploy/mps/>`_ available on many of their GPUs that allows users to run multiple concurrent processes on a single GPU.  The user needs to set in the ``worker_init`` commands to start MPS on every node in the block (this is machine dependent).  The ``available_accelerators`` option should then be set to the total number of GPU partitions run on a single node in the block.  For example, for a node with 4 Nvidia GPUs, to create 8 workers per GPU, set ``available_accelerators=32``.  GPUs will be assigned to workers in ascending order in contiguous blocks.  In the example, workers 0-7 will be placed on GPU 0, workers 8-15 on GPU 1, workers 16-23 on GPU 2, and workers 24-31 on GPU 3. 
+    
 Multi-Threaded Applications
 ---------------------------
 
