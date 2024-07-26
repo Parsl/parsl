@@ -6,6 +6,7 @@ import Generics.Derive
 import System.FFI
 
 %language ElabReflection
+%default total
 
 -- for benc dev environment:
 -- apt install chezscheme
@@ -281,9 +282,9 @@ zmq_get_socket_fd (MkZMQSocket sock_ptr) = do
   printLn fd
   pure $ MkFD fd
 
-poll_loop : ZMQSocket -> ZMQSocket -> IO ()
+covering poll_loop : ZMQSocket -> ZMQSocket -> IO ()
 
-main : IO ()
+covering main : IO ()
 main = do
   log "Idris2 interchange starting"
 
