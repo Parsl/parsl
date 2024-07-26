@@ -18,3 +18,7 @@ void pollhelper_set_entry(struct pollfd *buf, int pos, int fd) {
     // queueing behaviour situation, though.
 }
 
+
+short pollhelper_get_entry(struct pollfd *buf, int pos) {
+    return buf[pos].revents;
+}

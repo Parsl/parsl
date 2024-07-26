@@ -122,6 +122,12 @@ pollhelper_set_entry (MkPollMemPtr ptr) pos pi = do
   -- least-significant-bits thing?)
   primIO $ prim_pollhelper_set_entry ptr (cast (the Integer (cast pos))) (cast pi.fd) -- TODO: flags, if I want anything other than hardcoded POLLIN
 
+%foreign "C:pollhelper_get_entry,pollhelper"
+prim_pollhelper_get_entry : AnyPtr -> Int -> PrimIO Bits16
+
+pollhelper_get_entry : PollMemPtr n -> Fin n -> IO Bits16
+pollhelper_get_entry (MkPollMemPtr ptr) pos =
+  primIO $ prim_pollhelper_get_entry ptr (cast (the Integer (cast pos)))
 
 %foreign "C:poll,libc"
 prim_poll : AnyPtr -> Int -> Int -> PrimIO Int
@@ -166,8 +172,20 @@ poll inputs timeout = do
    poll_ret <- pollhelper_poll buf timeout -- TODO: something with the return result
    putStrLn "Poll return this return value:"
    printLn poll_ret
-   ?copy_data_out
-   r <- for inputs $ \i => pure (MkPollOutput i.fd ?extracted_result)
+
+   -- contrast Data.Vect.alLFins here with Data.Fin.List.allFins above..
+   -- we could use Data.Vect.allFins in both places I think... the reason
+   -- for Data.Vect here is so the output is the desired Data.Vect too...
+   r <- for (Data.Vect.allFins n) $ \i => do
+        putStrLn "Extracting result for poll index"
+        let inp = index i inputs
+        printLn i
+        printLn inp.fd
+        revents <- pollhelper_get_entry buf i
+        putStr "revents = "
+        printLn revents
+        pure (MkPollOutput inp.fd revents)
+
    pollhelper_free_memory buf
    pure r
 
@@ -371,7 +389,7 @@ main = do
                         MkPollInput tasks_submit_to_interchange_fd 0]
                        (MkTimeMS 4000)   -- should either be infinity or managed as part of a timed events queue that is not fds?
 
-  ?poll_not_impl2
+  log "poll completed"
 
   -- Semantics of buffer ownership: the caller must allocate a buffer and
   -- describe the size to zmq_recv. Probably some linear type stuff to be
