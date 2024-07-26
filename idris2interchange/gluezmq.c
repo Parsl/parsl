@@ -14,6 +14,7 @@ void *glue_zmq_ctx_new() {
 void *glue_zmq_socket(void* ctx, int type) {
     void *sock = zmq_socket(ctx, type);
     assert(sock != NULL);
+    printf("created socket, pointer is %p\n", sock);
     return sock;
 }
 
@@ -37,4 +38,19 @@ void *glue_zmq_recv_msg_alloc(void *sock) {
 
 int glue_zmq_msg_size(void *msg) {
     return zmq_msg_size(msg);
+}
+
+int glue_zmq_get_socket_fd(void *sock) {
+    int fd, r;
+    size_t optionlen;
+    printf("in glue_zmq_get_socket_fd: pre getsockopt\n");
+    printf("sock is %p\n", sock);
+    printf("&fd is %p\n", &fd);
+    printf("&optionlen is %p\n", &optionlen);
+    optionlen = sizeof(fd);
+    r = zmq_getsockopt(sock, ZMQ_FD, &fd, &optionlen);
+    printf("in glue_zmq_get_socket_fd: post getsockopt\n");
+    // TODO: do something with unused r?
+    assert (optionlen == sizeof(int));
+    return fd;
 }

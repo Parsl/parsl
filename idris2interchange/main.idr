@@ -1,3 +1,9 @@
+-- wow it took a long time before importing a library module...
+-- the source code was 290 lines long before adding the first
+-- import...
+import Data.Vect
+import System.FFI
+
 -- for benc dev environment:
 -- apt install chezscheme
 -- (build idris2 if necessary)
@@ -13,6 +19,87 @@
 ||| of log calls entirely? something involving the elaborator?
 log : String -> IO ()
 log msg = putStrLn msg
+
+
+
+
+-- bits for interfacing to linux poll
+
+-- TODO: can we do something to protect the lifetime of this int,
+-- eg to treat it linearly (or linearly with dup-ing?) so that we
+-- don't end up with bad lifetimes?
+data FD = MkFD Int
+
+-- this is what poll takes: but revents is an output
+-- so model it as input and output types that are internally
+-- converted to/from what happens to be a single pollfd struct...
+--       struct pollfd {
+--           int   fd;         /* file descriptor */
+--           short events;     /* requested events */
+--           short revents;    /* returned events */
+--       };
+
+record PollInput where
+  constructor MkPollInput
+  fd: FD
+
+  -- hoping that Bits16 is the same size as a C short...
+  -- that's not so defined in general
+  events: Bits16
+
+record PollOutput where
+  constructor MkPollOutput
+  fd: FD
+
+  revents: Bits16   -- see events short note above
+
+
+-- time in milliseconds - are there other ways to represent
+-- time units in idris? using a unit-forced type not int pushes
+-- against some common coding mistakes I've encountered in Parsl
+-- (in Parsl proper, as recommended by Kevin, a different approach
+-- is to ensure the *name* of all parameters and variables contains
+-- the unit - with less automatic type checking there)
+data TimeMS = MkTimeMS Int
+
+-- poll looks like this:
+--        int poll(struct pollfd *fds, nfds_t nfds, int timeout);
+
+-- in addition to being the same size, every entry in the input
+-- corresponds to the entry in the output
+-- (aka the FD key sequence of the input and the output is the
+-- same...)
+-- is there some better structure for that malloc than hoping
+-- we did a free at the end? `with` style bracket or something
+-- linear?
+
+data PollMemPtr : (n: Nat) -> Type where
+  MkPollMemPtr : AnyPtr -> PollMemPtr n
+
+%foreign "C:pollhelper_allocate_memory,pollhelper"
+prim_pollhelper_allocate_memory: Int -> PrimIO AnyPtr
+
+pollhelper_allocate_memory: (n: Nat) -> IO (PollMemPtr n)
+pollhelper_allocate_memory n = do
+  ptr <- primIO $ prim_pollhelper_allocate_memory (cast n)
+  pure (MkPollMemPtr ptr)
+
+pollhelper_free_memory : PollMemPtr n -> IO ()
+pollhelper_free_memory (MkPollMemPtr ptr) = free ptr
+
+poll: {n: Nat} -> Vect n PollInput -> TimeMS -> IO (Vect n PollOutput)
+poll inputs timeout = do
+   -- we can't do this alloc using idris2 memory alloc because
+   -- we don't have a sizeof operator or calloc (or equiv)
+   buf <- pollhelper_allocate_memory n
+   for_ inputs $ \i => pure ()
+   ?copy_data_in
+   ?call_poll
+   ?copy_data_out
+   r <- for inputs $ \i => pure (MkPollOutput i.fd ?extracted_result)
+   pollhelper_free_memory buf
+   pure r
+
 
 
 ||| This will name the C functions to use from the libzmq<->idris2
@@ -92,14 +179,16 @@ zmq_msg_size : ZMQMsg -> IO Int
 zmq_msg_size (MkZMQMsg msg_ptr) = primIO $ prim__zmq_msg_size msg_ptr
 
 
--- bits for interfacing to linux poll
+%foreign (gluezmq "glue_zmq_get_socket_fd")
+prim__zmq_get_socket_fd : AnyPtr -> PrimIO Int
 
--- TODO: can we do something to protect the lifetime of this int,
--- eg to treat it linearly (or linearly with dup-ing?) so that we
--- don't end up with bad lifetimes?
-data FD = FD Int
-
-
+zmq_get_socket_fd : ZMQSocket -> IO FD
+zmq_get_socket_fd (MkZMQSocket sock_ptr) = do
+  log "calling get_socket_fd"
+  fd <- (primIO $ prim__zmq_get_socket_fd sock_ptr)
+  log "retrieved fd"
+  printLn fd
+  pure $ MkFD fd
 
 
 main : IO ()
@@ -199,9 +288,19 @@ main = do
   -- API in something that looks more like a function... (eg take an fd
   -- and events list, and return a list of fd, revents?)
 
-  XXX
+  -- we will poll:
+  --  tasks_submit_to_interchange_socket
+  --  command_socket
 
-  log "polling NOTIMPL"
+  -- so first we need to ask those two sockets for their FDs
+  tasks_submit_to_interchange_fd <- zmq_get_socket_fd tasks_submit_to_interchange_socket
+  command_fd <- zmq_get_socket_fd command_socket
+
+  poll_outputs <- poll [MkPollInput command_fd 0,
+                        MkPollInput tasks_submit_to_interchange_fd 0]
+                       (MkTimeMS 4000)   -- should either be infinity or managed as part of a timed events queue that is not fds?
+
+  ?poll_not_impl2
 
   -- Semantics of buffer ownership: the caller must allocate a buffer and
   -- describe the size to zmq_recv. Probably some linear type stuff to be

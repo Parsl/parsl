@@ -539,8 +539,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             self.interchange_proc = subprocess.Popen(args=["cd elixirchange; MIX_ENV=prod mix run --no-halt"], shell=True)
         elif self.benc_interchange_cli == "idris2":
             self.interchange_proc = subprocess.Popen(args=["cd idris2interchange ; "
-                                                           "gcc -shared gluezmq.c -lzmq -o glue_zmq.so && "
+                                                           "gcc -shared gluezmq.c -lzmq -o glue_zmq.so && gcc -shared pollhelper.c -o pollhelper.so && "
                                                            "idris2 main.idr -x main"], shell=True)
+                                                           # "idris2 main.idr -o ixg && LD_LIBRARY_PATH=$(pwd)/build/exec/ixg_app gdb chezscheme"], shell=True)
 
         elif self.benc_interchange_cli == "python":
             # TODO: all these arguments below aren't used... so are they necessary? should there be
@@ -577,7 +578,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         logger.debug("Requesting worker ports")
         try:
-            (self.worker_task_port, self.worker_result_port) = self.command_client.run("WORKER_PORTS", timeout_s=20)
+            (self.worker_task_port, self.worker_result_port) = self.command_client.run("WORKER_PORTS", timeout_s=3600)
         except CommandClientTimeoutError:
             logger.error("Interchange has not completed initialization")
             # TODO: use a parsl exception...
