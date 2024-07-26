@@ -391,6 +391,17 @@ main = do
 
   log "poll completed"
 
+  -- one thing i dislike about the rust polling interface I used is it
+  -- was ugly looking to track the fd (poll output entry) back to the
+  -- originating socket - because I'm controlling the idris2 level poll
+  -- API perhaps I can add in something more here? (eg I can copy
+  -- arbitrary fields from the PollInput to PollOutput structure without
+  -- unix poll() needing to know about them)
+
+  -- I'm not really sure what that interface would look like. Potentially
+  -- a much higher level "here's a callback to run for each one" rather
+  -- than returning a structure?
+  
   -- Semantics of buffer ownership: the caller must allocate a buffer and
   -- describe the size to zmq_recv. Probably some linear type stuff to be
   -- done here to ensure the buffer gets used properly? (maybe even type

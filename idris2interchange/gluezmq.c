@@ -26,7 +26,7 @@ void glue_zmq_connect(void* sock, char *dest) {
 void *glue_zmq_recv_msg_alloc(void *sock) {
     zmq_msg_t *msg = malloc(sizeof(zmq_msg_t));
     zmq_msg_init(msg);
-    int e = zmq_msg_recv(msg, sock, 0);
+    int e = zmq_msg_recv(msg, sock, ZMQ_DONTWAIT);
     if(e == -1) {
         char *err_m = strerror(errno);
         printf("zmq_msg_recv failed: errno = %d, %s\n", errno, err_m);
