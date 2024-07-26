@@ -396,7 +396,7 @@ poll_loop command_socket tasks_submit_to_interchange_socket = do
 
   poll_outputs <- poll [MkPollInput command_fd 0,
                         MkPollInput tasks_submit_to_interchange_fd 0]
-                       (MkTimeMS 4000)   -- should either be infinity or managed as part of a timed events queue that is not fds?
+                       (MkTimeMS (-1)) -- -1 means infinity. should either be infinity or managed as part of a timed events queue that is not fd driven?
 
   log "poll completed"
 
