@@ -255,10 +255,12 @@ data ZMQMsg = MkZMQMsg AnyPtr
 %foreign (gluezmq "glue_zmq_recv_msg_alloc")
 prim__zmq_recv_msg_alloc : AnyPtr -> PrimIO AnyPtr
 
-zmq_recv_msg_alloc : ZMQSocket -> IO ZMQMsg
+zmq_recv_msg_alloc : ZMQSocket -> IO (Maybe ZMQMsg)
 zmq_recv_msg_alloc (MkZMQSocket sock_ptr) = do
     msg_ptr <- primIO $ prim__zmq_recv_msg_alloc sock_ptr
-    pure (MkZMQMsg msg_ptr)
+    if prim__nullAnyPtr msg_ptr == 1 
+      then pure $ Nothing
+      else pure $ Just $ MkZMQMsg msg_ptr
 
 
 %foreign (gluezmq "glue_zmq_msg_size")
@@ -412,18 +414,20 @@ main = do
   -- (after all uses, and eventually - pretty much 1-multiplicity semantics?)
   -- imagine an API: recvAndThen which takes a linear continuation?
 
-  log "Waiting to receive a message from task submit->interchange channel"
-  msg <- zmq_recv_msg_alloc tasks_submit_to_interchange_socket
+  log "Trying to receive a message from task submit->interchange channel"
+  maybe_msg <- zmq_recv_msg_alloc tasks_submit_to_interchange_socket
+  case maybe_msg of
+    Nothing => putStrLn "No message received."
+    Just msg => do
+      putStr "Received message, size "
+      s <- zmq_msg_size msg
+      printLn s
 
-  putStr "Received message, size "
-  s <- zmq_msg_size msg
-  printLn s
+      -- so now we've received a message... we'll need to eventually deallocate
+      -- it... and hopefully have the type system enforce that... TODO
 
-  -- so now we've received a message... we'll need to eventually deallocate
-  -- it... and hopefully have the type system enforce that... TODO
-
-  -- what msg contains here is a pickle-encoded two element dictionary,
-  -- the task ID and the buffer.
-  -- so... now its time to write a pickle decoder?
+      -- what msg contains here is a pickle-encoded two element dictionary,
+      -- the task ID and the buffer.
+      -- so... now its time to write a pickle decoder?
 
   log "Idris2 interchange ending"
