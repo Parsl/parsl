@@ -184,6 +184,7 @@ class Manager:
 
         self.uid = uid
         self.block_id = block_id
+        self.start_time = time.time()
 
         self.enable_mpi_mode = enable_mpi_mode
         self.mpi_launcher = mpi_launcher
@@ -263,6 +264,7 @@ class Manager:
                'worker_count': self.worker_count,
                'uid': self.uid,
                'block_id': self.block_id,
+               'start_time': self.start_time,
                'prefetch_capacity': self.prefetch_capacity,
                'max_capacity': self.worker_count + self.prefetch_capacity,
                'os': platform.system(),
