@@ -540,7 +540,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         elif self.benc_interchange_cli == "idris2":
             self.interchange_proc = subprocess.Popen(args=["cd idris2interchange ; "
                                                            "gcc -shared gluezmq.c -lzmq -o glue_zmq.so && gcc -shared pollhelper.c -o pollhelper.so && "
-                                                           "idris2 main.idr -x main"], shell=True)
+                                                           "idris2 main.idr -p sop -p elab-util -x main"], shell=True)
                                                            # "idris2 main.idr -o ixg && LD_LIBRARY_PATH=$(pwd)/build/exec/ixg_app gdb chezscheme"], shell=True)
 
         elif self.benc_interchange_cli == "python":
