@@ -43,16 +43,17 @@ def test_init():
     """Ensure all relevant kwargs are copied over from HTEx"""
 
     new_kwargs = {'max_workers_per_block'}
-    excluded_kwargs = {'available_accelerators', 'enable_mpi_mode', 'cores_per_worker', 'max_workers_per_node',
+    excluded_mpix_kwargs = {'available_accelerators', 'enable_mpi_mode', 'cores_per_worker', 'max_workers_per_node',
                        'mem_per_worker', 'cpu_affinity', 'max_workers'}
+    excluded_htex_kwargs = {'manager_selector'}
 
     # Get the kwargs from both HTEx and MPIEx
     htex_kwargs = set(signature(HighThroughputExecutor.__init__).parameters)
     mpix_kwargs = set(signature(MPIExecutor.__init__).parameters)
 
     assert mpix_kwargs.difference(htex_kwargs) == new_kwargs
-    assert len(mpix_kwargs.intersection(excluded_kwargs)) == 0
-    assert mpix_kwargs.union(excluded_kwargs).difference(new_kwargs) == htex_kwargs
+    assert len(mpix_kwargs.intersection(excluded_mpix_kwargs)) == 0
+    assert mpix_kwargs.union(excluded_mpix_kwargs).difference(new_kwargs) == htex_kwargs.difference(excluded_htex_kwargs)
 
 
 @pytest.mark.local
