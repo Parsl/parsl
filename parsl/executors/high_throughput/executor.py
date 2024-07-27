@@ -787,8 +787,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         launch_cmd = self.launch_cmd.format(block_id=block_id)
         return launch_cmd
 
-    def status(self) -> Dict[str, JobStatus]:
-        job_status = super().status()
+    def _regenerate_combined_status(self) -> Dict[str, JobStatus]:
+        job_status = super()._regenerate_combined_status()
         connected_blocks = self.connected_blocks()
         for job_id in job_status:
             job_info = job_status[job_id]
