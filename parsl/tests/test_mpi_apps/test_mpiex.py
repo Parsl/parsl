@@ -44,7 +44,7 @@ def test_init():
 
     new_kwargs = {'max_workers_per_block'}
     excluded_mpix_kwargs = {'available_accelerators', 'enable_mpi_mode', 'cores_per_worker', 'max_workers_per_node',
-                       'mem_per_worker', 'cpu_affinity', 'max_workers'}
+                            'mem_per_worker', 'cpu_affinity', 'max_workers'}
     excluded_htex_kwargs = {'manager_selector'}
 
     # Get the kwargs from both HTEx and MPIEx
