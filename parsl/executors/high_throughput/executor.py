@@ -21,8 +21,8 @@ from parsl.executors.errors import BadMessage, ScalingFailed
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
 from parsl.executors.high_throughput.manager_selector import (
-    ManagerSelectorBase,
-    ManagerSelectorRandom,
+    ManagerSelector,
+    RandomManagerSelector,
 )
 from parsl.executors.high_throughput.mpi_prefix_composer import (
     VALID_LAUNCHERS,
@@ -265,7 +265,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_logdir_root: Optional[str] = None,
                  enable_mpi_mode: bool = False,
                  mpi_launcher: str = "mpiexec",
-                 manager_selector: ManagerSelectorBase = ManagerSelectorRandom(),
+                 manager_selector: ManagerSelector = RandomManagerSelector(),
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
                  encrypted: bool = False):
 

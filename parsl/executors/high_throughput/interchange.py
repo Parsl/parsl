@@ -18,7 +18,7 @@ from parsl import curvezmq
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import ManagerLost, VersionMismatch
 from parsl.executors.high_throughput.manager_record import ManagerRecord
-from parsl.executors.high_throughput.manager_selector import ManagerSelectorBase
+from parsl.executors.high_throughput.manager_selector import ManagerSelector
 from parsl.monitoring.message_type import MessageType
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize as serialize_object
@@ -53,7 +53,7 @@ class Interchange:
                  logging_level: int,
                  poll_period: int,
                  cert_dir: Optional[str],
-                 manager_selector: ManagerSelectorBase,
+                 manager_selector: ManagerSelector,
                  ) -> None:
         """
         Parameters

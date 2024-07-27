@@ -5,7 +5,7 @@ from typing import Dict, List, Set
 from parsl.executors.high_throughput.manager_record import ManagerRecord
 
 
-class ManagerSelectorBase(metaclass=ABCMeta):
+class ManagerSelector(metaclass=ABCMeta):
 
     @abstractmethod
     def sort_managers(self, ready_managers: Dict[bytes, ManagerRecord], manager_list: Set[bytes]) -> List[bytes]:
@@ -17,7 +17,7 @@ class ManagerSelectorBase(metaclass=ABCMeta):
         pass
 
 
-class ManagerSelectorRandom(ManagerSelectorBase):
+class RandomManagerSelector(ManagerSelector):
 
     def sort_managers(self, ready_managers: Dict[bytes, ManagerRecord], manager_list: Set[bytes]) -> List[bytes]:
         c_manager_list = list(manager_list)
