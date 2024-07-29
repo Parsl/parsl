@@ -174,6 +174,16 @@ class BlockProviderExecutor(ParslExecutor):
         # Filters first iterable by bool values in second
         return list(compress(to_kill, killed))
 
+    def scale_out_facade(self, n: int) -> List[str]:
+        block_ids = self._scale_out(n)
+        if block_ids is not None:
+            new_status = {}
+            for block_id in block_ids:
+                new_status[block_id] = JobStatus(JobState.PENDING)
+            self.send_monitoring_info(new_status)
+            self._status.update(new_status)
+        return block_ids
+
     def _scale_out(self, blocks: int = 1) -> List[str]:
         """Scales out the number of blocks by "blocks"
         """
@@ -326,14 +336,4 @@ class BlockProviderExecutor(ParslExecutor):
                 new_status[block_id] = JobStatus(JobState.CANCELLED)
                 del self._status[block_id]
             self.send_monitoring_info(new_status)
-        return block_ids
-
-    def scale_out_facade(self, n: int) -> List[str]:
-        block_ids = self._scale_out(n)
-        if block_ids is not None:
-            new_status = {}
-            for block_id in block_ids:
-                new_status[block_id] = JobStatus(JobState.PENDING)
-            self.send_monitoring_info(new_status)
-            self._status.update(new_status)
         return block_ids
