@@ -176,12 +176,11 @@ class BlockProviderExecutor(ParslExecutor):
 
     def scale_out_facade(self, n: int) -> List[str]:
         block_ids = self._scale_out(n)
-        if block_ids is not None:
-            new_status = {}
-            for block_id in block_ids:
-                new_status[block_id] = JobStatus(JobState.PENDING)
-            self.send_monitoring_info(new_status)
-            self._status.update(new_status)
+        new_status = {}
+        for block_id in block_ids:
+            new_status[block_id] = JobStatus(JobState.PENDING)
+        self.send_monitoring_info(new_status)
+        self._status.update(new_status)
         return block_ids
 
     def _scale_out(self, blocks: int = 1) -> List[str]:
