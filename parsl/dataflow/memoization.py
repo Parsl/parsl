@@ -388,8 +388,12 @@ class BasicMemoizer(Memoizer):
                             data = pickle.load(f)
                             # Copy and hash only the input attributes
                             memo_fu: Future = Future()
-                            assert data['exception'] is None
-                            memo_fu.set_result(data['result'])
+
+                            if data['exception'] is None:
+                                memo_fu.set_result(data['result'])
+                            else:
+                                assert data['result'] is None
+                                memo_fu.set_exception(data['exception'])
                             memo_lookup_table[data['hash']] = memo_fu
 
                         except EOFError:
@@ -452,7 +456,6 @@ class BasicMemoizer(Memoizer):
 
         .. note::
             Checkpointing only works if memoization is enabled
-
         """
         with self.checkpoint_lock:
             self._checkpoint_these_tasks(self.checkpointable_tasks)
@@ -479,17 +482,19 @@ class BasicMemoizer(Memoizer):
         with open(checkpoint_tasks, 'ab') as f:
             for cc in checkpoint_queue:
                 (task_record, result, exception) = cc
-                if exception is None:
-                    hashsum = task_record['hashsum']
-                    if not hashsum:
-                        continue
-                    t = {'hash': hashsum, 'exception': None, 'result': result}
 
-                    # We are using pickle here since pickle dumps to a file in 'ab'
-                    # mode behave like a incremental log.
+                if exception is None and self.filter_result_for_checkpoint(result):
+                    t = {'hash': task_record['hashsum'], 'exception': None, 'result': result}
                     pickle.dump(t, f)
                     count += 1
-                    logger.debug("Task {task_record['id']} checkpointed")
+                    logger.debug("Task %s checkpointed result", task_record['id'])
+                elif exception is not None and self.filter_exception_for_checkpoint(exception):
+                    t = {'hash': task_record['hashsum'], 'exception': exception, 'result': None}
+                    pickle.dump(t, f)
+                    count += 1
+                    logger.debug("Task %s checkpointed exception", task_record['id'])
+                else:
+                    pass  # TODO: maybe log at debug level
 
         self.checkpointed_tasks += count
 
@@ -500,3 +505,11 @@ class BasicMemoizer(Memoizer):
                 logger.debug("No tasks checkpointed in this pass.")
         else:
             logger.info("Done checkpointing {} tasks".format(count))
+
+    def filter_result_for_checkpoint(self, result: Any) -> bool:
+        """Overridable method to decide if an task that ended with a successful result should be checkpointed"""
+        return True
+
+    def filter_exception_for_checkpoint(self, exception: BaseException) -> bool:
+        """Overridable method to decide if an entry that ended with an exception should be checkpointed"""
+        return False
