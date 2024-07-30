@@ -15,14 +15,14 @@ _db_manager_excepts: Optional[Exception]
 logger = logging.getLogger(__name__)
 
 
-class MonitoringRadio(metaclass=ABCMeta):
+class MonitoringRadioSender(metaclass=ABCMeta):
     @abstractmethod
     def send(self, message: object) -> None:
         pass
 
 
-class FilesystemRadio(MonitoringRadio):
-    """A MonitoringRadio that sends messages over a shared filesystem.
+class FilesystemRadioSender(MonitoringRadioSender):
+    """A MonitoringRadioSender that sends messages over a shared filesystem.
 
     The messsage directory structure is based on maildir,
     https://en.wikipedia.org/wiki/Maildir
@@ -36,7 +36,7 @@ class FilesystemRadio(MonitoringRadio):
     This avoids a race condition of reading partially written messages.
 
     This radio is likely to give higher shared filesystem load compared to
-    the UDPRadio, but should be much more reliable.
+    the UDP radio, but should be much more reliable.
     """
 
     def __init__(self, *, monitoring_url: str, source_id: int, timeout: int = 10, run_dir: str):
@@ -66,7 +66,7 @@ class FilesystemRadio(MonitoringRadio):
         os.rename(tmp_filename, new_filename)
 
 
-class HTEXRadio(MonitoringRadio):
+class HTEXRadioSender(MonitoringRadioSender):
 
     def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
         """
@@ -120,7 +120,7 @@ class HTEXRadio(MonitoringRadio):
         return
 
 
-class UDPRadio(MonitoringRadio):
+class UDPRadioSender(MonitoringRadioSender):
 
     def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
         """
@@ -174,7 +174,7 @@ class UDPRadio(MonitoringRadio):
         return
 
 
-class MultiprocessingQueueRadio(MonitoringRadio):
+class MultiprocessingQueueRadioSender(MonitoringRadioSender):
     """A monitoring radio which connects over a multiprocessing Queue.
     This radio is intended to be used on the submit side, where components
     in the submit process, or processes launched by multiprocessing, will have

@@ -56,7 +56,7 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers_per_node} "
                       "--mpi-launcher={mpi_launcher} "
                       "--available-accelerators {accelerators}")
 
-DEFAULT_INTERCHANGE_LAUNCH_CMD = "interchange.py"
+DEFAULT_INTERCHANGE_LAUNCH_CMD = ["interchange.py"]
 
 GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionProvider`
        Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
@@ -78,9 +78,9 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
         cores_per_worker, nodes_per_block, heartbeat_period ,heartbeat_threshold, logdir). For example:
         launch_cmd="process_worker_pool.py {debug} -c {cores_per_worker} --task_url={task_url} --result_url={result_url}"
 
-    interchange_launch_cmd : str
-        Custom command line string to launch the interchange process from the executor. If undefined,
-        the executor will use the default "interchange.py" command.
+    interchange_launch_cmd : Sequence[str]
+        Custom sequence of command line tokens to launch the interchange process from the executor. If
+        undefined, the executor will use the default "interchange.py" command.
 
     address : string
         An address to connect to the main Parsl process which is reachable from the network in which
@@ -238,7 +238,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  label: str = 'HighThroughputExecutor',
                  provider: ExecutionProvider = LocalProvider(),
                  launch_cmd: Optional[str] = None,
-                 interchange_launch_cmd: Optional[str] = None,
+                 interchange_launch_cmd: Optional[Sequence[str]] = None,
                  address: Optional[str] = None,
                  worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
@@ -456,8 +456,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                "task_id" : <task_id>
                "exception" : serialized exception object, on failure
             }
-
-        The `None` message is a die request.
         """
         logger.debug("Result queue worker starting")
 
@@ -475,58 +473,53 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
             else:
 
-                if msgs is None:
-                    logger.debug("Got None, exiting")
-                    return
+                for serialized_msg in msgs:
+                    try:
+                        msg = pickle.loads(serialized_msg)
+                    except pickle.UnpicklingError:
+                        raise BadMessage("Message received could not be unpickled")
 
-                else:
-                    for serialized_msg in msgs:
+                    if msg['type'] == 'heartbeat':
+                        continue
+                    elif msg['type'] == 'result':
                         try:
-                            msg = pickle.loads(serialized_msg)
-                        except pickle.UnpicklingError:
-                            raise BadMessage("Message received could not be unpickled")
+                            tid = msg['task_id']
+                        except Exception:
+                            raise BadMessage("Message received does not contain 'task_id' field")
 
-                        if msg['type'] == 'heartbeat':
-                            continue
-                        elif msg['type'] == 'result':
+                        if tid == -1 and 'exception' in msg:
+                            logger.warning("Executor shutting down due to exception from interchange")
+                            exception = deserialize(msg['exception'])
+                            self.set_bad_state_and_fail_all(exception)
+                            break
+
+                        task_fut = self.tasks.pop(tid)
+
+                        if 'result' in msg:
+                            result = deserialize(msg['result'])
+                            task_fut.set_result(result)
+
+                        elif 'exception' in msg:
                             try:
-                                tid = msg['task_id']
-                            except Exception:
-                                raise BadMessage("Message received does not contain 'task_id' field")
-
-                            if tid == -1 and 'exception' in msg:
-                                logger.warning("Executor shutting down due to exception from interchange")
-                                exception = deserialize(msg['exception'])
-                                self.set_bad_state_and_fail_all(exception)
-                                break
-
-                            task_fut = self.tasks.pop(tid)
-
-                            if 'result' in msg:
-                                result = deserialize(msg['result'])
-                                task_fut.set_result(result)
-
-                            elif 'exception' in msg:
-                                try:
-                                    s = deserialize(msg['exception'])
-                                    # s should be a RemoteExceptionWrapper... so we can reraise it
-                                    if isinstance(s, RemoteExceptionWrapper):
-                                        try:
-                                            s.reraise()
-                                        except Exception as e:
-                                            task_fut.set_exception(e)
-                                    elif isinstance(s, Exception):
-                                        task_fut.set_exception(s)
-                                    else:
-                                        raise ValueError("Unknown exception-like type received: {}".format(type(s)))
-                                except Exception as e:
-                                    # TODO could be a proper wrapped exception?
-                                    task_fut.set_exception(
-                                        DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
-                            else:
-                                raise BadMessage("Message received is neither result or exception")
+                                s = deserialize(msg['exception'])
+                                # s should be a RemoteExceptionWrapper... so we can reraise it
+                                if isinstance(s, RemoteExceptionWrapper):
+                                    try:
+                                        s.reraise()
+                                    except Exception as e:
+                                        task_fut.set_exception(e)
+                                elif isinstance(s, Exception):
+                                    task_fut.set_exception(s)
+                                else:
+                                    raise ValueError("Unknown exception-like type received: {}".format(type(s)))
+                            except Exception as e:
+                                # TODO could be a proper wrapped exception?
+                                task_fut.set_exception(
+                                    DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
                         else:
-                            raise BadMessage("Message received with unknown type {}".format(msg['type']))
+                            raise BadMessage("Message received is neither result or exception")
+                    else:
+                        raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
         logger.info("Result queue worker finished")
 
@@ -555,7 +548,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         config_pickle = pickle.dumps(interchange_config)
 
-        self.interchange_proc = subprocess.Popen(self.interchange_launch_cmd.encode("utf-8"), stdin=subprocess.PIPE)
+        self.interchange_proc = subprocess.Popen(self.interchange_launch_cmd, stdin=subprocess.PIPE)
         stdin = self.interchange_proc.stdin
         assert stdin is not None, "Popen should have created an IO object (vs default None) because of PIPE mode"
 
