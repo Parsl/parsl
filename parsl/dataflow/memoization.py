@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 import typeguard
 
 from parsl.dataflow.errors import BadCheckpoint
+from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.taskrecord import TaskRecord
 
 if TYPE_CHECKING:
@@ -336,8 +337,12 @@ class BasicMemoizer(Memoizer):
                             data = pickle.load(f)
                             # Copy and hash only the input attributes
                             memo_fu: Future = Future()
-                            assert data['exception'] is None
-                            memo_fu.set_result(data['result'])
+
+                            if data['exception'] is None:
+                                memo_fu.set_result(data['result'])
+                            else:
+                                assert data['result'] is None
+                                memo_fu.set_exception(data['exception'])
                             memo_lookup_table[data['hash']] = memo_fu
 
                         except EOFError:
@@ -418,17 +423,22 @@ class BasicMemoizer(Memoizer):
 
                     app_fu = task_record['app_fu']
 
-                    if app_fu.done() and app_fu.exception() is None:
+                    if app_fu.done() and self.filter_for_checkpoint(app_fu):
+
                         hashsum = task_record['hashsum']
                         if not hashsum:
                             continue
-                        t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
+
+                        if app_fu.exception() is None:
+                            t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
+                        else:
+                            t = {'hash': hashsum, 'exception': app_fu.exception(), 'result': None}
 
                         # We are using pickle here since pickle dumps to a file in 'ab'
                         # mode behave like a incremental log.
                         pickle.dump(t, f)
                         count += 1
-                        logger.debug("Task {} checkpointed".format(task_id))
+                        logger.debug("Task {} checkpointed as result".format(task_id))
 
             self.checkpointed_tasks += count
 
@@ -441,3 +451,7 @@ class BasicMemoizer(Memoizer):
                 logger.info("Done checkpointing {} tasks".format(count))
 
             return checkpoint_dir
+
+    def filter_for_checkpoint(self, app_fu: AppFuture) -> bool:
+        """Overridable method to decide if an entry should be checkpointed"""
+        return app_fu.exception() is None
