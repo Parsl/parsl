@@ -33,6 +33,7 @@ from parsl.dataflow.dependency_resolvers import SHALLOW_DEPENDENCY_RESOLVER
 from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
+from parsl.dataflow.retries import CompleteWithAlternateValue
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import FINAL_FAILURE_STATES, FINAL_STATES, States
 from parsl.dataflow.taskrecord import TaskRecord
@@ -340,8 +341,11 @@ class DataFlowKernel:
         if not future.done():
             raise InternalConsistencyError("done callback called, despite future not reporting itself as done")
 
+        returned_result = False
+
         try:
             res = self._unwrap_remote_exception_wrapper(future)
+            returned_result = True
 
         except Exception as e:
             logger.info(f"Task {task_id} try {task_record['try_id']} failed with exception of type {type(e).__name__}")
@@ -351,7 +355,7 @@ class DataFlowKernel:
             task_record['fail_count'] += 1
             if self._config.retry_handler:
                 try:
-                    cost = self._config.retry_handler(e, task_record)
+                    retry_behaviour = self._config.retry_handler(e, task_record)
                 except Exception as retry_handler_exception:
                     logger.exception("retry_handler raised an exception - will not retry")
 
@@ -363,7 +367,17 @@ class DataFlowKernel:
                     # rather than the execution level exception
                     e = retry_handler_exception
                 else:
-                    task_record['fail_cost'] += cost
+                    if isinstance(retry_behaviour, float) or isinstance(retry_behaviour, int):
+                        task_record['fail_cost'] += retry_behaviour
+                    elif isinstance(retry_behaviour, CompleteWithAlternateValue):
+                        # retry_behaviour.value contains the value we will complete with, instead
+                        # of trying to either retry or fail.
+                        res = retry_behaviour.value
+                        returned_result = True
+                    else:
+                        # TODO: this error doesn't go anywhere... just makes a hang...
+                        # should, like the block above, turn it into a final exception.
+                        raise InternalConsistencyError(f"Unrecognised retry behaviour {retry_behaviour}")
             else:
                 task_record['fail_cost'] += 1
 
@@ -399,7 +413,9 @@ class DataFlowKernel:
                 with task_record['app_fu']._update_lock:
                     task_record['app_fu'].set_exception(e)
 
-        else:
+        # we might do the result path even if we did exception handling above...
+        # because the exception handling might have decided we should have a result
+        if returned_result:
             if task_record['from_memo']:
                 self._complete_task(task_record, States.memo_done, res)
                 self._send_task_log_info(task_record)
