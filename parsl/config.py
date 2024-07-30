@@ -5,6 +5,7 @@ import typeguard
 from typing_extensions import Literal
 
 from parsl.dataflow.dependency_resolvers import DependencyResolver
+from parsl.dataflow.retries import RetryBehaviour
 from parsl.dataflow.taskrecord import TaskRecord
 from parsl.errors import ConfigurationError
 from parsl.executors.base import ParslExecutor
@@ -110,7 +111,7 @@ class Config(RepresentationMixin, UsageInformation):
                  garbage_collect: bool = True,
                  internal_tasks_max_threads: int = 10,
                  retries: int = 0,
-                 retry_handler: Optional[Callable[[Exception, TaskRecord], float]] = None,
+                 retry_handler: Optional[Callable[[Exception, TaskRecord], Union[float, RetryBehaviour]]] = None,
                  run_dir: str = 'runinfo',
                  std_autopath: Optional[Callable] = None,
                  strategy: Optional[str] = 'simple',
