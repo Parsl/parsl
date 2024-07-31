@@ -236,13 +236,13 @@ class DataFlowKernel:
             raise InternalConsistencyError(f"Exit case for {mode} should be unreachable, validated by typeguard on Config()")
 
     def _send_task_log_info(self, task_record: TaskRecord) -> None:
-        if self.monitoring:
+        if self.monitoring and self.monitoring.capture_file_provenance:
             task_log_info = self._create_task_log_info(task_record)
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
     def _send_file_log_info(self, file: Union[File, DataFuture, DynamicFileList.DynamicFile],
                             task_record: TaskRecord) -> None:
-        if self.monitoring:
+        if self.monitoring and self.monitoring.capture_file_provenance:
             file_log_info = self._create_file_log_info(file, task_record)
             self.monitoring.send(MessageType.FILE_INFO, file_log_info)
 
@@ -280,20 +280,20 @@ class DataFlowKernel:
         return env_log_info
 
     def _register_env(self, environ: ParslExecutor) -> None:
-        if self.monitoring:
+        if self.monitoring and self.monitoring.capture_file_provenance:
             environ_info = self._create_env_log_info(environ)
             self.monitoring.send(MessageType.ENVIRONMENT_INFO, environ_info)
 
     def register_as_input(self, f: Union(DynamicFileList.DynamicFile, File, DataFuture),
                           task_record: TaskRecord):
-        if self.monitoring:
+        if self.monitoring and self.monitoring.capture_file_provenance:
             self._send_file_log_info(f, task_record)
             file_input_info = self._create_file_io_info(f, task_record)
             self.monitoring.send(MessageType.INPUT_FILE, file_input_info)
 
     def register_as_output(self, f: Union(DynamicFileList.DynamicFile, File, DataFuture),
                            task_record: TaskRecord):
-        if self.monitoring:
+        if self.monitoring and self.monitoring.capture_file_provenance:
             self._send_file_log_info(f, task_record)
             file_output_info = self._create_file_io_info(f, task_record)
             self.monitoring.send(MessageType.OUTPUT_FILE, file_output_info)
