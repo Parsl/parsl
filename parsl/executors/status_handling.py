@@ -173,7 +173,11 @@ class BlockProviderExecutor(ParslExecutor):
         assert len(to_kill) == len(killed)
 
         if False in killed:
-            logger.warning(f"Some jobs were not killed successfully: to_kill list is {to_kill}, killed list is {killed}")
+            killed_job_ids = [jid for jid, k in zip(to_kill, killed) if k]
+            not_killed_job_ids = [jid for jid, k in zip(to_kill, killed) if not k]
+            logger.warning("Some jobs were not killed successfully: "
+                           f"killed jobs: {killed_job_ids}, "
+                           f"not-killed jobs: {not_killed_job_ids}")
 
         # Filters first iterable by bool values in second
         return list(compress(to_kill, killed))
