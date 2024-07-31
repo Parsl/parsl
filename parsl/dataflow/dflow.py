@@ -241,9 +241,12 @@ class DataFlowKernel:
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
     def _send_file_log_info(self, file: Union[File, DataFuture, DynamicFileList.DynamicFile],
-                            task_record: TaskRecord) -> None:
+                            task_record: TaskRecord, is_output:bool) -> None:
         if self.monitoring and self.monitoring.capture_file_provenance:
             file_log_info = self._create_file_log_info(file, task_record)
+            # make sure the task_id is None for inputs
+            if not is_output:
+                file_log_info['task_id'] = None
             self.monitoring.send(MessageType.FILE_INFO, file_log_info)
 
     def _create_file_log_info(self, file: Union[File, DataFuture, DynamicFileList.DynamicFile],
@@ -287,14 +290,14 @@ class DataFlowKernel:
     def register_as_input(self, f: Union(DynamicFileList.DynamicFile, File, DataFuture),
                           task_record: TaskRecord):
         if self.monitoring and self.monitoring.capture_file_provenance:
-            self._send_file_log_info(f, task_record)
+            self._send_file_log_info(f, task_record, False)
             file_input_info = self._create_file_io_info(f, task_record)
             self.monitoring.send(MessageType.INPUT_FILE, file_input_info)
 
     def register_as_output(self, f: Union(DynamicFileList.DynamicFile, File, DataFuture),
                            task_record: TaskRecord):
         if self.monitoring and self.monitoring.capture_file_provenance:
-            self._send_file_log_info(f, task_record)
+            self._send_file_log_info(f, task_record, True)
             file_output_info = self._create_file_io_info(f, task_record)
             self.monitoring.send(MessageType.OUTPUT_FILE, file_output_info)
 
@@ -304,10 +307,10 @@ class DataFlowKernel:
         Create the dictionary that will be included in the log.
         """
         file_io_info = {'file_id': str(file.uuid),
-                            'run_id': self.run_id,
-                            'task_id': task_record['id'],
-                            'try_id': task_record['try_id'],
-                            }
+                        'run_id': self.run_id,
+                        'task_id': task_record['id'],
+                        'try_id': task_record['try_id'],
+                        }
         return file_io_info
 
     def _create_task_log_info(self, task_record: TaskRecord) -> Dict[str, Any]:

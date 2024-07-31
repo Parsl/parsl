@@ -247,9 +247,9 @@ class Database:
         run_id = Column('run_id', Text,
                              nullable=False)
         task_id = Column('task_id', Integer,
-                         nullable=False)
+                         nullable=True)
         try_id = Column('try_id', Integer,
-                        nullable=False)
+                        nullable=True)
         timestamp = Column('timestamp', DateTime, nullable=True)
         size = Column('size', BigInteger, nullable=True)
         md5sum = Column('md5sum', Text, nullable=True)
@@ -515,22 +515,49 @@ class DatabaseManager:
                             file_all_messages.append(msg)
                             if file_id in inserted_files:
                                 changed = False
+                                # once certain items are set, they should not be changed
                                 if inserted_files[file_id]['timestamp'] is None:
+                                    if msg['timestamp'] is not None:
                                     inserted_files[file_id]['timestamp'] = msg['timestamp']
                                     changed = True
+                                else:
+                                    msg['timestamp'] = inserted_files[file_id]['timestamp']
                                 if inserted_files[file_id]['size'] is None:
+                                    if msg['size'] is not None:
                                     inserted_files[file_id]['size'] = msg['size']
                                     changed = True
+                                else:
+                                    msg['size'] = inserted_files[file_id]['size']
                                 if inserted_files[file_id]['md5sum'] is None:
+                                    if msg['md5sum'] is not None:
                                     inserted_files[file_id]['md5sum'] = msg['md5sum']
                                     changed = True
+                                else:
+                                    msg['md5sum'] = inserted_files[file_id]['md5sum']
+                                if inserted_files[file_id]['task_id'] is None:
+                                    if msg['task_id'] is not None:
+                                        inserted_files[file_id]['task_id'] = msg['task_id']
+                                        inserted_files[file_id]['try_id'] = msg['try_id']
+                                        changed = True
+                                else:
+                                    if msg['task_id'] == inserted_files[file_id]['task_id']:
+                                        if inserted_files[file_id]['try_id'] is None:
+                                            inserted_files[file_id]['try_id'] = msg['try_id']
+                                            changed = True
+                                        elif msg['try_id'] > inserted_files[file_id]['try_id']:
+                                            inserted_files[file_id]['try_id'] = msg['try_id']
+                                            changed = True
+                                    else:
+                                        msg['task_id'] = inserted_files[file_id]['task_id']
+                                        msg['try_id'] = inserted_files[file_id]['try_id']
                                 if changed:
                                     file_update_messages.append(msg)
                             else:
                                 inserted_files[file_id] = {'size': msg['size'],
                                                            'md5sum': msg['md5sum'],
-                                                           'timestamp': msg['timestamp']}
-
+                                                           'timestamp': msg['timestamp'],
+                                                           'task_id': msg['task_id'],
+                                                           'try_id': msg['try_id']}
                                 file_insert_messages.append(msg)
                         elif msg_type == MessageType.ENVIRONMENT_INFO:
                             if msg['environment_id'] not in inserted_envs:
@@ -600,7 +627,7 @@ class DatabaseManager:
                     if file_update_messages:
                         logger.debug("Updating {} FILE_INFO into files table".format(len(file_update_messages)))
                         self._update(table=FILES,
-                                     columns=['timestamp', 'size', 'md5sum', 'file_id'],
+                                     columns=['timestamp', 'size', 'md5sum', 'file_id', 'task_id', 'try_id'],
                                      messages=file_update_messages)
 
                     if input_file_insert_messages:
