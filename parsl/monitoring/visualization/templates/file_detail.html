@@ -23,5 +23,10 @@
                 {% endfor %}
             </td></tr>
         {% endif %}
+        {% if environment %}
+            <tr><td>Environment:</td><td>
+<a href="/workflow/{{ file_details['run_id'] }}/environment/{{ environment['environment_id'] }}">{{ environment['label'] }}</a>
+            </td></tr>
+        {% endif %}
     </table>
 {% endblock %}

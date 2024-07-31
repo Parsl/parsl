@@ -80,6 +80,8 @@ def file(file_id):
     input_files = InputFiles.query.filter_by(file_id=file_id).all()
     output_file = OutputFiles.query.filter_by(file_id=file_id).first()
     task_ids = set()
+    environment = None
+
     for f in input_files:
         task_ids.add(f.task_id)
     if output_file:
@@ -88,10 +90,12 @@ def file(file_id):
     for tid in task_ids:
         tasks[tid] = Task.query.filter_by(run_id=file_details.run_id, task_id=tid).first()
     workflow_details = Workflow.query.filter_by(run_id=file_details.run_id).first()
+    if output_file:
+        environment = Environment.query.filter_by(environment_id=tasks[output_file.task_id].task_environment).first()
 
     return render_template('file_detail.html', file_details=file_details,
                            input_files=input_files, output_file=output_file,
-                           tasks=tasks, workflow=workflow_details)
+                           tasks=tasks, workflow=workflow_details, environment=environment)
 
 
 @app.route('/files', methods=['GET', 'POST'])
