@@ -9,6 +9,7 @@ import os
 import pickle
 import platform
 import queue
+import subprocess
 import sys
 import threading
 import time
@@ -183,6 +184,7 @@ class Manager:
 
         self.uid = uid
         self.block_id = block_id
+        self.start_time = time.time()
 
         self.enable_mpi_mode = enable_mpi_mode
         self.mpi_launcher = mpi_launcher
@@ -262,6 +264,7 @@ class Manager:
                'worker_count': self.worker_count,
                'uid': self.uid,
                'block_id': self.block_id,
+               'start_time': self.start_time,
                'prefetch_capacity': self.prefetch_capacity,
                'max_capacity': self.worker_count + self.prefetch_capacity,
                'os': platform.system(),
@@ -733,7 +736,26 @@ def worker(
 
     # If desired, pin to accelerator
     if accelerator is not None:
-        os.environ["CUDA_VISIBLE_DEVICES"] = accelerator
+
+        # If CUDA devices, find total number of devices to allow for MPS
+        # See: https://developer.nvidia.com/system-management-interface
+        nvidia_smi_cmd = "nvidia-smi -L > /dev/null && nvidia-smi -L | wc -l"
+        nvidia_smi_ret = subprocess.run(nvidia_smi_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if nvidia_smi_ret.returncode == 0:
+            num_cuda_devices = int(nvidia_smi_ret.stdout.split()[0])
+        else:
+            num_cuda_devices = None
+
+        try:
+            if num_cuda_devices is not None:
+                procs_per_cuda_device = pool_size // num_cuda_devices
+                partitioned_accelerator = str(int(accelerator) // procs_per_cuda_device)  # multiple workers will share a GPU
+                os.environ["CUDA_VISIBLE_DEVICES"] = partitioned_accelerator
+                logger.info(f'Pinned worker to partitioned cuda device: {partitioned_accelerator}')
+            else:
+                os.environ["CUDA_VISIBLE_DEVICES"] = accelerator
+        except (TypeError, ValueError, ZeroDivisionError):
+            os.environ["CUDA_VISIBLE_DEVICES"] = accelerator
         os.environ["ROCR_VISIBLE_DEVICES"] = accelerator
         os.environ["ZE_AFFINITY_MASK"] = accelerator
         os.environ["ZE_ENABLE_PCI_ID_DEVICE_ORDER"] = '1'

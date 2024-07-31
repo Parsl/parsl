@@ -83,6 +83,10 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
     persistent_volumes: list[(str, str)]
         List of tuples describing persistent volumes to be mounted in the pod.
         The tuples consist of (PVC Name, Mount Directory).
+    service_account_name: str
+        Name of the service account to run the pod as.
+    annotations: Dict[str, str]
+        Annotations to set on the pod.
     """
     @typeguard.typechecked
     def __init__(self,
@@ -103,7 +107,9 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                  group_id: Optional[str] = None,
                  run_as_non_root: bool = False,
                  secret: Optional[str] = None,
-                 persistent_volumes: List[Tuple[str, str]] = []) -> None:
+                 persistent_volumes: List[Tuple[str, str]] = [],
+                 service_account_name: Optional[str] = None,
+                 annotations: Optional[Dict[str, str]] = None) -> None:
         if not _kubernetes_enabled:
             raise OptionalModuleMissing(['kubernetes'],
                                         "Kubernetes provider requires kubernetes module and config.")
@@ -146,6 +152,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.group_id = group_id
         self.run_as_non_root = run_as_non_root
         self.persistent_volumes = persistent_volumes
+        self.service_account_name = service_account_name
+        self.annotations = annotations
 
         self.kube_client = client.CoreV1Api()
 
@@ -160,10 +168,9 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
              - tasks_per_node (int) : command invocations to be launched per node
 
         Kwargs:
-             - job_name (String): Name for job, must be unique
+             - job_name (String): Name for job
 
         Returns:
-             - None: At capacity, cannot provision more
              - job_id: (string) Identifier for the job
         """
 
@@ -179,12 +186,14 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         formatted_cmd = template_string.format(command=cmd_string,
                                                worker_init=self.worker_init)
 
-        logger.debug("Pod name :{}".format(pod_name))
+        logger.debug("Pod name: %s", pod_name)
         self._create_pod(image=self.image,
                          pod_name=pod_name,
                          job_name=job_name,
                          cmd_string=formatted_cmd,
-                         volumes=self.persistent_volumes)
+                         volumes=self.persistent_volumes,
+                         service_account_name=self.service_account_name,
+                         annotations=self.annotations)
         self.resources[pod_name] = {'status': JobStatus(JobState.RUNNING)}
 
         return pod_name
@@ -233,13 +242,13 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         for jid in to_poll_job_ids:
             phase = None
             try:
-                pod_status = self.kube_client.read_namespaced_pod_status(name=jid, namespace=self.namespace)
+                pod = self.kube_client.read_namespaced_pod(name=jid, namespace=self.namespace)
             except Exception:
                 logger.exception("Failed to poll pod {} status, most likely because pod was terminated".format(jid))
                 if self.resources[jid]['status'] is JobStatus(JobState.RUNNING):
                     phase = 'Unknown'
             else:
-                phase = pod_status.status.phase
+                phase = pod.status.phase
             if phase:
                 status = translate_table.get(phase, JobState.UNKNOWN)
                 logger.debug("Updating pod {} with status {} to parsl status {}".format(jid,
@@ -253,7 +262,9 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                     job_name,
                     port=80,
                     cmd_string=None,
-                    volumes=[]):
+                    volumes=[],
+                    service_account_name=None,
+                    annotations=None):
         """ Create a kubernetes pod for the job.
         Args:
               - image (string) : Docker image to launch
@@ -274,7 +285,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         # Create the environment variables and command to initiate IPP
         environment_vars = client.V1EnvVar(name="TEST", value="SOME DATA")
 
-        launch_args = ["-c", "{0};".format(cmd_string)]
+        launch_args = ["-c", "{0}".format(cmd_string)]
 
         volume_mounts = []
         # Create mount paths for the volumes
@@ -311,11 +322,12 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                                                    claim_name=volume[0])))
 
         metadata = client.V1ObjectMeta(name=pod_name,
-                                       labels={"app": job_name})
+                                       labels={"app": job_name},
+                                       annotations=annotations)
         spec = client.V1PodSpec(containers=[container],
                                 image_pull_secrets=[secret],
-                                volumes=volume_defs
-                                )
+                                volumes=volume_defs,
+                                service_account_name=service_account_name)
 
         pod = client.V1Pod(spec=spec, metadata=metadata)
         api_response = self.kube_client.create_namespaced_pod(namespace=self.namespace,

@@ -1,11 +1,11 @@
 import pathlib
-import warnings
+from subprocess import Popen, TimeoutExpired
+from typing import Optional, Sequence
 from unittest import mock
 
 import pytest
 
 from parsl import HighThroughputExecutor, curvezmq
-from parsl.multiprocessing import ForkProcess
 
 _MOCK_BASE = "parsl.executors.high_throughput.executor"
 
@@ -78,16 +78,33 @@ def test_htex_shutdown(
     timeout_expires: bool,
     htex: HighThroughputExecutor,
 ):
-    mock_ix_proc = mock.Mock(spec=ForkProcess)
+    mock_ix_proc = mock.Mock(spec=Popen)
 
     if started:
         htex.interchange_proc = mock_ix_proc
-        mock_ix_proc.is_alive.return_value = True
+
+    # This will, in the absence of any exit trigger, block forever if
+    # no timeout is given and if the interchange does not terminate.
+    # Raise an exception to report that, rather than actually block,
+    # and hope that nothing is catching that exception.
+
+    # this function implements the behaviour if the interchange has
+    # not received a termination call
+    def proc_wait_alive(timeout):
+        if timeout:
+            raise TimeoutExpired(cmd="mock-interchange", timeout=timeout)
+        else:
+            raise RuntimeError("This wait call would hang forever")
+
+    def proc_wait_terminated(timeout):
+        return 0
+
+    mock_ix_proc.wait.side_effect = proc_wait_alive
 
     if not timeout_expires:
         # Simulate termination of the Interchange process
         def kill_interchange(*args, **kwargs):
-            mock_ix_proc.is_alive.return_value = False
+            mock_ix_proc.wait.side_effect = proc_wait_terminated
 
         mock_ix_proc.terminate.side_effect = kill_interchange
 
@@ -96,8 +113,8 @@ def test_htex_shutdown(
     mock_logs = mock_logger.info.call_args_list
     if started:
         assert mock_ix_proc.terminate.called
-        assert mock_ix_proc.join.called
-        assert {"timeout": 10} == mock_ix_proc.join.call_args[1]
+        assert mock_ix_proc.wait.called
+        assert {"timeout": 10} == mock_ix_proc.wait.call_args[1]
         if timeout_expires:
             assert "Unable to terminate Interchange" in mock_logs[1][0][0]
             assert mock_ix_proc.kill.called
@@ -105,7 +122,7 @@ def test_htex_shutdown(
         assert "Finished" in mock_logs[-1][0][0]
     else:
         assert not mock_ix_proc.terminate.called
-        assert not mock_ix_proc.join.called
+        assert not mock_ix_proc.wait.called
         assert "has not started" in mock_logs[0][0][0]
 
 
@@ -119,3 +136,25 @@ def test_max_workers_per_node():
 
     # Ensure max_workers_per_node takes precedence
     assert htex.max_workers_per_node == htex.max_workers == 1
+
+
+@pytest.mark.local
+@pytest.mark.parametrize("cmd", (None, "custom-launch-cmd"))
+def test_htex_worker_pool_launch_cmd(cmd: Optional[str]):
+    if cmd:
+        htex = HighThroughputExecutor(launch_cmd=cmd)
+        assert htex.launch_cmd == cmd
+    else:
+        htex = HighThroughputExecutor()
+        assert htex.launch_cmd.startswith("process_worker_pool.py")
+
+
+@pytest.mark.local
+@pytest.mark.parametrize("cmd", (None, ["custom", "launch", "cmd"]))
+def test_htex_interchange_launch_cmd(cmd: Optional[Sequence[str]]):
+    if cmd:
+        htex = HighThroughputExecutor(interchange_launch_cmd=cmd)
+        assert htex.interchange_launch_cmd == cmd
+    else:
+        htex = HighThroughputExecutor()
+        assert htex.interchange_launch_cmd == ["interchange.py"]

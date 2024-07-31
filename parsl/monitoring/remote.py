@@ -8,10 +8,10 @@ from typing import Any, Callable, Dict, List, Sequence, Tuple
 
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios import (
-    FilesystemRadio,
-    HTEXRadio,
-    MonitoringRadio,
-    UDPRadio,
+    FilesystemRadioSender,
+    HTEXRadioSender,
+    MonitoringRadioSender,
+    UDPRadioSender,
 )
 from parsl.multiprocessing import ForkProcess
 from parsl.process_loggers import wrap_with_logs
@@ -100,17 +100,17 @@ def monitor_wrapper(*,
     return (wrapped, args, new_kwargs)
 
 
-def get_radio(radio_mode: str, monitoring_hub_url: str, task_id: int, run_dir: str) -> MonitoringRadio:
-    radio: MonitoringRadio
+def get_radio(radio_mode: str, monitoring_hub_url: str, task_id: int, run_dir: str) -> MonitoringRadioSender:
+    radio: MonitoringRadioSender
     if radio_mode == "udp":
-        radio = UDPRadio(monitoring_hub_url,
-                         source_id=task_id)
+        radio = UDPRadioSender(monitoring_hub_url,
+                               source_id=task_id)
     elif radio_mode == "htex":
-        radio = HTEXRadio(monitoring_hub_url,
-                          source_id=task_id)
+        radio = HTEXRadioSender(monitoring_hub_url,
+                                source_id=task_id)
     elif radio_mode == "filesystem":
-        radio = FilesystemRadio(monitoring_url=monitoring_hub_url,
-                                source_id=task_id, run_dir=run_dir)
+        radio = FilesystemRadioSender(monitoring_url=monitoring_hub_url,
+                                      source_id=task_id, run_dir=run_dir)
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
     return radio
