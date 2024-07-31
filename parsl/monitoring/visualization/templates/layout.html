@@ -33,10 +33,10 @@ $( document ).ready(function() {
   </a>
   <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
     <div class="navbar-nav">
-      <a class="nav-item nav-link active" href="/">Workflows <span class="sr-only">(current)</span></a>
+      <a class="nav-item nav-link{% if 'file' not in request.path %} active{% endif %}" href="/">Workflows <span class="sr-only">(current)</span></a>
       <!--<a class="nav-item nav-link disabled" href="#">Tasks</a>
       <a class="nav-item nav-link disabled" href="#">Resources</a> -->
-        <a class="nav-item nav-link" href="/files">File Provenance</a>
+        <a class="nav-item nav-link {% if 'file' in request.path %} active{% endif %}" href="/files">File Provenance</a>
       <a class="nav-item nav-link" href="https://parsl.readthedocs.io/en/latest/">Documentation</a>
     </div>
   </div>
