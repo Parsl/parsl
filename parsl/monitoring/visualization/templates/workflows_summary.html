@@ -30,7 +30,11 @@
              <span class="task task-failed">{{ w['tasks_failed_count'] }}</span>
 
         </td>
+              {% if w['run_id'] in have_files %}
         <td><a href="files/workflow/{{ w['run_id'] }}/">files</a></td>
+                {% else %}
+          <td></td>
+                {% endif %}
       </tr>
     {% endfor %}
     </tbody>

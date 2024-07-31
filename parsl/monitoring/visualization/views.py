@@ -63,11 +63,15 @@ app.jinja_env.filters['durationformat'] = format_duration
 @app.route('/')
 def index():
     workflows = Workflow.query.all()
+    have_files = []
     for workflow in workflows:
         workflow.status = 'Running'
         if workflow.time_completed is not None:
             workflow.status = 'Completed'
-    return render_template('workflows_summary.html', workflows=workflows)
+        file_list = Files.query.filter_by(run_id=workflow.run_id).first()
+        if file_list:
+            have_files.append(workflow.run_id)
+    return render_template('workflows_summary.html', workflows=workflows, have_files=have_files)
 
 
 @app.route('/files/<file_id>/')
