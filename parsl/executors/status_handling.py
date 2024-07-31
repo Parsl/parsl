@@ -167,10 +167,18 @@ class BlockProviderExecutor(ParslExecutor):
     def provider(self):
         return self._provider
 
-    def _filter_scale_in_ids(self, to_kill, killed):
+    def _filter_scale_in_ids(self, to_kill: Sequence[Any], killed: Sequence[bool]) -> Sequence[Any]:
         """ Filter out job id's that were not killed
         """
         assert len(to_kill) == len(killed)
+
+        if False in killed:
+            killed_job_ids = [jid for jid, k in zip(to_kill, killed) if k]
+            not_killed_job_ids = [jid for jid, k in zip(to_kill, killed) if not k]
+            logger.warning("Some jobs were not killed successfully: "
+                           f"killed jobs: {killed_job_ids}, "
+                           f"not-killed jobs: {not_killed_job_ids}")
+
         # Filters first iterable by bool values in second
         return list(compress(to_kill, killed))
 
