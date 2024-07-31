@@ -140,12 +140,17 @@ def workflow(workflow_id):
     df_task = queries.completion_times_for_workflow(workflow_id, db.engine)
     df_task_tries = queries.tries_for_workflow(workflow_id, db.engine)
     task_summary = queries.app_counts_for_workflow(workflow_id, db.engine)
-
+    file_list = Files.query.filter_by(run_id=workflow_id).first()
+    if file_list:
+        have_files = True
+    else:
+        have_files = False
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
                            task_gantt=task_gantt_plot(df_task, df_status, time_completed=workflow_details.time_completed),
-                           task_per_app=task_per_app_plot(df_task_tries, df_status, time_completed=workflow_details.time_completed))
+                           task_per_app=task_per_app_plot(df_task_tries, df_status, time_completed=workflow_details.time_completed),
+                           have_files=have_files)
 
 
 @app.route('/workflow/<workflow_id>/environment/<environment_id>')
@@ -203,7 +208,6 @@ def task(workflow_id, task_id):
     task_status = Status.query.filter_by(
         run_id=workflow_id, task_id=task_id).order_by(Status.timestamp)
 
-    print(task_details['task_inputs'])
     df_resources = queries.resources_for_task(workflow_id, task_id, db.engine)
     environments = Environment.query.filter_by(run_id=workflow_id).all()
     environs = {}
