@@ -116,12 +116,16 @@ configuration.
 Dynamic File Lists
 ------------------
 
-When Parsl constructs the DAG for a workflow, it needs to know the input and output files
-for each app. This works well when the number of files is known in advance, and the lists of files
-are fully constructed before the workflow is submitted. However, in some cases, the number of files
-produced by an app is not know until the app executes. In these cases, Parsl provides a mechanism called
-:py:class:`~parsl.data_provider.dynamic_files.DynamicFileList` to dynamically construct the list of files.
-This class inherits from both the Python `Future <https://en.wikipedia.org/wiki/Futures_and_promises>`_ and `list <https://docs.python.org/3/tutorial/datastructures.html>`_ classes, but differs from traditional lists in the a few notable ways:
+When Parsl constructs the DAG for a workflow, it needs to know the input and
+output files for each app. This works well when the number of files is known
+in advance, and the lists of files are fully constructed before the workflow
+is submitted. However, in some cases, the number of files produced by an app
+is not know until the app executes. In these cases, Parsl provides a mechanism
+called :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList` to dynamically
+construct the list of files. This class inherits from both the Python
+`Future <https://en.wikipedia.org/wiki/Futures_and_promises>`_ and
+`list <https://docs.python.org/3/tutorial/datastructures.html>`_ classes, but
+differs from traditional lists in the a few notable ways:
 
 1. It can only contain :py:class:`~parsl.data_provider.files.File` and :py:class:`~parsl.app.futures.DataFuture` objects.
 2. It is truly dynamic, meaning that you can access an item in the list which is beyond the current length of the list. The list will grow to accomodate the request and return a future that will be resolved when the item is available. (see `Dynamic Scaling`_ for more details)
@@ -130,14 +134,19 @@ This class inherits from both the Python `Future <https://en.wikipedia.org/wiki/
 Dynamic Scaling
 ^^^^^^^^^^^^^^^
 
-The :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList` is designed to be used in cases where the number of
-files produced by an app is not known until the app executes. In these cases, the list can be accessed beyond its current
-length, and the list will grow to accomodate the request. In addition to the traditional methods of expanding a list
-(via ``append`` or ``extend``, the :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList` will grow when assigning
-a member by index to a position beyond its current length or when accessing a member by index beyond the current length.
-In each of these cases the list is expanded and filled with :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile`
-objects that are initialized with ``None``. When the file is available, the ``None`` is replaced with the actual file. This
-behavior allows for the following code to work:
+The :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList` is designed
+to be used in cases where the number of files produced by an app is not known
+until the app executes. In these cases, the list can be accessed beyond its
+current length, and the list will grow to accomodate the request. In addition
+to the traditional methods of expanding a list (via ``append`` or ``extend``,
+the :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList` will grow
+when assigning a member by index to a position beyond its current length or
+when accessing a member by index beyond the current length. In each of these
+cases the list is expanded and filled with
+:py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile`
+objects that are initialized with ``None``. When the file is available, the
+``None`` is replaced with the actual file. This behavior allows for the
+following code to work:
 
 .. code-block:: python
 
@@ -177,7 +186,10 @@ behavior allows for the following code to work:
 
     dfl[4] = File('file://path/to/file.6')     # dfl = [File('file://path/to/file.2'), File('file://path/to
 
-Specifically, the behavior will allow Parsl Apps to use as input files which do not exist at the time the App is created, but are produced by other Apps in the workflow, even when the number of output files is not know beforehand. For example:
+Specifically, the behavior will allow Parsl Apps to use as input files which
+do not exist at the time the App is created, but are produced by other Apps
+in the workflow, even when the number of output files is not know beforehand.
+For example:
 
 .. code-block:: python
 
@@ -221,27 +233,37 @@ Specifically, the behavior will allow Parsl Apps to use as input files which do 
                                                #    then does its work on the selected log files
     r.result()
 
-Without a :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList`, the above code would not work because when the DAG is constructed, the ``inputs`` to ``consume``
-is a slice of an empty list. However, the :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList` will populate the ``dfl`` list with two empty :ref:`DynamicFile <Dynamic Files>`
-objects (indicies 0 and 1) and then fill them in with the actual files produced by ``produce`` when they are available.
-The ``consume`` app will then wait until the files are available before running.
+Without a :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList`,
+the above code would not work because when the DAG is constructed, the
+``inputs`` to ``consume`` is a slice of an empty list. However, the
+:py:class:`~parsl.data_provider.dynamic_files.DynamicFileList` will populate
+the ``dfl`` list with two empty :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile`
+objects (indicies 0 and 1) and then fill them in with the actual files produced by
+``produce`` when they are available. The ``consume`` app will then wait
+until the files are available before running.
 
 Dynamic Files
 ^^^^^^^^^^^^^
 
-Technically the :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList` holds instances of
-:py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile`, a `Future <https://en.wikipedia.org/wiki/Futures_and_promises>`_, which itself wraps the
-:py:class:`~parsl.data_provider.files.File` and :py:class:`~parsl.app.futures.DataFuture` objects.
-However, this class is not intended to be used directly, and is only mentioned here for completeness.
-This wrapping is done automatically when you add an item to the list by direct assignment, ``append``, or
-``extend``. Any access to the members of the list is passed by the :py:class:`~parsl.data_provider
-.dynamic_files.DynamicFileList.DynamicFile` instance directly to the underlying object, thus making it
-an invisible layer to the user.
+Technically the :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList`
+holds instances of :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile`,
+a `Future <https://en.wikipedia.org/wiki/Futures_and_promises>`_, which itself
+wraps the :py:class:`~parsl.data_provider.files.File` and :py:class:`~parsl.app.futures.DataFuture`
+objects. However, this class is not intended to be used directly, and is only
+mentioned here for completeness. This wrapping is done automatically when you
+add an item to the list by direct assignment, ``append``, or ``extend``. Any
+access to the members of the list is passed by the
+:py:class:`~parsl.data_provider .dynamic_files.DynamicFileList.DynamicFile`
+instance directly to the underlying object, thus making it an invisible layer to
+the user.
 
-The :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile` can also be instantiated with `None`,
-creating a placeholder for a :py:class:`~parsl.data_provider.files.File` or :py:class:`~parsl.app.futures.DataFuture`.
-This was done to resolve any indexing issues arrising from the dynamic nature of the list. For example, without wrapping
-items in a :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile` the following code will not work:
+The :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile`
+can also be instantiated with `None`,creating a placeholder for a
+:py:class:`~parsl.data_provider.files.File` or :py:class:`~parsl.app.futures.DataFuture`.
+This was done to resolve any indexing issues arrising from the dynamic nature
+of the list. For example, without wrapping items in a
+:py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile` the
+following code will not work:
 
 .. code-block:: python
 
@@ -261,8 +283,8 @@ items in a :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.Dynamic
     fh = open(myfile, 'r')                     # fails because myfile points to an empty File
 
 
-But by utilizing the :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile` to wrap items, the code
-will now work:
+But by utilizing the :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile` to wrap items,
+the code will now work:
 
 .. code-block:: python
 
@@ -414,7 +436,7 @@ HTTP and FTP separate task staging providers can be configured as follows.
     from parsl.data_provider.http import HTTPSeparateTaskStaging
     from parsl.data_provider.ftp import FTPSeparateTaskStaging
 
-		config = Config(
+    config = Config(
         executors=[
             HighThroughputExecutor(
                 storage_access=[HTTPSeparateTaskStaging(), FTPSeparateTaskStaging()]
