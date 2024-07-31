@@ -151,7 +151,16 @@ def workflow(workflow_id):
 @app.route('/workflow/<workflow_id>/environment/<environment_id>')
 def environment(workflow_id, environment_id):
     environment_details = Environment.query.filter_by(environment_id=environment_id).first()
-    return render_template('env.html', environment_details=environment_details)
+    workflow = Workflow.query.filter_by(run_id=workflow_id).first()
+    task_list = Task.query.filter_by(task_environment=environment_id).all()
+    tasks = {}
+    for task in task_list:
+        if task.task_func_name not in tasks:
+            tasks[task.task_func_name] = []
+        tasks[task.task_func_name].append(task.task_id)
+
+    return render_template('env.html', environment_details=environment_details,
+                           workflow=workflow, tasks=tasks)
 
 
 @app.route('/workflow/<workflow_id>/app/<app_name>')
