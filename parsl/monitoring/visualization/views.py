@@ -1,6 +1,7 @@
 import pandas as pd
 from flask import current_app as app
 from flask import render_template, request
+import os.path as ospath
 
 import parsl.monitoring.queries.pandas as queries
 from parsl.monitoring.visualization.models import (
@@ -108,10 +109,7 @@ def files():
                 filename = '%' + form.file_name.data
             else:
                 filename = form.file_name.data
-            #if '%' in form.file_name.data:
             file_list = Files.query.filter(Files.file_name.like(filename)).all()
-            #else:
-            #    file_list = Files.query.filter_by(file_name=form.file_name.data).all()
         return render_template('files.html', form=form, file_list=file_list)
     return render_template('files.html', form=form)
 
@@ -119,6 +117,7 @@ def files():
 @app.route('/files/workflow/<workflow_id>/')
 def files_workflow(workflow_id):
     workflow_files = Files.query.filter_by(run_id=workflow_id).all()
+    file_map = {}
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
     task_ids = set()
     files_by_task = {}
@@ -126,15 +125,15 @@ def files_workflow(workflow_id):
     for wf in workflow_files:
         file_details[wf.file_id] = wf
         task_ids.add(wf.task_id)
+        file_map[wf.file_id] = ospath.basename(wf.file_name)
     tasks = {}
 
     for tid in task_ids:
         tasks[tid] = Task.query.filter_by(run_id=workflow_id, task_id=tid).first()
         files_by_task[tid] = {'inputs': InputFiles.query.filter_by(run_id=workflow_id, task_id=tid).all(),
                               'outputs': OutputFiles.query.filter_by(run_id=workflow_id, task_id=tid).all()}
-
     return render_template('files_workflow.html', workflow=workflow_details,
-                           task_files=files_by_task, tasks=tasks)
+                           task_files=files_by_task, tasks=tasks, file_map=file_map)
 
 
 @app.route('/workflow/<workflow_id>/')

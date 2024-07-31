@@ -4,7 +4,7 @@
 
 <br />
 
-<h2> Files for Workflow {{ workflow['name'] }}</h2>
+<h2> Files for Workflow {{ workflow['workflow_name'] }}</h2>
 
 <table class="table table-hover">
     <thead>
@@ -18,12 +18,12 @@
     <tbody>
     {% for tid, task in tasks | dictsort %}
         <tr>
-            <td>{{ task['task_func_name'] }}</td>
-            <td>{{ task['task_id'] }}</td>
+            <td><a href="/workflow/{{ workflow['run_id'] }}/app/{{ task['task_func_name'] }}">{{ task['task_func_name'] }}</a></td>
+            <td><a href="/workflow/{{ workflow['run_id'] }}/task/{{ task['task_id'] }}">{{ task['task_id'] }}</a></td>
             <td>
                 {% if task['task_inputs'] %}
                     {% for input in task_files[tid]['inputs'] %}
-                        <a href="/files/{{ input['file_id'] }}/">{{ input['file_name'] }}</a><br />
+                        <a href="/files/{{ input['file_id'] }}/">{{ file_map[input['file_id']] }}</a><br />
                     {% endfor %}
                 {% else %}
                     None
@@ -32,7 +32,7 @@
             <td>
                 {% if task['task_outputs'] %}
                     {% for output in task_files[tid]['outputs'] %}
-                        <a href="/files/{{ output['file_id'] }}/">{{ output['file_name'] }}</a><br />
+                        <a href="/files/{{ output['file_id'] }}/">{{ file_map[output['file_id']] }}</a><br />
                     {% endfor %}
                 {% else %}
                     None
