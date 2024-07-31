@@ -9,6 +9,7 @@ import zmq
 
 from parsl import curvezmq
 from parsl.executors.high_throughput.interchange import Interchange
+from parsl.executors.high_throughput.manager_selector import RandomManagerSelector
 
 
 def make_interchange(*, interchange_address: Optional[str], cert_dir: Optional[str]) -> Interchange:
@@ -23,6 +24,7 @@ def make_interchange(*, interchange_address: Optional[str], cert_dir: Optional[s
                        heartbeat_threshold=60,
                        logdir=".",
                        logging_level=logging.INFO,
+                       manager_selector=RandomManagerSelector(),
                        poll_period=10)
 
 

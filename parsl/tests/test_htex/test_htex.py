@@ -1,6 +1,6 @@
 import pathlib
-import warnings
 from subprocess import Popen, TimeoutExpired
+from typing import Optional, Sequence
 from unittest import mock
 
 import pytest
@@ -136,3 +136,25 @@ def test_max_workers_per_node():
 
     # Ensure max_workers_per_node takes precedence
     assert htex.max_workers_per_node == htex.max_workers == 1
+
+
+@pytest.mark.local
+@pytest.mark.parametrize("cmd", (None, "custom-launch-cmd"))
+def test_htex_worker_pool_launch_cmd(cmd: Optional[str]):
+    if cmd:
+        htex = HighThroughputExecutor(launch_cmd=cmd)
+        assert htex.launch_cmd == cmd
+    else:
+        htex = HighThroughputExecutor()
+        assert htex.launch_cmd.startswith("process_worker_pool.py")
+
+
+@pytest.mark.local
+@pytest.mark.parametrize("cmd", (None, ["custom", "launch", "cmd"]))
+def test_htex_interchange_launch_cmd(cmd: Optional[Sequence[str]]):
+    if cmd:
+        htex = HighThroughputExecutor(interchange_launch_cmd=cmd)
+        assert htex.interchange_launch_cmd == cmd
+    else:
+        htex = HighThroughputExecutor()
+        assert htex.interchange_launch_cmd == ["interchange.py"]
