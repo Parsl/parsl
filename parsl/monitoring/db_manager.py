@@ -518,20 +518,20 @@ class DatabaseManager:
                                 # once certain items are set, they should not be changed
                                 if inserted_files[file_id]['timestamp'] is None:
                                     if msg['timestamp'] is not None:
-                                    inserted_files[file_id]['timestamp'] = msg['timestamp']
-                                    changed = True
+                                        inserted_files[file_id]['timestamp'] = msg['timestamp']
+                                        changed = True
                                 else:
                                     msg['timestamp'] = inserted_files[file_id]['timestamp']
                                 if inserted_files[file_id]['size'] is None:
                                     if msg['size'] is not None:
-                                    inserted_files[file_id]['size'] = msg['size']
-                                    changed = True
+                                        inserted_files[file_id]['size'] = msg['size']
+                                        changed = True
                                 else:
                                     msg['size'] = inserted_files[file_id]['size']
                                 if inserted_files[file_id]['md5sum'] is None:
                                     if msg['md5sum'] is not None:
-                                    inserted_files[file_id]['md5sum'] = msg['md5sum']
-                                    changed = True
+                                        inserted_files[file_id]['md5sum'] = msg['md5sum']
+                                        changed = True
                                 else:
                                     msg['md5sum'] = inserted_files[file_id]['md5sum']
                                 if inserted_files[file_id]['task_id'] is None:

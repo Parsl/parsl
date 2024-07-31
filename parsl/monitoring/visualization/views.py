@@ -205,13 +205,18 @@ def task(workflow_id, task_id):
 
     print(task_details['task_inputs'])
     df_resources = queries.resources_for_task(workflow_id, task_id, db.engine)
+    environments = Environment.query.filter_by(run_id=workflow_id).all()
+    environs = {}
+    for env in environments:
+        environs[env.environment_id] = env.label
 
     return render_template('task.html',
                            workflow_details=workflow_details,
                            task_details=task_details,
                            task_status=task_status,
                            time_series_memory_resident=time_series_memory_per_task_plot(
-                               df_resources, 'psutil_process_memory_resident', 'Memory Usage')
+                               df_resources, 'psutil_process_memory_resident', 'Memory Usage'),
+                           environments=environs
                            )
 
 
