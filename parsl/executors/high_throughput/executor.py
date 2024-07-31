@@ -20,6 +20,10 @@ from parsl.data_provider.staging import Staging
 from parsl.executors.errors import BadMessage, ScalingFailed
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
+from parsl.executors.high_throughput.manager_selector import (
+    ManagerSelector,
+    RandomManagerSelector,
+)
 from parsl.executors.high_throughput.mpi_prefix_composer import (
     VALID_LAUNCHERS,
     validate_resource_spec,
@@ -56,7 +60,7 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers_per_node} "
                       "--mpi-launcher={mpi_launcher} "
                       "--available-accelerators {accelerators}")
 
-DEFAULT_INTERCHANGE_LAUNCH_CMD = "interchange.py"
+DEFAULT_INTERCHANGE_LAUNCH_CMD = ["interchange.py"]
 
 GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionProvider`
        Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
@@ -78,9 +82,9 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
         cores_per_worker, nodes_per_block, heartbeat_period ,heartbeat_threshold, logdir). For example:
         launch_cmd="process_worker_pool.py {debug} -c {cores_per_worker} --task_url={task_url} --result_url={result_url}"
 
-    interchange_launch_cmd : str
-        Custom command line string to launch the interchange process from the executor. If undefined,
-        the executor will use the default "interchange.py" command.
+    interchange_launch_cmd : Sequence[str]
+        Custom sequence of command line tokens to launch the interchange process from the executor. If
+        undefined, the executor will use the default "interchange.py" command.
 
     address : string
         An address to connect to the main Parsl process which is reachable from the network in which
@@ -238,7 +242,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  label: str = 'HighThroughputExecutor',
                  provider: ExecutionProvider = LocalProvider(),
                  launch_cmd: Optional[str] = None,
-                 interchange_launch_cmd: Optional[str] = None,
+                 interchange_launch_cmd: Optional[Sequence[str]] = None,
                  address: Optional[str] = None,
                  worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
@@ -261,6 +265,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_logdir_root: Optional[str] = None,
                  enable_mpi_mode: bool = False,
                  mpi_launcher: str = "mpiexec",
+                 manager_selector: ManagerSelector = RandomManagerSelector(),
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
                  encrypted: bool = False):
 
@@ -276,6 +281,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.prefetch_capacity = prefetch_capacity
         self.address = address
         self.address_probe_timeout = address_probe_timeout
+        self.manager_selector = manager_selector
         if self.address:
             self.all_addresses = address
         else:
@@ -544,11 +550,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                               "poll_period": self.poll_period,
                               "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
                               "cert_dir": self.cert_dir,
+                              "manager_selector": self.manager_selector,
                               }
 
         config_pickle = pickle.dumps(interchange_config)
 
-        self.interchange_proc = subprocess.Popen(self.interchange_launch_cmd.encode("utf-8"), stdin=subprocess.PIPE)
+        self.interchange_proc = subprocess.Popen(self.interchange_launch_cmd, stdin=subprocess.PIPE)
         stdin = self.interchange_proc.stdin
         assert stdin is not None, "Popen should have created an IO object (vs default None) because of PIPE mode"
 
