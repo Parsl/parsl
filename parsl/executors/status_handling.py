@@ -12,7 +12,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import BadStateException, ScalingFailed
 from parsl.jobs.error_handlers import noop_error_handler, simple_error_handler
-from parsl.jobs.states import JobState, JobStatus
+from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
 from parsl.monitoring.message_type import MessageType
 from parsl.providers.base import ExecutionProvider
 from parsl.utils import AtomicIDCounter
@@ -222,16 +222,20 @@ class BlockProviderExecutor(ParslExecutor):
 
         :return: A list of block ids corresponding to the blocks that were removed.
         """
-        # Obtain list of blocks to kill
-        to_kill = list(self.blocks_to_job_id.keys())[:blocks]
-        kill_ids = [self.blocks_to_job_id[block] for block in to_kill]
+
+        active_blocks = [block_id for block_id, status in self._status.items()
+                         if status.state not in TERMINAL_STATES]
+
+        block_ids_to_kill = active_blocks[:blocks]
+
+        job_ids_to_kill = [self.blocks_to_job_id[block] for block in block_ids_to_kill]
 
         # Cancel the blocks provisioned
         if self.provider:
-            logger.info(f"Scaling in jobs: {kill_ids}")
-            r = self.provider.cancel(kill_ids)
-            job_ids = self._filter_scale_in_ids(kill_ids, r)
-            block_ids_killed = [self.job_ids_to_block[jid] for jid in job_ids]
+            logger.info(f"Scaling in jobs: {job_ids_to_kill}")
+            r = self.provider.cancel(job_ids_to_kill)
+            job_ids = self._filter_scale_in_ids(job_ids_to_kill, r)
+            block_ids_killed = [self.job_ids_to_block[job_id] for job_id in job_ids]
             return block_ids_killed
         else:
             logger.error("No execution provider available to scale in")
@@ -269,10 +273,10 @@ class BlockProviderExecutor(ParslExecutor):
 
     def send_monitoring_info(self, status: Dict) -> None:
         # Send monitoring info for HTEX when monitoring enabled
-        if self.monitoring_radio:
+        if self.submit_monitoring_radio:
             msg = self.create_monitoring_info(status)
             logger.debug("Sending block monitoring message: %r", msg)
-            self.monitoring_radio.send((MessageType.BLOCK_INFO, msg))
+            self.submit_monitoring_radio.send((MessageType.BLOCK_INFO, msg))
 
     def create_monitoring_info(self, status: Dict[str, JobStatus]) -> Sequence[object]:
         """Create a monitoring message for each block based on the poll status.
