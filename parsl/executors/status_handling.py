@@ -183,22 +183,13 @@ class BlockProviderExecutor(ParslExecutor):
         return list(compress(to_kill, killed))
 
     def scale_out_facade(self, n: int) -> List[str]:
-        block_ids = self._scale_out(n)
-        new_status = {}
-        for block_id in block_ids:
-            new_status[block_id] = JobStatus(JobState.PENDING)
-        self.send_monitoring_info(new_status)
-        self._status.update(new_status)
-        return block_ids
-
-    def _scale_out(self, blocks: int = 1) -> List[str]:
         """Scales out the number of blocks by "blocks"
         """
         if not self.provider:
             raise ScalingFailed(self, "No execution provider available")
         block_ids = []
-        logger.info(f"Scaling out by {blocks} blocks")
-        for _ in range(blocks):
+        logger.info(f"Scaling out by {n} blocks")
+        for _ in range(n):
             block_id = str(self._block_id_counter.get_id())
             logger.info(f"Allocated block ID {block_id}")
             try:
@@ -208,6 +199,12 @@ class BlockProviderExecutor(ParslExecutor):
                 block_ids.append(block_id)
             except Exception as ex:
                 self._simulated_status[block_id] = JobStatus(JobState.FAILED, "Failed to start block {}: {}".format(block_id, ex))
+
+        new_status = {}
+        for block_id in block_ids:
+            new_status[block_id] = JobStatus(JobState.PENDING)
+        self.send_monitoring_info(new_status)
+        self._status.update(new_status)
         return block_ids
 
     def scale_in(self, blocks: int) -> List[str]:
