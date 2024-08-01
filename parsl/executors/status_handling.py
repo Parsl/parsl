@@ -167,10 +167,18 @@ class BlockProviderExecutor(ParslExecutor):
     def provider(self):
         return self._provider
 
-    def _filter_scale_in_ids(self, to_kill, killed):
+    def _filter_scale_in_ids(self, to_kill: Sequence[Any], killed: Sequence[bool]) -> Sequence[Any]:
         """ Filter out job id's that were not killed
         """
         assert len(to_kill) == len(killed)
+
+        if False in killed:
+            killed_job_ids = [jid for jid, k in zip(to_kill, killed) if k]
+            not_killed_job_ids = [jid for jid, k in zip(to_kill, killed) if not k]
+            logger.warning("Some jobs were not killed successfully: "
+                           f"killed jobs: {killed_job_ids}, "
+                           f"not-killed jobs: {not_killed_job_ids}")
+
         # Filters first iterable by bool values in second
         return list(compress(to_kill, killed))
 
@@ -265,10 +273,10 @@ class BlockProviderExecutor(ParslExecutor):
 
     def send_monitoring_info(self, status: Dict) -> None:
         # Send monitoring info for HTEX when monitoring enabled
-        if self.monitoring_radio:
+        if self.submit_monitoring_radio:
             msg = self.create_monitoring_info(status)
             logger.debug("Sending block monitoring message: %r", msg)
-            self.monitoring_radio.send((MessageType.BLOCK_INFO, msg))
+            self.submit_monitoring_radio.send((MessageType.BLOCK_INFO, msg))
 
     def create_monitoring_info(self, status: Dict[str, JobStatus]) -> Sequence[object]:
         """Create a monitoring message for each block based on the poll status.
