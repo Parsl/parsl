@@ -1,3 +1,4 @@
+||| enough of pickle to make the interchange work, no more...
 module Pickle
 
 import Bytes
