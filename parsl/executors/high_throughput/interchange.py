@@ -5,7 +5,6 @@ import logging
 import os
 import pickle
 import platform
-import queue
 import signal
 import sys
 import threading
@@ -25,6 +24,7 @@ from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize as serialize_object
 from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
+from sortedcontainers import SortedList
 
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
 PKL_DRAINED_CODE = pickle.dumps((2 ** 32) - 2)
@@ -128,7 +128,7 @@ class Interchange:
         self.hub_address = hub_address
         self.hub_zmq_port = hub_zmq_port
 
-        self.pending_task_queue: queue.Queue[Any] = queue.Queue(maxsize=10 ** 6)
+        self.pending_task_queue: SortedList[Any] = SortedList(key=lambda msg: msg['resource_specification']['running_time_min'])
         self.count = 0
 
         self.worker_ports = worker_ports
@@ -174,7 +174,7 @@ class Interchange:
 
         logger.info("Platform info: {}".format(self.current_platform))
 
-    def get_tasks(self, count: int) -> Sequence[dict]:
+    def get_tasks(self, count: int, ) -> Sequence[dict]:
         """ Obtains a batch of tasks from the internal pending_task_queue
 
         Parameters
@@ -189,12 +189,10 @@ class Interchange:
         """
         tasks = []
         for _ in range(0, count):
-            try:
-                x = self.pending_task_queue.get(block=False)
-            except queue.Empty:
+            if len(self.pending_task_queue) == 0:
                 break
-            else:
-                tasks.append(x)
+            x = self.pending_task_queue.pop(-1)
+            tasks.append(x)
 
         return tasks
 
@@ -212,11 +210,11 @@ class Interchange:
                 msg = self.task_incoming.recv_pyobj()
             except zmq.Again:
                 # We just timed out while attempting to receive
-                logger.debug("zmq.Again with {} tasks in internal queue".format(self.pending_task_queue.qsize()))
+                logger.debug("zmq.Again with {} tasks in internal queue".format(self.pending_task_queue.__len__()))
                 continue
 
             logger.debug("putting message onto pending_task_queue")
-            self.pending_task_queue.put(msg)
+            self.pending_task_queue.add(msg)
             task_counter += 1
             logger.debug(f"Fetched {task_counter} tasks so far")
 
@@ -249,7 +247,7 @@ class Interchange:
                 command_req = self.command_channel.recv_pyobj()
                 logger.debug("Received command request: {}".format(command_req))
                 if command_req == "OUTSTANDING_C":
-                    outstanding = self.pending_task_queue.qsize()
+                    outstanding = self.pending_task_queue.__len__()
                     for manager in self._ready_managers.values():
                         outstanding += len(manager['tasks'])
                     reply = outstanding
@@ -484,10 +482,10 @@ class Interchange:
             total=len(self._ready_managers),
             interesting=len(interesting_managers)))
 
-        if interesting_managers and not self.pending_task_queue.empty():
+        if interesting_managers and len(self.pending_task_queue) != 0:
             shuffled_managers = self.manager_selector.sort_managers(self._ready_managers, interesting_managers)
 
-            while shuffled_managers and not self.pending_task_queue.empty():  # cf. the if statement above...
+            while shuffled_managers and len(self.pending_task_queue) != 0:  # cf. the if statement above...
                 manager_id = shuffled_managers.pop()
                 m = self._ready_managers[manager_id]
                 tasks_inflight = len(m['tasks'])
