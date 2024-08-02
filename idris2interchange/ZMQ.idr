@@ -1,5 +1,6 @@
 module ZMQ
 
+import Bytes
 import FD
 import Logging
 
@@ -88,6 +89,18 @@ public export
 zmq_msg_size : ZMQMsg -> IO Int
 zmq_msg_size (MkZMQMsg msg_ptr) = primIO $ prim__zmq_msg_size msg_ptr
 
+%foreign (gluezmq "glue_zmq_msg_data")
+prim__zmq_msg_data : AnyPtr -> PrimIO AnyPtr
+
+zmq_msg_data : ZMQMsg -> IO AnyPtr
+zmq_msg_data (MkZMQMsg msg_ptr) = primIO $ prim__zmq_msg_data msg_ptr
+
+export
+zmq_msg_as_bytes : ZMQMsg -> IO (n: Nat ** (ByteBlock n))
+zmq_msg_as_bytes msg = do
+  size <- cast <$> zmq_msg_size msg
+  byte_ptr <- zmq_msg_data msg
+  pure (size ** (MkByteBlock byte_ptr size))
 
 %foreign (gluezmq "glue_zmq_get_socket_fd")
 prim__zmq_get_socket_fd : AnyPtr -> PrimIO Int

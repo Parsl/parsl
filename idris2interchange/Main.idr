@@ -7,6 +7,7 @@ import Data.Vect
 import Generics.Derive
 import System.FFI
 
+import Bytes
 import FD
 import Logging
 import Pickle
@@ -192,7 +193,8 @@ poll_loop command_socket tasks_submit_to_interchange_socket = do
         -- what msg contains here is a pickle-encoded two element dictionary,
         -- the task ID and the buffer.
         -- so... now its time to write a pickle decoder?
-        let unpickled_msg_struct = unpickle ?bytes
+        bytes <- zmq_msg_as_bytes msg
+        unpickled_msg_struct <- unpickle bytes
         ?notimpl_cmd_processing
 
 

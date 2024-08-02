@@ -45,6 +45,10 @@ int glue_zmq_msg_size(void *msg) {
     return zmq_msg_size(msg);
 }
 
+void* glue_zmq_msg_data(void *msg) {
+    return zmq_msg_data(msg);
+}
+
 int glue_zmq_get_socket_fd(void *sock) {
     int fd, r;
     size_t optionlen;
