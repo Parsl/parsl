@@ -1,3 +1,5 @@
+module ZMQ
+
 import FD
 import Logging
 
@@ -12,6 +14,7 @@ prim__zmq_ctx_new : PrimIO AnyPtr
 
 data ZMQContext = MkZMQContext AnyPtr
 
+public export
 new_zmq_context : IO ZMQContext
 new_zmq_context = do
   ptr <- primIO $ prim__zmq_ctx_new
@@ -30,6 +33,7 @@ new_zmq_context = do
 -- Can I import them more directly from zmq.h? (involving the
 -- horror that others have described of how awful it is to properly
 -- parse C code?)
+public export
 data ZMQSocketType = ZMQSocketDEALER | ZMQSocketREP
 
 ||| the equivalent of the #defines for socket types in /usr/include/zmq.h
@@ -41,11 +45,13 @@ zmq_socket_to_int ZMQSocketDEALER = 5
 -- pointers to specific kinds of data structure (as evidenced by their
 -- immediate wrapping in type-specific wrappers...)
 
+public export
 data ZMQSocket = MkZMQSocket AnyPtr
 
 %foreign (gluezmq "glue_zmq_socket")
 prim__zmq_socket : AnyPtr -> Int -> PrimIO AnyPtr
 
+public export
 new_zmq_socket : ZMQContext -> ZMQSocketType -> IO ZMQSocket
 new_zmq_socket (MkZMQContext ctx_ptr) socket_type = do
   ptr <- primIO (prim__zmq_socket ctx_ptr (zmq_socket_to_int socket_type))
@@ -54,6 +60,7 @@ new_zmq_socket (MkZMQContext ctx_ptr) socket_type = do
 %foreign (gluezmq "glue_zmq_connect")
 prim__zmq_connect : AnyPtr -> String -> PrimIO ()
 
+public export
 zmq_connect : ZMQSocket -> String -> IO ()
 zmq_connect (MkZMQSocket sock_ptr) dest = 
   primIO $ prim__zmq_connect sock_ptr dest
@@ -65,6 +72,7 @@ data ZMQMsg = MkZMQMsg AnyPtr
 %foreign (gluezmq "glue_zmq_recv_msg_alloc")
 prim__zmq_recv_msg_alloc : AnyPtr -> PrimIO AnyPtr
 
+public export
 zmq_recv_msg_alloc : ZMQSocket -> IO (Maybe ZMQMsg)
 zmq_recv_msg_alloc (MkZMQSocket sock_ptr) = do
     msg_ptr <- primIO $ prim__zmq_recv_msg_alloc sock_ptr
@@ -76,6 +84,7 @@ zmq_recv_msg_alloc (MkZMQSocket sock_ptr) = do
 %foreign (gluezmq "glue_zmq_msg_size")
 prim__zmq_msg_size : AnyPtr -> PrimIO Int
 
+public export
 zmq_msg_size : ZMQMsg -> IO Int
 zmq_msg_size (MkZMQMsg msg_ptr) = primIO $ prim__zmq_msg_size msg_ptr
 
@@ -83,6 +92,7 @@ zmq_msg_size (MkZMQMsg msg_ptr) = primIO $ prim__zmq_msg_size msg_ptr
 %foreign (gluezmq "glue_zmq_get_socket_fd")
 prim__zmq_get_socket_fd : AnyPtr -> PrimIO Int
 
+public export
 zmq_get_socket_fd : ZMQSocket -> IO FD
 zmq_get_socket_fd (MkZMQSocket sock_ptr) = do
   log "calling get_socket_fd"

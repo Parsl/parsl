@@ -1,5 +1,9 @@
+module FD
+
 import Generics.Derive
 import System.FFI
+
+import Logging
 
 %language ElabReflection
 %default total
@@ -9,6 +13,7 @@ import System.FFI
 -- TODO: can we do something to protect the lifetime of this int,
 -- eg to treat it linearly (or linearly with dup-ing?) so that we
 -- don't end up with bad lifetimes?
+public export
 data FD = MkFD Int
 
 
@@ -35,6 +40,7 @@ Cast FD Int where
 --           short revents;    /* returned events */
 --       };
 
+public export
 record PollInput where
   constructor MkPollInput
   fd: FD
@@ -57,6 +63,7 @@ record PollOutput where
 -- (in Parsl proper, as recommended by Kevin, a different approach
 -- is to ensure the *name* of all parameters and variables contains
 -- the unit - with less automatic type checking there)
+public export
 data TimeMS = MkTimeMS Int
 
 -- poll looks like this:
@@ -115,6 +122,7 @@ pollhelper_poll : {n : Nat} -> PollMemPtr n -> TimeMS -> IO Int
 pollhelper_poll (MkPollMemPtr ptr) (MkTimeMS t) =
   primIO $ prim_poll ptr (cast n) t
 
+public export
 poll: {n: Nat} -> Vect n PollInput -> TimeMS -> IO (Vect n PollOutput)
 poll inputs timeout = do
    -- we can't do this alloc using idris2 memory alloc because
