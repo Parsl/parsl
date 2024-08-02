@@ -119,10 +119,6 @@ class MonitoringRouter:
         zmq_radio_receiver_thread = threading.Thread(target=self.start_zmq_listener, daemon=True)
         zmq_radio_receiver_thread.start()
 
-        # exit when both of those have exiting
-        # TODO: this is to preserve the existing behaviour of start(), but it
-        # isn't necessarily the *right* thing to do...
-
         self.logger.info("Joining on ZMQ listener thread")
         zmq_radio_receiver_thread.join()
         self.logger.info("Joining on UDP listener thread")
