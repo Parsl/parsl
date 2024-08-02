@@ -112,11 +112,11 @@ class MonitoringRouter:
     @wrap_with_logs(target="monitoring_router")
     def start(self) -> None:
         self.logger.info("Starting UDP listener thread")
-        udp_radio_receiver_thread = threading.Thread(target=self.start_udp_listener)
+        udp_radio_receiver_thread = threading.Thread(target=self.start_udp_listener, daemon=True)
         udp_radio_receiver_thread.start()
 
         self.logger.info("Starting ZMQ listener thread")
-        zmq_radio_receiver_thread = threading.Thread(target=self.start_zmq_listener)
+        zmq_radio_receiver_thread = threading.Thread(target=self.start_zmq_listener, daemon=True)
         zmq_radio_receiver_thread.start()
 
         # exit when both of those have exiting
