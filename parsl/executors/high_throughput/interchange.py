@@ -237,6 +237,7 @@ class Interchange:
         logger.debug("Command Server Starting")
 
         if self.hub_address is not None and self.hub_zmq_port is not None:
+            logger.debug("Creating monitoring radio to %s:%s", self.hub_address, self.hub_zmq_port)
             monitoring_radio = ZMQRadioSender(self.hub_address, self.hub_zmq_port)
         else:
             monitoring_radio = None
@@ -327,7 +328,7 @@ class Interchange:
         logger.info("Starting main interchange method")
 
         if self.hub_address is not None and self.hub_zmq_port is not None:
-            logger.debug("Creating monitoring radio")
+            logger.debug("Creating monitoring radio to %s:%s", self.hub_address, self.hub_zmq_port)
             monitoring_radio = ZMQRadioSender(self.hub_address, self.hub_zmq_port)
             logger.debug("Created monitoring radio")
         else:
