@@ -6,7 +6,6 @@ import os
 import pickle
 import platform
 import queue
-import random
 import signal
 import sys
 import threading
@@ -19,6 +18,7 @@ from parsl import curvezmq
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import ManagerLost, VersionMismatch
 from parsl.executors.high_throughput.manager_record import ManagerRecord
+from parsl.executors.high_throughput.manager_selector import ManagerSelector
 from parsl.monitoring.message_type import MessageType
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize as serialize_object
@@ -53,6 +53,7 @@ class Interchange:
                  logging_level: int,
                  poll_period: int,
                  cert_dir: Optional[str],
+                 manager_selector: ManagerSelector,
                  ) -> None:
         """
         Parameters
@@ -159,6 +160,8 @@ class Interchange:
         self.connected_block_history: List[str] = []
 
         self.heartbeat_threshold = heartbeat_threshold
+
+        self.manager_selector = manager_selector
 
         self.current_platform = {'parsl_v': PARSL_VERSION,
                                  'python_v': "{}.{}.{}".format(sys.version_info.major,
@@ -486,8 +489,7 @@ class Interchange:
             interesting=len(interesting_managers)))
 
         if interesting_managers and not self.pending_task_queue.empty():
-            shuffled_managers = list(interesting_managers)
-            random.shuffle(shuffled_managers)
+            shuffled_managers = self.manager_selector.sort_managers(self._ready_managers, interesting_managers)
 
             while shuffled_managers and not self.pending_task_queue.empty():  # cf. the if statement above...
                 manager_id = shuffled_managers.pop()

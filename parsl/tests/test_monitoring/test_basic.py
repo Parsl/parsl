@@ -25,8 +25,21 @@ def this_app():
 # a configuration that is suitably configured for monitoring.
 
 def htex_config():
+    """This config will use htex's default htex-specific monitoring radio mode"""
     from parsl.tests.configs.htex_local_alternate import fresh_config
     return fresh_config()
+
+
+def htex_udp_config():
+    """This config will force UDP"""
+    from parsl.tests.configs.htex_local_alternate import fresh_config
+    c = fresh_config()
+    assert len(c.executors) == 1
+
+    assert c.executors[0].radio_mode == "htex", "precondition: htex has a radio mode attribute, configured for htex radio"
+    c.executors[0].radio_mode = "udp"
+
+    return c
 
 
 def workqueue_config():
@@ -48,7 +61,7 @@ def taskvine_config():
 
 
 @pytest.mark.local
-@pytest.mark.parametrize("fresh_config", [htex_config, workqueue_config, taskvine_config])
+@pytest.mark.parametrize("fresh_config", [htex_config, htex_udp_config, workqueue_config, taskvine_config])
 def test_row_counts(tmpd_cwd, fresh_config):
     # this is imported here rather than at module level because
     # it isn't available in a plain parsl install, so this module

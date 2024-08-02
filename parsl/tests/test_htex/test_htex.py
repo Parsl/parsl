@@ -1,6 +1,6 @@
 import pathlib
-import warnings
 from subprocess import Popen, TimeoutExpired
+from typing import Optional, Sequence
 from unittest import mock
 
 import pytest
@@ -71,12 +71,11 @@ def test_htex_start_encrypted(
 @pytest.mark.local
 @pytest.mark.parametrize("started", (True, False))
 @pytest.mark.parametrize("timeout_expires", (True, False))
-@mock.patch(f"{_MOCK_BASE}.logger")
 def test_htex_shutdown(
-    mock_logger: mock.MagicMock,
     started: bool,
     timeout_expires: bool,
     htex: HighThroughputExecutor,
+    caplog
 ):
     mock_ix_proc = mock.Mock(spec=Popen)
 
@@ -110,20 +109,19 @@ def test_htex_shutdown(
 
     htex.shutdown()
 
-    mock_logs = mock_logger.info.call_args_list
     if started:
         assert mock_ix_proc.terminate.called
         assert mock_ix_proc.wait.called
         assert {"timeout": 10} == mock_ix_proc.wait.call_args[1]
         if timeout_expires:
-            assert "Unable to terminate Interchange" in mock_logs[1][0][0]
+            assert "Unable to terminate Interchange" in caplog.text
             assert mock_ix_proc.kill.called
-        assert "Attempting" in mock_logs[0][0][0]
-        assert "Finished" in mock_logs[-1][0][0]
+        assert "Attempting HighThroughputExecutor shutdown" in caplog.text
+        assert "Finished HighThroughputExecutor shutdown" in caplog.text
     else:
         assert not mock_ix_proc.terminate.called
         assert not mock_ix_proc.wait.called
-        assert "has not started" in mock_logs[0][0][0]
+        assert "HighThroughputExecutor has not started" in caplog.text
 
 
 @pytest.mark.local
@@ -139,13 +137,22 @@ def test_max_workers_per_node():
 
 
 @pytest.mark.local
-def test_htex_launch_cmd():
-    htex = HighThroughputExecutor()
-    assert htex.launch_cmd.startswith("process_worker_pool.py")
-    assert htex.interchange_launch_cmd == "interchange.py"
+@pytest.mark.parametrize("cmd", (None, "custom-launch-cmd"))
+def test_htex_worker_pool_launch_cmd(cmd: Optional[str]):
+    if cmd:
+        htex = HighThroughputExecutor(launch_cmd=cmd)
+        assert htex.launch_cmd == cmd
+    else:
+        htex = HighThroughputExecutor()
+        assert htex.launch_cmd.startswith("process_worker_pool.py")
 
-    launch_cmd = "custom-launch-cmd"
-    ix_launch_cmd = "custom-ix-launch-cmd"
-    htex = HighThroughputExecutor(launch_cmd=launch_cmd, interchange_launch_cmd=ix_launch_cmd)
-    assert htex.launch_cmd == launch_cmd
-    assert htex.interchange_launch_cmd == ix_launch_cmd
+
+@pytest.mark.local
+@pytest.mark.parametrize("cmd", (None, ["custom", "launch", "cmd"]))
+def test_htex_interchange_launch_cmd(cmd: Optional[Sequence[str]]):
+    if cmd:
+        htex = HighThroughputExecutor(interchange_launch_cmd=cmd)
+        assert htex.interchange_launch_cmd == cmd
+    else:
+        htex = HighThroughputExecutor()
+        assert htex.interchange_launch_cmd == ["interchange.py"]
