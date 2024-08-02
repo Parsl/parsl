@@ -9,6 +9,7 @@ import System.FFI
 
 import FD
 import Logging
+import Pickle
 import ZMQ
 
 %language ElabReflection
@@ -191,6 +192,7 @@ poll_loop command_socket tasks_submit_to_interchange_socket = do
         -- what msg contains here is a pickle-encoded two element dictionary,
         -- the task ID and the buffer.
         -- so... now its time to write a pickle decoder?
+        let unpickled_msg_struct = unpickle ?bytes
         ?notimpl_cmd_processing
 
 
