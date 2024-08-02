@@ -5,26 +5,17 @@ import Data.Vect
 import Generics.Derive
 import System.FFI
 
+import Logging
+
 %language ElabReflection
 %default total
 
 -- for benc dev environment:
--- apt install chezscheme
+-- apt install chezscheme      -- to run idris
+-- apt install libzmq3-dev     -- for my own zmq bindings
 -- (build idris2 if necessary)
 -- export PATH=~/.idris2/bin:$PATH
 -- pytest -s parsl/tests/ --config parsl/tests/configs/htex_idris2.py 
-
-
-
-||| Output a log message
-|||
-||| This is just a print right now...
-||| What would it look like if I was trying to do macro-style eliding
-||| of log calls entirely? something involving the elaborator?
-log : String -> IO ()
-log msg = putStrLn msg
-
-
 
 
 -- bits for interfacing to linux poll
