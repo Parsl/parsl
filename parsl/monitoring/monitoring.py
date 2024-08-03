@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
 import typeguard
 
 from parsl.log_utils import set_file_logger
+from parsl.monitoring.errors import MonitoringHubStartError
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios import MultiprocessingQueueRadioSender
 from parsl.monitoring.router import router_starter
@@ -195,7 +196,7 @@ class MonitoringHub(RepresentationMixin):
             comm_q.join_thread()
         except queue.Empty:
             logger.error("Hub has not completed initialization in 120s. Aborting")
-            raise Exception("Hub failed to start")
+            raise MonitoringHubStartError()
 
         if isinstance(comm_q_result, str):
             logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
