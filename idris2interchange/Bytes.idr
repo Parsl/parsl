@@ -31,4 +31,6 @@ bb_uncons (MkByteBlock ptr (S n)) = do
 
   pure (v, rest)
 
-
+export
+length : ByteBlock n -> Nat
+length (MkByteBlock _ l) = l
