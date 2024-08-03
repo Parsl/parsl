@@ -4,6 +4,8 @@ import Bytes
 import FD
 import Logging
 
+%default total
+
 ||| This will name the C functions to use from the libzmq<->idris2
 ||| glue functions.
 gluezmq: String -> String

@@ -1,5 +1,7 @@
 module Logging
 
+%default total
+
 ||| Output a log message
 |||
 ||| This is just a print right now...

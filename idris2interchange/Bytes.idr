@@ -5,6 +5,8 @@
 ||| using a pickle decoder.
 module Bytes
 
+%default total
+
 public export
 data ByteBlock : Nat -> Type where
   MkByteBlock : AnyPtr -> (l: Nat) -> ByteBlock l
