@@ -1,4 +1,6 @@
 ||| enough of pickle to make the interchange work, no more...
+|||
+||| makes heavy reference to Lib/pickletools.py (from around Python 3.12)
 module Pickle
 
 import Bytes
@@ -7,6 +9,12 @@ import Logging
 ||| some untyped (or Python Any-typed) representation of the output
 ||| of executing a pickle
 data PickleAST = MkPickleAST
+
+
+record PickleVMState where
+  constructor MkPickleVMState
+  stack: ()
+  memo: ()   -- map of integers to objects. This is to support circular references so I'm not sure what this really should look like. Maybe I won't need it at all for the kind of data structures that are happening with the interchange?
 
 ||| Takes some representation of a byte sequence containing a pickle and
 ||| executes that pickle program, leaving something more like an AST of
@@ -21,6 +29,25 @@ data PickleAST = MkPickleAST
 ||| to let that happen, session style?
 export
 unpickle : (n: Nat ** (ByteBlock n)) -> IO PickleAST
-unpickle i = do
+unpickle ((S n) ** bb) = do
   log "beginning unpickle"
+
+  let vm_state = MkPickleVMState () ()
+
+  (opcode, rest) <- bb_uncons bb
+
+  putStr "Opcode: "
+  printLn opcode
+
+  case opcode of 
+    128 => ?error_proto_opcode_notimpl
+    _ => ?error_unknown_opcode
+
+  log "done with unpickle"
+
   pure MkPickleAST
+
+unpickle (Z ** bb) = do
+  log "unpickle not defined on empty byte sequence"
+  ?error_unpickle_Z
+

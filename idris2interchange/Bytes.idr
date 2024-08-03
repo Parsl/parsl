@@ -8,3 +8,27 @@ module Bytes
 public export
 data ByteBlock : Nat -> Type where
   MkByteBlock : AnyPtr -> (l: Nat) -> ByteBlock l
+
+%foreign "C:readByteAt,bytes"
+prim__readByteAt : AnyPtr -> PrimIO Bits8
+
+readByteAt : AnyPtr -> IO Bits8
+readByteAt p = primIO $ prim__readByteAt p
+
+%foreign "C:incPtr,bytes"
+prim__incPtr : AnyPtr -> AnyPtr
+
+incPtr : AnyPtr -> AnyPtr
+incPtr p = prim__incPtr p
+
+-- S n gives us proof that ByteBlock is not empty
+export
+bb_uncons : ByteBlock (S n) -> IO (Bits8, ByteBlock n)
+bb_uncons (MkByteBlock ptr (S n)) = do
+  v <- readByteAt ptr
+  let ptr_inc = incPtr ptr
+  let rest = MkByteBlock ptr_inc n
+
+  pure (v, rest)
+
+
