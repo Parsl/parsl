@@ -33,7 +33,10 @@ dispatch_cmd : String -> IO PickleAST
 
 dispatch_cmd "WORKER_PORTS" = do
   log "WORKER_PORTS requested"
-  pure (PickleUnicodeString "TODO notimpl")
+  -- hard-code return value because ports are also hard-coded ...
+  -- TODO: this should be some environment to be passed around
+  -- perhaps as a monad-style reader environment?
+  pure (PickleTuple [PickleInteger 9000, PickleInteger 9001])
 
 dispatch_cmd _ = ?error_cmd_not_implemented
 
@@ -215,6 +218,8 @@ poll_loop command_socket tasks_submit_to_interchange_socket = do
         putStr "Command received this command: "
         putStrLn cmd
         resp <- dispatch_cmd cmd
+        putStr "Response to command: "
+        printLn resp
         ?notimpl_must_REPly_to_the_REQ
 
 

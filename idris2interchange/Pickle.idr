@@ -19,6 +19,8 @@ import Logging
 ||| of executing a pickle
 public export
 data PickleAST = PickleUnicodeString String
+               | PickleInteger Int
+               | PickleTuple (List PickleAST)
 %runElab derive "PickleAST" [Generic, Meta, Show]
 
 record VMState where
