@@ -197,6 +197,8 @@ poll_loop command_socket tasks_submit_to_interchange_socket = do
 
   when ((index 0 poll_outputs).revents /= 0) $ do
     log "Trying to receive a message from command channel"
+    -- TODO: something here to force the command socket to statically only
+    -- be usable to send back the response to...
     maybe_msg <- zmq_recv_msg_alloc command_socket
     case maybe_msg of
       Nothing => do putStrLn "No message received."
