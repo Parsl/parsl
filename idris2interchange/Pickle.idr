@@ -17,6 +17,7 @@ import Logging
 
 ||| some untyped (or Python Any-typed) representation of the output
 ||| of executing a pickle
+public export
 data PickleAST = PickleUnicodeString String
 %runElab derive "PickleAST" [Generic, Meta, Show]
 

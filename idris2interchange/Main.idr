@@ -23,6 +23,22 @@ import ZMQ
 -- export PATH=~/.idris2/bin:$PATH
 -- pytest -s parsl/tests/ --config parsl/tests/configs/htex_idris2.py 
 
+
+
+-- the Python type contained in the returned AST depends on the supplied
+-- command... TODO: maybe I can describe that typing in the idris2 code
+-- rather than returning an equivalent to Python Any... so that the
+-- individual dispatch_cmd pieces can be typechecked a bit?
+dispatch_cmd : String -> IO PickleAST
+
+dispatch_cmd "WORKER_PORTS" = do
+  log "WORKER_PORTS requested"
+  pure (PickleUnicodeString "TODO notimpl")
+
+dispatch_cmd _ = ?error_cmd_not_implemented
+
+
+
 covering poll_loop : ZMQSocket -> ZMQSocket -> IO ()
 
 covering main : IO ()
@@ -194,8 +210,12 @@ poll_loop command_socket tasks_submit_to_interchange_socket = do
         -- the task ID and the buffer.
         -- so... now its time to write a pickle decoder?
         bytes <- zmq_msg_as_bytes msg
-        unpickled_msg_struct <- unpickle bytes
-        ?notimpl_cmd_processing
+        (PickleUnicodeString cmd) <- unpickle bytes
+            | _ => ?error_cmd_is_not_a_string
+        putStr "Command received this command: "
+        putStrLn cmd
+        resp <- dispatch_cmd cmd
+        ?notimpl_must_REPly_to_the_REQ
 
 
   poll_loop command_socket tasks_submit_to_interchange_socket
