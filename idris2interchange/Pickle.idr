@@ -80,7 +80,7 @@ step_FRAME bb state = do
       -- ByteBlock because we're reading the whole thing before attempting
       -- a parse.
       
-      pure state
+      step bb' state
     _ => ?error_not_enough_bytes_left_for_FRAME
 
 step {n = Z} bb state = do
