@@ -3,13 +3,17 @@
 ||| makes heavy reference to Lib/pickletools.py (from around Python 3.12)
 module Pickle
 
+import Generics.Derive
+
 import Bytes
 import Logging
+
+%language ElabReflection
 
 ||| some untyped (or Python Any-typed) representation of the output
 ||| of executing a pickle
 data PickleAST = PickleUnicodeString String
-
+%runElab derive "PickleAST" [Generic, Meta, Show]
 
 record VMState where
   constructor MkVMState
@@ -84,10 +88,16 @@ step_FRAME bb state = do
     _ => ?error_not_enough_bytes_left_for_FRAME
 
 step_MEMOIZE : {n: Nat} -> ByteBlock n -> VMState -> IO VMState
-step_MEMOIZE bb (MkVMState (h::stack) memo) = do
+step_MEMOIZE bb (MkVMState (v::rest_stack) memo) = do
   log "Opcode: MEMOIZE"
-  step bb (MkVMState stack (memo ++ [h]))
+  step bb (MkVMState (v::rest_stack) (memo ++ [v]))
 step_MEMOIZE bb (MkVMState [] memo) = ?error_MEMOIZE_with_empty_stack
+
+
+step_STOP : ByteBlock n -> VMState -> IO VMState
+step_STOP bb state = do
+  log "Opcode: STOP"
+  pure state
 
 -- The reasoning about lengths here is more complicated than PROTO or FRAME,
 -- and maybe pushes more into runtime: the number of bytes we want is encoded
@@ -126,12 +136,17 @@ step {n = Z} bb state = do
     ?error_pickle_ran_off_end
 
 step {n = S m} bb state = do
+
+    putStr "Stack pre-step: "
+    printLn state.stack
+
     (opcode, bb') <- bb_uncons bb
 
     putStr "Opcode number: "
     printLn opcode
 
     case opcode of 
+      46 => step_STOP bb' state
       128 => step_PROTO {n = m} bb' state
       140 => step_SHORT_BINUNICODE bb' state
       148 => step_MEMOIZE bb' state
