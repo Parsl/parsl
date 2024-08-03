@@ -8,12 +8,12 @@ import Logging
 
 ||| some untyped (or Python Any-typed) representation of the output
 ||| of executing a pickle
-data PickleAST = MkPickleAST
+data PickleAST = PickleUnicodeString String
 
 
 record VMState where
   constructor MkVMState
-  stack: ()
+  stack: List PickleAST
   memo: ()   -- map of integers to objects. This is to support circular references so I'm not sure what this really should look like. Maybe I won't need it at all for the kind of data structures that are happening with the interchange?
 
 
@@ -83,6 +83,38 @@ step_FRAME bb state = do
       step bb' state
     _ => ?error_not_enough_bytes_left_for_FRAME
 
+-- The reasoning about lengths here is more complicated than PROTO or FRAME,
+-- and maybe pushes more into runtime: the number of bytes we want is encoded
+--  in the first remaining byte of the ByteBlock.
+step_SHORT_BINUNICODE : {n: Nat} -> ByteBlock n -> VMState -> IO VMState
+step_SHORT_BINUNICODE {n} bb (MkVMState stack memo) = do
+  log "Opcode: SHORT_BINUNICODE"
+  case n of
+    (S k) => do
+      (strlen, bb') <- bb_uncons bb
+      putStr "UTF-8 byte sequence length: "
+      printLn strlen
+
+      -- the buffer contains strlen bytes of UTF-8 encoding, which we need to
+      -- turn into an Idris2 String. could go via C, or could do it as a
+      -- "read byte and append to idris2 string" entirely-in-idris impl?
+      -- that latter is a bit more complicated - because a char and a byte are
+      -- not the same thing. but we can "read a unicode codepoint" as
+      -- a step (read bytes until its not a continuation byte?) and decode
+      -- it into a char? that seems like a lot of faff compared to going via
+      -- a C buffer...
+
+      (str, bb'') <- str_from_bytes (cast strlen) bb'
+
+      putStr "String is: "
+      putStrLn str
+
+      let new_state = MkVMState ((PickleUnicodeString str)::stack) memo
+
+      step bb'' new_state
+
+    Z => ?error_SHORT_BINUNICODE_no_length
+
 step {n = Z} bb state = do
     log "ERROR: Pickle VM ran off end of pickle"
     ?error_pickle_ran_off_end
@@ -95,6 +127,7 @@ step {n = S m} bb state = do
 
     case opcode of 
       128 => step_PROTO {n = m} bb' state
+      140 => step_SHORT_BINUNICODE bb' state
       149 => step_FRAME {n = m} bb' state
       _ => ?error_unknown_opcode
 
@@ -114,11 +147,13 @@ unpickle : (n: Nat ** (ByteBlock n)) -> IO PickleAST
 unpickle ((S n) ** bb) = do
   log "beginning unpickle"
 
-  let init_vm_state = MkVMState () ()
+  let init_vm_state = MkVMState [] ()
 
-  end_vm_state <- step bb init_vm_state
+  (MkVMState (stack_head::rest) end_memo) <- step bb init_vm_state
+    | _ => ?error_stack_was_empty_at_end
+
   log "done with unpickle"
-  pure MkPickleAST
+  pure stack_head
 
 unpickle (Z ** bb) = do
   log "unpickle not defined on empty byte sequence"

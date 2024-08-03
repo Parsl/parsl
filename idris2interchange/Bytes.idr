@@ -15,11 +15,14 @@ prim__readByteAt : AnyPtr -> PrimIO Bits8
 readByteAt : AnyPtr -> IO Bits8
 readByteAt p = primIO $ prim__readByteAt p
 
-%foreign "C:incPtr,bytes"
-prim__incPtr : AnyPtr -> AnyPtr
+%foreign "C:incPtrBy,bytes"
+prim__incPtrBy : Int -> AnyPtr -> AnyPtr
 
 incPtr : AnyPtr -> AnyPtr
-incPtr p = prim__incPtr p
+incPtr p = prim__incPtrBy 1 p
+
+incPtrBy : Int -> AnyPtr -> AnyPtr
+incPtrBy n p = prim__incPtrBy n p
 
 -- S n gives us proof that ByteBlock is not empty
 export
@@ -34,3 +37,14 @@ bb_uncons (MkByteBlock ptr (S n)) = do
 export
 length : ByteBlock n -> Nat
 length (MkByteBlock _ l) = l
+
+
+%foreign "C:str_from_bytes,bytes"
+prim__str_from_bytes : Int -> AnyPtr -> PrimIO String
+
+export
+str_from_bytes : (m : Nat) -> ByteBlock n -> IO (String, ByteBlock (minus n m))
+str_from_bytes l (MkByteBlock p l') = do
+  s <- primIO $ prim__str_from_bytes (cast l) p
+  let rest = MkByteBlock (incPtrBy (cast l) p) (l' `minus` l)
+  pure (s, rest)
