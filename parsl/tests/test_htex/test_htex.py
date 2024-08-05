@@ -1,3 +1,4 @@
+import logging
 import pathlib
 from subprocess import Popen, TimeoutExpired
 from typing import Optional, Sequence
@@ -71,12 +72,11 @@ def test_htex_start_encrypted(
 @pytest.mark.local
 @pytest.mark.parametrize("started", (True, False))
 @pytest.mark.parametrize("timeout_expires", (True, False))
-@mock.patch(f"{_MOCK_BASE}.logger")
 def test_htex_shutdown(
-    mock_logger: mock.MagicMock,
     started: bool,
     timeout_expires: bool,
     htex: HighThroughputExecutor,
+    caplog
 ):
     mock_ix_proc = mock.Mock(spec=Popen)
 
@@ -108,22 +108,22 @@ def test_htex_shutdown(
 
         mock_ix_proc.terminate.side_effect = kill_interchange
 
-    htex.shutdown()
+    with caplog.at_level(logging.INFO):
+        htex.shutdown()
 
-    mock_logs = mock_logger.info.call_args_list
     if started:
         assert mock_ix_proc.terminate.called
         assert mock_ix_proc.wait.called
         assert {"timeout": 10} == mock_ix_proc.wait.call_args[1]
         if timeout_expires:
-            assert "Unable to terminate Interchange" in mock_logs[1][0][0]
+            assert "Unable to terminate Interchange" in caplog.text
             assert mock_ix_proc.kill.called
-        assert "Attempting" in mock_logs[0][0][0]
-        assert "Finished" in mock_logs[-1][0][0]
+        assert "Attempting HighThroughputExecutor shutdown" in caplog.text
+        assert "Finished HighThroughputExecutor shutdown" in caplog.text
     else:
         assert not mock_ix_proc.terminate.called
         assert not mock_ix_proc.wait.called
-        assert "has not started" in mock_logs[0][0][0]
+        assert "HighThroughputExecutor has not started" in caplog.text
 
 
 @pytest.mark.local
