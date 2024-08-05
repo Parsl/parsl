@@ -1,3 +1,4 @@
+import logging
 import pathlib
 from subprocess import Popen, TimeoutExpired
 from typing import Optional, Sequence
@@ -107,7 +108,8 @@ def test_htex_shutdown(
 
         mock_ix_proc.terminate.side_effect = kill_interchange
 
-    htex.shutdown()
+    with caplog.at_level(logging.INFO):
+        htex.shutdown()
 
     if started:
         assert mock_ix_proc.terminate.called
