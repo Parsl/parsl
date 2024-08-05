@@ -2,10 +2,16 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
 import pickle
+import threading
 from functools import lru_cache, singledispatch
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 
+import typeguard
+
+from parsl.dataflow.errors import BadCheckpoint
+from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.taskrecord import TaskRecord
 
 if TYPE_CHECKING:
@@ -116,6 +122,20 @@ def id_for_memo_function(f: types.FunctionType, output_ref: bool = False) -> byt
 
 
 class Memoizer:
+    def start(self, *, dfk: DataFlowKernel, memoize: bool = True, checkpoint_files: Sequence[str], run_dir: str) -> None:
+        raise NotImplementedError
+
+    def update_memo(self, task: TaskRecord, r: Future[Any]) -> None:
+        raise NotImplementedError
+
+    def checkpoint(self, tasks: Sequence[TaskRecord]) -> str:
+        raise NotImplementedError
+
+    def check_memo(self, task: TaskRecord) -> Optional[Future[Any]]:
+        raise NotImplementedError
+
+
+class BasicMemoizer(Memoizer):
     """Memoizer is responsible for ensuring that identical work is not repeated.
 
     When a task is repeated, i.e., the same function is called with the same exact arguments, the
@@ -146,7 +166,12 @@ class Memoizer:
 
     """
 
-    def __init__(self, dfk: DataFlowKernel, memoize: bool = True, checkpoint: Dict[str, Future[Any]] = {}):
+    run_dir: str
+
+    def __init__(self) -> None:
+        pass
+
+    def start(self, *, dfk: DataFlowKernel, memoize: bool = True, checkpoint_files: Sequence[str], run_dir: str) -> None:
         """Initialize the memoizer.
 
         Args:
@@ -158,6 +183,15 @@ class Memoizer:
         """
         self.dfk = dfk
         self.memoize = memoize
+        self.run_dir = run_dir
+
+        self.checkpointed_tasks = 0
+
+        self.checkpoint_lock = threading.Lock()
+
+        # TODO: we always load checkpoints even if we then discard them...
+        # this is more obvious here, less obvious in previous Parsl...
+        checkpoint = self.load_checkpoints(checkpoint_files)
 
         if self.memoize:
             logger.info("App caching initialized")
@@ -274,3 +308,150 @@ class Memoizer:
         else:
             logger.debug(f"Storing app cache entry {task['hashsum']} with result from task {task_id}")
         self.memo_lookup_table[task['hashsum']] = r
+
+    def _load_checkpoints(self, checkpointDirs: Sequence[str]) -> Dict[str, Future[Any]]:
+        """Load a checkpoint file into a lookup table.
+
+        The data being loaded from the pickle file mostly contains input
+        attributes of the task: func, args, kwargs, env...
+        To simplify the check of whether the exact task has been completed
+        in the checkpoint, we hash these input params and use it as the key
+        for the memoized lookup table.
+
+        Args:
+            - checkpointDirs (list) : List of filepaths to checkpoints
+              Eg. ['runinfo/001', 'runinfo/002']
+
+        Returns:
+            - memoized_lookup_table (dict)
+        """
+        memo_lookup_table = {}
+
+        for checkpoint_dir in checkpointDirs:
+            logger.info("Loading checkpoints from {}".format(checkpoint_dir))
+            checkpoint_file = os.path.join(checkpoint_dir, 'tasks.pkl')
+            try:
+                with open(checkpoint_file, 'rb') as f:
+                    while True:
+                        try:
+                            data = pickle.load(f)
+                            # Copy and hash only the input attributes
+                            memo_fu: Future = Future()
+
+                            if data['exception'] is None:
+                                memo_fu.set_result(data['result'])
+                            else:
+                                assert data['result'] is None
+                                memo_fu.set_exception(data['exception'])
+                            memo_lookup_table[data['hash']] = memo_fu
+
+                        except EOFError:
+                            # Done with the checkpoint file
+                            break
+            except FileNotFoundError:
+                reason = "Checkpoint file was not found: {}".format(
+                    checkpoint_file)
+                logger.error(reason)
+                raise BadCheckpoint(reason)
+            except Exception:
+                reason = "Failed to load checkpoint: {}".format(
+                    checkpoint_file)
+                logger.error(reason)
+                raise BadCheckpoint(reason)
+
+            logger.info("Completed loading checkpoint: {0} with {1} tasks".format(checkpoint_file,
+                                                                                  len(memo_lookup_table.keys())))
+        return memo_lookup_table
+
+    @typeguard.typechecked
+    def load_checkpoints(self, checkpointDirs: Optional[Sequence[str]]) -> Dict[str, Future]:
+        """Load checkpoints from the checkpoint files into a dictionary.
+
+        The results are used to pre-populate the memoizer's lookup_table
+
+        Kwargs:
+             - checkpointDirs (list) : List of run folder to use as checkpoints
+               Eg. ['runinfo/001', 'runinfo/002']
+
+        Returns:
+             - dict containing, hashed -> future mappings
+        """
+        if checkpointDirs:
+            return self._load_checkpoints(checkpointDirs)
+        else:
+            return {}
+
+    def checkpoint(self, tasks: Sequence[TaskRecord]) -> str:
+        """Checkpoint the dfk incrementally to a checkpoint file.
+
+        When called, every task that has been completed yet not
+        checkpointed is checkpointed to a file.
+
+        Kwargs:
+            - tasks (List of task records) : List of task ids to checkpoint. Default=None
+                                         if set to None, we iterate over all tasks held by the DFK.
+
+        .. note::
+            Checkpointing only works if memoization is enabled
+
+        Returns:
+            Checkpoint dir if checkpoints were written successfully.
+            By default the checkpoints are written to the RUNDIR of the current
+            run under RUNDIR/checkpoints/{tasks.pkl, dfk.pkl}
+        """
+        with self.checkpoint_lock:
+            checkpoint_queue = tasks
+
+            checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
+            checkpoint_dfk = checkpoint_dir + '/dfk.pkl'
+            checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
+
+            if not os.path.exists(checkpoint_dir):
+                os.makedirs(checkpoint_dir, exist_ok=True)
+
+            with open(checkpoint_dfk, 'wb') as f:
+                state = {'rundir': self.run_dir,
+                         # TODO: this isn't relevant to checkpointing? 'task_count': self.task_count
+                         }
+                pickle.dump(state, f)
+
+            count = 0
+
+            with open(checkpoint_tasks, 'ab') as f:
+                for task_record in checkpoint_queue:
+                    task_id = task_record['id']
+
+                    app_fu = task_record['app_fu']
+
+                    if app_fu.done() and self.filter_for_checkpoint(app_fu):
+
+                        hashsum = task_record['hashsum']
+                        if not hashsum:
+                            continue
+
+                        if app_fu.exception() is None:
+                            t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
+                        else:
+                            t = {'hash': hashsum, 'exception': app_fu.exception(), 'result': None}
+
+                        # We are using pickle here since pickle dumps to a file in 'ab'
+                        # mode behave like a incremental log.
+                        pickle.dump(t, f)
+                        count += 1
+                        logger.debug("Task {} checkpointed as result".format(task_id))
+
+            self.checkpointed_tasks += count
+
+            if count == 0:
+                if self.checkpointed_tasks == 0:
+                    logger.warning("No tasks checkpointed so far in this run. Please ensure caching is enabled")
+                else:
+                    logger.debug("No tasks checkpointed in this pass.")
+            else:
+                logger.info("Done checkpointing {} tasks".format(count))
+
+            return checkpoint_dir
+
+    def filter_for_checkpoint(self, app_fu: AppFuture) -> bool:
+        """Overridable method to decide if an entry should be checkpointed"""
+        return app_fu.exception() is None
