@@ -189,3 +189,41 @@ unpickle (Z ** bb) = do
   log "unpickle not defined on empty byte sequence"
   ?error_unpickle_Z
 
+
+||| Takes some PickleAST and turns it into a Pickle bytestream.
+export
+pickle : PickleAST -> IO (n: Nat ** (ByteBlock n))
+pickle ast = do
+  -- TODO: needs some kinds of ByteBlock access that we can write to in
+  -- the ways that this code wants. I think that only means appending,
+  -- because generally we will write out the args one by one (recursively)
+  -- and then the relevant opcode and immediate arguments.
+
+  -- 0-byte byte blocks seem a bit awkward in C land because malloc can return
+  -- NULL if called with 0 size, so this would need some special casing?
+  -- would be nice to have a monoidal structure (but in IO, I guess because
+  -- of allocs? unless i start doing things with the ffi callback to free
+  -- unused objects? which might fit here so that stuff is monoidal without
+  -- any explicit effects (IO, linearity) ?) -- but I'd probably like to aim
+  -- eventually for something linear to try to control resource usage rather
+  -- than doing GC?
+
+  -- PROTO 4
+  proto_header_bytes <- ?pickle_PROTO 4
+
+  --   cpython generated pickles then have a FRAME, but I think this isn't
+  --   compulsory - although it might cause some performance degredation in
+  --   streaming cases, I think in bytes-from-zmq cases like Parsl it won't
+  --   matter as the block of bytes has already arrived and been placed into
+  --   memory...
+
+  -- then recursively run per-PickleAST-constructor code.
+
+  ast_bytes <- ?encode_ast ast
+
+  -- this could look like monoid expression syntax if this code was not tied
+  -- into IO... appendBytes is <+> in IO (specifically, there are memory
+  -- allocation semantics not just a pure value)
+  bytes <- ?appendBytes proto_header_bytes ast_bytes
+
+  pure bytes

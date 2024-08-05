@@ -222,7 +222,9 @@ poll_loop command_socket tasks_submit_to_interchange_socket = do
         resp <- dispatch_cmd cmd
         putStr "Response to command: "
         printLn resp
-        ?notimpl_must_REPly_to_the_REQ
+        resp_bytes <- pickle resp
+        ?send_bytes command_socket resp_bytes
+        -- after this send, command socket is back is ready-for-a-REQ state
 
 
   poll_loop command_socket tasks_submit_to_interchange_socket
