@@ -11,6 +11,17 @@ public export
 data ByteBlock : Nat -> Type where
   MkByteBlock : AnyPtr -> (l: Nat) -> ByteBlock l
 
+
+-- i think this doesn't need to be in IO because its
+-- not doing anything that allocates resources: it
+-- uses a NULL pointer, and the length 0 means that
+-- nothing will ever try to dereference that pointer,
+-- although need to have caution on any kind of
+-- realloc/free... 
+export
+emptyByteBlock : ByteBlock 0
+emptyByteBlock = MkByteBlock prim__getNullAnyPtr 0
+
 %foreign "C:readByteAt,bytes"
 prim__readByteAt : AnyPtr -> PrimIO Bits8
 
@@ -35,6 +46,16 @@ bb_uncons (MkByteBlock ptr (S n)) = do
   let rest = MkByteBlock ptr_inc n
 
   pure (v, rest)
+
+export
+bb_append : ByteBlock n -> Bits8 -> IO (ByteBlock (S n))
+bb_append (MkByteBlock ptr n) = do
+  -- can't necessarily realloc here, because ptr is not
+  -- necessarily a malloced ptr: it might be a pointer
+  -- further along into the block.
+  new_ptr <- ?more_memory
+
+  pure ?bb
 
 export
 length : ByteBlock n -> Nat

@@ -190,6 +190,40 @@ unpickle (Z ** bb) = do
   ?error_unpickle_Z
 
 
+-- we can encode the length right in the type signature because
+-- this is a simple opcode...
+pickle_PROTO : Nat -> IO (ByteBlock 2)
+pickle_PROTO v = do
+  log "Pickling PROTO opcode"
+  -- write PROTO byte
+  -- write v as a byte
+
+  -- can I do this symmetrically to bb_uncons, but appending
+  -- at the end rather than taking off the front? i.e. treat
+  -- ByteBlock as kinda looking like a stream with take off
+  -- the front, append on the end... that probably fits the
+  -- right sort of UI for a pickle buffer? (there's no need
+  -- for the constructor to be a mirror of the deconstructor
+  -- because this isn't an algebraic data type?)
+  -- appending on the end probably maps ok-ish onto the
+  -- API for realloc? except danger here! realloc can move
+  -- the memory block, making any previous ByteBlocks that
+  -- point into that space invalid... which is then maybe
+  -- an interesting use for linear behaviour...
+  -- my coding style so far has been quite linear with ByteBlocks
+  -- so I wonder how easy/hard that will be to make into a
+  -- linear style? also see that blog post on linear types with
+  -- holes from tweag...
+  -- so lets take the dangerous (without linear types) route
+  -- and do reallocs...
+
+  let bytes = emptyByteBlock
+
+  bytes <- bb_append bytes 128   -- PROTO=128
+  bytes <- bb_append bytes (cast v)
+
+  pure bytes
+
 ||| Takes some PickleAST and turns it into a Pickle bytestream.
 export
 pickle : PickleAST -> IO (n: Nat ** (ByteBlock n))
@@ -209,7 +243,7 @@ pickle ast = do
   -- than doing GC?
 
   -- PROTO 4
-  proto_header_bytes <- ?pickle_PROTO 4
+  proto_header_bytes <- pickle_PROTO 4
 
   --   cpython generated pickles then have a FRAME, but I think this isn't
   --   compulsory - although it might cause some performance degredation in
