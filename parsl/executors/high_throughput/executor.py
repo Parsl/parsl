@@ -795,11 +795,15 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         return launch_cmd
 
     def status(self) -> Dict[str, JobStatus]:
+        logger.info(f"Starting htex status rewrite for {self.label}")
         job_status = super().status()
+        logger.info(f"Superclass job status: {job_status}")
         connected_blocks = self.connected_blocks()
+        logger.info(f"Reported connected blocks: {connected_blocks}")
         for job_id in job_status:
             job_info = job_status[job_id]
             if job_info.terminal and job_id not in connected_blocks:
+                logger.info(f"Rewriting block {job_id} from {job_info.state}")
                 job_status[job_id].state = JobState.MISSING
                 if job_status[job_id].message is None:
                     job_status[job_id].message = (
