@@ -334,7 +334,7 @@ New Functionality
 
 * New launcher: `parsl.launchers.WrappedLauncher` for launching tasks inside containers.
 
-* `parsl.channels.SSHChannel` now supports a ``key_filename`` kwarg `issue#1639 <https://github.com/Parsl/parsl/issues/1639>`_
+* ``parsl.channels.SSHChannel`` now supports a ``key_filename`` kwarg `issue#1639 <https://github.com/Parsl/parsl/issues/1639>`_
 
 * Newly added Makefile wraps several frequent developer operations such as:
 
@@ -442,7 +442,7 @@ New Functionality
   module, parsl.data_provider.globus
 
 * `parsl.executors.WorkQueueExecutor`: a new executor that integrates functionality from `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ is now available.
-* New provider to support for Ad-Hoc clusters `parsl.providers.AdHocProvider`
+* New provider to support for Ad-Hoc clusters ``parsl.providers.AdHocProvider``
 * New provider added to support LSF on Summit `parsl.providers.LSFProvider`
 * Support for CPU and Memory resource hints to providers `(github) <https://github.com/Parsl/parsl/issues/942>`_.
 * The ``logging_level=logging.INFO`` in `parsl.monitoring.MonitoringHub` is replaced with ``monitoring_debug=False``:
@@ -468,7 +468,7 @@ New Functionality
 
 * Several test-suite improvements that have dramatically reduced test duration.
 * Several improvements to the Monitoring interface.
-* Configurable port on `parsl.channels.SSHChannel`.
+* Configurable port on ``parsl.channels.SSHChannel``.
 * ``suppress_failure`` now defaults to True.
 * `parsl.executors.HighThroughputExecutor` is the recommended executor, and ``IPyParallelExecutor`` is deprecated.
 * `parsl.executors.HighThroughputExecutor` will expose worker information via environment variables: ``PARSL_WORKER_RANK`` and ``PARSL_WORKER_COUNT``
@@ -532,7 +532,7 @@ New Functionality
 
 * Cleaner user app file log management.
 * Updated configurations using `parsl.executors.HighThroughputExecutor` in the configuration section of the userguide.
-* Support for OAuth based SSH with `parsl.channels.OAuthSSHChannel`.
+* Support for OAuth based SSH with ``parsl.channels.OAuthSSHChannel``.
 
 Bug Fixes
 ^^^^^^^^^
