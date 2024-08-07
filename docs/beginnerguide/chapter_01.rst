@@ -70,3 +70,82 @@ Here's how:
 * **Task execution**: Parsl executes tasks in parallel by utilizing available resources.
 * **Data management**: Parsl automatically manages the data movement between tasks, ensuring each task has the necessary input data when it starts.
 * **Result collection**: Parsl collects the results of tasks as they are completed, allowing you to access them in your Python code.
+
+Glossary
+========
+
+App
+---
+A Python function decorated with ``@python_app`` or ``@bash_app`` that tells Parsl it can be run in parallel.
+
+AppFuture
+---------
+A Future that represents the execution of a Parsl app and can be required to access the status or result.
+
+Block
+-----
+A group of resources used by Parsl. Often a single group of compute nodes requested through a scheduler.
+
+Concurrency
+-----------
+The ability of a program to handle multiple tasks at once.
+
+DataFlowKernel (DFK)
+--------------------
+The part of Parsl that manages the execution of your apps and the flow of data between them.
+
+DataFuture
+----------
+A Future that represents a file produced by a Parsl app.
+
+Elasticity
+----------
+The ability of Parsl to dynamically adjust how many blocks it uses.
+
+Execution Provider
+------------------
+A component that connects Parsl to computing resources.
+
+Executor
+--------
+The part of Parsl that runs your apps on different computers or processors.
+
+Future
+------
+A placeholder for the result of a task that hasn't finished yet. You can use the ``.result()`` method to get the actual result when it's ready.
+
+Job
+---
+A task or set of tasks that need to be completed within a process. Not to be confused with a “Block” even though many schedulers use the term.
+
+Launcher
+--------
+A component that starts worker processes to execute tasks.
+
+Node
+----
+A single computer within a larger compute facility, such as a supercomputer.
+
+Resource(s)
+-----------
+A collection of nodes managed by a facility providing computers to many people.
+
+Scheduler
+---------
+A system which allocates compute nodes on a cluster to different users. Common examples include Slurm and PBSPro.
+
+Task
+----
+Represent and contain the context needed for a worker to make progress.
+
+Thread
+------
+A lightweight process that allows for concurrent execution of tasks within a single program. Python Threads share access to the same objects in memory, which comes with pros (less communication) and cons (thread condition).
+
+Worker
+------
+The entity that actually runs your code and makes forward progress on your workflows and activities by picking up tasks. Each worker is typically a single Python process assigned to its own set of CPUs and accelerators.
+
+Worker Pool
+-----------
+A collection of Workers which run as part of the same Block. Each worker in the Worker Pool is treated as identical for the purposes of scheduling Tasks.
