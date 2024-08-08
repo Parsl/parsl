@@ -5,6 +5,7 @@ import logging
 import os
 import pickle
 import platform
+import queue
 import signal
 import sys
 import threading
@@ -12,6 +13,7 @@ import time
 from typing import Any, Dict, List, NoReturn, Optional, Sequence, Set, Tuple, cast
 
 import zmq
+from sortedcontainers import SortedList
 
 from parsl import curvezmq
 from parsl.app.errors import RemoteExceptionWrapper
@@ -24,7 +26,6 @@ from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize as serialize_object
 from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
-from sortedcontainers import SortedList
 
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
 PKL_DRAINED_CODE = pickle.dumps((2 ** 32) - 2)
@@ -55,6 +56,7 @@ class Interchange:
                  poll_period: int,
                  cert_dir: Optional[str],
                  manager_selector: ManagerSelector,
+                 queue_threshold: int,
                  ) -> None:
         """
         Parameters
@@ -128,7 +130,8 @@ class Interchange:
         self.hub_address = hub_address
         self.hub_zmq_port = hub_zmq_port
 
-        self.pending_task_queue: SortedList[Any] = SortedList(key=lambda msg: msg['resource_specification']['running_time_min'])
+        self.priority_pending_task_queue: SortedList[Any] = SortedList(key=lambda msg: -msg['resource_spec']['priority'])
+        self.general_pending_task_queue: queue.Queue[Any] = queue.Queue(maxsize=10 ** 6)
         self.count = 0
 
         self.worker_ports = worker_ports
@@ -163,6 +166,7 @@ class Interchange:
         self.heartbeat_threshold = heartbeat_threshold
 
         self.manager_selector = manager_selector
+        self.queue_threshold = queue_threshold
 
         self.current_platform = {'parsl_v': PARSL_VERSION,
                                  'python_v': "{}.{}.{}".format(sys.version_info.major,
@@ -175,7 +179,8 @@ class Interchange:
         logger.info("Platform info: {}".format(self.current_platform))
 
     def get_tasks(self, count: int, ) -> Sequence[dict]:
-        """ Obtains a batch of tasks from the internal pending_task_queue
+        """ Obtains a batch of tasks from the internal priority_pending_task_queue first
+            then general_pending_task_queue
 
         Parameters
         ----------
@@ -189,9 +194,13 @@ class Interchange:
         """
         tasks = []
         for _ in range(0, count):
-            if len(self.pending_task_queue) == 0:
-                break
-            x = self.pending_task_queue.pop(-1)
+            if len(self.priority_pending_task_queue) > 0:
+                x = self.priority_pending_task_queue.pop(-1)
+            else:
+                try:
+                    x = self.general_pending_task_queue.get(block=False)
+                except queue.Empty:
+                    break
             tasks.append(x)
 
         return tasks
@@ -210,11 +219,27 @@ class Interchange:
                 msg = self.task_incoming.recv_pyobj()
             except zmq.Again:
                 # We just timed out while attempting to receive
-                logger.debug("zmq.Again with {} tasks in internal queue".format(self.pending_task_queue.__len__()))
+                total_tasks = self.priority_pending_task_queue.__len__() + self.general_pending_task_queue.qsize()
+                logger.debug("zmq.Again with {} tasks in internal queue".format(total_tasks))
                 continue
 
-            logger.debug("putting message onto pending_task_queue")
-            self.pending_task_queue.add(msg)
+            if self.queue_threshold == -1:
+                # logger.debug("Priority queue disabled: putting message onto general_pending_task_queue")
+                logger.debug("Priority queue disabled: putting message onto general_pending_task_queue")
+                self.general_pending_task_queue.put(msg)
+            else:
+                resource_spec = msg.get('resource_spec', {})
+                if 'priority' in resource_spec:
+                    priority = resource_spec['priority']
+                    if priority < self.queue_threshold:
+                        self.priority_pending_task_queue.add(msg)
+                        logger.debug("putting message onto priority_pending_task_queue")
+                    else:
+                        self.general_pending_task_queue.put(msg)
+                        logger.debug("putting message onto general_pending_task_queue")
+                else:
+                    self.general_pending_task_queue.put(msg)
+                    logger.debug("putting message onto general_pending_task_queue")
             task_counter += 1
             logger.debug(f"Fetched {task_counter} tasks so far")
 
@@ -247,7 +272,7 @@ class Interchange:
                 command_req = self.command_channel.recv_pyobj()
                 logger.debug("Received command request: {}".format(command_req))
                 if command_req == "OUTSTANDING_C":
-                    outstanding = self.pending_task_queue.__len__()
+                    outstanding = self.priority_pending_task_queue.__len__() + self.general_pending_task_queue.qsize()
                     for manager in self._ready_managers.values():
                         outstanding += len(manager['tasks'])
                     reply = outstanding
@@ -475,6 +500,9 @@ class Interchange:
                 m['active'] = False
                 self._send_monitoring_info(monitoring_radio, m)
 
+    def task_queues_not_empty(self) -> bool:
+        return len(self.priority_pending_task_queue) != 0 or not self.general_pending_task_queue.empty()
+
     def process_tasks_to_send(self, interesting_managers: Set[bytes]) -> None:
         # Check if there are tasks that could be sent to managers
 
@@ -482,10 +510,10 @@ class Interchange:
             total=len(self._ready_managers),
             interesting=len(interesting_managers)))
 
-        if interesting_managers and len(self.pending_task_queue) != 0:
+        if interesting_managers and self.task_queues_not_empty():
             shuffled_managers = self.manager_selector.sort_managers(self._ready_managers, interesting_managers)
 
-            while shuffled_managers and len(self.pending_task_queue) != 0:  # cf. the if statement above...
+            while shuffled_managers and self.task_queues_not_empty():  # cf. the if statement above...
                 manager_id = shuffled_managers.pop()
                 m = self._ready_managers[manager_id]
                 tasks_inflight = len(m['tasks'])

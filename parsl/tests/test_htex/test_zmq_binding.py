@@ -25,6 +25,7 @@ def make_interchange(*, interchange_address: Optional[str], cert_dir: Optional[s
                        logdir=".",
                        logging_level=logging.INFO,
                        manager_selector=RandomManagerSelector(),
+                       queue_threshold=-1,
                        poll_period=10)
 
 

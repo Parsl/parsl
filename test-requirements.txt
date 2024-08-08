@@ -17,6 +17,7 @@ mpi4py
 # (where it's specified in setup.py)
 sqlalchemy>=1.4,<2
 sqlalchemy2-stubs
+sortedcontainers-stubs
 
 Sphinx==4.5.0
 twine
