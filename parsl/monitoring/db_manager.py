@@ -283,7 +283,7 @@ class DatabaseManager:
                  ):
 
         self.workflow_end = False
-        self.workflow_start_message = None  # type: Optional[MonitoringMessage]
+        self.workflow_start_message: Optional[MonitoringMessage] = None
         self.logdir = logdir
         os.makedirs(self.logdir, exist_ok=True)
 
@@ -299,10 +299,10 @@ class DatabaseManager:
         self.batching_interval = batching_interval
         self.batching_threshold = batching_threshold
 
-        self.pending_priority_queue = queue.Queue()  # type: queue.Queue[TaggedMonitoringMessage]
-        self.pending_node_queue = queue.Queue()  # type: queue.Queue[MonitoringMessage]
-        self.pending_block_queue = queue.Queue()  # type: queue.Queue[MonitoringMessage]
-        self.pending_resource_queue = queue.Queue()  # type: queue.Queue[MonitoringMessage]
+        self.pending_priority_queue: queue.Queue[TaggedMonitoringMessage] = queue.Queue()
+        self.pending_node_queue: queue.Queue[MonitoringMessage] = queue.Queue()
+        self.pending_block_queue: queue.Queue[MonitoringMessage] = queue.Queue()
+        self.pending_resource_queue: queue.Queue[MonitoringMessage] = queue.Queue()
 
     def start(self,
               priority_queue: "queue.Queue[TaggedMonitoringMessage]",
@@ -351,18 +351,18 @@ class DatabaseManager:
         If that happens, the message will be added to deferred_resource_messages and processed later.
 
         """
-        inserted_tasks = set()  # type: Set[object]
+        inserted_tasks: Set[object] = set()
 
         """
         like inserted_tasks but for task,try tuples
         """
-        inserted_tries = set()  # type: Set[Any]
+        inserted_tries: Set[Any] = set()
 
         # for any task ID, we can defer exactly one message, which is the
         # assumed-to-be-unique first message (with first message flag set).
         # The code prior to this patch will discard previous message in
         # the case of multiple messages to defer.
-        deferred_resource_messages = {}  # type: MonitoringMessage
+        deferred_resource_messages: MonitoringMessage = {}
 
         exception_happened = False
 
@@ -505,7 +505,7 @@ class DatabaseManager:
                         "Got {} messages from block queue".format(len(block_info_messages)))
                     # block_info_messages is possibly a nested list of dict (at different polling times)
                     # Each dict refers to the info of a job/block at one polling time
-                    block_messages_to_insert = []  # type: List[Any]
+                    block_messages_to_insert: List[Any] = []
                     for block_msg in block_info_messages:
                         block_messages_to_insert.extend(block_msg)
                     self._insert(table=BLOCK, messages=block_messages_to_insert)
@@ -686,7 +686,7 @@ class DatabaseManager:
                 logger.exception("Rollback failed")
 
     def _get_messages_in_batch(self, msg_queue: "queue.Queue[X]") -> List[X]:
-        messages = []  # type: List[X]
+        messages: List[X] = []
         start = time.time()
         while True:
             if time.time() - start >= self.batching_interval or len(messages) >= self.batching_threshold:

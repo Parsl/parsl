@@ -199,10 +199,10 @@ def monitor(pid: int,
 
     pm = psutil.Process(pid)
 
-    children_user_time = {}  # type: Dict[int, float]
-    children_system_time = {}  # type: Dict[int, float]
-    children_num_ctx_switches_voluntary = {}  # type: Dict[int, float]
-    children_num_ctx_switches_involuntary = {}  # type: Dict[int, float]
+    children_user_time: Dict[int, float] = {}
+    children_system_time: Dict[int, float] = {}
+    children_num_ctx_switches_voluntary: Dict[int, float] = {}
+    children_num_ctx_switches_involuntary: Dict[int, float] = {}
 
     def accumulate_and_prepare() -> Dict[str, Any]:
         d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}
