@@ -53,6 +53,7 @@ def test_get_dataframe():
     assert res.equals(data), 'Unexpected dataframe'
 
 
+@pytest.mark.shared_fs
 def test_bash_default_arg():
     if os.path.exists('std.out'):
         os.remove('std.out')
