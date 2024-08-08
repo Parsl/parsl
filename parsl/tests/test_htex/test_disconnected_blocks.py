@@ -9,6 +9,8 @@ from parsl.executors.errors import BadStateException
 from parsl.jobs.states import JobState, JobStatus
 from parsl.providers import LocalProvider
 
+logger = logging.getLogger(__name__)
+
 
 def local_config():
     """Config to simulate failing blocks without connecting"""
@@ -41,25 +43,39 @@ def double(x):
 @pytest.mark.local
 def test_disconnected_blocks():
     """Test reporting of blocks that fail to connect from HTEX"""
+    logger.info("BENC: 1")
     dfk = parsl.dfk()
+    logger.info("BENC: 2")
     executor = dfk.executors["HTEX"]
+    logger.info("BENC: 3")
 
     connected_blocks = executor.connected_blocks()
+    logger.info("BENC: 4")
     assert not connected_blocks, "Expected 0 blocks"
+    logger.info("BENC: 5")
 
     future = double(5)
+    logger.info("BENC: 6")
     with pytest.raises(BadStateException):
+        logger.info("BENC: 7")
         future.result()
+        logger.info("BENC: 8")
+    logger.info("BENC: 9")
 
     assert isinstance(future.exception(), BadStateException)
+    logger.info("BENC: 10")
     exception_body = str(future.exception())
     assert "EXIT CODE: 0" in exception_body
+    logger.info("BENC: 11")
 
     status_dict = executor.status()
+    logger.info("BENC: 12")
     assert len(status_dict) == 1, "Expected only 1 block"
     for status in status_dict.values():
         assert isinstance(status, JobStatus)
         assert status.state == JobState.MISSING
 
+    logger.info("BENC: 13")
     connected_blocks = executor.connected_blocks()
+    logger.info("BENC: 14")
     assert not connected_blocks, "Expected 0 blocks"
