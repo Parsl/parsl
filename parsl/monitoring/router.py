@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import logging
+import multiprocessing.queues as mpq
 import os
 import pickle
-import queue
 import socket
 import threading
 import time
 from multiprocessing.synchronize import Event
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
+import typeguard
 import zmq
 
 from parsl.log_utils import set_file_logger
@@ -33,10 +34,10 @@ class MonitoringRouter:
                  logdir: str = ".",
                  logging_level: int = logging.INFO,
                  atexit_timeout: int = 3,   # in seconds
-                 priority_msgs: "queue.Queue[AddressedMonitoringMessage]",
-                 node_msgs: "queue.Queue[AddressedMonitoringMessage]",
-                 block_msgs: "queue.Queue[AddressedMonitoringMessage]",
-                 resource_msgs: "queue.Queue[AddressedMonitoringMessage]",
+                 priority_msgs: mpq.Queue,
+                 node_msgs: mpq.Queue,
+                 block_msgs: mpq.Queue,
+                 resource_msgs: mpq.Queue,
                  exit_event: Event,
                  ):
         """ Initializes a monitoring configuration class.
@@ -202,12 +203,13 @@ class MonitoringRouter:
 
 
 @wrap_with_logs
-def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
-                   exception_q: "queue.Queue[Tuple[str, str]]",
-                   priority_msgs: "queue.Queue[AddressedMonitoringMessage]",
-                   node_msgs: "queue.Queue[AddressedMonitoringMessage]",
-                   block_msgs: "queue.Queue[AddressedMonitoringMessage]",
-                   resource_msgs: "queue.Queue[AddressedMonitoringMessage]",
+@typeguard.typechecked
+def router_starter(comm_q: mpq.Queue,
+                   exception_q: mpq.Queue,
+                   priority_msgs: mpq.Queue,
+                   node_msgs: mpq.Queue,
+                   block_msgs: mpq.Queue,
+                   resource_msgs: mpq.Queue,
                    exit_event: Event,
 
                    hub_address: str,
