@@ -3,12 +3,12 @@ import logging
 
 import paramiko
 
-from parsl.channels.ssh.ssh import SSHChannel
+from parsl.channels.ssh.ssh import DeprecatedSSHChannel
 
 logger = logging.getLogger(__name__)
 
 
-class SSHInteractiveLoginChannel(SSHChannel):
+class DeprecatedSSHInteractiveLoginChannel(DeprecatedSSHChannel):
     """SSH persistent channel. This enables remote execution on sites
     accessible via ssh. This channel supports interactive login and is appropriate when
     keys are not set up.

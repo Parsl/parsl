@@ -3,7 +3,7 @@ import socket
 
 import paramiko
 
-from parsl.channels.ssh.ssh import SSHChannel
+from parsl.channels.ssh.ssh import DeprecatedSSHChannel
 from parsl.errors import OptionalModuleMissing
 
 try:
@@ -17,7 +17,7 @@ except (ImportError, NameError):
 logger = logging.getLogger(__name__)
 
 
-class OAuthSSHChannel(SSHChannel):
+class DeprecatedOAuthSSHChannel(DeprecatedSSHChannel):
     """SSH persistent channel. This enables remote execution on sites
     accessible via ssh. This channel uses Globus based OAuth tokens for authentication.
     """

@@ -24,7 +24,7 @@ class NoAuthSSHClient(paramiko.SSHClient):
         return
 
 
-class SSHChannel(Channel, RepresentationMixin):
+class DeprecatedSSHChannel(Channel, RepresentationMixin):
     ''' SSH persistent channel. This enables remote execution on sites
     accessible via ssh. It is assumed that the user has setup host keys
     so as to ssh to the remote host. Which goes to say that the following
