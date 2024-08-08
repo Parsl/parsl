@@ -302,16 +302,16 @@ class DatabaseManager:
         self.batching_interval = batching_interval
         self.batching_threshold = batching_threshold
 
-        self.pending_priority_queue = queue.Queue()  # type: queue.Queue[TaggedMonitoringMessage]
-        self.pending_node_queue = queue.Queue()  # type: queue.Queue[MonitoringMessage]
-        self.pending_block_queue = queue.Queue()  # type: queue.Queue[MonitoringMessage]
-        self.pending_resource_queue = queue.Queue()  # type: queue.Queue[MonitoringMessage]
+        self.pending_priority_queue: queue.Queue[TaggedMonitoringMessage] = queue.Queue()
+        self.pending_node_queue: queue.Queue[MonitoringMessage] = queue.Queue()
+        self.pending_block_queue: queue.Queue[MonitoringMessage] = queue.Queue()
+        self.pending_resource_queue: queue.Queue[MonitoringMessage] = queue.Queue()
 
     def start(self,
-              priority_queue: "mpq.Queue[TaggedMonitoringMessage]",
-              node_queue: "mpq.Queue[MonitoringMessage]",
-              block_queue: "mpq.Queue[MonitoringMessage]",
-              resource_queue: "mpq.Queue[MonitoringMessage]") -> None:
+              priority_queue: mpq.Queue,
+              node_queue: mpq.Queue,
+              block_queue: mpq.Queue,
+              resource_queue: mpq.Queue) -> None:
 
         self._kill_event = threading.Event()
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
@@ -723,11 +723,11 @@ class DatabaseManager:
 
 @wrap_with_logs(target="database_manager")
 @typeguard.typechecked
-def dbm_starter(exception_q: "mpq.Queue[Tuple[str, str]]",
-                priority_msgs: "mpq.Queue[TaggedMonitoringMessage]",
-                node_msgs: "mpq.Queue[MonitoringMessage]",
-                block_msgs: "mpq.Queue[MonitoringMessage]",
-                resource_msgs: "mpq.Queue[MonitoringMessage]",
+def dbm_starter(exception_q: mpq.Queue,
+                priority_msgs: mpq.Queue,
+                node_msgs: mpq.Queue,
+                block_msgs: mpq.Queue,
+                resource_msgs: mpq.Queue,
                 db_url: str,
                 logdir: str,
                 logging_level: int) -> None:

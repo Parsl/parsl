@@ -8,7 +8,7 @@ import socket
 import threading
 import time
 from multiprocessing.synchronize import Event
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import typeguard
 import zmq
@@ -34,10 +34,10 @@ class MonitoringRouter:
                  logdir: str = ".",
                  logging_level: int = logging.INFO,
                  atexit_timeout: int = 3,   # in seconds
-                 priority_msgs: "mpq.Queue[AddressedMonitoringMessage]",
-                 node_msgs: "mpq.Queue[AddressedMonitoringMessage]",
-                 block_msgs: "mpq.Queue[AddressedMonitoringMessage]",
-                 resource_msgs: "mpq.Queue[AddressedMonitoringMessage]",
+                 priority_msgs: mpq.Queue,
+                 node_msgs: mpq.Queue,
+                 block_msgs: mpq.Queue,
+                 resource_msgs: mpq.Queue,
                  exit_event: Event,
                  ):
         """ Initializes a monitoring configuration class.
@@ -204,12 +204,12 @@ class MonitoringRouter:
 
 @wrap_with_logs
 @typeguard.typechecked
-def router_starter(comm_q: "mpq.Queue[Union[Tuple[int, int], str]]",
-                   exception_q: "mpq.Queue[Tuple[str, str]]",
-                   priority_msgs: "mpq.Queue[AddressedMonitoringMessage]",
-                   node_msgs: "mpq.Queue[AddressedMonitoringMessage]",
-                   block_msgs: "mpq.Queue[AddressedMonitoringMessage]",
-                   resource_msgs: "mpq.Queue[AddressedMonitoringMessage]",
+def router_starter(comm_q: mpq.Queue,
+                   exception_q: mpq.Queue,
+                   priority_msgs: mpq.Queue,
+                   node_msgs: mpq.Queue,
+                   block_msgs: mpq.Queue,
+                   resource_msgs: mpq.Queue,
                    exit_event: Event,
 
                    hub_address: str,
