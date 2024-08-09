@@ -12,12 +12,21 @@ def noop_error_handler(executor: status_handling.BlockProviderExecutor, status: 
 
 
 def simple_error_handler(executor: status_handling.BlockProviderExecutor, status: Dict[str, JobStatus], threshold: int = 3) -> None:
+    logger.info(f"Simple error handler running for {executor.label}")
+    logger.info(f"status = {status}")
     (total_jobs, failed_jobs) = _count_jobs(status)
+    logger.info(f"(total_jobs, failed_jobs) = {total_jobs}, {failed_jobs}")
     if hasattr(executor.provider, "init_blocks"):
         threshold = max(1, executor.provider.init_blocks)
+        logger.info("overriding threshold with max init blocks")
 
+    logger.info(f"threshold is now: {threshold}")
     if total_jobs >= threshold and failed_jobs == total_jobs:
+        logger.info("entering failure path")
         executor.set_bad_state_and_fail_all(_get_error(status))
+    else:
+        logger.info("not entering failure path")
+    logger.info(f"Simple error handler finished for {executor.label}")
 
 
 def windowed_error_handler(executor: status_handling.BlockProviderExecutor, status: Dict[str, JobStatus], threshold: int = 3) -> None:
