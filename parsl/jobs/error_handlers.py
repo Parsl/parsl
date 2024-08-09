@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
+
 from typing import Dict, Tuple
 
 import parsl.executors.status_handling as status_handling
 from parsl.jobs.errors import TooManyJobFailuresError
 from parsl.jobs.states import JobState, JobStatus
 
+logger = logging.getLogger(__name__)
 
 def noop_error_handler(executor: status_handling.BlockProviderExecutor, status: Dict[str, JobStatus], threshold: int = 3) -> None:
     pass
