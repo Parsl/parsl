@@ -47,18 +47,20 @@ bb_uncons (MkByteBlock ptr (S n)) = do
 
   pure (v, rest)
 
+%foreign "C:copy_and_append,bytes"
+prim__copy_and_append: AnyPtr -> Int -> Bits8 -> PrimIO AnyPtr
+
 export
 bb_append : ByteBlock n -> Bits8 -> IO (ByteBlock (S n))
-bb_append (MkByteBlock ptr n) = do
+bb_append (MkByteBlock ptr n) v = do
   -- can't necessarily realloc here, because ptr is not
   -- necessarily a malloced ptr: it might be a pointer
   -- further along into the block... and without any 
   -- linearity we don't have any guarantee about other
   -- ByteBlocks sharing the same underlying memory...
   -- (which is also a problem for arbitrary mutability)
-  new_ptr <- ?more_memory
-
-  pure ?bb
+  new_ptr <- primIO $ prim__copy_and_append ptr (cast n) v
+  pure (MkByteBlock (new_ptr) (S n))
 
 export
 length : ByteBlock n -> Nat
