@@ -553,7 +553,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             # TODO: all these arguments below aren't used... so are they necessary? should there be
             # tests discovering they aren't used/passed?
             interchange_config = {"client_address": "127.0.0.1",
-                                  "client_ports": (9000, 9001, 9002),
+                                  "client_ports": (self.outgoing_q.port,
+                                                   self.incoming_q.port,
+                                                   self.command_client.port),
                                   "interchange_address": self.address,
                                   "worker_ports": self.worker_ports,
                                   "worker_port_range": self.worker_port_range,
@@ -564,6 +566,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                   "poll_period": self.poll_period,
                                   "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
                                   "cert_dir": self.cert_dir,
+                                  "manager_selector": self.manager_selector,
+                                  "run_id": self.run_id,
                                   }
 
             logger.error(f"BENC: interchange_config = {interchange_config}")
@@ -865,7 +869,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         try:
             self.interchange_proc.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
-            logger.info("Unable to terminate Interchange process; sending SIGKILL")
+            logger.warning("Unable to terminate Interchange process; sending SIGKILL")
             self.interchange_proc.kill()
 
         logger.info("Closing ZMQ pipes")

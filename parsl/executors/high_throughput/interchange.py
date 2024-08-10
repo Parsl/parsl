@@ -55,6 +55,7 @@ class Interchange:
                  poll_period: int,
                  cert_dir: Optional[str],
                  manager_selector: ManagerSelector,
+                 run_id: str,
                  ) -> None:
         """
         Parameters
@@ -124,6 +125,8 @@ class Interchange:
         self.command_channel = self.zmq_context.socket(zmq.REP)
         self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
         logger.info("Connected to client")
+
+        self.run_id = run_id
 
         self.hub_address = hub_address
         self.hub_zmq_port = hub_zmq_port
@@ -227,6 +230,7 @@ class Interchange:
             d: Dict = cast(Dict, manager.copy())
             d['timestamp'] = datetime.datetime.now()
             d['last_heartbeat'] = datetime.datetime.fromtimestamp(d['last_heartbeat'])
+            d['run_id'] = self.run_id
 
             monitoring_radio.send((MessageType.NODE_INFO, d))
 
