@@ -170,6 +170,10 @@ poll_loop command_socket tasks_submit_to_interchange_socket = do
   -- I'm not really sure what that interface would look like. Potentially
   -- a much higher level "here's a callback to run for each one" rather
   -- than returning a structure?
+
+  -- perhaps something like a list of fd, callback tuples (or 2nd value can be
+  -- a free type) so that when poll comes back, we get a "thing" which is actually
+  -- the content of the if-statements that would otherwise go below here.
   
   -- Semantics of buffer ownership: the caller must allocate a buffer and
   -- describe the size to zmq_recv. Probably some linear type stuff to be
