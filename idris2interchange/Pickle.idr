@@ -190,10 +190,8 @@ unpickle (Z ** bb) = do
   ?error_unpickle_Z
 
 
--- we can encode the length right in the type signature because
--- this is a simple opcode...
-pickle_PROTO : Nat -> IO (ByteBlock 2)
-pickle_PROTO v = do
+pickle_PROTO : (n ** ByteBlock n) -> Nat -> IO (m ** ByteBlock m)
+pickle_PROTO (n ** bytes) v = do
   log "Pickling PROTO opcode"
   -- write PROTO byte
   -- write v as a byte
@@ -217,12 +215,46 @@ pickle_PROTO v = do
   -- so lets take the dangerous (without linear types) route
   -- and do reallocs...
 
-  let bytes = emptyByteBlock
-
   bytes <- bb_append bytes 128   -- PROTO=128
   bytes <- bb_append bytes (cast v)
 
-  pure bytes
+  pure ((S (S n)) ** bytes)
+
+pickle_ast : (n: Nat ** ByteBlock n) -> PickleAST -> IO (m: Nat ** (ByteBlock m))
+
+fold_AST : (n ** ByteBlock n) -> PickleAST -> IO (m ** ByteBlock m)
+fold_AST (n ** bytes) ast = do
+  log "Folding over an AST element"
+  pickle_ast (n ** bytes) ast
+
+pickle_TUPLE : (n ** ByteBlock n) -> List PickleAST -> IO (m ** ByteBlock m)
+pickle_TUPLE (n ** bytes) entries = do
+  log "Pickling TUPLE"
+  bytes <- bb_append bytes 40  -- opcode is ASCII '(', decimal 40
+
+  -- Do some kind of fold over the entries list, to generate
+  -- a stack section that contains all those entries.
+  (len ** bytes) <- foldlM fold_AST ((S n) ** bytes) entries
+  
+  bytes <- bb_append bytes 116  -- opcode is ASCII t, decimal 116
+
+  pure ((S len) ** bytes)
+
+-- TODO: byte block contains n at runtime ... so maybe its possible
+-- to rearrange this dependent pair uses to treat ByteBlock as the
+-- dependant pair of n and ptr? i guess in that case, the n is not
+-- fixed - it can be anything - that's to point of the dependent
+-- pair? to say *who* can define that. If we were reasoning about
+-- ByteBlock in the same way, then n wouldn't be included as a
+-- type paramter, just like its not a type parameter but instead
+-- explicitly chosen, in (n ** ByteBlock n)  ?
+
+-- The first AST that we need to pickle is this, the initial worker
+-- ports response:
+--   PickleTuple [PickleInteger 9000, PickleInteger 9001]
+
+pickle_ast bytes (PickleTuple elements) = pickle_TUPLE bytes elements
+pickle_ast _ _ = ?notimpl_pickle_ast_others
 
 ||| Takes some PickleAST and turns it into a Pickle bytestream.
 export
@@ -243,7 +275,7 @@ pickle ast = do
   -- than doing GC?
 
   -- PROTO 4
-  proto_header_bytes <- pickle_PROTO 4
+  proto_header_bytes <- pickle_PROTO (0 ** emptyByteBlock) 4
 
   --   cpython generated pickles then have a FRAME, but I think this isn't
   --   compulsory - although it might cause some performance degredation in
@@ -253,11 +285,6 @@ pickle ast = do
 
   -- then recursively run per-PickleAST-constructor code.
 
-  ast_bytes <- ?encode_ast ast
+  ast_bytes <- pickle_ast proto_header_bytes ast
 
-  -- this could look like monoid expression syntax if this code was not tied
-  -- into IO... appendBytes is <+> in IO (specifically, there are memory
-  -- allocation semantics not just a pure value)
-  bytes <- ?appendBytes proto_header_bytes ast_bytes
-
-  pure bytes
+  pure ast_bytes
