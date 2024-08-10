@@ -253,7 +253,35 @@ pickle_TUPLE (n ** bytes) entries = do
 -- ports response:
 --   PickleTuple [PickleInteger 9000, PickleInteger 9001]
 
+pickle_BININT : (n ** ByteBlock n) -> Int -> IO (m ** ByteBlock m)
+pickle_BININT (n ** bytes) v = do
+  log "Pickling BININT"
+  printLn v
+
+  if v < 0 then ?notimpl_BININT_negatives
+           else log "this isn't negative - ok"
+
+  -- TODO: decompose 32-bit signed v into 4 bytes little-endian
+  let b1 = v `mod` 256
+  let b2 = (v `div` 256) `mod` 256
+  let b3 = (v `div` 256 `div` 256) `mod` 256
+  let b4 = (v `div` 256 `div` 256 `div` 256)
+
+  -- if v is too big, this will overflow a Bit8...
+  -- I'm not sure if thats a silent or raising error?
+  -- dividing b5 to give a b5, and checking b5 is 0
+  -- would be a test for that
+
+  bytes <- bb_append bytes 74   -- opcode is ASCII 'J'
+  bytes <- bb_append bytes (cast b1)
+  bytes <- bb_append bytes (cast b2)
+  bytes <- bb_append bytes (cast b3)
+  bytes <- bb_append bytes (cast b4)
+
+  pure (S (S (S (S (S n)))) ** bytes)
+
 pickle_ast bytes (PickleTuple elements) = pickle_TUPLE bytes elements
+pickle_ast bytes (PickleInteger v) = pickle_BININT bytes v
 pickle_ast _ _ = ?notimpl_pickle_ast_others
 
 ||| Takes some PickleAST and turns it into a Pickle bytestream.
