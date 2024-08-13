@@ -110,7 +110,7 @@ A job in Parsl refers to a unit of work that is submitted to an execution enviro
 **Launcher:**
 ----------------
 
-A launcher is like a starter for your apps. It's the part that actually starts the apps running on the computers. It's like a coach telling the athletes when to start running.
+A launcher in Parsl is responsible for placing the workers onto each computer, preparing them to run the apps. It’s like a bus driver who brings the players to the stadium, ensuring they are ready to start, but not directly involved in telling them what to do once they arrive.
 
 .. _manager:
 
