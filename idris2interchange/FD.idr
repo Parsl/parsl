@@ -157,7 +157,8 @@ poll inputs timeout = do
 
    putStrLn "About to call poll"
    poll_ret <- pollhelper_poll buf timeout -- TODO: something with the return result
-   putStrLn "Poll return this return value:"
+   putStrLn "Poll returned..."
+   putStrLn "... Poll returned this return value:"
    printLn poll_ret
 
    -- contrast Data.Vect.alLFins here with Data.Fin.List.allFins above..

@@ -38,6 +38,13 @@ dispatch_cmd "WORKER_PORTS" = do
   -- perhaps as a monad-style reader environment?
   pure (PickleTuple [PickleInteger 9000, PickleInteger 9001])
 
+dispatch_cmd "CONNECTED_BLOCKS" = do
+  log "CONNECTED_BLOCKS requested"
+  -- TODO: in the rusterchange, it seemed like connected blocks didn't
+  -- need implementing for the test suite, and could return an empty
+  -- list. So that's what I'll do here.
+  pure (PickleList [])
+
 dispatch_cmd _ = ?error_cmd_not_implemented
 
 

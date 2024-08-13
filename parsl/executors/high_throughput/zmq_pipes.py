@@ -75,7 +75,7 @@ class CommandClient:
         with self._lock:
             for _ in range(max_retries):
                 try:
-                    logger.debug("Sending command client command")
+                    logger.debug("Sending command client command %s", message)
 
                     if timeout_s is not None:
                         remaining_time_s = start_time_s + timeout_s - time.monotonic()

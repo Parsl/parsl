@@ -21,6 +21,7 @@ public export
 data PickleAST = PickleUnicodeString String
                | PickleInteger Int
                | PickleTuple (List PickleAST)
+               | PickleList (List PickleAST)
 %runElab derive "PickleAST" [Generic, Meta, Show]
 
 record VMState where
@@ -232,10 +233,21 @@ pickle_STOP (n ** bytes) = do
   bytes <- bb_append bytes 46  -- STOP is ASCII 46
   pure ((S n) ** bytes)
 
+
+-- this is the same code as pickle_TUPLE except for the opcode
+pickle_LIST : (n ** ByteBlock n) -> List PickleAST -> IO (m ** ByteBlock m)
+pickle_LIST (n ** bytes) entries = do
+  log "Pickling LIST"
+  bytes <- bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
+  (len ** bytes) <- foldlM fold_AST ((S n) ** bytes) entries
+  bytes <- bb_append bytes 108  -- opcode is ASCII l
+  pure ((S len) ** bytes)
+
+
 pickle_TUPLE : (n ** ByteBlock n) -> List PickleAST -> IO (m ** ByteBlock m)
 pickle_TUPLE (n ** bytes) entries = do
   log "Pickling TUPLE"
-  bytes <- bb_append bytes 40  -- opcode is ASCII '(', decimal 40
+  bytes <- bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
 
   -- Do some kind of fold over the entries list, to generate
   -- a stack section that contains all those entries.
@@ -286,6 +298,7 @@ pickle_BININT (n ** bytes) v = do
   pure (S (S (S (S (S n)))) ** bytes)
 
 pickle_ast bytes (PickleTuple elements) = pickle_TUPLE bytes elements
+pickle_ast bytes (PickleList elements) = pickle_LIST bytes elements
 pickle_ast bytes (PickleInteger v) = pickle_BININT bytes v
 pickle_ast _ _ = ?notimpl_pickle_ast_others
 
