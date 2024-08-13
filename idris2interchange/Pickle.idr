@@ -189,7 +189,6 @@ unpickle (Z ** bb) = do
   log "unpickle not defined on empty byte sequence"
   ?error_unpickle_Z
 
-
 pickle_PROTO : (n ** ByteBlock n) -> Nat -> IO (m ** ByteBlock m)
 pickle_PROTO (n ** bytes) v = do
   log "Pickling PROTO opcode"
@@ -226,6 +225,12 @@ fold_AST : (n ** ByteBlock n) -> PickleAST -> IO (m ** ByteBlock m)
 fold_AST (n ** bytes) ast = do
   log "Folding over an AST element"
   pickle_ast (n ** bytes) ast
+
+pickle_STOP : (n ** ByteBlock n) -> IO (m ** ByteBlock m)
+pickle_STOP (n ** bytes) = do
+  log "Pickling STOP opcode"
+  bytes <- bb_append bytes 46  -- STOP is ASCII 46
+  pure ((S n) ** bytes)
 
 pickle_TUPLE : (n ** ByteBlock n) -> List PickleAST -> IO (m ** ByteBlock m)
 pickle_TUPLE (n ** bytes) entries = do
@@ -315,4 +320,6 @@ pickle ast = do
 
   ast_bytes <- pickle_ast proto_header_bytes ast
 
-  pure ast_bytes
+  complete_bytes <- pickle_STOP ast_bytes
+
+  pure complete_bytes
