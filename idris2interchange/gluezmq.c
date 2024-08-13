@@ -63,3 +63,11 @@ int glue_zmq_get_socket_fd(void *sock) {
     assert (optionlen == sizeof(int));
     return fd;
 }
+
+
+void glue_zmq_alloc_send_bytes(void *sock, void *bytes, int len) {
+    int n;
+    n = zmq_send(sock, bytes, len, 0);
+    assert(n == len);
+    // TODO: could be -1 on failure and we should do *something* with that
+}

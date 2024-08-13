@@ -116,3 +116,12 @@ zmq_get_socket_fd (MkZMQSocket sock_ptr) = do
   printLn fd
   pure $ MkFD fd
 
+%foreign (gluezmq "glue_zmq_alloc_send_bytes")
+prim__zmq_alloc_send_bytes : AnyPtr -> AnyPtr -> Int -> PrimIO ()
+
+public export
+zmq_alloc_send_bytes : ZMQSocket -> ByteBlock n -> IO ()
+zmq_alloc_send_bytes (MkZMQSocket sock_ptr) (MkByteBlock byte_ptr size) = do
+  log "sending bytes"
+  primIO $ prim__zmq_alloc_send_bytes sock_ptr byte_ptr (cast size)
+  log "sent bytes"

@@ -226,8 +226,11 @@ poll_loop command_socket tasks_submit_to_interchange_socket = do
         resp <- dispatch_cmd cmd
         putStr "Response to command: "
         printLn resp
-        resp_bytes <- pickle resp
-        ?send_bytes command_socket resp_bytes
+        (n ** resp_bytes) <- pickle resp
+        zmq_alloc_send_bytes command_socket resp_bytes
+        -- need to do some appropriate de-alloc for a message here?
+        -- or is it done inside alloc_send_bytes?
+
         -- after this send, command socket is back is ready-for-a-REQ state
 
 
