@@ -206,7 +206,7 @@ class ResultsIncoming:
     def get(self):
         logger.debug("Waiting for ResultsIncoming message")
         m = self.results_receiver.recv_multipart()
-        logger.debug("Received ResultsIncoming message")
+        logger.debug(f"Received ResultsIncoming message: {m}")
         return m
 
     def close(self):

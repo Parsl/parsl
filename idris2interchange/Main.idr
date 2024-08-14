@@ -36,7 +36,7 @@ dispatch_cmd "WORKER_PORTS" = do
   -- hard-code return value because ports are also hard-coded ...
   -- TODO: this should be some environment to be passed around
   -- perhaps as a monad-style reader environment?
-  pure (PickleTuple [PickleInteger 9000, PickleInteger 9001])
+  pure (PickleTuple [PickleInteger 9003, PickleInteger 9004])
 
 dispatch_cmd "CONNECTED_BLOCKS" = do
   log "CONNECTED_BLOCKS requested"
