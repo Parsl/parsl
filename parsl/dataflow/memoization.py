@@ -6,7 +6,7 @@ import pickle
 from functools import lru_cache, singledispatch
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-import parsl.dataflow.taskrecord as taskrecord
+from parsl.dataflow.taskrecord import TaskRecord
 
 if TYPE_CHECKING:
     from parsl import DataFlowKernel  # import loop at runtime - needed for typechecking - TODO turn into "if typing:"
@@ -166,7 +166,7 @@ class Memoizer:
             logger.info("App caching disabled for all apps")
             self.memo_lookup_table = {}
 
-    def make_hash(self, task: taskrecord.TaskRecord) -> str:
+    def make_hash(self, task: TaskRecord) -> str:
         """Create a hash of the task inputs.
 
         Args:
@@ -201,7 +201,7 @@ class Memoizer:
         x = b''.join(t)
         return hashlib.md5(x).hexdigest()
 
-    def check_memo(self, task: taskrecord.TaskRecord) -> Optional[Future[Any]]:
+    def check_memo(self, task: TaskRecord) -> Optional[Future[Any]]:
         """Create a hash of the task and its inputs and check the lookup table for this hash.
 
         If present, the results are returned.
@@ -250,7 +250,7 @@ class Memoizer:
         """
         return self.memo_lookup_table[hashsum]
 
-    def update_memo(self, task: taskrecord.TaskRecord, r: Future[Any]) -> None:
+    def update_memo(self, task: TaskRecord, r: Future[Any]) -> None:
         """Updates the memoization lookup table with the result from a task.
 
         Args:
