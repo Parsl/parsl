@@ -12,8 +12,9 @@ from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
 import typeguard
 
 from parsl.log_utils import set_file_logger
+from parsl.monitoring.errors import MonitoringHubStartError
 from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.radios import MultiprocessingQueueRadio
+from parsl.monitoring.radios import MultiprocessingQueueRadioSender
 from parsl.monitoring.router import router_starter
 from parsl.monitoring.types import AddressedMonitoringMessage
 from parsl.multiprocessing import ForkProcess, SizedQueue
@@ -105,7 +106,7 @@ class MonitoringHub(RepresentationMixin):
         self.resource_monitoring_enabled = resource_monitoring_enabled
         self.resource_monitoring_interval = resource_monitoring_interval
 
-    def start(self, run_id: str, dfk_run_dir: str, config_run_dir: Union[str, os.PathLike]) -> int:
+    def start(self, dfk_run_dir: str, config_run_dir: Union[str, os.PathLike]) -> None:
 
         logger.debug("Starting MonitoringHub")
 
@@ -160,7 +161,6 @@ class MonitoringHub(RepresentationMixin):
                                                "zmq_port_range": self.hub_port_range,
                                                "logdir": self.logdir,
                                                "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                               "run_id": run_id
                                                },
                                        name="Monitoring-Router-Process",
                                        daemon=True,
@@ -187,7 +187,7 @@ class MonitoringHub(RepresentationMixin):
         self.filesystem_proc.start()
         logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
 
-        self.radio = MultiprocessingQueueRadio(self.block_msgs)
+        self.radio = MultiprocessingQueueRadioSender(self.block_msgs)
 
         try:
             comm_q_result = comm_q.get(block=True, timeout=120)
@@ -195,7 +195,7 @@ class MonitoringHub(RepresentationMixin):
             comm_q.join_thread()
         except queue.Empty:
             logger.error("Hub has not completed initialization in 120s. Aborting")
-            raise Exception("Hub failed to start")
+            raise MonitoringHubStartError()
 
         if isinstance(comm_q_result, str):
             logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
@@ -207,7 +207,7 @@ class MonitoringHub(RepresentationMixin):
 
         logger.info("Monitoring Hub initialized")
 
-        return zmq_port
+        self.hub_zmq_port = zmq_port
 
     # TODO: tighten the Any message format
     def send(self, mtype: MessageType, message: Any) -> None:

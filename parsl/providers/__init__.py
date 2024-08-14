@@ -1,12 +1,6 @@
-
-
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    # Workstation Provider
-
-    from parsl.providers.ad_hoc.ad_hoc import AdHocProvider
-
     # Cloud Providers
     from parsl.providers.aws.aws import AWSProvider
     from parsl.providers.azure.azure import AzureProvider
@@ -37,7 +31,6 @@ lazys = {
         'TorqueProvider': 'parsl.providers.torque.torque',
         'PBSProProvider': 'parsl.providers.pbspro.pbspro',
         'LSFProvider': 'parsl.providers.lsf.lsf',
-        'AdHocProvider': 'parsl.providers.ad_hoc.ad_hoc',
 
         # Cloud Providers
         'AWSProvider': 'parsl.providers.aws.aws',
@@ -72,7 +65,6 @@ __all__ = ['LocalProvider',
            'SlurmProvider',
            'TorqueProvider',
            'LSFProvider',
-           'AdHocProvider',
            'PBSProProvider',
            'AWSProvider',
            'GoogleCloudProvider',
