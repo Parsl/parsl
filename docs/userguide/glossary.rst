@@ -56,7 +56,7 @@ Concurrency means doing multiple things at the same time. In Parsl, it means tha
 
 Configuration is like setting up the rules for how Parsl should work. It's like adjusting the settings on your phone – you can choose how you want things to look and behave. In Parsl, you can configure things like how many computers to use, where to store data, and how to handle errors.
 
-.. _datafuture:
+.. _datafutureglossary:
 
 **DataFuture:**
 ------------------
