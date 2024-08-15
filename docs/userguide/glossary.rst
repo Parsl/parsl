@@ -96,7 +96,7 @@ An executor is like a manager for your apps. It's the part that decides which ap
 **Future:**
 -------------
 
-A future is a placeholder for the result of a task that hasn't finished yet. Both AppFuture and DataFuture are types of Futures. You can use the `.result()` method to get the actual result when it's ready.
+A future is a placeholder for the result of a task that hasn't finished yet. Both AppFuture and DataFuture are types of Futures. You can use the ``.result()`` method to get the actual result when it's ready.
 
 .. _jobglossary:
 
