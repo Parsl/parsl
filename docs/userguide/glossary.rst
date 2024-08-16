@@ -124,7 +124,7 @@ A manager in Parsl is responsible for overseeing the execution of tasks on speci
 **Memoization:**
 -------------------
 
-Memoization is like remembering something so you don't have to do it again. In Parsl, it means that if you run an app with the same inputs multiple times, Parsl will remember the result from the first time and give it to you again instead of running the app again. This can save a lot of time.
+Memoization is like remembering something so you don't have to do it again. In Parsl, if you are using memoization and you run an app with the same inputs multiple times, Parsl will remember the result from the first time and give it to you again instead of running the app again. This can save a lot of time.
 
 .. _mpiappglossary:    
 
