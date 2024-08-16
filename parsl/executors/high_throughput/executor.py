@@ -17,7 +17,7 @@ from parsl import curvezmq
 from parsl.addresses import get_all_addresses
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.staging import Staging
-from parsl.executors.errors import BadMessage, ScalingFailed
+from parsl.executors.errors import BadMessage, ExecutorError, ScalingFailed
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
 from parsl.executors.high_throughput.manager_selector import (
@@ -259,6 +259,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  prefetch_capacity: int = 0,
                  heartbeat_threshold: int = 120,
                  heartbeat_period: int = 30,
+                 queue_threshold: Optional[int] = -1,
                  drain_period: Optional[int] = None,
                  poll_period: int = 10,
                  address_probe_timeout: Optional[int] = None,
@@ -322,6 +323,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.interchange_port_range = interchange_port_range
         self.heartbeat_threshold = heartbeat_threshold
         self.heartbeat_period = heartbeat_period
+        self.queue_threshold = queue_threshold
         self.drain_period = drain_period
         self.poll_period = poll_period
         self.run_dir = '.'
@@ -551,6 +553,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                               "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
                               "cert_dir": self.cert_dir,
                               "manager_selector": self.manager_selector,
+                              "queue_threshold": self.queue_threshold,
                               "run_id": self.run_id,
                               }
 
@@ -659,8 +662,20 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Returns:
               Future
         """
+        if self.enable_mpi_mode:
+            validate_resource_spec(resource_specification, self.enable_mpi_mode)
+        else:
+            if resource_specification and isinstance(resource_specification, dict):
+                logger.debug("Got resource_specification: {}".format(resource_specification))
+                acceptable_fields = set(['running_time_min', 'priority'])
+                keys = set(resource_specification.keys())
 
-        validate_resource_spec(resource_specification, self.enable_mpi_mode)
+                if not keys.issubset(acceptable_fields):
+                    message = "Task resource specification only accepts these types of resources: {}".format(
+                            ', '.join(acceptable_fields))
+                    logger.error(message)
+                    raise ExecutorError(self, message)
+            # might need an else statement to raise an error if the not a resource spec
 
         if self.bad_state_is_set:
             raise self.executor_exception
@@ -684,7 +699,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         except TypeError:
             raise SerializationError(func.__name__)
 
-        msg = {"task_id": task_id, "buffer": fn_buf}
+        msg = {"task_id": task_id, 'resource_spec': resource_specification, "buffer": fn_buf}
 
         # Post task to the outgoing queue
         self.outgoing_q.put(msg)
