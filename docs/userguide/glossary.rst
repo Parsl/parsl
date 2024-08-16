@@ -159,7 +159,7 @@ A Parsl script is a file that contains the instructions for how to run your apps
 **Plugin:**
 ---------------
 
-A plugin is like an add-on for Parsl. It's a piece of code that you can add to Parsl to give it new features or change how it works. It's like an extra tool that you can add to your toolbox.
+A plugin is an add-on for Parsl. It's a piece of code that you can add to Parsl to give it new features or change how it works. It's like an extra tool that you can add to your toolbox.
 
 .. _pythonappglossary: 
 
