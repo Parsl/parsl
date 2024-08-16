@@ -8,6 +8,7 @@ pytest-random-order
 nbsphinx
 sphinx_rtd_theme
 mypy==1.5.1
+types-mock
 types-python-dateutil
 types-requests
 types-paramiko

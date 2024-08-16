@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-import parsl
 from parsl import Config, HighThroughputExecutor
 from parsl.executors.high_throughput.mpi_executor import MPIExecutor
 from parsl.launchers import SimpleLauncher
@@ -42,8 +41,8 @@ def test_docstring():
 def test_init():
     """Ensure all relevant kwargs are copied over from HTEx"""
 
-    new_kwargs = {'max_workers_per_block'}
-    excluded_kwargs = {'available_accelerators', 'enable_mpi_mode', 'cores_per_worker', 'max_workers_per_node',
+    new_kwargs = {'max_workers_per_block', 'mpi_launcher'}
+    excluded_kwargs = {'available_accelerators', 'cores_per_worker', 'max_workers_per_node',
                        'mem_per_worker', 'cpu_affinity', 'max_workers', 'manager_selector'}
 
     # Get the kwargs from both HTEx and MPIEx
