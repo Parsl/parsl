@@ -40,7 +40,7 @@ A block is like a group of computers loaned to you for doing work. Parsl will ma
 **Checkpointing:**
 ---------------------
 
-Checkpointing is like saving your progress in a video game. If something goes wrong, you can restart from the last saved point instead of starting all over again. In Parsl, checkpointing lets you save the state of your work so that you can resume it later if there's an interruption.
+Checkpointing is like saving your progress in a video game. If something goes wrong, you can restart from the last saved point (checkpoint) instead of starting all over again. In Parsl, checkpointing lets you save the state of your work so that you can resume it later if there's an interruption.
 
 .. _concurrencyglossary:
 
