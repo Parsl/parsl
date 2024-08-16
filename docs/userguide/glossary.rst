@@ -12,7 +12,7 @@ Our glossary is organized alphabetically in English. Feel free to contribute ter
 **App:**
 ----------
 
-In Parsl, an app is like a small, self-contained program that does a specific job. It's a piece of code, like a Python function or a Bash script, that you can run separately from your main program. Think of it as a mini-tool within your larger toolbox.
+In Parsl, an app is a small, self-contained program that does a specific job. It's a piece of code, such as a Python function or a Bash script, that can run separately from your main program. Think of it as a mini-tool within your larger toolbox.
 
 .. _appfutureglossary:
 
