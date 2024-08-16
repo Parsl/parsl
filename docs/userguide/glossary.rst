@@ -19,7 +19,7 @@ In Parsl, an app is a small, self-contained program that does a specific job. It
 **AppFuture:**
 -----------------
 
-An AppFuture is like a placeholder for the result of an app that's running in the background. It's like a ticket you get when you order food at a restaurant – you get the ticket right away, but you have to wait for the food to be ready. Similarly, you get an AppFuture immediately when you start an app, but you have to wait for the app to finish before you can see the results.
+An AppFuture is a placeholder for the result of an app that runs in the background. It's like a ticket you get when you order food at a restaurant – you get the ticket right away, but you have to wait for the food to be ready. Similarly, you get an AppFuture immediately when you start an app, but you have to wait for the app to finish before you can see the results.
 
 .. _bashappglossary:
 
