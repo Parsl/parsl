@@ -240,55 +240,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                 JobState.COMPLETED, stdout_path=self.resources[missing_job]['job_stdout_path'],
                 stderr_path=self.resources[missing_job]['job_stderr_path'])
 
-    def _status_squeue(self):
-        '''Returns the status list for a list of job_ids
-
-        Args:
-              self
-
-        Returns:
-              [status...] : Status list of all jobs
-        '''
-        job_id_list = ','.join(
-            [jid for jid, job in self.resources.items() if not job['status'].terminal]
-        )
-        if not job_id_list:
-            logger.debug('No active jobs, skipping status update')
-            return
-
-        cmd = "squeue --noheader --format='%i %t' --job '{0}'".format(job_id_list)
-        logger.debug("Executing %s", cmd)
-        retcode, stdout, stderr = self.execute_wait(cmd)
-        logger.debug("squeue returned %s %s", stdout, stderr)
-
-        # Execute_wait failed. Do no update
-        if retcode != 0:
-            logger.warning("squeue failed with non-zero exit code {}".format(retcode))
-            return
-
-        jobs_missing = set(self.resources.keys())
-        for line in stdout.split('\n'):
-            if not line:
-                # Blank line
-                continue
-            job_id, slurm_state = line.split()
-            if slurm_state not in squeue_translate_table:
-                logger.warning(f"Slurm status {slurm_state} is not recognized")
-            status = squeue_translate_table.get(slurm_state, JobState.UNKNOWN)
-            logger.debug("Updating job {} with slurm status {} to parsl state {!s}".format(job_id, slurm_state, status))
-            self.resources[job_id]['status'] = JobStatus(status,
-                                                         stdout_path=self.resources[job_id]['job_stdout_path'],
-                                                         stderr_path=self.resources[job_id]['job_stderr_path'])
-            jobs_missing.remove(job_id)
-
-        # squeue does not report on jobs that are not running. So we are filling in the
-        # blanks for missing jobs, we might lose some information about why the jobs failed.
-        for missing_job in jobs_missing:
-            logger.debug("Updating missing job {} to completed status".format(missing_job))
-            self.resources[missing_job]['status'] = JobStatus(
-                JobState.COMPLETED, stdout_path=self.resources[missing_job]['job_stdout_path'],
-                stderr_path=self.resources[missing_job]['job_stderr_path'])
-
     def submit(self, command: str, tasks_per_node: int, job_name="parsl.slurm") -> str:
         """Submit the command as a slurm job.
 
