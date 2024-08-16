@@ -3,7 +3,7 @@ Glossary of Parsl Terms
 
 This glossary defines terms based on their usage within Parsl. By defining our terminology, we hope to create understanding across our community and reduce confusion. When asking for or providing support to fellow Parsl users, please use these terms as defined.
 
-Our glossary is organized alphabetically by the English alphabet. Feel free to contribute terms and definitions to this list that will benefit Parsl users.
+Our glossary is organized alphabetically in English. Feel free to contribute terms and definitions to this list that will benefit Parsl users.
 
 .. _glossary:
 
