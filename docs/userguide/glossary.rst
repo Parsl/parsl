@@ -166,7 +166,7 @@ A plugin is an add-on for Parsl. It's a piece of code that you can add to Parsl 
 **Python App:**
 ------------------
 
-A Python app is a special kind of app in Parsl that's written in the Python programming language. It's a way to use Parsl to run your Python code in parallel.
+A Python app is a special kind of app in Parsl that's written as a Python function. It's a way to use Parsl to run your Python code in parallel.
 
 .. _resourceglossary:
 
