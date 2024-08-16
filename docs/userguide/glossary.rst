@@ -61,7 +61,7 @@ Configuration sets up the rules for how Parsl should work. It's like adjusting t
 **DataFuture:**
 ------------------
 
-A DataFuture is like a placeholder for a file that an app is creating. It's like a receipt for a package you're expecting – you get the receipt right away, but you have to wait for the package to arrive. Similarly, you get a DataFuture immediately when an app starts creating a file, but you have to wait for the file to be finished before you can use it.
+A DataFuture is a placeholder for a file that an app is creating. It's like a receipt for a package you're expecting – you get the receipt right away, but you have to wait for the package to arrive. Similarly, you get a DataFuture immediately when an app starts creating a file, but you have to wait for the file to be finished before you can use it.
 
 .. _dfkglossary:
 
