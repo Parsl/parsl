@@ -33,28 +33,28 @@ A Bash app is a special kind of app in Parsl that lets you run commands from you
 **Block:**
 ------------
 
-A block is like a group of computers loaned to you for doing work. Parsl will manage passing out work to each of them to do. This way, you can get your work done faster by using multiple computers at the same time.
+A block is a group of resources, such as nodes or computational units, allocated for executing tasks. Parsl manages the distribution of work across these resources to expedite task completion.
 
 .. _checkpointingglossary:
 
 **Checkpointing:**
 ---------------------
 
-Checkpointing is like saving your progress in a video game. If something goes wrong, you can restart from the last saved point (checkpoint) instead of starting all over again. In Parsl, checkpointing lets you save the state of your work so that you can resume it later if there's an interruption.
+Checkpointing is like saving your progress in a video game. If something goes wrong, you can restart from the last saved point instead of starting over. In Parsl, checkpointing saves the state of your work so you can resume it later if interrupted.
 
 .. _concurrencyglossary:
 
 **Concurrency:**
 -------------------
 
-Concurrency means doing multiple things at the same time. In Parsl, it means that your apps can run simultaneously, even if they're not on the same computer. This can make your programs run much faster.
+Concurrency means doing multiple things at the same time. In Parsl, it enables your apps to run in parallel across different resources, significantly speeding up program execution.
 
 .. _configurationglossary:
 
 **Configuration:**
 ---------------------
 
-Configuration sets up the rules for how Parsl should work. It's like adjusting the settings on your phone – you can choose how you want things to look and behave. In Parsl, you can configure things like how many computers to use, where to store data, and how to handle errors.
+Configuration sets up the rules for how Parsl should work. It's like adjusting the settings on your phone – you can choose how you want things to look and behave. In Parsl, you can configure things like how many resources to use, where to store data, and how to handle errors.
 
 .. _datafutureglossary:
 
@@ -75,21 +75,21 @@ The DataFlowKernel is like the brain of Parsl. It's the part that controls how y
 **Elasticity:**
 -----------------
 
-Elasticity means being able to stretch or shrink. In Parsl, it means that you can easily add or remove blocks of computers as needed. This is useful if your workload changes – you can use more computers when you have a lot of work to do and fewer computers when you don't.
+Elasticity refers to the ability to scale resources up or down as needed. In Parsl, it allows you to add or remove blocks of computational resources based on workload demands.
 
 .. _executionproviderglossary:
 
 **Execution Provider:**
 --------------------------
 
-An execution provider is like a bridge between Parsl and the computers you want to use. It's the part that knows how to talk to different types of computers, like your laptop, a cluster, or a cloud service.
+An execution provider acts as a bridge between Parsl and the resources you want to use, such as your laptop, a cluster, or a cloud service. It handles communication with these resources to execute tasks.
 
 .. _executorglossary:
 
 **Executor:**
 ----------------
 
-An executor is like a manager for your apps. It's the part that decides which app should run on which computer and when. It's like a traffic controller, directing the flow of apps to make sure they all get where they need to go.
+An executor is a manager that determines which app runs on which resource and when. It directs the flow of apps to ensure efficient task execution. It's like a traffic controller, directing the flow of apps to make sure they all get where they need to go.
 
 .. _futureglossary:
 
@@ -103,7 +103,7 @@ A future is a placeholder for the result of a task that hasn't finished yet. Bot
 **Job:**
 ---------
 
-A job in Parsl refers to a unit of work that is submitted to an execution environment (like a cluster or cloud) for processing. It's like a task that needs to be done, such as running a script or processing data, and it can consist of one or more tasks that are executed on a compute resource.
+A job in Parsl is a unit of work submitted to an execution environment (such as a cluster or cloud) for processing. It can consist of one or more apps executed on computational resources.
 
 .. _launcherglossary:
 
@@ -131,28 +131,28 @@ Memoization is like remembering something so you don't have to do it again. In P
 **MPI App:**
 ---------------
 
-An MPI app is a special kind of app that uses a technology called Message Passing Interface (MPI) to communicate between different computers. It's like a walkie-talkie that lets different apps talk to each other.
+An MPI app is a specialized app that uses the Message Passing Interface (MPI) for communication between different nodes within the app. It enables different parts of the app to communicate and work together effectively. It's like a walkie-talkie that lets different parts of an app talk to each other.
 
 .. _nodeglossary:
 
 **Node:**
 ------------
 
-A node in Parsl is like a workstation in a factory. It's the physical or virtual machine where work gets done. Each node provides the computational power needed to run tasks, and it can host several workers who carry out the tasks.
+A node in Parsl is like a workstation in a factory. It's a physical or virtual machine that provides the computational power needed to run tasks. Each node can host several workers that execute tasks.
 
 .. _parallelismglossary:
 
 **Parallelism:**
 -------------------
 
-Parallelism means doing multiple things at the same time. In Parsl, it means that your apps can run simultaneously on different computers. This can make your programs run much faster.
+Parallelism means doing multiple things at the same time but not necessarily in the same location or using the same resources. In Parsl, it involves running apps simultaneously across different nodes or computational resources, accelerating program execution.
 
 .. _parslscriptglossary:    
 
 **Parsl Script:**
 ---------------------
 
-A Parsl script is a file that contains the instructions for how to run your apps in parallel. It's like a recipe that tells you what ingredients to use and how to combine them.
+A Parsl script is a Python program that uses the Parsl library to define and run apps in parallel. It's like a recipe that tells you what ingredients to use and how to combine them.
 
 .. _pluginglossary:
 
@@ -160,6 +160,13 @@ A Parsl script is a file that contains the instructions for how to run your apps
 ---------------
 
 A plugin is an add-on for Parsl. It's a piece of code that you can add to Parsl to give it new features or change how it works. It's like an extra tool that you can add to your toolbox.
+
+.. _processglossary:
+
+**Process:**
+---------------
+
+In Parsl, a process is like a box that holds a set of tasks that can be executed together, sharing resources and context. A process in Parsl is a way to group related tasks, manage their dependencies, and optimize their execution.
 
 .. _pythonappglossary: 
 
@@ -173,7 +180,7 @@ A Python app is a special kind of app in Parsl that's written as a Python functi
 **Resource:**
 ---------------
 
-A resource in Parsl refers to any computational asset that can be used to execute tasks, such as CPU cores, memory, or entire nodes. It's like the tools and materials you need to get a job done.
+A resource in Parsl refers to any computational asset that can be used to execute tasks, such as CPU cores, memory, or entire nodes. It's like the tools and materials you need to get a job done. Rsources, often grouped in nodes or clusters, are essential for processing workloads.
 
 .. _serializationglossary:    
 
@@ -187,32 +194,33 @@ Serialization is like packing your belongings into a suitcase so you can take th
 **Staging:**
 ---------------
 
-Staging is like setting the stage for a play. In Parsl, it means preparing the data that your apps need before they start running. This can involve things like copying files to the right location or converting them into the right format.
+Staging in Parsl refers to moving data to the appropriate location before an app starts running. This ensures that all necessary data is available where it needs to be for the app to execute properly.
 
 .. _taskglossary:
 
 **Task:**
 ------------
 
-A task in Parsl is the smallest unit of work that can be executed. It's like a single step in a larger process, where each task is part of a broader workflow or job.
+A task in Parsl is the execution of an app, it is the smallest unit of work that can be executed. It's like a single step in a larger process, where each task is part of a broader workflow or job.
 
 .. _threadglossary:    
 
 **Thread:**
 -------------
 
-A thread is like a smaller part of a program that can run independently. It's like a worker in a factory who can do their job at the same time as other workers.
+A thread is like a smaller part of a program that can run independently. It's like a worker in a factory who can do their job at the same time as other workers. Threads are commonly used for parallelism within a single node.
 
 .. _workerglossary:
 
 **Worker:**
 -------------
 
-A worker in Parsl is like an employee in the factory who does the actual work. Workers run on nodes and are responsible for executing the tasks assigned to them. Multiple workers can work on a single node, sharing the node’s resources to get the job done efficiently.
+A worker in Parsl is an independent process that runs on a node to execute tasks. Unlike threads, which share resources within a single process, workers operate as separate entities, each potentially handling different tasks on the same or different nodes.
 
 .. _workflowglossary:    
 
 **Workflow:**
 ----------------
 
-A workflow is like a series of steps that you follow to complete a task. In Parsl, it's a way to describe how your apps should run and how they depend on each other. It's like a flowchart that shows you the order in which things need to happen.
+A workflow is like a series of steps that you follow to complete a task. In Parsl, it's a way to describe how your apps should run and how they depend on each other, like a flowchart that shows you the order in which things need to happen. A workflow is typically expressed in a Parsl script, which is a Python program that leverages the Parsl library to orchestrate these tasks in a structured manner.
+
