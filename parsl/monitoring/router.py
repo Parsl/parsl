@@ -204,7 +204,8 @@ class MonitoringRouter:
 
 @wrap_with_logs
 @typeguard.typechecked
-def router_starter(comm_q: mpq.Queue,
+def router_starter(*,
+                   comm_q: mpq.Queue,
                    exception_q: mpq.Queue,
                    priority_msgs: mpq.Queue,
                    node_msgs: mpq.Queue,
