@@ -173,7 +173,7 @@ A Python app is a special kind of app in Parsl that's written as a Python functi
 **Resource:**
 ---------------
 
-A resource in Parsl refers to any computational asset that can be used to execute tasks, such as CPU cores, memory, or entire nodes. It's like the tools and materials you need to get a job done. Rsources, often grouped in nodes or clusters, are essential for processing workloads.
+A resource in Parsl refers to any computational asset that can be used to execute tasks, such as CPU cores, memory, or entire nodes. It's like the tools and materials you need to get a job done. Resources, often grouped in nodes or clusters, are essential for processing workloads.
 
 .. _serializationglossary:    
 
