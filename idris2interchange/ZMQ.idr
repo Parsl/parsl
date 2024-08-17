@@ -116,6 +116,19 @@ zmq_get_socket_fd (MkZMQSocket sock_ptr) = do
   printLn fd
   pure $ MkFD fd
 
+%foreign (gluezmq "glue_zmq_get_socket_events")
+prim__zmq_get_socket_events : AnyPtr -> PrimIO Int
+
+public export
+zmq_get_socket_events : ZMQSocket -> IO Int
+zmq_get_socket_events (MkZMQSocket sock_ptr) = do
+  log "calling get_socket_events"
+  events <- primIO $ prim__zmq_get_socket_events sock_ptr
+  log "retrieved these event flags: "
+  printLn events
+  pure events
+
+
 %foreign (gluezmq "glue_zmq_alloc_send_bytes")
 prim__zmq_alloc_send_bytes : AnyPtr -> AnyPtr -> Int -> PrimIO ()
 

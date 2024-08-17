@@ -193,6 +193,7 @@ poll_loop command_socket tasks_submit_to_interchange_socket = do
   -- imagine an API: recvAndThen which takes a linear continuation?
 
   when ((index 1 poll_outputs).revents /= 0) $ do
+    -- TODO: need to get ZMQ_EVENTs here
     log "Trying to receive a message from task submit->interchange channel"
     maybe_msg <- zmq_recv_msg_alloc tasks_submit_to_interchange_socket
     case maybe_msg of
@@ -207,6 +208,14 @@ poll_loop command_socket tasks_submit_to_interchange_socket = do
         -- and also do something with the message
 
   when ((index 0 poll_outputs).revents /= 0) $ do
+    log "Got a poll result for command channel. Doing ZMQ-specific event handling."
+
+    -- TODO: need to get ZMQ_EVENTs here
+    -- zmq_socket.getsockopt(ZMQ_EVENTS, &zevents, &events_len);
+    events <- zmq_get_socket_events command_socket
+    log "Poll loop got these command channel events:"
+    printLn events
+
     log "Trying to receive a message from command channel"
     -- TODO: something here to force the command socket to statically only
     -- be usable to send back the response to...

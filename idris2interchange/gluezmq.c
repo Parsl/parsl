@@ -64,6 +64,21 @@ int glue_zmq_get_socket_fd(void *sock) {
     return fd;
 }
 
+int glue_zmq_get_socket_events(void *sock) {
+    size_t optionlen;
+    uint32_t events;
+
+    optionlen = sizeof(events);
+
+    printf("in glue_zmq_socket_events\n");
+    int ret = zmq_getsockopt(sock, ZMQ_EVENTS, &events, &optionlen);
+
+    assert (optionlen == sizeof(uint32_t));
+    assert (ret == 0);
+    printf("done with glue_zmq_socket_events\n");
+    return events;
+}
+
 
 void glue_zmq_alloc_send_bytes(void *sock, void *bytes, int len) {
     int n;
