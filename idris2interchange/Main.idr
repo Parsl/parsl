@@ -48,6 +48,58 @@ dispatch_cmd "CONNECTED_BLOCKS" = do
 dispatch_cmd _ = ?error_cmd_not_implemented
 
 
+||| this drains ZMQ when there's a poll. this is a bit complicated and
+||| not like a regular level-triggered poll.
+||| Some reading:
+||| https://funcptr.net/2012/09/10/zeromq---edge-triggered-notification/
+||| https://github.com/zeromq/libzmq/issues/3641
+covering zmq_poll_command_channel_loop : ZMQSocket -> IO ()
+zmq_poll_command_channel_loop command_socket = do
+  -- need to run this in a loop until it returns no events left
+  events <- zmq_get_socket_events command_socket
+  log "ZMQ poll command channel loop got these command channel events: "
+  printLn events
+
+  -- TODO: ignoring writeability of this channel. I think thats the right
+  -- thing to be doing: being ready for a write doesn't mean we can write
+  -- to it immediately. (?)
+
+  when (events == 1) $ do  -- read, and no write. if there's a write event in here,
+                           -- this won't match
+    log "Trying to receive a message from command channel"
+    -- TODO: something here to force the command socket to statically only
+    -- be usable to send back the response to...
+    maybe_msg <- zmq_recv_msg_alloc command_socket
+    case maybe_msg of
+      Nothing => do putStrLn "No message received."
+      Just msg => do
+        putStr "Received message, size "
+        s <- zmq_msg_size msg
+        printLn s
+
+        -- so now we've received a message... we'll need to eventually deallocate
+        -- it... and hopefully have the type system enforce that... TODO
+
+        -- what msg contains here is a pickle-encoded two element dictionary,
+        -- the task ID and the buffer.
+        -- so... now its time to write a pickle decoder?
+        bytes <- zmq_msg_as_bytes msg
+        (PickleUnicodeString cmd) <- unpickle bytes
+            | _ => ?error_cmd_is_not_a_string
+        putStr "Command received this command: "
+        putStrLn cmd
+        resp <- dispatch_cmd cmd
+        putStr "Response to command: "
+        printLn resp
+        (n ** resp_bytes) <- pickle resp
+        zmq_alloc_send_bytes command_socket resp_bytes
+        -- need to do some appropriate de-alloc for a message here?
+        -- or is it done inside alloc_send_bytes?
+
+        -- after this send, command socket is back is ready-for-a-REQ state
+
+        zmq_poll_command_channel_loop command_socket
+
 
 covering poll_loop : ZMQSocket -> ZMQSocket -> IO ()
 
@@ -209,46 +261,7 @@ poll_loop command_socket tasks_submit_to_interchange_socket = do
 
   when ((index 0 poll_outputs).revents /= 0) $ do
     log "Got a poll result for command channel. Doing ZMQ-specific event handling."
-
-    -- TODO: need to get ZMQ_EVENTs here
-    -- zmq_socket.getsockopt(ZMQ_EVENTS, &zevents, &events_len);
-    events <- zmq_get_socket_events command_socket
-    log "Poll loop got these command channel events:"
-    printLn events
-
-    log "Trying to receive a message from command channel"
-    -- TODO: something here to force the command socket to statically only
-    -- be usable to send back the response to...
-    maybe_msg <- zmq_recv_msg_alloc command_socket
-    case maybe_msg of
-      Nothing => do putStrLn "No message received."
-                    poll_loop command_socket tasks_submit_to_interchange_socket
-      Just msg => do
-        putStr "Received message, size "
-        s <- zmq_msg_size msg
-        printLn s
-
-        -- so now we've received a message... we'll need to eventually deallocate
-        -- it... and hopefully have the type system enforce that... TODO
-
-        -- what msg contains here is a pickle-encoded two element dictionary,
-        -- the task ID and the buffer.
-        -- so... now its time to write a pickle decoder?
-        bytes <- zmq_msg_as_bytes msg
-        (PickleUnicodeString cmd) <- unpickle bytes
-            | _ => ?error_cmd_is_not_a_string
-        putStr "Command received this command: "
-        putStrLn cmd
-        resp <- dispatch_cmd cmd
-        putStr "Response to command: "
-        printLn resp
-        (n ** resp_bytes) <- pickle resp
-        zmq_alloc_send_bytes command_socket resp_bytes
-        -- need to do some appropriate de-alloc for a message here?
-        -- or is it done inside alloc_send_bytes?
-
-        -- after this send, command socket is back is ready-for-a-REQ state
-
+    zmq_poll_command_channel_loop command_socket
 
   poll_loop command_socket tasks_submit_to_interchange_socket
       
