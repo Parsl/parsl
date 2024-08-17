@@ -1,18 +1,20 @@
 import contextlib
 import logging
 import os
+import queue
 import typing
 import unittest
 from typing import Dict
+from unittest import mock
 
 import pytest
 
-import parsl
 from parsl.app.app import python_app
+from parsl.executors.high_throughput.executor import HighThroughputExecutor
+from parsl.executors.high_throughput.mpi_executor import MPIExecutor
 from parsl.executors.high_throughput.mpi_prefix_composer import (
     InvalidResourceSpecification,
     MissingResourceSpecification,
-    validate_resource_spec,
 )
 from parsl.executors.high_throughput.mpi_resource_management import (
     get_nodes_in_batchjob,
@@ -20,6 +22,8 @@ from parsl.executors.high_throughput.mpi_resource_management import (
     get_slurm_hosts_list,
     identify_scheduler,
 )
+from parsl.launchers import SimpleLauncher
+from parsl.providers import LocalProvider
 from parsl.tests.configs.htex_local import fresh_config
 
 EXECUTOR_LABEL = "MPI_TEST"
@@ -49,23 +53,6 @@ def get_env_vars(parsl_resource_specification: Dict = {}) -> Dict:
 
 
 @pytest.mark.local
-def test_resource_spec_env_vars():
-    resource_spec = {
-        "num_nodes": 4,
-        "ranks_per_node": 2,
-    }
-
-    assert double(5).result() == 10
-
-    future = get_env_vars(parsl_resource_specification=resource_spec)
-
-    result = future.result()
-    assert isinstance(result, Dict)
-    assert result["PARSL_NUM_NODES"] == str(resource_spec["num_nodes"])
-    assert result["PARSL_RANKS_PER_NODE"] == str(resource_spec["ranks_per_node"])
-
-
-@pytest.mark.local
 @unittest.mock.patch("subprocess.check_output", return_value=b"c203-031\nc203-032\n")
 def test_slurm_mocked_mpi_fetch(subprocess_check):
     nodeinfo = get_slurm_hosts_list()
@@ -81,16 +68,6 @@ def add_to_path(path: os.PathLike) -> typing.Generator[None, None, None]:
         yield
     finally:
         os.environ["PATH"] = old_path
-
-
-@pytest.mark.local
-@pytest.mark.skip
-def test_slurm_mpi_fetch():
-    logging.warning(f"Current pwd : {os.path.dirname(__file__)}")
-    with add_to_path(os.path.dirname(__file__)):
-        logging.warning(f"PATH: {os.environ['PATH']}")
-        nodeinfo = get_slurm_hosts_list()
-    logging.warning(f"Got : {nodeinfo}")
 
 
 @contextlib.contextmanager
@@ -122,22 +99,43 @@ def test_top_level():
 
 @pytest.mark.local
 @pytest.mark.parametrize(
-    "resource_spec, is_mpi_enabled, exception",
+    "resource_spec, exception",
     (
-        ({"num_nodes": 2, "ranks_per_node": 1}, False, None),
-        ({"launcher_options": "--debug_foo"}, False, None),
-        ({"num_nodes": 2, "BAD_OPT": 1}, False, InvalidResourceSpecification),
-        ({}, False, None),
-        ({"num_nodes": 2, "ranks_per_node": 1}, True, None),
-        ({"launcher_options": "--debug_foo"}, True, None),
-        ({"num_nodes": 2, "BAD_OPT": 1}, True, InvalidResourceSpecification),
-        ({}, True, MissingResourceSpecification),
+
+        ({"num_nodes": 2, "ranks_per_node": 1}, None),
+        ({"launcher_options": "--debug_foo"}, None),
+        ({"num_nodes": 2, "BAD_OPT": 1}, InvalidResourceSpecification),
+        ({}, MissingResourceSpecification),
     )
 )
-def test_resource_spec(resource_spec: Dict, is_mpi_enabled: bool, exception):
+def test_mpi_resource_spec(resource_spec: Dict, exception):
+    """Test validation of resource_specification in MPIExecutor"""
+
+    mpi_ex = MPIExecutor(provider=LocalProvider(launcher=SimpleLauncher()))
+    mpi_ex.outgoing_q = mock.Mock(spec=queue.Queue)
+
     if exception:
         with pytest.raises(exception):
-            validate_resource_spec(resource_spec, is_mpi_enabled)
+            mpi_ex.validate_resource_spec(resource_spec)
     else:
-        result = validate_resource_spec(resource_spec, is_mpi_enabled)
+        result = mpi_ex.validate_resource_spec(resource_spec)
         assert result is None
+
+
+@pytest.mark.local
+@pytest.mark.parametrize(
+    "resource_spec",
+    (
+        {"num_nodes": 2, "ranks_per_node": 1},
+        {"launcher_options": "--debug_foo"},
+        {"BAD_OPT": 1},
+    )
+)
+def test_mpi_resource_spec_passed_to_htex(resource_spec: dict):
+    """HTEX should reject every resource_spec"""
+
+    htex = HighThroughputExecutor()
+    htex.outgoing_q = mock.Mock(spec=queue.Queue)
+
+    with pytest.raises(InvalidResourceSpecification):
+        htex.validate_resource_spec(resource_spec)

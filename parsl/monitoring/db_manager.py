@@ -1,10 +1,13 @@
 import datetime
 import logging
+import multiprocessing.queues as mpq
 import os
 import queue
 import threading
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
+
+import typeguard
 
 from parsl.dataflow.states import States
 from parsl.errors import OptionalModuleMissing
@@ -305,15 +308,15 @@ class DatabaseManager:
         self.pending_resource_queue: queue.Queue[MonitoringMessage] = queue.Queue()
 
     def start(self,
-              priority_queue: "queue.Queue[TaggedMonitoringMessage]",
-              node_queue: "queue.Queue[MonitoringMessage]",
-              block_queue: "queue.Queue[MonitoringMessage]",
-              resource_queue: "queue.Queue[MonitoringMessage]") -> None:
+              priority_queue: mpq.Queue,
+              node_queue: mpq.Queue,
+              block_queue: mpq.Queue,
+              resource_queue: mpq.Queue) -> None:
 
         self._kill_event = threading.Event()
         self._priority_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
-                                                                priority_queue, 'priority', self._kill_event,),
+                                                                priority_queue, self._kill_event,),
                                                             name="Monitoring-migrate-priority",
                                                             daemon=True,
                                                             )
@@ -321,7 +324,7 @@ class DatabaseManager:
 
         self._node_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                         args=(
-                                                            node_queue, 'node', self._kill_event,),
+                                                            node_queue, self._kill_event,),
                                                         name="Monitoring-migrate-node",
                                                         daemon=True,
                                                         )
@@ -329,7 +332,7 @@ class DatabaseManager:
 
         self._block_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                          args=(
-                                                             block_queue, 'block', self._kill_event,),
+                                                             block_queue, self._kill_event,),
                                                          name="Monitoring-migrate-block",
                                                          daemon=True,
                                                          )
@@ -337,7 +340,7 @@ class DatabaseManager:
 
         self._resource_queue_pull_thread = threading.Thread(target=self._migrate_logs_to_internal,
                                                             args=(
-                                                                resource_queue, 'resource', self._kill_event,),
+                                                                resource_queue, self._kill_event,),
                                                             name="Monitoring-migrate-resource",
                                                             daemon=True,
                                                             )
@@ -574,43 +577,26 @@ class DatabaseManager:
             raise RuntimeError("An exception happened sometime during database processing and should have been logged in database_manager.log")
 
     @wrap_with_logs(target="database_manager")
-    def _migrate_logs_to_internal(self, logs_queue: queue.Queue, queue_tag: str, kill_event: threading.Event) -> None:
-        logger.info("Starting processing for queue {}".format(queue_tag))
+    def _migrate_logs_to_internal(self, logs_queue: queue.Queue, kill_event: threading.Event) -> None:
+        logger.info("Starting _migrate_logs_to_internal")
 
         while not kill_event.is_set() or logs_queue.qsize() != 0:
-            logger.debug("""Checking STOP conditions for {} threads: {}, {}"""
-                         .format(queue_tag, kill_event.is_set(), logs_queue.qsize() != 0))
+            logger.debug("Checking STOP conditions: kill event: %s, queue has entries: %s",
+                         kill_event.is_set(), logs_queue.qsize() != 0)
             try:
                 x, addr = logs_queue.get(timeout=0.1)
             except queue.Empty:
                 continue
             else:
-                if queue_tag == 'priority' and x == 'STOP':
+                if x == 'STOP':
                     self.close()
-                elif queue_tag == 'priority':  # implicitly not 'STOP'
-                    assert isinstance(x, tuple)
-                    assert len(x) == 2
-                    assert x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO], \
-                        "_migrate_logs_to_internal can only migrate WORKFLOW_,TASK_INFO message from priority queue, got x[0] == {}".format(x[0])
-                    self._dispatch_to_internal(x)
-                elif queue_tag == 'resource':
-                    assert isinstance(x, tuple), "_migrate_logs_to_internal was expecting a tuple, got {}".format(x)
-                    assert x[0] == MessageType.RESOURCE_INFO, (
-                        "_migrate_logs_to_internal can only migrate RESOURCE_INFO message from resource queue, "
-                        "got tag {}, message {}".format(x[0], x)
-                    )
-                    self._dispatch_to_internal(x)
-                elif queue_tag == 'node':
-                    assert len(x) == 2, "expected message tuple to have exactly two elements"
-                    assert x[0] == MessageType.NODE_INFO, "_migrate_logs_to_internal can only migrate NODE_INFO messages from node queue"
-
-                    self._dispatch_to_internal(x)
-                elif queue_tag == "block":
-                    self._dispatch_to_internal(x)
                 else:
-                    logger.error(f"Discarding because unknown queue tag '{queue_tag}', message: {x}")
+                    self._dispatch_to_internal(x)
 
     def _dispatch_to_internal(self, x: Tuple) -> None:
+        assert isinstance(x, tuple)
+        assert len(x) == 2, "expected message tuple to have exactly two elements"
+
         if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO]:
             self.pending_priority_queue.put(cast(Any, x))
         elif x[0] == MessageType.RESOURCE_INFO:
@@ -719,11 +705,12 @@ class DatabaseManager:
 
 
 @wrap_with_logs(target="database_manager")
-def dbm_starter(exception_q: "queue.Queue[Tuple[str, str]]",
-                priority_msgs: "queue.Queue[TaggedMonitoringMessage]",
-                node_msgs: "queue.Queue[MonitoringMessage]",
-                block_msgs: "queue.Queue[MonitoringMessage]",
-                resource_msgs: "queue.Queue[MonitoringMessage]",
+@typeguard.typechecked
+def dbm_starter(exception_q: mpq.Queue,
+                priority_msgs: mpq.Queue,
+                node_msgs: mpq.Queue,
+                block_msgs: mpq.Queue,
+                resource_msgs: mpq.Queue,
                 db_url: str,
                 logdir: str,
                 logging_level: int) -> None:
