@@ -47,7 +47,7 @@ Checkpointing is like saving your progress in a video game. If something goes wr
 **Concurrency:**
 -------------------
 
-Concurrency means doing multiple things at the same time. In Parsl, it enables your apps to run in parallel across different resources, significantly speeding up program execution.
+Concurrency means doing multiple things at the same time. In Parsl, it enables your apps to run in parallel across different resources, significantly speeding up program execution. It's like a chef preparing multiple dishes in a single kitchen, switching between all of them quickly.
 
 .. _configurationglossary:
 
@@ -131,7 +131,7 @@ Memoization is like remembering something so you don't have to do it again. In P
 **MPI App:**
 ---------------
 
-An MPI app is a specialized app that uses the Message Passing Interface (MPI) for communication between different nodes within the app. It enables different parts of the app to communicate and work together effectively. It's like a walkie-talkie that lets different parts of an app talk to each other.
+An MPI app is a specialized app that uses the Message Passing Interface (MPI) for communication, which can occur both across nodes and within a single node. MPI enables different parts of the app to communicate and coordinate their activities, similar to how a walkie-talkie allows different teams to stay in sync.
 
 .. _nodeglossary:
 
@@ -145,7 +145,7 @@ A node in Parsl is like a workstation in a factory. It's a physical or virtual m
 **Parallelism:**
 -------------------
 
-Parallelism means doing multiple things at the same time but not necessarily in the same location or using the same resources. In Parsl, it involves running apps simultaneously across different nodes or computational resources, accelerating program execution.
+Parallelism means doing multiple things at the same time but not necessarily in the same location or using the same resources. In Parsl, it involves running apps simultaneously across different nodes or computational resources, accelerating program execution. Unlike concurrency which is like a chef preparing multiple dishes in a single kitchen, parallelism is like multiple chefs preparing different dishes in separate kitchens, at the same time.
 
 .. _parslscriptglossary:    
 
@@ -160,13 +160,6 @@ A Parsl script is a Python program that uses the Parsl library to define and run
 ---------------
 
 A plugin is an add-on for Parsl. It's a piece of code that you can add to Parsl to give it new features or change how it works. It's like an extra tool that you can add to your toolbox.
-
-.. _processglossary:
-
-**Process:**
----------------
-
-In Parsl, a process is like a box that holds a set of tasks that can be executed together, sharing resources and context. A process in Parsl is a way to group related tasks, manage their dependencies, and optimize their execution.
 
 .. _pythonappglossary: 
 
@@ -194,7 +187,7 @@ Serialization is like packing your belongings into a suitcase so you can take th
 **Staging:**
 ---------------
 
-Staging in Parsl refers to moving data to the appropriate location before an app starts running. This ensures that all necessary data is available where it needs to be for the app to execute properly.
+Staging in Parsl involves moving data to the appropriate location before an app starts running and can also include moving data back after the app finishes. This process ensures that all necessary data is available where it needs to be for the app to execute properly and that the output data is returned to a specified location once the execution is complete.
 
 .. _taskglossary:
 
