@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        container: ["hcr.io/tylern4/slurm-standalone:slurm-24-05-0-1"]
+        container: ["ghcr.io/tylern4/slurm-standalone:slurm-24-05-0-1"]
     timeout-minutes: 30
 
     container:
