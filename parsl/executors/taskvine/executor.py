@@ -3,6 +3,7 @@ Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant,
 high-throughput system for delegating Parsl tasks to thousands of remote machines
 """
 
+import getpass
 import hashlib
 import inspect
 import itertools
@@ -216,7 +217,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Create directories for data and results
         log_dir = os.path.join(run_dir, self.label)
-        tmp_dir = os.path.join('/tmp/', f'{self.label}-{os.getlogin()}')
+        tmp_dir = os.path.join('/tmp/', f'{self.label}-{getpass.getuser()}')
         self._function_data_dir = os.path.join(tmp_dir, datetime.now().strftime('%Y%m%d%H%M%S%f'), "function_data")
         os.makedirs(log_dir)
         os.makedirs(self._function_data_dir)
