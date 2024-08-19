@@ -35,17 +35,17 @@ WORKER_RESULT_PORT = 9004
 
 
 -- this should be total, proved by decreasing n
--- but apparently not?
-covering inner_ascii_dump : (n : Nat ** ByteBlock n) -> IO ()
+-- but apparently not? cheat by using assert_smaller...
+inner_ascii_dump : (n : Nat ** ByteBlock n) -> IO ()
 inner_ascii_dump (Z ** _) = pure ()
-inner_ascii_dump (S n' ** bytes) = do
+inner_ascii_dump i@(S n' ** bytes) = do
   (b, rest) <- bb_uncons bytes
   if b >= 32 && b < 128
     then putStr (singleton (chr $ cast b))
     else putStr "."
-  inner_ascii_dump (n' ** rest)
+  inner_ascii_dump (assert_smaller i (n' ** rest))
 
-covering ascii_dump : (n : Nat ** ByteBlock n) -> IO ()
+ascii_dump : (n : Nat ** ByteBlock n) -> IO ()
 ascii_dump v = do
   inner_ascii_dump v
   putStrLn ""
