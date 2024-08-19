@@ -53,8 +53,8 @@ class MonitoringRouter:
              Logging level as defined in the logging module. Default: logging.INFO
         atexit_timeout : float, optional
             The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
-        XXX TODO not-so-many-left-now... *_msgs : Queue
-            Four multiprocessing queues to receive messages, routed by type tag, and sometimes modified according to type tag.
+        resource_msgs : multiprocessing.Queue
+            A multiprocessing queue to receive messages to be routed onwards to the database process
 
         exit_event : Event
             An event that the main Parsl process will set to signal that the monitoring router should shut down.
