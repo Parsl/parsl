@@ -31,6 +31,23 @@ WORKER_RESULT_PORT = 9004
 
 
 
+-- this should be total, proved by decreasing n
+-- but apparently not?
+covering inner_ascii_dump : (n ** ByteBlock n) -> IO ()
+inner_ascii_dump (0 ** _) = pure ()
+inner_ascii_dump (S n' ** bytes) = do
+  (b, rest) <- bb_uncons bytes
+  if b >= 32 && b < 128
+    then putStr (singleton (chr $ cast b))
+    else putStr "."
+  inner_ascii_dump (n' ** rest)
+
+covering ascii_dump : (n ** ByteBlock n) -> IO ()
+ascii_dump v = do
+  inner_ascii_dump v
+  putStrLn ""
+
+
 -- the Python type contained in the returned AST depends on the supplied
 -- command... TODO: maybe I can describe that typing in the idris2 code
 -- rather than returning an equivalent to Python Any... so that the
@@ -149,6 +166,9 @@ zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = d
         putStr "Received registration-like message on task interchange->worker channel, size "
         s <- zmq_msg_size msg
         printLn s
+        bytes <- zmq_msg_as_bytes msg
+        ascii_dump bytes
+
         zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket
 
 
