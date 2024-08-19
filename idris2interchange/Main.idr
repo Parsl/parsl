@@ -144,6 +144,8 @@ zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket = d
         putStr "Received task-like message on task submit->interchange channel, size "
         s <- zmq_msg_size msg
         printLn s
+        bytes <- zmq_msg_as_bytes msg
+        ascii_dump bytes
 
         -- TODO: so now we've received a message... we'll need to eventually deallocate
         -- and also do something with the message
