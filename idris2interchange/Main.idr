@@ -100,6 +100,32 @@ zmq_poll_command_channel_loop command_socket = do
 
         zmq_poll_command_channel_loop command_socket
 
+-- TODO: factor ZMQ_EVENTS handling with other channels
+covering zmq_poll_tasks_submit_to_interchange_loop : ZMQSocket -> IO ()
+zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket = do
+  -- need to run this in a loop until it returns no events left
+  events <- zmq_get_socket_events tasks_submit_to_interchange_socket
+  log "ZMQ poll tasks submit to interchange loop got these zmq events: "
+  printLn events
+
+  -- TODO: ignoring writeability of this channel. I think thats the right
+  -- thing to be doing: being ready for a write doesn't mean we can write
+  -- to it immediately. (?)
+
+  when (events `mod` 2 == 1) $ do  -- read
+    log "Trying to receive a message from task submit->interchange channel"
+    maybe_msg <- zmq_recv_msg_alloc tasks_submit_to_interchange_socket
+    case maybe_msg of
+      Nothing => do putStrLn "No message received on task submit->interchange channel"
+      Just msg => do
+        putStr "Received task-like message on task submit->interchange channel, size "
+        s <- zmq_msg_size msg
+        printLn s
+
+        -- TODO: so now we've received a message... we'll need to eventually deallocate
+        -- and also do something with the message
+
+        zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket
 
 covering poll_loop : ZMQSocket -> ZMQSocket -> IO ()
 
@@ -245,19 +271,8 @@ poll_loop command_socket tasks_submit_to_interchange_socket = do
   -- imagine an API: recvAndThen which takes a linear continuation?
 
   when ((index 1 poll_outputs).revents /= 0) $ do
-    -- TODO: need to get ZMQ_EVENTs here
-    log "Trying to receive a message from task submit->interchange channel"
-    maybe_msg <- zmq_recv_msg_alloc tasks_submit_to_interchange_socket
-    case maybe_msg of
-      Nothing => do putStrLn "No message received."
-                    poll_loop command_socket tasks_submit_to_interchange_socket
-      Just msg => do
-        putStr "Received message, size "
-        s <- zmq_msg_size msg
-        printLn s
-
-        -- so now we've received a message... we'll need to eventually deallocate
-        -- and also do something with the message
+    log "Got a poll result for tasks submit to interchange channel. Doing ZMQ-specific event handling."
+    zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket
 
   when ((index 0 poll_outputs).revents /= 0) $ do
     log "Got a poll result for command channel. Doing ZMQ-specific event handling."
