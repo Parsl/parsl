@@ -109,7 +109,7 @@ For Developers
 
 3. Install::
 
-    $ cd parsl
+    $ cd parsl # only if you didn't enter the top-level directory in step 2 above
     $ python3 setup.py install
 
 4. Use Parsl!

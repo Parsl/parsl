@@ -35,6 +35,7 @@ extras_require = {
     'flux': ['pyyaml', 'cffi', 'jsonschema'],
     'proxystore': ['proxystore'],
     'radical-pilot': ['radical.pilot==1.60', 'radical.utils==1.60'],
+    'ssh': ['paramiko'],
     # Disabling psi-j since github direct links are not allowed by pypi
     # 'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
 }
@@ -56,6 +57,7 @@ setup(
     python_requires=">=3.8.0",
     install_requires=install_requires,
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
+               'parsl/executors/high_throughput/interchange.py',
                'parsl/executors/workqueue/exec_parsl_function.py',
                'parsl/executors/workqueue/parsl_coprocess.py',
     ],

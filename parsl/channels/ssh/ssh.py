@@ -2,8 +2,6 @@ import errno
 import logging
 import os
 
-import paramiko
-
 from parsl.channels.base import Channel
 from parsl.channels.errors import (
     AuthException,
@@ -13,18 +11,27 @@ from parsl.channels.errors import (
     FileCopyException,
     SSHException,
 )
+from parsl.errors import OptionalModuleMissing
 from parsl.utils import RepresentationMixin
+
+try:
+    import paramiko
+    _ssh_enabled = True
+except (ImportError, NameError, FileNotFoundError):
+    _ssh_enabled = False
+
 
 logger = logging.getLogger(__name__)
 
 
-class NoAuthSSHClient(paramiko.SSHClient):
-    def _auth(self, username, *args):
-        self._transport.auth_none(username)
-        return
+if _ssh_enabled:
+    class NoAuthSSHClient(paramiko.SSHClient):
+        def _auth(self, username, *args):
+            self._transport.auth_none(username)
+            return
 
 
-class SSHChannel(Channel, RepresentationMixin):
+class DeprecatedSSHChannel(Channel, RepresentationMixin):
     ''' SSH persistent channel. This enables remote execution on sites
     accessible via ssh. It is assumed that the user has setup host keys
     so as to ssh to the remote host. Which goes to say that the following
@@ -53,6 +60,9 @@ class SSHChannel(Channel, RepresentationMixin):
 
         Raises:
         '''
+        if not _ssh_enabled:
+            raise OptionalModuleMissing(['ssh'],
+                                        "SSHChannel requires the ssh module and config.")
 
         self.hostname = hostname
         self.username = username
@@ -227,7 +237,19 @@ class SSHChannel(Channel, RepresentationMixin):
 
     def close(self) -> None:
         if self._is_connected():
+            transport = self.ssh_client.get_transport()
             self.ssh_client.close()
+
+            # ssh_client.close calls transport.close, but transport.close does
+            # not always wait for the transport thread to be stopped. See impl
+            # of Transport.close in paramiko and issue
+            # https://github.com/paramiko/paramiko/issues/520
+            logger.debug("Waiting for transport thread to stop")
+            transport.join(30)
+            if transport.is_alive():
+                logger.warning("SSH transport thread did not shut down")
+            else:
+                logger.debug("SSH transport thread stopped")
 
     def isdir(self, path):
         """Return true if the path refers to an existing directory.

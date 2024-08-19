@@ -11,7 +11,8 @@ import time
 
 import pytest
 
-from parsl.channels import LocalChannel, SSHChannel
+from parsl.channels import LocalChannel
+from parsl.channels.ssh.ssh import DeprecatedSSHChannel
 from parsl.jobs.states import JobState
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers import LocalProvider
@@ -92,19 +93,24 @@ def test_ssh_channel():
                 # already exist, so create it here.
                 pathlib.Path('{}/known.hosts'.format(config_dir)).touch(mode=0o600)
                 script_dir = tempfile.mkdtemp()
-                p = LocalProvider(channel=SSHChannel('127.0.0.1', port=server_port,
-                                                     script_dir=remote_script_dir,
-                                                     host_keys_filename='{}/known.hosts'.format(config_dir),
-                                                     key_filename=priv_key),
-                                  launcher=SingleNodeLauncher(debug=False))
-                p.script_dir = script_dir
-                _run_tests(p)
+                channel = DeprecatedSSHChannel('127.0.0.1', port=server_port,
+                                               script_dir=remote_script_dir,
+                                               host_keys_filename='{}/known.hosts'.format(config_dir),
+                                               key_filename=priv_key)
+                try:
+                    p = LocalProvider(channel=channel,
+                                      launcher=SingleNodeLauncher(debug=False))
+                    p.script_dir = script_dir
+                    _run_tests(p)
+                finally:
+                    channel.close()
         finally:
             _stop_sshd(sshd_thread)
 
 
 def _stop_sshd(sshd_thread):
     sshd_thread.stop()
+    sshd_thread.join()
 
 
 class SSHDThread(threading.Thread):

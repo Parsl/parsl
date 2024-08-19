@@ -8,8 +8,13 @@ from parsl.executors.high_throughput.executor import (
     GENERAL_HTEX_PARAM_DOCS,
     HighThroughputExecutor,
 )
+from parsl.executors.high_throughput.mpi_prefix_composer import (
+    VALID_LAUNCHERS,
+    validate_resource_spec,
+)
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import JobStatus
+from parsl.launchers import SimpleLauncher
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
 
@@ -30,6 +35,11 @@ class MPIExecutor(HighThroughputExecutor):
     max_workers_per_block: int
         Maximum number of MPI applications to run at once per block
 
+    mpi_launcher: str
+        Select one from the list of supported MPI launchers:
+        ("srun", "aprun", "mpiexec").
+        default: "mpiexec"
+
     {GENERAL_HTEX_PARAM_DOCS}
     """
 
@@ -38,6 +48,7 @@ class MPIExecutor(HighThroughputExecutor):
                  label: str = 'MPIExecutor',
                  provider: ExecutionProvider = LocalProvider(),
                  launch_cmd: Optional[str] = None,
+                 interchange_launch_cmd: Optional[str] = None,
                  address: Optional[str] = None,
                  worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
@@ -59,13 +70,13 @@ class MPIExecutor(HighThroughputExecutor):
         super().__init__(
             # Hard-coded settings
             cores_per_worker=1e-9,  # Ensures there will be at least an absurd number of workers
-            enable_mpi_mode=True,
             max_workers_per_node=max_workers_per_block,
 
             # Everything else
             label=label,
             provider=provider,
             launch_cmd=launch_cmd,
+            interchange_launch_cmd=interchange_launch_cmd,
             address=address,
             worker_ports=worker_ports,
             worker_port_range=worker_port_range,
@@ -80,9 +91,21 @@ class MPIExecutor(HighThroughputExecutor):
             poll_period=poll_period,
             address_probe_timeout=address_probe_timeout,
             worker_logdir_root=worker_logdir_root,
-            mpi_launcher=mpi_launcher,
             block_error_handler=block_error_handler,
             encrypted=encrypted
         )
+        self.enable_mpi_mode = True
+        self.mpi_launcher = mpi_launcher
 
         self.max_workers_per_block = max_workers_per_block
+
+        if not isinstance(self.provider.launcher, SimpleLauncher):
+            raise TypeError("mpi_mode requires the provider to be configured to use a SimpleLauncher")
+
+        if mpi_launcher not in VALID_LAUNCHERS:
+            raise ValueError(f"mpi_launcher set to:{mpi_launcher} must be set to one of {VALID_LAUNCHERS}")
+
+        self.mpi_launcher = mpi_launcher
+
+    def validate_resource_spec(self, resource_specification: dict):
+        return validate_resource_spec(resource_specification)

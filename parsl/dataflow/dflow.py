@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import atexit
+import concurrent.futures as cf
 import datetime
 import inspect
 import logging
@@ -112,14 +113,10 @@ class DataFlowKernel:
         self.monitoring: Optional[MonitoringHub]
         self.monitoring = config.monitoring
 
-        # hub address and port for interchange to connect
-        self.hub_address = None  # type: Optional[str]
-        self.hub_zmq_port = None  # type: Optional[int]
         if self.monitoring:
             if self.monitoring.logdir is None:
                 self.monitoring.logdir = self.run_dir
-            self.hub_address = self.monitoring.hub_address
-            self.hub_zmq_port = self.monitoring.start(self.run_id, self.run_dir, self.config.run_dir)
+            self.monitoring.start(self.run_dir, self.config.run_dir)
 
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
@@ -209,6 +206,8 @@ class DataFlowKernel:
         self.tasks: Dict[int, TaskRecord] = {}
         self.submitter_lock = threading.Lock()
 
+        self.dependency_launch_pool = cf.ThreadPoolExecutor(max_workers=1, thread_name_prefix="Dependency-Launch")
+
         self.dependency_resolver = self.config.dependency_resolver if self.config.dependency_resolver is not None \
             else SHALLOW_DEPENDENCY_RESOLVER
 
@@ -217,9 +216,24 @@ class DataFlowKernel:
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        logger.debug("Exiting the context manager, calling cleanup for DFK")
-        self.cleanup()
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        mode = self.config.exit_mode
+        logger.debug("Exiting context manager, with exit mode '%s'", mode)
+        if mode == "cleanup":
+            logger.info("Calling cleanup for DFK")
+            self.cleanup()
+        elif mode == "skip":
+            logger.info("Skipping all cleanup handling")
+        elif mode == "wait":
+            if exc_type is None:
+                logger.info("Waiting for all tasks to complete")
+                self.wait_for_current_tasks()
+                self.cleanup()
+            else:
+                logger.info("There was an exception - cleaning up without waiting for task completion")
+                self.cleanup()
+        else:
+            raise InternalConsistencyError(f"Exit case for {mode} should be unreachable, validated by typeguard on Config()")
 
     def _send_task_log_info(self, task_record: TaskRecord) -> None:
         if self.monitoring:
@@ -611,9 +625,9 @@ class DataFlowKernel:
         return kwargs.get('_parsl_staging_inhibit', False)
 
     def launch_if_ready(self, task_record: TaskRecord) -> None:
-        """
-        launch_if_ready will launch the specified task, if it is ready
-        to run (for example, without dependencies, and in pending state).
+        """Schedules a task record for re-inspection to see if it is ready
+        for launch and for launch if it is ready. The call will return
+        immediately.
 
         This should be called by any piece of the DataFlowKernel that
         thinks a task may have become ready to run.
@@ -622,12 +636,16 @@ class DataFlowKernel:
         ready to run - launch_if_ready will not incorrectly launch that
         task.
 
-        It is also not an error to call launch_if_ready on a task that has
-        already been launched - launch_if_ready will not re-launch that
-        task.
-
         launch_if_ready is thread safe, so may be called from any thread
         or callback.
+        """
+        self.dependency_launch_pool.submit(self._launch_if_ready_async, task_record)
+
+    @wrap_with_logs
+    def _launch_if_ready_async(self, task_record: TaskRecord) -> None:
+        """
+        _launch_if_ready will launch the specified task, if it is ready
+        to run (for example, without dependencies, and in pending state).
         """
         exec_fu = None
 
@@ -1159,10 +1177,10 @@ class DataFlowKernel:
         for executor in executors:
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
-            executor.hub_address = self.hub_address
-            executor.hub_zmq_port = self.hub_zmq_port
             if self.monitoring:
-                executor.monitoring_radio = self.monitoring.radio
+                executor.hub_address = self.monitoring.hub_address
+                executor.hub_zmq_port = self.monitoring.hub_zmq_port
+                executor.submit_monitoring_radio = self.monitoring.radio
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
@@ -1255,6 +1273,23 @@ class DataFlowKernel:
             executor.shutdown()
             logger.info(f"Shut down executor {executor.label}")
 
+            if hasattr(executor, 'provider'):
+                if hasattr(executor.provider, 'script_dir'):
+                    logger.info(f"Closing channel(s) for {executor.label}")
+
+                    if hasattr(executor.provider, 'channels'):
+                        for channel in executor.provider.channels:
+                            logger.info(f"Closing channel {channel}")
+                            channel.close()
+                            logger.info(f"Closed channel {channel}")
+                    else:
+                        assert hasattr(executor.provider, 'channel'), "If provider has no .channels, it must have .channel"
+                        logger.info(f"Closing channel {executor.provider.channel}")
+                        executor.provider.channel.close()
+                        logger.info(f"Closed channel {executor.provider.channel}")
+
+                    logger.info(f"Closed executor channel(s) for {executor.label}")
+
         logger.info("Terminated executors")
         self.time_completed = datetime.datetime.now()
 
@@ -1270,6 +1305,10 @@ class DataFlowKernel:
             logger.info("Terminating monitoring")
             self.monitoring.close()
             logger.info("Terminated monitoring")
+
+        logger.info("Terminating dependency launch pool")
+        self.dependency_launch_pool.shutdown()
+        logger.info("Terminated dependency launch pool")
 
         logger.info("Unregistering atexit hook")
         atexit.unregister(self.atexit_cleanup)
@@ -1417,8 +1456,6 @@ class DataFlowKernel:
         Returns:
              - dict containing, hashed -> future mappings
         """
-        self.memo_lookup_table = None
-
         if checkpointDirs:
             return self._load_checkpoints(checkpointDirs)
         else:

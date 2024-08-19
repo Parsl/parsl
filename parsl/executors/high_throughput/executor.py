@@ -1,32 +1,33 @@
 import logging
 import math
 import pickle
+import subprocess
 import threading
 import typing
 import warnings
 from collections import defaultdict
 from concurrent.futures import Future
 from dataclasses import dataclass
-from multiprocessing import Process
 from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import typeguard
 
-import parsl.launchers
 from parsl import curvezmq
 from parsl.addresses import get_all_addresses
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.staging import Staging
 from parsl.executors.errors import BadMessage, ScalingFailed
-from parsl.executors.high_throughput import interchange, zmq_pipes
+from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
+from parsl.executors.high_throughput.manager_selector import (
+    ManagerSelector,
+    RandomManagerSelector,
+)
 from parsl.executors.high_throughput.mpi_prefix_composer import (
-    VALID_LAUNCHERS,
-    validate_resource_spec,
+    InvalidResourceSpecification,
 )
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
-from parsl.multiprocessing import ForkProcess
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
@@ -57,6 +58,8 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers_per_node} "
                       "--mpi-launcher={mpi_launcher} "
                       "--available-accelerators {accelerators}")
 
+DEFAULT_INTERCHANGE_LAUNCH_CMD = ["interchange.py"]
+
 GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionProvider`
        Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
         :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
@@ -76,6 +79,10 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
         will be formatted with appropriate values for the following values (debug, task_url, result_url,
         cores_per_worker, nodes_per_block, heartbeat_period ,heartbeat_threshold, logdir). For example:
         launch_cmd="process_worker_pool.py {debug} -c {cores_per_worker} --task_url={task_url} --result_url={result_url}"
+
+    interchange_launch_cmd : Sequence[str]
+        Custom sequence of command line tokens to launch the interchange process from the executor. If
+        undefined, the executor will use the default "interchange.py" command.
 
     address : string
         An address to connect to the main Parsl process which is reachable from the network in which
@@ -163,7 +170,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  |      |         |             | batching      |    |         |
            Parsl<---Fut-|         |             | load-balancing|  result   exception
                      ^  |         |             | watchdogs     |    |         |
-                     |  |         |   Q_mngmnt  |               |    V         V
+                     |  |         |    Result   |               |    |         |
+                     |  |         |    Queue    |               |    V         V
                      |  |         |    Thread<--|-incoming_q<---|--- +---------+
                      |  |         |      |      |               |
                      |  |         |      |      |               |
@@ -214,17 +222,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Parsl will create names as integers starting with 0.
 
         default: empty list
-
-    enable_mpi_mode: bool
-        If enabled, MPI launch prefixes will be composed for the batch scheduler based on
-        the nodes available in each batch job and the resource_specification dict passed
-        from the app. This is an experimental feature, please refer to the following doc section
-        before use:  https://parsl.readthedocs.io/en/stable/userguide/mpi_apps.html
-
-    mpi_launcher: str
-        This field is only used if enable_mpi_mode is set. Select one from the
-        list of supported MPI launchers = ("srun", "aprun", "mpiexec").
-        default: "mpiexec"
     """
 
     @typeguard.typechecked
@@ -232,6 +229,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  label: str = 'HighThroughputExecutor',
                  provider: ExecutionProvider = LocalProvider(),
                  launch_cmd: Optional[str] = None,
+                 interchange_launch_cmd: Optional[Sequence[str]] = None,
                  address: Optional[str] = None,
                  worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
@@ -252,8 +250,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  poll_period: int = 10,
                  address_probe_timeout: Optional[int] = None,
                  worker_logdir_root: Optional[str] = None,
-                 enable_mpi_mode: bool = False,
-                 mpi_launcher: str = "mpiexec",
+                 manager_selector: ManagerSelector = RandomManagerSelector(),
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
                  encrypted: bool = False):
 
@@ -269,6 +266,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.prefetch_capacity = prefetch_capacity
         self.address = address
         self.address_probe_timeout = address_probe_timeout
+        self.manager_selector = manager_selector
         if self.address:
             self.all_addresses = address
         else:
@@ -305,7 +303,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self._task_counter = 0
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
-        self.interchange_proc: Optional[Process] = None
+        self.interchange_proc: Optional[subprocess.Popen] = None
         self.interchange_port_range = interchange_port_range
         self.heartbeat_threshold = heartbeat_threshold
         self.heartbeat_period = heartbeat_period
@@ -317,20 +315,17 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.encrypted = encrypted
         self.cert_dir = None
 
-        self.enable_mpi_mode = enable_mpi_mode
-        assert mpi_launcher in VALID_LAUNCHERS, \
-            f"mpi_launcher must be set to one of {VALID_LAUNCHERS}"
-        if self.enable_mpi_mode:
-            assert isinstance(self.provider.launcher, parsl.launchers.SimpleLauncher), \
-                "mpi_mode requires the provider to be configured to use a SimpleLauncher"
-
-        self.mpi_launcher = mpi_launcher
-
         if not launch_cmd:
             launch_cmd = DEFAULT_LAUNCH_CMD
         self.launch_cmd = launch_cmd
 
+        if not interchange_launch_cmd:
+            interchange_launch_cmd = DEFAULT_INTERCHANGE_LAUNCH_CMD
+        self.interchange_launch_cmd = interchange_launch_cmd
+
     radio_mode = "htex"
+    enable_mpi_mode: bool = False
+    mpi_launcher: str = "mpiexec"
 
     def _warn_deprecated(self, old: str, new: str):
         warnings.warn(
@@ -359,6 +354,18 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         if self.worker_logdir_root is not None:
             return "{}/{}".format(self.worker_logdir_root, self.label)
         return self.logdir
+
+    def validate_resource_spec(self, resource_specification: dict):
+        """HTEX does not support *any* resource_specification options and
+        will raise InvalidResourceSpecification is any are passed to it"""
+        if resource_specification:
+            raise InvalidResourceSpecification(
+                set(resource_specification.keys()),
+                ("HTEX does not support the supplied resource_specifications."
+                 "For MPI applications consider using the MPIExecutor. "
+                 "For specifications for core count/memory/walltime, consider using WorkQueueExecutor. ")
+            )
+        return
 
     def initialize_scaling(self):
         """Compose the launch command and scale out the initial blocks.
@@ -419,20 +426,19 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             "127.0.0.1", self.interchange_port_range, self.cert_dir
         )
 
-        self._queue_management_thread = None
-        self._start_queue_management_thread()
+        self._result_queue_thread = None
+        self._start_result_queue_thread()
         self._start_local_interchange_process()
 
-        logger.debug("Created management thread: {}".format(self._queue_management_thread))
+        logger.debug("Created result queue thread: %s", self._result_queue_thread)
 
         self.initialize_scaling()
 
     @wrap_with_logs
-    def _queue_management_worker(self):
-        """Listen to the queue for task status messages and handle them.
+    def _result_queue_worker(self):
+        """Listen to the queue for task result messages and handle them.
 
-        Depending on the message, tasks will be updated with results, exceptions,
-        or updates. It expects the following messages:
+        Depending on the message, tasks will be updated with results or exceptions.
 
         .. code:: python
 
@@ -446,10 +452,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                "task_id" : <task_id>
                "exception" : serialized exception object, on failure
             }
-
-        The `None` message is a die request.
         """
-        logger.debug("Queue management worker starting")
+        logger.debug("Result queue worker starting")
 
         while not self.bad_state_is_set:
             try:
@@ -465,108 +469,114 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
             else:
 
-                if msgs is None:
-                    logger.debug("Got None, exiting")
-                    return
+                for serialized_msg in msgs:
+                    try:
+                        msg = pickle.loads(serialized_msg)
+                    except pickle.UnpicklingError:
+                        raise BadMessage("Message received could not be unpickled")
 
-                else:
-                    for serialized_msg in msgs:
+                    if msg['type'] == 'heartbeat':
+                        continue
+                    elif msg['type'] == 'result':
                         try:
-                            msg = pickle.loads(serialized_msg)
-                        except pickle.UnpicklingError:
-                            raise BadMessage("Message received could not be unpickled")
+                            tid = msg['task_id']
+                        except Exception:
+                            raise BadMessage("Message received does not contain 'task_id' field")
 
-                        if msg['type'] == 'heartbeat':
-                            continue
-                        elif msg['type'] == 'result':
+                        if tid == -1 and 'exception' in msg:
+                            logger.warning("Executor shutting down due to exception from interchange")
+                            exception = deserialize(msg['exception'])
+                            self.set_bad_state_and_fail_all(exception)
+                            break
+
+                        task_fut = self.tasks.pop(tid)
+
+                        if 'result' in msg:
+                            result = deserialize(msg['result'])
+                            task_fut.set_result(result)
+
+                        elif 'exception' in msg:
                             try:
-                                tid = msg['task_id']
-                            except Exception:
-                                raise BadMessage("Message received does not contain 'task_id' field")
-
-                            if tid == -1 and 'exception' in msg:
-                                logger.warning("Executor shutting down due to exception from interchange")
-                                exception = deserialize(msg['exception'])
-                                self.set_bad_state_and_fail_all(exception)
-                                break
-
-                            task_fut = self.tasks.pop(tid)
-
-                            if 'result' in msg:
-                                result = deserialize(msg['result'])
-                                task_fut.set_result(result)
-
-                            elif 'exception' in msg:
-                                try:
-                                    s = deserialize(msg['exception'])
-                                    # s should be a RemoteExceptionWrapper... so we can reraise it
-                                    if isinstance(s, RemoteExceptionWrapper):
-                                        try:
-                                            s.reraise()
-                                        except Exception as e:
-                                            task_fut.set_exception(e)
-                                    elif isinstance(s, Exception):
-                                        task_fut.set_exception(s)
-                                    else:
-                                        raise ValueError("Unknown exception-like type received: {}".format(type(s)))
-                                except Exception as e:
-                                    # TODO could be a proper wrapped exception?
-                                    task_fut.set_exception(
-                                        DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
-                            else:
-                                raise BadMessage("Message received is neither result or exception")
+                                s = deserialize(msg['exception'])
+                                # s should be a RemoteExceptionWrapper... so we can reraise it
+                                if isinstance(s, RemoteExceptionWrapper):
+                                    try:
+                                        s.reraise()
+                                    except Exception as e:
+                                        task_fut.set_exception(e)
+                                elif isinstance(s, Exception):
+                                    task_fut.set_exception(s)
+                                else:
+                                    raise ValueError("Unknown exception-like type received: {}".format(type(s)))
+                            except Exception as e:
+                                # TODO could be a proper wrapped exception?
+                                task_fut.set_exception(
+                                    DeserializationError("Received exception, but handling also threw an exception: {}".format(e)))
                         else:
-                            raise BadMessage("Message received with unknown type {}".format(msg['type']))
+                            raise BadMessage("Message received is neither result or exception")
+                    else:
+                        raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
-        logger.info("Queue management worker finished")
+        logger.info("Result queue worker finished")
 
-    def _start_local_interchange_process(self):
+    def _start_local_interchange_process(self) -> None:
         """ Starts the interchange process locally
 
-        Starts the interchange process locally and uses an internal command queue to
+        Starts the interchange process locally and uses the command queue to
         get the worker task and result ports that the interchange has bound to.
         """
-        self.interchange_proc = ForkProcess(target=interchange.starter,
-                                            kwargs={"client_ports": (self.outgoing_q.port,
-                                                                     self.incoming_q.port,
-                                                                     self.command_client.port),
-                                                    "interchange_address": self.address,
-                                                    "worker_ports": self.worker_ports,
-                                                    "worker_port_range": self.worker_port_range,
-                                                    "hub_address": self.hub_address,
-                                                    "hub_zmq_port": self.hub_zmq_port,
-                                                    "logdir": self.logdir,
-                                                    "heartbeat_threshold": self.heartbeat_threshold,
-                                                    "poll_period": self.poll_period,
-                                                    "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
-                                                    "cert_dir": self.cert_dir,
-                                                    },
-                                            daemon=True,
-                                            name="HTEX-Interchange"
-                                            )
-        self.interchange_proc.start()
 
+        interchange_config = {"client_address": "127.0.0.1",
+                              "client_ports": (self.outgoing_q.port,
+                                               self.incoming_q.port,
+                                               self.command_client.port),
+                              "interchange_address": self.address,
+                              "worker_ports": self.worker_ports,
+                              "worker_port_range": self.worker_port_range,
+                              "hub_address": self.hub_address,
+                              "hub_zmq_port": self.hub_zmq_port,
+                              "logdir": self.logdir,
+                              "heartbeat_threshold": self.heartbeat_threshold,
+                              "poll_period": self.poll_period,
+                              "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
+                              "cert_dir": self.cert_dir,
+                              "manager_selector": self.manager_selector,
+                              "run_id": self.run_id,
+                              }
+
+        config_pickle = pickle.dumps(interchange_config)
+
+        self.interchange_proc = subprocess.Popen(self.interchange_launch_cmd, stdin=subprocess.PIPE)
+        stdin = self.interchange_proc.stdin
+        assert stdin is not None, "Popen should have created an IO object (vs default None) because of PIPE mode"
+
+        logger.debug("Popened interchange process. Writing config object")
+        stdin.write(config_pickle)
+        stdin.flush()
+        stdin.close()
+        logger.debug("Sent config object. Requesting worker ports")
         try:
             (self.worker_task_port, self.worker_result_port) = self.command_client.run("WORKER_PORTS", timeout_s=120)
         except CommandClientTimeoutError:
-            logger.error("Interchange has not completed initialization in 120s. Aborting")
+            logger.error("Interchange has not completed initialization. Aborting")
             raise Exception("Interchange failed to start")
+        logger.debug("Got worker ports")
 
-    def _start_queue_management_thread(self):
-        """Method to start the management thread as a daemon.
+    def _start_result_queue_thread(self):
+        """Method to start the result queue thread as a daemon.
 
         Checks if a thread already exists, then starts it.
-        Could be used later as a restart if the management thread dies.
+        Could be used later as a restart if the result queue thread dies.
         """
-        if self._queue_management_thread is None:
-            logger.debug("Starting queue management thread")
-            self._queue_management_thread = threading.Thread(target=self._queue_management_worker, name="HTEX-Queue-Management-Thread")
-            self._queue_management_thread.daemon = True
-            self._queue_management_thread.start()
-            logger.debug("Started queue management thread")
+        if self._result_queue_thread is None:
+            logger.debug("Starting result queue thread")
+            self._result_queue_thread = threading.Thread(target=self._result_queue_worker, name="HTEX-Result-Queue-Thread")
+            self._result_queue_thread.daemon = True
+            self._result_queue_thread.start()
+            logger.debug("Started result queue thread")
 
         else:
-            logger.error("Management thread already exists, returning")
+            logger.error("Result queue thread already exists, returning")
 
     def hold_worker(self, worker_id: str) -> None:
         """Puts a worker on hold, preventing scheduling of additional tasks to it.
@@ -640,7 +650,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
               Future
         """
 
-        validate_resource_spec(resource_specification, self.enable_mpi_mode)
+        self.validate_resource_spec(resource_specification)
 
         if self.bad_state_is_set:
             raise self.executor_exception
@@ -809,12 +819,28 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         logger.info("Attempting HighThroughputExecutor shutdown")
 
         self.interchange_proc.terminate()
-        self.interchange_proc.join(timeout=timeout)
-        if self.interchange_proc.is_alive():
-            logger.info("Unable to terminate Interchange process; sending SIGKILL")
+        try:
+            self.interchange_proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            logger.warning("Unable to terminate Interchange process; sending SIGKILL")
             self.interchange_proc.kill()
 
-        self.interchange_proc.close()
+        logger.info("Closing ZMQ pipes")
+
+        # These pipes are used in a thread unsafe manner. If you have traced a
+        # problem to this block of code, you might consider what is happening
+        # with other threads that access these.
+
+        # incoming_q is not closed here because it is used by the results queue
+        # worker which is not shut down at this point.
+
+        if hasattr(self, 'outgoing_q'):
+            logger.info("Closing outgoing_q")
+            self.outgoing_q.close()
+
+        if hasattr(self, 'command_client'):
+            logger.info("Closing command client")
+            self.command_client.close()
 
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 

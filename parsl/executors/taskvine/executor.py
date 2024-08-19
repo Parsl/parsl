@@ -573,24 +573,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     def workers_per_node(self) -> Union[int, float]:
         return 1
 
-    def scale_in(self, count: int) -> List[str]:
-        """Scale in method. Cancel a given number of blocks
-        """
-        # Obtain list of blocks to kill
-        to_kill = list(self.blocks_to_job_id.keys())[:count]
-        kill_ids = [self.blocks_to_job_id[block] for block in to_kill]
-
-        # Cancel the blocks provisioned
-        if self.provider:
-            logger.info(f"Scaling in jobs: {kill_ids}")
-            r = self.provider.cancel(kill_ids)
-            job_ids = self._filter_scale_in_ids(kill_ids, r)
-            block_ids_killed = [self.job_ids_to_block[jid] for jid in job_ids]
-            return block_ids_killed
-        else:
-            logger.error("No execution provider available to scale")
-            return []
-
     def shutdown(self, *args, **kwargs):
         """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the TaskVine system submission.
@@ -607,11 +589,13 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Join all processes before exiting
         logger.debug("Joining on submit process")
         self._submit_process.join()
+        self._submit_process.close()
         logger.debug("Joining on collector thread")
         self._collector_thread.join()
         if self.worker_launch_method == 'factory':
             logger.debug("Joining on factory process")
             self._factory_process.join()
+            self._factory_process.close()
 
         # Shutdown multiprocessing queues
         self._ready_task_queue.close()

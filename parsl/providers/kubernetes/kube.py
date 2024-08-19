@@ -168,10 +168,9 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
              - tasks_per_node (int) : command invocations to be launched per node
 
         Kwargs:
-             - job_name (String): Name for job, must be unique
+             - job_name (String): Name for job
 
         Returns:
-             - None: At capacity, cannot provision more
              - job_id: (string) Identifier for the job
         """
 
@@ -187,7 +186,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         formatted_cmd = template_string.format(command=cmd_string,
                                                worker_init=self.worker_init)
 
-        logger.debug("Pod name :{}".format(pod_name))
+        logger.debug("Pod name: %s", pod_name)
         self._create_pod(image=self.image,
                          pod_name=pod_name,
                          job_name=job_name,
@@ -243,13 +242,13 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         for jid in to_poll_job_ids:
             phase = None
             try:
-                pod_status = self.kube_client.read_namespaced_pod_status(name=jid, namespace=self.namespace)
+                pod = self.kube_client.read_namespaced_pod(name=jid, namespace=self.namespace)
             except Exception:
                 logger.exception("Failed to poll pod {} status, most likely because pod was terminated".format(jid))
                 if self.resources[jid]['status'] is JobStatus(JobState.RUNNING):
                     phase = 'Unknown'
             else:
-                phase = pod_status.status.phase
+                phase = pod.status.phase
             if phase:
                 status = translate_table.get(phase, JobState.UNKNOWN)
                 logger.debug("Updating pod {} with status {} to parsl status {}".format(jid,
@@ -286,7 +285,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         # Create the environment variables and command to initiate IPP
         environment_vars = client.V1EnvVar(name="TEST", value="SOME DATA")
 
-        launch_args = ["-c", "{0};".format(cmd_string)]
+        launch_args = ["-c", "{0}".format(cmd_string)]
 
         volume_mounts = []
         # Create mount paths for the volumes
