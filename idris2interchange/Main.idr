@@ -36,8 +36,8 @@ WORKER_RESULT_PORT = 9004
 
 -- this should be total, proved by decreasing n
 -- but apparently not?
-covering inner_ascii_dump : (n ** ByteBlock n) -> IO ()
-inner_ascii_dump (0 ** _) = pure ()
+covering inner_ascii_dump : (n : Nat ** ByteBlock n) -> IO ()
+inner_ascii_dump (Z ** _) = pure ()
 inner_ascii_dump (S n' ** bytes) = do
   (b, rest) <- bb_uncons bytes
   if b >= 32 && b < 128
@@ -45,7 +45,7 @@ inner_ascii_dump (S n' ** bytes) = do
     else putStr "."
   inner_ascii_dump (n' ** rest)
 
-covering ascii_dump : (n ** ByteBlock n) -> IO ()
+covering ascii_dump : (n : Nat ** ByteBlock n) -> IO ()
 ascii_dump v = do
   inner_ascii_dump v
   putStrLn ""
