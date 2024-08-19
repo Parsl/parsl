@@ -23,15 +23,13 @@ class StubStaging(Staging, RepresentationMixin):
         return file.scheme in known_url_schemes
 
     def stage_in(self, dm, executor: str, file: File, parent_fut: Optional[Future]) -> Optional[DataFuture]:
-        if file.netloc == '':
-            file.netloc = file.filename
         if file.scheme in ["taskvinetemp", "https", "http"]:
-            file.local_path = file.netloc
+            file.local_path = file.url.split('/')[-1]
+        logger.debug("Task vine staging provider stage in for {}".format(repr(file)))
         return None
 
     def stage_out(self, dm, executor: str, file: File, app_fu: Future) -> Optional[Future]:
-        if file.netloc == '':
-            file.netloc = file.filename
         if file.scheme in ["taskvinetemp", "https", "http"]:
-            file.local_path = file.netloc
+            file.local_path = file.url.split('/')[-1]
+        logger.debug("Task vine staging provider stage out for {}".format(repr(file)))
         return None

@@ -508,10 +508,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if parsl_file.scheme == 'file' or \
            (parsl_file.local_path and os.path.exists(parsl_file.local_path)):
             to_stage = not os.path.isabs(parsl_file.filepath)
-            return ParslFileToVine(parsl_file.filepath, parsl_file.netloc, to_stage, to_cache)
+            return ParslFileToVine(parsl_file.filepath, parsl_file.filepath, to_stage, to_cache)
         else:
             # we must stage url and temp files
-            ptv = ParslFileToVine(parsl_file.url, parsl_file.netloc, True, to_cache)
+            ptv = ParslFileToVine(parsl_file.url, parsl_file.local_path, True, to_cache)
             return ptv
 
     def _std_output_to_vine(self, fdname, stdfspec):
