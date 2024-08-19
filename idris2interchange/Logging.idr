@@ -1,5 +1,7 @@
 module Logging
 
+import System.Clock
+
 %default total
 
 ||| Output a log message
@@ -9,6 +11,11 @@ module Logging
 ||| of log calls entirely? something involving the elaborator?
 public export
 log : String -> IO ()
-log msg = putStrLn msg
+log msg = do
+  putStr " * "
+  now <- clockTime UTC
+  print now
+  putStr " "
+  putStrLn msg
 
 
