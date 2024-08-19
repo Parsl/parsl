@@ -69,6 +69,13 @@ zmq_connect : ZMQSocket -> String -> IO ()
 zmq_connect (MkZMQSocket sock_ptr) dest = 
   primIO $ prim__zmq_connect sock_ptr dest
 
+%foreign (gluezmq "glue_zmq_bind")
+prim__zmq_bind : AnyPtr -> String -> PrimIO ()
+
+public export
+zmq_bind : ZMQSocket -> String -> IO ()
+zmq_bind (MkZMQSocket sock_ptr) dest = 
+  primIO $ prim__zmq_bind sock_ptr dest
 
 data ZMQMsg = MkZMQMsg AnyPtr
 

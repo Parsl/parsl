@@ -16,6 +16,12 @@ import ZMQ
 %language ElabReflection
 %default total
 
+WORKER_TASK_PORT : Int
+WORKER_TASK_PORT = 9003
+
+WORKER_RESULT_PORT : Int
+WORKER_RESULT_PORT = 9004
+
 -- for benc dev environment:
 -- apt install chezscheme      -- to run idris
 -- apt install libzmq3-dev     -- for my own zmq bindings
@@ -36,7 +42,7 @@ dispatch_cmd "WORKER_PORTS" = do
   -- hard-code return value because ports are also hard-coded ...
   -- TODO: this should be some environment to be passed around
   -- perhaps as a monad-style reader environment?
-  pure (PickleTuple [PickleInteger 9003, PickleInteger 9004])
+  pure (PickleTuple [PickleInteger WORKER_TASK_PORT, PickleInteger WORKER_RESULT_PORT])
 
 dispatch_cmd "CONNECTED_BLOCKS" = do
   log "CONNECTED_BLOCKS requested"
@@ -127,7 +133,28 @@ zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket = d
 
         zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket
 
-covering poll_loop : ZMQSocket -> ZMQSocket -> IO ()
+covering zmq_poll_tasks_interchange_to_worker_loop : ZMQSocket -> IO ()
+zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = do
+  events <- zmq_get_socket_events tasks_interchange_to_worker_socket
+  log "ZMQ poll tasks interchange to worker loop got these zmq events: "
+  printLn events
+  -- TODO: we'll be both reading and writing from this socket
+
+  when (events `mod` 2 == 1) $ do -- read
+    log "Reading message from task interchange->worker channel"
+    maybe_msg <- zmq_recv_msg_alloc tasks_interchange_to_worker_socket
+    case maybe_msg of
+      Nothing => do putStrLn "No message received on task interchange->worker channel"
+      Just msg => do
+        putStr "Received registration-like message on task interchange->worker channel, size "
+        s <- zmq_msg_size msg
+        printLn s
+        zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket
+
+
+-- TODO: is there anything to distinguish these three sockets at the type
+-- level that ties into their expected use?
+covering poll_loop : ZMQSocket -> ZMQSocket -> ZMQSocket -> IO ()
 
 covering main : IO ()
 main = do
@@ -186,11 +213,19 @@ main = do
   zmq_connect command_socket "tcp://127.0.0.1:9002"
   log "Connected interchange command channel"
 
-  poll_loop command_socket tasks_submit_to_interchange_socket
+  log "Creating worker task socket"
+  tasks_interchange_to_worker_socket <- new_zmq_socket zmq_ctx ZMQSocketROUTER
+  -- TODO: use configuration interchange address from submit process, rather
+  -- than hard-coded 0.0.0.0, likewise for port
+  zmq_bind tasks_interchange_to_worker_socket "tcp://0.0.0.0:9003"
+
+  log "Created worker task socket"
+
+  poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket
 
   -- TODO move these sockets into elixir style single state object
 
-poll_loop command_socket tasks_submit_to_interchange_socket = do
+poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket = do
   -- TODO: probably should create result socket here
 
   -- TODO: polling of some kind here to decide which socket we're going to
@@ -236,11 +271,16 @@ poll_loop command_socket tasks_submit_to_interchange_socket = do
   --  command_socket
 
   -- so first we need to ask those two sockets for their FDs
+  -- TODO: these could have a "HasFD" or "IsPollable" interface rather than
+  -- explicitly asking for the FD? So that you might specify: (Pollable, continuation) as a pair
+  -- for the interface of this loop?
   tasks_submit_to_interchange_fd <- zmq_get_socket_fd tasks_submit_to_interchange_socket
   command_fd <- zmq_get_socket_fd command_socket
+  tasks_interchange_to_worker_fd <- zmq_get_socket_fd tasks_interchange_to_worker_socket
 
   poll_outputs <- poll [MkPollInput command_fd 0,
-                        MkPollInput tasks_submit_to_interchange_fd 0]
+                        MkPollInput tasks_submit_to_interchange_fd 0,
+                        MkPollInput tasks_interchange_to_worker_fd 0]
                        (MkTimeMS (-1)) -- -1 means infinity. should either be infinity or managed as part of a timed events queue that is not fd driven?
 
   log "poll completed"
@@ -278,7 +318,11 @@ poll_loop command_socket tasks_submit_to_interchange_socket = do
     log "Got a poll result for command channel. Doing ZMQ-specific event handling."
     zmq_poll_command_channel_loop command_socket
 
-  poll_loop command_socket tasks_submit_to_interchange_socket
+  when ((index 2 poll_outputs).revents /= 0) $ do
+    log "Got a poll result for tasks submit to interchange channel. Doing ZMQ-specific event handling."
+    zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket
+
+  poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket
       
 
   log "Idris2 interchange ending"

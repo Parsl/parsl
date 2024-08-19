@@ -23,6 +23,11 @@ void glue_zmq_connect(void* sock, char *dest) {
     assert(r == 0);
 }
 
+void glue_zmq_bind(void* sock, char *dest) {
+    int r = zmq_bind(sock, dest);
+    assert(r == 0);
+}
+
 void *glue_zmq_recv_msg_alloc(void *sock) {
     zmq_msg_t *msg = malloc(sizeof(zmq_msg_t));
     zmq_msg_init(msg);
