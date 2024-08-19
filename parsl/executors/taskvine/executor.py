@@ -18,6 +18,7 @@ import tempfile
 import threading
 import uuid
 from concurrent.futures import Future
+from datetime import datetime
 from typing import List, Literal, Optional, Union
 
 # Import other libraries
@@ -215,7 +216,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Create directories for data and results
         log_dir = os.path.join(run_dir, self.label)
-        self._function_data_dir = os.path.join(run_dir, self.label, "function_data")
+        tmp_dir = os.path.join('/tmp/', f'{self.label}-{os.getlogin()}')
+        self._function_data_dir = os.path.join(tmp_dir, datetime.now().strftime('%Y%m%d%H%M%S%f'), "function_data")
         os.makedirs(log_dir)
         os.makedirs(self._function_data_dir)
 
