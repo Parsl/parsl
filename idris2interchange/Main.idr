@@ -16,6 +16,9 @@ import ZMQ
 %language ElabReflection
 %default total
 
+
+-- TODO: this should eventually be chosen according to
+-- config supplied on stdin, or by random bind.
 WORKER_TASK_PORT : Int
 WORKER_TASK_PORT = 9003
 
