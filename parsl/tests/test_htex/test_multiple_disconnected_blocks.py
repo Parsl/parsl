@@ -11,6 +11,7 @@ from parsl.providers import LocalProvider
 
 logger = logging.getLogger(__name__)
 
+
 def local_config():
     """Config to simulate failing blocks without connecting"""
     return Config(
@@ -40,8 +41,10 @@ def double(x):
     return x * 2
 
 
+# shouldn't be expecting a bad state exception if we've scaled in block 0
+# rather than it failing - maybe need to tweak min/max/init blocks?
 @pytest.mark.local
-@pytest.mark.skip("shouldn't be expecting a bad state exception if we've scaled in block 0 rather than it failing - maybe need to tweak min/max/init blocks?")
+@pytest.mark.skip("see comment")
 def test_multiple_disconnected_blocks():
     """Test reporting of blocks that fail to connect from HTEX
     When init_blocks == N, error handling expects N failures before
