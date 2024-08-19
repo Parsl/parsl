@@ -321,6 +321,8 @@ class BlockProviderExecutor(ParslExecutor):
             status = self._make_status_dict(block_ids, self._provider.status(job_ids))
         else:
             status = {}
+
+        logger.debug(f"status from provider is {status}, simulated status to override is {self._simulated_status}")
         status.update(self._simulated_status)
 
         return status
@@ -335,6 +337,7 @@ class BlockProviderExecutor(ParslExecutor):
 
     def scale_in_facade(self, n: int, max_idletime: Optional[float] = None) -> List[str]:
 
+        logger.debug("BENC: scale_in_facade")
         if max_idletime is None:
             block_ids = self.scale_in(n)
         else:
@@ -347,7 +350,10 @@ class BlockProviderExecutor(ParslExecutor):
         if block_ids is not None:
             new_status = {}
             for block_id in block_ids:
-                new_status[block_id] = JobStatus(JobState.CANCELLED)
-                del self._status[block_id]
+                logger.debug(f"BENC: recorded scaled in simulated status for block {block_id}")
+                s = JobStatus(JobState.SCALED_IN)
+                new_status[block_id] = s
+                self._status[block_id] = s
+                self._simulated_status[block_id] = s
             self.send_monitoring_info(new_status)
         return block_ids

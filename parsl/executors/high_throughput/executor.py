@@ -790,7 +790,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         connected_blocks = self.connected_blocks()
         for job_id in job_status:
             job_info = job_status[job_id]
-            if job_info.terminal and job_id not in connected_blocks:
+            if job_info.terminal and job_id not in connected_blocks and job_info.state != JobState.SCALED_IN:
+                logger.debug(f"BENC: job {job_id} was status {job_info}, overriding to MISSING")
                 job_status[job_id].state = JobState.MISSING
                 if job_status[job_id].message is None:
                     job_status[job_id].message = (
