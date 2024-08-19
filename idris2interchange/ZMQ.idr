@@ -37,12 +37,13 @@ new_zmq_context = do
 -- horror that others have described of how awful it is to properly
 -- parse C code?)
 public export
-data ZMQSocketType = ZMQSocketDEALER | ZMQSocketREP
+data ZMQSocketType = ZMQSocketDEALER | ZMQSocketREP | ZMQSocketROUTER
 
 ||| the equivalent of the #defines for socket types in /usr/include/zmq.h
 zmq_socket_to_int : ZMQSocketType -> Int
 zmq_socket_to_int ZMQSocketREP = 4
 zmq_socket_to_int ZMQSocketDEALER = 5
+zmq_socket_to_int ZMQSocketROUTER = 6
 
 -- TODO: all these AnyPtrs could be made tighter perhaps - they're all
 -- pointers to specific kinds of data structure (as evidenced by their
