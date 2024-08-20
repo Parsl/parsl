@@ -1,10 +1,14 @@
 import logging
 import socket
 
-import paramiko
-
-from parsl.channels.ssh.ssh import SSHChannel
+from parsl.channels.ssh.ssh import DeprecatedSSHChannel
 from parsl.errors import OptionalModuleMissing
+
+try:
+    import paramiko
+    _ssh_enabled = True
+except (ImportError, NameError, FileNotFoundError):
+    _ssh_enabled = False
 
 try:
     from oauth_ssh.oauth_ssh_token import find_access_token
@@ -17,7 +21,7 @@ except (ImportError, NameError):
 logger = logging.getLogger(__name__)
 
 
-class OAuthSSHChannel(SSHChannel):
+class DeprecatedOAuthSSHChannel(DeprecatedSSHChannel):
     """SSH persistent channel. This enables remote execution on sites
     accessible via ssh. This channel uses Globus based OAuth tokens for authentication.
     """
@@ -38,6 +42,10 @@ class OAuthSSHChannel(SSHChannel):
 
         Raises:
         '''
+        if not _ssh_enabled:
+            raise OptionalModuleMissing(['ssh'],
+                                        "OauthSSHChannel requires the ssh module and config.")
+
         if not _oauth_ssh_enabled:
             raise OptionalModuleMissing(['oauth_ssh'],
                                         "OauthSSHChannel requires oauth_ssh module and config.")

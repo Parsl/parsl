@@ -47,8 +47,7 @@ Parsl currently supports the following providers:
 7. `parsl.providers.AWSProvider`: This provider allows you to provision and manage cloud nodes from Amazon Web Services.
 8. `parsl.providers.GoogleCloudProvider`: This provider allows you to provision and manage cloud nodes from Google Cloud.
 9. `parsl.providers.KubernetesProvider`: This provider allows you to provision and manage containers on a Kubernetes cluster.
-10. `parsl.providers.AdHocProvider`: This provider allows you manage execution over a collection of nodes to form an ad-hoc cluster.
-11. `parsl.providers.LSFProvider`: This provider allows you to schedule resources via IBM's LSF scheduler.
+10. `parsl.providers.LSFProvider`: This provider allows you to schedule resources via IBM's LSF scheduler.
 
 
 
