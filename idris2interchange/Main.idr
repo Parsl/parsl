@@ -5,6 +5,7 @@ module Main
 -- import...
 import Data.Vect
 import Generics.Derive
+import Language.JSON
 import System.FFI
 
 import Bytes
@@ -168,11 +169,16 @@ zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = d
     case maybe_msg of
       Nothing => do putStrLn "No message received on task interchange->worker channel"
       Just msg => do
+        bb@(s ** bytes) <- zmq_msg_as_bytes msg
         putStr "Received registration-like message on task interchange->worker channel, size "
-        s <- zmq_msg_size msg
         printLn s
-        bytes <- zmq_msg_as_bytes msg
-        ascii_dump bytes
+        ascii_dump bb
+
+        (msg_as_str, _) <- str_from_bytes (cast s) bytes
+        let j = parse msg_as_str
+
+        log "Parsed JSON:"
+        printLn j
 
         zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket
 

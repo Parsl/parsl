@@ -536,7 +536,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         elif self.benc_interchange_cli == "idris2":
             self.interchange_proc = subprocess.Popen(args=["cd idris2interchange ; "
                                                            "gcc -shared gluezmq.c -lzmq -o glue_zmq.so && gcc -shared pollhelper.c -o pollhelper.so && gcc -shared bytes.c -o bytes.so && "
-                                                           "rm -rf build/ && idris2 Main.idr -p sop -p elab-util -x main"], shell=True)
+                                                           "rm -rf build/ && idris2 Main.idr -p sop -p elab-util -p contrib -x main"], shell=True)
                                                            # "idris2 main.idr -o ixg && LD_LIBRARY_PATH=$(pwd)/build/exec/ixg_app gdb chezscheme"], shell=True)
 
         elif self.benc_interchange_cli == "python":
