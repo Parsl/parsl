@@ -146,7 +146,8 @@ class TasksOutgoing:
         self.zmq_context = curvezmq.ClientContext(cert_dir)
         self.zmq_socket = self.zmq_context.socket(zmq.DEALER)
         self.zmq_socket.set_hwm(0)
-        self.port = self.zmq_socket.bind("tcp://{}:9000".format(ip_address))
+        self.port = 9000
+        self.zmq_socket.bind("tcp://{}:9000".format(ip_address))
         self.poller = zmq.Poller()
         self.poller.register(self.zmq_socket, zmq.POLLOUT)
 
@@ -201,7 +202,8 @@ class ResultsIncoming:
         self.zmq_context = curvezmq.ClientContext(cert_dir)
         self.results_receiver = self.zmq_context.socket(zmq.DEALER)
         self.results_receiver.set_hwm(0)
-        self.port = self.results_receiver.bind("tcp://{}:9001".format(ip_address))
+        self.results_receiver.bind("tcp://{}:9001".format(ip_address))
+        self.port = 9001
 
     def get(self):
         logger.debug("Waiting for ResultsIncoming message")
