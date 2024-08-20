@@ -218,7 +218,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Create directories for data and results
         log_dir = os.path.join(run_dir, self.label)
         os.makedirs(log_dir)
-        
         tmp_prefix = f'{self.label}-{getpass.getuser()}-{datetime.now().strftime("%Y%m%d%H%M%S%f")}-'
         self._function_data_dir = tempfile.TemporaryDirectory(prefix=tmp_prefix)
 
