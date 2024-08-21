@@ -508,10 +508,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if parsl_file.scheme == 'file' or \
            (parsl_file.local_path and os.path.exists(parsl_file.local_path)):
             to_stage = not os.path.isabs(parsl_file.filepath)
-            return ParslFileToVine(parsl_file.filepath, parsl_file.filepath, to_stage, to_cache)
+            return ParslFileToVine(parsl_file.filepath, parsl_file.filepath, stage=to_stage, cache=to_cache, protocol=parsl_file.scheme)
         else:
             # we must stage url and temp files
-            ptv = ParslFileToVine(parsl_file.url, parsl_file.local_path, True, to_cache)
+            ptv = ParslFileToVine(parsl_file.url, parsl_file.local_path, stage=True, cache=to_cache, protocol=parsl_file.scheme)
             return ptv
 
     def _std_output_to_vine(self, fdname, stdfspec):
@@ -519,7 +519,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         return a ParslFileToVine with it. These files are never cached"""
         fname, mode = putils.get_std_fname_mode(fdname, stdfspec)
         to_stage = not os.path.isabs(fname)
-        return ParslFileToVine(fname, fname, stage=to_stage, cache=False)
+        return ParslFileToVine(fname, fname, stage=to_stage, cache=False, protocol="file")
 
     def _prepare_package(self, fn, extra_pkgs):
         """ Look at source code of apps to figure out their package depedencies

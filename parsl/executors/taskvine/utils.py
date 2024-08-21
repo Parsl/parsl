@@ -71,12 +71,14 @@ class ParslFileToVine:
                  parsl_name: str,   # name of file
                  remote_name: str,       # name of file if url
                  stage: bool,       # whether TaskVine should know about this file
-                 cache: bool        # whether TaskVine should cache this file
+                 cache: bool,        # whether TaskVine should cache this file
+                 protocol: str,     # protocol if url
                  ):
         self.parsl_name = parsl_name
         self.stage = stage
         self.cache = cache
         self.remote_name = remote_name
+        self.protocol = protocol
 
 
 def run_parsl_function(map_file, function_file, argument_file, result_file):

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 known_url_schemes = ["http", "https", "taskvinetemp"]
 
 
-class StubStaging(Staging, RepresentationMixin):
+class TaskVineStaging(Staging, RepresentationMixin):
 
     def can_stage_in(self, file):
         logger.debug("Task vine staging provider checking passthrough for {}".format(repr(file)))
