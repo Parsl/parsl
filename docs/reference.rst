@@ -38,15 +38,9 @@ Configuration
 Channels
 ========
 
-.. autosummary::
-    :toctree: stubs
-    :nosignatures:
-
-    parsl.channels.base.Channel
-    parsl.channels.LocalChannel
-    parsl.channels.SSHChannel
-    parsl.channels.OAuthSSHChannel
-    parsl.channels.SSHInteractiveLoginChannel
+Channels are deprecated in Parsl. See
+`issue 3515 <https://github.com/Parsl/parsl/issues/3515>`_
+for further discussion.
 
 Data management
 ===============
@@ -109,7 +103,6 @@ Providers
     :toctree: stubs
     :nosignatures:
 
-    parsl.providers.AdHocProvider
     parsl.providers.AWSProvider
     parsl.providers.CobaltProvider
     parsl.providers.CondorProvider

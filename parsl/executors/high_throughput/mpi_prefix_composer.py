@@ -21,14 +21,15 @@ class MissingResourceSpecification(Exception):
 class InvalidResourceSpecification(Exception):
     """Exception raised when Invalid input is supplied via resource specification"""
 
-    def __init__(self, invalid_keys: Set[str]):
+    def __init__(self, invalid_keys: Set[str], message: str = ''):
         self.invalid_keys = invalid_keys
+        self.message = message
 
     def __str__(self):
-        return f"Invalid resource specification options supplied: {self.invalid_keys}"
+        return f"Invalid resource specification options supplied: {self.invalid_keys} {self.message}"
 
 
-def validate_resource_spec(resource_spec: Dict[str, str], is_mpi_enabled: bool):
+def validate_resource_spec(resource_spec: Dict[str, str]):
     """Basic validation of keys in the resource_spec
 
     Raises: InvalidResourceSpecification if the resource_spec
@@ -38,7 +39,7 @@ def validate_resource_spec(resource_spec: Dict[str, str], is_mpi_enabled: bool):
 
     # empty resource_spec when mpi_mode is set causes parsl to hang
     # ref issue #3427
-    if is_mpi_enabled and len(user_keys) == 0:
+    if len(user_keys) == 0:
         raise MissingResourceSpecification('MPI mode requires optional parsl_resource_specification keyword argument to be configured')
 
     legal_keys = set(("ranks_per_node",

@@ -12,7 +12,6 @@ globus-sdk
 dill
 tblib
 requests
-paramiko
 psutil>=5.5.1
 setproctitle
 filelock>=3.13,<4

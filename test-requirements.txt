@@ -1,12 +1,14 @@
 flake8==6.1.0
 ipyparallel
 pandas
+paramiko
 pytest>=7.4.0,<8
 pytest-cov
 pytest-random-order
 nbsphinx
 sphinx_rtd_theme
 mypy==1.5.1
+types-mock
 types-python-dateutil
 types-requests
 types-paramiko

@@ -1,6 +1,3 @@
-# Workstation Provider
-from parsl.providers.ad_hoc.ad_hoc import AdHocProvider
-
 # Cloud Providers
 from parsl.providers.aws.aws import AWSProvider
 from parsl.providers.azure.azure import AzureProvider
@@ -24,7 +21,6 @@ __all__ = ['LocalProvider',
            'SlurmProvider',
            'TorqueProvider',
            'LSFProvider',
-           'AdHocProvider',
            'PBSProProvider',
            'AWSProvider',
            'GoogleCloudProvider',
