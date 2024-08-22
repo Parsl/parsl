@@ -2,7 +2,6 @@ import argparse
 
 import parsl
 from parsl.app.app import python_app
-from parsl.tests.configs.local_threads import config
 
 
 @python_app(cache=True)
