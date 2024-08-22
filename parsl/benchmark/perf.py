@@ -49,7 +49,7 @@ def performance(*, resources: dict, target_t: float, args_extra_size: int, itera
 
     iteration = 1
 
-    args_extra_payload = "x" * args_extra_size
+    # args_extra_payload = "x" * args_extra_size
 
     if isinstance(iterate_mode, list):
         n = iterate_mode[0]
@@ -65,7 +65,13 @@ def performance(*, resources: dict, target_t: float, args_extra_size: int, itera
 
         fs = []
         print("Submitting tasks / invoking apps")
-        for _ in range(n):
+        for index in range(n):
+            # this means there is a different argument for each iteration,
+            # which will make checkpointing/memo behave differently
+            # so this could be switchable in parsl-perf dev branch
+            # args_extra_payload = index   # always a new one (except for run repeats)
+
+            args_extra_payload = index % 10
             fs.append(app(args_extra_payload, parsl_resource_specification=resources))
 
         submitted_t = time.time()
