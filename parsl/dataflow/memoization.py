@@ -130,6 +130,9 @@ class Memoizer:
     def check_memo(self, task: TaskRecord) -> Optional[Future[Any]]:
         raise NotImplementedError
 
+    def close(self) -> None:
+        raise NotImplementedError
+
 
 class BasicMemoizer(Memoizer):
     """Memoizer is responsible for ensuring that identical work is not repeated.

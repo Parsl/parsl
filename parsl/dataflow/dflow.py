@@ -1202,6 +1202,7 @@ class DataFlowKernel:
 
         self.log_task_states()
 
+        # TODO: do this in the basic memoizer
         # Checkpointing takes priority over the rest of the tasks
         # checkpoint if any valid checkpoint method is specified
         if self.checkpoint_mode is not None:
@@ -1213,6 +1214,10 @@ class DataFlowKernel:
             if self._checkpoint_timer:
                 logger.info("Stopping checkpoint timer")
                 self._checkpoint_timer.close()
+
+        logger.info("Closing memoizer")
+        self.memoizer.close()
+        logger.info("Closed memoizer")
 
         # Send final stats
         self.usage_tracker.send_end_message()
