@@ -589,11 +589,13 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Join all processes before exiting
         logger.debug("Joining on submit process")
         self._submit_process.join()
+        self._submit_process.close()
         logger.debug("Joining on collector thread")
         self._collector_thread.join()
         if self.worker_launch_method == 'factory':
             logger.debug("Joining on factory process")
             self._factory_process.join()
+            self._factory_process.close()
 
         # Shutdown multiprocessing queues
         self._ready_task_queue.close()
