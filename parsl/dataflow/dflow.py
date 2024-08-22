@@ -157,6 +157,8 @@ class DataFlowKernel:
             self.monitoring.send((MessageType.WORKFLOW_INFO,
                                  workflow_info))
 
+        # TODO: this configuration should become part of the particular memoizer code
+        # - this is a checkpoint-implementation-specific parameter
         if config.checkpoint_files is not None:
             checkpoint_files = config.checkpoint_files
         elif config.checkpoint_files is None and config.checkpoint_mode is not None:
@@ -193,6 +195,10 @@ class DataFlowKernel:
         self.add_executors(config.executors)
         self.add_executors([parsl_internal_executor])
 
+        # TODO: these checkpoint modes should move into the memoizer implementation
+        # they're (probably?) checkpointer specific: for example the sqlite3-pure-memoizer
+        # doesn't have a notion of building up an in-memory checkpoint table that needs to be
+        # flushed on a separate policy
         if self.checkpoint_mode == "periodic":
             if config.checkpoint_period is None:
                 raise ConfigurationError("Checkpoint period must be specified with periodic checkpoint mode")
