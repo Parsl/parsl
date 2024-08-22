@@ -50,7 +50,7 @@ def performance(*, resources: dict, target_t: float, args_extra_size: int, itera
 
     iteration = 1
 
-    args_extra_payload = "x" * args_extra_size
+    # args_extra_payload = "x" * args_extra_size
 
     if isinstance(iterate_mode, list):
         n = iterate_mode[0]
