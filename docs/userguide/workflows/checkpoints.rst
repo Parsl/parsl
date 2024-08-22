@@ -264,8 +264,7 @@ of the ``slow_double`` app.
     # Wait for the results
     [i.result() for i in d]
 
-    cpt_dir = dfk.checkpoint()
-    print(cpt_dir)  # Prints the checkpoint dir
+    dfk.checkpoint()
 
 
 Resuming from a checkpoint
