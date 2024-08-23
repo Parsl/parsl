@@ -23,16 +23,14 @@ def local_config():
                 poll_period=100,
                 max_workers_per_node=1,
                 provider=LocalProvider(
-                    worker_init="conda deactivate; export PATH=''; which python; exit 0",
-                    init_blocks=2,
-                    max_blocks=4,
-                    min_blocks=0,
+                    worker_init="exit 0",
+                    init_blocks=2
                 ),
             )
         ],
         run_dir="/tmp/test_htex",
         max_idletime=0.5,
-        strategy='htex_auto_scale',
+        strategy='none',
     )
 
 
@@ -41,32 +39,23 @@ def double(x):
     return x * 2
 
 
-# shouldn't be expecting a bad state exception if we've scaled in block 0
-# rather than it failing - maybe need to tweak min/max/init blocks?
 @pytest.mark.local
-@pytest.mark.skip("see comment")
 def test_multiple_disconnected_blocks():
     """Test reporting of blocks that fail to connect from HTEX
     When init_blocks == N, error handling expects N failures before
     the run is cancelled
     """
 
-    logger.error("BENC: 1")
     dfk = parsl.dfk()
     executor = dfk.executors["HTEX"]
 
     connected_blocks = executor.connected_blocks()
     assert not connected_blocks, "Expected 0 blocks"
 
-    logger.error("BENC: 2")
     future = double(5)
-    logger.error("BENC: 2.1")
     with pytest.raises(BadStateException):
-        logger.error("BENC: 2.2")
         future.result()
-        logger.error("BENC: 2.3")
 
-    logger.error("BENC: 3")
     assert isinstance(future.exception(), BadStateException)
     exception_body = str(future.exception())
     assert "EXIT CODE: 0" in exception_body
@@ -77,7 +66,5 @@ def test_multiple_disconnected_blocks():
         assert isinstance(status, JobStatus)
         assert status.state == JobState.MISSING
 
-    logger.error("BENC: 4")
     connected_blocks = executor.connected_blocks()
     assert not connected_blocks, "Expected 0 blocks"
-    logger.error("BENC: 5")
