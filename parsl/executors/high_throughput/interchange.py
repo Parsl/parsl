@@ -485,7 +485,7 @@ class Interchange:
         # Check if there are tasks that could be sent to managers
 
         logger.debug(
-            "Managers count (interesting/total): {}/{}",
+            "Managers count (interesting/total): %d/%d",
             len(interesting_managers),
             len(self._ready_managers)
         )
