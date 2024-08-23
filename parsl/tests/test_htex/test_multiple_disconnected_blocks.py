@@ -9,8 +9,6 @@ from parsl.executors.errors import BadStateException
 from parsl.jobs.states import JobState, JobStatus
 from parsl.providers import LocalProvider
 
-logger = logging.getLogger(__name__)
-
 
 def local_config():
     """Config to simulate failing blocks without connecting"""
@@ -45,7 +43,6 @@ def test_multiple_disconnected_blocks():
     When init_blocks == N, error handling expects N failures before
     the run is cancelled
     """
-
     dfk = parsl.dfk()
     executor = dfk.executors["HTEX"]
 
