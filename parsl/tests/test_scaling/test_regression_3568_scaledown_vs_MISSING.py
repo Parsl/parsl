@@ -1,3 +1,7 @@
+import time
+
+import pytest
+
 import parsl
 from parsl.channels import LocalChannel
 from parsl.config import Config
@@ -5,12 +9,11 @@ from parsl.executors import HighThroughputExecutor
 from parsl.launchers import WrappedLauncher
 from parsl.providers import LocalProvider
 
-import pytest
 
 def local_config():
     return Config(
-        max_idletime = 6,
-        strategy = 'htex_auto_scale',
+        max_idletime=6,
+        strategy='htex_auto_scale',
         executors=[
             HighThroughputExecutor(
                 label="htex_local",
@@ -31,12 +34,10 @@ def local_config():
 
 @parsl.python_app
 def task():
-  return 7
+    return 7
+
 
 @pytest.mark.local
 def test_regression():
-  print("waiting")
-  import time
-  time.sleep(120)
-  print("task2")
-  assert task().result() == 7
+    time.sleep(120)
+    assert task().result() == 7
