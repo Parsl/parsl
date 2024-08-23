@@ -321,8 +321,6 @@ class BlockProviderExecutor(ParslExecutor):
             status = self._make_status_dict(block_ids, self._provider.status(job_ids))
         else:
             status = {}
-
-        logger.debug(f"status from provider is {status}, simulated status to override is {self._simulated_status}")
         status.update(self._simulated_status)
 
         return status
