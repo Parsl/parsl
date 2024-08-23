@@ -3,6 +3,7 @@
 ||| makes heavy reference to Lib/pickletools.py (from around Python 3.12)
 module Pickle
 
+import Control.App
 import Generics.Derive
 
 import Bytes
@@ -34,16 +35,16 @@ record VMState where
 -- if there are not 8 bytes left in ByteBlock, explode...
 -- TODO: this could look nicer with a parser monad/parser applicative
 -- rather than threading the shrinking bb?
-read_uint8 : {n: Nat} -> ByteBlock (S (S (S (S (S (S (S (S n)))))))) -> IO (Int, ByteBlock n)
+read_uint8 : {n: Nat} -> ByteBlock (S (S (S (S (S (S (S (S n)))))))) -> App Init (Int, ByteBlock n)
 read_uint8 bb = do
-  (byte1, bb1) <- bb_uncons bb 
-  (byte2, bb2) <- bb_uncons bb1 
-  (byte3, bb3) <- bb_uncons bb2
-  (byte4, bb4) <- bb_uncons bb3 
-  (byte5, bb5) <- bb_uncons bb4 
-  (byte6, bb6) <- bb_uncons bb5 
-  (byte7, bb7) <- bb_uncons bb6 
-  (byte8, bb8) <- bb_uncons bb7 
+  (byte1, bb1) <- primIO $ bb_uncons bb 
+  (byte2, bb2) <- primIO $ bb_uncons bb1 
+  (byte3, bb3) <- primIO $ bb_uncons bb2
+  (byte4, bb4) <- primIO $ bb_uncons bb3 
+  (byte5, bb5) <- primIO $ bb_uncons bb4 
+  (byte6, bb6) <- primIO $ bb_uncons bb5 
+  (byte7, bb7) <- primIO $ bb_uncons bb6 
+  (byte8, bb8) <- primIO $ bb_uncons bb7 
 
   -- bytes are bytes but we want an Int...
 
@@ -61,9 +62,9 @@ read_uint8 bb = do
 
 -- define this signature before the body because we are mutually
 -- recursive (or I could use a mutual block? what's the difference?)
-step : {n : Nat} -> ByteBlock n -> VMState -> IO VMState
+step : {n : Nat} -> ByteBlock n -> VMState -> App Init VMState
 
-step_PROTO : {n : Nat} -> ByteBlock n -> VMState -> IO VMState
+step_PROTO : {n : Nat} -> ByteBlock n -> VMState -> App Init VMState
 
 step_PROTO {n = Z} bb state = do
   ?error_PROTO_ran_off_end
@@ -72,21 +73,23 @@ step_PROTO {n = Z} bb state = do
 step_PROTO {n = S n'} bb state = do
   log "Opcode: PROTO"
   -- read a uint1
-  (proto_ver, bb') <- bb_uncons bb
-  putStr "Pickle protocol version: "
-  printLn proto_ver
+  (proto_ver, bb') <- primIO $ bb_uncons bb
+  primIO $ do
+    putStr "Pickle protocol version: "
+    printLn proto_ver
   step {n = n'} bb' state 
 
-step_FRAME : {n : Nat} -> ByteBlock n -> VMState -> IO VMState
+step_FRAME : {n : Nat} -> ByteBlock n -> VMState -> App Init VMState
 step_FRAME bb state = do
   log "Opcode: FRAME"
   case n of
     (S (S (S (S (S (S (S (S k)))))))) => do
       (frame_len, bb') <- read_uint8 bb
-      putStr "Frame length is: "
-      printLn frame_len
-      putStr "Bytes remaining in buffer: "
-      printLn (length bb')
+      primIO $ do
+        putStr "Frame length is: "
+        printLn frame_len
+        putStr "Bytes remaining in buffer: "
+        printLn (length bb')
       -- TODO: out of interest, validate FRAME against ByteBlock length.
       -- In pickle in general we can't do that because the input is a
       -- stream, not a fixed length block... but we know the length of
@@ -96,14 +99,14 @@ step_FRAME bb state = do
       step bb' state
     _ => ?error_not_enough_bytes_left_for_FRAME
 
-step_MEMOIZE : {n: Nat} -> ByteBlock n -> VMState -> IO VMState
+step_MEMOIZE : {n: Nat} -> ByteBlock n -> VMState -> App Init VMState
 step_MEMOIZE bb (MkVMState (v::rest_stack) memo) = do
   log "Opcode: MEMOIZE"
   step bb (MkVMState (v::rest_stack) (memo ++ [v]))
 step_MEMOIZE bb (MkVMState [] memo) = ?error_MEMOIZE_with_empty_stack
 
 
-step_STOP : ByteBlock n -> VMState -> IO VMState
+step_STOP : ByteBlock n -> VMState -> App Init VMState
 step_STOP bb state = do
   log "Opcode: STOP"
   pure state
@@ -111,14 +114,15 @@ step_STOP bb state = do
 -- The reasoning about lengths here is more complicated than PROTO or FRAME,
 -- and maybe pushes more into runtime: the number of bytes we want is encoded
 --  in the first remaining byte of the ByteBlock.
-step_SHORT_BINUNICODE : {n: Nat} -> ByteBlock n -> VMState -> IO VMState
+step_SHORT_BINUNICODE : {n: Nat} -> ByteBlock n -> VMState -> App Init VMState
 step_SHORT_BINUNICODE {n} bb (MkVMState stack memo) = do
   log "Opcode: SHORT_BINUNICODE"
   case n of
     (S k) => do
-      (strlen, bb') <- bb_uncons bb
-      putStr "UTF-8 byte sequence length: "
-      printLn strlen
+      (strlen, bb') <- primIO $ bb_uncons bb
+      primIO $ do
+        putStr "UTF-8 byte sequence length: "
+        printLn strlen
 
       -- the buffer contains strlen bytes of UTF-8 encoding, which we need to
       -- turn into an Idris2 String. could go via C, or could do it as a
@@ -129,10 +133,11 @@ step_SHORT_BINUNICODE {n} bb (MkVMState stack memo) = do
       -- it into a char? that seems like a lot of faff compared to going via
       -- a C buffer...
 
-      (str, bb'') <- str_from_bytes (cast strlen) bb'
+      (str, bb'') <- primIO $ str_from_bytes (cast strlen) bb'
 
-      putStr "String is: "
-      putStrLn str
+      primIO $ do
+        putStr "String is: "
+        putStrLn str
 
       let new_state = MkVMState ((PickleUnicodeString str)::stack) memo
 
@@ -146,13 +151,15 @@ step {n = Z} bb state = do
 
 step {n = S m} bb state = do
 
-    putStr "Stack pre-step: "
-    printLn state.stack
+    primIO $ do
+      putStr "Stack pre-step: "
+      printLn state.stack
 
-    (opcode, bb') <- bb_uncons bb
+    (opcode, bb') <- primIO $ bb_uncons bb
 
-    putStr "Opcode number: "
-    printLn opcode
+    primIO $ do
+      putStr "Opcode number: "
+      printLn opcode
 
     case opcode of 
       46 => step_STOP bb' state
@@ -174,7 +181,7 @@ step {n = S m} bb state = do
 ||| functionally? maybe need some linear stuff on usage of msg object
 ||| to let that happen, session style?
 export
-unpickle : (n: Nat ** (ByteBlock n)) -> IO PickleAST
+unpickle : (n: Nat ** (ByteBlock n)) -> App Init PickleAST
 unpickle ((S n) ** bb) = do
   log "beginning unpickle"
 
@@ -190,7 +197,7 @@ unpickle (Z ** bb) = do
   log "unpickle not defined on empty byte sequence"
   ?error_unpickle_Z
 
-pickle_PROTO : (n ** ByteBlock n) -> Nat -> IO (m ** ByteBlock m)
+pickle_PROTO : (n ** ByteBlock n) -> Nat -> App Init (m ** ByteBlock m)
 pickle_PROTO (n ** bytes) v = do
   log "Pickling PROTO opcode"
   -- write PROTO byte
@@ -215,45 +222,45 @@ pickle_PROTO (n ** bytes) v = do
   -- so lets take the dangerous (without linear types) route
   -- and do reallocs...
 
-  bytes <- bb_append bytes 128   -- PROTO=128
-  bytes <- bb_append bytes (cast v)
+  bytes <- primIO $ bb_append bytes 128   -- PROTO=128
+  bytes <- primIO $ bb_append bytes (cast v)
 
   pure ((S (S n)) ** bytes)
 
-pickle_ast : (n: Nat ** ByteBlock n) -> PickleAST -> IO (m: Nat ** (ByteBlock m))
+pickle_ast : (n: Nat ** ByteBlock n) -> PickleAST -> App Init (m: Nat ** (ByteBlock m))
 
-fold_AST : (n ** ByteBlock n) -> PickleAST -> IO (m ** ByteBlock m)
+fold_AST : (n ** ByteBlock n) -> PickleAST -> App Init (m ** ByteBlock m)
 fold_AST (n ** bytes) ast = do
   log "Folding over an AST element"
   pickle_ast (n ** bytes) ast
 
-pickle_STOP : (n ** ByteBlock n) -> IO (m ** ByteBlock m)
+pickle_STOP : (n ** ByteBlock n) -> App Init (m ** ByteBlock m)
 pickle_STOP (n ** bytes) = do
   log "Pickling STOP opcode"
-  bytes <- bb_append bytes 46  -- STOP is ASCII 46
+  bytes <- primIO $ bb_append bytes 46  -- STOP is ASCII 46
   pure ((S n) ** bytes)
 
 
 -- this is the same code as pickle_TUPLE except for the opcode
-pickle_LIST : (n ** ByteBlock n) -> List PickleAST -> IO (m ** ByteBlock m)
+pickle_LIST : (n ** ByteBlock n) -> List PickleAST -> App Init (m ** ByteBlock m)
 pickle_LIST (n ** bytes) entries = do
   log "Pickling LIST"
-  bytes <- bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
+  bytes <- primIO $ bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
   (len ** bytes) <- foldlM fold_AST ((S n) ** bytes) entries
-  bytes <- bb_append bytes 108  -- opcode is ASCII l
+  bytes <- primIO $ bb_append bytes 108  -- opcode is ASCII l
   pure ((S len) ** bytes)
 
 
-pickle_TUPLE : (n ** ByteBlock n) -> List PickleAST -> IO (m ** ByteBlock m)
+pickle_TUPLE : (n ** ByteBlock n) -> List PickleAST -> App Init (m ** ByteBlock m)
 pickle_TUPLE (n ** bytes) entries = do
   log "Pickling TUPLE"
-  bytes <- bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
+  bytes <- primIO $ bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
 
   -- Do some kind of fold over the entries list, to generate
   -- a stack section that contains all those entries.
   (len ** bytes) <- foldlM fold_AST ((S n) ** bytes) entries
   
-  bytes <- bb_append bytes 116  -- opcode is ASCII t, decimal 116
+  bytes <- primIO $ bb_append bytes 116  -- opcode is ASCII t, decimal 116
 
   pure ((S len) ** bytes)
 
@@ -270,10 +277,10 @@ pickle_TUPLE (n ** bytes) entries = do
 -- ports response:
 --   PickleTuple [PickleInteger 9000, PickleInteger 9001]
 
-pickle_BININT : (n ** ByteBlock n) -> Int -> IO (m ** ByteBlock m)
+pickle_BININT : (n ** ByteBlock n) -> Int -> App Init (m ** ByteBlock m)
 pickle_BININT (n ** bytes) v = do
   log "Pickling BININT"
-  printLn v
+  primIO $ printLn v
 
   if v < 0 then ?notimpl_BININT_negatives
            else log "this isn't negative - ok"
@@ -289,11 +296,11 @@ pickle_BININT (n ** bytes) v = do
   -- dividing b5 to give a b5, and checking b5 is 0
   -- would be a test for that
 
-  bytes <- bb_append bytes 74   -- opcode is ASCII 'J'
-  bytes <- bb_append bytes (cast b1)
-  bytes <- bb_append bytes (cast b2)
-  bytes <- bb_append bytes (cast b3)
-  bytes <- bb_append bytes (cast b4)
+  bytes <- primIO $ bb_append bytes 74   -- opcode is ASCII 'J'
+  bytes <- primIO $ bb_append bytes (cast b1)
+  bytes <- primIO $ bb_append bytes (cast b2)
+  bytes <- primIO $ bb_append bytes (cast b3)
+  bytes <- primIO $ bb_append bytes (cast b4)
 
   pure (S (S (S (S (S n)))) ** bytes)
 
@@ -304,7 +311,7 @@ pickle_ast _ _ = ?notimpl_pickle_ast_others
 
 ||| Takes some PickleAST and turns it into a Pickle bytestream.
 export
-pickle : PickleAST -> IO (n: Nat ** (ByteBlock n))
+pickle : PickleAST -> App Init (n: Nat ** (ByteBlock n))
 pickle ast = do
   -- TODO: needs some kinds of ByteBlock access that we can write to in
   -- the ways that this code wants. I think that only means appending,

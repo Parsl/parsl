@@ -1,10 +1,12 @@
 module ZMQ
 
+import Control.App
+
 import Bytes
 import FD
 import Logging
 
-%default total
+-- Control.App isn't total in the way that IO seems to be... %default total
 
 ||| This will name the C functions to use from the libzmq<->idris2
 ||| glue functions.
@@ -18,9 +20,9 @@ prim__zmq_ctx_new : PrimIO AnyPtr
 data ZMQContext = MkZMQContext AnyPtr
 
 public export
-new_zmq_context : IO ZMQContext
+new_zmq_context : App Init ZMQContext
 new_zmq_context = do
-  ptr <- primIO $ prim__zmq_ctx_new
+  ptr <- primIO $ primIO $ prim__zmq_ctx_new
   -- TODO: validate ptr is not NULL, at least?
   -- and either make this return a Maybe, or
   -- terminate, or some other exception style?
@@ -56,26 +58,26 @@ data ZMQSocket = MkZMQSocket AnyPtr
 prim__zmq_socket : AnyPtr -> Int -> PrimIO AnyPtr
 
 public export
-new_zmq_socket : ZMQContext -> ZMQSocketType -> IO ZMQSocket
+new_zmq_socket : ZMQContext -> ZMQSocketType -> App Init ZMQSocket
 new_zmq_socket (MkZMQContext ctx_ptr) socket_type = do
-  ptr <- primIO (prim__zmq_socket ctx_ptr (zmq_socket_to_int socket_type))
+  ptr <- primIO $ primIO (prim__zmq_socket ctx_ptr (zmq_socket_to_int socket_type))
   pure (MkZMQSocket ptr)
 
 %foreign (gluezmq "glue_zmq_connect")
 prim__zmq_connect : AnyPtr -> String -> PrimIO ()
 
 public export
-zmq_connect : ZMQSocket -> String -> IO ()
+zmq_connect : ZMQSocket -> String -> App Init ()
 zmq_connect (MkZMQSocket sock_ptr) dest = 
-  primIO $ prim__zmq_connect sock_ptr dest
+  primIO $ primIO $ prim__zmq_connect sock_ptr dest
 
 %foreign (gluezmq "glue_zmq_bind")
 prim__zmq_bind : AnyPtr -> String -> PrimIO ()
 
 public export
-zmq_bind : ZMQSocket -> String -> IO ()
+zmq_bind : ZMQSocket -> String -> App Init ()
 zmq_bind (MkZMQSocket sock_ptr) dest = 
-  primIO $ prim__zmq_bind sock_ptr dest
+  primIO $ primIO $ prim__zmq_bind sock_ptr dest
 
 data ZMQMsg = MkZMQMsg AnyPtr
 
@@ -84,9 +86,9 @@ data ZMQMsg = MkZMQMsg AnyPtr
 prim__zmq_recv_msg_alloc : AnyPtr -> PrimIO AnyPtr
 
 public export
-zmq_recv_msg_alloc : ZMQSocket -> IO (Maybe ZMQMsg)
+zmq_recv_msg_alloc : ZMQSocket -> App Init (Maybe ZMQMsg)
 zmq_recv_msg_alloc (MkZMQSocket sock_ptr) = do
-    msg_ptr <- primIO $ prim__zmq_recv_msg_alloc sock_ptr
+    msg_ptr <- primIO $ primIO $ prim__zmq_recv_msg_alloc sock_ptr
     if prim__nullAnyPtr msg_ptr == 1 
       then pure $ Nothing
       else pure $ Just $ MkZMQMsg msg_ptr
@@ -96,17 +98,17 @@ zmq_recv_msg_alloc (MkZMQSocket sock_ptr) = do
 prim__zmq_msg_size : AnyPtr -> PrimIO Int
 
 public export
-zmq_msg_size : ZMQMsg -> IO Int
-zmq_msg_size (MkZMQMsg msg_ptr) = primIO $ prim__zmq_msg_size msg_ptr
+zmq_msg_size : ZMQMsg -> App Init Int
+zmq_msg_size (MkZMQMsg msg_ptr) = primIO $ primIO $ prim__zmq_msg_size msg_ptr
 
 %foreign (gluezmq "glue_zmq_msg_data")
 prim__zmq_msg_data : AnyPtr -> PrimIO AnyPtr
 
-zmq_msg_data : ZMQMsg -> IO AnyPtr
-zmq_msg_data (MkZMQMsg msg_ptr) = primIO $ prim__zmq_msg_data msg_ptr
+zmq_msg_data : ZMQMsg -> App Init AnyPtr
+zmq_msg_data (MkZMQMsg msg_ptr) = primIO $ primIO $ prim__zmq_msg_data msg_ptr
 
 export
-zmq_msg_as_bytes : ZMQMsg -> IO (n: Nat ** (ByteBlock n))
+zmq_msg_as_bytes : ZMQMsg -> App Init (n: Nat ** (ByteBlock n))
 zmq_msg_as_bytes msg = do
   size <- cast <$> zmq_msg_size msg
   byte_ptr <- zmq_msg_data msg
@@ -116,24 +118,24 @@ zmq_msg_as_bytes msg = do
 prim__zmq_get_socket_fd : AnyPtr -> PrimIO Int
 
 public export
-zmq_get_socket_fd : ZMQSocket -> IO FD
+zmq_get_socket_fd : ZMQSocket -> App Init FD
 zmq_get_socket_fd (MkZMQSocket sock_ptr) = do
   log "calling get_socket_fd"
-  fd <- (primIO $ prim__zmq_get_socket_fd sock_ptr)
+  fd <- (primIO $ primIO $ prim__zmq_get_socket_fd sock_ptr)
   log "retrieved fd"
-  printLn fd
+  primIO $ printLn fd
   pure $ MkFD fd
 
 %foreign (gluezmq "glue_zmq_get_socket_events")
 prim__zmq_get_socket_events : AnyPtr -> PrimIO Int
 
 public export
-zmq_get_socket_events : ZMQSocket -> IO Int
+zmq_get_socket_events : ZMQSocket -> App Init Int
 zmq_get_socket_events (MkZMQSocket sock_ptr) = do
   log "calling get_socket_events"
-  events <- primIO $ prim__zmq_get_socket_events sock_ptr
+  events <- primIO $ primIO $ prim__zmq_get_socket_events sock_ptr
   log "retrieved these event flags: "
-  printLn events
+  primIO $ printLn events
   pure events
 
 
@@ -141,8 +143,8 @@ zmq_get_socket_events (MkZMQSocket sock_ptr) = do
 prim__zmq_alloc_send_bytes : AnyPtr -> AnyPtr -> Int -> PrimIO ()
 
 public export
-zmq_alloc_send_bytes : ZMQSocket -> ByteBlock n -> IO ()
+zmq_alloc_send_bytes : ZMQSocket -> ByteBlock n -> App Init ()
 zmq_alloc_send_bytes (MkZMQSocket sock_ptr) (MkByteBlock byte_ptr size) = do
   log "sending bytes"
-  primIO $ prim__zmq_alloc_send_bytes sock_ptr byte_ptr (cast size)
+  primIO $ primIO $ prim__zmq_alloc_send_bytes sock_ptr byte_ptr (cast size)
   log "sent bytes"

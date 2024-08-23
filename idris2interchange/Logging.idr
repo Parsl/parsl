@@ -1,5 +1,6 @@
 module Logging
 
+import Control.App
 import System.Clock
 
 %default total
@@ -9,9 +10,9 @@ import System.Clock
 ||| This is just a print right now...
 ||| What would it look like if I was trying to do macro-style eliding
 ||| of log calls entirely? something involving the elaborator?
-public export
-log : String -> IO ()
-log msg = do
+covering public export
+log : String -> App Init ()
+log msg = primIO $ do
   putStr " * "
   now <- clockTime UTC
   print now

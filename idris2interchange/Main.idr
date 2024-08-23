@@ -3,6 +3,7 @@ module Main
 -- wow it took a long time before importing a library module...
 -- the source code was 290 lines long before adding the first
 -- import...
+import Control.App
 import Data.Vect
 import Generics.Derive
 import Language.JSON
@@ -15,7 +16,7 @@ import Pickle
 import ZMQ
 
 %language ElabReflection
-%default total
+-- %default total
 
 
 -- TODO: this should eventually be chosen according to
@@ -37,26 +38,26 @@ WORKER_RESULT_PORT = 9004
 
 -- this should be total, proved by decreasing n
 -- but apparently not? cheat by using assert_smaller...
-inner_ascii_dump : (n : Nat ** ByteBlock n) -> IO ()
+inner_ascii_dump : (n : Nat ** ByteBlock n) -> App Init ()
 inner_ascii_dump (Z ** _) = pure ()
 inner_ascii_dump i@(S n' ** bytes) = do
-  (b, rest) <- bb_uncons bytes
+  (b, rest) <- primIO $ bb_uncons bytes
   if b >= 32 && b < 128
-    then putStr (singleton (chr $ cast b))
-    else putStr "."
+    then primIO $ putStr (singleton (chr $ cast b))
+    else primIO $ putStr "."
   inner_ascii_dump (assert_smaller i (n' ** rest))
 
-ascii_dump : (n : Nat ** ByteBlock n) -> IO ()
+ascii_dump : (n : Nat ** ByteBlock n) -> App Init ()
 ascii_dump v = do
   inner_ascii_dump v
-  putStrLn ""
+  primIO $ putStrLn ""
 
 
 -- the Python type contained in the returned AST depends on the supplied
 -- command... TODO: maybe I can describe that typing in the idris2 code
 -- rather than returning an equivalent to Python Any... so that the
 -- individual dispatch_cmd pieces can be typechecked a bit?
-dispatch_cmd : String -> IO PickleAST
+dispatch_cmd : String -> App Init PickleAST
 
 dispatch_cmd "WORKER_PORTS" = do
   log "WORKER_PORTS requested"
@@ -80,12 +81,12 @@ dispatch_cmd _ = ?error_cmd_not_implemented
 ||| Some reading:
 ||| https://funcptr.net/2012/09/10/zeromq---edge-triggered-notification/
 ||| https://github.com/zeromq/libzmq/issues/3641
-covering zmq_poll_command_channel_loop : ZMQSocket -> IO ()
+covering zmq_poll_command_channel_loop : ZMQSocket -> App Init ()
 zmq_poll_command_channel_loop command_socket = do
   -- need to run this in a loop until it returns no events left
   events <- zmq_get_socket_events command_socket
   log "ZMQ poll command channel loop got these command channel events: "
-  printLn events
+  primIO $ printLn events
 
   -- TODO: ignoring writeability of this channel. I think thats the right
   -- thing to be doing: being ready for a write doesn't mean we can write
@@ -98,11 +99,12 @@ zmq_poll_command_channel_loop command_socket = do
     -- be usable to send back the response to...
     maybe_msg <- zmq_recv_msg_alloc command_socket
     case maybe_msg of
-      Nothing => do putStrLn "No message received."
+      Nothing => do primIO $ putStrLn "No message received."
       Just msg => do
-        putStr "Received message, size "
         s <- zmq_msg_size msg
-        printLn s
+        primIO $ do
+          putStr "Received message, size "
+          printLn s
 
         -- so now we've received a message... we'll need to eventually deallocate
         -- it... and hopefully have the type system enforce that... TODO
@@ -113,11 +115,13 @@ zmq_poll_command_channel_loop command_socket = do
         bytes <- zmq_msg_as_bytes msg
         (PickleUnicodeString cmd) <- unpickle bytes
             | _ => ?error_cmd_is_not_a_string
-        putStr "Command received this command: "
-        putStrLn cmd
+        primIO $ do
+          putStr "Command received this command: "
+          putStrLn cmd
         resp <- dispatch_cmd cmd
-        putStr "Response to command: "
-        printLn resp
+        primIO $ do
+          putStr "Response to command: "
+          printLn resp
         (n ** resp_bytes) <- pickle resp
         zmq_alloc_send_bytes command_socket resp_bytes
         -- need to do some appropriate de-alloc for a message here?
@@ -128,12 +132,12 @@ zmq_poll_command_channel_loop command_socket = do
         zmq_poll_command_channel_loop command_socket
 
 -- TODO: factor ZMQ_EVENTS handling with other channels
-covering zmq_poll_tasks_submit_to_interchange_loop : ZMQSocket -> IO ()
+covering zmq_poll_tasks_submit_to_interchange_loop : ZMQSocket -> App Init ()
 zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket = do
   -- need to run this in a loop until it returns no events left
   events <- zmq_get_socket_events tasks_submit_to_interchange_socket
   log "ZMQ poll tasks submit to interchange loop got these zmq events: "
-  printLn events
+  primIO $ printLn events
 
   -- TODO: ignoring writeability of this channel. I think thats the right
   -- thing to be doing: being ready for a write doesn't mean we can write
@@ -143,11 +147,12 @@ zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket = d
     log "Trying to receive a message from task submit->interchange channel"
     maybe_msg <- zmq_recv_msg_alloc tasks_submit_to_interchange_socket
     case maybe_msg of
-      Nothing => do putStrLn "No message received on task submit->interchange channel"
+      Nothing => primIO $ putStrLn "No message received on task submit->interchange channel"
       Just msg => do
-        putStr "Received task-like message on task submit->interchange channel, size "
         s <- zmq_msg_size msg
-        printLn s
+        primIO $ do
+          putStr "Received task-like message on task submit->interchange channel, size "
+          printLn s
         bytes <- zmq_msg_as_bytes msg
         ascii_dump bytes
 
@@ -156,39 +161,40 @@ zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket = d
 
         zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket
 
-covering zmq_poll_tasks_interchange_to_worker_loop : ZMQSocket -> IO ()
+covering zmq_poll_tasks_interchange_to_worker_loop : ZMQSocket -> App Init ()
 zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = do
   events <- zmq_get_socket_events tasks_interchange_to_worker_socket
   log "ZMQ poll tasks interchange to worker loop got these zmq events: "
-  printLn events
+  primIO $ printLn events
   -- TODO: we'll be both reading and writing from this socket
 
   when (events `mod` 2 == 1) $ do -- read
     log "Reading message from task interchange->worker channel"
     maybe_msg <- zmq_recv_msg_alloc tasks_interchange_to_worker_socket
     case maybe_msg of
-      Nothing => do putStrLn "No message received on task interchange->worker channel"
+      Nothing => primIO $ putStrLn "No message received on task interchange->worker channel"
       Just msg => do
         bb@(s ** bytes) <- zmq_msg_as_bytes msg
-        putStr "Received registration-like message on task interchange->worker channel, size "
-        printLn s
+        primIO $ do
+          putStr "Received registration-like message on task interchange->worker channel, size "
+          printLn s
         ascii_dump bb
 
-        (msg_as_str, _) <- str_from_bytes (cast s) bytes
+        (msg_as_str, _) <- primIO $ str_from_bytes (cast s) bytes
         let j = parse msg_as_str
 
         log "Parsed JSON:"
-        printLn j
+        primIO $ printLn j
 
         zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket
 
 
 -- TODO: is there anything to distinguish these three sockets at the type
 -- level that ties into their expected use?
-covering poll_loop : ZMQSocket -> ZMQSocket -> ZMQSocket -> IO ()
+covering poll_loop : ZMQSocket -> ZMQSocket -> ZMQSocket -> App Init ()
 
-covering main : IO ()
-main = do
+covering app_main : App Init ()
+app_main = do
   log "Idris2 interchange starting"
 
   -- could use some with-style notation? zmq context doesn't need any cleanup
@@ -357,3 +363,7 @@ poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to
       
 
   log "Idris2 interchange ending"
+
+
+covering main : IO ()
+main = run app_main
