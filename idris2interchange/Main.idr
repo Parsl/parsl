@@ -341,16 +341,16 @@ poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to
   -- (after all uses, and eventually - pretty much 1-multiplicity semantics?)
   -- imagine an API: recvAndThen which takes a linear continuation?
 
-  when ((index 1 poll_outputs).revents /= 0) $ do
-    log "Got a poll result for tasks submit to interchange channel. Doing ZMQ-specific event handling."
-    zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket
-
   when ((index 0 poll_outputs).revents /= 0) $ do
     log "Got a poll result for command channel. Doing ZMQ-specific event handling."
     zmq_poll_command_channel_loop command_socket
 
-  when ((index 2 poll_outputs).revents /= 0) $ do
+  when ((index 1 poll_outputs).revents /= 0) $ do
     log "Got a poll result for tasks submit to interchange channel. Doing ZMQ-specific event handling."
+    zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket
+
+  when ((index 2 poll_outputs).revents /= 0) $ do
+    log "Got a poll result for tasks interchange to workers channel. Doing ZMQ-specific event handling."
     zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket
 
   poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket
