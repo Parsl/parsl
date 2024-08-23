@@ -337,7 +337,6 @@ class BlockProviderExecutor(ParslExecutor):
 
     def scale_in_facade(self, n: int, max_idletime: Optional[float] = None) -> List[str]:
 
-        logger.debug("BENC: scale_in_facade")
         if max_idletime is None:
             block_ids = self.scale_in(n)
         else:
@@ -350,7 +349,7 @@ class BlockProviderExecutor(ParslExecutor):
         if block_ids is not None:
             new_status = {}
             for block_id in block_ids:
-                logger.debug(f"BENC: recorded scaled in simulated status for block {block_id}")
+                logger.debug("Marking block %s as SCALED_IN", block_id)
                 s = JobStatus(JobState.SCALED_IN)
                 new_status[block_id] = s
                 self._status[block_id] = s
