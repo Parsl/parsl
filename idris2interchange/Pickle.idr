@@ -84,7 +84,7 @@ step_FRAME bb state = do
     (S (S (S (S (S (S (S (S k)))))))) => do
       (frame_len, bb') <- read_uint8 bb
       logv "Frame length is" frame_len
-      logv "Bytes remaining in buffer: " (length bb')
+      logv "Bytes remaining in buffer" (length bb')
       -- TODO: out of interest, validate FRAME against ByteBlock length.
       -- In pickle in general we can't do that because the input is a
       -- stream, not a fixed length block... but we know the length of
