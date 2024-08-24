@@ -1,199 +1,147 @@
 Overview
 ========
 
-Parsl is designed to enable straightforward parallelism and orchestration of asynchronous 
-tasks into dataflow-based workflows, in Python. Parsl manages the concurrent execution of 
-these tasks across various computation resources, from laptops to supercomputers,
-scheduling each task only when its dependencies (e.g., input data dependencies) are met.
+What is Parsl and Its Applications?
+-----------------------------------
+
+Parsl is a Python library designed to enable straightforward parallelism and the orchestration of asynchronous tasks into dataflow-based workflows. It simplifies the execution of tasks across multiple computing resources, from laptops to supercomputers, by managing the concurrent execution of these tasks. Parsl schedules each task only when its dependencies, such as input data, are met. This allows Python code to run concurrently on various processors or computers, significantly speeding up data processing and computational tasks. Parsl is particularly beneficial for applications where problems can be broken down into smaller, independent tasks, making it versatile for a wide range of uses—from simple Python functions to complex workflows.
+
+Developing a Parsl Program
+--------------------------
 
 Developing a Parsl program is a two-step process:
 
-1. Define Parsl apps by annotating Python functions to indicate that they can be executed concurrently.
-2. Use standard Python code to invoke Parsl apps, creating asynchronous tasks and adhering to dependencies defined between apps.
+1. **Define Parsl Apps**: Annotate Python functions to indicate that they can be executed concurrently.
+2. **Invoke Parsl Apps**: Use standard Python code to invoke these apps, creating asynchronous tasks and managing the dependencies defined between them.
 
-We aim in this section to provide a mental model of how Parsl programs behave.
-We discuss how Parsl programs create concurrent tasks, how tasks communicate,
-and the nature of the environment on which Parsl programs can perform
-operations. In each case, we compare and contrast the behavior of Python
-programs that use Parsl constructs with those of conventional Python
-programs.
+This approach allows you to create a mental model of how Parsl programs behave. You can compare and contrast the behavior of Python programs that use Parsl constructs with those of conventional Python programs.
 
-.. note::
-	The behavior of a Parsl program can vary in minor respects depending on the
-	Executor used (see :ref:`label-execution`). We focus here on the behavior seen when
-	using the recommended `parsl.executors.HighThroughputExecutor` (HTEX).
+Common Applications
+-------------------
+
+1. **Data Processing and Analysis**: Parsl accelerates the processing of large datasets by performing tasks like data cleaning, transformation, and analysis in parallel. For instance, in genomic data analysis, tasks such as sequence alignment and variant calling can be executed concurrently across multiple computing nodes, significantly speeding up the process.
+
+2. **Scientific Simulations**: Parsl supports the parallel execution of complex simulations in fields such as physics, chemistry, and biology. A practical example includes simulating CO2 molecule clusters in chemistry, where running simulations in parallel improves computational efficiency and statistical sampling.
+
+3. **Machine Learning**: Parsl can parallelize the training of machine learning models. For example, it can train multiple deep learning models with different hyperparameters simultaneously across various GPUs, reducing the time required to find the best-performing model.
+
+4. **Parameter Studies**: Parsl allows the execution of multiple program instances with varying parameters in parallel. This is particularly useful in materials science, where researchers can study material properties under different conditions by running simulations in parallel.
+
+Script vs. Workflow
+-------------------
+
+In Parsl, the distinction between a script and a workflow is essential:
+
+- **Script**: A Python file containing Parsl code that defines the tasks and their dependencies.
+- **Workflow**: The actual execution of the Parsl script, which coordinates multiple tasks across different resources, ensuring tasks are executed in the correct order based on their dependencies.
+
+Understanding this distinction is like differentiating between a recipe and the cooking process. The script is the recipe, while the workflow is the cooking process, orchestrating the execution of tasks.
+
+Key Features and Benefits
+-------------------------
+
+- **Python-Based**: Parsl is written in Python, making it accessible to users familiar with the language.
+- **Cross-Platform Compatibility**: Parsl runs on various platforms, from laptops to supercomputers, allowing for easy scaling.
+- **Flexibility**: It supports different tasks, including Python functions, Bash scripts, and MPI applications, enabling the integration of existing code.
+- **Data Handling**: Parsl manages data movement between tasks automatically, simplifying the development of data-intensive workflows.
+- **Performance**: Parsl efficiently handles thousands of tasks per second, making it suitable for high-performance computing applications.
+
+Understanding Concurrency and Parallelism
+=========================================
+
+Concurrency vs. Parallelism
+----------------------------
+
+- **Concurrency**: The ability of a program to handle multiple tasks simultaneously. These tasks may not execute at the same time but can overlap or be interleaved.
+- **Parallelism**: The simultaneous execution of multiple tasks on different processors or computers, requiring hardware support for parallel processing.
+
+Parsl facilitates both concurrency and parallelism, allowing tasks to be executed concurrently and leveraging parallel hardware to run them simultaneously on different processors or computers.
+
+How Parsl Facilitates Parallel Computing
+----------------------------------------
+
+Parsl simplifies parallel computing by abstracting away the complexities of managing threads, processes, or inter-node communication. It allows you to focus on application logic by handling:
+
+- **Task Definition**: Defining tasks as Python functions or Bash scripts that can run in parallel.
+- **Dependency Management**: Specifying dependencies between tasks to ensure correct execution order.
+- **Resource Allocation**: Automatically allocating resources based on task dependencies and availability.
+- **Task Execution**: Running tasks in parallel by utilizing available resources.
+- **Data Management**: Managing data movement between tasks to ensure they have the necessary input data.
+- **Result Collection**: Collecting task results for further processing in your Python code.
 
 Parsl and Concurrency
----------------------
-Any call to a Parsl app creates a new task that executes concurrently with the
-main program and any other task(s) that are currently executing. Different
-tasks may execute on the same nodes or on different nodes, and on the same or
-different computers. 
+=====================
 
-The Parsl execution model thus differs from the Python native execution model,
-which is inherently sequential. A Python program that does not contain Parsl
-constructs, or make use of other concurrency mechanisms, executes statements
-one at a time, in the order that they appear in the program. This behavior is
-illustrated in the following figure, which shows a Python program on the left
-and, on the right, the statements executed over time when that program is run,
-from top to bottom. Each time that the program calls a function, control passes
-from the main program (in black) to the function (in red). Execution of the
-main program resumes only after the function returns.
+Any call to a Parsl app creates a new task that executes concurrently with the main program and other tasks. This behavior contrasts with the sequential nature of standard Python programs, where statements are executed one at a time in the order they appear.
 
-.. image:: ../images/overview/python-concurrency.png
-   :scale: 70
-   :align: center 
+In a traditional Python program, calling a function transfers control from the main program to the function, and execution of the main program resumes only after the function returns. However, in Parsl, whenever a program calls an app, a separate thread of execution is created, and the main program continues without pausing. The calling program will only block (wait) when explicitly told to do so, typically by calling the ``result()`` method.
 
-In contrast, the Parsl execution model is inherently concurrent. Whenever a
-program calls an app, a separate thread of execution is created, and the main
-program continues without pausing. Thus in the example shown in the figure
-below. There is initially a single task: the main program (black). The first
-call to ``double`` creates a second task (red) and the second call to ``double`` 
-creates a third task (orange). The second and third task terminate as the
-function that they execute returns. (The dashed lines represent the start and
-finish of the tasks). The calling program will only block (wait) when it is
-explicitly told to do so (in this case by calling ``result()``)
+Execution Model: Python vs. Parsl
+---------------------------------
 
-.. image:: ../images/overview/parsl-concurrency.png
+The execution model of Parsl is inherently concurrent, which is a key difference from Python's native sequential execution model. The figures below illustrate this difference:
 
+1. **Python Sequential Execution**:
+   - In traditional Python, the main program pauses when a function is called and resumes only after the function returns.
 
-.. note::
-	Note: We talk here about concurrency rather than parallelism for a reason.
-	Two activities are concurrent if they can execute at the same time. Two
-	activities occur in parallel if they do run at the same time. If a Parsl
-	program creates more tasks that there are available processors, not all
-	concurrent activities may run in parallel.
+2. **Parsl Concurrent Execution**:
+   - In Parsl, when an app is called, a separate task is created, and the main program continues executing. The main program only waits if the ``result()`` method is called.
 
+This concurrent execution model enables Parsl to efficiently manage and execute multiple tasks in parallel, even across different nodes or computers.
 
 Parsl and Execution
--------------------
-We have now seen that Parsl tasks are executed concurrently alongside the main
-Python program and other Parsl tasks. We now turn to the question of how and
-where are those tasks executed. Given the range of computers on which parallel
-programs may be executed, Parsl allows tasks to be executed using different 
-executors (:py:class:`parsl.executors`). Executors are responsible for taking a queue of tasks and executing 
-them on local or remote resources.
+===================
 
-We briefly describe two of Parsl's most commonly used executors. 
-Other executors are described in :ref:`label-execution`.
+Parsl tasks are executed concurrently alongside the main Python program and other Parsl tasks. Depending on the computing environment, Parsl allows tasks to be executed using different executors, which are responsible for managing the execution of tasks on local or remote resources.
 
-The `parsl.executors.HighThroughputExecutor` (HTEX) implements a *pilot job model* that enables 
-fine-grain task execution using across one or more provisioned nodes. 
-HTEX can be used on a single node (e.g., a laptop) and will make use of 
-multiple processes for concurrent execution.
-As shown in the following figure, HTEX uses Parsl's provider abstraction (:py:class:`parsl.providers`) to 
-communicate with a resource manager (e.g., batch scheduler or cloud API) to 
-provision a set of nodes (e.g., Parsl will use Slurm’s sbatch command to request
-nodes on a Slurm cluster) for the duration of execution. 
-HTEX deploys a lightweight worker agent on the nodes which subsequently connects 
-back to the main Parsl process. Parsl tasks are then sent from the main program 
-to the connected workers for execution and the results are sent back via the 
-same mechanism. This approach has a number of advantages over other methods: 
-it avoids long job scheduler queue delays by acquiring one set of resources 
-for the entire program and it allows for scheduling of many tasks on individual 
-nodes. 
+Common Executors in Parsl
+--------------------------
 
-.. image:: ../images/overview/htex-model.png
+1. **HighThroughputExecutor (HTEX)**:
+   The ``HighThroughputExecutor`` (HTEX) implements a pilot job model that enables fine-grain task execution across one or more provisioned nodes. HTEX can be used on a single node (e.g., a laptop) or across multiple nodes in a cluster. It communicates with a resource manager (e.g., a batch scheduler or cloud API) to provision nodes for the duration of execution. HTEX deploys lightweight worker agents on the nodes, which connect back to the main Parsl process. This model avoids long job scheduler queue delays and allows for efficient scheduling of many tasks on individual nodes.
 
-.. Note:
-	Note: when deploying HTEX, or any pilot job model such as the
-	WorkQueueExecutor, it is important that the worker nodes be able to connect
-	back to the main Parsl process. Thus, you should verify that there is network
-  connectivity between the workers and the Parsl process and ensure that the
-	correct network address is used by the workers. Parsl provides a helper
-	function to automatically detect network addresses 
-	(`parsl.addresses.address_by_query`).
+   .. image:: ../images/overview/htex-model.png
+      :alt: HTEX Model
 
+   **Note**: When deploying HTEX or any pilot job model, it is important to ensure that the worker nodes can connect back to the main Parsl process. Parsl provides a helper function, ``parsl.addresses.address_by_query``, to automatically detect network addresses.
 
-The `parsl.executors.ThreadPoolExecutor` allows tasks to be executed on a pool of locally 
-accessible threads. As execution occurs on the same computer, on a pool of 
-threads forked from the main program, the tasks share memory with one another 
-(this is discussed further in the following sections).
-
+2. **ThreadPoolExecutor**:
+   The ``ThreadPoolExecutor`` allows tasks to be executed on a pool of locally accessible threads. As execution occurs on the same computer, the tasks share memory with one another. This executor is ideal for running tasks on a single machine where tasks need to share data or resources.
 
 Parsl and Communication
------------------------
-Parsl tasks typically need to communicate in order to perform useful work.
-Parsl provides for two forms of communication: by parameter passing
-and by file passing. 
-As described in the next section, Parsl programs may also communicate by
-interacting with shared filesystems and services its environment. 
+=======================
+
+Parsl tasks typically need to communicate to perform useful work. Parsl supports two primary forms of communication: parameter passing and file passing.
 
 Parameter Passing
-^^^^^^^^^^^^^^^^^
+-----------------
 
-The figure above illustrates communication via parameter passing. 
-The call ``double(3)`` to the app ``double`` in the main program creates a new task
-and passes the parameter value, 3, to that new task. When the task completes
-execution, its return value, 6, is returned to the main program. Similarly, the
-second task is passed the value 5 and returns the value 10. In this case, the
-parameters passed are simple primitive types (i.e., integers); however, complex
-objects (e.g., Numpy Arrays, Pandas DataFrames, custom objects) can also be
-passed to/from tasks.
+In Parsl, parameters can be passed directly between tasks. When a task is created, it receives its input parameters and, upon completion, returns the output to the main program or another task. While simple primitive types like integers are commonly passed, more complex objects such as Numpy arrays, Pandas DataFrames, or custom objects can also be passed to and from tasks.
 
 File Passing
-^^^^^^^^^^^^
-Parsl supports communication via files in both Bash apps and Python apps. 
-Files may be used in place of parameter passing for many reasons, such as for 
-apps are designed to support files, when data to be exchanged are large, 
-or when data cannot be easily serialized into Python objects. 
-As Parsl tasks may be executed on remote nodes, without shared file systems, 
-Parsl offers a Parsl :py:class:`parsl.data_provider.files.File` construct for location-independent reference 
-to files. Parsl will translate file objects to worker-accessible paths
-when executing dependent apps.
-Parsl is also able to transfer files in, out, and between Parsl
-apps using one of several methods (e.g., FTP, HTTP(S), Globus and rsync). 
-To accommodate the asynchronous nature of file transfer, Parsl treats 
-data movement like a Parsl app, adding a dependency to the execution graph
-and waiting for transfers to complete before executing dependent apps. 
-More information is provided in  :ref:`label-data`).
+------------
 
-Futures
-^^^^^^^
-Communication via parameter and file passing also serves a second purpose, namely 
-synchronization. As we discuss in more detail in :ref:`label-futures`, a call to an
-app returns a special object called a future that has a special unassigned 
-state until such time as the app returns, at which time it takes the return 
-value. (In the example program, two futures are thus created, d1 and d2.) The
-AppFuture function result() blocks until the future to which it is applied takes
-a value. Thus the print statement in the main program blocks until both child
-tasks created by the calls to the double app return. The following figure
-captures this behavior, with time going from left to right rather than top to
-bottom as in the preceding figure. Task 1 is initially active as it starts
-Tasks 2 and 3, then blocks as a result of calls to d1.result() and d2.result(),
-and when those values are available, is active again.
+Parsl also supports communication via files, which is especially useful when dealing with large datasets or when tasks are designed to work with files. Parsl uses the ``parsl.data_provider.files.File`` construct for location-independent reference to files. This allows tasks to be executed on remote nodes without shared file systems. Parsl can transfer files in, out, and between tasks using methods such as FTP, HTTP(S), Globus, and rsync. The asynchronous nature of file transfer is managed by Parsl, which adds these transfers as dependencies in the execution graph.
+
+Synchronization with Futures
+-----------------------------
+
+Futures in Parsl serve as placeholders for the results of tasks. When a task is created, it returns a future that initially remains in an unassigned state until the task completes. The ``result()`` method is used to retrieve the result, and this method blocks the main program until the future is resolved. This synchronization mechanism ensures that dependent tasks execute in the correct order.
 
 .. image:: ../images/overview/communication.png
+   :alt: Communication and Synchronization
 
 The Parsl Environment
----------------------
-Regular Python and Parsl-enhanced Python differ in terms of the environment in
-which code executes. We use the term *environment* here to refer to the 
-variables and modules (the *memory environment*), the file system(s) 
-(the *file system environment*), and the services (the *service environment*) 
-that are accessible to a function.
+=====================
 
-An important question when it comes to understanding the behavior of Parsl 
-programs is the environment in which this new task executes: does it have the 
-same or different memory, file system, or service environment as its parent 
-task or any other task? The answer, depends on the executor used, and (in the 
-case of the file system environment) where the task executes. 
-Below we describe behavior for the most commonly used `parsl.executors.HighThroughputExecutor`
-which is representative of all Parsl executors except the `parsl.executors.ThreadPoolExecutor`.
+Parsl enhances Python by altering the environment in which code executes, including the memory environment, file system environment, and service environment.
 
-.. Warning:
-	The `parsl.executors.ThreadPoolExecutor` behaves differently than other Parsl executors as
-	it allows tasks to share memory.
+Memory Environment
+------------------
 
-Memory environment
-^^^^^^^^^^^^^^^^^^ 
+In Python, a function has access to both local variables (defined within the function) and global variables (defined outside the function). However, in Parsl, except when using the ``ThreadPoolExecutor``, each task runs in a distinct environment with access only to local variables associated with the app function.
 
-In Python, the variables and modules that are accessible to a function are defined 
-by Python scoping rules, by which a function has access to both variables defined 
-within the function (*local* variables) and those defined outside the function 
-(*global* variables). Thus in the following code, the print statement in the 
-print_answer function accesses the global variable "answer", and we see as output 
-"the answer is 42."
+For example, consider the following code:
 
 .. code-block:: python
 
@@ -204,36 +152,9 @@ print_answer function accesses the global variable "answer", and we see as outpu
 
     print_answer()
 
+In regular Python, the ``print_answer`` function would output "the answer is 42" because it accesses the global variable ``answer``. However, in Parsl (except when using the ``ThreadPoolExecutor``), if this program is executed, the function would print "the answer is 0" because the print statement in ``print_answer`` would not have access to the global variable that has been assigned the value 42. This behavior is due to the fact that Parsl apps run in a distinct environment with no access to global variables.
 
-In Parsl (except when using the `parsl.executors.ThreadPoolExecutor`) a Parsl app is executed
-in a distinct environment that only has access to local variables associated 
-with the app function. Thus, if the program above is executed with say the 
-`parsl.executors.HighThroughputExecutor`, will print "the answer is 0" rather than "the answer
-is 42," because the print statement in provide_answer does not have access to 
-the global variable that has been assigned the value 42.  The program will
-run without errors when using the `parsl.executors.ThreadPoolExecutor`.
-
-Similarly, the same scoping rules apply to import statements, and thus 
-the following program will run without errors with the `parsl.executors.ThreadPoolExecutor`, 
-but raise errors when run with any other executor, because the return statement 
-in ``ambiguous_double`` refers to a variable (factor) and a module (random) that are 
-not known to the function.
-
-.. code-block:: python
-
-    import random
-    factor = 5
-
-    @python_app
-    def ambiguous_double(x):
-        return x * random.random() * factor
-
-    print(ambiguous_double(42))
- 
-
-To allow this program to run correctly with all Parsl executors, the random 
-library must be imported within the app, and the factor variable must be
-passed as an argument, as follows.
+To ensure compatibility with all Parsl executors, you should pass any required variables as arguments to the function, and import any necessary modules within the function itself, as shown below:
 
 .. code-block:: python
 
@@ -245,76 +166,206 @@ passed as an argument, as follows.
         import random
         return x * random.random() * factor
 
-    print(good_double(factor, 42))
+    print(good_double(factor, 42).result())
 
+This ensures that the function runs correctly regardless of the executor used.
 
-File system environment 
-^^^^^^^^^^^^^^^^^^^^^^^
+File System Environment
+========================
 
-In a regular Python program the environment that is accessible to a Python 
-program also includes the file system(s) of the computer on which it is 
-executing. 
-Thus in the following code, a value written to a file "answer.txt" in the
-current directory can be retrieved by reading the same file, and the print
-statement outputs "the answer is 42."
+In a regular Python program, the environment accessible to the code includes the file system of the computer on which it is running. For example:
 
 .. code-block:: python
 
     def print_answer_file():
-        with open('answer.txt','r') as f:
-            print('the answer is',  f.read())
+        with open('answer.txt', 'r') as f:
+            print('the answer is', f.read())
 
-    with open('answer.txt','w') as f:
+    with open('answer.txt', 'w') as f:
         f.write('42')
-        f.close()
 
     print_answer_file()
 
+The above code writes the value "42" to a file named ``answer.txt`` and then reads it back to print "the answer is 42". In Parsl, the file system environment accessible to a task depends on where the task executes. If two tasks run on nodes that share a file system, they can share the file system environment, allowing one task to read a file written by another task. However, if the tasks are executed on nodes without a shared file system, they will not share the file environment, and attempts to read the file would fail.
 
-The question of which file system environment is accessible to a Parsl app
-depends on where the app executes. If two tasks run on nodes that share a 
-file system, then those tasks (e.g., tasks A and B in the figure below, 
-but not task C) share a file system environment. Thus the program above will 
-output "the answer is 42" if the parent task and the child task run on 
-nodes 1 and 2, but not if they run on nodes 2 and 3.
+The diagram below illustrates this scenario:
 
 .. image:: ../images/overview/filesystem.png
-   :scale: 70
-   :align: center 
+   :alt: File System Environment
 
 Service Environment
-^^^^^^^^^^^^^^^^^^^
+====================
 
-We use the term service environment to refer to network services that may be
-accessible to a Parsl program, such as a Redis server or Globus data management
-service. These services are accessible to any task.
+The service environment refers to network services accessible to a Parsl program, such as a Redis server or Globus data management service. These services are typically accessible to any task, regardless of the executor used or the location of the task.
 
 Environment Summary
-^^^^^^^^^^^^^^^^^^^
+====================
 
-As we summarize in the table, if tasks execute with the `parsl.executors.ThreadPoolExecutor`, 
-they share the memory and file system environment of the parent task. If they
-execute with any other executor, they have a separate memory environment, and
-may or may not share their file system environment with other tasks, depending
-on where they are placed. All tasks typically have access to the same network
-services.
+The table below summarizes the differences in environment sharing between tasks executed with the ``ThreadPoolExecutor`` and other Parsl executors:
 
-+--------------------+--------------------+--------------------+---------------------------+------------------+
-|                    | Share memory       | Share file system  | Share file system         | Share service    |
-|                    | environment with   | environment with   | environment with other    | environment      |
-|                    | parent/other tasks | parent             | tasks                     | with other tasks | 
-+====================+====================+====================+===========================+==================+
-+--------------------+--------------------+--------------------+---------------------------+------------------+
-| Python             | Yes                | Yes                | N/A                       |     N/A          |
-| without            |                    |                    |                           |                  |
-| Parsl              |                    |                    |                           |                  |
-+--------------------+--------------------+--------------------+---------------------------+------------------+
-| Parsl              | Yes                | Yes                | Yes                       |     N/A          |
-| ThreadPoolExecutor |                    |                    |                           |                  |
-|                    |                    |                    |                           |                  |
-+--------------------+--------------------+--------------------+---------------------------+------------------+
-| Other Parsl        | No                 | If executed on the | If tasks are executed on  |     N/A          |
-| executors          |                    | same node with     | the same node or with     |                  |
-|                    |                    | file system access | access to the same file   |                  |
-|                    |                    |                    | system                    |                  |
-+--------------------+--------------------+--------------------+---------------------------+------------------+
+.. list-table::
+   :header-rows: 1
+
+   * - 
+     - Share Memory Environment with Parent/Other Tasks
+     - Share File System Environment with Parent
+     - Share File System Environment with Other Tasks
+     - Share Service Environment with Other Tasks
+   * - Python without Parsl
+     - Yes
+     - Yes
+     - N/A
+     - N/A
+   * - Parsl ``ThreadPoolExecutor``
+     - Yes
+     - Yes
+     - Yes
+     - N/A
+   * - Other Parsl Executors
+     - No
+     - If executed on the same node with file system access
+     - If tasks are executed on the same node or with access to the same file system
+     - N/A
+
+Getting Started with Parsl
+===========================
+
+Installation and Setup
+-----------------------
+
+System Requirements and Dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Parsl is compatible with Python 3.8 or newer and has been tested on Linux. Ensure Python and pip are installed on your system before proceeding.
+
+Installation on Different Platforms
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- **Windows**: Parsl is not officially supported on Windows, but you can use the Windows Subsystem for Linux (WSL) to run it.
+- **Docker**: Parsl can be run in a Docker container, providing a portable environment.
+- **macOS**: Install Parsl using pip or conda. On Macs with M1 chips, use a Rosetta terminal for compatibility.
+- **Linux**: Parsl is well-supported on Linux and can be installed using pip or conda.
+- **Android**: While Parsl is not designed for Android, you can use platforms like Google Colab to run Parsl scripts in a browser.
+
+Installing Parsl
+~~~~~~~~~~~~~~~~
+
+To install Parsl using pip, run:
+
+.. code-block:: bash
+
+    python3 -m pip install parsl
+
+Verify the installation with:
+
+.. code-block:: bash
+
+    parsl --version
+
+Upgrade to the latest version with:
+
+.. code-block:: bash
+
+    python3 -m pip install -U parsl
+
+Basic Configuration
+---------------------
+
+Parsl separates your code from how it's executed through a configuration file that defines how Parsl uses computing resources. A simple configuration for running Parsl on your local machine might look like this:
+
+.. code-block:: python
+
+    from parsl.config import Config
+    from parsl.executors import ThreadPoolExecutor
+
+    config = Config(
+        executors=[ThreadPoolExecutor(max_threads=4)]
+    )
+
+This configuration uses up to four threads in parallel on your local machine.
+
+Writing and Running a Parsl Script
+-----------------------------------
+
+A Parsl script defines tasks and their dependencies. Here’s a simple example:
+
+.. code-block:: python
+
+    import parsl
+    from parsl.config import Config
+    from parsl.executors import HighThroughputExecutor
+    from parsl import python_app
+
+    config = Config(executors=[HighThroughputExecutor(max_workers=4)])
+    parsl.load(config)
+
+    @python_app
+    def my_task(x):
+        return x * 2
+
+    results = [my_task(i) for i in range(10)]
+
+    for result in results:
+        print(result.result())
+
+This script defines a task that doubles a number, runs 10 instances of this task in parallel, and prints the results.
+
+Practical Tutorial: Hello World with Parsl
+------------------------------------------
+
+A basic "Hello World" script in Parsl:
+
+.. code-block:: python
+
+    import parsl
+    from parsl import python_app
+
+    @python_app
+    def hello(name):
+        return f'Hello, {name}!'
+
+    parsl.load()
+    result = hello("World").result()
+    print(result)  # Output: Hello, World!
+
+This script demonstrates the core components of a Parsl program, including importing Parsl, loading a configuration, defining an app, calling the app, and retrieving results.
+
+Setting Up Your First Parsl Workflow
+-------------------------------------
+
+To set up your first Parsl workflow, you'll need to:
+
+1. **Install Parsl**: Follow the installation instructions in the "Installation and Setup" section to install Parsl on your system.
+2. **Choose a Configuration**: Select a configuration that matches your computing environment. Parsl provides several example configurations for different platforms, such as laptops, clusters, and clouds. You can also create custom settings.
+3. **Write a Parsl Script**: Define the tasks you want to run in parallel and their dependencies.
+4. **Load the Configuration**: Use the ``parsl.load()`` function to load your chosen configuration.
+5. **Run Your Script**: Execute a Parsl script like any other Python script. Parsl will then take care of executing your tasks in parallel, managing dependencies, and moving data as needed.
+
+Advanced Concepts: Parsl Environment and Execution
+===================================================
+
+Parsl and Concurrency
+----------------------
+
+As previously mentioned, any call to a Parsl app creates a new task that executes concurrently with the main program and other tasks. This behavior contrasts with the sequential nature of standard Python programs, where statements are executed one at a time in the order they appear.
+
+Execution Model: Python vs. Parsl
+----------------------------------
+
+The execution model of Parsl is inherently concurrent, which is a key difference from Python's native sequential execution model. This enables Parsl to efficiently manage and execute multiple tasks in parallel, even across different nodes or computers.
+
+Task Communication
+-------------------
+
+Parsl supports communication between tasks via parameter and file passing. Parameters can be passed directly between tasks, while files can be used when dealing with large datasets or when tasks are designed to work with files. Parsl manages file transfers as asynchronous tasks, ensuring that dependencies are met before execution.
+
+Synchronization with Futures
+-----------------------------
+
+Futures in Parsl serve as placeholders for the results of tasks. When a task is created, it returns a future that remains in an unassigned state until the task completes. The ``result()`` method is used to retrieve the result, and this method blocks the main program until the future is resolved. This synchronization mechanism ensures that dependent tasks execute in the correct order.
+
+Environment Considerations
+---------------------------
+
+Parsl enhances Python by altering the environment in which code executes, including the memory environment, file system environment, and service environment. Understanding these environments is crucial for developing efficient and reliable Parsl applications.
+
