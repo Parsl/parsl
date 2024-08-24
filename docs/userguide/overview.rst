@@ -35,6 +35,11 @@ In Parsl, the distinction between a script and a workflow is essential:
 - **Script**: A Python file containing Parsl code that defines the tasks and their dependencies.
 - **Workflow**: The actual execution of the Parsl script, which coordinates multiple tasks across different resources, ensuring tasks are executed in the correct order based on their dependencies.
 
+.. image:: ../images/script_vs_workflow.png
+   :alt: Script vs. Workflow
+   :align: center
+   :scale: 70%
+
 Understanding this distinction is like differentiating between a recipe and the cooking process. The script is the recipe, while the workflow is the cooking process, orchestrating the execution of tasks.
 
 Key Features and Benefits
@@ -56,6 +61,11 @@ Concurrency vs. Parallelism
 - **Parallelism**: The simultaneous execution of multiple tasks on different processors or computers, requiring hardware support for parallel processing.
 
 Parsl facilitates both concurrency and parallelism, allowing tasks to be executed concurrently and leveraging parallel hardware to run them simultaneously on different processors or computers.
+
+.. image:: ../images/how_parsl_manages_concurrency.png
+   :alt: How Parsl Manages Concurrency
+   :align: center
+   :scale: 70%
 
 How Parsl Facilitates Parallel Computing
 ----------------------------------------
@@ -309,6 +319,11 @@ A Parsl script defines tasks and their dependencies. Here’s a simple example:
         print(result.result())
 
 This script defines a task that doubles a number, runs 10 instances of this task in parallel, and prints the results.
+
+.. image:: ../images/basic_parsl_script_flow.png
+   :alt: Diagram: Basic Parsl Script Flow
+   :align: center
+   :scale: 70%
 
 Practical Tutorial: Hello World with Parsl
 ------------------------------------------
