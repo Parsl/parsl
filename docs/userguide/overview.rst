@@ -37,9 +37,7 @@ In Parsl, the distinction between a script and a workflow is essential:
 
 .. image:: ../images/ScriptvsWorkflow.png
    :alt: Script vs. Workflow
-   :align: center
-   :scale: 70%
-
+  
 Understanding this distinction is like differentiating between a recipe and the cooking process. The script is the recipe, while the workflow is the cooking process, orchestrating the execution of tasks.
 
 Key Features and Benefits
@@ -64,9 +62,7 @@ Parsl facilitates both concurrency and parallelism, allowing tasks to be execute
 
 .. image:: ../images/ParslManagesConcurrency.jpg
    :alt: How Parsl Manages Concurrency
-   :align: center
-   :scale: 70%
-
+   
 How Parsl Facilitates Parallel Computing
 ----------------------------------------
 
@@ -322,9 +318,7 @@ This script defines a task that doubles a number, runs 10 instances of this task
 
 .. image:: ../images/BasicParslScriptFlow.jpg
    :alt: Diagram: Basic Parsl Script Flow
-   :align: center
-   :scale: 70%
-
+  
 Practical Tutorial: Hello World with Parsl
 ------------------------------------------
 
