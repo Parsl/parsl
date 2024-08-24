@@ -122,8 +122,7 @@ zmq_get_socket_fd : ZMQSocket -> App Init FD
 zmq_get_socket_fd (MkZMQSocket sock_ptr) = do
   log "calling get_socket_fd"
   fd <- (primIO $ primIO $ prim__zmq_get_socket_fd sock_ptr)
-  log "retrieved fd"
-  primIO $ printLn fd
+  logv "retrieved fd" fd
   pure $ MkFD fd
 
 %foreign (gluezmq "glue_zmq_get_socket_events")
@@ -134,8 +133,7 @@ zmq_get_socket_events : ZMQSocket -> App Init Int
 zmq_get_socket_events (MkZMQSocket sock_ptr) = do
   log "calling get_socket_events"
   events <- primIO $ primIO $ prim__zmq_get_socket_events sock_ptr
-  log "retrieved these event flags: "
-  primIO $ printLn events
+  logv "retrieved these event flags" events
   pure events
 
 

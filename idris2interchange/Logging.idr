@@ -20,3 +20,13 @@ log msg = primIO $ do
   putStrLn msg
 
 
+covering public export
+logv : Show s => String -> s -> App Init ()
+logv msg v = primIO $ do
+  putStr " * "
+  now <- clockTime UTC
+  print now
+  putStr " "
+  putStr msg
+  putStr ": "
+  printLn v

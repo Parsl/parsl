@@ -85,8 +85,7 @@ covering zmq_poll_command_channel_loop : ZMQSocket -> App Init ()
 zmq_poll_command_channel_loop command_socket = do
   -- need to run this in a loop until it returns no events left
   events <- zmq_get_socket_events command_socket
-  log "ZMQ poll command channel loop got these command channel events: "
-  primIO $ printLn events
+  logv "ZMQ poll command channel loop got these command channel events" events
 
   -- TODO: ignoring writeability of this channel. I think thats the right
   -- thing to be doing: being ready for a write doesn't mean we can write
@@ -99,12 +98,10 @@ zmq_poll_command_channel_loop command_socket = do
     -- be usable to send back the response to...
     maybe_msg <- zmq_recv_msg_alloc command_socket
     case maybe_msg of
-      Nothing => do primIO $ putStrLn "No message received."
+      Nothing => log "No message received."
       Just msg => do
         s <- zmq_msg_size msg
-        primIO $ do
-          putStr "Received message, size "
-          printLn s
+        logv "Received message, size" s
 
         -- so now we've received a message... we'll need to eventually deallocate
         -- it... and hopefully have the type system enforce that... TODO
@@ -115,13 +112,9 @@ zmq_poll_command_channel_loop command_socket = do
         bytes <- zmq_msg_as_bytes msg
         (PickleUnicodeString cmd) <- unpickle bytes
             | _ => ?error_cmd_is_not_a_string
-        primIO $ do
-          putStr "Command received this command: "
-          putStrLn cmd
+        logv "Command received this command" cmd
         resp <- dispatch_cmd cmd
-        primIO $ do
-          putStr "Response to command: "
-          printLn resp
+        logv "Response to command" resp
         (n ** resp_bytes) <- pickle resp
         zmq_alloc_send_bytes command_socket resp_bytes
         -- need to do some appropriate de-alloc for a message here?
@@ -136,8 +129,7 @@ covering zmq_poll_tasks_submit_to_interchange_loop : ZMQSocket -> App Init ()
 zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket = do
   -- need to run this in a loop until it returns no events left
   events <- zmq_get_socket_events tasks_submit_to_interchange_socket
-  log "ZMQ poll tasks submit to interchange loop got these zmq events: "
-  primIO $ printLn events
+  logv "ZMQ poll tasks submit to interchange loop got these zmq events" events
 
   -- TODO: ignoring writeability of this channel. I think thats the right
   -- thing to be doing: being ready for a write doesn't mean we can write
@@ -147,12 +139,10 @@ zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket = d
     log "Trying to receive a message from task submit->interchange channel"
     maybe_msg <- zmq_recv_msg_alloc tasks_submit_to_interchange_socket
     case maybe_msg of
-      Nothing => primIO $ putStrLn "No message received on task submit->interchange channel"
+      Nothing => log "No message received on task submit->interchange channel"
       Just msg => do
         s <- zmq_msg_size msg
-        primIO $ do
-          putStr "Received task-like message on task submit->interchange channel, size "
-          printLn s
+        logv "Received task-like message on task submit->interchange channel, size" s
         bytes <- zmq_msg_as_bytes msg
         ascii_dump bytes
 
@@ -164,27 +154,23 @@ zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket = d
 covering zmq_poll_tasks_interchange_to_worker_loop : ZMQSocket -> App Init ()
 zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = do
   events <- zmq_get_socket_events tasks_interchange_to_worker_socket
-  log "ZMQ poll tasks interchange to worker loop got these zmq events: "
-  primIO $ printLn events
+  logv "ZMQ poll tasks interchange to worker loop got these zmq events" events
   -- TODO: we'll be both reading and writing from this socket
 
   when (events `mod` 2 == 1) $ do -- read
     log "Reading message from task interchange->worker channel"
     maybe_msg <- zmq_recv_msg_alloc tasks_interchange_to_worker_socket
     case maybe_msg of
-      Nothing => primIO $ putStrLn "No message received on task interchange->worker channel"
+      Nothing => log "No message received on task interchange->worker channel"
       Just msg => do
         bb@(s ** bytes) <- zmq_msg_as_bytes msg
-        primIO $ do
-          putStr "Received registration-like message on task interchange->worker channel, size "
-          printLn s
+        logv "Received registration-like message on task interchange->worker channel, size" s
         ascii_dump bb
 
         (msg_as_str, _) <- primIO $ str_from_bytes (cast s) bytes
         let j = parse msg_as_str
 
-        log "Parsed JSON:"
-        primIO $ printLn j
+        logv "Parsed JSON" j
 
         zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket
 

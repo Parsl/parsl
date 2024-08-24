@@ -74,9 +74,7 @@ step_PROTO {n = S n'} bb state = do
   log "Opcode: PROTO"
   -- read a uint1
   (proto_ver, bb') <- primIO $ bb_uncons bb
-  primIO $ do
-    putStr "Pickle protocol version: "
-    printLn proto_ver
+  logv "Pickle protocol version" proto_ver
   step {n = n'} bb' state 
 
 step_FRAME : {n : Nat} -> ByteBlock n -> VMState -> App Init VMState
@@ -85,11 +83,8 @@ step_FRAME bb state = do
   case n of
     (S (S (S (S (S (S (S (S k)))))))) => do
       (frame_len, bb') <- read_uint8 bb
-      primIO $ do
-        putStr "Frame length is: "
-        printLn frame_len
-        putStr "Bytes remaining in buffer: "
-        printLn (length bb')
+      logv "Frame length is" frame_len
+      logv "Bytes remaining in buffer: " (length bb')
       -- TODO: out of interest, validate FRAME against ByteBlock length.
       -- In pickle in general we can't do that because the input is a
       -- stream, not a fixed length block... but we know the length of
@@ -120,9 +115,7 @@ step_SHORT_BINUNICODE {n} bb (MkVMState stack memo) = do
   case n of
     (S k) => do
       (strlen, bb') <- primIO $ bb_uncons bb
-      primIO $ do
-        putStr "UTF-8 byte sequence length: "
-        printLn strlen
+      logv "UTF-8 byte sequence length" strlen
 
       -- the buffer contains strlen bytes of UTF-8 encoding, which we need to
       -- turn into an Idris2 String. could go via C, or could do it as a
@@ -135,9 +128,7 @@ step_SHORT_BINUNICODE {n} bb (MkVMState stack memo) = do
 
       (str, bb'') <- primIO $ str_from_bytes (cast strlen) bb'
 
-      primIO $ do
-        putStr "String is: "
-        putStrLn str
+      logv "String is" str
 
       let new_state = MkVMState ((PickleUnicodeString str)::stack) memo
 
@@ -151,15 +142,11 @@ step {n = Z} bb state = do
 
 step {n = S m} bb state = do
 
-    primIO $ do
-      putStr "Stack pre-step: "
-      printLn state.stack
+    logv "Stack pre-step" state.stack
 
     (opcode, bb') <- primIO $ bb_uncons bb
 
-    primIO $ do
-      putStr "Opcode number: "
-      printLn opcode
+    logv "Opcode number" opcode
 
     case opcode of 
       46 => step_STOP bb' state
@@ -279,8 +266,7 @@ pickle_TUPLE (n ** bytes) entries = do
 
 pickle_BININT : (n ** ByteBlock n) -> Int -> App Init (m ** ByteBlock m)
 pickle_BININT (n ** bytes) v = do
-  log "Pickling BININT"
-  primIO $ printLn v
+  logv "Pickling BININT" v
 
   if v < 0 then ?notimpl_BININT_negatives
            else log "this isn't negative - ok"

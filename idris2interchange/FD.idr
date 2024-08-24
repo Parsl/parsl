@@ -136,44 +136,38 @@ poll inputs timeout = do
      -- in here, we know that i is in the range of n
      -- and so then can be used safely to index inputs
      -- as used in print statement below
-     primIO $ do
-       putStrLn "---"
-       putStrLn "AllFins member: "
-       printLn i
-       putStrLn "FD at this pos:"
-       -- ... here index will fail at compile time if it cannot statically
-       -- verify that i is in range for inputs - there's no notion of a
-       -- runtime out of range error for this index call.
-       -- we aren't verifying in the type system that it is the *correct*
-       -- n that we intended - that still happens by human reasoning.
-       -- (also theres no '.fd is an unknown attribute' runtime error...
-       -- that's also a compile time error)
-       printLn (index i inputs).fd
-       -- it also doesn't check we are passing in the right memory block
-       -- to pollhelper_set_entry that happens to have the same count/size
+     log "---"
+     logv "AllFins member" i
+     -- ... here index will fail at compile time if it cannot statically
+     -- verify that i is in range for inputs - there's no notion of a
+     -- runtime out of range error for this index call.
+     -- we aren't verifying in the type system that it is the *correct*
+     -- n that we intended - that still happens by human reasoning.
+     -- (also theres no '.fd is an unknown attribute' runtime error...
+     -- that's also a compile time error)
+     logv "FD at this pos" (index i inputs).fd
+     -- it also doesn't check we are passing in the right memory block
+     -- to pollhelper_set_entry that happens to have the same count/size
      pollhelper_set_entry buf i (index i inputs)
 
    -- the above "allocate and set values later" looks quite like the
    -- linear immutable hole filling stuff talked about by Arnauld at tweag,
    -- although the other (.revents) part of this struct *is* mutable...
 
-   primIO $ putStrLn "About to call poll"
+   log "About to call poll"
    poll_ret <- pollhelper_poll buf timeout -- TODO: something with the return result
-   primIO $ putStrLn "Poll returned..."
-   primIO $ putStrLn "... Poll returned this return value:"
-   primIO $ printLn poll_ret
+   log "Poll returned..."
+   logv "... Poll returned this return value" poll_ret
 
    -- contrast Data.Vect.alLFins here with Data.Fin.List.allFins above..
    -- we could use Data.Vect.allFins in both places I think... the reason
    -- for Data.Vect here is so the output is the desired Data.Vect too...
    r <- for (Data.Vect.allFins n) $ \i => do
-        primIO $ putStrLn "Extracting result for poll index"
         let inp = index i inputs
-        primIO $ printLn i
-        primIO $ printLn inp.fd
+        logv "Extracting result for poll index" i
+        logv "FD" inp.fd
         revents <- pollhelper_get_entry buf i
-        primIO $ putStr "revents = "
-        primIO $ printLn revents
+        logv "revents" revents
         pure (MkPollOutput inp.fd revents)
 
    pollhelper_free_memory buf
