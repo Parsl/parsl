@@ -88,19 +88,19 @@ data PollMemPtr : (n: Nat) -> Type where
 %foreign "C:pollhelper_allocate_memory,pollhelper"
 prim_pollhelper_allocate_memory: Int -> PrimIO AnyPtr
 
-pollhelper_allocate_memory: (n: Nat) -> App Init (PollMemPtr n)
+pollhelper_allocate_memory: HasErr AppHasIO es => (n: Nat) -> App es (PollMemPtr n)
 pollhelper_allocate_memory n = do
   ptr <- primIO $ primIO $ prim_pollhelper_allocate_memory (cast n)
   pure (MkPollMemPtr ptr)
 
-pollhelper_free_memory : PollMemPtr n -> App Init ()
+pollhelper_free_memory : HasErr AppHasIO es => PollMemPtr n -> App es ()
 pollhelper_free_memory (MkPollMemPtr ptr) = primIO $ free ptr
 
 
 %foreign "C:pollhelper_set_entry,pollhelper"
 prim_pollhelper_set_entry : AnyPtr -> Int -> Int -> PrimIO ()
 
-pollhelper_set_entry : PollMemPtr n -> Fin n -> PollInput -> App Init ()
+pollhelper_set_entry : HasErr AppHasIO es => PollMemPtr n -> Fin n -> PollInput -> App es ()
 pollhelper_set_entry (MkPollMemPtr ptr) pos pi = do
   -- the cast for pos from Fin n to Int is unchecked and will break
   -- at runtime if the number is too big for Int... not compile time
@@ -112,19 +112,19 @@ pollhelper_set_entry (MkPollMemPtr ptr) pos pi = do
 %foreign "C:pollhelper_get_entry,pollhelper"
 prim_pollhelper_get_entry : AnyPtr -> Int -> PrimIO Bits16
 
-pollhelper_get_entry : PollMemPtr n -> Fin n -> App Init Bits16
+pollhelper_get_entry : HasErr AppHasIO es => PollMemPtr n -> Fin n -> App es Bits16
 pollhelper_get_entry (MkPollMemPtr ptr) pos =
   primIO $ primIO $ prim_pollhelper_get_entry ptr (cast (the Integer (cast pos)))
 
 %foreign "C:poll,libc"
 prim_poll : AnyPtr -> Int -> Int -> PrimIO Int
 
-pollhelper_poll : {n : Nat} -> PollMemPtr n -> TimeMS -> App Init Int
+pollhelper_poll : HasErr AppHasIO es => {n : Nat} -> PollMemPtr n -> TimeMS -> App es Int
 pollhelper_poll (MkPollMemPtr ptr) (MkTimeMS t) =
   primIO $ primIO $ prim_poll ptr (cast n) t
 
 public export
-poll: {n: Nat} -> Vect n PollInput -> TimeMS -> App Init (Vect n PollOutput)
+poll: HasErr AppHasIO es => {n: Nat} -> Vect n PollInput -> TimeMS -> App es (Vect n PollOutput)
 poll inputs timeout = do
    -- we can't do this alloc using idris2 memory alloc because
    -- we don't have a sizeof operator or calloc (or equiv)

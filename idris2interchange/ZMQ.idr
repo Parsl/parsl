@@ -20,7 +20,7 @@ prim__zmq_ctx_new : PrimIO AnyPtr
 data ZMQContext = MkZMQContext AnyPtr
 
 public export
-new_zmq_context : App Init ZMQContext
+new_zmq_context : HasErr AppHasIO es => App es ZMQContext
 new_zmq_context = do
   ptr <- primIO $ primIO $ prim__zmq_ctx_new
   -- TODO: validate ptr is not NULL, at least?
@@ -58,7 +58,7 @@ data ZMQSocket = MkZMQSocket AnyPtr
 prim__zmq_socket : AnyPtr -> Int -> PrimIO AnyPtr
 
 public export
-new_zmq_socket : ZMQContext -> ZMQSocketType -> App Init ZMQSocket
+new_zmq_socket : HasErr AppHasIO es => ZMQContext -> ZMQSocketType -> App es ZMQSocket
 new_zmq_socket (MkZMQContext ctx_ptr) socket_type = do
   ptr <- primIO $ primIO (prim__zmq_socket ctx_ptr (zmq_socket_to_int socket_type))
   pure (MkZMQSocket ptr)
@@ -67,7 +67,7 @@ new_zmq_socket (MkZMQContext ctx_ptr) socket_type = do
 prim__zmq_connect : AnyPtr -> String -> PrimIO ()
 
 public export
-zmq_connect : ZMQSocket -> String -> App Init ()
+zmq_connect : HasErr AppHasIO es => ZMQSocket -> String -> App es ()
 zmq_connect (MkZMQSocket sock_ptr) dest = 
   primIO $ primIO $ prim__zmq_connect sock_ptr dest
 
@@ -75,7 +75,7 @@ zmq_connect (MkZMQSocket sock_ptr) dest =
 prim__zmq_bind : AnyPtr -> String -> PrimIO ()
 
 public export
-zmq_bind : ZMQSocket -> String -> App Init ()
+zmq_bind : HasErr AppHasIO es => ZMQSocket -> String -> App es ()
 zmq_bind (MkZMQSocket sock_ptr) dest = 
   primIO $ primIO $ prim__zmq_bind sock_ptr dest
 
@@ -86,7 +86,7 @@ data ZMQMsg = MkZMQMsg AnyPtr
 prim__zmq_recv_msg_alloc : AnyPtr -> PrimIO AnyPtr
 
 public export
-zmq_recv_msg_alloc : ZMQSocket -> App Init (Maybe ZMQMsg)
+zmq_recv_msg_alloc : HasErr AppHasIO es => ZMQSocket -> App es (Maybe ZMQMsg)
 zmq_recv_msg_alloc (MkZMQSocket sock_ptr) = do
     msg_ptr <- primIO $ primIO $ prim__zmq_recv_msg_alloc sock_ptr
     if prim__nullAnyPtr msg_ptr == 1 
@@ -98,17 +98,17 @@ zmq_recv_msg_alloc (MkZMQSocket sock_ptr) = do
 prim__zmq_msg_size : AnyPtr -> PrimIO Int
 
 public export
-zmq_msg_size : ZMQMsg -> App Init Int
+zmq_msg_size : HasErr AppHasIO es => ZMQMsg -> App es Int
 zmq_msg_size (MkZMQMsg msg_ptr) = primIO $ primIO $ prim__zmq_msg_size msg_ptr
 
 %foreign (gluezmq "glue_zmq_msg_data")
 prim__zmq_msg_data : AnyPtr -> PrimIO AnyPtr
 
-zmq_msg_data : ZMQMsg -> App Init AnyPtr
+zmq_msg_data : HasErr AppHasIO es => ZMQMsg -> App es AnyPtr
 zmq_msg_data (MkZMQMsg msg_ptr) = primIO $ primIO $ prim__zmq_msg_data msg_ptr
 
 export
-zmq_msg_as_bytes : ZMQMsg -> App Init (n: Nat ** (ByteBlock n))
+zmq_msg_as_bytes : HasErr AppHasIO es => ZMQMsg -> App es (n: Nat ** (ByteBlock n))
 zmq_msg_as_bytes msg = do
   size <- cast <$> zmq_msg_size msg
   byte_ptr <- zmq_msg_data msg
@@ -118,7 +118,7 @@ zmq_msg_as_bytes msg = do
 prim__zmq_get_socket_fd : AnyPtr -> PrimIO Int
 
 public export
-zmq_get_socket_fd : ZMQSocket -> App Init FD
+zmq_get_socket_fd : HasErr AppHasIO es => ZMQSocket -> App es FD
 zmq_get_socket_fd (MkZMQSocket sock_ptr) = do
   log "calling get_socket_fd"
   fd <- (primIO $ primIO $ prim__zmq_get_socket_fd sock_ptr)
@@ -129,7 +129,7 @@ zmq_get_socket_fd (MkZMQSocket sock_ptr) = do
 prim__zmq_get_socket_events : AnyPtr -> PrimIO Int
 
 public export
-zmq_get_socket_events : ZMQSocket -> App Init Int
+zmq_get_socket_events : HasErr AppHasIO es => ZMQSocket -> App es Int
 zmq_get_socket_events (MkZMQSocket sock_ptr) = do
   log "calling get_socket_events"
   events <- primIO $ primIO $ prim__zmq_get_socket_events sock_ptr
@@ -141,7 +141,7 @@ zmq_get_socket_events (MkZMQSocket sock_ptr) = do
 prim__zmq_alloc_send_bytes : AnyPtr -> AnyPtr -> Int -> PrimIO ()
 
 public export
-zmq_alloc_send_bytes : ZMQSocket -> ByteBlock n -> App Init ()
+zmq_alloc_send_bytes : HasErr AppHasIO es => ZMQSocket -> ByteBlock n -> App es ()
 zmq_alloc_send_bytes (MkZMQSocket sock_ptr) (MkByteBlock byte_ptr size) = do
   log "sending bytes"
   primIO $ primIO $ prim__zmq_alloc_send_bytes sock_ptr byte_ptr (cast size)

@@ -35,7 +35,7 @@ record VMState where
 -- if there are not 8 bytes left in ByteBlock, explode...
 -- TODO: this could look nicer with a parser monad/parser applicative
 -- rather than threading the shrinking bb?
-read_uint8 : {n: Nat} -> ByteBlock (S (S (S (S (S (S (S (S n)))))))) -> App Init (Int, ByteBlock n)
+read_uint8 : HasErr AppHasIO es => {n: Nat} -> ByteBlock (S (S (S (S (S (S (S (S n)))))))) -> App es (Int, ByteBlock n)
 read_uint8 bb = do
   (byte1, bb1) <- primIO $ bb_uncons bb 
   (byte2, bb2) <- primIO $ bb_uncons bb1 
@@ -62,9 +62,9 @@ read_uint8 bb = do
 
 -- define this signature before the body because we are mutually
 -- recursive (or I could use a mutual block? what's the difference?)
-step : {n : Nat} -> ByteBlock n -> VMState -> App Init VMState
+step : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 
-step_PROTO : {n : Nat} -> ByteBlock n -> VMState -> App Init VMState
+step_PROTO : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 
 step_PROTO {n = Z} bb state = do
   ?error_PROTO_ran_off_end
@@ -77,7 +77,7 @@ step_PROTO {n = S n'} bb state = do
   logv "Pickle protocol version" proto_ver
   step {n = n'} bb' state 
 
-step_FRAME : {n : Nat} -> ByteBlock n -> VMState -> App Init VMState
+step_FRAME : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_FRAME bb state = do
   log "Opcode: FRAME"
   case n of
@@ -94,14 +94,14 @@ step_FRAME bb state = do
       step bb' state
     _ => ?error_not_enough_bytes_left_for_FRAME
 
-step_MEMOIZE : {n: Nat} -> ByteBlock n -> VMState -> App Init VMState
+step_MEMOIZE : HasErr AppHasIO es => {n: Nat} -> ByteBlock n -> VMState -> App es VMState
 step_MEMOIZE bb (MkVMState (v::rest_stack) memo) = do
   log "Opcode: MEMOIZE"
   step bb (MkVMState (v::rest_stack) (memo ++ [v]))
 step_MEMOIZE bb (MkVMState [] memo) = ?error_MEMOIZE_with_empty_stack
 
 
-step_STOP : ByteBlock n -> VMState -> App Init VMState
+step_STOP : HasErr AppHasIO es => ByteBlock n -> VMState -> App es VMState
 step_STOP bb state = do
   log "Opcode: STOP"
   pure state
@@ -109,7 +109,7 @@ step_STOP bb state = do
 -- The reasoning about lengths here is more complicated than PROTO or FRAME,
 -- and maybe pushes more into runtime: the number of bytes we want is encoded
 --  in the first remaining byte of the ByteBlock.
-step_SHORT_BINUNICODE : {n: Nat} -> ByteBlock n -> VMState -> App Init VMState
+step_SHORT_BINUNICODE : HasErr AppHasIO es => {n: Nat} -> ByteBlock n -> VMState -> App es VMState
 step_SHORT_BINUNICODE {n} bb (MkVMState stack memo) = do
   log "Opcode: SHORT_BINUNICODE"
   case n of
@@ -168,7 +168,7 @@ step {n = S m} bb state = do
 ||| functionally? maybe need some linear stuff on usage of msg object
 ||| to let that happen, session style?
 export
-unpickle : (n: Nat ** (ByteBlock n)) -> App Init PickleAST
+unpickle : HasErr AppHasIO es => (n: Nat ** (ByteBlock n)) -> App es PickleAST
 unpickle ((S n) ** bb) = do
   log "beginning unpickle"
 
@@ -184,7 +184,7 @@ unpickle (Z ** bb) = do
   log "unpickle not defined on empty byte sequence"
   ?error_unpickle_Z
 
-pickle_PROTO : (n ** ByteBlock n) -> Nat -> App Init (m ** ByteBlock m)
+pickle_PROTO : HasErr AppHasIO es => (n ** ByteBlock n) -> Nat -> App es (m ** ByteBlock m)
 pickle_PROTO (n ** bytes) v = do
   log "Pickling PROTO opcode"
   -- write PROTO byte
@@ -214,14 +214,14 @@ pickle_PROTO (n ** bytes) v = do
 
   pure ((S (S n)) ** bytes)
 
-pickle_ast : (n: Nat ** ByteBlock n) -> PickleAST -> App Init (m: Nat ** (ByteBlock m))
+pickle_ast : HasErr AppHasIO es => (n: Nat ** ByteBlock n) -> PickleAST -> App es (m: Nat ** (ByteBlock m))
 
-fold_AST : (n ** ByteBlock n) -> PickleAST -> App Init (m ** ByteBlock m)
+fold_AST : HasErr AppHasIO es => (n ** ByteBlock n) -> PickleAST -> App es (m ** ByteBlock m)
 fold_AST (n ** bytes) ast = do
   log "Folding over an AST element"
   pickle_ast (n ** bytes) ast
 
-pickle_STOP : (n ** ByteBlock n) -> App Init (m ** ByteBlock m)
+pickle_STOP : HasErr AppHasIO es => (n ** ByteBlock n) -> App es (m ** ByteBlock m)
 pickle_STOP (n ** bytes) = do
   log "Pickling STOP opcode"
   bytes <- primIO $ bb_append bytes 46  -- STOP is ASCII 46
@@ -229,7 +229,7 @@ pickle_STOP (n ** bytes) = do
 
 
 -- this is the same code as pickle_TUPLE except for the opcode
-pickle_LIST : (n ** ByteBlock n) -> List PickleAST -> App Init (m ** ByteBlock m)
+pickle_LIST : HasErr AppHasIO es => (n ** ByteBlock n) -> List PickleAST -> App es (m ** ByteBlock m)
 pickle_LIST (n ** bytes) entries = do
   log "Pickling LIST"
   bytes <- primIO $ bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
@@ -238,7 +238,7 @@ pickle_LIST (n ** bytes) entries = do
   pure ((S len) ** bytes)
 
 
-pickle_TUPLE : (n ** ByteBlock n) -> List PickleAST -> App Init (m ** ByteBlock m)
+pickle_TUPLE : HasErr AppHasIO es => (n ** ByteBlock n) -> List PickleAST -> App es (m ** ByteBlock m)
 pickle_TUPLE (n ** bytes) entries = do
   log "Pickling TUPLE"
   bytes <- primIO $ bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
@@ -264,7 +264,7 @@ pickle_TUPLE (n ** bytes) entries = do
 -- ports response:
 --   PickleTuple [PickleInteger 9000, PickleInteger 9001]
 
-pickle_BININT : (n ** ByteBlock n) -> Int -> App Init (m ** ByteBlock m)
+pickle_BININT : HasErr AppHasIO es => (n ** ByteBlock n) -> Int -> App es (m ** ByteBlock m)
 pickle_BININT (n ** bytes) v = do
   logv "Pickling BININT" v
 
@@ -297,7 +297,7 @@ pickle_ast _ _ = ?notimpl_pickle_ast_others
 
 ||| Takes some PickleAST and turns it into a Pickle bytestream.
 export
-pickle : PickleAST -> App Init (n: Nat ** (ByteBlock n))
+pickle : HasErr AppHasIO es => PickleAST -> App es (n: Nat ** (ByteBlock n))
 pickle ast = do
   -- TODO: needs some kinds of ByteBlock access that we can write to in
   -- the ways that this code wants. I think that only means appending,

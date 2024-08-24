@@ -11,7 +11,7 @@ import System.Clock
 ||| What would it look like if I was trying to do macro-style eliding
 ||| of log calls entirely? something involving the elaborator?
 covering public export
-log : String -> App Init ()
+log : HasErr AppHasIO es => String -> App es ()
 log msg = primIO $ do
   putStr " * "
   now <- clockTime UTC
@@ -21,7 +21,7 @@ log msg = primIO $ do
 
 
 covering public export
-logv : Show s => String -> s -> App Init ()
+logv : HasErr AppHasIO es => Show s => String -> s -> App es ()
 logv msg v = primIO $ do
   putStr " * "
   now <- clockTime UTC
