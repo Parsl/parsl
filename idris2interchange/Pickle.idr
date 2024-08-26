@@ -53,15 +53,40 @@ read_uint8 bb = do
   -- bytes are bytes but we want an Int...
 
   let v = (((((((
-              byte8) * 256 + 
-              byte7) * 256 + 
-              byte6) * 256 + 
-              byte5) * 256 + 
-              byte4) * 256 + 
-              byte3) * 256 + 
-              byte2) * 256 +
-              byte1
-  pure (cast v, bb8)
+              cast byte8) * 256 + 
+              cast byte7) * 256 + 
+              cast byte6) * 256 + 
+              cast byte5) * 256 + 
+              cast byte4) * 256 + 
+              cast byte3) * 256 + 
+              cast byte2) * 256 +
+              cast byte1
+  pure (v, bb8)
+
+
+read_uint4 : HasErr AppHasIO es => {n: Nat} -> ByteBlock (S (S (S (S n)))) -> App es (Int, ByteBlock n)
+read_uint4 bb = do
+  (byte1, bb1) <- primIO $ bb_uncons bb 
+  (byte2, bb2) <- primIO $ bb_uncons bb1 
+  (byte3, bb3) <- primIO $ bb_uncons bb2
+  (byte4, bb4) <- primIO $ bb_uncons bb3 
+
+  logv "byte1" byte1
+  logv "byte2" byte2
+  logv "byte3" byte3
+  logv "byte4" byte4
+
+  -- bytes are bytes but we want an Int...
+
+  let v = (((
+              cast byte4) * 256 + 
+              cast byte3) * 256 + 
+              cast byte2) * 256 +
+              cast byte1
+
+  logv "byte combined to v" v
+  pure (v, bb4)
+
 
 
 -- define this signature before the body because we are mutually
@@ -125,7 +150,13 @@ step_STOP bb state = do
 
 step_BINBYTES : HasErr AppHasIO es => {n: Nat} -> ByteBlock n -> VMState -> App es VMState
 step_BINBYTES {n} bb (MkVMState stack memo) = do
-  ?notimpl_BINBYTES
+  log "Opcode: BINBYTES"
+  case n of
+    (S (S (S (S k)))) => do
+      (block_len, bb') <- read_uint4 bb
+      logv "Byte count" block_len
+      ?notimpl_BINBYTES
+    _ => ?error_BINBYTES_not_enough_to_count
 
 -- The reasoning about lengths here is more complicated than PROTO or FRAME,
 -- and maybe pushes more into runtime: the number of bytes we want is encoded
