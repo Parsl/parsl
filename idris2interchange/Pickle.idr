@@ -17,13 +17,16 @@ import Logging
 -- %default total
 
 ||| some untyped (or Python Any-typed) representation of the output
-||| of executing a pickle
+||| of executing a pickle.
+||| PickleMark is a special thing here because its used on the stack
+||| but not expected to be exposed as part of the final value.
 public export
 data PickleAST = PickleUnicodeString String
                | PickleInteger Int
                | PickleTuple (List PickleAST)
                | PickleList (List PickleAST)
                | PickleDict (List (PickleAST, PickleAST))
+               | PickleMark
 %runElab derive "PickleAST" [Generic, Meta, Show]
 
 record VMState where
@@ -78,6 +81,19 @@ step_PROTO {n = S n'} bb state = do
   logv "Pickle protocol version" proto_ver
   step {n = n'} bb' state 
 
+step_BININT1 : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_BININT1 {n = Z} bb state = do
+  ?error_BININT1_ran_off_end
+  pure state
+
+step_BININT1 {n = S n'} bb (MkVMState stack memo) = do
+  log "Opcode: BININT1"
+  -- read an unsigned uint1
+  (v, bb') <- primIO $ bb_uncons bb
+  logv "1-byte unsigned integer" v
+  let new_state = MkVMState ((PickleInteger (cast v))::stack) memo
+  step {n = n'} bb' new_state 
+
 step_FRAME : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_FRAME bb state = do
   log "Opcode: FRAME"
@@ -106,6 +122,10 @@ step_STOP : HasErr AppHasIO es => ByteBlock n -> VMState -> App es VMState
 step_STOP bb state = do
   log "Opcode: STOP"
   pure state
+
+step_BINBYTES : HasErr AppHasIO es => {n: Nat} -> ByteBlock n -> VMState -> App es VMState
+step_BINBYTES {n} bb (MkVMState stack memo) = do
+  ?notimpl_BINBYTES
 
 -- The reasoning about lengths here is more complicated than PROTO or FRAME,
 -- and maybe pushes more into runtime: the number of bytes we want is encoded
@@ -145,6 +165,14 @@ step_EMPTYDICT {n} bb (MkVMState stack memo) = do
 
   step {n} bb new_state 
 
+step_MARK : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_MARK {n} bb (MkVMState stack memo) = do
+  log "Opcode: MARK"
+
+  let new_state = MkVMState (PickleMark::stack) memo
+
+  step {n} bb new_state 
+
 step {n = Z} bb state = do
     log "ERROR: Pickle VM ran off end of pickle"
     ?error_pickle_ran_off_end
@@ -158,7 +186,10 @@ step {n = S m} bb state = do
     logv "Opcode number" opcode
 
     case opcode of 
+      40 => step_MARK bb' state
       46 => step_STOP bb' state
+      66 => step_BINBYTES bb' state
+      75 => step_BININT1 bb' state
       125 => step_EMPTYDICT bb' state
       128 => step_PROTO {n = m} bb' state
       140 => step_SHORT_BINUNICODE bb' state
