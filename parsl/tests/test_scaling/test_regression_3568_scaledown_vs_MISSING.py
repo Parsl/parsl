@@ -47,7 +47,7 @@ def test_regression(try_assert):
     # it down to 0 blocks. Because of 'sleep inf' in the WrappedLaucher, the
     # block will not ever register. This lack of registration is part of the
     # bug being tested for regression.
-  
+
     # After that scaling has happened, we should see that we have one block
     # and it should be in a terminal state. We should also see htex reporting
     # no blocks connected.
@@ -63,16 +63,15 @@ def test_regression(try_assert):
 
     assert htex.connected_blocks() == [], "No block should have connected to interchange"
 
-    # So after a few seconds we should see
-    # 0 blocks connected, 1 block marked as terminal
-    # (post-fix that should be marked as SCALED_IN
-    # but pre-fix it won't be... so for checking it
-    # fails before the fix, we can't check SCALED_IN)
-    # but we can check the historical blocks connected
-    # which should show no blocks connected.
+    # Now we can reconfigure the launcher to let subsequent blocks launch ok,
+    # and run a trivial task. That trivial task will scale up a new block and
+    # run the task successfully.
 
-    # once we see that we can swap in the new launcher
-    # and try running an app.
+    # Prior to issue #3568, the bug was that the scale in of the first
+    # block earlier in the test case would have been treated as a failure,
+    # and then the block error handler would have treated that failure as a
+    # permanent htex failure, and so the task execution below would raise
+    # a BadStateException rather than attempt to run the task.
 
     assert htex.provider.launcher.prepend != "", "Pre-req: prepend attribute should exist and be non-empty"
     htex.provider.launcher.prepend = ""
