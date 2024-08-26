@@ -36,6 +36,7 @@ extras_require = {
     'proxystore': ['proxystore'],
     'radical-pilot': ['radical.pilot==1.60', 'radical.utils==1.60'],
     'ssh': ['paramiko'],
+    'globus_compute': ['globus_compute_sdk>=2.27.1'],
     # Disabling psi-j since github direct links are not allowed by pypi
     # 'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
 }
