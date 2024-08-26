@@ -10,6 +10,7 @@ export PATH := $(CCTOOLS_INSTALL)/bin/:$(PATH)
 export CCTOOLS_VERSION=7.8.0
 export HYDRA_LAUNCHER=fork
 export OMPI_MCA_rmaps_base_oversubscribe=yes
+export RADICAL_UTILS_NO_ATFORK=whatever
 MPI=$(MPICH)
 
 .PHONY: help
@@ -62,7 +63,7 @@ htex_local_test: ## run all tests with htex_local config
 
 .PHONY: htex_local_alternate_test
 htex_local_alternate_test: ## run all tests with htex_local config
-	pip3 install ".[monitoring]"
+	pip3 install "."
 	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --random-order --durations 10
 
 $(CCTOOLS_INSTALL):	#CCtools contains both taskvine and workqueue so install only once
@@ -84,7 +85,7 @@ radical_local_test:
 
 .PHONY: config_local_test
 config_local_test: $(CCTOOLS_INSTALL)
-	pip3 install ".[monitoring,visualization,proxystore]"
+	pip3 install ".[proxystore]"
 	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages pytest parsl/tests/ -k "not cleannet" --config local --random-order --durations 10
 
 .PHONY: site_test
@@ -97,7 +98,7 @@ perf_test:
 	parsl-perf --time 5 --config parsl/tests/configs/local_threads.py
 
 .PHONY: test ## run all tests with all config types
-test: clean_coverage isort lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test wqex_local_test vineex_local_test radical_local_test config_local_test perf_test ## run all tests
+test: clean_coverage isort lint flake8 mypy local_thread_test htex_local_test wqex_local_test vineex_local_test radical_local_test config_local_test perf_test ## run all tests
 
 .PHONY: tag
 tag: ## create a tag in git. to run, do a 'make VERSION="version string" tag
