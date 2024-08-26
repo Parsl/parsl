@@ -163,6 +163,10 @@ def pytest_configure(config):
         'markers',
         'executor_supports_std_stream_tuples: Marks tests that require tuple support for stdout/stderr'
     )
+    config.addinivalue_line(
+        'markers',
+        'globus_compute: Marks tests that require a valid globus_compute target'
+    )
 
 
 @pytest.fixture(autouse=True, scope='session')
