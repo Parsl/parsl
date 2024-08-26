@@ -2,14 +2,11 @@ import uuid
 from concurrent.futures import Future
 from typing import Any, Callable, Dict, Optional, Union
 
-import typeguard
-
 from parsl.errors import OptionalModuleMissing
 from parsl.executors.base import ParslExecutor
 from parsl.utils import RepresentationMixin
 
 UUID_LIKE_T = Union[uuid.UUID, str]
-
 
 
 class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
@@ -25,15 +22,14 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
             self,
             endpoint_id: Optional[UUID_LIKE_T] = None,
             task_group_id: Optional[UUID_LIKE_T] = None,
-            resource_specification: Optional[dict[str, Any]] = None,
-            user_endpoint_config: Optional[dict[str, Any]] = None,
+            resource_specification: Optional[Dict[str, Any]] = None,
+            user_endpoint_config: Optional[Dict[str, Any]] = None,
             label: str = "GlobusComputeExecutor",
             batch_size: int = 128,
             amqp_port: Optional[int] = None,
             **kwargs,
-        ):
+    ):
         """
-
         Parameters
         ----------
 
@@ -141,5 +137,3 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
             Tasks cannot be cancelled once they are registered.
         """
         return self._executor.shutdown()
-
-
