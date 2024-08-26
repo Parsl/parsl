@@ -11,24 +11,22 @@ from parsl.providers import LocalProvider
 
 
 def local_config():
+    # see the comments inside test_regression for reasoning about why each
+    # of these parameters is set why it is.
     return Config(
         max_idletime=1,
+
         strategy='htex_auto_scale',
         strategy_period=1,
+
         executors=[
             HighThroughputExecutor(
                 label="htex_local",
-                address="127.0.0.1",
-                cores_per_worker=1,
                 encrypted=True,
                 provider=LocalProvider(
-                    channel=LocalChannel(),
                     init_blocks=1,
                     min_blocks=0,
                     max_blocks=1,
-                    # TODO: swap out the launcher during the test. make it use a much longer sleep (or infinite sleep)
-                    # to give blocks that run but never complete themselves. then swap that for a launcher which
-                    # launches the worker pool immediately.
                     launcher=WrappedLauncher(prepend="sleep inf ; "),
                 ),
             )
@@ -43,14 +41,23 @@ def task():
 
 @pytest.mark.local
 def test_regression(try_assert):
-    # config means that we should start with one block and very rapidly scale
-    # it down to 0 blocks. Because of 'sleep inf' in the WrappedLaucher, the
-    # block will not ever register. This lack of registration is part of the
-    # bug being tested for regression.
+    # The above config means that we should start scaling out one initial
+    # block, but then scale it back in after a second or so if the executor
+    # is kept idle (which this test does using try_assert).
 
-    # After that scaling has happened, we should see that we have one block
-    # and it should be in a terminal state. We should also see htex reporting
-    # no blocks connected.
+    # Because of 'sleep inf' in the WrappedLaucher, the block will not ever
+    # register.
+
+    # The bug being tested is about mistreatment of blocks which are scaled in
+    # before they have a chance to register, and the above forces that to
+    # happen.
+
+    # After that scaling in has happened, we should see that we have one block
+    # and it should be in a terminal state. The below try_assert waits for
+    # that to become true.
+
+    # At that time, we should also see htex reporting no blocks registered - as
+    # mentioned above, that is a necessary part of the bug being tested here.
 
     # Give 10 strategy periods for the above to happen: each step of scale up,
     # and scale down due to idleness isn't guaranteed to happen in exactly one
@@ -68,9 +75,9 @@ def test_regression(try_assert):
     # run the task successfully.
 
     # Prior to issue #3568, the bug was that the scale in of the first
-    # block earlier in the test case would have been treated as a failure,
-    # and then the block error handler would have treated that failure as a
-    # permanent htex failure, and so the task execution below would raise
+    # block earlier in the test case would have incorrectly been treated as a
+    # failure, and then the block error handler would have treated that failure
+    # as a permanent htex failure, and so the task execution below would raise
     # a BadStateException rather than attempt to run the task.
 
     assert htex.provider.launcher.prepend != "", "Pre-req: prepend attribute should exist and be non-empty"
