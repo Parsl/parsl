@@ -23,6 +23,7 @@ data PickleAST = PickleUnicodeString String
                | PickleInteger Int
                | PickleTuple (List PickleAST)
                | PickleList (List PickleAST)
+               | PickleDict (List (PickleAST, PickleAST))
 %runElab derive "PickleAST" [Generic, Meta, Show]
 
 record VMState where
@@ -136,6 +137,14 @@ step_SHORT_BINUNICODE {n} bb (MkVMState stack memo) = do
 
     Z => ?error_SHORT_BINUNICODE_no_length
 
+step_EMPTYDICT : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_EMPTYDICT {n} bb (MkVMState stack memo) = do
+  log "Opcode: EMPTYDICT"
+
+  let new_state = MkVMState ((PickleDict [])::stack) memo
+
+  step {n} bb new_state 
+
 step {n = Z} bb state = do
     log "ERROR: Pickle VM ran off end of pickle"
     ?error_pickle_ran_off_end
@@ -150,6 +159,7 @@ step {n = S m} bb state = do
 
     case opcode of 
       46 => step_STOP bb' state
+      125 => step_EMPTYDICT bb' state
       128 => step_PROTO {n = m} bb' state
       140 => step_SHORT_BINUNICODE bb' state
       148 => step_MEMOIZE bb' state
