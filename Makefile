@@ -62,7 +62,7 @@ htex_local_test: ## run all tests with htex_local config
 
 .PHONY: htex_local_alternate_test
 htex_local_alternate_test: ## run all tests with htex_local config
-	pip3 install ".[monitoring]"
+	pip3 install "."
 	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/htex_local_alternate.py --random-order --durations 10
 
 $(CCTOOLS_INSTALL):	#CCtools contains both taskvine and workqueue so install only once
@@ -84,7 +84,7 @@ radical_local_test:
 
 .PHONY: config_local_test
 config_local_test: $(CCTOOLS_INSTALL)
-	pip3 install ".[monitoring,visualization,proxystore]"
+	pip3 install ".[proxystore]"
 	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages pytest parsl/tests/ -k "not cleannet" --config local --random-order --durations 10
 
 .PHONY: site_test
