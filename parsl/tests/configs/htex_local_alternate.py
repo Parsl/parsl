@@ -68,6 +68,3 @@ def fresh_config():
         ),
         usage_tracking=True
     )
-
-
-config = fresh_config()
