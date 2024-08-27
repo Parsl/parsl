@@ -542,6 +542,9 @@ Perlmutter (NERSC)
 ------------------
 
 NERSC provides documentation on `how to use Parsl on Perlmutter <https://docs.nersc.gov/jobs/workflow/parsl/>`_.
+Perlmutter is a Slurm based HPC system and parsl uses `parsl.providers.SlurmProvider` with `parsl.launchers.SrunLauncher`
+to launch tasks onto this machine.
+
 
 Frontera (TACC)
 ---------------
@@ -599,6 +602,8 @@ Polaris (ALCF)
     :width: 75%
 
 ALCF provides documentation on `how to use Parsl on Polaris <https://docs.alcf.anl.gov/polaris/workflows/parsl/>`_.
+Polaris uses `parsl.providers.PBSProProvider` and `parsl.launchers.MpiExecLauncher` to launch tasks onto the HPC system.
+
 
 
 Stampede2 (TACC)
