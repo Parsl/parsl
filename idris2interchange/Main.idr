@@ -39,7 +39,9 @@ WORKER_RESULT_PORT = 9004
 record MatchState where
   constructor MkMatchState
   managers: List ()
-  tasks: List ()
+  tasks: List PickleAST
+%runElab derive "MatchState" [Generic, Meta, Show]
+
 
 
 -- this should be total, proved by decreasing n
@@ -131,7 +133,7 @@ zmq_poll_command_channel_loop command_socket = do
         zmq_poll_command_channel_loop command_socket
 
 -- TODO: factor ZMQ_EVENTS handling with other channels
-covering zmq_poll_tasks_submit_to_interchange_loop : HasErr AppHasIO es => ZMQSocket -> App es ()
+covering zmq_poll_tasks_submit_to_interchange_loop : (State MatchState MatchState es, HasErr AppHasIO es) => ZMQSocket -> App es ()
 zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket = do
   -- need to run this in a loop until it returns no events left
   events <- zmq_get_socket_events tasks_submit_to_interchange_socket
@@ -157,6 +159,12 @@ zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket = d
         logv "Unpickled task" task
 
         -- TODO: add to match state
+
+        old_state@(MkMatchState managers tasks) <- get MatchState
+        logv "Old match state" old_state
+        put MatchState (MkMatchState managers (task :: tasks))
+        log "Put new task into match state" 
+
         -- TODO: deallocate the message and bytes (after unpickling)
 
         -- TODO: so now we've received a message... we'll need to eventually deallocate
@@ -190,7 +198,7 @@ zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = d
 
 -- TODO: is there anything to distinguish these three sockets at the type
 -- level that ties into their expected use?
-covering poll_loop : HasErr AppHasIO es => ZMQSocket -> ZMQSocket -> ZMQSocket -> App es ()
+covering poll_loop : (State MatchState MatchState es, HasErr AppHasIO es) => ZMQSocket -> ZMQSocket -> ZMQSocket -> App es ()
 
 covering app_main : (HasErr AppHasIO es, State MatchState MatchState es) => App es ()
 app_main = do
