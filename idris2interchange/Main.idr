@@ -38,7 +38,7 @@ WORKER_RESULT_PORT = 9004
 
 record MatchState where
   constructor MkMatchState
-  managers: List ()
+  managers: List JSON
   tasks: List PickleAST
 %runElab derive "MatchState" [Generic, Meta, Show]
 
@@ -172,7 +172,7 @@ zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket = d
 
         zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket
 
-covering zmq_poll_tasks_interchange_to_worker_loop : HasErr AppHasIO es => ZMQSocket -> App es ()
+covering zmq_poll_tasks_interchange_to_worker_loop : (State MatchState MatchState es, HasErr AppHasIO es) => ZMQSocket -> App es ()
 zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = do
   events <- zmq_get_socket_events tasks_interchange_to_worker_socket
   logv "ZMQ poll tasks interchange to worker loop got these zmq events" events
@@ -189,9 +189,22 @@ zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = d
         ascii_dump bb
 
         (msg_as_str, _) <- primIO $ str_from_bytes (cast s) bytes
-        let j = parse msg_as_str
+        let mj = parse msg_as_str
 
-        logv "Parsed JSON" j
+        case mj of
+          Nothing => ?error_no_json_parse_of_registration_like
+          Just j => do
+            logv "Parsed JSON" j
+
+            -- TODO: is this always registration? I think no, because I think
+            -- there might be heartbeats too? so pull out type and match on that.
+            let t = lookup "type" j
+            case t of
+              Just (JString "registration") => do
+                old_state@(MkMatchState managers tasks) <- get MatchState
+                put MatchState (MkMatchState (j :: managers) tasks)
+                log "Put new manager into match state" 
+              _ => ?error_unknown_registration_like_type
 
         zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket
 
