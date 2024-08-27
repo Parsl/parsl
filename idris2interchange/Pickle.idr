@@ -210,6 +210,66 @@ step_EMPTYDICT {n} bb (MkVMState stack memo) = do
 
   step {n} bb new_state 
 
+notMark : PickleAST -> Bool
+notMark (PickleMark) = False
+notMark _ = True
+
+split_pairs : List a -> List (a, a)
+split_pairs [] = []
+split_pairs (a :: b :: rest) = (a,b) :: (split_pairs rest)
+split_pairs _ = ?error_split_list_not_even
+-- TODO: what's a better way to deal with the odd-length
+-- case? in App, could raise an exception, but then this function
+-- doesn't look very pure. (which is true... it isn't, because it
+-- isn't covering all lists). or `Maybe`. or require a proof of
+-- even-ness and use that proof to convince idris of coveringness?
+-- which pushes the error check one level higher.
+
+-- TODO: this mutates an object, rather than being value-pure, which will
+-- interact incorrectly with values stored by MEMOIZE: the modification
+-- should be visible in the MEMOIZED object, but won't be. In the parsl
+-- case, that's probably ok, because I don't think memoized objects are
+-- every used in the interchange (and the memoize retrieval opcodes are not
+-- implemented...)
+step_SETITEMS : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_SETITEMS {n} bb (MkVMState stack memo) = do
+  log "Opcode: SETITEMS"
+
+  -- get a stack slice from the start of the stack (most recent) down to the
+  -- first MARK object. All of those should then disappear from the stack.
+
+  -- If the state moves to being
+  -- an App-state, then it would become monadic perform-action-while, which
+  -- would keep the rest_stack implicit
+  let (items, rest) = span notMark stack
+  case rest of
+    (PickleMark :: dict@(PickleDict old_items) :: rest_stack) => do
+      logv "Item pairs" items
+      logv "Dict" dict
+      logv "Rest of stack" rest_stack
+
+      -- now set item pairs from `items`, starting lowest down the stack
+      -- (so at the end of the items list)
+
+      let item_pairs = map (\(a,b) => (b,a)) $ split_pairs items
+      logv "item pairs" item_pairs
+
+      -- What k/v data structure to use? Language.JSON stores json objects
+      -- as a list of k/v tuples. So I'll do that here too. It's not super
+      -- efficient but I'm expecting dictionaries of size 2 in the interchange.
+
+      -- TODO: for key in k/v there is some Python-level equivalence to be
+      -- used for the keys. In almost every situation, I don't imagine a
+      -- pickle setting a key/value then in the same program setting the
+      -- same key to a different value, but it is a possibility I think
+      -- (at least the SETITEMS pickletools doc talks about ordering of
+      -- setting operations, which would be relevant mostly in the k1=k2 case)
+
+      let new_stack = (PickleDict (item_pairs ++ old_items)) :: rest_stack
+
+      step {n} bb (MkVMState new_stack memo)
+    _ => ?error_stack_malformed_for_SETITEMS
+
 step_MARK : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_MARK {n} bb (MkVMState stack memo) = do
   log "Opcode: MARK"
@@ -235,6 +295,7 @@ step {n = S m} bb state = do
       46 => step_STOP bb' state
       66 => step_BINBYTES bb' state
       75 => step_BININT1 bb' state
+      117 => step_SETITEMS bb' state
       125 => step_EMPTYDICT bb' state
       128 => step_PROTO {n = m} bb' state
       140 => step_SHORT_BINUNICODE bb' state
