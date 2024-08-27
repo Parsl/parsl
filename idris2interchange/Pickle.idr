@@ -27,6 +27,7 @@ data PickleAST = PickleUnicodeString String
                | PickleList (List PickleAST)
                | PickleDict (List (PickleAST, PickleAST))
                | PickleMark
+               | PickleBytes (List Bits8)
 %runElab derive "PickleAST" [Generic, Meta, Show]
 
 record VMState where
@@ -148,6 +149,15 @@ step_STOP bb state = do
   log "Opcode: STOP"
   pure state
 
+
+binbytes_folder : HasErr AppHasIO es => (List Bits8, (n : Nat ** ByteBlock n)) -> Int -> App es (List Bits8, (m : Nat ** ByteBlock m))
+binbytes_folder (l, (k ** bb)) _ = do
+  case k of
+    (S k') => do
+      (v, bb') <- primIO $ bb_uncons bb
+      pure (l ++ [v], (k' ** bb'))
+    _ => ?error_binbytes_folder_exhausted_bytes
+
 step_BINBYTES : HasErr AppHasIO es => {n: Nat} -> ByteBlock n -> VMState -> App es VMState
 step_BINBYTES {n} bb (MkVMState stack memo) = do
   log "Opcode: BINBYTES"
@@ -155,7 +165,11 @@ step_BINBYTES {n} bb (MkVMState stack memo) = do
     (S (S (S (S k)))) => do
       (block_len, bb') <- read_uint4 bb
       logv "Byte count" block_len
-      ?notimpl_BINBYTES
+      -- TODO: is there a library function for this?
+      (bytes, (l ** bb'')) <- foldlM binbytes_folder ([], (k ** bb')) [1..block_len] 
+      let new_state = MkVMState ((PickleBytes bytes)::stack) memo
+
+      step bb'' new_state
     _ => ?error_BINBYTES_not_enough_to_count
 
 -- The reasoning about lengths here is more complicated than PROTO or FRAME,
