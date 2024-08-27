@@ -359,7 +359,6 @@ poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to
     zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket
 
   poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket
-      
 
   log "Idris2 interchange ending"
 
