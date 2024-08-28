@@ -237,9 +237,12 @@ A Parsl script is a Python script that defines the tasks you want to run in para
 
 Here's a simple example:
 
-.. code-block:: python
+.. code-block:: bash
 
    !pip install parsl
+
+.. code-block:: python
+
    import parsl
    from parsl.config import Config
    from parsl.executors import HighThroughputExecutor
@@ -256,7 +259,7 @@ Here's a simple example:
        return x * 2
 
    results = []
-   for i in range(10):
+   for i in range 10:
        results.append(my_task(i))
 
    # Indent the following block to be part of the 'for' loop
