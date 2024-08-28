@@ -50,6 +50,10 @@ int glue_zmq_msg_size(void *msg) {
     return zmq_msg_size(msg);
 }
 
+int glue_zmq_msg_more(void *msg) {
+    return zmq_msg_more(msg);
+}
+
 void* glue_zmq_msg_data(void *msg) {
     return zmq_msg_data(msg);
 }

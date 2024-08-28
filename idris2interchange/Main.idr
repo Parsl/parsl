@@ -180,12 +180,20 @@ zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = d
 
   when (events `mod` 2 == 1) $ do -- read
     log "Reading message from task interchange->worker channel"
-    maybe_msg <- zmq_recv_msg_alloc tasks_interchange_to_worker_socket
-    case maybe_msg of
-      Nothing => log "No message received on task interchange->worker channel"
-      Just msg => do
-        bb@(s ** bytes) <- zmq_msg_as_bytes msg
-        logv "Received registration-like message on task interchange->worker channel, size" s
+    -- This socket is a ROUTER socket, so there will be a multi-part
+    -- message where the first part is going to be the identifier of the
+    -- sender. I think if one part is available, all parts will be available,
+    -- because they're delivered all as one on-the-wire message. I haven't
+    -- seen that be explicitly noted, though.
+
+    -- TODO: Idris2 level API for receiving multipart messages, returning a
+    -- list of msg objects, instead of a Maybe.
+    msgs <- zmq_recv_msgs_multipart_alloc tasks_interchange_to_worker_socket
+    case msgs of
+      [] => log "No message received on task interchange->worker channel"
+      [addr_part, json_part] => do
+        bb@(s ** bytes) <- zmq_msg_as_bytes json_part
+        logv "Received two-part message on task interchange->worker channel, size" s
         ascii_dump bb
 
         (msg_as_str, _) <- primIO $ str_from_bytes (cast s) bytes
@@ -205,8 +213,9 @@ zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = d
                 put MatchState (MkMatchState (j :: managers) tasks)
                 log "Put new manager into match state" 
               _ => ?error_unknown_registration_like_type
-
         zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket
+      _ => ?error_tasks_to_interchange_expected_two_parts
+
 
 
 -- TODO: is there anything to distinguish these three sockets at the type

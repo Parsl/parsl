@@ -93,6 +93,33 @@ zmq_recv_msg_alloc (MkZMQSocket sock_ptr) = do
       then pure $ Nothing
       else pure $ Just $ MkZMQMsg msg_ptr
 
+%foreign (gluezmq "glue_zmq_msg_more")
+prim__zmq_msg_more : AnyPtr -> PrimIO Int
+
+public export
+zmq_msg_more : HasErr AppHasIO es => ZMQMsg -> App es Bool
+zmq_msg_more (MkZMQMsg msg_ptr) = do
+  flag <- primIO $ primIO $ prim__zmq_msg_more msg_ptr
+  case flag of
+    0 => pure False
+    1 => pure True
+    _ => ?error_out_of_range_zmq_msg_more
+
+public export
+zmq_recv_msgs_multipart_alloc : HasErr AppHasIO es => ZMQSocket -> App es (List ZMQMsg)
+zmq_recv_msgs_multipart_alloc socket = do
+  -- structure could be something like:
+  -- recursively, keep invoking get msg while the 'more' flag is set
+  maybe_head_msg <- zmq_recv_msg_alloc socket
+  case maybe_head_msg of 
+    Nothing => pure []
+    Just head_msg => do
+      more <- zmq_msg_more head_msg
+      if more
+        then do
+          rest_msgs <- zmq_recv_msgs_multipart_alloc socket
+          pure (head_msg :: rest_msgs)
+        else pure [head_msg]
 
 %foreign (gluezmq "glue_zmq_msg_size")
 prim__zmq_msg_size : AnyPtr -> PrimIO Int
