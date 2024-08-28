@@ -413,7 +413,7 @@ The Parsl documentation includes an interactive tutorial that guides you through
 
 Here are your options for completing the tutorial:
 
-- **Binder:** For an online interactive experience without any installations, you can use Binder to run the tutorial in a Jupyter Notebook environment. Start the tutorial on Binder `here <https://mybinder.org>`_.
+- **Binder:** For an online interactive experience without any installations, you can use Binder to run the tutorial in a Jupyter Notebook environment. Start the tutorial on Binder `Binder link <https://mybinder.org>`_.
 
 - **Online Notebooks:** If you'd rather try Parsl in a different online notebook setup, you can access it here: `Online Notebooks link <https://notebooks.example.com>`_.
 
