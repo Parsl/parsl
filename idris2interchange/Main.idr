@@ -111,6 +111,18 @@ matchmake = do
 
   log "Matchmaker (no-op) completed"
 
+  (MkMatchState managers tasks) <- get MatchState
+
+  case tasks of
+    [] => log "No tasks in matchmaker - no match possible"
+    task :: rest_tasks => do
+      logv "This task is available for matchmaking" task
+      -- manager selection more complicated, especially with replacement/removal
+      -- of manager value with a decremented value.
+      -- perhaps a "take and subtract" function which returns both a manager
+      -- object but also the full modified manager list?
+      ?notimpl_matchmaker
+      
 
 ||| this drains ZMQ when there's a poll. this is a bit complicated and
 ||| not like a regular level-triggered poll.
