@@ -205,7 +205,7 @@ Here are some common errors you might encounter during installation and how to f
 
 - **ModuleNotFoundError: No module named 'parsl':** This means that Parsl is not installed. Make sure you have followed the installation instructions correctly.
 
-- **Permission errors:** If you get permission errors during installation, try running the pip command with `sudo` (Linux/macOS) or as an administrator (Windows).
+- **Permission errors:** If you get permission errors during installation, try running the pip command with ``sudo`` (Linux/macOS) or as an administrator (Windows).
 
 If you encounter other errors, please consult the Parsl documentation or seek help from the Parsl community in the `#parsl-help <https://parsl.slack.com>`_ channel on Slack.
 
