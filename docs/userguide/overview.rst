@@ -415,10 +415,10 @@ Here are your options for completing the tutorial:
 
 - **Binder:** For an online interactive experience without any installations, you can use Binder to run the tutorial in a Jupyter Notebook environment. Start the tutorial on Binder `here <https://mybinder.org>`_.
 
-- **Online Notebooks:** If you'd rather try Parsl in a different online notebook setup, you can access it `here <https://notebooks.example.com>`_.
+- **Online Notebooks:** If you'd rather try Parsl in a different online notebook setup, you can access it here: `Online Notebooks link <https://notebooks.example.com>`_.
 
 Here are links to Parsl documentation that will help guide you through the tutorial:
 
-- **Parsl Tutorial:** This provides a comprehensive guide on using Parsl with examples and explanations. You can access it `here <https://parsl.readthedocs.io/en/stable/tutorials.html>`_.
+- **Parsl Tutorial:** This provides a comprehensive guide on using Parsl with examples and explanations. You can access it here: `Parsl Tutorial link <https://parsl.readthedocs.io/en/stable/tutorials.html>`_.
 
-- **Quickstart Guide:** This provides a quick introduction to Parsl and how to start the tutorial. You can access it `here <https://parsl.readthedocs.io/en/stable/quickstart.html>`_.
+- **Quickstart Guide:** This provides a quick introduction to Parsl and how to start the tutorial. You can access it here: `Quickstart Guide link <https://parsl.readthedocs.io/en/stable/quickstart.html>`_.
