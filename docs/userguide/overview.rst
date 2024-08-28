@@ -28,7 +28,7 @@ In Parsl, there's a distinction between a **script** and a **workflow**.
 
 Understanding the role of a Parsl script and a workflow is like understanding the difference between a recipe and the cooking process. A Parsl script can be thought of as a recipe, where the ingredients are the tasks and the steps are the dependencies. The workflow, on the other hand, is the process of cooking that recipe. It orchestrates the actual cooking process, ensuring that the steps are followed correctly and the ingredients are combined at the right time.
 
-.. image:: images/ScriptvsWorkflow.png
+.. image:: ../images/overview/ScriptvsWorkflow.png
    :alt: Script vs. Workflow
    :align: center
 
@@ -63,7 +63,7 @@ Concurrency is a more general concept that can be achieved even on a single proc
 
 Parsl enables both concurrency and parallelism. It allows you to define tasks that can be executed concurrently and leverages parallel hardware to run those tasks simultaneously on different processors or computers.
 
-.. image:: images/ParslManagesConcurrency.jpg
+.. image:: ../images/overview/ParslManagesConcurrency.jpg
    :alt: Parsl Manages Concurrency
    :align: center
 
@@ -265,7 +265,7 @@ Here's a simple example:
 
 These scripts define a task called `my_task` that doubles a number. Run the first and then the second (top to bottom). It then creates 10 instances of this task, each with a different input, and runs them in parallel. Finally, it prints the results as they become available. To check if this script worked, you should see the numbers 0 through 18 printed to your console, although not necessarily in order.
 
-.. image:: images/BasicParslScriptFlow.jpg
+.. image:: ../images/overview/BasicParslScriptFlow.jpg
    :alt: Basic Parsl Script Flow
    :align: center
 
