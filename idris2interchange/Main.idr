@@ -84,6 +84,34 @@ dispatch_cmd "CONNECTED_BLOCKS" = do
 dispatch_cmd _ = ?error_cmd_not_implemented
 
 
+matchmake :  (State MatchState MatchState es, HasErr AppHasIO es) => App es ()
+matchmake = do
+  log "Matchmaker starting"
+  -- we can make a match if we have a manager with capacity and a task in the
+  -- task queue. This is the point that in the real htex interchange can do
+  -- more interesting matching.
+
+  -- selecting a task is easy: it's any task from the task list, and so the
+  -- head of the task list will do, and it's cheap to extract and leave the
+  -- remaining tasks as a whole list.
+
+  -- selecting a manager is harder: the state here holds all the managers
+  -- with a slot count. we need any manager with a non-zero slot count.
+  -- maybe there's a more efficient data structure here that can deal with
+  -- slotcount == 0, /= 0 being the primary selection mechanism being the
+  -- primary selection mechanism. eg. some functional structure that can
+  -- be ordered by slotcount. or split into two lists: the 0s and the non-0s.
+  -- (similar to the interesting_managers vs ready_managers distinction in
+  -- real interchange, which was implemented to avoid linear scan of all
+  -- busy managers)
+
+  -- transactionally: get a task; get a manager; if we succeed at both,
+  -- dispatch task and update task (by removal) and manager (by decrement)
+  -- lists in MatchState.
+
+  log "Matchmaker (no-op) completed"
+
+
 ||| this drains ZMQ when there's a poll. this is a bit complicated and
 ||| not like a regular level-triggered poll.
 ||| Some reading:
@@ -164,6 +192,7 @@ zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket = d
         logv "Old match state" old_state
         put MatchState (MkMatchState managers (task :: tasks))
         log "Put new task into match state" 
+        matchmake
 
         -- TODO: deallocate the message and bytes (after unpickling)
 
@@ -212,6 +241,7 @@ zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = d
                 old_state@(MkMatchState managers tasks) <- get MatchState
                 put MatchState (MkMatchState (j :: managers) tasks)
                 log "Put new manager into match state" 
+                matchmake
               _ => ?error_unknown_registration_like_type
         zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket
       _ => ?error_tasks_to_interchange_expected_two_parts
