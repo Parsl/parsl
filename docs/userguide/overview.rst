@@ -203,7 +203,7 @@ Here are some common errors you might encounter during installation and how to f
 
 - **ERROR: Could not find a version that satisfies the requirement parsl:** This means that pip cannot find a compatible version of Parsl for your Python version. Make sure you are using Python 3.8 or newer.
 
-- **ModuleNotFoundError: No module named 'parsl':** This means that Parsl is not installed. Make sure you have followed the installation instructions correctly.
+- **ModuleNotFoundError: No module named "parsl":** This means that Parsl is not installed. Make sure you have followed the installation instructions correctly.
 
 - **Permission errors:** If you get permission errors during installation, try running the pip command with ``sudo`` (Linux/macOS) or as an administrator (Windows).
 
@@ -263,7 +263,7 @@ Here's a simple example:
    for result in results:
        print(result.result())
 
-These scripts define a task called `my_task` that doubles a number. Run the first and then the second (top to bottom). It then creates 10 instances of this task, each with a different input, and runs them in parallel. Finally, it prints the results as they become available. To check if this script worked, you should see the numbers 0 through 18 printed to your console, although not necessarily in order.
+These scripts define a task called ``my_task`` that doubles a number. Run the first and then the second (top to bottom). It then creates 10 instances of this task, each with a different input, and runs them in parallel. Finally, it prints the results as they become available. To check if this script worked, you should see the numbers 0 through 18 printed to your console, although not necessarily in order.
 
 .. image:: ../images/overview/BasicParslScriptFlow.jpg
    :alt: Basic Parsl Script Flow
@@ -274,11 +274,11 @@ Parsl Script Basic Workflow
 
 - **Import Parsl:** The script begins by importing the Parsl library, which provides the necessary tools and functions for parallel execution.
 - **Load Configuration:** A configuration object is loaded, specifying the resources (e.g., local threads, clusters, clouds) that Parsl will use to execute tasks. This step is crucial as it tailors Parsl's behavior to the specific computing environment.
-- **Define Apps:** Python functions are decorated with special tags (`@python_app` or `@bash_app`) to indicate that they can be run in parallel as independent tasks.
+- **Define Apps:** Python functions are decorated with special tags (``@python_app`` or ``@bash_app``) to indicate that they can be run in parallel as independent tasks.
 - **Call Apps:** The decorated functions (apps) are invoked, creating futures. Futures are placeholders for the results of these parallel tasks, allowing the script to continue without waiting for each task to finish.
 - **DataFlowKernel (DFK):** The DFK, the core of Parsl, takes over. It manages the execution of tasks, ensuring they run when their dependencies (e.g., input data) are ready and resources are available.
 - **Task Execution:** The DFK sends tasks to executors, which are responsible for running the tasks on the specified resources (e.g., different cores or nodes).
-- **Get Results:** Once tasks are completed, the `.result()` method is used to retrieve the results from the futures. The script can then use these results for further processing or analysis.
+- **Get Results:** Once tasks are completed, the ``.result()`` method is used to retrieve the results from the futures. The script can then use these results for further processing or analysis.
 - **End:** The script concludes after all tasks have been executed and their results have been retrieved.
 
 To run a Parsl script, you first need to load the configuration:
@@ -308,7 +308,7 @@ Let's look at a simplified example:
    result = hello().result()
    print(result)  # Output: Hello, Frodo!
 
-This script defines a Parsl app called `hello` that takes a name and returns a greeting. It then runs the app with the input "Frodo" and prints the result. If this script worked, you should see "Hello, Frodo!" printed to your console.
+This script defines a Parsl app called ``hello`` that takes a name and returns a greeting. It then runs the app with the input "Frodo" and prints the result. If this script worked, you should see "Hello, Frodo!" printed to your console.
 
 Getting Started Tutorial
 ========================
@@ -334,11 +334,11 @@ The best way to learn Parsl is by doing. Let's revisit the "Hello World" example
 
 This script demonstrates the core components of a Parsl program:
 
-- **Importing Parsl:** The `import parsl` line brings in the Parsl library, giving you access to its functions and classes.
-- **Loading Configuration:** The `parsl.load(config)` line initializes Parsl with your chosen configuration. This configuration specifies how Parsl will use your computing resources. In this example, we're using a simple configuration for running Parsl on your local machine.
-- **Defining an App:** The `@python_app` decorator tells Parsl that the `hello` function is a Parsl app, meaning it can be run in parallel.
-- **Calling the App:** The `hello("World")` line calls the app with the argument "World". This doesn't run the function immediately; instead, it returns a future, a placeholder for the result that will be available later.
-- **Getting the Result:** The `.result()` method waits for the app to finish and then returns the result, which is the string "Hello, World!".
+- **Importing Parsl:** The ``import parsl`` line brings in the Parsl library, giving you access to its functions and classes.
+- **Loading Configuration:** The ``parsl.load(config)`` line initializes Parsl with your chosen configuration. This configuration specifies how Parsl will use your computing resources. In this example, we're using a simple configuration for running Parsl on your local machine.
+- **Defining an App:** The ``@python_app`` decorator tells Parsl that the ``hello`` function is a Parsl app, meaning it can be run in parallel.
+- **Calling the App:** The ``hello("World")`` line calls the app with the argument "World". This doesn't run the function immediately; instead, it returns a future, a placeholder for the result that will be available later.
+- **Getting the Result:** The ``.result()`` method waits for the app to finish and then returns the result, which is the string "Hello, World!".
 - **Printing the Result:** The last line prints the result to the console.
 
 Practical Example: Setting Up Your First Parsl Workflow
@@ -349,7 +349,7 @@ To set up your first Parsl workflow, you'll need to:
 1. **Install Parsl:** Follow the instructions in the "Installation and Setup" section to install Parsl on your system.
 2. **Choose a configuration:** Select a configuration that matches your computing environment. Parsl provides several example configurations for different platforms, such as laptops, clusters, and clouds. You can also create custom settings.
 3. **Write a Parsl script:** Define the tasks you want to run in parallel and their dependencies.
-4. **Load the configuration:** Use the `parsl.load()` function to load your chosen configuration.
+4. **Load the configuration:** Use the ``parsl.load()`` function to load your chosen configuration.
 5. **Run your script:** Execute a Parsl script like any other Python script. Parsl will then take care of executing your tasks in parallel, managing dependencies, and moving data as needed.
 
 .. _parsl_docs: https://parsl.readthedocs.io/en/stable/
@@ -364,7 +364,7 @@ Parsl and Concurrency
 
 Parsl is designed to make parallel programming easier in Python. It allows you to break down your code into smaller tasks that can run concurrently, meaning they can be executed at the same time or in an overlapping manner. This is different from traditional Python code, which runs one line at a time in sequence.
 
-When you call a Parsl app (a function decorated with `@python_app` or `@bash_app`), Parsl creates a new task that runs independently of your main program. This means your main program can continue running while the task is being executed, potentially on a different processor or computer.
+When you call a Parsl app (a function decorated with ``@python_app`` or ``@bash_app``), Parsl creates a new task that runs independently of your main program. This means your main program can continue running while the task is being executed, potentially on a different processor or computer.
 
 Introduction to Futures
 -----------------------
