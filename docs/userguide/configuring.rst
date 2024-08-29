@@ -536,6 +536,18 @@ Center's **Expanse** supercomputer. The example is designed to be executed on th
 .. literalinclude:: ../../parsl/configs/expanse.py
 
 
+Improv (Argonne LCRC)
+---------------------
+
+.. image:: https://www.lcrc.anl.gov/sites/default/files/styles/965_wide/public/2023-12/20231214_114057.jpg?itok=A-Rz5pP9
+
+**Improv** is a PBS Pro based  supercomputer at Argonne's Laboratory Computing Resource
+Center (LCRC). The following snippet is an example configuration that uses `parsl.providers.PBSProProvider`
+and `parsl.launchers.MpiRunLauncher` to run on multinode jobs.
+
+.. literalinclude:: ../../parsl/configs/improv.py
+
+
 .. _configuring_nersc_cori:
 
 Perlmutter (NERSC)
