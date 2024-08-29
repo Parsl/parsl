@@ -46,12 +46,17 @@ class JobState(IntEnum):
     bad worker environment or network connectivity issues.
     """
 
+    SCALED_IN = 9
+    """This job has been deliberately scaled in. Scaling code should not be concerned
+    that the job never ran (for example for error handling purposes).
+    """
+
     def __str__(self) -> str:
         return f"{self.__class__.__name__}.{self.name}"
 
 
 TERMINAL_STATES = [JobState.CANCELLED, JobState.COMPLETED, JobState.FAILED,
-                   JobState.TIMEOUT, JobState.MISSING]
+                   JobState.TIMEOUT, JobState.MISSING, JobState.SCALED_IN]
 
 
 class JobStatus:
