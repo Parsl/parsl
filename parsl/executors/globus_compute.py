@@ -2,8 +2,6 @@ import uuid
 from concurrent.futures import Future
 from typing import Any, Callable, Dict, Optional, Union
 
-import typeguard
-
 from parsl.errors import OptionalModuleMissing
 from parsl.executors.base import ParslExecutor
 from parsl.utils import RepresentationMixin
@@ -33,7 +31,6 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
             **kwargs,
         ):
         """
-
         Parameters
         ----------
 
@@ -124,6 +121,7 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
         """
         self._executor.resource_specification = resource_specification or self.resource_specification
         return self._executor.submit(func, *args, **kwargs)
+
 
     def shutdown(self, wait=True, *, cancel_futures=False):
         """Clean-up the resources associated with the Executor.

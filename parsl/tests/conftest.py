@@ -167,6 +167,11 @@ def pytest_configure(config):
         'markers',
         'globus_compute: Marks tests that require a valid globus_compute target'
     )
+    config.addinivalue_line(
+        'markers',
+        'shared_fs: Marks tests that require a shared_fs between the workers are the test client'
+    )
+
 
 
 @pytest.fixture(autouse=True, scope='session')

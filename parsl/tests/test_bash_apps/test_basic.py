@@ -24,6 +24,7 @@ def foo(x, y, z=10, stdout=None, label=None):
     return f"echo {x} {y} {z}"
 
 
+@pytest.mark.shared_fs
 def test_command_format_1(tmpd_cwd):
     """Testing command format for BashApps"""
 
@@ -38,6 +39,7 @@ def test_command_format_1(tmpd_cwd):
     assert so_content == "1 4 10"
 
 
+@pytest.mark.shared_fs
 def test_auto_log_filename_format(caplog):
     """Testing auto log filename format for BashApps
     """
@@ -65,7 +67,7 @@ def test_auto_log_filename_format(caplog):
     for record in caplog.records:
         assert record.levelno < logging.ERROR
 
-
+@pytest.mark.shared_fs
 def test_parallel_for(tmpd_cwd, n=3):
     """Testing a simple parallel for loop"""
     outdir = tmpd_cwd / "outputs/test_parallel"

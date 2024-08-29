@@ -11,6 +11,7 @@ def fresh_config():
     return Config(
         executors=[
             GlobusComputeExecutor(
+                label="globus_compute",
                 endpoint_id=endpoint_id
             )
         ]
