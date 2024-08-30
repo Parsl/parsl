@@ -30,4 +30,4 @@ jobs:
 
       - name: Test Parsl with Slurm Config
         run: |
-          pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/slurm_local.py --random-order --durations 10
+          /usr/local/bin/docker-entrypoint.sh pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/slurm_local.py --random-order --durations 10
