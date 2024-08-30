@@ -13,7 +13,7 @@ jobs:
 
     container:
       image: ${{ matrix.container }}
-      options: "--platform=linux/amd64 --rm -h node01 -v $PWD/parsl/tests/slurm-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh"
+      options: "--platform=linux/amd64 --rm -h node01"
 
     name: ${{ matrix.container }}
     steps:
@@ -30,4 +30,4 @@ jobs:
 
       - name: Test Parsl with Slurm Config
         run: |
-          /usr/local/bin/docker-entrypoint.sh pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/slurm_local.py --random-order --durations 10
+          ./parsl/tests/slurm-entrypoint.sh  pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/slurm_local.py --random-order --durations 10
