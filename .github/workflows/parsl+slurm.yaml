@@ -13,7 +13,7 @@ jobs:
 
     container:
       image: ${{ matrix.container }}
-      options: "--platform=linux/amd64 --rm -h node01"
+      options: "--platform=linux/amd64 --rm -h node01 -v $PWD/parsl/tests/slurm-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh"
 
     name: ${{ matrix.container }}
     steps:
