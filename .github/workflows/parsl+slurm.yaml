@@ -1,5 +1,7 @@
 name: Test Slurm Scheduler
-on: push
+on:
+  pull_request:
+
 jobs:
   build:
     runs-on: ubuntu-22.04
