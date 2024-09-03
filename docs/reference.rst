@@ -93,6 +93,7 @@ Launchers
     parsl.launchers.SrunMPILauncher
     parsl.launchers.GnuParallelLauncher
     parsl.launchers.MpiExecLauncher
+    parsl.launchers.MpiRunLauncher
     parsl.launchers.JsrunLauncher
     parsl.launchers.WrappedLauncher
 
