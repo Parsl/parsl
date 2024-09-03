@@ -109,8 +109,6 @@ matchmake = do
   -- dispatch task and update task (by removal) and manager (by decrement)
   -- lists in MatchState.
 
-  log "Matchmaker (no-op) completed"
-
   (MkMatchState managers tasks) <- get MatchState
 
   case tasks of
@@ -120,8 +118,14 @@ matchmake = do
       -- manager selection more complicated, especially with replacement/removal
       -- of manager value with a decremented value.
       -- perhaps a "take and subtract" function which returns both a manager
-      -- object but also the full modified manager list?
+      -- object but also the full modified manager list? or the manager list
+      -- without the selected entry, with the intention of adding it back in
+      -- later? Will also need to be able to increments on this structure when
+      -- task results come in.
+      -- In the rust impl, I represented managers using multiple slot objects,
+      -- as many as listed in the original count.
       ?notimpl_matchmaker
+  log "Matchmaker (no-op) completed"
       
 
 ||| this drains ZMQ when there's a poll. this is a bit complicated and
