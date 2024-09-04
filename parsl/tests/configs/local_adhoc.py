@@ -1,7 +1,7 @@
 from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
-from parsl.providers import AdHocProvider
+from parsl.providers.ad_hoc.ad_hoc import DeprecatedAdHocProvider
 
 
 def fresh_config():
@@ -10,7 +10,7 @@ def fresh_config():
             HighThroughputExecutor(
                 label='AdHoc',
                 encrypted=True,
-                provider=AdHocProvider(
+                provider=DeprecatedAdHocProvider(
                     channels=[LocalChannel(), LocalChannel()]
                 )
             )
