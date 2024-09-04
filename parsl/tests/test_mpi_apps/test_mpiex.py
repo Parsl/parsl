@@ -43,7 +43,7 @@ def test_init():
 
     new_kwargs = {'max_workers_per_block', 'mpi_launcher'}
     excluded_kwargs = {'available_accelerators', 'cores_per_worker', 'max_workers_per_node',
-                       'mem_per_worker', 'cpu_affinity', 'max_workers', 'manager_selector'}
+                       'mem_per_worker', 'cpu_affinity', 'manager_selector'}
 
     # Get the kwargs from both HTEx and MPIEx
     htex_kwargs = set(signature(HighThroughputExecutor.__init__).parameters)
