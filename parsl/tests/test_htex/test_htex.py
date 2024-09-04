@@ -127,18 +127,6 @@ def test_htex_shutdown(
 
 
 @pytest.mark.local
-def test_max_workers_per_node():
-    with pytest.warns(DeprecationWarning) as record:
-        htex = HighThroughputExecutor(max_workers_per_node=1, max_workers=2)
-
-    warning_msg = "max_workers is deprecated"
-    assert any(warning_msg in str(warning.message) for warning in record)
-
-    # Ensure max_workers_per_node takes precedence
-    assert htex.max_workers_per_node == htex.max_workers == 1
-
-
-@pytest.mark.local
 @pytest.mark.parametrize("cmd", (None, "custom-launch-cmd"))
 def test_htex_worker_pool_launch_cmd(cmd: Optional[str]):
     if cmd:
