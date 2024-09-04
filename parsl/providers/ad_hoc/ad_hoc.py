@@ -12,8 +12,12 @@ from parsl.utils import RepresentationMixin
 logger = logging.getLogger(__name__)
 
 
-class AdHocProvider(ExecutionProvider, RepresentationMixin):
-    """ Ad-hoc execution provider
+class DeprecatedAdHocProvider(ExecutionProvider, RepresentationMixin):
+    """ Deprecated ad-hoc execution provider
+
+    The (former) AdHocProvider is deprecated. See
+    `issue #3515 <https://github.com/Parsl/parsl/issues/3515>`_
+    for further discussion.
 
     This provider is used to provision execution resources over one or more ad hoc nodes
     that are each accessible over a Channel (say, ssh) but otherwise lack a cluster scheduler.

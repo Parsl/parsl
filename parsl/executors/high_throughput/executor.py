@@ -12,7 +12,6 @@ from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import typeguard
 
-import parsl.launchers
 from parsl import curvezmq
 from parsl.addresses import get_all_addresses
 from parsl.app.errors import RemoteExceptionWrapper
@@ -20,9 +19,12 @@ from parsl.data_provider.staging import Staging
 from parsl.executors.errors import BadMessage, ScalingFailed
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
+from parsl.executors.high_throughput.manager_selector import (
+    ManagerSelector,
+    RandomManagerSelector,
+)
 from parsl.executors.high_throughput.mpi_prefix_composer import (
-    VALID_LAUNCHERS,
-    validate_resource_spec,
+    InvalidResourceSpecification,
 )
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
@@ -197,9 +199,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         will check the available memory at startup and limit the number of workers such that
         the there's sufficient memory for each worker. Default: None
 
-    max_workers : int
-        Deprecated. Please use max_workers_per_node instead.
-
     max_workers_per_node : int
         Caps the number of workers launched per node. Default: None
 
@@ -220,17 +219,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Parsl will create names as integers starting with 0.
 
         default: empty list
-
-    enable_mpi_mode: bool
-        If enabled, MPI launch prefixes will be composed for the batch scheduler based on
-        the nodes available in each batch job and the resource_specification dict passed
-        from the app. This is an experimental feature, please refer to the following doc section
-        before use:  https://parsl.readthedocs.io/en/stable/userguide/mpi_apps.html
-
-    mpi_launcher: str
-        This field is only used if enable_mpi_mode is set. Select one from the
-        list of supported MPI launchers = ("srun", "aprun", "mpiexec").
-        default: "mpiexec"
     """
 
     @typeguard.typechecked
@@ -248,7 +236,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_debug: bool = False,
                  cores_per_worker: float = 1.0,
                  mem_per_worker: Optional[float] = None,
-                 max_workers: Optional[Union[int, float]] = None,
                  max_workers_per_node: Optional[Union[int, float]] = None,
                  cpu_affinity: str = 'none',
                  available_accelerators: Union[int, Sequence[str]] = (),
@@ -259,8 +246,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  poll_period: int = 10,
                  address_probe_timeout: Optional[int] = None,
                  worker_logdir_root: Optional[str] = None,
-                 enable_mpi_mode: bool = False,
-                 mpi_launcher: str = "mpiexec",
+                 manager_selector: ManagerSelector = RandomManagerSelector(),
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
                  encrypted: bool = False):
 
@@ -276,14 +262,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.prefetch_capacity = prefetch_capacity
         self.address = address
         self.address_probe_timeout = address_probe_timeout
+        self.manager_selector = manager_selector
         if self.address:
             self.all_addresses = address
         else:
             self.all_addresses = ','.join(get_all_addresses())
 
-        if max_workers:
-            self._warn_deprecated("max_workers", "max_workers_per_node")
-        self.max_workers_per_node = max_workers_per_node or max_workers or float("inf")
+        self.max_workers_per_node = max_workers_per_node or float("inf")
 
         mem_slots = self.max_workers_per_node
         cpu_slots = self.max_workers_per_node
@@ -324,15 +309,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.encrypted = encrypted
         self.cert_dir = None
 
-        self.enable_mpi_mode = enable_mpi_mode
-        assert mpi_launcher in VALID_LAUNCHERS, \
-            f"mpi_launcher must be set to one of {VALID_LAUNCHERS}"
-        if self.enable_mpi_mode:
-            assert isinstance(self.provider.launcher, parsl.launchers.SimpleLauncher), \
-                "mpi_mode requires the provider to be configured to use a SimpleLauncher"
-
-        self.mpi_launcher = mpi_launcher
-
         if not launch_cmd:
             launch_cmd = DEFAULT_LAUNCH_CMD
         self.launch_cmd = launch_cmd
@@ -342,6 +318,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.interchange_launch_cmd = interchange_launch_cmd
 
     radio_mode = "htex"
+    enable_mpi_mode: bool = False
+    mpi_launcher: str = "mpiexec"
 
     def _warn_deprecated(self, old: str, new: str):
         warnings.warn(
@@ -352,16 +330,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         )
 
     @property
-    def max_workers(self):
-        self._warn_deprecated("max_workers", "max_workers_per_node")
-        return self.max_workers_per_node
-
-    @max_workers.setter
-    def max_workers(self, val: Union[int, float]):
-        self._warn_deprecated("max_workers", "max_workers_per_node")
-        self.max_workers_per_node = val
-
-    @property
     def logdir(self):
         return "{}/{}".format(self.run_dir, self.label)
 
@@ -370,6 +338,18 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         if self.worker_logdir_root is not None:
             return "{}/{}".format(self.worker_logdir_root, self.label)
         return self.logdir
+
+    def validate_resource_spec(self, resource_specification: dict):
+        """HTEX does not support *any* resource_specification options and
+        will raise InvalidResourceSpecification is any are passed to it"""
+        if resource_specification:
+            raise InvalidResourceSpecification(
+                set(resource_specification.keys()),
+                ("HTEX does not support the supplied resource_specifications."
+                 "For MPI applications consider using the MPIExecutor. "
+                 "For specifications for core count/memory/walltime, consider using WorkQueueExecutor. ")
+            )
+        return
 
     def initialize_scaling(self):
         """Compose the launch command and scale out the initial blocks.
@@ -544,6 +524,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                               "poll_period": self.poll_period,
                               "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
                               "cert_dir": self.cert_dir,
+                              "manager_selector": self.manager_selector,
+                              "run_id": self.run_id,
                               }
 
         config_pickle = pickle.dumps(interchange_config)
@@ -652,7 +634,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
               Future
         """
 
-        validate_resource_spec(resource_specification, self.enable_mpi_mode)
+        self.validate_resource_spec(resource_specification)
 
         if self.bad_state_is_set:
             raise self.executor_exception
@@ -792,7 +774,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         connected_blocks = self.connected_blocks()
         for job_id in job_status:
             job_info = job_status[job_id]
-            if job_info.terminal and job_id not in connected_blocks:
+            if job_info.terminal and job_id not in connected_blocks and job_info.state != JobState.SCALED_IN:
+                logger.debug("Rewriting job %s from status %s to MISSING", job_id, job_info)
                 job_status[job_id].state = JobState.MISSING
                 if job_status[job_id].message is None:
                     job_status[job_id].message = (
@@ -824,7 +807,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         try:
             self.interchange_proc.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
-            logger.info("Unable to terminate Interchange process; sending SIGKILL")
+            logger.warning("Unable to terminate Interchange process; sending SIGKILL")
             self.interchange_proc.kill()
 
         logger.info("Closing ZMQ pipes")

@@ -10,6 +10,11 @@ from parsl.jobs.states import JobState, JobStatus
 from parsl.providers import LocalProvider
 
 
+class FailingProvider(LocalProvider):
+    def submit(*args, **kwargs):
+        raise RuntimeError("Deliberate failure of provider.submit")
+
+
 def local_config():
     """Config to simulate failing blocks without connecting"""
     return Config(
@@ -20,15 +25,19 @@ def local_config():
                 heartbeat_threshold=2,
                 poll_period=100,
                 max_workers_per_node=1,
-                provider=LocalProvider(
-                    worker_init="exit 0",
-                    init_blocks=2
+                provider=FailingProvider(
+                    init_blocks=0,
+                    max_blocks=2,
+                    min_blocks=0,
                 ),
             )
         ],
-        run_dir="/tmp/test_htex",
         max_idletime=0.5,
-        strategy='none',
+        strategy='htex_auto_scale',
+        strategy_period=0.1
+        # this strategy period needs to be a few times smaller than the
+        # status_polling_interval of FailingProvider, which is 5s at
+        # time of writing
     )
 
 
@@ -38,11 +47,8 @@ def double(x):
 
 
 @pytest.mark.local
-def test_multiple_disconnected_blocks():
-    """Test reporting of blocks that fail to connect from HTEX
-    When init_blocks == N, error handling expects N failures before
-    the run is cancelled
-    """
+def test_disconnected_blocks():
+    """Test reporting of blocks that fail to connect from HTEX"""
     dfk = parsl.dfk()
     executor = dfk.executors["HTEX"]
 
@@ -54,14 +60,12 @@ def test_multiple_disconnected_blocks():
         future.result()
 
     assert isinstance(future.exception(), BadStateException)
-    exception_body = str(future.exception())
-    assert "EXIT CODE: 0" in exception_body
 
     status_dict = executor.status()
-    assert len(status_dict) == 2, "Expected 2 blocks"
+    assert len(status_dict) == 1, "Expected exactly 1 block"
     for status in status_dict.values():
         assert isinstance(status, JobStatus)
         assert status.state == JobState.MISSING
 
     connected_blocks = executor.connected_blocks()
-    assert not connected_blocks, "Expected 0 blocks"
+    assert connected_blocks == [], "Expected exactly 0 connected blocks"
