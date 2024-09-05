@@ -42,7 +42,7 @@ jobs:
 
     - name: wait for pytest Job
       run: |
-        kubectl wait --timeout=600s --for=condition=Complete Job pytest
+        kubectl wait --timeout=180s --for=condition=Complete Job pytest
 
     - name: report some info
       if: ${{ always() }}
