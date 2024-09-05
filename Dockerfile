@@ -36,5 +36,5 @@ WORKDIR /cctools
 RUN . /venv/bin/activate && apt install swig && ./configure --prefix=/ && make && make install
 
 WORKDIR /parsl
-RUN . /venv/bin/activate && pip3 install '.[kubernetes]' -r test-requirements.txt
+RUN . /venv/bin/activate && pip3 install '.[kubernetes]' cloudpickle -r test-requirements.txt
 
