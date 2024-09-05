@@ -29,7 +29,12 @@ RUN apt-get update && apt-get install -y gcc build-essential make pkg-config mpi
 
 RUN python3.12 -m venv /venv
 
-ADD . /src
-WORKDIR /src
+ADD . /parsl
+WORKDIR /
+RUN git clone https://github.com/cooperative-computing-lab/cctools
+WORKDIR /cctools
+RUN . /venv/bin/activate && apt install swig && ./configure --prefix=/ && make && make install
 
+WORKDIR /parsl
 RUN . /venv/bin/activate && pip3 install '.[kubernetes]' -r test-requirements.txt
+
