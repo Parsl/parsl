@@ -50,4 +50,4 @@ jobs:
         free -h
         kubectl describe pods
         kubectl describe jobs
-        kubectl logs Job/pytest
+        kubectl logs --timestamps Job/pytest
