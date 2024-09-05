@@ -24,4 +24,3 @@ def fresh_config():
             )
         ],
     )
-
