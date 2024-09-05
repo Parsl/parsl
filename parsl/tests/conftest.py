@@ -173,7 +173,6 @@ def pytest_configure(config):
     )
 
 
-
 @pytest.fixture(autouse=True, scope='session')
 def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
     """Load a dfk around entire test suite, except in local mode.

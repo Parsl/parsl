@@ -9,7 +9,6 @@ from parsl.utils import RepresentationMixin
 UUID_LIKE_T = Union[uuid.UUID, str]
 
 
-
 class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
     """ GlobusComputeExecutor enables remote execution on Globus Compute endpoints
 
@@ -29,7 +28,7 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
             batch_size: int = 128,
             amqp_port: Optional[int] = None,
             **kwargs,
-        ):
+    ):
         """
         Parameters
         ----------
@@ -122,7 +121,6 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
         self._executor.resource_specification = resource_specification or self.resource_specification
         return self._executor.submit(func, *args, **kwargs)
 
-
     def shutdown(self, wait=True, *, cancel_futures=False):
         """Clean-up the resources associated with the Executor.
 
@@ -139,5 +137,3 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
             Tasks cannot be cancelled once they are registered.
         """
         return self._executor.shutdown()
-
-

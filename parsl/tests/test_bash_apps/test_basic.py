@@ -67,6 +67,7 @@ def test_auto_log_filename_format(caplog):
     for record in caplog.records:
         assert record.levelno < logging.ERROR
 
+
 @pytest.mark.shared_fs
 def test_parallel_for(tmpd_cwd, n=3):
     """Testing a simple parallel for loop"""
