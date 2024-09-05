@@ -25,5 +25,3 @@ def fresh_config():
         ],
     )
 
-
-config = fresh_config()
