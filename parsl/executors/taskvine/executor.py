@@ -105,7 +105,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  factory_config: TaskVineFactoryConfig = TaskVineFactoryConfig(),
                  provider: Optional[ExecutionProvider] = LocalProvider(init_blocks=1),
+                 working_dir: str = '.',
                  storage_access: Optional[List[Staging]] = None):
+
+        self.working_dir = working_dir
 
         # Set worker launch option for this executor
         if worker_launch_method == 'factory' or worker_launch_method == 'manual':
@@ -215,9 +218,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Create directories for data and results
         log_dir = os.path.join(run_dir, self.label)
-        self._function_data_dir = os.path.join(run_dir, self.label, "function_data")
+        self._function_data_dir = os.path.join("/tmp/function_data/", self.label, str(uuid.uuid4()))
         os.makedirs(log_dir)
-        os.makedirs(self._function_data_dir)
+        os.makedirs(self._function_data_dir, exist_ok=True)
 
         # put TaskVine logs outside of a Parsl run as TaskVine caches between runs while
         # Parsl does not.
@@ -363,6 +366,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Also consider any *arg that looks like a file as an input:
         input_files += [self._register_file(f) for f in args if isinstance(f, File)]
+        logger.debug(f"registered input files {input_files}")
 
         for kwarg, maybe_file in kwargs.items():
             # Add appropriate input and output files from "stdout" and "stderr" keyword arguments
@@ -504,15 +508,18 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if parsl_file.scheme == 'file' or \
            (parsl_file.local_path and os.path.exists(parsl_file.local_path)):
             to_stage = not os.path.isabs(parsl_file.filepath)
-
-        return ParslFileToVine(parsl_file.filepath, to_stage, to_cache)
+            return ParslFileToVine(parsl_file.filepath, parsl_file.filepath, stage=to_stage, cache=to_cache, protocol=parsl_file.scheme)
+        else:
+            # we must stage url and temp files
+            ptv = ParslFileToVine(parsl_file.url, parsl_file.local_path, stage=True, cache=to_cache, protocol=parsl_file.scheme)
+            return ptv
 
     def _std_output_to_vine(self, fdname, stdfspec):
         """Find the name of the file that will contain stdout or stderr and
         return a ParslFileToVine with it. These files are never cached"""
         fname, mode = putils.get_std_fname_mode(fdname, stdfspec)
         to_stage = not os.path.isabs(fname)
-        return ParslFileToVine(fname, stage=to_stage, cache=False)
+        return ParslFileToVine(fname, fname, stage=to_stage, cache=False, protocol="file")
 
     def _prepare_package(self, fn, extra_pkgs):
         """ Look at source code of apps to figure out their package depedencies
