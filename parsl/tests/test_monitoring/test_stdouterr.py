@@ -38,6 +38,7 @@ def fresh_config(run_dir):
         monitoring=MonitoringHub(
                         hub_address="localhost",
                         hub_port=55055,
+                        udp_atexit_timeout=0
         )
     )
 
