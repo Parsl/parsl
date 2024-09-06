@@ -148,7 +148,7 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
 
     manager_selector: ManagerSelector
         Determines what strategy the interchange uses to select managers during task distribution.
-        See API reference under "Executors Miscellaneous" regarding the various manager selectors.
+        See API reference under "Manager Selectors" regarding the various manager selectors.
         Default: RandomManagerSelector()
 """  # Documentation for params used by both HTEx and MPIEx
 
