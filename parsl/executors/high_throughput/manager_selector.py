@@ -21,7 +21,7 @@ class RandomManagerSelector(ManagerSelector):
 
     """Returns a shuffled list of interesting_managers
 
-    Maintains the behavior of the original interchange. Works well
+    By default this strategy is used by the interchange. Works well
     in distributing workloads equally across all availble compute
     resources. Is not effective in conjunction with elastic scaling
     behavior as it leads to wasted resource consumption.
