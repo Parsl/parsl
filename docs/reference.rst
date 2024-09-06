@@ -78,8 +78,8 @@ Executors
     parsl.executors.FluxExecutor
     parsl.executors.radical.RadicalPilotExecutor
 
-Executors Miscellaneous
-=======================
+Manager Selectors
+=================
 
 .. autosummary::
     :toctree: stubs
