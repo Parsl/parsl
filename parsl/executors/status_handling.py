@@ -347,7 +347,10 @@ class BlockProviderExecutor(ParslExecutor):
         if block_ids is not None:
             new_status = {}
             for block_id in block_ids:
-                new_status[block_id] = JobStatus(JobState.CANCELLED)
-                del self._status[block_id]
+                logger.debug("Marking block %s as SCALED_IN", block_id)
+                s = JobStatus(JobState.SCALED_IN)
+                new_status[block_id] = s
+                self._status[block_id] = s
+                self._simulated_status[block_id] = s
             self.send_monitoring_info(new_status)
         return block_ids
