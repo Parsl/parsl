@@ -10,6 +10,7 @@ from unittest import mock
 import pytest
 
 from parsl.app.app import python_app
+from parsl.executors.errors import UnsupportedFeatureError
 from parsl.executors.high_throughput.executor import HighThroughputExecutor
 from parsl.executors.high_throughput.mpi_executor import MPIExecutor
 from parsl.executors.high_throughput.mpi_prefix_composer import (
@@ -137,5 +138,5 @@ def test_mpi_resource_spec_passed_to_htex(resource_spec: dict):
     htex = HighThroughputExecutor()
     htex.outgoing_q = mock.Mock(spec=queue.Queue)
 
-    with pytest.raises(InvalidResourceSpecification):
+    with pytest.raises(UnsupportedFeatureError):
         htex.validate_resource_spec(resource_spec)

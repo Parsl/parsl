@@ -28,17 +28,18 @@ class BadStateException(ExecutorError):
 class UnsupportedFeatureError(ExecutorError):
     """Error raised when attemping to use unsupported feature in an Executor"""
 
-    def __init__(self, feature, current_executor, target_executor):
+    def __init__(self, feature, current_executor, suggestion):
         self.feature = feature
         self.current_executor = current_executor
-        self.target_executor = target_executor
+        self.suggestion = suggestion
 
     def __str__(self):
-        if self.target_executor:
+        if self.suggestion:
             return "The {} feature is unsupported in {}. \
-                    Please checkout {} for this feature".format(self.feature,
-                                                                self.current_executor,
-                                                                self.target_executor)
+                    Suggestion: \
+                    {}".format(self.feature,
+                               self.current_executor,
+                               self.target_executor)
         else:
             return "The {} feature is unsupported in {}.".format(self.feature,
                                                                  self.current_executor)
