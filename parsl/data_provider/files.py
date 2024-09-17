@@ -6,6 +6,7 @@ on where (client-side, remote-side, intermediary-side) the File.filepath is
 being called from.
 """
 import logging
+from hashlib import md5
 import os
 import datetime
 from typing import Optional, Union
@@ -32,7 +33,7 @@ class File:
     @typeguard.typechecked
     def __init__(self, url: Union[os.PathLike, str], uu_id: Union[uuid.UUID, None] = None,
                  timestamp: Optional[datetime.datetime] = None):
-        """Construct a File object from a url string.
+        """Construct a File object from an url string.
 
         Args:
            - url (string or PathLike) : url of the file e.g.
@@ -48,9 +49,14 @@ class File:
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
-        self.timestamp = timestamp
-        self.size = None
-        self.md5sum = None
+        if self.scheme == 'file' and os.path.isfile(self.path):
+            self.size = os.stat(self.path).st_size
+            self.md5sum = md5(open(self.path, 'rb').read()).hexdigest()
+            self.timestamp = datetime.datetime.fromtimestamp(os.path.getmtime(self.path), tz=datetime.timezone.utc)
+        else:
+            self.size = None
+            self.md5sum = None
+            self.timestamp = timestamp
         self.local_path: Optional[str] = None
         if uu_id is not None:
             self.uuid = uu_id
@@ -110,4 +116,5 @@ class File:
 
     @property
     def timesatmp(self) -> Optional[str]:
+        """Stub to make this compatible with DynamicFile objects."""
         return None
