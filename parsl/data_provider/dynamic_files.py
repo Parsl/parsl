@@ -113,10 +113,11 @@ class DynamicFileList(Future, list):
                 return self.file_obj.file_obj.cleancopy()
             return self.file_obj.cleancopy()
 
-        def convert_to_df(self):
+        def convert_to_df(self, dfk) -> None:
             """Convert the file_obj to a DataFuture."""
             if not self._is_df:
-                self.file_obj = DataFuture(self.parent, self.file_obj, tid=self.parent._output_task_id)
+                self.file_obj = DataFuture(self.parent, self.file_obj, tid=self.parent._output_task_id,
+                                           dfk=dfk)
                 self._is_df = True
 
         def done(self) -> bool:
@@ -334,7 +335,7 @@ class DynamicFileList(Future, list):
         self.parent = fut
         self.parent.add_done_callback(self.parent_callback)
         for idx in range(self._last_idx + 1):
-            self[idx].convert_to_df()
+            self[idx].convert_to_df(self.dfk)
             self.stage_file(idx)
         self._call_callbacks()
 
@@ -377,7 +378,8 @@ class DynamicFileList(Future, list):
         """
         if not isinstance(__object, DynamicFileList.DynamicFile):
             if self.parent is not None and isinstance(__object, File):
-                __object = DataFuture(self.parent, __object, tid=self._output_task_id)
+                __object = DataFuture(self.parent, __object, tid=self._output_task_id,
+                                      dfk=self.dfk)
             __object = self.wrap(__object)
         if self._last_idx == len(self) - 1:
             super().append(__object)
@@ -401,7 +403,8 @@ class DynamicFileList(Future, list):
                 raise ValueError("DynamicFileList can only contain Files or DataFutures")
             if not isinstance(f, DynamicFileList.DynamicFile):
                 if self.parent is not None and isinstance(f, File):
-                    f = DataFuture(self.parent, f, tid=self._output_task_id)
+                    f = DataFuture(self.parent, f, tid=self._output_task_id,
+                                   dfk=self.dfk)
                 f = self.wrap(f)
             self.files_done[f.filename] = f.done
             items.append(f)
@@ -433,7 +436,8 @@ class DynamicFileList(Future, list):
             raise ValueError("Cannot insert at index greater than the last index")
         if not isinstance(__object, self.DynamicFile):
             if self.parent is not None and isinstance(__object, File):
-                __object = DataFuture(self.parent, __object, tid=self._output_task_id)
+                __object = DataFuture(self.parent, __object, tid=self._output_task_id,
+                                      dfk=self.dfk)
             __object = self.wrap(__object)
         self.files_done[__object.filename] = __object.done
         super().insert(__index, __object)
@@ -499,7 +503,8 @@ class DynamicFileList(Future, list):
             del self.files_done[self[key].filename]
         if super().__getitem__(key).empty:
             if self.parent is not None and isinstance(value, File):
-                value = DataFuture(self.parent, value, tid=self._output_task_id)
+                value = DataFuture(self.parent, value, tid=self._output_task_id,
+                                   dfk=self.dfk)
             super().__getitem__(key).set(value)
             self.files_done[super().__getitem__(key).filename] = super().__getitem__(key).done
             self._last_idx = max(self._last_idx, key)
