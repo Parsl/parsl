@@ -50,7 +50,7 @@ class DynamicFileList(Future, list):
                 self.set_exception(e)
             else:
                 self.file_obj.timestamp = datetime.now(timezone.utc)
-                self.parent.dataflow.register_as_output(self.file_obj, self.parent.task_record)
+                self.parent.dfk.register_as_output(self.file_obj, self.parent.task_record)
                 self.set_result(self.file_obj)
 
         def __init__(self, fut: DynamicFileList, file_obj: Optional[Union[File, DataFuture]] = None):
@@ -242,7 +242,7 @@ class DynamicFileList(Future, list):
         self._last_idx = -1
         self.executor: str = ''
         self.parent: Union[AppFuture, None] = None
-        self.dataflow = None
+        self.dfk = None
         self._sub_callbacks: List[Callable] = []
         self._in_callback = False
         self._staging_inhibited = False
@@ -268,7 +268,7 @@ class DynamicFileList(Future, list):
         Args:
             - idx (int) : Index of the file to stage
         """
-        if self.dataflow is None:
+        if self.dfk is None:
             return
         out_file = self[idx]
         if out_file.empty or out_file.staged:
@@ -281,7 +281,7 @@ class DynamicFileList(Future, list):
             f_copy = out_file.file_obj.file_obj.cleancopy()
             self[idx].file_obj.file_obj = f_copy
             logger.debug("Submitting stage out for output file {}".format(repr(out_file.file_obj)))
-            stageout_fut = self.dataflow.data_manager.stage_out(f_copy, self.executor, self.parent)
+            stageout_fut = self.dfk.data_manager.stage_out(f_copy, self.executor, self.parent)
             if stageout_fut:
                 logger.debug("Adding a dependency on stageout future for {}".format(repr(out_file)))
                 self[idx].file_obj.parent = stageout_fut
@@ -289,12 +289,12 @@ class DynamicFileList(Future, list):
             else:
                 logger.debug("No stageout dependency for {}".format(repr(f_copy)))
                 # self.parent._outputs.append(DataFuture(self.parent, out_file.file_obj.file_obj, tid=self.parent.tid))
-            func = self.dataflow.tasks[self._output_task_id]['func']
+            func = self.dfk.tasks[self._output_task_id]['func']
             # this is a hook for post-task stage-out
             # note that nothing depends on the output - which is maybe a bug
             # in the not-very-tested stage-out system?
-            func = self.dataflow.data_manager.replace_task_stage_out(f_copy, func, self.executor)
-            self.dataflow.tasks[self._output_task_id]['func'] = func
+            func = self.dfk.data_manager.replace_task_stage_out(f_copy, func, self.executor)
+            self.dfk.tasks[self._output_task_id]['func'] = func
         self.parent._outputs = self
         self._call_callbacks()
         # TODO dfk._gather_all_deps
@@ -316,7 +316,7 @@ class DynamicFileList(Future, list):
             - st_inhibited (bool) : Whether staging is inhibited
         """
         self.executor = executor
-        self.dataflow = dataflow
+        self.dfk = dataflow
         self._staging_inhibited = st_inhibited
         self._output_task_id = task_id
         self.task_record = task_record
