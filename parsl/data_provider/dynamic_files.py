@@ -33,7 +33,7 @@ class DynamicFileList(Future, list):
 
 
         """
-        def parent_callback(self, parent_fu: Future):
+        def parent_callback(self, parent_fu: Future) -> None:
             """Callback from executor future to update the parent.
 
             Updates the future with the result (the File object) or the parent future's
@@ -71,24 +71,24 @@ class DynamicFileList(Future, list):
             self._staged_out = False
 
         @property
-        def staged(self):
+        def staged(self) -> bool:
             """Return whether this file has been staged out."""
             return self._staged_out
 
         @property
-        def empty(self):
+        def empty(self) -> bool:
             """Return whether this is an empty wrapper."""
             return self._empty
 
         @property
-        def uuid(self):
+        def uuid(self) -> Union[str, None]:
             """Return the uuid of the file object this datafuture represents."""
             if self._empty:
                 return None
             return self.file_obj.uuid
 
         @property
-        def timestamp(self):
+        def timestamp(self) -> Union[datetime, None]:
             """Return the timestamp of the file object this datafuture represents."""
             if self._empty:
                 return None
@@ -108,13 +108,20 @@ class DynamicFileList(Future, list):
             self._is_df = isinstance(self.file_obj, DataFuture)
             self.parent.add_done_func(self.file_obj.filename, self.done)
 
-        def cleancopy(self):
+        def cleancopy(self) -> File:
+            """Create a clean copy of the file_obj."""
             if self._is_df:
                 return self.file_obj.file_obj.cleancopy()
             return self.file_obj.cleancopy()
 
         def convert_to_df(self, dfk) -> None:
-            """Convert the file_obj to a DataFuture."""
+            """Convert the file_obj to a DataFuture.
+
+            Parameters
+            ----------
+            dfk : DataFlowKernel
+                The dataflow kernel that this instance is associated with
+            """
             if not self._is_df:
                 self.file_obj = DataFuture(self.parent, self.file_obj, tid=self.parent._output_task_id,
                                            dfk=dfk)
@@ -136,25 +143,26 @@ class DynamicFileList(Future, list):
             return self._is_df
 
         @property
-        def tid(self):
+        def tid(self) -> Union[int, None]:
             """Returns the task_id of the task that will resolve this DataFuture."""
             if self._is_df:
                 return self.file_obj.tid
 
         @property
-        def filepath(self):
+        def filepath(self) -> Union[str, None]:
             """Filepath of the File object this datafuture represents."""
             return self.file_obj.filepath
 
         @property
-        def filename(self):
+        def filename(self) -> Union[str, None]:
             """Filename of the File object this datafuture represents."""
             if self.file_obj is None:
                 return None
             return self.file_obj.filepath
 
         @property
-        def size(self):
+        def size(self) -> Union[int, None]:
+            """Size of the file."""
             if self._empty:
                 return None
             if self._is_df:
@@ -162,7 +170,8 @@ class DynamicFileList(Future, list):
             return self.file_obj.size
 
         @property
-        def md5sum(self):
+        def md5sum(self) -> Union[str, None]:
+            """MD5 sum of the file."""
             if self._empty:
                 return None
             if self._is_df:
@@ -210,28 +219,8 @@ class DynamicFileList(Future, list):
             self.parent._outputs = self
             self.set_result(self)
 
-    '''''
-    def file_callback(self, file_fu: Future):
-        """Callback from executor future to update the file.
-
-        Updates the future with the result (the File object) or the parent future's
-        exception.
-
-        Args:
-            - file_fu (Future): Future returned by the executor along with callback
-
-        Returns:
-            - None
-        """
-
-        e = file_fu.exception()
-        if e:
-            self.files_done[file_fu.filename] = False
-        else:
-            self.files_done[file_fu.filename] = file_fu.done()
-    '''
     @typeguard.typechecked
-    def __init__(self, files: Optional[List[Union[File, DataFuture, DynamicFile]]] = None):
+    def __init__(self, files: Optional[List[Union[File, DataFuture, 'self.DynamicFile']]] = None):
         """Construct a DynamicFileList instance
 
         Args:
@@ -300,7 +289,7 @@ class DynamicFileList(Future, list):
         self._call_callbacks()
         # TODO dfk._gather_all_deps
 
-    def wrap(self, file_obj: Union[File, DataFuture, None]):
+    def wrap(self, file_obj: Union[File, DataFuture, None]) -> 'self.DynamicFile':
         """ Wrap a file object in a DynamicFile
 
         Args:
@@ -343,26 +332,26 @@ class DynamicFileList(Future, list):
         """ Not implemented """
         raise NotImplementedError("Cancel not implemented")
 
-    def cancelled(self):
+    def cancelled(self) -> bool:
         """ Not implemented """
         return False
 
-    def running(self):
+    def running(self) -> bool:
         """ Returns True if the parent future is running """
         if self.parent is not None:
             return self.parent.running()
         else:
             return False
 
-    def result(self, timeout=None):
+    def result(self, timeout=None) -> 'DynamicFileList':
         """ Return self, which is the results of the file list """
         return self
 
-    def exception(self, timeout=None):
+    def exception(self, timeout=None) -> None:
         """ No-op"""
         return None
 
-    def done(self):
+    def done(self) -> bool:
         """ Return True if all files are done """
         for element in self.files_done.values():
             if not element():
