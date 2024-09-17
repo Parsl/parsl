@@ -1,14 +1,20 @@
 import getpass
 import logging
 
-import paramiko
+from parsl.channels.ssh.ssh import DeprecatedSSHChannel
+from parsl.errors import OptionalModuleMissing
 
-from parsl.channels.ssh.ssh import SSHChannel
+try:
+    import paramiko
+    _ssh_enabled = True
+except (ImportError, NameError, FileNotFoundError):
+    _ssh_enabled = False
+
 
 logger = logging.getLogger(__name__)
 
 
-class SSHInteractiveLoginChannel(SSHChannel):
+class DeprecatedSSHInteractiveLoginChannel(DeprecatedSSHChannel):
     """SSH persistent channel. This enables remote execution on sites
     accessible via ssh. This channel supports interactive login and is appropriate when
     keys are not set up.
@@ -30,6 +36,10 @@ class SSHInteractiveLoginChannel(SSHChannel):
 
         Raises:
         '''
+        if not _ssh_enabled:
+            raise OptionalModuleMissing(['ssh'],
+                                        "SSHInteractiveLoginChannel requires the ssh module and config.")
+
         self.hostname = hostname
         self.username = username
         self.password = password

@@ -3,6 +3,7 @@ Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant,
 high-throughput system for delegating Parsl tasks to thousands of remote machines
 """
 
+import getpass
 import hashlib
 import inspect
 import itertools
@@ -18,6 +19,7 @@ import tempfile
 import threading
 import uuid
 from concurrent.futures import Future
+from datetime import datetime
 from typing import List, Literal, Optional, Union
 
 # Import other libraries
@@ -215,9 +217,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Create directories for data and results
         log_dir = os.path.join(run_dir, self.label)
-        self._function_data_dir = os.path.join(run_dir, self.label, "function_data")
         os.makedirs(log_dir)
-        os.makedirs(self._function_data_dir)
+        tmp_prefix = f'{self.label}-{getpass.getuser()}-{datetime.now().strftime("%Y%m%d%H%M%S%f")}-'
+        self._function_data_dir = tempfile.TemporaryDirectory(prefix=tmp_prefix)
 
         # put TaskVine logs outside of a Parsl run as TaskVine caches between runs while
         # Parsl does not.
@@ -227,7 +229,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # factory logs go with manager logs regardless
         self.factory_config.scratch_dir = self.manager_config.vine_log_dir
-        logger.debug(f"Function data directory: {self._function_data_dir}, log directory: {log_dir}")
+        logger.debug(f"Function data directory: {self._function_data_dir.name}, log directory: {log_dir}")
         logger.debug(
             f"TaskVine manager log directory: {self.manager_config.vine_log_dir}, "
             f"factory log directory: {self.factory_config.scratch_dir}")
@@ -293,7 +295,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             'map': Pickled file with a dict between local parsl names, and remote taskvine names.
         """
         task_dir = "{:04d}".format(executor_task_id)
-        return os.path.join(self._function_data_dir, task_dir, *path_components)
+        return os.path.join(self._function_data_dir.name, task_dir, *path_components)
 
     def submit(self, func, resource_specification, *args, **kwargs):
         """Processes the Parsl app by its arguments and submits the function
@@ -589,11 +591,13 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Join all processes before exiting
         logger.debug("Joining on submit process")
         self._submit_process.join()
+        self._submit_process.close()
         logger.debug("Joining on collector thread")
         self._collector_thread.join()
         if self.worker_launch_method == 'factory':
             logger.debug("Joining on factory process")
             self._factory_process.join()
+            self._factory_process.close()
 
         # Shutdown multiprocessing queues
         self._ready_task_queue.close()

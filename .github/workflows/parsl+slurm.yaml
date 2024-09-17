@@ -1,0 +1,35 @@
+name: Test Slurm Scheduler
+on:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    permissions:
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        container: ["ghcr.io/tylern4/slurm-standalone:slurm-24-05-0-1"]
+    timeout-minutes: 30
+
+    container:
+      image: ${{ matrix.container }}
+      options: "--platform=linux/amd64 --rm -h node01"
+
+    name: ${{ matrix.container }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Dependencies and Parsl
+        run: |
+          CC=/usr/lib64/openmpi/bin/mpicc pip3 install . -r test-requirements.txt
+
+      - name: Verify Parsl Installation
+        run: |
+          pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/local_threads.py --random-order --durations 10
+
+      - name: Test Parsl with Slurm Config
+        run: |
+          ./parsl/tests/slurm-entrypoint.sh  pytest parsl/tests/ -k "not cleannet and not unix_filesystem_permissions_required" --config parsl/tests/configs/slurm_local.py --random-order --durations 10

@@ -38,15 +38,9 @@ Configuration
 Channels
 ========
 
-.. autosummary::
-    :toctree: stubs
-    :nosignatures:
-
-    parsl.channels.base.Channel
-    parsl.channels.LocalChannel
-    parsl.channels.SSHChannel
-    parsl.channels.OAuthSSHChannel
-    parsl.channels.SSHInteractiveLoginChannel
+Channels are deprecated in Parsl. See
+`issue 3515 <https://github.com/Parsl/parsl/issues/3515>`_
+for further discussion.
 
 Data management
 ===============
@@ -100,6 +94,7 @@ Launchers
     parsl.launchers.SrunMPILauncher
     parsl.launchers.GnuParallelLauncher
     parsl.launchers.MpiExecLauncher
+    parsl.launchers.MpiRunLauncher
     parsl.launchers.JsrunLauncher
     parsl.launchers.WrappedLauncher
 
@@ -110,7 +105,6 @@ Providers
     :toctree: stubs
     :nosignatures:
 
-    parsl.providers.AdHocProvider
     parsl.providers.AWSProvider
     parsl.providers.CobaltProvider
     parsl.providers.CondorProvider
