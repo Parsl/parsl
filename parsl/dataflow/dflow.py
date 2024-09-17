@@ -988,7 +988,6 @@ class DataFlowKernel:
             check_dep(inp)
         else:
             for dep in inp:
-                print(f" checking inputs: {dep}")
                 check_dep(dep)
 
         return depends
