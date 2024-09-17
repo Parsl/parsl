@@ -6,7 +6,7 @@ import logging
 from os import stat
 from concurrent.futures import Future
 from typing import Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 import typeguard
 
 from parsl.data_provider.files import File
@@ -40,7 +40,7 @@ class DataFuture(Future):
         else:
             self.set_result(self.file_obj)
             if not self.file_obj.timestamp:
-                self.file_obj.timestamp = datetime.now()
+                self.file_obj.timestamp = datetime.fromtimestamp(stat(self.file_obj.filepath).st_ctime, tz=timezone.utc)
             if not self.file_obj.size:
                 self.file_obj.size = stat(self.file_obj.filepath).st_size
             if not self.file_obj.md5sum:
@@ -77,7 +77,7 @@ class DataFuture(Future):
         self.parent.add_done_callback(self.parent_callback)
         if os.path.exists(file_obj.path):
             file_stat = os.stat(file_obj.path)
-            self.file_obj.timestamp = file_stat.st_ctime
+            self.file_obj.timestamp = datetime.fromtimestamp(file_stat.st_ctime, tz=timezone.utc)
             self.file_obj.size = file_stat.st_size
             self.file_obj.md5sum = md5(open(self.file_obj, 'rb').read()).hexdigest()
 
