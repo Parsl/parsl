@@ -62,7 +62,6 @@ class DataManager:
         if isinstance(input, DynamicFileList.DynamicFile):
             if input.empty:
                 file = DynamicFileList.DynamicFile
-                # TODO NEED TO TRACK FILE IF IT IS EMPTY
                 pass
             else:
                 file = input.cleancopy()
