@@ -23,6 +23,7 @@ from parsl.data_provider.file_noop import NoOpFileStaging
 from parsl.data_provider.ftp import FTPInTaskStaging
 from parsl.data_provider.http import HTTPInTaskStaging
 from parsl.data_provider.zip import ZipFileStaging
+from parsl.dataflow.memosql import SQLiteMemoizer
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SingleNodeLauncher
 
@@ -66,7 +67,8 @@ def fresh_config():
                         monitoring_debug=False,
                         resource_monitoring_interval=1,
         ),
-        usage_tracking=True
+        usage_tracking=True,
+        memoizer=SQLiteMemoizer()
     )
 
 
