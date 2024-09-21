@@ -209,7 +209,7 @@ For instance, with conda, follow this `cheatsheet <https://conda.io/docs/_downlo
    source activate <my_env>
 
    # Install packages:
-   conda install <ipyparallel, dill, boto3...>
+   conda install <dill, boto3...>
 
 
 How do I run code that uses Python2.X?
