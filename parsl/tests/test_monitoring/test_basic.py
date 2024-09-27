@@ -8,6 +8,8 @@ from parsl import HighThroughputExecutor
 from parsl.config import Config
 from parsl.executors.taskvine import TaskVineExecutor, TaskVineManagerConfig
 from parsl.monitoring import MonitoringHub
+from parsl.monitoring.radios.base import HTEXRadio
+from parsl.monitoring.radios.udp import UDPRadio
 
 
 @parsl.python_app
@@ -35,9 +37,10 @@ def htex_udp_config():
     from parsl.tests.configs.htex_local_alternate import fresh_config
     c = fresh_config()
     assert len(c.executors) == 1
+    ex = c.executors[0]
 
-    assert c.executors[0].radio_mode == "htex", "precondition: htex has a radio mode attribute, configured for htex radio"
-    c.executors[0].radio_mode = "udp"
+    assert isinstance(ex.remote_monitoring_radio_config, HTEXRadio), "precondition: htex is configured for the HTEXRadio"
+    ex.remote_monitoring_radio_config = UDPRadio()
 
     return c
 

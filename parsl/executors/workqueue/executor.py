@@ -715,6 +715,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.collector_queue.close()
         self.collector_queue.join_thread()
 
+        super().shutdown()
+
         logger.debug("Work Queue shutdown completed")
 
     @wrap_with_logs

@@ -28,6 +28,7 @@ from parsl.executors.high_throughput.mpi_prefix_composer import (
 )
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
+from parsl.monitoring.radios.base import HTEXRadio, RadioConfig
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
@@ -248,11 +249,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_logdir_root: Optional[str] = None,
                  manager_selector: ManagerSelector = RandomManagerSelector(),
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
-                 encrypted: bool = False):
+                 encrypted: bool = False,
+                 remote_monitoring_radio_config: Optional[RadioConfig] = None):
 
         logger.debug("Initializing HighThroughputExecutor")
 
         BlockProviderExecutor.__init__(self, provider=provider, block_error_handler=block_error_handler)
+
         self.label = label
         self.worker_debug = worker_debug
         self.storage_access = storage_access
@@ -295,6 +298,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             self._workers_per_node = 1  # our best guess-- we do not have any provider hints
 
         self._task_counter = 0
+
+        if remote_monitoring_radio_config is not None:
+            self.remote_monitoring_radio_config = remote_monitoring_radio_config
+        else:
+            self.remote_monitoring_radio_config = HTEXRadio()
+
         self.worker_ports = worker_ports
         self.worker_port_range = worker_port_range
         self.interchange_proc: Optional[subprocess.Popen] = None
@@ -317,7 +326,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             interchange_launch_cmd = DEFAULT_INTERCHANGE_LAUNCH_CMD
         self.interchange_launch_cmd = interchange_launch_cmd
 
-    radio_mode = "htex"
     enable_mpi_mode: bool = False
     mpi_launcher: str = "mpiexec"
 
@@ -826,6 +834,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         if hasattr(self, 'command_client'):
             logger.info("Closing command client")
             self.command_client.close()
+
+        # TODO: implement this across all executors
+        super().shutdown()
 
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 

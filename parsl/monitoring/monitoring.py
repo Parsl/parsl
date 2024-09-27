@@ -5,7 +5,7 @@ import multiprocessing.synchronize as ms
 import os
 import queue
 import time
-from multiprocessing import Event, Process
+from multiprocessing import Event
 from multiprocessing.queues import Queue
 from typing import TYPE_CHECKING, Any, Literal, Optional, Tuple, Union, cast
 
@@ -14,7 +14,7 @@ import typeguard
 from parsl.log_utils import set_file_logger
 from parsl.monitoring.errors import MonitoringHubStartError
 from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.radios import MultiprocessingQueueRadioSender
+from parsl.monitoring.radios.base import MultiprocessingQueueRadioSender, RadioConfig
 from parsl.monitoring.router import router_starter
 from parsl.monitoring.types import AddressedMonitoringMessage
 from parsl.multiprocessing import ForkProcess, SizedQueue
@@ -129,7 +129,7 @@ class MonitoringHub(RepresentationMixin):
         # in the future, Queue will allow runtime subscripts.
 
         if TYPE_CHECKING:
-            comm_q: Queue[Union[Tuple[int, int], str]]
+            comm_q: Queue[Union[int, str]]
         else:
             comm_q: Queue
 
@@ -150,7 +150,6 @@ class MonitoringHub(RepresentationMixin):
                                                "resource_msgs": self.resource_msgs,
                                                "exit_event": self.router_exit_event,
                                                "hub_address": self.hub_address,
-                                               "udp_port": self.hub_port,
                                                "zmq_port_range": self.hub_port_range,
                                                "logdir": self.logdir,
                                                "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
@@ -172,13 +171,13 @@ class MonitoringHub(RepresentationMixin):
         self.dbm_proc.start()
         logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
 
-        self.filesystem_proc = Process(target=filesystem_receiver,
-                                       args=(self.logdir, self.resource_msgs, dfk_run_dir),
-                                       name="Monitoring-Filesystem-Process",
-                                       daemon=True
-                                       )
-        self.filesystem_proc.start()
-        logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
+        # self.filesystem_proc = Process(target=filesystem_receiver,
+        #                               args=(self.logdir, self.resource_msgs, dfk_run_dir),
+        #                               name="Monitoring-Filesystem-Process",
+        #                               daemon=True
+        #                               )
+        # self.filesystem_proc.start()
+        # logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
 
         self.radio = MultiprocessingQueueRadioSender(self.resource_msgs)
 
@@ -194,9 +193,23 @@ class MonitoringHub(RepresentationMixin):
             logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
             raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
 
-        udp_port, zmq_port = comm_q_result
+        zmq_port = comm_q_result
 
-        self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
+        self.zmq_port = zmq_port
+
+        # need to initialize radio configs, perhaps first time a radio config is used
+        # in each executor? (can't do that at startup because executor list is dynamic,
+        # don't know all the executors till later)
+        # self.radio_config.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
+        # How can this config be populated properly?
+        # There's a UDP port chosen right now by the monitoring router and
+        # sent back a line above...
+        # What does that look like for other radios? htexradio has no specific config at all,
+        # filesystem radio has a path (that should have been created?) for config, and a loop
+        # that needs to be running, started in this start method.
+        # so something like... radio_config.receive() generates the appropriate receiver object?
+        # which has a shutdown method on it for later. and also updates radio_config itself so
+        # it has the right info to send across the wire? or some state driving like that?
 
         logger.info("Monitoring Hub initialized")
 
@@ -228,7 +241,7 @@ class MonitoringHub(RepresentationMixin):
                     )
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
-                self.filesystem_proc.terminate()
+                # self.filesystem_proc.terminate()
             logger.info("Setting router termination event")
             self.router_exit_event.set()
             logger.info("Waiting for router to terminate")
@@ -248,9 +261,9 @@ class MonitoringHub(RepresentationMixin):
             # should this be message based? it probably doesn't need to be if
             # we believe we've received all messages
             logger.info("Terminating filesystem radio receiver process")
-            self.filesystem_proc.terminate()
-            self.filesystem_proc.join()
-            self.filesystem_proc.close()
+            # self.filesystem_proc.terminate()
+            # self.filesystem_proc.join()
+            # self.filesystem_proc.close()
 
             logger.info("Closing monitoring multiprocessing queues")
             self.exception_q.close()
@@ -258,6 +271,17 @@ class MonitoringHub(RepresentationMixin):
             self.resource_msgs.close()
             self.resource_msgs.join_thread()
             logger.info("Closed monitoring multiprocessing queues")
+
+    def start_receiver(self, radio_config: RadioConfig, ip: str) -> Any:
+        """somehow start a radio receiver here and update radioconfig to be sent over the wire, without
+        losing the info we need to shut down that receiver later...
+        """
+        r = radio_config.create_receiver(ip=ip, resource_msgs=self.resource_msgs)  # TODO: return a shutdownable...
+        logger.info(f"BENC: created receiver {r}")
+        # assert r is not None
+        return r
+        # ... that is, a thing we need to do a shutdown call on at shutdown, a "shutdownable"? without
+        # expecting any more structure on it?
 
 
 @wrap_with_logs

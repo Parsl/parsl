@@ -749,11 +749,10 @@ class DataFlowKernel:
                                                        kwargs=kwargs,
                                                        x_try_id=try_id,
                                                        x_task_id=task_id,
-                                                       monitoring_hub_url=self.monitoring.monitoring_hub_url,
+                                                       radio_config=executor.remote_monitoring_radio_config,
                                                        run_id=self.run_id,
                                                        logging_level=wrapper_logging_level,
                                                        sleep_dur=self.monitoring.resource_monitoring_interval,
-                                                       radio_mode=executor.radio_mode,
                                                        monitor_resources=executor.monitor_resources(),
                                                        run_dir=self.run_dir)
 
@@ -1181,6 +1180,18 @@ class DataFlowKernel:
                 executor.hub_address = self.monitoring.hub_address
                 executor.hub_zmq_port = self.monitoring.hub_zmq_port
                 executor.submit_monitoring_radio = self.monitoring.radio
+                # this will modify the radio config object: it will add relevant parameters needed
+                # for the particular remote radio sender to communicate back
+                logger.info("starting monitoring receiver "
+                            f"for executor {executor} "
+                            f"with remote monitoring radio config {executor.remote_monitoring_radio_config}")
+                executor.monitoring_receiver = self.monitoring.start_receiver(executor.remote_monitoring_radio_config,
+                                                                              ip=self.monitoring.hub_address)
+                # TODO: this is a weird way to start the receiver.
+                # Rather than in executor.start, but there's a tangle here
+                # trying to make the executors usable in a non-pure-parsl
+                # context where there is no DFK to grab config out of?
+                # (and no monitoring...)
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')

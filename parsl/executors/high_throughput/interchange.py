@@ -20,7 +20,7 @@ from parsl.executors.high_throughput.errors import ManagerLost, VersionMismatch
 from parsl.executors.high_throughput.manager_record import ManagerRecord
 from parsl.executors.high_throughput.manager_selector import ManagerSelector
 from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.radios import MonitoringRadioSender, ZMQRadioSender
+from parsl.monitoring.radios.base import MonitoringRadioSender, ZMQRadioSender
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize as serialize_object
 from parsl.utils import setproctitle
