@@ -166,7 +166,6 @@ class UsageTracker:
 
         logger.debug(f"Usage tracking start message: {message}")
 
-        print(f"Usage tracking end message (unencoded): {message}")
         return self.encode_message(message)
 
     def construct_end_message(self) -> bytes:
@@ -199,7 +198,6 @@ class UsageTracker:
 
         logger.debug(f"Usage tracking end message (unencoded): {message}")
 
-        print(f"Usage tracking end message (unencoded): {message}")
         return self.encode_message(message)
 
     def encode_message(self, obj):
