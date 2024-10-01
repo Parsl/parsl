@@ -49,7 +49,7 @@ What is sent?
 
 The data collected depends on the tracking level selected:
 
-* **Level 1:** Only basic information such as Python version, Parsl version, and platform name (Linux, MacOS etc.).
+* **Level 1:** Only basic information such as Python version, Parsl version, and platform name (Linux, MacOS, etc.)
 * **Level 2:** Level 1 information and configuration information including provider, executor, and launcher names.
 * **Level 3:** Level 2 information and workflow execution details, including the number of applications run, failures, and execution time.
 
