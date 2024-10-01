@@ -8,7 +8,7 @@ Parsl uses an **Opt-in** model for usage tracking, allowing users to decide if t
 Why are we doing this?
 ----------------------
 
-The Parsl development team relies on funding from government agencies. To sustain this funding and advocate for continued support, it is essential to show that the scientific community benefits from these investments.
+The Parsl development team relies on funding from government agencies. To sustain this funding and advocate for continued support, it is essential to show that the research community benefits from these investments.
 
 By opting in to share usage data, you actively support the ongoing development and maintenance of Parsl. (See:ref:`What is sent? <what-is-sent>` below).
 
@@ -21,13 +21,13 @@ Choose the data you share with Usage Tracking Levels.
 
 **Usage Tracking Levels:**
 
-* **Level 1:** Basic information such as Python version, Parsl version, and platform details.
-* **Level 2:** Configuration information including provider, executor, and launcher names.
-* **Level 3:** Workflow execution details, including the number of applications run, failures, and execution time.
+* **Level 1:** Only basic information such as Python version, Parsl version, and platform details (Linux, MacOS etc.).
+* **Level 2:** Level 1 information and configuration information including provider, executor, and launcher names.
+* **Level 3:** Level 2 information and workflow execution details, including the number of applications run, failures, and execution time.
 
 By enabling usage tracking, you support Parsl's development. 
 
-**To opt-in, set ``usage_tracking`` to the desired level (1, 2, or 3) in the configuration object (`parsl.config.Config`).**
+**To opt-in, set** ``usage_tracking`` **to the desired level (1, 2, or 3) in the configuration object** (``parsl.config.Config``) **.**
 
 Example:
 
@@ -49,9 +49,9 @@ What is sent?
 
 The data collected depends on the tracking level selected:
 
-* **Level 1:** Basic information such as Python version, Parsl version, and platform details.
-* **Level 2:** Configuration information including provider, executor, and launcher names.
-* **Level 3:** Workflow execution details, including the number of applications run, failures, and execution time.
+* **Level 1:** Only basic information such as Python version, Parsl version, and platform details (Linux, MacOS etc.).
+* **Level 2:** Level 1 information and configuration information including provider, executor, and launcher names.
+* **Level 3:** Level 2 information and workflow execution details, including the number of applications run, failures, and execution time.
 
 **Example Messages:**
 
@@ -99,7 +99,7 @@ The data collected depends on the tracking level selected:
        "end":1727156156
     }
 
-**All messages sent are logged in the ``parsl.log`` file, ensuring complete transparency.**
+**All messages sent are logged in the** ``parsl.log`` **file, ensuring complete transparency.**
 
 How is the data sent?
 ---------------------
@@ -119,7 +119,7 @@ Data is sent twice per run:
 What will the data be used for?
 -------------------------------
 
-The data will help answer key questions, including:
+The data will help the Parsl team understand Parsl usage and make development and maintenance decisions, including:
 
 * Focus development and maintenance on the most-used components of Parsl.
 * Determine which Python versions to continue supporting.
@@ -141,7 +141,8 @@ The collected data is aggregated and displayed on a publicly accessible dashboar
 Leaderboard
 -----------
 
-**Opting in to usage tracking also allows you to participate in the Parsl Leaderboard. To participate in the leaderboard, you can deanonymize yourself using the ``project_name`` parameter in the parsl configuration object (`parsl.config.Config`).**
+**Opting in to usage tracking also allows you to participate in the Parsl Leaderboard.
+To participate in the leaderboard, you can deanonymize yourself using the** ``project_name`` **parameter in the parsl configuration object** (``parsl.config.Config``) **.**
 
 `Find the Parsl Leaderboard here <https://cloudwatch.amazonaws.com/dashboard.html?dashboard=Parsl-Usage-Tracking-Stats&context=eyJSIjoidXMtZWFzdC0xIiwiRCI6ImN3LWRiLTA0Njc5ODQ4MjQwNiIsIlUiOiJ1cy1lYXN0LTFfNW41R1BwYVd0IiwiQyI6IjN2bzJmbzAxYnI1dm92YjY2dGEwcmo2dmNkIiwiSSI6InVzLWVhc3QtMTplMjYyZGZkMy05NjI2LTQ4YTMtYjBkOC1jYWYwYWU1NzA4M2EiLCJPIjoiYXJuOmF3czppYW06OjA0Njc5ODQ4MjQwNjpyb2xlL3NlcnZpY2Utcm9sZS9DV0RCU2hhcmluZy1QdWJsaWNSZWFkT25seUFjY2Vzcy1UTlBOMk5COSIsIk0iOiJQdWJsaWMifQ==&start=PT3H&end=null>`_
 
