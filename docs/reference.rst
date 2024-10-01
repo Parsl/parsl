@@ -78,6 +78,16 @@ Executors
     parsl.executors.FluxExecutor
     parsl.executors.radical.RadicalPilotExecutor
 
+Manager Selectors
+=================
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.executors.high_throughput.manager_selector.RandomManagerSelector
+    parsl.executors.high_throughput.manager_selector.BlockIdManagerSelector
+
 Launchers
 =========
 
