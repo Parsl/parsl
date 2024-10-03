@@ -60,6 +60,7 @@ jobs:
         make clean_coverage
         # Installing parsl into venv required for GCendpoint
         pip3 install .
+        pip3 install globus-compute-endpoint>=2.27.1
 
     - name: start globus_compute_endpoint
       env:
