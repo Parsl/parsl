@@ -236,7 +236,7 @@ for reporting purposes.
 
 As an NSF-funded project, our ability to track usage metrics is important for continued funding. 
 
-You can opt-in by setting ``usage_tracking=True`` in the configuration object (`parsl.config.Config`). 
+You can opt-in by setting ``usage_tracking=3`` in the configuration object (`parsl.config.Config`). 
 
 To read more about what information is collected and how it is used see :ref:`label-usage-tracking`.
 
