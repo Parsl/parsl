@@ -16,15 +16,16 @@ from parsl import curvezmq
 from parsl.addresses import get_all_addresses
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.staging import Staging
-from parsl.executors.errors import BadMessage, ScalingFailed
+from parsl.executors.errors import (
+    BadMessage,
+    InvalidResourceSpecificationError,
+    ScalingFailed,
+)
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
 from parsl.executors.high_throughput.manager_selector import (
     ManagerSelector,
     RandomManagerSelector,
-)
-from parsl.executors.high_throughput.mpi_prefix_composer import (
-    InvalidResourceSpecification,
 )
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
@@ -341,9 +342,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
     def validate_resource_spec(self, resource_specification: dict):
         """HTEX does not support *any* resource_specification options and
-        will raise InvalidResourceSpecification is any are passed to it"""
+        will raise InvalidResourceSpecificationError is any are passed to it"""
         if resource_specification:
-            raise InvalidResourceSpecification(
+            raise InvalidResourceSpecificationError(
                 set(resource_specification.keys()),
                 ("HTEX does not support the supplied resource_specifications."
                  "For MPI applications consider using the MPIExecutor. "
