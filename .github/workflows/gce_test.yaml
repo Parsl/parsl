@@ -60,25 +60,25 @@ jobs:
         make clean_coverage
         # Installing parsl into venv required for GCendpoint
         pip3 install .
+        
+        # Temporary fix, until changes make it into compute releases
+        git clone -b configure_tasks_working_dir https://github.com/globus/globus-compute.git        
+        pip3 install globus-compute/compute_sdk globus-compute/compute_endpoint
 
     - name: start globus_compute_endpoint
       env:
         GLOBUS_COMPUTE_CLIENT_ID: ${{ secrets.GLOBUS_COMPUTE_CLIENT_ID }}
         GLOBUS_COMPUTE_CLIENT_SECRET: ${{ secrets.GLOBUS_COMPUTE_SECRET_KEY }}
       run: |
-        source .venv/bin/activate
+        source /home/runner/work/parsl/parsl/.venv/bin/activate
         globus-compute-endpoint configure default
         cat << EOF > /home/runner/.globus_compute/default/config.yaml
-        display_name: null
         engine:
-          provider:
-            type: LocalProvider
-            init_blocks: 1
-            max_blocks: 1
-            min_blocks: 0
-            worker_init: source /home/runner/work/parsl/parsl/.venv/bin/activate
-          type: GlobusComputeEngine
+          type: ThreadPoolEngine
+          max_workers: 4
         EOF
+        cat /home/runner/.globus_compute/default/config.yaml
+        mkdir ~/.globus_compute/default/tasks_working_dir
         globus-compute-endpoint start default
         globus-compute-endpoint list
     - name: make test
@@ -104,6 +104,5 @@ jobs:
         path: |
           runinfo/
           .pytest/
-          ~/.globus_compute/default/
           ci_job_info.txt
         compression-level: 9
