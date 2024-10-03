@@ -4,9 +4,7 @@ from unittest import mock
 import pytest
 
 from parsl.executors import HighThroughputExecutor
-from parsl.executors.high_throughput.mpi_prefix_composer import (
-    InvalidResourceSpecification,
-)
+from parsl.executors.errors import InvalidResourceSpecificationError
 
 
 def double(x):
@@ -36,5 +34,5 @@ def test_resource_spec_validation():
 def test_resource_spec_validation_bad_keys():
     htex = HighThroughputExecutor()
 
-    with pytest.raises(InvalidResourceSpecification):
+    with pytest.raises(InvalidResourceSpecificationError):
         htex.validate_resource_spec({"num_nodes": 2})

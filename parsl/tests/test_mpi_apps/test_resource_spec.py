@@ -10,12 +10,9 @@ from unittest import mock
 import pytest
 
 from parsl.app.app import python_app
+from parsl.executors.errors import InvalidResourceSpecificationError
 from parsl.executors.high_throughput.executor import HighThroughputExecutor
 from parsl.executors.high_throughput.mpi_executor import MPIExecutor
-from parsl.executors.high_throughput.mpi_prefix_composer import (
-    InvalidResourceSpecification,
-    MissingResourceSpecification,
-)
 from parsl.executors.high_throughput.mpi_resource_management import (
     get_nodes_in_batchjob,
     get_pbs_hosts_list,
@@ -104,8 +101,8 @@ def test_top_level():
 
         ({"num_nodes": 2, "ranks_per_node": 1}, None),
         ({"launcher_options": "--debug_foo"}, None),
-        ({"num_nodes": 2, "BAD_OPT": 1}, InvalidResourceSpecification),
-        ({}, MissingResourceSpecification),
+        ({"num_nodes": 2, "BAD_OPT": 1}, InvalidResourceSpecificationError),
+        ({}, InvalidResourceSpecificationError),
     )
 )
 def test_mpi_resource_spec(resource_spec: Dict, exception):
@@ -137,5 +134,5 @@ def test_mpi_resource_spec_passed_to_htex(resource_spec: dict):
     htex = HighThroughputExecutor()
     htex.outgoing_q = mock.Mock(spec=queue.Queue)
 
-    with pytest.raises(InvalidResourceSpecification):
+    with pytest.raises(InvalidResourceSpecificationError):
         htex.validate_resource_spec(resource_spec)
