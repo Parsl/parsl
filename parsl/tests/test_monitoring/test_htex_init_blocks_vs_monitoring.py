@@ -78,6 +78,6 @@ def test_row_counts(tmpd_cwd, strategy):
         (c, ) = result.first()
         assert c == 1, "There should be a single pending status"
 
-        result = connection.execute(text("SELECT COUNT(*) FROM block WHERE block_id = 0 AND status = 'CANCELLED' AND run_id = :run_id"), binds)
+        result = connection.execute(text("SELECT COUNT(*) FROM block WHERE block_id = 0 AND status = 'SCALED_IN' AND run_id = :run_id"), binds)
         (c, ) = result.first()
         assert c == 1, "There should be a single cancelled status"

@@ -61,7 +61,6 @@ class SingleNodeLauncher(Launcher):
         """
         Args:
         - command (string): The command string to be launched
-        - task_block (string) : bash evaluated string.
         - fail_on_any: If True, return a nonzero exit code if any worker failed, otherwise zero;
                        if False, return a nonzero exit code if all workers failed, otherwise zero.
 
@@ -131,7 +130,6 @@ class GnuParallelLauncher(Launcher):
         """
         Args:
         - command (string): The command string to be launched
-        - task_block (string) : bash evaluated string.
 
         """
         task_blocks = tasks_per_node * nodes_per_block
@@ -208,7 +206,6 @@ class MpiExecLauncher(Launcher):
         """
         Args:
         - command (string): The command string to be launched
-        - task_block (string) : bash evaluated string.
 
         """
         task_blocks = tasks_per_node * nodes_per_block
@@ -263,7 +260,6 @@ class MpiRunLauncher(Launcher):
         """
         Args:
         - command (string): The command string to be launched
-        - task_block (string) : bash evaluated string.
 
         """
         task_blocks = tasks_per_node * nodes_per_block
@@ -311,7 +307,6 @@ class SrunLauncher(Launcher):
         """
         Args:
         - command (string): The command string to be launched
-        - task_block (string) : bash evaluated string.
 
         """
         task_blocks = tasks_per_node * nodes_per_block
@@ -363,7 +358,6 @@ class SrunMPILauncher(Launcher):
         """
         Args:
         - command (string): The command string to be launched
-        - task_block (string) : bash evaluated string.
 
         """
         task_blocks = tasks_per_node * nodes_per_block

@@ -7,7 +7,7 @@ import queue
 import time
 from multiprocessing import Event, Process
 from multiprocessing.queues import Queue
-from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Literal, Optional, Tuple, Union, cast
 
 import typeguard
 
@@ -138,25 +138,18 @@ class MonitoringHub(RepresentationMixin):
         self.exception_q: Queue[Tuple[str, str]]
         self.exception_q = SizedQueue(maxsize=10)
 
-        self.priority_msgs: Queue[Tuple[Any, int]]
-        self.priority_msgs = SizedQueue()
-
-        self.resource_msgs: Queue[AddressedMonitoringMessage]
+        self.resource_msgs: Queue[Union[AddressedMonitoringMessage, Tuple[Literal["STOP"], Literal[0]]]]
         self.resource_msgs = SizedQueue()
-
-        self.node_msgs: Queue[AddressedMonitoringMessage]
-        self.node_msgs = SizedQueue()
-
-        self.block_msgs: Queue[AddressedMonitoringMessage]
-        self.block_msgs = SizedQueue()
 
         self.router_exit_event: ms.Event
         self.router_exit_event = Event()
 
         self.router_proc = ForkProcess(target=router_starter,
-                                       args=(comm_q, self.exception_q, self.priority_msgs, self.node_msgs,
-                                             self.block_msgs, self.resource_msgs, self.router_exit_event),
-                                       kwargs={"hub_address": self.hub_address,
+                                       kwargs={"comm_q": comm_q,
+                                               "exception_q": self.exception_q,
+                                               "resource_msgs": self.resource_msgs,
+                                               "exit_event": self.router_exit_event,
+                                               "hub_address": self.hub_address,
                                                "udp_port": self.hub_port,
                                                "zmq_port_range": self.hub_port_range,
                                                "logdir": self.logdir,
@@ -168,7 +161,7 @@ class MonitoringHub(RepresentationMixin):
         self.router_proc.start()
 
         self.dbm_proc = ForkProcess(target=dbm_starter,
-                                    args=(self.exception_q, self.priority_msgs, self.node_msgs, self.block_msgs, self.resource_msgs,),
+                                    args=(self.exception_q, self.resource_msgs,),
                                     kwargs={"logdir": self.logdir,
                                             "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                             "db_url": self.logging_endpoint,
@@ -187,7 +180,7 @@ class MonitoringHub(RepresentationMixin):
         self.filesystem_proc.start()
         logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
 
-        self.radio = MultiprocessingQueueRadioSender(self.block_msgs)
+        self.radio = MultiprocessingQueueRadioSender(self.resource_msgs)
 
         try:
             comm_q_result = comm_q.get(block=True, timeout=120)
@@ -256,7 +249,7 @@ class MonitoringHub(RepresentationMixin):
             logger.debug("Finished waiting for router termination")
             if len(exception_msgs) == 0:
                 logger.debug("Sending STOP to DBM")
-                self.priority_msgs.put(("STOP", 0))
+                self.resource_msgs.put(("STOP", 0))
             else:
                 logger.debug("Not sending STOP to DBM, because there were DBM exceptions")
             logger.debug("Waiting for DB termination")
@@ -274,14 +267,8 @@ class MonitoringHub(RepresentationMixin):
             logger.info("Closing monitoring multiprocessing queues")
             self.exception_q.close()
             self.exception_q.join_thread()
-            self.priority_msgs.close()
-            self.priority_msgs.join_thread()
             self.resource_msgs.close()
             self.resource_msgs.join_thread()
-            self.node_msgs.close()
-            self.node_msgs.join_thread()
-            self.block_msgs.close()
-            self.block_msgs.join_thread()
             logger.info("Closed monitoring multiprocessing queues")
 
 

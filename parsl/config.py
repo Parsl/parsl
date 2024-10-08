@@ -83,6 +83,9 @@ class Config(RepresentationMixin, UsageInformation):
         Setting this field to 0 will disable usage tracking. Default (this field is not set): usage tracking is not enabled.
         Parsl only collects minimal, non personally-identifiable,
         information used for reporting to our funding agencies.
+    project_name: str, optional
+        Option to deanonymize usage tracking data.
+        If set, this value will be used as the project name in the usage tracking data and placed on the leaderboard.
     initialize_logging : bool, optional
         Make DFK optionally not initialize any logging. Log messages
         will still be passed into the python logging system under the
@@ -118,6 +121,7 @@ class Config(RepresentationMixin, UsageInformation):
                  max_idletime: float = 120.0,
                  monitoring: Optional[MonitoringHub] = None,
                  usage_tracking: int = 0,
+                 project_name: Optional[str] = None,
                  initialize_logging: bool = True) -> None:
 
         executors = tuple(executors or [])
@@ -154,6 +158,7 @@ class Config(RepresentationMixin, UsageInformation):
         self.max_idletime = max_idletime
         self.validate_usage_tracking(usage_tracking)
         self.usage_tracking = usage_tracking
+        self.project_name = project_name
         self.initialize_logging = initialize_logging
         self.monitoring = monitoring
         self.std_autopath: Optional[Callable] = std_autopath
