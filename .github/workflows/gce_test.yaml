@@ -67,7 +67,7 @@ jobs:
         GLOBUS_COMPUTE_CLIENT_ID: ${{ secrets.GLOBUS_COMPUTE_CLIENT_ID }}
         GLOBUS_COMPUTE_CLIENT_SECRET: ${{ secrets.GLOBUS_COMPUTE_SECRET_KEY }}
       run: |
-        source .venv/bin/activate
+        source /home/runner/work/parsl/parsl/.venv/bin/activate
         globus-compute-endpoint configure default
         cat << EOF > /home/runner/.globus_compute/default/config.yaml
         display_name: null
