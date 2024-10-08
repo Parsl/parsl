@@ -70,15 +70,10 @@ jobs:
         source /home/runner/work/parsl/parsl/.venv/bin/activate
         globus-compute-endpoint configure default
         cat << EOF > /home/runner/.globus_compute/default/config.yaml
-        display_name: null
+        display_name: local_threads
         engine:
-          provider:
-            type: LocalProvider
-            init_blocks: 1
-            max_blocks: 1
-            min_blocks: 0
-            worker_init: source /home/runner/work/parsl/parsl/.venv/bin/activate
-          type: GlobusComputeEngine
+          type: ThreadPoolEngine
+          max_workers: 4
         EOF
         globus-compute-endpoint start default
         globus-compute-endpoint list
