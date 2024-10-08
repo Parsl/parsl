@@ -13,6 +13,7 @@ types-python-dateutil
 types-requests
 types-paramiko
 mpi4py
+globus-compute-sdk>=2.27.1
 
 # sqlalchemy is needed for typechecking, so it's here
 # as well as at runtime for optional monitoring execution
