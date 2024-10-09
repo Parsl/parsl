@@ -46,7 +46,7 @@ class UnsupportedFeatureError(ExecutorError):
                                                                  self.current_executor)
 
 
-class InvalidResourceSpecificationError(ExecutorError):
+class InvalidResourceSpecification(ExecutorError):
     """Error raised when Invalid input is supplied via resource Specification"""
 
     def __init__(self, invalid_keys: Set[str], message: str = ''):

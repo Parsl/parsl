@@ -18,7 +18,7 @@ from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.staging import Staging
 from parsl.executors.errors import (
     BadMessage,
-    InvalidResourceSpecificationError,
+    InvalidResourceSpecification,
     ScalingFailed,
 )
 from parsl.executors.high_throughput import zmq_pipes
@@ -342,9 +342,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
     def validate_resource_spec(self, resource_specification: dict):
         """HTEX does not support *any* resource_specification options and
-        will raise InvalidResourceSpecificationError is any are passed to it"""
+        will raise InvalidResourceSpecification is any are passed to it"""
         if resource_specification:
-            raise InvalidResourceSpecificationError(
+            raise InvalidResourceSpecification(
                 set(resource_specification.keys()),
                 ("HTEX does not support the supplied resource_specifications."
                  "For MPI applications consider using the MPIExecutor. "

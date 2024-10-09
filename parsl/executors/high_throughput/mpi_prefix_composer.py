@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, List, Tuple
 
-from parsl.executors.errors import InvalidResourceSpecificationError
+from parsl.executors.errors import InvalidResourceSpecification
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ VALID_LAUNCHERS = ('srun',
 def validate_resource_spec(resource_spec: Dict[str, str]):
     """Basic validation of keys in the resource_spec
 
-    Raises: InvalidResourceSpecificationError if the resource_spec
+    Raises: InvalidResourceSpecification if the resource_spec
         is invalid (e.g, contains invalid keys)
     """
     user_keys = set(resource_spec.keys())
@@ -21,8 +21,8 @@ def validate_resource_spec(resource_spec: Dict[str, str]):
     # empty resource_spec when mpi_mode is set causes parsl to hang
     # ref issue #3427
     if len(user_keys) == 0:
-        raise InvalidResourceSpecificationError(user_keys,
-                                                'MPI mode requires optional parsl_resource_specification keyword argument to be configured')
+        raise InvalidResourceSpecification(user_keys,
+                                           'MPI mode requires optional parsl_resource_specification keyword argument to be configured')
 
     legal_keys = set(("ranks_per_node",
                       "num_nodes",
@@ -31,7 +31,7 @@ def validate_resource_spec(resource_spec: Dict[str, str]):
                       ))
     invalid_keys = user_keys - legal_keys
     if invalid_keys:
-        raise InvalidResourceSpecificationError(invalid_keys=invalid_keys)
+        raise InvalidResourceSpecification(invalid_keys)
     if "num_nodes" in resource_spec:
         if not resource_spec.get("num_ranks") and resource_spec.get("ranks_per_node"):
             resource_spec["num_ranks"] = str(int(resource_spec["num_nodes"]) * int(resource_spec["ranks_per_node"]))
