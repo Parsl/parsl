@@ -8,12 +8,15 @@ from parsl.providers import LocalProvider
 
 
 def fresh_config():
-    return Config(executors=[WorkQueueExecutor(port=9000,
-                                               coprocess=True,
-                                               provider=LocalProvider(init_blocks=0, min_blocks=0, max_blocks=1)
-                                               )],
+    return Config(strategy='simple',
+                  executors=[WorkQueueExecutor(port=9000, coprocess=True,
+                                               provider=LocalProvider(init_blocks=0))],
                   monitoring=MonitoringHub(hub_address="localhost",
                                            hub_port=55055,
                                            monitoring_debug=True,
                                            resource_monitoring_interval=1,
-                                           ))
+                                           )
+                  )
+
+
+config = fresh_config()

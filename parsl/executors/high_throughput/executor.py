@@ -317,7 +317,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             interchange_launch_cmd = DEFAULT_INTERCHANGE_LAUNCH_CMD
         self.interchange_launch_cmd = interchange_launch_cmd
 
-    radio_mode = "htex"
+        self.radio_mode = "htex"
+
     enable_mpi_mode: bool = False
     mpi_launcher: str = "mpiexec"
 
@@ -581,7 +582,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     def outstanding(self) -> int:
         """Returns the count of tasks outstanding across the interchange
         and managers"""
-        return self.command_client.run("OUTSTANDING_C")
+        return len(self.tasks)
 
     @property
     def connected_workers(self) -> int:
@@ -746,21 +747,26 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             if len(block_ids_to_kill) < blocks:
                 logger.warning(f"Could not find enough blocks to kill: wanted {blocks} but only selected {len(block_ids_to_kill)}")
 
+        logger.info("Iterating over block IDs")
         # Hold the block
         for block_id in block_ids_to_kill:
             self._hold_block(block_id)
+        logger.info("Iterated over block IDs")
 
         # Now kill via provider
         # Potential issue with multiple threads trying to remove the same blocks
         to_kill = [self.blocks_to_job_id[bid] for bid in block_ids_to_kill if bid in self.blocks_to_job_id]
 
+        logger.info("Calling provider cancel")
         r = self.provider.cancel(to_kill)
+        logger.info("Provide cancel returned")
         job_ids = self._filter_scale_in_ids(to_kill, r)
 
         # to_kill block_ids are fetched from self.blocks_to_job_id
         # If a block_id is in self.blocks_to_job_id, it must exist in self.job_ids_to_block
         block_ids_killed = [self.job_ids_to_block[jid] for jid in job_ids]
 
+        logger.info("htex scale in returning")
         return block_ids_killed
 
     def _get_launch_command(self, block_id: str) -> str:
