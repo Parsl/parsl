@@ -28,7 +28,7 @@ import parsl.utils as putils
 from parsl.data_provider.files import File
 from parsl.data_provider.staging import Staging
 from parsl.errors import OptionalModuleMissing
-from parsl.executors.errors import ExecutorError
+from parsl.executors.errors import ExecutorError, InvalidResourceSpecification
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.workqueue import exec_parsl_function
 from parsl.process_loggers import wrap_with_logs
@@ -419,7 +419,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 message = "Task resource specification only accepts these types of resources: {}".format(
                         ', '.join(acceptable_fields))
                 logger.error(message)
-                raise ExecutorError(self, message)
+                raise InvalidResourceSpecification(keys, message)
 
             # this checks that either all of the required resource types are specified, or
             # that none of them are: the `required_resource_types` are not actually required,
@@ -430,9 +430,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 logger.error("Running with `autolabel=False`. In this mode, "
                              "task resource specification requires "
                              "three resources to be specified simultaneously: cores, memory, and disk")
-                raise ExecutorError(self, "Task resource specification requires "
-                                          "three resources to be specified simultaneously: cores, memory, and disk. "
-                                          "Try setting autolabel=True if you are unsure of the resource usage")
+                raise InvalidResourceSpecification(keys,
+                                                   "Task resource specification requires "
+                                                   "three resources to be specified simultaneously: cores, memory, and disk. "
+                                                   "Try setting autolabel=True if you are unsure of the resource usage")
 
             for k in keys:
                 if k == 'cores':
