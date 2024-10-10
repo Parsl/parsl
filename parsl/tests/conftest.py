@@ -59,7 +59,7 @@ def tmpd_cwd_session(pytestconfig):
 
     config = re.sub(r"[^A-z0-9_-]+", "_", pytestconfig.getoption('config')[0])
     cwd = pathlib.Path(os.getcwd())
-    pytest_dir = cwd / ".pytest"
+    pytest_dir = cwd / "pytest-parsl"
     pytest_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
 
     test_dir_prefix = "parsltest-"
