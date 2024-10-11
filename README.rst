@@ -1,6 +1,6 @@
 Parsl - Parallel Scripting Library
 ==================================
-|licence| |build-status| |docs| |NSF-1550588| |NSF-1550476| |NSF-1550562| |NSF-1550528| |CZI-EOSS|
+|licence| |docs| |NSF-1550588| |NSF-1550476| |NSF-1550562| |NSF-1550528| |CZI-EOSS|
 
 Parsl extends parallelism in Python beyond a single computer.
 
@@ -43,9 +43,6 @@ then explore the `parallel computing patterns <https://parsl.readthedocs.io/en/s
 .. |licence| image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
    :target: https://github.com/Parsl/parsl/blob/master/LICENSE
    :alt: Apache Licence V2.0
-.. |build-status| image:: https://github.com/Parsl/parsl/actions/workflows/ci.yaml/badge.svg
-   :target: https://github.com/Parsl/parsl/actions/workflows/ci.yaml
-   :alt: Build status
 .. |docs| image:: https://readthedocs.org/projects/parsl/badge/?version=stable
    :target: http://parsl.readthedocs.io/en/stable/?badge=stable
    :alt: Documentation Status
@@ -120,7 +117,7 @@ For Developers
 Requirements
 ============
 
-Parsl is supported in Python 3.8+. Requirements can be found `here <requirements.txt>`_. Requirements for running tests can be found `here <test-requirements.txt>`_.
+Parsl is supported in Python 3.9+. Requirements can be found `here <requirements.txt>`_. Requirements for running tests can be found `here <test-requirements.txt>`_.
 
 Code of Conduct
 ===============

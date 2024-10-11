@@ -66,7 +66,8 @@ def fresh_config():
                         monitoring_debug=False,
                         resource_monitoring_interval=1,
         ),
-        usage_tracking=True
+        usage_tracking=3,
+        project_name="parsl htex_local_alternate test configuration"
     )
 
 
