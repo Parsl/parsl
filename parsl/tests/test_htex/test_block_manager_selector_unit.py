@@ -1,10 +1,8 @@
 import pytest
-from parsl.executors.high_throughput.manager_selector import (
-    BlockIdManagerSelector,
-)
-from parsl.executors.high_throughput.manager_record import (
-    ManagerRecord
-)
+
+from parsl.executors.high_throughput.manager_record import ManagerRecord
+from parsl.executors.high_throughput.manager_selector import BlockIdManagerSelector
+
 
 @pytest.mark.local
 def test_sort_managers():
