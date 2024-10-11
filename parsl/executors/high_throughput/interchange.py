@@ -549,7 +549,6 @@ class Interchange:
                         monitoring_radio.send(r['payload'])
                     elif r['type'] == 'heartbeat':
                         logger.debug("Manager %r sent heartbeat via results connection", manager_id)
-                        b_messages.append((p_message, r))
                     else:
                         logger.error("Interchange discarding result_queue message of unknown type: %s", r["type"])
 

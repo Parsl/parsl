@@ -460,9 +460,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                     except pickle.UnpicklingError:
                         raise BadMessage("Message received could not be unpickled")
 
-                    if msg['type'] == 'heartbeat':
-                        continue
-                    elif msg['type'] == 'result':
+                    if msg['type'] == 'result':
                         try:
                             tid = msg['task_id']
                         except Exception:
