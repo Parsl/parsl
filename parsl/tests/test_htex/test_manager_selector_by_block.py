@@ -41,6 +41,7 @@ def get_worker_pid():
     import os
     return os.environ.get('PARSL_WORKER_BLOCK_ID')
 
+
 @pytest.mark.local
 def test_block_id_selection(try_assert):
     blockids = []
