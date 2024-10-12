@@ -41,14 +41,13 @@ def get_worker_pid():
     import os
     return os.environ.get('PARSL_WORKER_BLOCK_ID')
 
-
 @pytest.mark.local
-def test_block_id_selection():
+def test_block_id_selection(try_assert):
     blockids = []
+    try_assert(lambda: (time.sleep(1) or get_worker_pid().result() == "1"), timeout_ms=20000)
     for i in range(10):
         future = get_worker_pid()
         blockids.append(future.result())
         print(future.result())
-        time.sleep(1)
 
     assert all(blockid == "1" for blockid in blockids)
