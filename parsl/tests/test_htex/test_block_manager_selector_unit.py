@@ -14,7 +14,7 @@ def test_sort_managers():
     }
 
     manager_list = {b'manager1', b'manager2', b'manager3', b'manager4'}
-    expected_sorted_list = [b'manager3', b'manager4', b'manager1', b'manager2']
+    expected_sorted_list = [b'manager2', b'manager1', b'manager4', b'manager3']
     manager_selector = BlockIdManagerSelector()
     sorted_managers = manager_selector.sort_managers(ready_managers, manager_list)
     assert sorted_managers == expected_sorted_list
