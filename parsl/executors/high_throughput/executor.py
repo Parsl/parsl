@@ -199,9 +199,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         will check the available memory at startup and limit the number of workers such that
         the there's sufficient memory for each worker. Default: None
 
-    max_workers : int
-        Deprecated. Please use max_workers_per_node instead.
-
     max_workers_per_node : int
         Caps the number of workers launched per node. Default: None
 
@@ -239,7 +236,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_debug: bool = False,
                  cores_per_worker: float = 1.0,
                  mem_per_worker: Optional[float] = None,
-                 max_workers: Optional[Union[int, float]] = None,
                  max_workers_per_node: Optional[Union[int, float]] = None,
                  cpu_affinity: str = 'none',
                  available_accelerators: Union[int, Sequence[str]] = (),
@@ -274,9 +270,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         else:
             self.all_addresses = ','.join(get_all_addresses())
 
-        if max_workers:
-            self._warn_deprecated("max_workers", "max_workers_per_node")
-        self.max_workers_per_node = max_workers_per_node or max_workers or float("inf")
+        self.max_workers_per_node = max_workers_per_node or float("inf")
 
         mem_slots = self.max_workers_per_node
         cpu_slots = self.max_workers_per_node
@@ -336,16 +330,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             DeprecationWarning,
             stacklevel=2
         )
-
-    @property
-    def max_workers(self):
-        self._warn_deprecated("max_workers", "max_workers_per_node")
-        return self.max_workers_per_node
-
-    @max_workers.setter
-    def max_workers(self, val: Union[int, float]):
-        self._warn_deprecated("max_workers", "max_workers_per_node")
-        self.max_workers_per_node = val
 
     @property
     def logdir(self):
