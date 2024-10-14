@@ -460,9 +460,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                     except pickle.UnpicklingError:
                         raise BadMessage("Message received could not be unpickled")
 
-                    if msg['type'] == 'heartbeat':
-                        continue
-                    elif msg['type'] == 'result':
+                    if msg['type'] == 'result':
                         try:
                             tid = msg['task_id']
                         except Exception:
@@ -582,7 +580,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     def outstanding(self) -> int:
         """Returns the count of tasks outstanding across the interchange
         and managers"""
-        return self.command_client.run("OUTSTANDING_C")
+        return len(self.tasks)
 
     @property
     def connected_workers(self) -> int:
