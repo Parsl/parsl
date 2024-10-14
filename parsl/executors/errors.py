@@ -1,4 +1,6 @@
 """Exceptions raise by Executors."""
+from typing import Set
+
 from parsl.errors import ParslError
 from parsl.executors.base import ParslExecutor
 
@@ -42,6 +44,17 @@ class UnsupportedFeatureError(ExecutorError):
         else:
             return "The {} feature is unsupported in {}.".format(self.feature,
                                                                  self.current_executor)
+
+
+class InvalidResourceSpecification(ExecutorError):
+    """Error raised when Invalid input is supplied via resource Specification"""
+
+    def __init__(self, invalid_keys: Set[str], message: str = ''):
+        self.invalid_keys = invalid_keys
+        self.message = message
+
+    def __str__(self):
+        return f"Invalid Resource Specification Supplied: {self.invalid_keys}. {self.message}"
 
 
 class ScalingFailed(ExecutorError):
