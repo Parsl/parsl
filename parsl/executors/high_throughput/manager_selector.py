@@ -37,7 +37,7 @@ class RandomManagerSelector(ManagerSelector):
 
 class BlockIdManagerSelector(ManagerSelector):
 
-    """Returns /a/an/ interesting_managers list sorted by block ID
+    """Returns an interesting_managers list sorted by block ID
 
     Observations:
     1. BlockID manager selector helps with workloads that see a varying
