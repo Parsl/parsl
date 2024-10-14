@@ -1,6 +1,7 @@
 import inspect
 import logging
 import os
+import re
 import shlex
 import subprocess
 import threading
@@ -380,3 +381,40 @@ class AutoCancelTimer(threading.Timer):
         exc_tb: Optional[TracebackType]
     ) -> None:
         self.cancel()
+
+
+def _strip_non_alphanumeric(raw_string: str) -> str:
+    return re.sub(r'^[^a-z0-9]+|[^a-z0-9]+$', '', raw_string)
+
+
+def sanitize_dns_label_rfc1123(raw_string: str) -> str:
+    """Convert input string to a valid RFC 1123 DNS label."""
+    # Convert to lowercase and replace invalid characters with hyphen
+    sanitized = re.sub(r'[^a-z0-9]', '-', raw_string.lower())
+
+    # Remove consecutive hyphens
+    sanitized = re.sub(r'-+', '-', sanitized)
+
+    # DNS label cannot exceed 63 characters
+    sanitized = sanitized[:63]
+
+    return _strip_non_alphanumeric(sanitized)
+
+
+def sanitize_dns_subdomain_rfc1123(raw_string: str) -> str:
+    """Convert input string to a valid RFC 1123 DNS subdomain."""
+    segments = raw_string.split('.')
+
+    sanitized_segments = []
+    for segment in segments:
+        if not segment:
+            continue
+        sanitized_segment = sanitize_dns_label_rfc1123(segment)
+        sanitized_segments.append(sanitized_segment)
+
+    sanitized = '.'.join(sanitized_segments)
+
+    # DNS subdomain cannot exceed 253 characters
+    sanitized = sanitized[:253]
+
+    return _strip_non_alphanumeric(sanitized)
