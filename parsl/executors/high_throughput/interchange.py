@@ -6,7 +6,6 @@ import os
 import pickle
 import platform
 import queue
-import signal
 import sys
 import threading
 import time
@@ -312,16 +311,6 @@ class Interchange:
     def start(self) -> None:
         """ Start the interchange
         """
-
-        # If a user workflow has set its own signal handler for sigterm, that
-        # handler will be inherited by the interchange process because it is
-        # launched as a multiprocessing fork process.
-        # That can interfere with the interchange shutdown mechanism, which is
-        # to receive a SIGTERM and exit immediately.
-        # See Parsl issue #2343 (Threads and multiprocessing cannot be
-        # intermingled without deadlocks) which talks about other fork-related
-        # parent-process-inheritance problems.
-        signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
         logger.info("Starting main interchange method")
 
