@@ -251,13 +251,7 @@ class Interchange:
             try:
                 command_req = self.command_channel.recv_pyobj()
                 logger.debug("Received command request: {}".format(command_req))
-                if command_req == "OUTSTANDING_C":
-                    outstanding = self.pending_task_queue.qsize()
-                    for manager in self._ready_managers.values():
-                        outstanding += len(manager['tasks'])
-                    reply = outstanding
-
-                elif command_req == "CONNECTED_BLOCKS":
+                if command_req == "CONNECTED_BLOCKS":
                     reply = self.connected_block_history
 
                 elif command_req == "WORKERS":
@@ -538,7 +532,6 @@ class Interchange:
                         monitoring_radio.send(r['payload'])
                     elif r['type'] == 'heartbeat':
                         logger.debug("Manager %r sent heartbeat via results connection", manager_id)
-                        b_messages.append((p_message, r))
                     else:
                         logger.error("Interchange discarding result_queue message of unknown type: %s", r["type"])
 
