@@ -16,15 +16,16 @@ from parsl import curvezmq
 from parsl.addresses import get_all_addresses
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.staging import Staging
-from parsl.executors.errors import BadMessage, ScalingFailed
+from parsl.executors.errors import (
+    BadMessage,
+    InvalidResourceSpecification,
+    ScalingFailed,
+)
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
 from parsl.executors.high_throughput.manager_selector import (
     ManagerSelector,
     RandomManagerSelector,
-)
-from parsl.executors.high_throughput.mpi_prefix_composer import (
-    InvalidResourceSpecification,
 )
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus

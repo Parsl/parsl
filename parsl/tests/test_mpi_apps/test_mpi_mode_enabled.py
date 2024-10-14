@@ -8,9 +8,7 @@ import pytest
 import parsl
 from parsl import Config, bash_app, python_app
 from parsl.executors import MPIExecutor
-from parsl.executors.high_throughput.mpi_prefix_composer import (
-    MissingResourceSpecification,
-)
+from parsl.executors.errors import InvalidResourceSpecification
 from parsl.launchers import SimpleLauncher
 from parsl.providers import LocalProvider
 
@@ -185,6 +183,6 @@ def test_simulated_load(rounds: int = 100):
 @pytest.mark.local
 def test_missing_resource_spec():
 
-    with pytest.raises(MissingResourceSpecification):
+    with pytest.raises(InvalidResourceSpecification):
         future = mock_app(sleep_dur=0.4)
         future.result(timeout=10)
