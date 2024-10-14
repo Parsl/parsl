@@ -23,8 +23,10 @@ class RandomManagerSelector(ManagerSelector):
 
     By default this strategy is used by the interchange. Works well
     in distributing workloads equally across all availble compute
-    resources. Is not effective in conjunction with elastic scaling
-    behavior as it leads to wasted resource consumption.
+    resources. The random workload strategy is not effective in
+    conjunction with elastic scaling behavior as the even task
+    distribution does not allow the scaling down of blocks, leading
+    to wasted resource consumption.
     """
 
     def sort_managers(self, ready_managers: Dict[bytes, ManagerRecord], manager_list: Set[bytes]) -> List[bytes]:
@@ -35,11 +37,11 @@ class RandomManagerSelector(ManagerSelector):
 
 class BlockIdManagerSelector(ManagerSelector):
 
-    """Returns a interesting_managers list sorted by block ID
+    """Returns /a/an/ interesting_managers list sorted by block ID
 
     Observations:
     1. BlockID manager selector helps with workloads that see a varying
-    amount of tasks over time. We see new blocks are prioritized with the
+    amount of tasks over time. New blocks are prioritized with the
     blockID manager selector, when used with 'htex_auto_scaling', results
     in compute cost savings.
 
