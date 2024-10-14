@@ -4,9 +4,7 @@ from unittest import mock
 import pytest
 
 from parsl.executors import HighThroughputExecutor
-from parsl.executors.high_throughput.mpi_prefix_composer import (
-    InvalidResourceSpecification,
-)
+from parsl.executors.errors import InvalidResourceSpecification
 
 
 def double(x):

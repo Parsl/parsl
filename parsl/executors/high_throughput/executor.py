@@ -16,15 +16,16 @@ from parsl import curvezmq
 from parsl.addresses import get_all_addresses
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.staging import Staging
-from parsl.executors.errors import BadMessage, ScalingFailed
+from parsl.executors.errors import (
+    BadMessage,
+    InvalidResourceSpecification,
+    ScalingFailed,
+)
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
 from parsl.executors.high_throughput.manager_selector import (
     ManagerSelector,
     RandomManagerSelector,
-)
-from parsl.executors.high_throughput.mpi_prefix_composer import (
-    InvalidResourceSpecification,
 )
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
@@ -464,9 +465,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                     except pickle.UnpicklingError:
                         raise BadMessage("Message received could not be unpickled")
 
-                    if msg['type'] == 'heartbeat':
-                        continue
-                    elif msg['type'] == 'result':
+                    if msg['type'] == 'result':
                         try:
                             tid = msg['task_id']
                         except Exception:
@@ -586,7 +585,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     def outstanding(self) -> int:
         """Returns the count of tasks outstanding across the interchange
         and managers"""
-        return self.command_client.run("OUTSTANDING_C")
+        return len(self.tasks)
 
     @property
     def connected_workers(self) -> int:
