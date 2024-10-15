@@ -196,9 +196,9 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                          volumes=self.persistent_volumes,
                          service_account_name=self.service_account_name,
                          annotations=self.annotations)
-        self.resources[pod_name] = {'status': JobStatus(JobState.RUNNING)}
+        self.resources[job_id] = {'status': JobStatus(JobState.RUNNING), 'pod_name': pod_name}
 
-        return pod_name
+        return job_id
 
     def status(self, job_ids):
         """ Get the status of a list of jobs identified by the job identifiers
@@ -214,6 +214,9 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
             self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
 
+    def _get_pod_name(self, job_id: str) -> str:
+        return self.resources[job_id]['pod_name']
+
     def cancel(self, job_ids):
         """ Cancels the jobs specified by a list of job ids
         Args:
@@ -223,7 +226,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         """
         for job in job_ids:
             logger.debug("Terminating job/pod: {0}".format(job))
-            self._delete_pod(job)
+            pod_name = self._get_pod_name(job)
+            self._delete_pod(pod_name)
 
             self.resources[job]['status'] = JobStatus(JobState.CANCELLED)
         rets = [True for i in job_ids]
@@ -244,7 +248,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         for jid in to_poll_job_ids:
             phase = None
             try:
-                pod = self.kube_client.read_namespaced_pod(name=jid, namespace=self.namespace)
+                pod_name = self._get_pod_name(jid)
+                pod = self.kube_client.read_namespaced_pod(name=pod_name, namespace=self.namespace)
             except Exception:
                 logger.exception("Failed to poll pod {} status, most likely because pod was terminated".format(jid))
                 if self.resources[jid]['status'] is JobStatus(JobState.RUNNING):
