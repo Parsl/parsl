@@ -351,9 +351,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         if resource_specification:
             raise InvalidResourceSpecification(
                 set(resource_specification.keys()),
-                ("HTEX does not support the supplied resource_specifications."
+                ("HTEX does not support the supplied resource_specifications. "
                  "For MPI applications consider using the MPIExecutor. "
-                 "For specifications for core count/memory/walltime, consider using WorkQueueExecutor. ")
+                 "For specifications for core count/memory/walltime, consider using WorkQueueExecutor.")
             )
         return
 
