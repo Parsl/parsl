@@ -146,6 +146,11 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
 
     encrypted : bool
         Flag to enable/disable encryption (CurveZMQ). Default is False.
+
+    manager_selector: ManagerSelector
+        Determines what strategy the interchange uses to select managers during task distribution.
+        See API reference under "Manager Selectors" regarding the various manager selectors.
+        Default: 'RandomManagerSelector'
 """  # Documentation for params used by both HTEx and MPIEx
 
 
