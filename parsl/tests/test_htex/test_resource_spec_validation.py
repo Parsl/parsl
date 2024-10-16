@@ -29,17 +29,20 @@ def test_resource_spec_validation():
     ret_val = htex.validate_resource_spec({})
     assert ret_val is None
 
+
 @pytest.mark.local
 def test_resource_spec_validation_one_key():
     htex = HighThroughputExecutor()
     ret_val = htex.validate_resource_spec({"priority": 2})
     assert ret_val is None
 
+
 @pytest.mark.local
 def test_resource_spec_validation_two_key():
     htex = HighThroughputExecutor()
     ret_val = htex.validate_resource_spec({"priority": 2, "running_time_min": 4})
     assert ret_val is None
+
 
 @pytest.mark.local
 def test_resource_spec_validation_bad_keys():

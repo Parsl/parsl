@@ -357,7 +357,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                 message = "Task resource specification only accepts these types of resources: {}".format(
                     ', '.join(acceptable_fields))
                 logger.error(message)
-                raise InvalidResourceSpecification(self, message)
+                raise InvalidResourceSpecification(set(resource_specification.keys()), message)
         return
 
     def initialize_scaling(self):
