@@ -1,5 +1,7 @@
 import os
 
+import pytest
+
 import parsl
 from parsl.app.app import bash_app
 
@@ -21,6 +23,7 @@ def no_checkpoint_stdout_app_ignore_args(stdout=None):
     return "echo X"
 
 
+@pytest.mark.shared_fs
 def test_memo_stdout(tmpd_cwd):
     path_x = tmpd_cwd / "test.memo.stdout.x"
 

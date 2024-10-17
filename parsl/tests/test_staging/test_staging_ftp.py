@@ -15,6 +15,7 @@ def sort_strings(inputs=[], outputs=[]):
 
 
 @pytest.mark.cleannet
+@pytest.mark.staging_required
 def test_staging_ftp():
     """Test staging for an ftp file
 
