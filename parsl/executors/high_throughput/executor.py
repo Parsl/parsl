@@ -347,8 +347,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
     def validate_resource_spec(self, resource_specification: dict):
         """HTEX supports the following *Optional* resource specifications:
-        running_time_min: estimate of task runtime, any unit of time is acceptable
-        as long as it is consistent across the workload
         priority: lower value is higher priority"""
         if resource_specification:
             acceptable_fields = set(['priority'])
