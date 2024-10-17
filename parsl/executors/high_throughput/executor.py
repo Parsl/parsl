@@ -349,13 +349,14 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         """HTEX supports the following *Optional* resource specifications:
         priority: lower value is higher priority"""
         if resource_specification:
-            acceptable_fields = set(['priority'])
+            acceptable_fields = {'priority'}
             keys = set(resource_specification.keys())
-            if not keys.issubset(acceptable_fields):
+            invalid_keys = keys - acceptable_fields
+            if invalid_keys:
                 message = "Task resource specification only accepts these types of resources: {}".format(
                     ', '.join(acceptable_fields))
                 logger.error(message)
-                raise InvalidResourceSpecification(set(resource_specification.keys()), message)
+                raise InvalidResourceSpecification(set(invalid_keys), message)
         return
 
     def initialize_scaling(self):
