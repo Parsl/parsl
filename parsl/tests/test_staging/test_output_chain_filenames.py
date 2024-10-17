@@ -1,5 +1,7 @@
 from concurrent.futures import Future
 
+import pytest
+
 from parsl import File
 from parsl.app.app import bash_app
 
@@ -14,6 +16,7 @@ def app2(inputs=(), outputs=(), stdout=None, stderr=None, mock=False):
     return f"echo '{inputs[0]}' > {outputs[0]}"
 
 
+@pytest.mark.shared_fs
 def test_behavior(tmpd_cwd):
     expected_path = str(tmpd_cwd / "simple-out.txt")
     app1_future = app1(
