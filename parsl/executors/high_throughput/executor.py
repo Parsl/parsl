@@ -351,7 +351,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         as long as it is consistent across the workload
         priority: lower value is higher priority"""
         if resource_specification:
-            acceptable_fields = set(['running_time_min', 'priority'])
+            acceptable_fields = set(['priority'])
             keys = set(resource_specification.keys())
             if not keys.issubset(acceptable_fields):
                 message = "Task resource specification only accepts these types of resources: {}".format(
