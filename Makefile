@@ -84,7 +84,7 @@ radical_local_test:
 
 .PHONY: config_local_test
 config_local_test: $(CCTOOLS_INSTALL)
-	pip3 install ".[monitoring,visualization,proxystore]"
+	pip3 install ".[monitoring,visualization,proxystore,kubernetes]"
 	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages pytest parsl/tests/ -k "not cleannet" --config local --random-order --durations 10
 
 .PHONY: site_test
