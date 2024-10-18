@@ -52,7 +52,7 @@ def test_drain(try_assert):
 
     # wait till we have a block running...
 
-    try_assert(lambda: len(htex.connected_managers()) == 1)
+    try_assert(lambda: len(htex.connected_managers()) == 1, check_period_ms = 20)
 
     managers = htex.connected_managers()
     assert managers[0]['active'], "The manager should be active"
@@ -63,7 +63,7 @@ def test_drain(try_assert):
     time.sleep(TIME_CONST)
 
     # this assert should happen *very fast* after the above delay...
-    try_assert(lambda: htex.connected_managers()[0]['draining'], timeout_ms=500)
+    try_assert(lambda: htex.connected_managers()[0]['draining'], timeout_ms=500, check_period_ms = 20)
 
     # and the test task should still be running...
     assert not fut.done(), "The test task should still be running"
@@ -76,4 +76,4 @@ def test_drain(try_assert):
     # connected managers.
     # As with the above draining assert, this should happen very fast after
     # the task ends.
-    try_assert(lambda: len(htex.connected_managers()) == 0, timeout_ms=500)
+    try_assert(lambda: len(htex.connected_managers()) == 0, timeout_ms=500, check_period_ms = 20)
