@@ -15,7 +15,7 @@ from parsl.providers import LocalProvider
 # last twice that many number of seconds.
 TIME_CONST = 1
 
-CONNECTED_MANAGERS_POLL_MS = 20
+CONNECTED_MANAGERS_POLL_MS = 100
 
 
 def local_config():
