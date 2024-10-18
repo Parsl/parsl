@@ -5,13 +5,13 @@ import logging
 import os
 import pickle
 import platform
-import queue
 import sys
 import threading
 import time
 from typing import Any, Dict, List, NoReturn, Optional, Sequence, Set, Tuple, cast
 
 import zmq
+from sortedcontainers import SortedList
 
 from parsl import curvezmq
 from parsl.app.errors import RemoteExceptionWrapper
@@ -130,7 +130,7 @@ class Interchange:
         self.hub_address = hub_address
         self.hub_zmq_port = hub_zmq_port
 
-        self.pending_task_queue: queue.Queue[Any] = queue.Queue(maxsize=10 ** 6)
+        self.pending_task_queue: SortedList[Any] = SortedList(key=lambda msg: -msg['resource_spec']['priority'])
         self.count = 0
 
         self.worker_ports = worker_ports
@@ -191,12 +191,9 @@ class Interchange:
         """
         tasks = []
         for _ in range(0, count):
-            try:
-                x = self.pending_task_queue.get(block=False)
-            except queue.Empty:
-                break
-            else:
-                tasks.append(x)
+            if len(self.pending_task_queue) > 0:
+                x = self.pending_task_queue.pop(-1)
+            tasks.append(x)
 
         return tasks
 
@@ -214,11 +211,14 @@ class Interchange:
                 msg = self.task_incoming.recv_pyobj()
             except zmq.Again:
                 # We just timed out while attempting to receive
-                logger.debug("zmq.Again with {} tasks in internal queue".format(self.pending_task_queue.qsize()))
+                logger.debug("zmq.Again with {} tasks in internal queue".format(len(self.pending_task_queue)))
                 continue
 
+            resource_spec = msg.get('resource_spec', {})
+            resource_spec.setdefault("priority", float('inf'))
+            msg['resource_spec'] = resource_spec
             logger.debug("putting message onto pending_task_queue")
-            self.pending_task_queue.put(msg)
+            self.pending_task_queue.add(msg)
             task_counter += 1
             logger.debug(f"Fetched {task_counter} tasks so far")
 
@@ -471,10 +471,10 @@ class Interchange:
             len(self._ready_managers)
         )
 
-        if interesting_managers and not self.pending_task_queue.empty():
+        if interesting_managers and (len(self.pending_task_queue) != 0):
             shuffled_managers = self.manager_selector.sort_managers(self._ready_managers, interesting_managers)
 
-            while shuffled_managers and not self.pending_task_queue.empty():  # cf. the if statement above...
+            while shuffled_managers and (len(self.pending_task_queue) != 0):  # cf. the if statement above...
                 manager_id = shuffled_managers.pop()
                 m = self._ready_managers[manager_id]
                 tasks_inflight = len(m['tasks'])
