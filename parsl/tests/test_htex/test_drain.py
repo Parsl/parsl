@@ -13,7 +13,7 @@ from parsl.providers import LocalProvider
 # based around the expected drain period: the drain period
 # is TIME_CONST seconds, and the single executed task will
 # last twice that many number of seconds.
-TIME_CONST = 1
+TIME_CONST = 4
 
 CONNECTED_MANAGERS_POLL_MS = 100
 
