@@ -29,6 +29,7 @@ def no_checkpoint_stdout_app(stdout=None):
     return "echo X"
 
 
+@pytest.mark.shared_fs
 def test_memo_stdout(tmpd_cwd):
     assert const_list_x == const_list_x_arg
 
