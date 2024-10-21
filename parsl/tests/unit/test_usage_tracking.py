@@ -43,3 +43,24 @@ def test_invalid_types(level):
     # we can't instantiate TypeCheckError if we're in typeguard 2.x environment
     # because it does not exist... so check name using strings.
     assert ex.type.__name__ in ["TypeCheckError", "TypeError"]
+
+
+@pytest.mark.local
+def test_valid_project_name():
+    """Test valid project_name."""
+    assert (
+        Config(
+            usage_tracking=3,
+            project_name="unit-test",
+        ).project_name == "unit-test"
+    )
+
+
+@pytest.mark.local
+@pytest.mark.parametrize("name", (1, 1.0, True, object()))
+def test_invalid_project_name(name):
+    """Test invalid project_name."""
+    with pytest.raises(Exception) as ex:
+        Config(usage_tracking=3, project_name=name)
+
+    assert ex.type.__name__ in ["TypeCheckError", "TypeError"]
