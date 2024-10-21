@@ -59,7 +59,8 @@ jobs:
         make deps
         make clean_coverage
         # Installing parsl into venv required for GCendpoint
-        pip3 install .
+        # TODO: Test if the following install is necessary
+        # pip3 install .
         
         # Temporary fix, until changes make it into compute releases
         git clone -b configure_tasks_working_dir https://github.com/globus/globus-compute.git        
