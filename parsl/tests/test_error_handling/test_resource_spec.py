@@ -1,5 +1,8 @@
+import pytest
+
 import parsl
 from parsl.app.app import python_app
+from parsl.config import Config
 from parsl.executors import WorkQueueExecutor
 from parsl.executors.errors import InvalidResourceSpecification
 from parsl.executors.high_throughput.executor import HighThroughputExecutor
@@ -41,3 +44,19 @@ def test_resource(n=2):
             isinstance(executor, HighThroughputExecutor) or
             isinstance(executor, WorkQueueExecutor) or
             isinstance(executor, ThreadPoolExecutor))
+
+
+@python_app
+def long_delay(parsl_resource_specification={}):
+    import time
+    time.sleep(30)
+
+
+@pytest.mark.skip('I need to understand whats happening here better')
+@pytest.mark.local
+def test_wq_resource_excess():
+    c = Config(executors=[WorkQueueExecutor(port=9000, enable_monitoring=True)])
+
+    parsl.load(c)
+    f = long_delay(parsl_resource_specification={'memory': 1, 'disk': 1, 'cores': 1})
+    assert f.exception() is not None, "This should have failed"

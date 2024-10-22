@@ -25,7 +25,7 @@ from parsl.serialize import serialize as serialize_object
 from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
 
-PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
+PKL_HEARTBEAT_RESPONSE_CODE = pickle.dumps((2 ** 32) - 1)
 PKL_DRAINED_CODE = pickle.dumps((2 ** 32) - 2)
 
 LOGGER_NAME = "interchange"
@@ -66,7 +66,7 @@ class Interchange:
              If specified the interchange will only listen on this address for connections from workers
              else, it binds to all addresses.
 
-        client_ports : triple(int, int, int)
+        client_ports : tuple(int, int, int)
              The ports at which the client can be reached
 
         worker_ports : tuple(int, int)
@@ -104,7 +104,6 @@ class Interchange:
         os.makedirs(self.logdir, exist_ok=True)
 
         start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
-        logger.propagate = False
         logger.debug("Initializing Interchange process")
 
         self.client_address = client_address
@@ -249,6 +248,7 @@ class Interchange:
 
         while True:
             try:
+                logger.debug("Waiting for command request")
                 command_req = self.command_channel.recv_pyobj()
                 logger.debug("Received command request: {}".format(command_req))
                 if command_req == "CONNECTED_BLOCKS":
@@ -393,6 +393,9 @@ class Interchange:
 
             if msg['type'] == 'registration':
                 # We set up an entry only if registration works correctly
+                # XXXX this makes a partially initialised manager record visible
+                # (for example via MANAGERS). Initialize it properly before
+                # assigning it into _ready_managers?
                 self._ready_managers[manager_id] = {'last_heartbeat': time.time(),
                                                     'idle_since': time.time(),
                                                     'block_id': None,
@@ -409,6 +412,12 @@ class Interchange:
                 interesting_managers.add(manager_id)
                 logger.info(f"Adding manager: {manager_id!r} to ready queue")
                 m = self._ready_managers[manager_id]
+
+                # XXXX maybe should be a bit more strict about which fields are
+                # being copied here... why are we using python_version and also
+                # copying in python_v here?
+                # what are the fields we actually care about, rather than this being
+                # a dumping ground?
 
                 # m is a ManagerRecord, but msg is a dict[Any,Any] and so can
                 # contain arbitrary fields beyond those in ManagerRecord (and
@@ -437,9 +446,13 @@ class Interchange:
                     logger.info(f"Manager {manager_id!r} has compatible Parsl version {msg['parsl_v']}")
                     logger.info(f"Manager {manager_id!r} has compatible Python version {msg['python_v'].rsplit('.', 1)[0]}")
             elif msg['type'] == 'heartbeat':
-                self._ready_managers[manager_id]['last_heartbeat'] = time.time()
-                logger.debug("Manager %r sent heartbeat via tasks connection", manager_id)
-                self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
+                manager = self._ready_managers.get(manager_id)
+                if manager:
+                    manager['last_heartbeat'] = time.time()
+                    logger.debug("Received heartbeat from manager %r via tasks connection", manager_id)
+                    self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_RESPONSE_CODE])
+                else:
+                    logger.warning("Received heartbeat via tasks connection for unregistered manager %r")
             elif msg['type'] == 'drain':
                 self._ready_managers[manager_id]['draining'] = True
                 logger.debug("Manager %r requested drain", manager_id)
@@ -512,6 +525,7 @@ class Interchange:
             manager_id, *all_messages = self.results_incoming.recv_multipart()
             if manager_id not in self._ready_managers:
                 logger.warning(f"Received a result from a un-registered manager: {manager_id!r}")
+                # this could happen for a heartbeat message (either before registration has happened in another thread, or after cleanup)
             else:
                 logger.debug("Got %s result items in batch from manager %r", len(all_messages), manager_id)
 
@@ -531,7 +545,7 @@ class Interchange:
 
                         monitoring_radio.send(r['payload'])
                     elif r['type'] == 'heartbeat':
-                        logger.debug("Manager %r sent heartbeat via results connection", manager_id)
+                        logger.debug("Received heartbeat from manager %r via results connection", manager_id)
                     else:
                         logger.error("Interchange discarding result_queue message of unknown type: %s", r["type"])
 
