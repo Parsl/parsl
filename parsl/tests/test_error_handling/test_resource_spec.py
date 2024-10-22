@@ -4,11 +4,9 @@ import parsl
 from parsl.app.app import python_app
 from parsl.config import Config
 from parsl.executors import WorkQueueExecutor
-from parsl.executors.errors import ExecutorError, UnsupportedFeatureError
+from parsl.executors.errors import InvalidResourceSpecification
 from parsl.executors.high_throughput.executor import HighThroughputExecutor
-from parsl.executors.high_throughput.mpi_prefix_composer import (
-    InvalidResourceSpecification,
-)
+from parsl.executors.threads import ThreadPoolExecutor
 
 
 @python_app
@@ -30,11 +28,10 @@ def test_resource(n=2):
     try:
         fut.result()
     except InvalidResourceSpecification:
-        assert isinstance(executor, HighThroughputExecutor)
-    except UnsupportedFeatureError:
-        assert not isinstance(executor, WorkQueueExecutor)
-    except Exception as e:
-        assert isinstance(e, ExecutorError)
+        assert (
+            isinstance(executor, HighThroughputExecutor) or
+            isinstance(executor, WorkQueueExecutor) or
+            isinstance(executor, ThreadPoolExecutor))
 
     # Specify resources with wrong types
     # 'cpus' is incorrect, should be 'cores'
@@ -43,11 +40,10 @@ def test_resource(n=2):
     try:
         fut.result()
     except InvalidResourceSpecification:
-        assert isinstance(executor, HighThroughputExecutor)
-    except UnsupportedFeatureError:
-        assert not isinstance(executor, WorkQueueExecutor)
-    except Exception as e:
-        assert isinstance(e, ExecutorError)
+        assert (
+            isinstance(executor, HighThroughputExecutor) or
+            isinstance(executor, WorkQueueExecutor) or
+            isinstance(executor, ThreadPoolExecutor))
 
 
 @python_app

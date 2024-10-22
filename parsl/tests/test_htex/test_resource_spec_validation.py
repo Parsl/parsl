@@ -4,9 +4,7 @@ from unittest import mock
 import pytest
 
 from parsl.executors import HighThroughputExecutor
-from parsl.executors.high_throughput.mpi_prefix_composer import (
-    InvalidResourceSpecification,
-)
+from parsl.executors.errors import InvalidResourceSpecification
 
 
 def double(x):
@@ -29,6 +27,13 @@ def test_submit_calls_validate():
 def test_resource_spec_validation():
     htex = HighThroughputExecutor()
     ret_val = htex.validate_resource_spec({})
+    assert ret_val is None
+
+
+@pytest.mark.local
+def test_resource_spec_validation_one_key():
+    htex = HighThroughputExecutor()
+    ret_val = htex.validate_resource_spec({"priority": 2})
     assert ret_val is None
 
 
