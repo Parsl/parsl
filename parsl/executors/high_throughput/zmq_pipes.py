@@ -205,12 +205,21 @@ class ResultsIncoming:
         self.port = self.results_receiver.bind_to_random_port("tcp://{}".format(ip_address),
                                                               min_port=port_range[0],
                                                               max_port=port_range[1])
+        self.poller = zmq.Poller()
+        self.poller.register(self.results_receiver, zmq.POLLIN)
 
-    def get(self):
+    def get(self, timeout_ms=None):
+        """Get a message from the queue, returning None if timeout expires
+        without a message. timeout is measured in milliseconds.
+        """
         logger.debug("Waiting for ResultsIncoming message")
-        m = self.results_receiver.recv_multipart()
-        logger.debug("Received ResultsIncoming message")
-        return m
+        socks = dict(self.poller.poll(timeout=timeout_ms))
+        if self.results_receiver in socks and socks[self.results_receiver] == zmq.POLLIN:
+            m = self.results_receiver.recv_multipart()
+            logger.debug("Received ResultsIncoming message")
+            return m
+        else:
+            return None
 
     def close(self):
         self.results_receiver.close()

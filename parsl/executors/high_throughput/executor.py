@@ -323,6 +323,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             interchange_launch_cmd = DEFAULT_INTERCHANGE_LAUNCH_CMD
         self.interchange_launch_cmd = interchange_launch_cmd
 
+        self._result_queue_thread_exit = threading.Event()
+        self._result_queue_thread: Optional[threading.Thread] = None
+
     radio_mode = "htex"
     enable_mpi_mode: bool = False
     mpi_launcher: str = "mpiexec"
@@ -447,9 +450,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         """
         logger.debug("Result queue worker starting")
 
-        while not self.bad_state_is_set:
+        while not self.bad_state_is_set and not self._result_queue_thread_exit.is_set():
             try:
-                msgs = self.incoming_q.get()
+                msgs = self.incoming_q.get(timeout_ms=1000)
+                if msgs is None:  # timeout
+                    continue
 
             except IOError as e:
                 logger.exception("Caught broken queue with exception code {}: {}".format(e.errno, e))
@@ -484,7 +489,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                         if 'result' in msg:
                             result = deserialize(msg['result'])
                             task_fut.set_result(result)
-
                         elif 'exception' in msg:
                             try:
                                 s = deserialize(msg['exception'])
@@ -507,6 +511,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                     else:
                         raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
+        logger.info("Closing result ZMQ pipe")
+        self.incoming_q.close()
         logger.info("Result queue worker finished")
 
     def _start_local_interchange_process(self) -> None:
@@ -809,6 +815,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         logger.info("Attempting HighThroughputExecutor shutdown")
 
+        logger.info("Terminating interchange and result queue thread")
+        self._result_queue_thread_exit.set()
         self.interchange_proc.terminate()
         try:
             self.interchange_proc.wait(timeout=timeout)
@@ -832,6 +840,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         if hasattr(self, 'command_client'):
             logger.info("Closing command client")
             self.command_client.close()
+
+        logger.info("Waiting for result queue thread exit")
+        if self._result_queue_thread:
+            self._result_queue_thread.join()
 
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 

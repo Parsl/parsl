@@ -32,7 +32,7 @@ class MonitoringRouter:
                  monitoring_hub_address: str = "127.0.0.1",
                  logdir: str = ".",
                  logging_level: int = logging.INFO,
-                 atexit_timeout: int = 3,   # in seconds
+                 atexit_timeout: float = 3,   # in seconds
                  resource_msgs: mpq.Queue,
                  exit_event: Event,
                  ):
@@ -52,7 +52,9 @@ class MonitoringRouter:
         logging_level : int
              Logging level as defined in the logging module. Default: logging.INFO
         atexit_timeout : float, optional
-            The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
+            The amount of time in seconds to wait for more UDP messages at shutdown, after the last DFK
+            workflow message is received.
+
         resource_msgs : multiprocessing.Queue
             A multiprocessing queue to receive messages to be routed onwards to the database process
 
@@ -60,9 +62,9 @@ class MonitoringRouter:
             An event that the main Parsl process will set to signal that the monitoring router should shut down.
         """
         os.makedirs(logdir, exist_ok=True)
-        self.logger = set_file_logger("{}/monitoring_router.log".format(logdir),
-                                      name="monitoring_router",
-                                      level=logging_level)
+        self.logger, _ = set_file_logger("{}/monitoring_router.log".format(logdir),
+                                         name="monitoring_router",
+                                         level=logging_level)
         self.logger.debug("Monitoring router starting")
 
         self.hub_address = hub_address
@@ -190,6 +192,8 @@ def router_starter(*,
                    udp_port: Optional[int],
                    zmq_port_range: Tuple[int, int],
 
+                   udp_atexit_timeout: float,
+
                    logdir: str,
                    logging_level: int) -> None:
     setproctitle("parsl: monitoring router")
@@ -200,7 +204,8 @@ def router_starter(*,
                                   logdir=logdir,
                                   logging_level=logging_level,
                                   resource_msgs=resource_msgs,
-                                  exit_event=exit_event)
+                                  exit_event=exit_event,
+                                  atexit_timeout=udp_atexit_timeout)
     except Exception as e:
         logger.error("MonitoringRouter construction failed.", exc_info=True)
         comm_q.put(f"Monitoring router construction failed: {e}")
