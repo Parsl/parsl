@@ -145,10 +145,6 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
-        'sshd_required: Marks tests that require a SSHD'
-    )
-    config.addinivalue_line(
-        'markers',
         'multiple_cores_required: Marks tests that require multiple cores, such as htex affinity'
     )
     config.addinivalue_line(
