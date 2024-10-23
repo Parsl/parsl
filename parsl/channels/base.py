@@ -87,14 +87,3 @@ class Channel(metaclass=ABCMeta):
             If False, raise an OSError if the target directory already exists.
         """
         pass
-
-    @abstractmethod
-    def abspath(self, path: str) -> str:
-        """Return the absolute path.
-
-        Parameters
-        ----------
-        path : str
-            Path for which the absolute path will be returned.
-        """
-        pass
