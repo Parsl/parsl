@@ -73,19 +73,6 @@ class AuthException(ChannelError):
         super().__init__("Authentication to remote server failed", e, hostname)
 
 
-class SSHException(ChannelError):
-    ''' if there was any other error connecting or establishing an SSH session
-
-    Contains:
-    reason(string)
-    e (paramiko exception object)
-    hostname (string)
-    '''
-
-    def __init__(self, e: Exception, hostname: str) -> None:
-        super().__init__("Error connecting or establishing an SSH session", e, hostname)
-
-
 class FileCopyException(ChannelError):
     ''' File copy operation failed
 
