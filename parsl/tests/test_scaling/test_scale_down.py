@@ -5,7 +5,6 @@ import pytest
 
 import parsl
 from parsl import File, python_app
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SingleNodeLauncher
