@@ -161,11 +161,3 @@ class Channeled():
     def __init__(self) -> None:
         self.channel: Channel
         pass
-
-
-class MultiChanneled():
-    """A marker type to indicate that parsl should manage multiple Channels for this provider"""
-
-    def __init__(self) -> None:
-        self.channels: List[Channel]
-        pass
