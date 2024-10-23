@@ -6,6 +6,13 @@ from parsl.errors import OptionalModuleMissing
 from parsl.executors.base import ParslExecutor
 from parsl.utils import RepresentationMixin
 
+try:
+    from globus_compute_sdk import Client, Executor
+    _globus_compute_enabled = True
+except ImportError:
+    _globus_compute_enabled = False
+    Client: Any  # type: ignore[no-redef]
+
 UUID_LIKE_T = Union[uuid.UUID, str]
 
 
@@ -27,6 +34,7 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
             label: str = "GlobusComputeExecutor",
             batch_size: int = 128,
             amqp_port: Optional[int] = None,
+            client: Optional[Client] = None,
             **kwargs,
     ):
         """
@@ -60,6 +68,10 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
             Port to use when connecting to results queue. Note that the
             Compute web services only support 5671, 5672, and 443.
 
+        client:
+            instance of globus_compute_sdk.Client to be used by the executor.
+            If not provided, the executor will instantiate one with default arguments.
+
         kwargs:
             Other kwargs listed will be passed through to globus_compute_sdk.Executor
             as is
@@ -72,14 +84,14 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
         self.label = label
         self.batch_size = batch_size
         self.amqp_port = amqp_port
+        self.client = client
 
-        try:
-            from globus_compute_sdk import Executor
-        except ImportError:
+        if not _globus_compute_enabled:
             raise OptionalModuleMissing(
                 ['globus-compute-sdk'],
                 "GlobusComputeExecutor requires globus-compute-sdk installed"
             )
+
         self._executor: Executor = Executor(
             endpoint_id=endpoint_id,
             task_group_id=task_group_id,
@@ -88,6 +100,7 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
             label=label,
             batch_size=batch_size,
             amqp_port=amqp_port,
+            client=self.client,
             **kwargs
         )
 
