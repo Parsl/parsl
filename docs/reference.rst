@@ -171,7 +171,6 @@ Exceptions
     parsl.providers.errors.SchedulerMissingArgs
     parsl.providers.errors.ScriptPathError
     parsl.channels.errors.ChannelError
-    parsl.channels.errors.FileExists
     parsl.channels.errors.AuthException
     parsl.channels.errors.FileCopyException
     parsl.executors.high_throughput.errors.WorkerLost
