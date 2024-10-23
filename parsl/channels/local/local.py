@@ -102,7 +102,7 @@ class LocalChannel(Channel, RepresentationMixin):
                 os.chmod(local_dest, 0o700)
 
             except OSError as e:
-                raise FileCopyException(e, self.hostname)
+                raise FileCopyException(e)
 
         else:
             os.chmod(local_dest, 0o700)
