@@ -287,16 +287,6 @@ class DeprecatedSSHChannel(Channel, RepresentationMixin):
         self.execute_wait('mkdir -p {}'.format(path))
         self._valid_sftp_client().chmod(path, mode)
 
-    def abspath(self, path):
-        """Return the absolute path on the remote side.
-
-        Parameters
-        ----------
-        path : str
-            Path for which the absolute path will be returned.
-        """
-        return self._valid_sftp_client().normalize(path)
-
     @property
     def script_dir(self):
         return self._script_dir
