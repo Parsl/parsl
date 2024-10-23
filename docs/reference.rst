@@ -171,7 +171,6 @@ Exceptions
     parsl.providers.errors.SchedulerMissingArgs
     parsl.providers.errors.ScriptPathError
     parsl.channels.errors.ChannelError
-    parsl.channels.errors.BadHostKeyException
     parsl.channels.errors.BadScriptPath
     parsl.channels.errors.BadPermsScriptPath
     parsl.channels.errors.FileExists
