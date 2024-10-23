@@ -214,7 +214,6 @@ class DeprecatedSSHChannel(Channel, RepresentationMixin):
             - str: Local path to file
 
         Raises:
-            - FileExists : Name collision at local directory.
             - FileCopyException : FileCopy failed.
         '''
 
