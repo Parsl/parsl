@@ -3,25 +3,9 @@ from typing import Dict, Tuple
 
 
 class Channel(metaclass=ABCMeta):
-    """Channels are abstractions that enable ExecutionProviders to talk to
-    resource managers of remote compute facilities.
-
-    For certain resources such as campus clusters or supercomputers at
-    research laboratories, resource requirements may require authentication.
-    For instance some resources may allow access to their job schedulers from
-    only their login-nodes which require you to authenticate through SSH, or
-    require two factor authentication.
-
-    The simplest Channel, *LocalChannel*, executes commands locally in a
-    shell, while the *SSHChannel* authenticates you to remote systems.
-
-    Channels provide the ability to execute commands remotely, using the
-    execute_wait method, and manipulate the remote file system using methods
-    such as push_file, pull_file and makedirs.
-
-    Channels should ensure that each launched command runs in a new process
-    group, so that providers (such as AdHocProvider and LocalProvider) which
-    terminate long running commands using process groups can do so.
+    """This is a base class for a feature that has now been removed from
+    Parsl. This class should go away / be merged downwards into
+    LocalChannel.
     """
 
     @abstractmethod
