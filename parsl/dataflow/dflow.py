@@ -6,7 +6,6 @@ import datetime
 import inspect
 import logging
 import os
-import pathlib
 import pickle
 import random
 import sys
@@ -1163,13 +1162,6 @@ class DataFlowKernel:
             # its script directory set or not.
 
             channel.script_dir = os.path.join(run_dir, 'submit_scripts')  # type: ignore[unreachable]
-
-            # Only create dirs if we aren't on a shared-fs
-            if not channel.isdir(run_dir):
-                parent, child = pathlib.Path(run_dir).parts[-2:]
-                remote_run_dir = os.path.join(parent, child)
-                channel.script_dir = os.path.join(remote_run_dir, 'remote_submit_scripts')
-                provider.script_dir = os.path.join(run_dir, 'local_submit_scripts')
 
         channel.makedirs(channel.script_dir, exist_ok=True)
 
