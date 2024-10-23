@@ -17,19 +17,6 @@ class ChannelError(ParslError):
         return "Hostname:{0}, Reason:{1}".format(self.hostname, self.reason)
 
 
-class AuthException(ChannelError):
-    ''' An error raised during execution of an app.
-    What this exception contains depends entirely on context
-    Contains:
-    reason(string)
-    e (paramiko exception object)
-    hostname (string)
-    '''
-
-    def __init__(self, e: Exception, hostname: str) -> None:
-        super().__init__("Authentication to remote server failed", e, hostname)
-
-
 class FileCopyException(ChannelError):
     ''' File copy operation failed
 
