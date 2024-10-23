@@ -25,7 +25,6 @@ class LocalChannel(Channel, RepresentationMixin):
             - script_dir (string): Directory to place scripts
         '''
         self.userhome = os.path.abspath(userhome)
-        self.hostname = "localhost"
         self.envs = envs
         local_env = os.environ.copy()
         self._envs = copy.deepcopy(local_env)
