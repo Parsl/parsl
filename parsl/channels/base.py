@@ -89,17 +89,6 @@ class Channel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def isdir(self, path: str) -> bool:
-        """Return true if the path refers to an existing directory.
-
-        Parameters
-        ----------
-        path : str
-            Path of directory to check.
-        """
-        pass
-
-    @abstractmethod
     def abspath(self, path: str) -> str:
         """Return the absolute path.
 

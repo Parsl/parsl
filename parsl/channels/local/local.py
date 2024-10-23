@@ -111,17 +111,6 @@ class LocalChannel(Channel, RepresentationMixin):
     def pull_file(self, remote_source, local_dir):
         return self.push_file(remote_source, local_dir)
 
-    def isdir(self, path):
-        """Return true if the path refers to an existing directory.
-
-        Parameters
-        ----------
-        path : str
-            Path of directory to check.
-        """
-
-        return os.path.isdir(path)
-
     def makedirs(self, path, mode=0o700, exist_ok=False):
         """Create a directory.
 
