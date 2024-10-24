@@ -24,7 +24,6 @@ from typeguard import typechecked
 import parsl
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.app.futures import DataFuture
-from parsl.channels.local.local import LocalChannel
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
@@ -1141,22 +1140,6 @@ class DataFlowKernel:
 
         logger.info("End of summary")
 
-    def _create_script_dir(self, channel: LocalChannel) -> None:
-        """Create script directories across a channel
-
-        Parameters
-        ----------
-        channel: LocalChannel
-           LocalChannel over which the script dir is to be created
-        """
-        run_dir = self.run_dir
-
-        sd = os.path.join(run_dir, 'submit_scripts')
-        assert isinstance(sd, str)
-        channel.script_dir = sd
-
-        channel.makedirs(channel.script_dir, exist_ok=True)
-
     def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         for executor in executors:
             executor.run_id = self.run_id
@@ -1167,10 +1150,10 @@ class DataFlowKernel:
                 executor.submit_monitoring_radio = self.monitoring.radio
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
-                    executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
-                    os.makedirs(executor.provider.script_dir, exist_ok=True)
-
-                    self._create_script_dir(executor.provider.channel)
+                    script_dir = os.path.join(self.run_dir, 'submit_scripts')
+                    executor.provider.script_dir = script_dir
+                    executor.provider.channel.script_dir = script_dir
+                    os.makedirs(script_dir, exist_ok=True)
 
             self.executors[executor.label] = executor
             executor.start()
