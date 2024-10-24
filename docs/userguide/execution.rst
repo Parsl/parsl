@@ -89,6 +89,9 @@ Parsl currently supports the following executors:
 4. `parsl.executors.taskvine.TaskVineExecutor`: This executor uses `TaskVine <https://ccl.cse.nd.edu/software/taskvine/>`_ as the execution backend. TaskVine scales up to tens of thousands of cores and actively uses local storage on compute nodes to offer a diverse array of performance-oriented features, including: smart caching and sharing common large files between tasks and compute nodes, reliable execution of tasks, dynamic resource sizing, automatic Python environment detection and sharing.
 These executors cover a broad range of execution requirements. As with other Parsl components, there is a standard interface (ParslExecutor) that can be implemented to add support for other executors.
 
+5. `parsl.executors.globus_compute.GlobusComputeExecutor`: This executor uses `Globus Compute <https://globus-compute.readthedocs.io/en/latest/index.html>`_
+as the execution backend to run functions on remote systems.
+
 .. note::
    Refer to :ref:`configuration-section` for information on how to configure these executors.
 
