@@ -17,10 +17,8 @@ class LocalChannel(RepresentationMixin):
         ''' Initialize the local channel.
 
         KwArgs:
-            - userhome (string): (default='.') This is provided as a way to override and set a specific userhome
             - envs (dict) : A dictionary of env variables to be set when launching the shell
         '''
-        self.userhome = os.path.abspath(".")
         envs = {}
         self.envs = envs
         local_env = os.environ.copy()
@@ -52,7 +50,6 @@ class LocalChannel(RepresentationMixin):
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                cwd=self.userhome,
                 env=current_env,
                 shell=True,
                 preexec_fn=os.setpgrp
