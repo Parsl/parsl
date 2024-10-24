@@ -238,10 +238,9 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         with open(userscript_path, 'w') as f:
             f.write(job_config["worker_init"] + '\n' + wrapped_command)
 
-        user_script_path = self.channel.push_file(userscript_path, self.channel.script_dir)
-        the_input_files = [user_script_path] + self.transfer_input_files
+        the_input_files = [userscript_path] + self.transfer_input_files
         job_config["input_files"] = ','.join(the_input_files)
-        job_config["job_script"] = os.path.basename(user_script_path)
+        job_config["job_script"] = os.path.basename(userscript_path)
 
         # Construct and move the submit script
         self._write_submit_script(template_string, script_path, job_name, job_config)
