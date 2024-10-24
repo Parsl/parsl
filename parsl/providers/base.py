@@ -154,10 +154,3 @@ class ExecutionProvider(metaclass=ABCMeta):
         :return: the number of seconds to wait between calls to status()
         """
         pass
-
-
-class Channeled():
-    """A marker type to indicate that parsl should manage a Channel for this provider"""
-    def __init__(self) -> None:
-        self.channel: Channel
-        pass
