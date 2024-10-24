@@ -2,12 +2,10 @@ import logging
 import os
 import subprocess
 
-from parsl.utils import RepresentationMixin
-
 logger = logging.getLogger(__name__)
 
 
-class LocalChannel(RepresentationMixin):
+class LocalChannel:
     ''' This is not even really a channel, since opening a local shell is not heavy
     and done so infrequently that they do not need a persistent channel
     '''
