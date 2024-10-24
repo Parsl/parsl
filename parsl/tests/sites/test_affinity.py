@@ -5,7 +5,6 @@ import os
 import pytest
 
 from parsl import python_app
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.providers import LocalProvider
@@ -22,7 +21,6 @@ def local_config():
                 available_accelerators=2,
                 encrypted=True,
                 provider=LocalProvider(
-                    channel=LocalChannel(),
                     init_blocks=1,
                     max_blocks=1,
                 ),

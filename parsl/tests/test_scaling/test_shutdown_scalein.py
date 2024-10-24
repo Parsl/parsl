@@ -4,7 +4,6 @@ import threading
 import pytest
 
 import parsl
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SimpleLauncher
@@ -47,7 +46,6 @@ def test_shutdown_scalein_blocks(tmpd_cwd, try_assert):
     scaled in at DFK shutdown.
     """
     accumulating_provider = AccumulatingLocalProvider(
-        channel=LocalChannel(),
         init_blocks=BLOCK_COUNT,
         min_blocks=0,
         max_blocks=0,

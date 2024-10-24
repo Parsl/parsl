@@ -4,7 +4,6 @@ import zipfile
 import pytest
 
 import parsl
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.data_provider.files import File
 from parsl.data_provider.zip import ZipAuthorityError, ZipFileStaging

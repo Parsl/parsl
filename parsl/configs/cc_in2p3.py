@@ -1,4 +1,3 @@
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.providers import GridEngineProvider
@@ -10,7 +9,6 @@ config = Config(
             label='cc_in2p3_htex',
             max_workers_per_node=2,
             provider=GridEngineProvider(
-                channel=LocalChannel(),
                 nodes_per_block=1,
                 init_blocks=2,
                 max_blocks=2,

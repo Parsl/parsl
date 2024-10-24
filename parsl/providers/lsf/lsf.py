@@ -3,7 +3,6 @@ import math
 import os
 import time
 
-from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.cluster_provider import ClusterProvider
@@ -32,11 +31,6 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
 
     Parameters
     ----------
-    channel : Channel
-        Channel for accessing this provider. Possible channels include
-        :class:`~parsl.channels.LocalChannel` (the default),
-        :class:`~parsl.channels.SSHChannel`, or
-        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
         When request_by_nodes is False, it is computed by cores_per_block / cores_per_node.
@@ -71,7 +65,6 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
         :class:`~parsl.launchers.SrunLauncher`, or
         :class:`~parsl.launchers.AprunLauncher`
-    move_files : Optional[Bool]: should files be moved? by default, Parsl will try to move files.
     bsub_redirection: Bool
         Should a redirection symbol "<" be included when submitting jobs, i.e., Bsub < job_script.
     request_by_nodes: Bool
@@ -81,7 +74,6 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
     """
 
     def __init__(self,
-                 channel=LocalChannel(),
                  nodes_per_block=1,
                  cores_per_block=None,
                  cores_per_node=None,
@@ -95,13 +87,11 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
                  project=None,
                  queue=None,
                  cmd_timeout=120,
-                 move_files=True,
                  bsub_redirection=False,
                  request_by_nodes=True,
                  launcher=SingleNodeLauncher()):
         label = 'LSF'
         super().__init__(label,
-                         channel,
                          nodes_per_block,
                          init_blocks,
                          min_blocks,
@@ -115,7 +105,6 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         self.queue = queue
         self.cores_per_block = cores_per_block
         self.cores_per_node = cores_per_node
-        self.move_files = move_files
         self.bsub_redirection = bsub_redirection
         self.request_by_nodes = request_by_nodes
 
@@ -217,7 +206,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         logger.debug("Requesting one block with {} nodes".format(self.nodes_per_block))
 
         job_config = {}
-        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config["submit_script_dir"] = self.script_dir
         job_config["nodes"] = self.nodes_per_block
         job_config["tasks_per_node"] = tasks_per_node
         job_config["walltime"] = wtime_to_minutes(self.walltime)
@@ -233,17 +222,10 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
 
-        if self.move_files:
-            logger.debug("moving files")
-            channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
-        else:
-            logger.debug("not moving files")
-            channel_script_path = script_path
-
         if self.bsub_redirection:
-            cmd = "bsub < {0}".format(channel_script_path)
+            cmd = "bsub < {0}".format(script_path)
         else:
-            cmd = "bsub {0}".format(channel_script_path)
+            cmd = "bsub {0}".format(script_path)
         retcode, stdout, stderr = super().execute_wait(cmd)
 
         job_id = None

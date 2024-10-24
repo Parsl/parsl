@@ -11,8 +11,6 @@ import time
 
 import pytest
 
-from parsl.channels import LocalChannel
-from parsl.channels.ssh.ssh import DeprecatedSSHChannel
 from parsl.jobs.states import JobState
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers import LocalProvider
@@ -64,143 +62,9 @@ def _run_tests(p: LocalProvider):
 def test_local_channel():
     with tempfile.TemporaryDirectory() as script_dir:
         script_dir = tempfile.mkdtemp()
-        p = LocalProvider(channel=LocalChannel(), launcher=SingleNodeLauncher(debug=False))
+        p = LocalProvider(launcher=SingleNodeLauncher(debug=False))
         p.script_dir = script_dir
         _run_tests(p)
-
-
-SSHD_CONFIG = """
-Port {port}
-ListenAddress 127.0.0.1
-HostKey {hostkey}
-AuthorizedKeysFile {connpubkey}
-AuthenticationMethods publickey
-StrictModes no
-Subsystem sftp {sftp_path}
-"""
-
-
-# It would probably be better, when more formalized site testing comes into existence, to
-# use a site-testing provided server/configuration instead of the current scheme
-@pytest.mark.local
-@pytest.mark.sshd_required
-def test_ssh_channel():
-    with tempfile.TemporaryDirectory() as config_dir:
-        sshd_thread, priv_key, server_port = _start_sshd(config_dir)
-        try:
-            with tempfile.TemporaryDirectory() as remote_script_dir:
-                # The SSH library fails to add the new host key to the file if the file does not
-                # already exist, so create it here.
-                pathlib.Path('{}/known.hosts'.format(config_dir)).touch(mode=0o600)
-                script_dir = tempfile.mkdtemp()
-                channel = DeprecatedSSHChannel('127.0.0.1', port=server_port,
-                                               script_dir=remote_script_dir,
-                                               host_keys_filename='{}/known.hosts'.format(config_dir),
-                                               key_filename=priv_key)
-                try:
-                    p = LocalProvider(channel=channel,
-                                      launcher=SingleNodeLauncher(debug=False))
-                    p.script_dir = script_dir
-                    _run_tests(p)
-                finally:
-                    channel.close()
-        finally:
-            _stop_sshd(sshd_thread)
-
-
-def _stop_sshd(sshd_thread):
-    sshd_thread.stop()
-    sshd_thread.join()
-
-
-class SSHDThread(threading.Thread):
-    def __init__(self, config_file):
-        threading.Thread.__init__(self, daemon=True)
-        self.config_file = config_file
-        self.stop_flag = False
-        self.error = None
-
-    def run(self):
-        try:
-            # sshd needs to be run with an absolute path, hence the call to which()
-            sshpath = shutil.which('sshd')
-            assert sshpath is not None, "can find sshd executable"
-            p = subprocess.Popen([sshpath, '-D', '-f', self.config_file],
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            while True:
-                ec = p.poll()
-                if self.stop_flag:
-                    p.terminate()
-                    break
-                elif ec is None:
-                    time.sleep(0.1)
-                elif ec == 0:
-                    self.error = Exception('sshd exited prematurely: {}{}'.format(p.stdout.read(),
-                                                                                  p.stderr.read()))
-                    break
-                else:
-                    self.error = Exception('sshd failed: {}{}'.format(p.stdout.read(),
-                                                                      p.stderr.read()))
-                    break
-        except Exception as ex:
-            logger.exception("SSHDThread exception from run loop")
-            self.error = ex
-
-    def stop(self):
-        self.stop_flag = True
-
-
-def _start_sshd(config_dir: str):
-    server_config, priv_key, port = _init_sshd(config_dir)
-    sshd_thread = SSHDThread(server_config)
-    sshd_thread.start()
-    time.sleep(1.0)
-    if not sshd_thread.is_alive():
-        raise Exception('Failed to start sshd: {}'.format(sshd_thread.error))
-    return sshd_thread, priv_key, port
-
-
-def _init_sshd(config_dir):
-    hostkey = '{}/hostkey'.format(config_dir)
-    connkey = '{}/connkey'.format(config_dir)
-    os.system('ssh-keygen -b 2048 -t rsa -q -N "" -f {}'.format(hostkey))
-    os.system('ssh-keygen -b 2048 -t rsa -q -N "" -f {}'.format(connkey))
-    port = _find_free_port(22222)
-    server_config_str = SSHD_CONFIG.format(port=port, hostkey=hostkey,
-                                           connpubkey='{}.pub'.format(connkey),
-                                           sftp_path=_get_system_sftp_path())
-    server_config = '{}/sshd_config'.format(config_dir)
-    with open(server_config, 'w') as f:
-        f.write(server_config_str)
-    return server_config, connkey, port
-
-
-def _get_system_sftp_path():
-    try:
-        with open('/etc/ssh/sshd_config') as f:
-            line = f.readline()
-            while line:
-                tokens = line.split()
-                if tokens[0] == 'Subsystem' and tokens[1] == 'sftp':
-                    return tokens[2]
-                line = f.readline()
-    except Exception:
-        pass
-    return '/usr/lib/openssh/sftp-server'
-
-
-def _find_free_port(start: int):
-    port = start
-    while port < 65535:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            s.bind(('127.0.0.1', port))
-            s.close()
-            return port
-        except Exception:
-            pass
-        port += random.randint(1, 20)
-    raise Exception('Could not find free port')
 
 
 def _run(p: LocalProvider, command: str, np: int = 1):

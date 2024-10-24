@@ -5,7 +5,6 @@ import pytest
 
 import parsl
 from parsl import File, python_app
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState
@@ -31,7 +30,6 @@ def local_config():
                 encrypted=True,
                 launch_cmd="sleep inf",
                 provider=LocalProvider(
-                    channel=LocalChannel(),
                     init_blocks=1,
                     max_blocks=_max_blocks,
                     min_blocks=_min_blocks,

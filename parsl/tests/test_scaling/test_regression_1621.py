@@ -3,7 +3,6 @@ import threading
 import pytest
 
 import parsl
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SimpleLauncher
@@ -43,7 +42,6 @@ def test_one_block(tmpd_cwd):
     one app is invoked. this is a regression test.
     """
     oneshot_provider = OneShotLocalProvider(
-        channel=LocalChannel(),
         init_blocks=0,
         min_blocks=0,
         max_blocks=10,

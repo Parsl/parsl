@@ -3,7 +3,6 @@ import os
 import time
 import warnings
 
-from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import AprunLauncher
 from parsl.providers.cluster_provider import ClusterProvider
@@ -33,11 +32,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
 
     Parameters
     ----------
-    channel : Channel
-        Channel for accessing this provider. Possible channels include
-        :class:`~parsl.channels.LocalChannel` (the default),
-        :class:`~parsl.channels.SSHChannel`, or
-        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
     min_blocks : int
@@ -60,7 +54,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.launchers.SingleNodeLauncher`
     """
     def __init__(self,
-                 channel=LocalChannel(),
                  nodes_per_block=1,
                  init_blocks=0,
                  min_blocks=0,
@@ -75,7 +68,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
                  cmd_timeout=10):
         label = 'cobalt'
         super().__init__(label,
-                         channel=channel,
                          nodes_per_block=nodes_per_block,
                          init_blocks=init_blocks,
                          min_blocks=min_blocks,
@@ -179,10 +171,8 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
 
-        channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
-
         command = 'qsub -n {0} {1} -t {2} {3} {4}'.format(
-            self.nodes_per_block, queue_opt, wtime_to_minutes(self.walltime), account_opt, channel_script_path)
+            self.nodes_per_block, queue_opt, wtime_to_minutes(self.walltime), account_opt, script_path)
         logger.debug("Executing {}".format(command))
 
         retcode, stdout, stderr = self.execute_wait(command)

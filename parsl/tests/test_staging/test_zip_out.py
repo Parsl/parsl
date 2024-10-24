@@ -3,7 +3,6 @@ import zipfile
 import pytest
 
 import parsl
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.data_provider.data_manager import default_staging
 from parsl.data_provider.files import File

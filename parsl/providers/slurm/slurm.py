@@ -3,12 +3,10 @@ import math
 import os
 import re
 import time
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import typeguard
 
-from parsl.channels import LocalChannel
-from parsl.channels.base import Channel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.launchers.base import Launcher
@@ -70,11 +68,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         Slurm queue to place job in. If unspecified or ``None``, no queue slurm directive will be specified.
     constraint : str
         Slurm job constraint, often used to choose cpu or gpu type. If unspecified or ``None``, no constraint slurm directive will be added.
-    channel : Channel
-        Channel for accessing this provider. Possible channels include
-        :class:`~parsl.channels.LocalChannel` (the default),
-        :class:`~parsl.channels.SSHChannel`, or
-        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
     cores_per_node : int
@@ -110,7 +103,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
         :class:`~parsl.launchers.SrunLauncher`, or
         :class:`~parsl.launchers.AprunLauncher`
-    move_files : Optional[Bool]: should files be moved? by default, Parsl will try to move files.
     """
 
     @typeguard.typechecked
@@ -119,7 +111,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  account: Optional[str] = None,
                  qos: Optional[str] = None,
                  constraint: Optional[str] = None,
-                 channel: Channel = LocalChannel(),
                  nodes_per_block: int = 1,
                  cores_per_node: Optional[int] = None,
                  mem_per_node: Optional[int] = None,
@@ -133,11 +124,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  worker_init: str = '',
                  cmd_timeout: int = 10,
                  exclusive: bool = True,
-                 move_files: bool = True,
                  launcher: Launcher = SingleNodeLauncher()):
         label = 'slurm'
         super().__init__(label,
-                         channel,
                          nodes_per_block,
                          init_blocks,
                          min_blocks,
@@ -151,7 +140,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         self.cores_per_node = cores_per_node
         self.mem_per_node = mem_per_node
         self.exclusive = exclusive
-        self.move_files = move_files
         self.account = account
         self.qos = qos
         self.constraint = constraint
@@ -277,8 +265,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         logger.debug("Requesting one block with {} nodes".format(self.nodes_per_block))
 
-        job_config = {}
-        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config: Dict[str, Any] = {}
+        job_config["submit_script_dir"] = self.script_dir
         job_config["nodes"] = self.nodes_per_block
         job_config["tasks_per_node"] = tasks_per_node
         job_config["walltime"] = wtime_to_minutes(self.walltime)
@@ -296,14 +284,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
 
-        if self.move_files:
-            logger.debug("moving files")
-            channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
-        else:
-            logger.debug("not moving files")
-            channel_script_path = script_path
-
-        retcode, stdout, stderr = self.execute_wait("sbatch {0}".format(channel_script_path))
+        retcode, stdout, stderr = self.execute_wait("sbatch {0}".format(script_path))
 
         if retcode == 0:
             for line in stdout.split('\n'):

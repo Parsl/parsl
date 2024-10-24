@@ -17,7 +17,6 @@ those timing parameters control.
 
 import os
 
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.data_provider.file_noop import NoOpFileStaging
 from parsl.data_provider.ftp import FTPInTaskStaging
@@ -48,7 +47,6 @@ def fresh_config():
                 poll_period=100,
                 encrypted=True,
                 provider=LocalProvider(
-                    channel=LocalChannel(),
                     init_blocks=0,
                     min_blocks=0,
                     max_blocks=5,

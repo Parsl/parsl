@@ -4,7 +4,6 @@ import pytest
 
 import parsl
 from parsl.app.app import bash_app, python_app
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.executors.high_throughput.manager_selector import (
@@ -31,7 +30,6 @@ def test_block_id_selection(try_assert):
         max_workers_per_node=1,
         manager_selector=BlockIdManagerSelector(),
         provider=LocalProvider(
-            channel=LocalChannel(),
             init_blocks=BLOCK_COUNT,
             max_blocks=BLOCK_COUNT,
             min_blocks=BLOCK_COUNT,

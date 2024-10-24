@@ -2,7 +2,6 @@ import logging
 import os
 import time
 
-from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import AprunLauncher
 from parsl.providers.cluster_provider import ClusterProvider
@@ -33,11 +32,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
     Parameters
     ----------
-    channel : Channel
-        Channel for accessing this provider. Possible channels include
-        :class:`~parsl.channels.LocalChannel` (the default),
-        :class:`~parsl.channels.SSHChannel`, or
-        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     account : str
         Account the job will be charged against.
     queue : str
@@ -68,7 +62,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
     """
     def __init__(self,
-                 channel=LocalChannel(),
                  account=None,
                  queue=None,
                  scheduler_options='',
@@ -83,7 +76,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                  cmd_timeout=120):
         label = 'torque'
         super().__init__(label,
-                         channel,
                          nodes_per_block,
                          init_blocks,
                          min_blocks,
@@ -173,8 +165,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                      tasks_per_node)
 
         job_config = {}
-        # TODO : script_path might need to change to accommodate script dir set via channels
-        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config["submit_script_dir"] = self.script_dir
         job_config["nodes"] = self.nodes_per_block
         job_config["task_blocks"] = self.nodes_per_block * tasks_per_node
         job_config["nodes_per_block"] = self.nodes_per_block
@@ -192,15 +183,13 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
         logger.debug("Writing submit script")
         self._write_submit_script(self.template_string, script_path, job_name, job_config)
 
-        channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
-
         submit_options = ''
         if self.queue is not None:
             submit_options = '{0} -q {1}'.format(submit_options, self.queue)
         if self.account is not None:
             submit_options = '{0} -A {1}'.format(submit_options, self.account)
 
-        launch_cmd = "qsub {0} {1}".format(submit_options, channel_script_path)
+        launch_cmd = "qsub {0} {1}".format(submit_options, script_path)
         retcode, stdout, stderr = self.execute_wait(launch_cmd)
 
         job_id = None

@@ -5,7 +5,6 @@ import time
 import pytest
 
 import parsl
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SimpleLauncher
@@ -22,7 +21,6 @@ def fresh_config(run_dir, strategy, db_url):
                 cores_per_worker=1,
                 encrypted=True,
                 provider=LocalProvider(
-                    channel=LocalChannel(),
                     init_blocks=1,
                     # min and max are set to 0 to ensure that we don't get
                     # a block from ongoing strategy scaling, only from
