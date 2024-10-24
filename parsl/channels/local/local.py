@@ -4,14 +4,13 @@ import os
 import shutil
 import subprocess
 
-from parsl.channels.base import Channel
 from parsl.channels.errors import FileCopyException
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 
-class LocalChannel(Channel, RepresentationMixin):
+class LocalChannel(RepresentationMixin):
     ''' This is not even really a channel, since opening a local shell is not heavy
     and done so infrequently that they do not need a persistent channel
     '''

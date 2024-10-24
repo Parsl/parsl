@@ -2,7 +2,7 @@ import logging
 import os
 import time
 
-from parsl.channels import LocalChannel
+from parsl.channels.local.local import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.base import ExecutionProvider
