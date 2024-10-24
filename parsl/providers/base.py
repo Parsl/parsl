@@ -2,7 +2,6 @@ import logging
 from abc import ABCMeta, abstractmethod, abstractproperty
 from typing import Any, Dict, List, Optional
 
-from parsl.channels.base import Channel
 from parsl.jobs.states import JobStatus
 
 logger = logging.getLogger(__name__)
