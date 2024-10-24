@@ -103,7 +103,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
         :class:`~parsl.launchers.SrunLauncher`, or
         :class:`~parsl.launchers.AprunLauncher`
-    move_files : Optional[Bool]: should files be moved? by default, Parsl will try to move files.
     """
 
     @typeguard.typechecked
@@ -125,7 +124,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  worker_init: str = '',
                  cmd_timeout: int = 10,
                  exclusive: bool = True,
-                 move_files: bool = True,
                  launcher: Launcher = SingleNodeLauncher()):
         label = 'slurm'
         super().__init__(label,
@@ -142,7 +140,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         self.cores_per_node = cores_per_node
         self.mem_per_node = mem_per_node
         self.exclusive = exclusive
-        self.move_files = move_files
         self.account = account
         self.qos = qos
         self.constraint = constraint
@@ -287,14 +284,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
 
-        if self.move_files:
-            logger.debug("moving files")
-            channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
-        else:
-            logger.debug("not moving files")
-            channel_script_path = script_path
-
-        retcode, stdout, stderr = self.execute_wait("sbatch {0}".format(channel_script_path))
+        retcode, stdout, stderr = self.execute_wait("sbatch {0}".format(script_path))
 
         if retcode == 0:
             for line in stdout.split('\n'):
