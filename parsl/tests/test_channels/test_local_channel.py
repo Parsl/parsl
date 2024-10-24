@@ -1,6 +1,9 @@
+import pytest
+
 from parsl.channels.local.local import LocalChannel
 
 
+@pytest.mark.local
 def test_env():
     ''' Regression testing for issue #27
     '''
@@ -18,6 +21,7 @@ def test_env():
     print("RC:{} \nSTDOUT:{} \nSTDERR:{}".format(rc, stdout, stderr))
 
 
+@pytest.mark.local
 def test_env_mod():
     ''' Testing for env update at execute time.
     '''
@@ -34,9 +38,3 @@ def test_env_mod():
 
     x = [s for s in stdout if s.startswith("TEST_ENV=fooo")]
     assert x, "User set env missing"
-
-
-if __name__ == "__main__":
-
-    test_env()
-    test_env_mod()
