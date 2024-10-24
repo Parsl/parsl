@@ -43,12 +43,9 @@ class LocalChannel(RepresentationMixin):
               to override the envs set at channel initialization.
 
         Returns:
-            - retcode : Return code from the execution, -1 on fail
+            - retcode : Return code from the execution
             - stdout  : stdout string
             - stderr  : stderr string
-
-        Raises:
-        None.
         '''
         current_env = copy.deepcopy(self._envs)
         current_env.update(envs)
