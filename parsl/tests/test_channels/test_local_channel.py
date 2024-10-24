@@ -1,6 +1,6 @@
 import pytest
 
-from parsl.channels.local.local import LocalChannel
+from parsl.channels.local.local import execute_wait
 
 
 @pytest.mark.local
@@ -8,8 +8,7 @@ def test_env():
     ''' Regression testing for issue #27
     '''
 
-    lc = LocalChannel()
-    rc, stdout, stderr = lc.execute_wait("env", 1)
+    rc, stdout, stderr = execute_wait("env", 1)
 
     stdout = stdout.split('\n')
     x = [s for s in stdout if s.startswith("PATH=")]

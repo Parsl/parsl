@@ -1,6 +1,6 @@
 import pytest
 
-from parsl.channels.local.local import LocalChannel
+from parsl.channels.local.local import execute_wait
 
 
 @pytest.mark.local
@@ -11,10 +11,8 @@ def test_local_large_output_2210():
     pipes filling up.
     """
 
-    c = LocalChannel()
-
     # this will output 128kb of stdout
-    c.execute_wait("yes | dd count=128 bs=1024", walltime=60)
+    execute_wait("yes | dd count=128 bs=1024", walltime=60)
 
     # if this test fails, execute_wait should raise a timeout
     # exception.

@@ -2,7 +2,7 @@ import logging
 from abc import abstractmethod
 from string import Template
 
-from parsl.channels.local.local import LocalChannel
+from parsl.channels.local.local import execute_wait
 from parsl.launchers.base import Launcher
 from parsl.launchers.errors import BadLauncher
 from parsl.providers.base import ExecutionProvider
@@ -53,7 +53,6 @@ class ClusterProvider(ExecutionProvider):
                  cmd_timeout=10):
 
         self._label = label
-        self.channel = LocalChannel()
         self.nodes_per_block = nodes_per_block
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
@@ -74,7 +73,7 @@ class ClusterProvider(ExecutionProvider):
         t = self.cmd_timeout
         if timeout is not None:
             t = timeout
-        return self.channel.execute_wait(cmd, t)
+        return execute_wait(cmd, t)
 
     def _write_submit_script(self, template, script_filename, job_name, configs):
         """Generate submit script and write it to a file.
