@@ -4,7 +4,7 @@ from unittest import mock
 
 import pytest
 
-from parsl.channels import LocalChannel
+from parsl.channels.local.local import LocalChannel
 from parsl.providers import SlurmProvider
 
 

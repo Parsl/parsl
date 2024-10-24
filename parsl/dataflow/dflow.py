@@ -24,7 +24,7 @@ from typeguard import typechecked
 import parsl
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.app.futures import DataFuture
-from parsl.channels import Channel
+from parsl.channels.local.local import LocalChannel
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
@@ -1141,13 +1141,13 @@ class DataFlowKernel:
 
         logger.info("End of summary")
 
-    def _create_script_dir(self, channel: Channel) -> None:
+    def _create_script_dir(self, channel: LocalChannel) -> None:
         """Create script directories across a channel
 
         Parameters
         ----------
-        channel: Channel obj
-           Channel over which the remote dirs are to be created
+        channel: LocalChannel
+           LocalChannel over which the script dir is to be created
         """
         run_dir = self.run_dir
 
