@@ -69,20 +69,3 @@ class LocalChannel(RepresentationMixin):
             logger.debug("Execution of command in process %s completed normally", proc.pid)
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
-
-    def makedirs(self, path, mode=0o700, exist_ok=False):
-        """Create a directory.
-
-        If intermediate directories do not exist, they will be created.
-
-        Parameters
-        ----------
-        path : str
-            Path of directory to create.
-        mode : int
-            Permissions (posix-style) for the newly-created directory.
-        exist_ok : bool
-            If False, raise an OSError if the target directory already exists.
-        """
-
-        return os.makedirs(path, mode, exist_ok)
