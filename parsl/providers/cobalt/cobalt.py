@@ -171,10 +171,8 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
 
-        channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
-
         command = 'qsub -n {0} {1} -t {2} {3} {4}'.format(
-            self.nodes_per_block, queue_opt, wtime_to_minutes(self.walltime), account_opt, channel_script_path)
+            self.nodes_per_block, queue_opt, wtime_to_minutes(self.walltime), account_opt, script_path)
         logger.debug("Executing {}".format(command))
 
         retcode, stdout, stderr = self.execute_wait(command)
