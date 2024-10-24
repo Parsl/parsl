@@ -48,7 +48,6 @@ from parsl.monitoring import MonitoringHub
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.remote import monitor_wrapper
 from parsl.process_loggers import wrap_with_logs
-from parsl.providers.base import ExecutionProvider
 from parsl.usage_tracking.usage import UsageTracker
 from parsl.utils import Timer, get_all_checkpoints, get_std_fname_mode, get_version
 
@@ -1142,13 +1141,11 @@ class DataFlowKernel:
 
         logger.info("End of summary")
 
-    def _create_remote_dirs_over_channel(self, provider: ExecutionProvider, channel: Channel) -> None:
+    def _create_remote_dirs_over_channel(self, channel: Channel) -> None:
         """Create script directories across a channel
 
         Parameters
         ----------
-        provider: Provider obj
-           Provider for which scripts dirs are being created
         channel: Channel obj
            Channel over which the remote dirs are to be created
         """
@@ -1171,7 +1168,7 @@ class DataFlowKernel:
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
                     os.makedirs(executor.provider.script_dir, exist_ok=True)
 
-                    self._create_remote_dirs_over_channel(executor.provider, executor.provider.channel)
+                    self._create_remote_dirs_over_channel(executor.provider.channel)
 
             self.executors[executor.label] = executor
             executor.start()
