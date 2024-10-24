@@ -244,9 +244,8 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         # Construct and move the submit script
         self._write_submit_script(template_string, script_path, job_name, job_config)
-        channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        cmd = "condor_submit {0}".format(channel_script_path)
+        cmd = "condor_submit {0}".format(script_path)
         try:
             retcode, stdout, stderr = self.execute_wait(cmd)
         except Exception as e:
