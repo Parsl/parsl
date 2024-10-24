@@ -9,7 +9,7 @@ environment. Configuration is described by a Python object (:class:`~parsl.confi
 so that developers can 
 introspect permissible options, validate settings, and retrieve/edit
 configurations dynamically during execution. A configuration object specifies 
-details of the provider, executors, connection channel, allocation size, 
+details of the provider, executors, allocation size,
 queues, durations, and data management options. 
 
 The following example shows a basic configuration object (:class:`~parsl.config.Config`) for the Frontera
