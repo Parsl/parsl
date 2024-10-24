@@ -2,7 +2,6 @@ import logging
 from abc import ABCMeta, abstractmethod, abstractproperty
 from typing import Any, Dict, List, Optional
 
-from parsl.channels.base import Channel
 from parsl.jobs.states import JobStatus
 
 logger = logging.getLogger(__name__)
@@ -153,19 +152,4 @@ class ExecutionProvider(metaclass=ABCMeta):
 
         :return: the number of seconds to wait between calls to status()
         """
-        pass
-
-
-class Channeled():
-    """A marker type to indicate that parsl should manage a Channel for this provider"""
-    def __init__(self) -> None:
-        self.channel: Channel
-        pass
-
-
-class MultiChanneled():
-    """A marker type to indicate that parsl should manage multiple Channels for this provider"""
-
-    def __init__(self) -> None:
-        self.channels: List[Channel]
         pass
