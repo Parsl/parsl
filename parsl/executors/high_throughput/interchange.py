@@ -6,7 +6,6 @@ import os
 import pickle
 import platform
 import queue
-import signal
 import sys
 import threading
 import time
@@ -67,7 +66,7 @@ class Interchange:
              If specified the interchange will only listen on this address for connections from workers
              else, it binds to all addresses.
 
-        client_ports : triple(int, int, int)
+        client_ports : tuple(int, int, int)
              The ports at which the client can be reached
 
         worker_ports : tuple(int, int)
@@ -105,7 +104,6 @@ class Interchange:
         os.makedirs(self.logdir, exist_ok=True)
 
         start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
-        logger.propagate = False
         logger.debug("Initializing Interchange process")
 
         self.client_address = client_address
@@ -252,13 +250,7 @@ class Interchange:
             try:
                 command_req = self.command_channel.recv_pyobj()
                 logger.debug("Received command request: {}".format(command_req))
-                if command_req == "OUTSTANDING_C":
-                    outstanding = self.pending_task_queue.qsize()
-                    for manager in self._ready_managers.values():
-                        outstanding += len(manager['tasks'])
-                    reply = outstanding
-
-                elif command_req == "CONNECTED_BLOCKS":
+                if command_req == "CONNECTED_BLOCKS":
                     reply = self.connected_block_history
 
                 elif command_req == "WORKERS":
@@ -318,16 +310,6 @@ class Interchange:
     def start(self) -> None:
         """ Start the interchange
         """
-
-        # If a user workflow has set its own signal handler for sigterm, that
-        # handler will be inherited by the interchange process because it is
-        # launched as a multiprocessing fork process.
-        # That can interfere with the interchange shutdown mechanism, which is
-        # to receive a SIGTERM and exit immediately.
-        # See Parsl issue #2343 (Threads and multiprocessing cannot be
-        # intermingled without deadlocks) which talks about other fork-related
-        # parent-process-inheritance problems.
-        signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
         logger.info("Starting main interchange method")
 
@@ -549,7 +531,6 @@ class Interchange:
                         monitoring_radio.send(r['payload'])
                     elif r['type'] == 'heartbeat':
                         logger.debug("Manager %r sent heartbeat via results connection", manager_id)
-                        b_messages.append((p_message, r))
                     else:
                         logger.error("Interchange discarding result_queue message of unknown type: %s", r["type"])
 

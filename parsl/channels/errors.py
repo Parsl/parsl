@@ -1,7 +1,5 @@
 ''' Exceptions raise by Apps.
 '''
-from typing import Optional
-
 from parsl.errors import ParslError
 
 
@@ -58,21 +56,6 @@ class BadPermsScriptPath(ChannelError):
 
     def __init__(self, e: Exception, hostname: str) -> None:
         super().__init__("User does not have permissions to access the script_dir", e, hostname)
-
-
-class FileExists(ChannelError):
-    ''' Push or pull of file over channel fails since a file of the name already
-    exists on the destination.
-
-    Contains:
-    reason(string)
-    e (paramiko exception object)
-    hostname (string)
-    '''
-
-    def __init__(self, e: Exception, hostname: str, filename: Optional[str] = None) -> None:
-        super().__init__("File name collision in channel transport phase: {}".format(filename),
-                         e, hostname)
 
 
 class AuthException(ChannelError):
