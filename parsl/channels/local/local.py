@@ -16,7 +16,7 @@ class LocalChannel(Channel, RepresentationMixin):
     and done so infrequently that they do not need a persistent channel
     '''
 
-    def __init__(self, userhome=".", envs={}, script_dir=None):
+    def __init__(self):
         ''' Initialize the local channel. script_dir is required by set to a default.
 
         KwArgs:
@@ -24,12 +24,13 @@ class LocalChannel(Channel, RepresentationMixin):
             - envs (dict) : A dictionary of env variables to be set when launching the shell
             - script_dir (string): Directory to place scripts
         '''
-        self.userhome = os.path.abspath(userhome)
+        self.userhome = os.path.abspath(".")
+        envs = {}
         self.envs = envs
         local_env = os.environ.copy()
         self._envs = copy.deepcopy(local_env)
         self._envs.update(envs)
-        self.script_dir = script_dir
+        self.script_dir = None
 
     def execute_wait(self, cmd, walltime=None, envs={}):
         ''' Synchronously execute a commandline string on the shell.
