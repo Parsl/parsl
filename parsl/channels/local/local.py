@@ -22,7 +22,7 @@ class LocalChannel(RepresentationMixin):
 
         Args:
             - cmd (string) : Commandline string to execute
-            - walltime (int) : walltime in seconds, this is not really used now.
+            - walltime (int) : walltime in seconds
 
         Returns:
             - retcode : Return code from the execution
