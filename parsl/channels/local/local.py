@@ -10,11 +10,6 @@ class LocalChannel:
     and done so infrequently that they do not need a persistent channel
     '''
 
-    def __init__(self):
-        ''' Initialize the local channel.
-        '''
-        pass
-
     def execute_wait(self, cmd, walltime=None):
         ''' Synchronously execute a commandline string on the shell.
 
