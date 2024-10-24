@@ -166,7 +166,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
         job_config = {}
         # TODO : script_path might need to change to accommodate script dir set via channels
-        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config["submit_script_dir"] = self.script_dir
         job_config["nodes"] = self.nodes_per_block
         job_config["task_blocks"] = self.nodes_per_block * tasks_per_node
         job_config["nodes_per_block"] = self.nodes_per_block

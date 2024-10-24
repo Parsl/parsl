@@ -14,12 +14,11 @@ class LocalChannel(RepresentationMixin):
     '''
 
     def __init__(self):
-        ''' Initialize the local channel. script_dir is required by set to a default.
+        ''' Initialize the local channel.
 
         KwArgs:
             - userhome (string): (default='.') This is provided as a way to override and set a specific userhome
             - envs (dict) : A dictionary of env variables to be set when launching the shell
-            - script_dir (string): Directory to place scripts
         '''
         self.userhome = os.path.abspath(".")
         envs = {}
@@ -27,7 +26,6 @@ class LocalChannel(RepresentationMixin):
         local_env = os.environ.copy()
         self._envs = copy.deepcopy(local_env)
         self._envs.update(envs)
-        self.script_dir = None
 
     def execute_wait(self, cmd, walltime=None, envs={}):
         ''' Synchronously execute a commandline string on the shell.

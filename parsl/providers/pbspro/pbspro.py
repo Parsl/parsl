@@ -154,7 +154,7 @@ class PBSProProvider(TorqueProvider):
         )
 
         job_config = {}
-        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config["submit_script_dir"] = self.script_dir
         job_config["nodes_per_block"] = self.nodes_per_block
         job_config["ncpus"] = self.cpus_per_node
         job_config["walltime"] = self.walltime

@@ -1152,7 +1152,6 @@ class DataFlowKernel:
                 if hasattr(executor.provider, 'script_dir'):
                     script_dir = os.path.join(self.run_dir, 'submit_scripts')
                     executor.provider.script_dir = script_dir
-                    executor.provider.channel.script_dir = script_dir
                     os.makedirs(script_dir, exist_ok=True)
 
             self.executors[executor.label] = executor
