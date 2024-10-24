@@ -170,7 +170,6 @@ Exceptions
     parsl.providers.errors.ScaleOutFailed
     parsl.providers.errors.SchedulerMissingArgs
     parsl.providers.errors.ScriptPathError
-    parsl.channels.errors.FileCopyException
     parsl.executors.high_throughput.errors.WorkerLost
     parsl.executors.high_throughput.interchange.ManagerLost
     parsl.serialize.errors.DeserializationError
