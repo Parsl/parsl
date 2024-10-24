@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import ABCMeta, abstractmethod
 from typing import Dict, Tuple
 
 
@@ -7,6 +7,12 @@ class Channel(metaclass=ABCMeta):
     Parsl. This class should go away / be merged downwards into
     LocalChannel.
     """
+
+    # Script dir must be an absolute path
+    # This is initialized to None, which violates the type specification,
+    # and so code using script_dir must make sure it doesn't expect this
+    # to be not-None until after the DFK has initialized the channel
+    script_dir: str
 
     @abstractmethod
     def execute_wait(self, cmd: str, walltime: int = 0, envs: Dict[str, str] = {}) -> Tuple[int, str, str]:
@@ -22,25 +28,6 @@ class Channel(metaclass=ABCMeta):
         Returns:
             - (exit_code, stdout, stderr) (int, string, string)
         '''
-        pass
-
-    @abstractproperty
-    def script_dir(self) -> str:
-        ''' This is a property. Returns the directory assigned for storing all internal scripts such as
-        scheduler submit scripts. This is usually where error logs from the scheduler would reside on the
-        channel destination side.
-
-        Args:
-            - None
-
-        Returns:
-            - Channel script dir
-        '''
-        pass
-
-    # DFK expects to be able to modify this, so it needs to be in the abstract class
-    @script_dir.setter
-    def script_dir(self, value: str) -> None:
         pass
 
     @abstractmethod

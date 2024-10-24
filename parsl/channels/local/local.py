@@ -129,13 +129,3 @@ class LocalChannel(Channel, RepresentationMixin):
         """
 
         return os.makedirs(path, mode, exist_ok)
-
-    @property
-    def script_dir(self):
-        return self._script_dir
-
-    @script_dir.setter
-    def script_dir(self, value):
-        if value is not None:
-            value = os.path.abspath(value)
-        self._script_dir = value
