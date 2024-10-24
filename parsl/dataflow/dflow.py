@@ -1141,7 +1141,7 @@ class DataFlowKernel:
 
         logger.info("End of summary")
 
-    def _create_remote_dirs_over_channel(self, channel: Channel) -> None:
+    def _create_script_dir(self, channel: Channel) -> None:
         """Create script directories across a channel
 
         Parameters
@@ -1168,7 +1168,7 @@ class DataFlowKernel:
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
                     os.makedirs(executor.provider.script_dir, exist_ok=True)
 
-                    self._create_remote_dirs_over_channel(executor.provider.channel)
+                    self._create_script_dir(executor.provider.channel)
 
             self.executors[executor.label] = executor
             executor.start()
