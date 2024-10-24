@@ -120,14 +120,3 @@ class Channel(metaclass=ABCMeta):
             Path of directory to check.
         """
         pass
-
-    @abstractmethod
-    def abspath(self, path: str) -> str:
-        """Return the absolute path.
-
-        Parameters
-        ----------
-        path : str
-            Path for which the absolute path will be returned.
-        """
-        pass
