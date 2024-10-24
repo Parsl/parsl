@@ -2,7 +2,6 @@ import logging
 import os
 import time
 
-from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import AprunLauncher
 from parsl.providers.cluster_provider import ClusterProvider
@@ -63,7 +62,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
     """
     def __init__(self,
-                 channel=LocalChannel(),
                  account=None,
                  queue=None,
                  scheduler_options='',
@@ -78,7 +76,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                  cmd_timeout=120):
         label = 'torque'
         super().__init__(label,
-                         channel,
                          nodes_per_block,
                          init_blocks,
                          min_blocks,

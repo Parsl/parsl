@@ -3,7 +3,6 @@ import os
 import time
 import warnings
 
-from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import AprunLauncher
 from parsl.providers.cluster_provider import ClusterProvider
@@ -55,7 +54,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.launchers.SingleNodeLauncher`
     """
     def __init__(self,
-                 channel=LocalChannel(),
                  nodes_per_block=1,
                  init_blocks=0,
                  min_blocks=0,
@@ -70,7 +68,6 @@ class CobaltProvider(ClusterProvider, RepresentationMixin):
                  cmd_timeout=10):
         label = 'cobalt'
         super().__init__(label,
-                         channel=channel,
                          nodes_per_block=nodes_per_block,
                          init_blocks=init_blocks,
                          min_blocks=min_blocks,

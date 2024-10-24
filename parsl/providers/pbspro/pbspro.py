@@ -3,7 +3,6 @@ import logging
 import os
 import time
 
-from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.pbspro.template import template_string
@@ -49,7 +48,6 @@ class PBSProProvider(TorqueProvider):
         :class:`~parsl.launchers.SingleNodeLauncher`.
     """
     def __init__(self,
-                 channel=LocalChannel(),
                  account=None,
                  queue=None,
                  scheduler_options='',
@@ -64,8 +62,7 @@ class PBSProProvider(TorqueProvider):
                  launcher=SingleNodeLauncher(),
                  walltime="00:20:00",
                  cmd_timeout=120):
-        super().__init__(channel,
-                         account,
+        super().__init__(account,
                          queue,
                          scheduler_options,
                          worker_init,

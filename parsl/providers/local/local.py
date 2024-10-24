@@ -40,7 +40,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
     """
 
     def __init__(self,
-                 channel=LocalChannel(),
                  nodes_per_block=1,
                  launcher=SingleNodeLauncher(),
                  init_blocks=1,
@@ -50,7 +49,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  cmd_timeout=30,
                  parallelism=1,
                  move_files=None):
-        self.channel = channel
+        self.channel = LocalChannel()
         self._label = 'local'
         self.nodes_per_block = nodes_per_block
         self.launcher = launcher

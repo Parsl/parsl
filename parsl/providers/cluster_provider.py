@@ -2,6 +2,7 @@ import logging
 from abc import abstractmethod
 from string import Template
 
+from parsl.channels.local.local import LocalChannel
 from parsl.launchers.base import Launcher
 from parsl.launchers.errors import BadLauncher
 from parsl.providers.base import ExecutionProvider
@@ -42,7 +43,6 @@ class ClusterProvider(ExecutionProvider):
 
     def __init__(self,
                  label,
-                 channel,
                  nodes_per_block,
                  init_blocks,
                  min_blocks,
@@ -53,7 +53,7 @@ class ClusterProvider(ExecutionProvider):
                  cmd_timeout=10):
 
         self._label = label
-        self.channel = channel
+        self.channel = LocalChannel()
         self.nodes_per_block = nodes_per_block
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
