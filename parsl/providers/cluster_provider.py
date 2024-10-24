@@ -2,11 +2,11 @@ import logging
 from abc import abstractmethod
 from string import Template
 
-from parsl.channels.local.local import execute_wait
 from parsl.launchers.base import Launcher
 from parsl.launchers.errors import BadLauncher
 from parsl.providers.base import ExecutionProvider
 from parsl.providers.errors import SchedulerMissingArgs, ScriptPathError
+from parsl.utils import execute_wait
 
 logger = logging.getLogger(__name__)
 

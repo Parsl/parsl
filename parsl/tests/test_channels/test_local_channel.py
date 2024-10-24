@@ -1,6 +1,6 @@
 import pytest
 
-from parsl.channels.local.local import execute_wait
+from parsl.utils import execute_wait
 
 
 @pytest.mark.local

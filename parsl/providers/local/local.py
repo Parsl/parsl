@@ -2,7 +2,6 @@ import logging
 import os
 import time
 
-from parsl.channels.local.local import execute_wait
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.base import ExecutionProvider
@@ -11,7 +10,7 @@ from parsl.providers.errors import (
     ScriptPathError,
     SubmitException,
 )
-from parsl.utils import RepresentationMixin
+from parsl.utils import RepresentationMixin, execute_wait
 
 logger = logging.getLogger(__name__)
 
