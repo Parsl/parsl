@@ -1151,7 +1151,9 @@ class DataFlowKernel:
         """
         run_dir = self.run_dir
 
-        channel.script_dir = os.path.join(run_dir, 'submit_scripts')
+        sd = os.path.join(run_dir, 'submit_scripts')
+        assert isinstance(sd, str)
+        channel.script_dir = sd
 
         channel.makedirs(channel.script_dir, exist_ok=True)
 
