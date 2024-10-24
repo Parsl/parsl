@@ -95,6 +95,8 @@ class LocalChannel(RepresentationMixin):
         local_dest = os.path.join(dest_dir, os.path.basename(source))
 
         # Only attempt to copy if the target dir and source dir are different
+        logger.debug(f"push file comparing directories: {os.path.dirname(source)} vs {dest_dir}")
+        logger.debug(f"push file comparing directories: {os.path.dirname(source)!r} vs {dest_dir!r}")
         if os.path.dirname(source) != dest_dir:
             try:
                 shutil.copyfile(source, local_dest)
