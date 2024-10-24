@@ -66,7 +66,7 @@ class Interchange:
              If specified the interchange will only listen on this address for connections from workers
              else, it binds to all addresses.
 
-        client_ports : triple(int, int, int)
+        client_ports : tuple(int, int, int)
              The ports at which the client can be reached
 
         worker_ports : tuple(int, int)
