@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 from concurrent.futures import Future
 from typing import Any, Callable, Dict, Optional, Union
@@ -11,7 +13,6 @@ try:
     _globus_compute_enabled = True
 except ImportError:
     _globus_compute_enabled = False
-    Client: Any  # type: ignore[no-redef]
 
 UUID_LIKE_T = Union[uuid.UUID, str]
 
@@ -54,7 +55,9 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
         user_endpoint_config:
             User endpoint configuration values as described
             and allowed by endpoint administrators. Must be a JSON-serializable dict
-            or None.
+            or None. Refer docs from `globus-compute
+            <https://globus-compute.readthedocs.io/en/latest/endpoints/endpoints.html#templating-endpoint-configuration>`_
+            for more info.
 
         label:
             a label to name the executor; mainly utilized for
@@ -118,11 +121,16 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
 
         func: Callable
             Python function to execute remotely
+
         resource_specification: Dict[str, Any]
-            Resource specification used to run MPI applications on Endpoints configured
-            to use globus compute's MPIEngine
+            Resource specification can be used specify MPI resources required by MPI applications on
+            Endpoints configured to use globus compute's MPIEngine. GCE also accepts *user_endpoint_config*
+            to configure endpoints when the endpoint is a `Multi-User Endpoint
+            <https://globus-compute.readthedocs.io/en/latest/endpoints/endpoints.html#templating-endpoint-configuration>`_
+
         args:
             Args to pass to the function
+
         kwargs:
             kwargs to pass to the function
 
@@ -132,6 +140,8 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
         Future
         """
         self._executor.resource_specification = resource_specification or self.resource_specification
+        # Pop user_endpoint_config since it is illegal in resource_spec for globus_compute
+        self._executor.user_endpoint_config = resource_specification.pop('user_endpoint_config', self.user_endpoint_config)
         return self._executor.submit(func, *args, **kwargs)
 
     def shutdown(self, wait=True, *, cancel_futures=False):
