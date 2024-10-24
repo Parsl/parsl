@@ -4,7 +4,6 @@ from unittest import mock
 
 import pytest
 
-from parsl.channels import LocalChannel
 from parsl.providers import SlurmProvider
 
 
@@ -13,7 +12,7 @@ def test_submit_script_basic(tmp_path):
     """Test slurm resources table"""
 
     provider = SlurmProvider(
-        partition="debug", channel=LocalChannel()
+        partition="debug"
     )
     provider.script_dir = tmp_path
     provider.channel.script_dir = tmp_path

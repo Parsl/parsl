@@ -12,7 +12,7 @@ def test_submit_script_basic(tmp_path):
     """Test slurm resources table"""
 
     provider = PBSProProvider(
-        queue="debug", channel=LocalChannel()
+        queue="debug"
     )
     provider.script_dir = tmp_path
     provider.channel.script_dir = tmp_path
