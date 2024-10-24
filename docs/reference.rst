@@ -174,7 +174,6 @@ Exceptions
     parsl.channels.errors.BadHostKeyException
     parsl.channels.errors.BadScriptPath
     parsl.channels.errors.BadPermsScriptPath
-    parsl.channels.errors.FileExists
     parsl.channels.errors.AuthException
     parsl.channels.errors.SSHException
     parsl.channels.errors.FileCopyException
