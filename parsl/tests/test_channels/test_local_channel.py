@@ -18,8 +18,6 @@ def test_env():
     x = [s for s in stdout if s.startswith("HOME=")]
     assert x, "HOME not found"
 
-    print("RC:{} \nSTDOUT:{} \nSTDERR:{}".format(rc, stdout, stderr))
-
 
 @pytest.mark.local
 def test_env_mod():
