@@ -32,7 +32,7 @@ def test_manager_lost_system_failure(tmpd_cwd):
         cores_per_worker=1,
         worker_logdir_root=str(tmpd_cwd),
         heartbeat_period=1,
-        heartbeat_threshold=1,
+        heartbeat_threshold=3,
     )
     c = Config(executors=[hte], strategy='simple', strategy_period=0.1)
 

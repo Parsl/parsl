@@ -66,7 +66,7 @@ class Interchange:
              If specified the interchange will only listen on this address for connections from workers
              else, it binds to all addresses.
 
-        client_ports : triple(int, int, int)
+        client_ports : tuple(int, int, int)
              The ports at which the client can be reached
 
         worker_ports : tuple(int, int)
@@ -104,7 +104,6 @@ class Interchange:
         os.makedirs(self.logdir, exist_ok=True)
 
         start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
-        logger.propagate = False
         logger.debug("Initializing Interchange process")
 
         self.client_address = client_address
