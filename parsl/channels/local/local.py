@@ -37,7 +37,7 @@ class LocalChannel(Channel, RepresentationMixin):
 
         Args:
             - cmd (string) : Commandline string to execute
-            - walltime (int) : walltime in seconds, this is not really used now.
+            - walltime (int) : walltime in seconds
 
         Kwargs:
             - envs (dict) : Dictionary of env variables. This will be used
