@@ -48,23 +48,24 @@ def app():
 @pytest.mark.parametrize("msg",
                          (b'FuzzyByte\rSTREAM',  # not JSON
                           b'{}',  # missing fields
-                          b'{"type":"heartbeat"}',  # heartbeat without ID
+                          b'{"type":"heartbeat"}',  # regression test #3262
                           )
                          )
 def test_bad_messages(try_assert, msg):
-    """This tests that a heartbeat arriving after a manager
-    has expired due to missing heartbeats (due to transient
-    delay) does not kill the interchange - issue #3262 and
-    issue #3632.
+    """This tests that the interchange is resilient to a few different bad
+    messages: malformed messages caused by implementation errors, and
+    heartbeat messages from managers that are not registered.
+
+    The heartbeat test is a regression test for issues #3262, #3632
     """
 
     c, htex = fresh_config()
 
     with parsl.load(c):
 
-        # send a bad message into the interchange on the
-        # task_outgoing worker channel, and then check that
-        # we can scale out a block and run a task.
+        # send a bad message into the interchange on the task_outgoing worker
+        # channel, and then check that the interchange is still alive enough
+        # that we can scale out a block and run a task.
 
         (task_port, result_port) = htex.command_client.run("WORKER_PORTS")
 
