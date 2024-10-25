@@ -44,12 +44,9 @@ class LocalChannel(Channel, RepresentationMixin):
               to override the envs set at channel initialization.
 
         Returns:
-            - retcode : Return code from the execution, -1 on fail
+            - retcode : Return code from the execution
             - stdout  : stdout string
             - stderr  : stderr string
-
-        Raises:
-        None.
         '''
         current_env = copy.deepcopy(self._envs)
         current_env.update(envs)
@@ -145,16 +142,6 @@ class LocalChannel(Channel, RepresentationMixin):
 
         return os.makedirs(path, mode, exist_ok)
 
-    def abspath(self, path):
-        """Return the absolute path.
-
-        Parameters
-        ----------
-        path : str
-            Path for which the absolute path will be returned.
-        """
-        return os.path.abspath(path)
-
     @property
     def script_dir(self):
         return self._script_dir
@@ -162,5 +149,5 @@ class LocalChannel(Channel, RepresentationMixin):
     @script_dir.setter
     def script_dir(self, value):
         if value is not None:
-            value = self.abspath(value)
+            value = os.path.abspath(value)
         self._script_dir = value

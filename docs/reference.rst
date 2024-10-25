@@ -78,6 +78,16 @@ Executors
     parsl.executors.FluxExecutor
     parsl.executors.radical.RadicalPilotExecutor
 
+Manager Selectors
+=================
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.executors.high_throughput.manager_selector.RandomManagerSelector
+    parsl.executors.high_throughput.manager_selector.BlockIdManagerSelector
+
 Launchers
 =========
 
@@ -164,7 +174,6 @@ Exceptions
     parsl.channels.errors.BadHostKeyException
     parsl.channels.errors.BadScriptPath
     parsl.channels.errors.BadPermsScriptPath
-    parsl.channels.errors.FileExists
     parsl.channels.errors.AuthException
     parsl.channels.errors.SSHException
     parsl.channels.errors.FileCopyException

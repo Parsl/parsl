@@ -16,15 +16,16 @@ from parsl import curvezmq
 from parsl.addresses import get_all_addresses
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.staging import Staging
-from parsl.executors.errors import BadMessage, ScalingFailed
+from parsl.executors.errors import (
+    BadMessage,
+    InvalidResourceSpecification,
+    ScalingFailed,
+)
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
 from parsl.executors.high_throughput.manager_selector import (
     ManagerSelector,
     RandomManagerSelector,
-)
-from parsl.executors.high_throughput.mpi_prefix_composer import (
-    InvalidResourceSpecification,
 )
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
@@ -145,6 +146,11 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
 
     encrypted : bool
         Flag to enable/disable encryption (CurveZMQ). Default is False.
+
+    manager_selector: ManagerSelector
+        Determines what strategy the interchange uses to select managers during task distribution.
+        See API reference under "Manager Selectors" regarding the various manager selectors.
+        Default: 'RandomManagerSelector'
 """  # Documentation for params used by both HTEx and MPIEx
 
 
@@ -199,9 +205,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         will check the available memory at startup and limit the number of workers such that
         the there's sufficient memory for each worker. Default: None
 
-    max_workers : int
-        Deprecated. Please use max_workers_per_node instead.
-
     max_workers_per_node : int
         Caps the number of workers launched per node. Default: None
 
@@ -239,7 +242,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_debug: bool = False,
                  cores_per_worker: float = 1.0,
                  mem_per_worker: Optional[float] = None,
-                 max_workers: Optional[Union[int, float]] = None,
                  max_workers_per_node: Optional[Union[int, float]] = None,
                  cpu_affinity: str = 'none',
                  available_accelerators: Union[int, Sequence[str]] = (),
@@ -272,9 +274,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         else:
             self.all_addresses = ','.join(get_all_addresses())
 
-        if max_workers:
-            self._warn_deprecated("max_workers", "max_workers_per_node")
-        self.max_workers_per_node = max_workers_per_node or max_workers or float("inf")
+        self.max_workers_per_node = max_workers_per_node or float("inf")
 
         mem_slots = self.max_workers_per_node
         cpu_slots = self.max_workers_per_node
@@ -336,16 +336,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         )
 
     @property
-    def max_workers(self):
-        self._warn_deprecated("max_workers", "max_workers_per_node")
-        return self.max_workers_per_node
-
-    @max_workers.setter
-    def max_workers(self, val: Union[int, float]):
-        self._warn_deprecated("max_workers", "max_workers_per_node")
-        self.max_workers_per_node = val
-
-    @property
     def logdir(self):
         return "{}/{}".format(self.run_dir, self.label)
 
@@ -356,15 +346,17 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         return self.logdir
 
     def validate_resource_spec(self, resource_specification: dict):
-        """HTEX does not support *any* resource_specification options and
-        will raise InvalidResourceSpecification is any are passed to it"""
+        """HTEX supports the following *Optional* resource specifications:
+        priority: lower value is higher priority"""
         if resource_specification:
-            raise InvalidResourceSpecification(
-                set(resource_specification.keys()),
-                ("HTEX does not support the supplied resource_specifications."
-                 "For MPI applications consider using the MPIExecutor. "
-                 "For specifications for core count/memory/walltime, consider using WorkQueueExecutor. ")
-            )
+            acceptable_fields = {'priority'}
+            keys = set(resource_specification.keys())
+            invalid_keys = keys - acceptable_fields
+            if invalid_keys:
+                message = "Task resource specification only accepts these types of resources: {}".format(
+                    ', '.join(acceptable_fields))
+                logger.error(message)
+                raise InvalidResourceSpecification(set(invalid_keys), message)
         return
 
     def initialize_scaling(self):
@@ -475,9 +467,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                     except pickle.UnpicklingError:
                         raise BadMessage("Message received could not be unpickled")
 
-                    if msg['type'] == 'heartbeat':
-                        continue
-                    elif msg['type'] == 'result':
+                    if msg['type'] == 'result':
                         try:
                             tid = msg['task_id']
                         except Exception:
@@ -597,7 +587,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     def outstanding(self) -> int:
         """Returns the count of tasks outstanding across the interchange
         and managers"""
-        return self.command_client.run("OUTSTANDING_C")
+        return len(self.tasks)
 
     @property
     def connected_workers(self) -> int:
@@ -674,7 +664,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         except TypeError:
             raise SerializationError(func.__name__)
 
-        msg = {"task_id": task_id, "buffer": fn_buf}
+        msg = {"task_id": task_id, "resource_spec": resource_specification, "buffer": fn_buf}
 
         # Post task to the outgoing queue
         self.outgoing_q.put(msg)

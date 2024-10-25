@@ -362,7 +362,7 @@ class Manager:
                 if tasks == HEARTBEAT_CODE:
                     logger.debug("Got heartbeat from interchange")
                 elif tasks == DRAINED_CODE:
-                    logger.info("Got fulled drained message from interchange - setting kill flag")
+                    logger.info("Got fully drained message from interchange - setting kill flag")
                     kill_event.set()
                 else:
                     task_recv_counter += len(tasks)
