@@ -123,9 +123,6 @@ Stepping through the following question should help formulate a suitable configu
 | Torque/PBS based    | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.TorqueProvider`       |
 | system              | * `parsl.executors.WorkQueueExecutor`         |                                        |
 +---------------------+-----------------------------------------------+----------------------------------------+
-| Cobalt based system | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.CobaltProvider`       |
-|                     | * `parsl.executors.WorkQueueExecutor`         |                                        |
-+---------------------+-----------------------------------------------+----------------------------------------+
 | GridEngine based    | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.GridEngineProvider`   |
 | system              | * `parsl.executors.WorkQueueExecutor`         |                                        |
 +---------------------+-----------------------------------------------+----------------------------------------+
@@ -184,8 +181,6 @@ Stepping through the following question should help formulate a suitable configu
 +=====================================+==========================+====================================================+
 | `parsl.providers.TorqueProvider`    | Any                      | * `parsl.launchers.AprunLauncher`                  |
 |                                     |                          | * `parsl.launchers.MpiExecLauncher`                |
-+-------------------------------------+--------------------------+----------------------------------------------------+
-| `parsl.providers.CobaltProvider`    | Any                      | * `parsl.launchers.AprunLauncher`                  |
 +-------------------------------------+--------------------------+----------------------------------------------------+
 | `parsl.providers.SlurmProvider`     | Any                      | * `parsl.launchers.SrunLauncher`  if native slurm  |
 |                                     |                          | * `parsl.launchers.AprunLauncher`, otherwise       |
