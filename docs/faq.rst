@@ -257,15 +257,15 @@ There are a few common situations in which a Parsl script might hang:
 
      .. code-block:: python
 
-        from libsubmit.providers import Cobalt
         from parsl.config import Config
+        from parsl.providers import SlurmProvider
         from parsl.executors import HighThroughputExecutor
 
         config = Config(
             executors=[
                 HighThroughputExecutor(
-                    label='ALCF_theta_local',
-                    provider=Cobalt(),
+                    label='htex',
+                    provider=SlurmProvider(),
                     worer_port_range=('50000,55000'),
                     interchange_port_range=('50000,55000')
                 )
