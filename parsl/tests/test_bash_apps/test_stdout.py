@@ -34,6 +34,7 @@ testids = [
 ]
 
 
+@pytest.mark.shared_fs
 @pytest.mark.parametrize('spec', speclist, ids=testids)
 def test_bad_stdout_specs(spec):
     """Testing bad stdout spec cases"""
@@ -91,6 +92,7 @@ def test_bad_stderr_file():
 
 
 @pytest.mark.executor_supports_std_stream_tuples
+@pytest.mark.shared_fs
 def test_stdout_truncate(tmpd_cwd, caplog):
     """Testing truncation of prior content of stdout"""
 
@@ -110,6 +112,7 @@ def test_stdout_truncate(tmpd_cwd, caplog):
         assert record.levelno < logging.ERROR
 
 
+@pytest.mark.shared_fs
 def test_stdout_append(tmpd_cwd, caplog):
     """Testing appending to prior content of stdout (default open() mode)"""
 

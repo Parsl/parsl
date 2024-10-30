@@ -15,6 +15,7 @@ def output_to_stds(*, stdout=parsl.AUTO_LOGNAME, stderr=parsl.AUTO_LOGNAME):
     return "echo hello ; echo goodbye >&2"
 
 
+@pytest.mark.shared_fs
 def test_stdout_staging_file(tmpd_cwd, caplog):
     basename = str(tmpd_cwd) + "/stdout.txt"
     stdout_file = File("file://" + basename)
@@ -30,6 +31,7 @@ def test_stdout_staging_file(tmpd_cwd, caplog):
         assert record.levelno < logging.ERROR
 
 
+@pytest.mark.shared_fs
 def test_stdout_stderr_staging_zip(tmpd_cwd, caplog):
     zipfile_name = str(tmpd_cwd) + "/staging.zip"
     stdout_relative_path = "somewhere/test-out.txt"
