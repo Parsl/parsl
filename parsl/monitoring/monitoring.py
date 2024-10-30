@@ -7,13 +7,12 @@ import queue
 import time
 from multiprocessing import Event, Process
 from multiprocessing.queues import Queue
-from typing import TYPE_CHECKING, Any, Literal, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Literal, Optional, Tuple, Union, cast
 
 import typeguard
 
 from parsl.log_utils import set_file_logger
 from parsl.monitoring.errors import MonitoringHubStartError
-from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios import MultiprocessingQueueRadioSender
 from parsl.monitoring.router import router_starter
 from parsl.monitoring.types import TaggedMonitoringMessage
@@ -202,10 +201,9 @@ class MonitoringHub(RepresentationMixin):
 
         self.hub_zmq_port = zmq_port
 
-    # TODO: tighten the Any message format
-    def send(self, mtype: MessageType, message: Any) -> None:
-        logger.debug("Sending message type {}".format(mtype))
-        self.radio.send((mtype, message))
+    def send(self, message: TaggedMonitoringMessage) -> None:
+        logger.debug("Sending message type {}".format(message[0]))
+        self.radio.send(message)
 
     def close(self) -> None:
         logger.info("Terminating Monitoring Hub")
