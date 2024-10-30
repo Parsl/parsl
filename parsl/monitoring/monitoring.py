@@ -258,7 +258,7 @@ class MonitoringHub(RepresentationMixin):
 
 
 @wrap_with_logs
-def filesystem_receiver(logdir: str, q: "queue.Queue[TaggedMonitoringMessage]", run_dir: str) -> None:
+def filesystem_receiver(logdir: str, q: Queue[TaggedMonitoringMessage], run_dir: str) -> None:
     logger = set_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
                              name="monitoring_filesystem_radio",
                              level=logging.INFO)
