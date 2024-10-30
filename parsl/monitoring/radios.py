@@ -8,8 +8,6 @@ from multiprocessing.queues import Queue
 
 import zmq
 
-from parsl.serialize import serialize
-
 logger = logging.getLogger(__name__)
 
 
@@ -59,7 +57,7 @@ class FilesystemRadioSender(MonitoringRadioSender):
         # move it into new/, so that a partially written
         # file will never be observed in new/
         with open(tmp_filename, "wb") as f:
-            f.write(serialize(buffer))
+            pickle.dump(buffer, f)
         os.rename(tmp_filename, new_filename)
 
 
