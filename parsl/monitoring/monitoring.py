@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import multiprocessing.synchronize as ms
 import os
+import pickle
 import queue
 import time
 from multiprocessing import Event, Process
@@ -18,7 +19,6 @@ from parsl.monitoring.router import router_starter
 from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import ForkProcess, SizedQueue
 from parsl.process_loggers import wrap_with_logs
-from parsl.serialize import deserialize
 from parsl.utils import RepresentationMixin, setproctitle
 
 _db_manager_excepts: Optional[Exception]
@@ -282,7 +282,7 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[TaggedMonitoringMessage]", 
                 logger.info("Processing filesystem radio file %s", filename)
                 full_path_filename = f"{new_dir}/{filename}"
                 with open(full_path_filename, "rb") as f:
-                    message = deserialize(f.read())
+                    message = pickle.load(f)
                 logger.debug("Message received is: %s", message)
                 assert isinstance(message, tuple)
                 q.put(cast(TaggedMonitoringMessage, message))
