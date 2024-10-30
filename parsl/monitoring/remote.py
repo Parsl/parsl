@@ -7,12 +7,10 @@ from multiprocessing import Event
 from typing import Any, Callable, Dict, List, Sequence, Tuple
 
 from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.radios import (
-    FilesystemRadioSender,
-    HTEXRadioSender,
-    MonitoringRadioSender,
-    UDPRadioSender,
-)
+from parsl.monitoring.radios.base import MonitoringRadioSender
+from parsl.monitoring.radios.filesystem import FilesystemRadioSender
+from parsl.monitoring.radios.htex import HTEXRadioSender
+from parsl.monitoring.radios.udp import UDPRadioSender
 from parsl.multiprocessing import ForkProcess
 from parsl.process_loggers import wrap_with_logs
 
