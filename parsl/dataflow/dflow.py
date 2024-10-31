@@ -1042,13 +1042,16 @@ class DataFlowKernel:
 
         # Check for futures in inputs=[<fut>...]
         if 'inputs' in kwargs:
-            new_inputs = []
-            for dep in kwargs['inputs']:
-                try:
-                    new_inputs.extend([self.dependency_resolver.traverse_to_unwrap(dep)])
-                except Exception as e:
-                    append_failure(e, dep)
-            kwargs['inputs'] = new_inputs
+            if isinstance(kwargs['inputs'], DynamicFileList):
+                new_inputs = kwargs['inputs']
+            else:
+                new_inputs = []
+                for dep in kwargs['inputs']:
+                    try:
+                        new_inputs.extend([self.dependency_resolver.traverse_to_unwrap(dep)])
+                    except Exception as e:
+                        append_failure(e, dep)
+                kwargs['inputs'] = new_inputs
 
         return new_args, kwargs, dep_failures
 
