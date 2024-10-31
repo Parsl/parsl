@@ -58,7 +58,7 @@ class FilesystemRadioSender(MonitoringRadioSender):
 
         tmp_filename = f"{self.tmp_path}/{unique_id}"
         new_filename = f"{self.new_path}/{unique_id}"
-        buffer = (message, "NA")
+        buffer = message
 
         # this will write the message out then atomically
         # move it into new/, so that a partially written
@@ -187,7 +187,7 @@ class MultiprocessingQueueRadioSender(MonitoringRadioSender):
         self.queue = queue
 
     def send(self, message: object) -> None:
-        self.queue.put((message, 0))
+        self.queue.put(message)
 
 
 class ZMQRadioSender(MonitoringRadioSender):

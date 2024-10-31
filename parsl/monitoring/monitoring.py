@@ -16,7 +16,7 @@ from parsl.monitoring.errors import MonitoringHubStartError
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios import MultiprocessingQueueRadioSender
 from parsl.monitoring.router import router_starter
-from parsl.monitoring.types import AddressedMonitoringMessage
+from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import ForkProcess, SizedQueue
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import deserialize
@@ -138,7 +138,7 @@ class MonitoringHub(RepresentationMixin):
         self.exception_q: Queue[Tuple[str, str]]
         self.exception_q = SizedQueue(maxsize=10)
 
-        self.resource_msgs: Queue[Union[AddressedMonitoringMessage, Tuple[Literal["STOP"], Literal[0]]]]
+        self.resource_msgs: Queue[Union[TaggedMonitoringMessage, Literal["STOP"]]]
         self.resource_msgs = SizedQueue()
 
         self.router_exit_event: ms.Event
@@ -237,7 +237,7 @@ class MonitoringHub(RepresentationMixin):
             logger.debug("Finished waiting for router termination")
             if len(exception_msgs) == 0:
                 logger.debug("Sending STOP to DBM")
-                self.resource_msgs.put(("STOP", 0))
+                self.resource_msgs.put("STOP")
             else:
                 logger.debug("Not sending STOP to DBM, because there were DBM exceptions")
             logger.debug("Waiting for DB termination")
@@ -261,7 +261,7 @@ class MonitoringHub(RepresentationMixin):
 
 
 @wrap_with_logs
-def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]", run_dir: str) -> None:
+def filesystem_receiver(logdir: str, q: "queue.Queue[TaggedMonitoringMessage]", run_dir: str) -> None:
     logger = set_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
                              name="monitoring_filesystem_radio",
                              level=logging.INFO)
@@ -288,7 +288,7 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]
                     message = deserialize(f.read())
                 logger.debug(f"Message received is: {message}")
                 assert isinstance(message, tuple)
-                q.put(cast(AddressedMonitoringMessage, message))
+                q.put(cast(TaggedMonitoringMessage, message))
                 os.remove(full_path_filename)
             except Exception:
                 logger.exception(f"Exception processing {filename} - probably will be retried next iteration")
