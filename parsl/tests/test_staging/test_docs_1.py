@@ -12,7 +12,7 @@ def convert(inputs=[], outputs=[]):
 
 
 @pytest.mark.cleannet
-@pytest.mark.shared_fs
+@pytest.mark.staging_required
 def test():
     # create an remote Parsl file
     inp = File('ftp://ftp.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')

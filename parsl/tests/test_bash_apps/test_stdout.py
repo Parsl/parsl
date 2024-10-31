@@ -34,7 +34,6 @@ testids = [
 ]
 
 
-@pytest.mark.shared_fs
 @pytest.mark.parametrize('spec', speclist, ids=testids)
 def test_bad_stdout_specs(spec):
     """Testing bad stdout spec cases"""
