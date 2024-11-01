@@ -984,7 +984,7 @@ class DataFlowKernel:
             - app_kwargs (dict) : Rest of the kwargs to the fn passed as dict.
 
         Returns:
-               (AppFuture) [DataFutures,]
+            AppFuture
 
         """
 
