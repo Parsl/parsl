@@ -159,8 +159,8 @@ class DataFlowKernel:
         }
 
         if self.monitoring:
-            self.monitoring.send(MessageType.WORKFLOW_INFO,
-                                 workflow_info)
+            self.monitoring.send((MessageType.WORKFLOW_INFO,
+                                 workflow_info))
 
         if config.checkpoint_files is not None:
             checkpoints = self.load_checkpoints(config.checkpoint_files)
@@ -235,7 +235,7 @@ class DataFlowKernel:
     def _send_task_log_info(self, task_record: TaskRecord) -> None:
         if self.monitoring:
             task_log_info = self._create_task_log_info(task_record)
-            self.monitoring.send(MessageType.TASK_INFO, task_log_info)
+            self.monitoring.send((MessageType.TASK_INFO, task_log_info))
 
     def _create_task_log_info(self, task_record: TaskRecord) -> Dict[str, Any]:
         """
@@ -1239,12 +1239,12 @@ class DataFlowKernel:
 
         if self.monitoring:
             logger.info("Sending final monitoring message")
-            self.monitoring.send(MessageType.WORKFLOW_INFO,
+            self.monitoring.send((MessageType.WORKFLOW_INFO,
                                  {'tasks_failed_count': self.task_state_counts[States.failed],
                                   'tasks_completed_count': self.task_state_counts[States.exec_done],
                                   "time_began": self.time_began,
                                   'time_completed': self.time_completed,
-                                  'run_id': self.run_id, 'rundir': self.run_dir})
+                                  'run_id': self.run_id, 'rundir': self.run_dir}))
 
             logger.info("Terminating monitoring")
             self.monitoring.close()
