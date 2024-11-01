@@ -436,9 +436,13 @@ class Interchange:
                     logger.info(f"Manager {manager_id!r} has compatible Parsl version {msg['parsl_v']}")
                     logger.info(f"Manager {manager_id!r} has compatible Python version {msg['python_v'].rsplit('.', 1)[0]}")
             elif msg['type'] == 'heartbeat':
-                self._ready_managers[manager_id]['last_heartbeat'] = time.time()
-                logger.debug("Manager %r sent heartbeat via tasks connection", manager_id)
-                self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
+                manager = self._ready_managers.get(manager_id)
+                if manager:
+                    manager['last_heartbeat'] = time.time()
+                    logger.debug("Manager %r sent heartbeat via tasks connection", manager_id)
+                    self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
+                else:
+                    logger.warning("Received heartbeat via tasks connection for not-registered manager %r", manager_id)
             elif msg['type'] == 'drain':
                 self._ready_managers[manager_id]['draining'] = True
                 logger.debug("Manager %r requested drain", manager_id)
