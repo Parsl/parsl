@@ -5,14 +5,10 @@ import socket
 import uuid
 from abc import ABCMeta, abstractmethod
 from multiprocessing.queues import Queue
-from typing import Optional
 
 import zmq
 
 from parsl.serialize import serialize
-
-_db_manager_excepts: Optional[Exception]
-
 
 logger = logging.getLogger(__name__)
 
