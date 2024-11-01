@@ -115,7 +115,6 @@ Providers
     :nosignatures:
 
     parsl.providers.AWSProvider
-    parsl.providers.CobaltProvider
     parsl.providers.CondorProvider
     parsl.providers.GoogleCloudProvider
     parsl.providers.GridEngineProvider

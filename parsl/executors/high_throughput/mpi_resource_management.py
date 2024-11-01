@@ -17,7 +17,6 @@ class Scheduler(Enum):
     Unknown = 0
     Slurm = 1
     PBS = 2
-    Cobalt = 3
 
 
 def get_slurm_hosts_list() -> List[str]:
@@ -37,13 +36,6 @@ def get_pbs_hosts_list() -> List[str]:
         return [line.strip() for line in f.readlines()]
 
 
-def get_cobalt_hosts_list() -> List[str]:
-    """Get list of COBALT hosts from envvar: COBALT_NODEFILE"""
-    nodefile_name = os.environ["COBALT_NODEFILE"]
-    with open(nodefile_name) as f:
-        return [line.strip() for line in f.readlines()]
-
-
 def get_nodes_in_batchjob(scheduler: Scheduler) -> List[str]:
     """Get nodelist from all supported schedulers"""
     nodelist = []
@@ -51,8 +43,6 @@ def get_nodes_in_batchjob(scheduler: Scheduler) -> List[str]:
         nodelist = get_slurm_hosts_list()
     elif scheduler == Scheduler.PBS:
         nodelist = get_pbs_hosts_list()
-    elif scheduler == Scheduler.Cobalt:
-        nodelist = get_cobalt_hosts_list()
     else:
         raise RuntimeError(f"mpi_mode does not support scheduler:{scheduler}")
     return nodelist
@@ -64,8 +54,6 @@ def identify_scheduler() -> Scheduler:
         return Scheduler.Slurm
     elif os.environ.get("PBS_NODEFILE"):
         return Scheduler.PBS
-    elif os.environ.get("COBALT_NODEFILE"):
-        return Scheduler.Cobalt
     else:
         return Scheduler.Unknown
 

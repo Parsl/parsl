@@ -11,7 +11,7 @@ class ExecutionProvider(metaclass=ABCMeta):
     """Execution providers are responsible for managing execution resources
     that have a Local Resource Manager (LRM). For instance, campus clusters
     and supercomputers generally have LRMs (schedulers) such as Slurm,
-    Torque/PBS, Condor and Cobalt. Clouds, on the other hand, have API
+    Torque/PBS, and Condor. Clouds, on the other hand, have API
     interfaces that allow much more fine-grained composition of an execution
     environment. An execution provider abstracts these types of resources and
     provides a single uniform interface to them.

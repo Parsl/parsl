@@ -33,7 +33,6 @@ execution_environment:
     - Slurm
     - LSF
     - PBS
-    - Cobalt
     - Flux
     - GridEngine
     - HTCondor
