@@ -650,14 +650,6 @@ def worker(
     debug: bool,
     mpi_launcher: str,
 ):
-    """
-
-    Put request token into queue
-    Get task from task_queue
-    Pop request from queue
-    Put result into result_queue
-    """
-
     # override the global logger inherited from the __main__ process (which
     # usually logs to manager.log) with one specific to this worker.
     global logger
