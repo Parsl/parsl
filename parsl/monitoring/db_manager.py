@@ -556,7 +556,7 @@ class DatabaseManager:
             logger.debug("Checking STOP conditions: kill event: %s, queue has entries: %s",
                          kill_event.is_set(), logs_queue.qsize() != 0)
             try:
-                x, addr = logs_queue.get(timeout=0.1)
+                x = logs_queue.get(timeout=0.1)
             except queue.Empty:
                 continue
             else:
