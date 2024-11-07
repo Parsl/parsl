@@ -1186,12 +1186,7 @@ class DataFlowKernel:
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
                     os.makedirs(executor.provider.script_dir, exist_ok=True)
 
-                    if hasattr(executor.provider, 'channels'):
-                        logger.debug("Creating script_dir across multiple channels")
-                        for channel in executor.provider.channels:
-                            self._create_remote_dirs_over_channel(executor.provider, channel)
-                    else:
-                        self._create_remote_dirs_over_channel(executor.provider, executor.provider.channel)
+                    self._create_remote_dirs_over_channel(executor.provider, executor.provider.channel)
 
             self.executors[executor.label] = executor
             executor.start()
@@ -1275,20 +1270,14 @@ class DataFlowKernel:
 
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
-                    logger.info(f"Closing channel(s) for {executor.label}")
+                    logger.info(f"Closing channel for {executor.label}")
 
-                    if hasattr(executor.provider, 'channels'):
-                        for channel in executor.provider.channels:
-                            logger.info(f"Closing channel {channel}")
-                            channel.close()
-                            logger.info(f"Closed channel {channel}")
-                    else:
-                        assert hasattr(executor.provider, 'channel'), "If provider has no .channels, it must have .channel"
-                        logger.info(f"Closing channel {executor.provider.channel}")
-                        executor.provider.channel.close()
-                        logger.info(f"Closed channel {executor.provider.channel}")
+                    assert hasattr(executor.provider, 'channel'), "Provider with .script_dir must have .channel"
+                    logger.info(f"Closing channel {executor.provider.channel}")
+                    executor.provider.channel.close()
+                    logger.info(f"Closed channel {executor.provider.channel}")
 
-                    logger.info(f"Closed executor channel(s) for {executor.label}")
+                    logger.info(f"Closed executor channel for {executor.label}")
 
         logger.info("Terminated executors")
         self.time_completed = datetime.datetime.now()
