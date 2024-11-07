@@ -6,7 +6,7 @@ import os
 import pickle
 import queue
 import time
-from multiprocessing import Event, Process
+from multiprocessing import Event
 from multiprocessing.queues import Queue
 from typing import TYPE_CHECKING, Literal, Optional, Tuple, Union, cast
 
@@ -171,11 +171,11 @@ class MonitoringHub(RepresentationMixin):
         self.dbm_proc.start()
         logger.info("Started the router process %s and DBM process %s", self.router_proc.pid, self.dbm_proc.pid)
 
-        self.filesystem_proc = Process(target=filesystem_receiver,
-                                       args=(self.logdir, self.resource_msgs, dfk_run_dir),
-                                       name="Monitoring-Filesystem-Process",
-                                       daemon=True
-                                       )
+        self.filesystem_proc = ForkProcess(target=filesystem_receiver,
+                                           args=(self.logdir, self.resource_msgs, dfk_run_dir),
+                                           name="Monitoring-Filesystem-Process",
+                                           daemon=True
+                                           )
         self.filesystem_proc.start()
         logger.info("Started filesystem radio receiver process %s", self.filesystem_proc.pid)
 
