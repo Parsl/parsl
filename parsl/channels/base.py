@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
-from typing import Dict, Tuple
+from typing import Tuple
 
 
 class Channel(metaclass=ABCMeta):
@@ -22,15 +22,12 @@ class Channel(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def execute_wait(self, cmd: str, walltime: int = 0, envs: Dict[str, str] = {}) -> Tuple[int, str, str]:
+    def execute_wait(self, cmd: str, walltime: int = 0) -> Tuple[int, str, str]:
         ''' Executes the cmd, with a defined walltime.
 
         Args:
             - cmd (string): Command string to execute over the channel
             - walltime (int) : Timeout in seconds
-
-        KWargs:
-            - envs (Dict[str, str]) : Environment variables to push to the remote side
 
         Returns:
             - (exit_code, stdout, stderr) (int, string, string)
