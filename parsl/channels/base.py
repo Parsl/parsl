@@ -82,12 +82,6 @@ class Channel(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def close(self) -> None:
-        ''' Closes the channel.
-        '''
-        pass
-
-    @abstractmethod
     def makedirs(self, path: str, mode: int = 0o511, exist_ok: bool = False) -> None:
         """Create a directory.
 
