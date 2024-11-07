@@ -288,6 +288,6 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[TaggedMonitoringMessage]", 
                 q.put(cast(TaggedMonitoringMessage, message))
                 os.remove(full_path_filename)
             except Exception:
-                logger.exception("Exception processing %s  - probably will be retried next iteration", filename)
+                logger.exception("Exception processing %s - probably will be retried next iteration", filename)
 
         time.sleep(1)  # whats a good time for this poll?
