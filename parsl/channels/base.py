@@ -20,7 +20,7 @@ class Channel(metaclass=ABCMeta):
     such as push_file, pull_file and makedirs.
 
     Channels should ensure that each launched command runs in a new process
-    group, so that providers (such LocalProvider) which terminate long
+    group, so that providers (such as LocalProvider) which terminate long
     running commands using process groups can do so.
     """
 
