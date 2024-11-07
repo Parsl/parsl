@@ -21,7 +21,6 @@ class LocalChannel(Channel, RepresentationMixin):
         KwArgs:
             - script_dir (string): Directory to place scripts
         '''
-        self.hostname = "localhost"
         self.script_dir = None
 
     def execute_wait(self, cmd, walltime=None):
@@ -82,7 +81,7 @@ class LocalChannel(Channel, RepresentationMixin):
                 os.chmod(local_dest, 0o700)
 
             except OSError as e:
-                raise FileCopyException(e, self.hostname)
+                raise FileCopyException(e, "localhost")
 
         else:
             os.chmod(local_dest, 0o700)
