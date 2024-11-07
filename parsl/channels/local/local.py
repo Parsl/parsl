@@ -16,15 +16,13 @@ class LocalChannel(Channel, RepresentationMixin):
     and done so infrequently that they do not need a persistent channel
     '''
 
-    def __init__(self, userhome=".", envs={}, script_dir=None):
+    def __init__(self, envs={}, script_dir=None):
         ''' Initialize the local channel. script_dir is required by set to a default.
 
         KwArgs:
-            - userhome (string): (default='.') This is provided as a way to override and set a specific userhome
             - envs (dict) : A dictionary of env variables to be set when launching the shell
             - script_dir (string): Directory to place scripts
         '''
-        self.userhome = os.path.abspath(userhome)
         self.hostname = "localhost"
         self.envs = envs
         local_env = os.environ.copy()
@@ -57,7 +55,6 @@ class LocalChannel(Channel, RepresentationMixin):
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                cwd=self.userhome,
                 env=current_env,
                 shell=True,
                 preexec_fn=os.setpgrp
