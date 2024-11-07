@@ -14,7 +14,6 @@ def test_submit_script_basic(tmp_path):
         queue="debug"
     )
     provider.script_dir = tmp_path
-    provider.channel.script_dir = tmp_path
     job_id = str(random.randint(55000, 59000))
     provider.execute_wait = mock.Mock(spec=PBSProProvider.execute_wait)
     provider.execute_wait.return_value = (0, job_id, "")
