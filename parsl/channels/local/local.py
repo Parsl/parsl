@@ -1,4 +1,3 @@
-import copy
 import logging
 import os
 import shutil
@@ -16,46 +15,33 @@ class LocalChannel(Channel, RepresentationMixin):
     and done so infrequently that they do not need a persistent channel
     '''
 
-    def __init__(self, envs={}, script_dir=None):
+    def __init__(self, script_dir=None):
         ''' Initialize the local channel. script_dir is required by set to a default.
 
         KwArgs:
-            - envs (dict) : A dictionary of env variables to be set when launching the shell
             - script_dir (string): Directory to place scripts
         '''
         self.hostname = "localhost"
-        self.envs = envs
-        local_env = os.environ.copy()
-        self._envs = copy.deepcopy(local_env)
-        self._envs.update(envs)
         self.script_dir = script_dir
 
-    def execute_wait(self, cmd, walltime=None, envs={}):
+    def execute_wait(self, cmd, walltime=None):
         ''' Synchronously execute a commandline string on the shell.
 
         Args:
             - cmd (string) : Commandline string to execute
             - walltime (int) : walltime in seconds
 
-        Kwargs:
-            - envs (dict) : Dictionary of env variables. This will be used
-              to override the envs set at channel initialization.
-
         Returns:
             - retcode : Return code from the execution
             - stdout  : stdout string
             - stderr  : stderr string
         '''
-        current_env = copy.deepcopy(self._envs)
-        current_env.update(envs)
-
         try:
             logger.debug("Creating process with command '%s'", cmd)
             proc = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                env=current_env,
                 shell=True,
                 preexec_fn=os.setpgrp
             )
