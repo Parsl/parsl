@@ -15,14 +15,14 @@ class LocalChannel(Channel, RepresentationMixin):
     and done so infrequently that they do not need a persistent channel
     '''
 
-    def __init__(self, script_dir=None):
+    def __init__(self):
         ''' Initialize the local channel. script_dir is required by set to a default.
 
         KwArgs:
             - script_dir (string): Directory to place scripts
         '''
         self.hostname = "localhost"
-        self.script_dir = script_dir
+        self.script_dir = None
 
     def execute_wait(self, cmd, walltime=None):
         ''' Synchronously execute a commandline string on the shell.
