@@ -34,10 +34,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
     Parameters
     ----------
     channel : Channel
-        Channel for accessing this provider. Possible channels include
-        :class:`~parsl.channels.LocalChannel` (the default),
-        :class:`~parsl.channels.SSHChannel`, or
-        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
+        Channel for accessing this provider.
     account : str
         Account the job will be charged against.
     queue : str
