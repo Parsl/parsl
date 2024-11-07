@@ -101,5 +101,6 @@ interpreted as a Future.
 Removed interfaces
 ------------------
 
-Parsl had a ``Channel`` interface which was removed in 2024.  See
-`issue 3515 <https://github.com/Parsl/parsl/issues/3515>`_ for further discussion.
+Parsl had a deprecated ``Channel`` abstraction. See
+`issue 3515 <https://github.com/Parsl/parsl/issues/3515>`_
+for further discussion on its removal.
