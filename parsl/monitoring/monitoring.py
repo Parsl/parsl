@@ -3,22 +3,23 @@ from __future__ import annotations
 import logging
 import multiprocessing.synchronize as ms
 import os
+import pickle
 import queue
 import time
-from multiprocessing import Event, Process
+from multiprocessing import Event
 from multiprocessing.queues import Queue
-from typing import TYPE_CHECKING, Literal, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Literal, Optional, Tuple, Union, cast
 
 import typeguard
 
 from parsl.log_utils import set_file_logger
 from parsl.monitoring.errors import MonitoringHubStartError
-from parsl.monitoring.radios import MultiprocessingQueueRadioSender
+from parsl.monitoring.radios.base import RadioConfig
+from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.monitoring.router import router_starter
 from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import ForkProcess, SizedQueue
 from parsl.process_loggers import wrap_with_logs
-from parsl.serialize import deserialize
 from parsl.utils import RepresentationMixin, setproctitle
 
 _db_manager_excepts: Optional[Exception]
@@ -44,7 +45,6 @@ class MonitoringHub(RepresentationMixin):
                  workflow_name: Optional[str] = None,
                  workflow_version: Optional[str] = None,
                  logging_endpoint: Optional[str] = None,
-                 logdir: Optional[str] = None,
                  monitoring_debug: bool = False,
                  resource_monitoring_enabled: bool = True,
                  resource_monitoring_interval: float = 30):  # in seconds
@@ -73,8 +73,6 @@ class MonitoringHub(RepresentationMixin):
              The database connection url for monitoring to log the information.
              These URLs follow RFC-1738, and can include username, password, hostname, database name.
              Default: sqlite, in the configured run_dir.
-        logdir : str
-             Parsl log directory paths. Logs and temp files go here. Default: '.'
         monitoring_debug : Bool
              Enable monitoring debug logging. Default: False
         resource_monitoring_enabled : boolean
@@ -96,7 +94,6 @@ class MonitoringHub(RepresentationMixin):
         self.hub_port_range = hub_port_range
 
         self.logging_endpoint = logging_endpoint
-        self.logdir = logdir
         self.monitoring_debug = monitoring_debug
 
         self.workflow_name = workflow_name
@@ -109,13 +106,10 @@ class MonitoringHub(RepresentationMixin):
 
         logger.debug("Starting MonitoringHub")
 
-        if self.logdir is None:
-            self.logdir = "."
-
         if self.logging_endpoint is None:
             self.logging_endpoint = f"sqlite:///{os.fspath(config_run_dir)}/monitoring.db"
 
-        os.makedirs(self.logdir, exist_ok=True)
+        os.makedirs(dfk_run_dir, exist_ok=True)
 
         self.monitoring_hub_active = True
 
@@ -128,7 +122,7 @@ class MonitoringHub(RepresentationMixin):
         # in the future, Queue will allow runtime subscripts.
 
         if TYPE_CHECKING:
-            comm_q: Queue[Union[Tuple[int, int], str]]
+            comm_q: Queue[Union[int, str]]
         else:
             comm_q: Queue
 
@@ -149,9 +143,8 @@ class MonitoringHub(RepresentationMixin):
                                                "resource_msgs": self.resource_msgs,
                                                "exit_event": self.router_exit_event,
                                                "hub_address": self.hub_address,
-                                               "udp_port": self.hub_port,
                                                "zmq_port_range": self.hub_port_range,
-                                               "logdir": self.logdir,
+                                               "run_dir": dfk_run_dir,
                                                "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                                },
                                        name="Monitoring-Router-Process",
@@ -161,7 +154,7 @@ class MonitoringHub(RepresentationMixin):
 
         self.dbm_proc = ForkProcess(target=dbm_starter,
                                     args=(self.exception_q, self.resource_msgs,),
-                                    kwargs={"logdir": self.logdir,
+                                    kwargs={"run_dir": dfk_run_dir,
                                             "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                             "db_url": self.logging_endpoint,
                                             },
@@ -169,15 +162,16 @@ class MonitoringHub(RepresentationMixin):
                                     daemon=True,
                                     )
         self.dbm_proc.start()
-        logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
+        logger.info("Started the router process %s and DBM process %s", self.router_proc.pid, self.dbm_proc.pid)
 
-        self.filesystem_proc = Process(target=filesystem_receiver,
-                                       args=(self.logdir, self.resource_msgs, dfk_run_dir),
-                                       name="Monitoring-Filesystem-Process",
-                                       daemon=True
-                                       )
+        self.filesystem_proc = ForkProcess(target=filesystem_receiver,
+                                           args=(self.resource_msgs, dfk_run_dir),
+                                           # tmp should be DFK run dir... but its not wired in at the sender side...
+                                           name="Monitoring-Filesystem-Process",
+                                           daemon=True
+                                           )
         self.filesystem_proc.start()
-        logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
+        logger.info("Started filesystem radio receiver process %s", self.filesystem_proc.pid)
 
         self.radio = MultiprocessingQueueRadioSender(self.resource_msgs)
 
@@ -190,19 +184,33 @@ class MonitoringHub(RepresentationMixin):
             raise MonitoringHubStartError()
 
         if isinstance(comm_q_result, str):
-            logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
+            logger.error("MonitoringRouter sent an error message: %s", comm_q_result)
             raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
 
-        udp_port, zmq_port = comm_q_result
+        zmq_port = comm_q_result
 
-        self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
+        self.zmq_port = zmq_port
+
+        # need to initialize radio configs, perhaps first time a radio config is used
+        # in each executor? (can't do that at startup because executor list is dynamic,
+        # don't know all the executors till later)
+        # self.radio_config.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
+        # How can this config be populated properly?
+        # There's a UDP port chosen right now by the monitoring router and
+        # sent back a line above...
+        # What does that look like for other radios? htexradio has no specific config at all,
+        # filesystem radio has a path (that should have been created?) for config, and a loop
+        # that needs to be running, started in this start method.
+        # so something like... radio_config.receive() generates the appropriate receiver object?
+        # which has a shutdown method on it for later. and also updates radio_config itself so
+        # it has the right info to send across the wire? or some state driving like that?
 
         logger.info("Monitoring Hub initialized")
 
         self.hub_zmq_port = zmq_port
 
     def send(self, message: TaggedMonitoringMessage) -> None:
-        logger.debug("Sending message type {}".format(message[0]))
+        logger.debug("Sending message type %s", message[0])
         self.radio.send(message)
 
     def close(self) -> None:
@@ -219,14 +227,13 @@ class MonitoringHub(RepresentationMixin):
             if exception_msgs:
                 for exception_msg in exception_msgs:
                     logger.error(
-                        "{} process delivered an exception: {}. Terminating all monitoring processes immediately.".format(
-                            exception_msg[0],
-                            exception_msg[1]
-                        )
+                        "%s process delivered an exception: %s. Terminating all monitoring processes immediately.",
+                        exception_msg[0],
+                        exception_msg[1]
                     )
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
-                self.filesystem_proc.terminate()
+                # self.filesystem_proc.terminate()
             logger.info("Setting router termination event")
             self.router_exit_event.set()
             logger.info("Waiting for router to terminate")
@@ -246,9 +253,9 @@ class MonitoringHub(RepresentationMixin):
             # should this be message based? it probably doesn't need to be if
             # we believe we've received all messages
             logger.info("Terminating filesystem radio receiver process")
-            self.filesystem_proc.terminate()
-            self.filesystem_proc.join()
-            self.filesystem_proc.close()
+            # self.filesystem_proc.terminate()
+            # self.filesystem_proc.join()
+            # self.filesystem_proc.close()
 
             logger.info("Closing monitoring multiprocessing queues")
             self.exception_q.close()
@@ -257,10 +264,21 @@ class MonitoringHub(RepresentationMixin):
             self.resource_msgs.join_thread()
             logger.info("Closed monitoring multiprocessing queues")
 
+    def start_receiver(self, radio_config: RadioConfig, ip: str, run_dir: str) -> Any:
+        """somehow start a radio receiver here and update radioconfig to be sent over the wire, without
+        losing the info we need to shut down that receiver later...
+        """
+        r = radio_config.create_receiver(ip=ip, run_dir=run_dir, resource_msgs=self.resource_msgs)
+        logger.info(f"BENC: created receiver {r}")
+        # assert r is not None
+        return r
+        # ... that is, a thing we need to do a shutdown call on at shutdown, a "shutdownable"? without
+        # expecting any more structure on it?
+
 
 @wrap_with_logs
-def filesystem_receiver(logdir: str, q: "queue.Queue[TaggedMonitoringMessage]", run_dir: str) -> None:
-    logger = set_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
+def filesystem_receiver(q: Queue[TaggedMonitoringMessage], run_dir: str) -> None:
+    logger = set_file_logger("{}/monitoring_filesystem_radio.log".format(run_dir),
                              name="monitoring_filesystem_radio",
                              level=logging.INFO)
 
@@ -269,7 +287,9 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[TaggedMonitoringMessage]", 
     base_path = f"{run_dir}/monitor-fs-radio/"
     tmp_dir = f"{base_path}/tmp/"
     new_dir = f"{base_path}/new/"
-    logger.debug(f"Creating new and tmp paths under {base_path}")
+    logger.debug("Creating new and tmp paths under %s", base_path)
+
+    target_radio = MultiprocessingQueueRadioSender(q)
 
     os.makedirs(tmp_dir, exist_ok=True)
     os.makedirs(new_dir, exist_ok=True)
@@ -280,15 +300,15 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[TaggedMonitoringMessage]", 
         # iterate over files in new_dir
         for filename in os.listdir(new_dir):
             try:
-                logger.info(f"Processing filesystem radio file {filename}")
+                logger.info("Processing filesystem radio file %s", filename)
                 full_path_filename = f"{new_dir}/{filename}"
                 with open(full_path_filename, "rb") as f:
-                    message = deserialize(f.read())
-                logger.debug(f"Message received is: {message}")
+                    message = pickle.load(f)
+                logger.debug("Message received is: %s", message)
                 assert isinstance(message, tuple)
-                q.put(cast(TaggedMonitoringMessage, message))
+                target_radio.send(cast(TaggedMonitoringMessage, message))
                 os.remove(full_path_filename)
             except Exception:
-                logger.exception(f"Exception processing {filename} - probably will be retried next iteration")
+                logger.exception("Exception processing %s  - probably will be retried next iteration", filename)
 
         time.sleep(1)  # whats a good time for this poll?
