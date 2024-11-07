@@ -71,10 +71,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     constraint : str
         Slurm job constraint, often used to choose cpu or gpu type. If unspecified or ``None``, no constraint slurm directive will be added.
     channel : Channel
-        Channel for accessing this provider. Possible channels include
-        :class:`~parsl.channels.LocalChannel` (the default),
-        :class:`~parsl.channels.SSHChannel`, or
-        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
+        Channel for accessing this provider.
     nodes_per_block : int
         Nodes to provision per block.
     cores_per_node : int
