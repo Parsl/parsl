@@ -55,34 +55,6 @@ class LocalChannel(Channel, RepresentationMixin):
 
         return (retcode, stdout.decode("utf-8"), stderr.decode("utf-8"))
 
-    def isdir(self, path):
-        """Return true if the path refers to an existing directory.
-
-        Parameters
-        ----------
-        path : str
-            Path of directory to check.
-        """
-
-        return os.path.isdir(path)
-
-    def makedirs(self, path, mode=0o700, exist_ok=False):
-        """Create a directory.
-
-        If intermediate directories do not exist, they will be created.
-
-        Parameters
-        ----------
-        path : str
-            Path of directory to create.
-        mode : int
-            Permissions (posix-style) for the newly-created directory.
-        exist_ok : bool
-            If False, raise an OSError if the target directory already exists.
-        """
-
-        return os.makedirs(path, mode, exist_ok)
-
     @property
     def script_dir(self):
         return self._script_dir
