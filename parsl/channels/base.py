@@ -80,31 +80,3 @@ class Channel(metaclass=ABCMeta):
             destination_path (string)
         '''
         pass
-
-    @abstractmethod
-    def makedirs(self, path: str, mode: int = 0o511, exist_ok: bool = False) -> None:
-        """Create a directory.
-
-        If intermediate directories do not exist, they will be created.
-
-        Parameters
-        ----------
-        path : str
-            Path of directory to create.
-        mode : int
-            Permissions (posix-style) for the newly-created directory.
-        exist_ok : bool
-            If False, raise an OSError if the target directory already exists.
-        """
-        pass
-
-    @abstractmethod
-    def isdir(self, path: str) -> bool:
-        """Return true if the path refers to an existing directory.
-
-        Parameters
-        ----------
-        path : str
-            Path of directory to check.
-        """
-        pass
