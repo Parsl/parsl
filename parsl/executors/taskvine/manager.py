@@ -52,7 +52,7 @@ def _set_manager_attributes(m, config):
         m.set_property("framework", "parsl")
 
     if config.tune_parameters is not None:
-        for k,v in config.tune_parameters.items():
+        for k, v in config.tune_parameters.items():
             m.tune(k, v)
 
 
