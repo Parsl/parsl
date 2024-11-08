@@ -156,6 +156,10 @@ class TaskVineManagerConfig:
         Directory to store TaskVine logging facilities.
         Default is None, in which all TaskVine logs will be contained
         in the Parsl logging directory.
+
+    tune_parameters: Optional[dict]
+        Extended vine_tune parameters, expressed in a dictionary
+        by { 'tune-parameter' : value }.
     """
 
     # Connection and communication settings
@@ -181,6 +185,7 @@ class TaskVineManagerConfig:
     autocategory: bool = True
     enable_peer_transfers: bool = True
     wait_for_workers: Optional[int] = None
+    tune_parameters: Optional[dict] = None
 
     # Logging settings
     vine_log_dir: Optional[str] = None
