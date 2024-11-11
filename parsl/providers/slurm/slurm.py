@@ -71,7 +71,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     constraint : str
         Slurm job constraint, often used to choose cpu or gpu type. If unspecified or ``None``, no constraint slurm directive will be added.
     clusters : str
-        Slurm cluster name, or comma seperated cluster list, used to choose between different clusters in a federated Slurm instance. If unspecified or ``None``, no slurm directive for clusters will be added.
+        Slurm cluster name, or comma seperated cluster list, used to choose between different clusters in a federated Slurm instance.
+        If unspecified or ``None``, no slurm directive for clusters will be added.
     channel : Channel
         Channel for accessing this provider.
     nodes_per_block : int
