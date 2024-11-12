@@ -362,7 +362,7 @@ class Manager:
                 if tasks == HEARTBEAT_CODE:
                     logger.debug("Got heartbeat from interchange")
                 elif tasks == DRAINED_CODE:
-                    logger.info("Got fulled drained message from interchange - setting kill flag")
+                    logger.info("Got fully drained message from interchange - setting kill flag")
                     kill_event.set()
                 else:
                     task_recv_counter += len(tasks)
@@ -650,14 +650,6 @@ def worker(
     debug: bool,
     mpi_launcher: str,
 ):
-    """
-
-    Put request token into queue
-    Get task from task_queue
-    Pop request from queue
-    Put result into result_queue
-    """
-
     # override the global logger inherited from the __main__ process (which
     # usually logs to manager.log) with one specific to this worker.
     global logger

@@ -114,6 +114,7 @@ class UsageTracker:
                                                 sys.version_info.minor,
                                                 sys.version_info.micro)
         self.tracking_level = self.check_tracking_level()
+        self.project_name = self.config.project_name
         self.start_time = None
         logger.debug("Tracking level: {}".format(self.tracking_level))
 
@@ -153,6 +154,9 @@ class UsageTracker:
                    'platform.system': platform.system(),
                    'tracking_level': int(self.tracking_level)}
 
+        if self.project_name:
+            message['project_name'] = self.project_name
+
         if self.tracking_level >= 2:
             message['components'] = get_parsl_usage(self.dfk._config)
 
@@ -188,6 +192,10 @@ class UsageTracker:
                    'end': end_time,
                    'execution_time': end_time - self.start_time,
                    'components': [dfk_component] + get_parsl_usage(self.dfk._config)}
+
+        if self.project_name:
+            message['project_name'] = self.project_name
+
         logger.debug(f"Usage tracking end message (unencoded): {message}")
 
         return self.encode_message(message)

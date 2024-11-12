@@ -14,7 +14,7 @@ import typeguard
 import zmq
 
 from parsl.log_utils import set_file_logger
-from parsl.monitoring.types import AddressedMonitoringMessage, TaggedMonitoringMessage
+from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
@@ -125,7 +125,7 @@ class MonitoringRouter:
                     data, addr = self.udp_sock.recvfrom(2048)
                     resource_msg = pickle.loads(data)
                     self.logger.debug("Got UDP Message from {}: {}".format(addr, resource_msg))
-                    self.resource_msgs.put((resource_msg, addr))
+                    self.resource_msgs.put(resource_msg)
                 except socket.timeout:
                     pass
 
@@ -136,7 +136,7 @@ class MonitoringRouter:
                     data, addr = self.udp_sock.recvfrom(2048)
                     msg = pickle.loads(data)
                     self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
-                    self.resource_msgs.put((msg, addr))
+                    self.resource_msgs.put(msg)
                     last_msg_received_time = time.time()
                 except socket.timeout:
                     pass
@@ -160,10 +160,7 @@ class MonitoringRouter:
                         assert len(msg) >= 1, "ZMQ Receiver expects tuples of length at least 1, got {}".format(msg)
                         assert len(msg) == 2, "ZMQ Receiver expects message tuples of exactly length 2, got {}".format(msg)
 
-                        msg_0: AddressedMonitoringMessage
-                        msg_0 = (msg, 0)
-
-                        self.resource_msgs.put(msg_0)
+                        self.resource_msgs.put(msg)
                 except zmq.Again:
                     pass
                 except Exception:
