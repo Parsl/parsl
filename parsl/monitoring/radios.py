@@ -5,14 +5,8 @@ import socket
 import uuid
 from abc import ABCMeta, abstractmethod
 from multiprocessing.queues import Queue
-from typing import Optional
 
 import zmq
-
-from parsl.serialize import serialize
-
-_db_manager_excepts: Optional[Exception]
-
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +35,8 @@ class FilesystemRadioSender(MonitoringRadioSender):
     the UDP radio, but should be much more reliable.
     """
 
-    def __init__(self, *, monitoring_url: str, source_id: int, timeout: int = 10, run_dir: str):
+    def __init__(self, *, monitoring_url: str, timeout: int = 10, run_dir: str):
         logger.info("filesystem based monitoring channel initializing")
-        self.source_id = source_id
         self.base_path = f"{run_dir}/monitor-fs-radio/"
         self.tmp_path = f"{self.base_path}/tmp"
         self.new_path = f"{self.base_path}/new"
@@ -58,31 +51,28 @@ class FilesystemRadioSender(MonitoringRadioSender):
 
         tmp_filename = f"{self.tmp_path}/{unique_id}"
         new_filename = f"{self.new_path}/{unique_id}"
-        buffer = (message, "NA")
+        buffer = message
 
         # this will write the message out then atomically
         # move it into new/, so that a partially written
         # file will never be observed in new/
         with open(tmp_filename, "wb") as f:
-            f.write(serialize(buffer))
+            pickle.dump(buffer, f)
         os.rename(tmp_filename, new_filename)
 
 
 class HTEXRadioSender(MonitoringRadioSender):
 
-    def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
+    def __init__(self, monitoring_url: str, timeout: int = 10):
         """
         Parameters
         ----------
 
         monitoring_url : str
             URL of the form <scheme>://<IP>:<PORT>
-        source_id : str
-            String identifier of the source
         timeout : int
             timeout, default=10s
         """
-        self.source_id = source_id
         logger.info("htex-based monitoring channel initialising")
 
     def send(self, message: object) -> None:
@@ -124,21 +114,18 @@ class HTEXRadioSender(MonitoringRadioSender):
 
 class UDPRadioSender(MonitoringRadioSender):
 
-    def __init__(self, monitoring_url: str, source_id: int, timeout: int = 10):
+    def __init__(self, monitoring_url: str, timeout: int = 10):
         """
         Parameters
         ----------
 
         monitoring_url : str
             URL of the form <scheme>://<IP>:<PORT>
-        source_id : str
-            String identifier of the source
         timeout : int
             timeout, default=10s
         """
         self.monitoring_url = monitoring_url
         self.sock_timeout = timeout
-        self.source_id = source_id
         try:
             self.scheme, self.ip, port = (x.strip('/') for x in monitoring_url.split(':'))
             self.port = int(port)
@@ -187,7 +174,7 @@ class MultiprocessingQueueRadioSender(MonitoringRadioSender):
         self.queue = queue
 
     def send(self, message: object) -> None:
-        self.queue.put((message, 0))
+        self.queue.put(message)
 
 
 class ZMQRadioSender(MonitoringRadioSender):

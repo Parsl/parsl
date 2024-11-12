@@ -1,7 +1,5 @@
 flake8==6.1.0
-ipyparallel
 pandas
-paramiko
 pytest>=7.4.0,<8
 pytest-cov
 pytest-mock
@@ -12,7 +10,6 @@ mypy==1.5.1
 types-mock
 types-python-dateutil
 types-requests
-types-paramiko
 mpi4py
 
 # sqlalchemy is needed for typechecking, so it's here

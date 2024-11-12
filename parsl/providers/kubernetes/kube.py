@@ -1,10 +1,5 @@
 import logging
-import time
-
-from parsl.providers.kubernetes.template import template_string
-
-logger = logging.getLogger(__name__)
-
+import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
 import typeguard
@@ -12,13 +7,16 @@ import typeguard
 from parsl.errors import OptionalModuleMissing
 from parsl.jobs.states import JobState, JobStatus
 from parsl.providers.base import ExecutionProvider
-from parsl.utils import RepresentationMixin
+from parsl.providers.kubernetes.template import template_string
+from parsl.utils import RepresentationMixin, sanitize_dns_subdomain_rfc1123
 
 try:
     from kubernetes import client, config
     _kubernetes_enabled = True
 except (ImportError, NameError, FileNotFoundError):
     _kubernetes_enabled = False
+
+logger = logging.getLogger(__name__)
 
 translate_table = {
     'Running': JobState.RUNNING,
@@ -161,7 +159,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.resources: Dict[object, Dict[str, Any]]
         self.resources = {}
 
-    def submit(self, cmd_string, tasks_per_node, job_name="parsl"):
+    def submit(self, cmd_string: str, tasks_per_node: int, job_name: str = "parsl.kube"):
         """ Submit a job
         Args:
              - cmd_string  :(String) - Name of the container to initiate
@@ -173,15 +171,19 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         Returns:
              - job_id: (string) Identifier for the job
         """
+        job_id = uuid.uuid4().hex[:8]
 
-        cur_timestamp = str(time.time() * 1000).split(".")[0]
-        job_name = "{0}-{1}".format(job_name, cur_timestamp)
-
-        if not self.pod_name:
-            pod_name = '{}'.format(job_name)
-        else:
-            pod_name = '{}-{}'.format(self.pod_name,
-                                      cur_timestamp)
+        pod_name = self.pod_name or job_name
+        try:
+            pod_name = sanitize_dns_subdomain_rfc1123(pod_name)
+        except ValueError:
+            logger.warning(
+                f"Invalid pod name '{pod_name}' for job '{job_id}', falling back to 'parsl.kube'"
+            )
+            pod_name = "parsl.kube"
+        pod_name = pod_name[:253 - 1 - len(job_id)]  # Leave room for the job ID
+        pod_name = pod_name.rstrip(".-")  # Remove trailing dot or hyphen after trim
+        pod_name = f"{pod_name}.{job_id}"
 
         formatted_cmd = template_string.format(command=cmd_string,
                                                worker_init=self.worker_init)
@@ -189,14 +191,14 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         logger.debug("Pod name: %s", pod_name)
         self._create_pod(image=self.image,
                          pod_name=pod_name,
-                         job_name=job_name,
+                         job_id=job_id,
                          cmd_string=formatted_cmd,
                          volumes=self.persistent_volumes,
                          service_account_name=self.service_account_name,
                          annotations=self.annotations)
-        self.resources[pod_name] = {'status': JobStatus(JobState.RUNNING)}
+        self.resources[job_id] = {'status': JobStatus(JobState.RUNNING), 'pod_name': pod_name}
 
-        return pod_name
+        return job_id
 
     def status(self, job_ids):
         """ Get the status of a list of jobs identified by the job identifiers
@@ -212,6 +214,9 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
             self._status()
         return [self.resources[jid]['status'] for jid in job_ids]
 
+    def _get_pod_name(self, job_id: str) -> str:
+        return self.resources[job_id]['pod_name']
+
     def cancel(self, job_ids):
         """ Cancels the jobs specified by a list of job ids
         Args:
@@ -221,7 +226,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         """
         for job in job_ids:
             logger.debug("Terminating job/pod: {0}".format(job))
-            self._delete_pod(job)
+            pod_name = self._get_pod_name(job)
+            self._delete_pod(pod_name)
 
             self.resources[job]['status'] = JobStatus(JobState.CANCELLED)
         rets = [True for i in job_ids]
@@ -242,7 +248,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         for jid in to_poll_job_ids:
             phase = None
             try:
-                pod = self.kube_client.read_namespaced_pod(name=jid, namespace=self.namespace)
+                pod_name = self._get_pod_name(jid)
+                pod = self.kube_client.read_namespaced_pod(name=pod_name, namespace=self.namespace)
             except Exception:
                 logger.exception("Failed to poll pod {} status, most likely because pod was terminated".format(jid))
                 if self.resources[jid]['status'] is JobStatus(JobState.RUNNING):
@@ -257,10 +264,10 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                 self.resources[jid]['status'] = JobStatus(status)
 
     def _create_pod(self,
-                    image,
-                    pod_name,
-                    job_name,
-                    port=80,
+                    image: str,
+                    pod_name: str,
+                    job_id: str,
+                    port: int = 80,
                     cmd_string=None,
                     volumes=[],
                     service_account_name=None,
@@ -269,7 +276,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         Args:
               - image (string) : Docker image to launch
               - pod_name (string) : Name of the pod
-              - job_name (string) : App label
+              - job_id (string) : Job ID
         KWargs:
              - port (integer) : Container port
         Returns:
@@ -299,7 +306,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                                                   )
         # Configure Pod template container
         container = client.V1Container(
-            name=pod_name,
+            name=job_id,
             image=image,
             resources=resources,
             ports=[client.V1ContainerPort(container_port=port)],
@@ -322,7 +329,7 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                                                    claim_name=volume[0])))
 
         metadata = client.V1ObjectMeta(name=pod_name,
-                                       labels={"app": job_name},
+                                       labels={"parsl-job-id": job_id},
                                        annotations=annotations)
         spec = client.V1PodSpec(containers=[container],
                                 image_pull_secrets=[secret],
