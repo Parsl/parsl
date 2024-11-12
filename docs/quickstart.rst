@@ -181,7 +181,7 @@ An example which launches 512 workers on 128 nodes of the Polaris supercomputer 
 .. code-block:: python
 
     config = Config(
-        retires=1,  # Restart task if they fail once
+        retries=1,  # Restart task if they fail once
         executors=[
             HighThroughputExecutor(
                 available_accelerators=4,  # Maps one worker per GPU
