@@ -180,6 +180,11 @@ An example which launches 4 workers on 1 node of the Polaris supercomputer looks
 
 .. code-block:: python
 
+    from parsl import Config
+    from parsl.executors import HighThroughputExecutor
+    from parsl.providers import PBSProProvider
+    from parsl.launchers import MpiExecLauncher
+
     config = Config(
         retries=1,  # Restart task if they fail once
         executors=[
