@@ -29,7 +29,6 @@ from parsl.channels import Channel
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
-from parsl.data_provider.dynamic_files import DynamicFileList
 from parsl.dataflow.dependency_resolvers import SHALLOW_DEPENDENCY_RESOLVER
 from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
@@ -240,7 +239,7 @@ class DataFlowKernel:
             task_log_info = self._create_task_log_info(task_record)
             self.monitoring.send(MessageType.TASK_INFO, task_log_info)
 
-    def _send_file_log_info(self, file: Union[File, DataFuture, DynamicFileList.DynamicFile],
+    def _send_file_log_info(self, file: Union[File, DataFuture],
                             task_record: TaskRecord, is_output:bool) -> None:
         if self.monitoring and self.monitoring.capture_file_provenance:
             file_log_info = self._create_file_log_info(file, task_record)
@@ -249,7 +248,7 @@ class DataFlowKernel:
                 file_log_info['task_id'] = None
             self.monitoring.send(MessageType.FILE_INFO, file_log_info)
 
-    def _create_file_log_info(self, file: Union[File, DataFuture, DynamicFileList.DynamicFile],
+    def _create_file_log_info(self, file: Union[File, DataFuture],
                               task_record: TaskRecord) -> Dict[str, Any]:
         """
         Create the dictionary that will be included in the log.
@@ -287,21 +286,21 @@ class DataFlowKernel:
             environ_info = self._create_env_log_info(environ)
             self.monitoring.send(MessageType.ENVIRONMENT_INFO, environ_info)
 
-    def register_as_input(self, f: Union(DynamicFileList.DynamicFile, File, DataFuture),
+    def register_as_input(self, f: Union[File, DataFuture],
                           task_record: TaskRecord):
         if self.monitoring and self.monitoring.capture_file_provenance:
             self._send_file_log_info(f, task_record, False)
             file_input_info = self._create_file_io_info(f, task_record)
             self.monitoring.send(MessageType.INPUT_FILE, file_input_info)
 
-    def register_as_output(self, f: Union(DynamicFileList.DynamicFile, File, DataFuture),
+    def register_as_output(self, f: Union[File, DataFuture],
                            task_record: TaskRecord):
         if self.monitoring and self.monitoring.capture_file_provenance:
             self._send_file_log_info(f, task_record, True)
             file_output_info = self._create_file_io_info(f, task_record)
             self.monitoring.send(MessageType.OUTPUT_FILE, file_output_info)
 
-    def _create_file_io_info(self, file: Union[File, DataFuture, DynamicFileList.DynamicFile],
+    def _create_file_io_info(self, file: Union[File, DataFuture],
                                 task_record: TaskRecord) -> Dict[str, Any]:
         """
         Create the dictionary that will be included in the log.
@@ -880,13 +879,13 @@ class DataFlowKernel:
             if kwarg in ['stdout', 'stderr']:
                 continue
             (kwargs[kwarg], func) = self.data_manager.optionally_stage_in(f, func, executor)
-            if isinstance(f, (DynamicFileList.DynamicFile, File, DataFuture)):
+            if isinstance(f, (File, DataFuture)):
                 self.register_as_input(f, task_record)
 
         newargs = list(args)
         for idx, f in enumerate(newargs):
             (newargs[idx], func) = self.data_manager.optionally_stage_in(f, func, executor)
-            if isinstance(f, (DynamicFileList.DynamicFile, File, DataFuture)):
+            if isinstance(f, (File, DataFuture)):
                 self.register_as_input(f, task_record)
 
         return tuple(newargs), kwargs, func
@@ -895,11 +894,6 @@ class DataFlowKernel:
                          func: Callable, task_id: int, task_record: TaskRecord) -> Callable:
         logger.debug("Adding output dependencies")
         outputs = kwargs.get('outputs', [])
-        if isinstance(outputs, DynamicFileList):
-            outputs.set_dataflow(self, executor, self.check_staging_inhibited(kwargs), task_id, task_record)
-            outputs.set_parent(app_fut)
-            app_fut._outputs = outputs
-            return func
 
         app_fut._outputs = []
 
@@ -984,11 +978,8 @@ class DataFlowKernel:
 
         # Check for futures in inputs=[<fut>...]
         inp = kwargs.get('inputs', [])
-        if isinstance(inp, DynamicFileList):
-            check_dep(inp)
-        else:
-            for dep in inp:
-                check_dep(dep)
+        for dep in inp:
+            check_dep(dep)
 
         return depends
 
