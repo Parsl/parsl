@@ -62,14 +62,13 @@ class DataManager:
         if isinstance(input, DynamicFileList.DynamicFile):
             if input.empty:
                 file = DynamicFileList.DynamicFile
-                pass
             else:
                 file = input.cleancopy()
                 # replace the input DataFuture with a new DataFuture which will complete at
                 # the same time as the original one, but will contain the newly
                 # copied file
                 input = DataFuture(input, file, tid=input.tid)
-                return (input, func)
+            return (input, func)
         elif isinstance(input, DataFuture):
             file = input.file_obj.cleancopy()
             # replace the input DataFuture with a new DataFuture which will complete at
@@ -125,7 +124,7 @@ class DataManager:
             - executor (str) : an executor the file is going to be staged in to.
         """
 
-        if isinstance(input, DataFuture):
+        if isinstance(input, (DataFuture, DynamicFileList, DynamicFileList.DynamicFile)):
             parent_fut = input  # type: Optional[Future]
         elif isinstance(input, File):
             parent_fut = None

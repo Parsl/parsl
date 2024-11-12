@@ -376,11 +376,16 @@ class DataFlowKernel:
 
         return task_log_info
 
-    def _count_deps(self, depends: Sequence[Future]) -> int:
+    def _count_deps(self, task_record: TaskRecord) -> int:
         """Count the number of unresolved futures in the list depends.
         """
         count = 0
-        for dep in depends:
+        for dep in task_record['depends']:
+            # if dep is a DynamicFileList in the outputs, then is state is not relevant
+            if isinstance(dep, DynamicFileList) and 'outputs' in task_record['kwargs'] \
+                and isinstance(task_record['kwargs']['outputs'], DynamicFileList) \
+                and task_record['kwargs']['outputs'] == dep:
+                continue
             if not dep.done():
                 count += 1
 
@@ -731,7 +736,7 @@ class DataFlowKernel:
                 logger.debug(f"Task {task_id} is not pending, so launch_if_ready skipping")
                 return
 
-            if self._count_deps(task_record['depends']) != 0:
+            if self._count_deps(task_record) != 0:
                 logger.debug(f"Task {task_id} has outstanding dependencies, so launch_if_ready skipping")
                 return
 
@@ -1036,19 +1041,24 @@ class DataFlowKernel:
         for key in kwargs:
             dep = kwargs[key]
             try:
+                if key == 'outputs' and isinstance(dep, DynamicFileList):
+                    continue
                 kwargs[key] = self.dependency_resolver.traverse_to_unwrap(dep)
             except Exception as e:
                 append_failure(e, dep)
 
         # Check for futures in inputs=[<fut>...]
         if 'inputs' in kwargs:
-            new_inputs = []
-            for dep in kwargs['inputs']:
-                try:
-                    new_inputs.extend([self.dependency_resolver.traverse_to_unwrap(dep)])
-                except Exception as e:
-                    append_failure(e, dep)
-            kwargs['inputs'] = new_inputs
+            if isinstance(kwargs['inputs'], DynamicFileList):
+                new_inputs = kwargs['inputs']
+            else:
+                new_inputs = []
+                for dep in kwargs['inputs']:
+                    try:
+                        new_inputs.extend([self.dependency_resolver.traverse_to_unwrap(dep)])
+                    except Exception as e:
+                        append_failure(e, dep)
+                kwargs['inputs'] = new_inputs
 
         return new_args, kwargs, dep_failures
 

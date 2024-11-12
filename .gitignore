@@ -130,3 +130,7 @@ docs/1-parsl-introduction.ipynb
 
 /tmp
 parsl/data_provider/dyn.new.py
+
+examples/
+
+.jupyter/
