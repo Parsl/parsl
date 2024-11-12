@@ -8,6 +8,8 @@ traditional Python `list`, but is also a Future. This allows for Files to be app
 and have these Files properly treated by Parsl.
 """
 from __future__ import annotations
+
+import sys
 from concurrent.futures import Future
 from datetime import datetime, timezone
 from typing import List, Optional, Union, Callable, Dict
@@ -53,7 +55,8 @@ class DynamicFileList(Future):
                 self.parent.dfk.register_as_output(self.file_obj, self.parent.task_record)
                 self.set_result(self.file_obj)
 
-        def __init__(self, fut: DynamicFileList, file_obj: Optional[Union[File, DataFuture]] = None):
+        def __init__(self, fut: DynamicFileList,
+                     file_obj: Optional[Union[File, DataFuture]] = None):
             """Construct a DynamicFile instance
 
             If the file_obj is None, create an emptry instance, otherwise wrap file_obj.
@@ -95,7 +98,7 @@ class DynamicFileList(Future):
             return self.file_obj.timestamp
 
         @typeguard.typechecked
-        def set(self, file_obj: Union[File, DataFuture, 'DynamicFileList.DynamicFile']):
+        def set_file(self, file_obj: Union[File, DataFuture, 'DynamicFileList.DynamicFile']):
             """Set the file_obj for this instance.
 
             Args:
@@ -103,10 +106,12 @@ class DynamicFileList(Future):
             """
             if isinstance(file_obj, type(self)):
                 self.file_obj = file_obj.file_obj
-            self.file_obj = file_obj
-            self._empty = False
+            else:
+                self.file_obj = file_obj
+            self._empty = self.file_obj is None
             self._is_df = isinstance(self.file_obj, DataFuture)
-            self.parent.add_done_func(self.file_obj.filename, self.done)
+            if self.file_obj is not None:
+                self.parent.add_done_func(self.file_obj.filename, self.done)
 
         def cleancopy(self) -> File:
             """Create a clean copy of the file_obj."""
@@ -135,6 +140,8 @@ class DynamicFileList(Future):
             """
             if self._is_df:
                 return self.file_obj.done()
+            if self._empty:
+                return False
             return True  # Files are always done
 
         @property
@@ -151,6 +158,8 @@ class DynamicFileList(Future):
         @property
         def filepath(self) -> Union[str, None]:
             """Filepath of the File object this datafuture represents."""
+            if self.file_obj is None:
+                return None
             return self.file_obj.filepath
 
         @property
@@ -200,6 +209,32 @@ class DynamicFileList(Future):
         def __repr__(self) -> str:
             return self.file_obj.__repr__()
 
+        def __eq__(self, other: DynamicFileList.DynamicFile) -> bool:
+            return self.uuid == other.uuid
+
+        def __ne__(self, other: DynamicFileList.DynamicFile) -> bool:
+            return self.uuid != other.uuid
+
+        def __gt__(self, other: DynamicFileList.DynamicFile) -> bool:
+            if self.file_obj is not None and other.file_obj is not None:
+                return self.filepath > other.filepath
+            if self.file_obj is None:
+                return False
+            return True
+
+        def __lt__(self, other: DynamicFileList.DynamicFile) -> bool:
+            if self.file_obj is not None and other.file_obj is not None:
+                return self.filepath < other.filepath
+            if self.file_obj is None:
+                return True
+            return False
+
+        def __ge__(self, other: DynamicFileList.DynamicFile) -> bool:
+            return self.__gt__(other) or self.__eq__(other)
+
+        def __le__(self, other: DynamicFileList.DynamicFile) -> bool:
+            return self.__lt__(other) or self.__eq__(other)
+
     def parent_callback(self, parent_fu):
         """Callback from executor future to update the parent.
 
@@ -216,6 +251,7 @@ class DynamicFileList(Future):
         if e:
             self.set_exception(e)
         else:
+            self._isdone = True
             self.parent._outputs = self
             self.set_result(self)
 
@@ -238,7 +274,8 @@ class DynamicFileList(Future):
         self._staging_inhibited = False
         self._output_task_id = None
         self.task_record = None
-        self._files = []
+        self._files: List[DynamicFileList.DynamicFile] = []
+        self._isdone = False
         if files is not None:
             self.extend(files)
 
@@ -291,6 +328,7 @@ class DynamicFileList(Future):
         # TODO dfk._gather_all_deps
 
     def count(self, item) -> int:
+        """ Return the count of the given item in the list"""
         return self._files.count(item)
 
     def wrap(self, file_obj: Union[File, DataFuture, None]) -> DynamicFile:
@@ -355,8 +393,10 @@ class DynamicFileList(Future):
         """ No-op"""
         return None
 
-    def done(self) -> bool:
+    def done(self, ) -> bool:
         """ Return True if all files are done """
+        if not self._isdone:
+            return False
         for element in self.files_done.values():
             if not element():
                 return False
@@ -364,6 +404,24 @@ class DynamicFileList(Future):
 
     def __len__(self) -> int:
         return len(self._files)
+
+    def __eq__(self, other: DynamicFileList) -> bool:
+        return self._files == other._files
+
+    def __ne__(self, other: DynamicFileList) -> bool:
+        return self._files != other._files
+
+    def __lt__(self, other: DynamicFileList) -> bool:
+        return self._files < other._files
+
+    def __le__(self, other: DynamicFileList) -> bool:
+        return self._files <= other._files
+
+    def __gt__(self, other: DynamicFileList) -> bool:
+        return self._files > other._files
+
+    def __ge__(self, other: DynamicFileList) -> bool:
+        return self._files >= other._files
 
     @typeguard.typechecked
     def append(self, __object: Union[File, DataFuture, 'DynamicFileList.DynamicFile']):
@@ -381,7 +439,7 @@ class DynamicFileList(Future):
             self._files.append(__object)
         else:
             # must assume the object is empty, but exists
-            self._files[self._last_idx + 1].set(__object)
+            self._files[self._last_idx + 1].set_file(__object)
         self.files_done[__object.filename] = self._files[self._last_idx + 1].done
         self._last_idx += 1
         self.stage_file(self._last_idx)
@@ -416,16 +474,29 @@ class DynamicFileList(Future):
             self._files.extend([self.wrap(None)] * abs(diff))
         for item in items:
             self._last_idx += 1
-            self[self._last_idx].set(item)
+            self[self._last_idx].set_file(item)
             self.files_done[item.filename] = self._files[self._last_idx].done
             self.stage_file(self._last_idx)
         self._call_callbacks()
 
     def index(self,
-              item: Union[File, DataFuture, 'DynamicFileList.DynamicFile'],
+              item: Union[File, DataFuture, DynamicFile],
               start: Optional[int] = 0,
               stop: Optional[int] = sys.maxsize) -> int:
-        return self._files.index(item, start, stop)
+        """ Return the index of the first instance of the given item in the list.
+        Raises a ValueError if the item is not found. Note that this method looks
+        for the base File object which is wrapped by the DataFuture or DynamicFile.
+
+        Args:
+            - item (File/DataFuture/DynamicFile) : File, DataFuture, or DynamicFile to find
+            - start (int) : Index to start searching from
+            - stop (int) : Index to stop searching at
+        """
+        for i in range(start, min(stop, len(self))):
+            if not self[i].empty:
+                if self[i].uuid == item.uuid:
+                    return i
+        raise ValueError("Item not found")
 
     def insert(self, __index: int, __object: Union[File, DataFuture, DynamicFile]):
         """ Insert a file into the list at the given index and update the files_done dict
@@ -453,8 +524,10 @@ class DynamicFileList(Future):
         Args:
             - __value (File/DataFuture) : File or DataFuture to remove
         """
-        del self.files_done[__value.filename]
-        self._files.remove(__value)
+        if __value.filename in self.files_done:
+            del self.files_done[__value.filename]
+        idx = self.index(__value)
+        del self._files[idx]
         self._last_idx -= 1
         self._call_callbacks()
 
@@ -507,16 +580,16 @@ class DynamicFileList(Future):
             if self.parent is not None and isinstance(value, File):
                 value = DataFuture(self.parent, value, tid=self._output_task_id,
                                    dfk=self.dfk)
-            self._files[key].set(value)
+            self._files[key].set_file(value)
             self.files_done[self._files[key].filename] = self._files[key].done
             self._last_idx = max(self._last_idx, key)
             self._call_callbacks()
             self.stage_file(key)
         elif value.uuid == self._files[key].uuid:
             if isinstance(value, DynamicFileList.DynamicFile):
-                self._files[key].set(value.file_obj)
+                self._files[key].set_file(value.file_obj)
             else:
-                self._files[key].set(value)
+                self._files[key].set_file(value)
         else:
             raise ValueError("Cannot set a value that is not empty")
             # if not isinstance(value, self.DynamicFile):
