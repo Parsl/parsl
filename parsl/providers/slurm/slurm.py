@@ -184,7 +184,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             _cmd = "sacct"
             # Add clusters option to sacct if provided
             if self.clusters:
-                _cmd = f"sacct --clusters={self.clusters}"
+                _cmd += f" --clusters={self.clusters}"
             # Using state%20 to get enough characters to not truncate output
             # of the state. Without output can look like "<job_id>     CANCELLED+"
             self._cmd = _cmd + " -X --noheader --format=jobid,state%20 --job '{0}'"
@@ -195,7 +195,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             _cmd = "squeue"
             # Add clusters option to squeue if provided
             if self.clusters:
-                _cmd = f"squeue --clusters={self.clusters}"
+                _cmd += f" --clusters={self.clusters}"
             self._cmd = _cmd + " --noheader --format='%i %t' --job '{0}'"
             self._translate_table = squeue_translate_table
 
@@ -359,7 +359,14 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = self.execute_wait("scancel {0}".format(job_id_list))
+
+        # Make the command to cancel jobs
+        _cmd = "scancel"
+        if self.clusters:
+            _cmd += f" --clusters={self.clusters}"
+        _cmd += " {0}"
+
+        retcode, stdout, stderr = self.execute_wait(_cmd.format(job_id_list))
         rets = None
         if retcode == 0:
             for jid in job_ids:
