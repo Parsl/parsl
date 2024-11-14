@@ -339,7 +339,7 @@ class DataFlowKernel:
             raise InternalConsistencyError("done callback called, despite future not reporting itself as done")
 
         try:
-            res = self._unwrap_remote_exception_wrapper(future, task_record)
+            res = self._unwrap_remote_exception_wrapper(future)
 
         except Exception as e:
             logger.info(f"Task {task_id} try {task_record['try_id']} failed with exception of type {type(e).__name__}")
@@ -605,31 +605,9 @@ class DataFlowKernel:
             self.task_state_counts[new_state] += 1
             task_record['status'] = new_state
 
-    # this is a horrible place to put results radio mode decoding.
-    # @staticmethod
-    def _unwrap_remote_exception_wrapper(self, future: Future, task_record) -> Any:
+    @staticmethod
+    def _unwrap_remote_exception_wrapper(future: Future) -> Any:
         result = future.result()
-
-        # this instance check is made twice - once before unwrapping radio results
-        # and once afterwards. This is a bit ugly, but executors can send back an
-        # unannotated RemoteExceptionWrapper, in addition to the monitoring wrapper
-        # sending back an annotated RemoteExceptionWrapper
-        if isinstance(result, RemoteExceptionWrapper):
-            result.reraise()
-
-        executor = self.executors[task_record['executor']]
-        radio_mode = executor.radio_mode
-        # raise RuntimeError(f"BENC: with radio_mode {radio_mode}, result potentially with monitoring: {result}")
-        if radio_mode == "results" and not task_record['from_memo']:
-            try:
-                (messages, result) = result
-            except Exception as e:
-                raise RuntimeError(f"BENC: Got exception {e} with result = {result}")
-            # raise RuntimeError(f"BENC: discarding {len(messages)} monitoring messages: {messages}")
-            if self.monitoring:
-                for (t, v) in messages:
-                    self.monitoring.send((t, v))
-
         if isinstance(result, RemoteExceptionWrapper):
             result.reraise()
         return result

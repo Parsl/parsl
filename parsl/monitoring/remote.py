@@ -3,8 +3,7 @@ import logging
 import os
 import time
 from functools import wraps
-from multiprocessing import Event, Queue
-from queue import Empty
+from multiprocessing import Event
 from typing import Any, Callable, Dict, List, Sequence, Tuple
 
 from parsl.monitoring.message_type import MessageType
@@ -12,7 +11,6 @@ from parsl.monitoring.radios import (
     FilesystemRadioSender,
     HTEXRadioSender,
     MonitoringRadioSender,
-    ResultsRadioSender,
     UDPRadioSender,
 )
 from parsl.multiprocessing import ForkProcess
@@ -42,8 +40,6 @@ def monitor_wrapper(*,
         task_id = kwargs.pop('_parsl_monitoring_task_id')
         try_id = kwargs.pop('_parsl_monitoring_try_id')
         terminate_event = Event()
-        terminate_queue: Queue[List[Any]]
-        terminate_queue = Queue()
         # Send first message to monitoring router
         send_first_message(try_id,
                            task_id,
@@ -64,8 +60,7 @@ def monitor_wrapper(*,
                                    logging_level,
                                    sleep_dur,
                                    run_dir,
-                                   terminate_event,
-                                   terminate_queue),
+                                   terminate_event),
                              daemon=True,
                              name="Monitor-Wrapper-{}".format(task_id))
             pp.start()
@@ -78,22 +73,12 @@ def monitor_wrapper(*,
             p = None
 
         try:
-            ret_v = f(*args, **kwargs)
+            return f(*args, **kwargs)
         finally:
             # There's a chance of zombification if the workers are killed by some signals (?)
             if p:
                 terminate_event.set()
-
-                try:
-                    more_monitoring_messages = terminate_queue.get(timeout=30)
-                except Empty:
-                    more_monitoring_messages = []
-
-                p.join(30)
-                # 30 second delay for this -- this timeout will be hit in the
-                # case of an unusually long end-of-loop, plus 30 seconds from
-                # the earlier get.
-
+                p.join(30)  # 30 second delay for this -- this timeout will be hit in the case of an unusually long end-of-loop
                 if p.exitcode is None:
                     logger.warn("Event-based termination of monitoring helper took too long. Using process-based termination.")
                     p.terminate()
@@ -107,41 +92,6 @@ def monitor_wrapper(*,
                               monitoring_hub_url,
                               run_id,
                               radio_mode, run_dir)
-
-        # if we reach here, the finally block has run, and
-        # ret_v has been populated. so we can do the return
-        # that used to live inside the try: block.
-        # If that block raised an exception, then the finally
-        # block would run, but then we would not come to this
-        # return statement. As before.
-        if radio_mode == "results":
-            # this import has to happen here, not at the top level: we
-            # want the result_radio_queue from the import on the
-            # execution side - we *don't* want to get the (empty)
-            # result_radio_queue on the submit side, send that with the
-            # closure, and then send it (still empty) back. This is pretty
-            # subtle, which suggests it needs either lots of documentation
-            # or perhaps something nicer than using globals like this?
-            from parsl.monitoring.radios import result_radio_queue
-            assert isinstance(result_radio_queue, list)
-            assert isinstance(more_monitoring_messages, list)
-
-            full = result_radio_queue + more_monitoring_messages
-
-            # due to fork/join when there are already results in the
-            # queue, messages may appear in `full` via two routes:
-            # once in process, and once via forking and joining.
-            # At present that seems to happen only with first_msg messages,
-            # so here check that full only has one.
-            first_msg = [m for m in full if m[1]['first_msg']]  # type: ignore[index]
-            not_first_msg = [m for m in full if not m[1]['first_msg']]  # type: ignore[index]
-
-            # now assume there will be at least one first_msg
-            full = [first_msg[0]] + not_first_msg
-
-            return (full, ret_v)
-        else:
-            return ret_v
 
     new_kwargs = kwargs.copy()
     new_kwargs['_parsl_monitoring_task_id'] = x_task_id
@@ -159,9 +109,6 @@ def get_radio(radio_mode: str, monitoring_hub_url: str, task_id: int, run_dir: s
     elif radio_mode == "filesystem":
         radio = FilesystemRadioSender(monitoring_url=monitoring_hub_url,
                                       run_dir=run_dir)
-    elif radio_mode == "results":
-        radio = ResultsRadioSender(monitoring_url=monitoring_hub_url,
-                                   source_id=task_id)
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
     return radio
@@ -221,8 +168,7 @@ def monitor(pid: int,
             run_dir: str,
             # removed all defaults because unused and there's no meaningful default for terminate_event.
             # these probably should become named arguments, with a *, and named at invocation.
-            terminate_event: Any,
-            terminate_queue: Any) -> None:  # cannot be Event because of multiprocessing type weirdness.
+            terminate_event: Any) -> None:  # cannot be Event because of multiprocessing type weirdness.
     """Monitors the Parsl task's resources by pointing psutil to the task's pid and watching it and its children.
 
     This process makes calls to logging, but deliberately does not attach
@@ -368,12 +314,4 @@ def monitor(pid: int,
         radio.send((MessageType.RESOURCE_INFO, d))
     except Exception:
         logging.exception("Exception getting the resource usage. Not sending final usage to Hub", exc_info=True)
-
-    # TODO: write out any accumulated messages that might have been
-    # accumulated by the results radio, so that the task wrapper in the main
-    # task process can see these results.
-    from parsl.monitoring.radios import result_radio_queue
-    logging.debug("Sending result_radio_queue")
-    terminate_queue.put(result_radio_queue)
-
     logging.debug("End of monitoring helper")

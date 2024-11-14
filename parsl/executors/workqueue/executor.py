@@ -223,9 +223,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             specifiation for each task).
     """
 
-    # TODO: this should be configurable: there's no definite preference for
-    # results radio vs filesystem mode.
-    # radio_mode = "results"
     radio_mode = "filesystem"
 
     @typeguard.typechecked
@@ -255,8 +252,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  worker_executable: str = 'work_queue_worker',
                  function_dir: Optional[str] = None,
                  coprocess: bool = False,
-                 scaling_cores_per_worker: int = 1,
-                 radio_mode: str = "filesystem"):
+                 scaling_cores_per_worker: int = 1):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
         if not _work_queue_enabled:
@@ -293,7 +289,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.worker_executable = worker_executable
         self.function_dir = function_dir
         self.coprocess = coprocess
-        self.radio_mode = radio_mode
 
         if not self.address:
             self.address = socket.gethostname()

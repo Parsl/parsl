@@ -322,8 +322,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             interchange_launch_cmd = DEFAULT_INTERCHANGE_LAUNCH_CMD
         self.interchange_launch_cmd = interchange_launch_cmd
 
-        self.radio_mode = "htex"
-
+    radio_mode = "htex"
     enable_mpi_mode: bool = False
     mpi_launcher: str = "mpiexec"
 
