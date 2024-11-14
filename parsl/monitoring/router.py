@@ -31,7 +31,7 @@ class MonitoringRouter:
                  zmq_port_range: Tuple[int, int] = (55050, 56000),
 
                  monitoring_hub_address: str = "127.0.0.1",
-                 logdir: str = ".",
+                 run_dir: str = ".",
                  logging_level: int = logging.INFO,
                  atexit_timeout: int = 3,   # in seconds
                  resource_msgs: mpq.Queue,
@@ -48,7 +48,7 @@ class MonitoringRouter:
         zmq_port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
              Default: (55050, 56000)
-        logdir : str
+        run_dir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         logging_level : int
              Logging level as defined in the logging module. Default: logging.INFO
@@ -59,8 +59,8 @@ class MonitoringRouter:
         exit_event : Event
             An event that the main Parsl process will set to signal that the monitoring router should shut down.
         """
-        os.makedirs(logdir, exist_ok=True)
-        self.logger = set_file_logger("{}/monitoring_router.log".format(logdir),
+        os.makedirs(run_dir, exist_ok=True)
+        self.logger = set_file_logger(f"{run_dir}/monitoring_router.log",
                                       name="monitoring_router",
                                       level=logging_level)
         self.logger.debug("Monitoring router starting")
@@ -187,14 +187,14 @@ def router_starter(*,
                    udp_port: Optional[int],
                    zmq_port_range: Tuple[int, int],
 
-                   logdir: str,
+                   run_dir: str,
                    logging_level: int) -> None:
     setproctitle("parsl: monitoring router")
     try:
         router = MonitoringRouter(hub_address=hub_address,
                                   udp_port=udp_port,
                                   zmq_port_range=zmq_port_range,
-                                  logdir=logdir,
+                                  run_dir=run_dir,
                                   logging_level=logging_level,
                                   resource_msgs=resource_msgs,
                                   exit_event=exit_event)
