@@ -14,6 +14,7 @@ import typeguard
 import zmq
 
 from parsl.log_utils import set_file_logger
+from parsl.monitoring.radios import MultiprocessingQueueRadioSender
 from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
@@ -55,7 +56,6 @@ class MonitoringRouter:
             The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
         resource_msgs : multiprocessing.Queue
             A multiprocessing queue to receive messages to be routed onwards to the database process
-
         exit_event : Event
             An event that the main Parsl process will set to signal that the monitoring router should shut down.
         """
@@ -98,7 +98,7 @@ class MonitoringRouter:
                                                                                min_port=zmq_port_range[0],
                                                                                max_port=zmq_port_range[1])
 
-        self.resource_msgs = resource_msgs
+        self.target_radio = MultiprocessingQueueRadioSender(resource_msgs)
         self.exit_event = exit_event
 
     @wrap_with_logs(target="monitoring_router")
@@ -125,7 +125,7 @@ class MonitoringRouter:
                     data, addr = self.udp_sock.recvfrom(2048)
                     resource_msg = pickle.loads(data)
                     self.logger.debug("Got UDP Message from {}: {}".format(addr, resource_msg))
-                    self.resource_msgs.put(resource_msg)
+                    self.target_radio.send(resource_msg)
                 except socket.timeout:
                     pass
 
@@ -136,7 +136,7 @@ class MonitoringRouter:
                     data, addr = self.udp_sock.recvfrom(2048)
                     msg = pickle.loads(data)
                     self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
-                    self.resource_msgs.put(msg)
+                    self.target_radio.send(msg)
                     last_msg_received_time = time.time()
                 except socket.timeout:
                     pass
@@ -160,7 +160,7 @@ class MonitoringRouter:
                         assert len(msg) >= 1, "ZMQ Receiver expects tuples of length at least 1, got {}".format(msg)
                         assert len(msg) == 2, "ZMQ Receiver expects message tuples of exactly length 2, got {}".format(msg)
 
-                        self.resource_msgs.put(msg)
+                        self.target_radio.send(msg)
                 except zmq.Again:
                     pass
                 except Exception:

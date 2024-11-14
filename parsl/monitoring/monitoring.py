@@ -270,6 +270,8 @@ def filesystem_receiver(logdir: str, q: Queue[TaggedMonitoringMessage], run_dir:
     new_dir = f"{base_path}/new/"
     logger.debug("Creating new and tmp paths under %s", base_path)
 
+    target_radio = MultiprocessingQueueRadioSender(q)
+
     os.makedirs(tmp_dir, exist_ok=True)
     os.makedirs(new_dir, exist_ok=True)
 
@@ -285,7 +287,7 @@ def filesystem_receiver(logdir: str, q: Queue[TaggedMonitoringMessage], run_dir:
                     message = pickle.load(f)
                 logger.debug("Message received is: %s", message)
                 assert isinstance(message, tuple)
-                q.put(cast(TaggedMonitoringMessage, message))
+                target_radio.send(cast(TaggedMonitoringMessage, message))
                 os.remove(full_path_filename)
             except Exception:
                 logger.exception("Exception processing %s - probably will be retried next iteration", filename)
