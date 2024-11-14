@@ -3,23 +3,22 @@ from __future__ import annotations
 import logging
 import multiprocessing.synchronize as ms
 import os
+import pickle
 import queue
 import time
-from multiprocessing import Event, Process
+from multiprocessing import Event
 from multiprocessing.queues import Queue
-from typing import TYPE_CHECKING, Any, Literal, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Literal, Optional, Tuple, Union, cast
 
 import typeguard
 
 from parsl.log_utils import set_file_logger
 from parsl.monitoring.errors import MonitoringHubStartError
-from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios import MultiprocessingQueueRadioSender
 from parsl.monitoring.router import router_starter
-from parsl.monitoring.types import AddressedMonitoringMessage
+from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import ForkProcess, SizedQueue
 from parsl.process_loggers import wrap_with_logs
-from parsl.serialize import deserialize
 from parsl.utils import RepresentationMixin, setproctitle
 
 _db_manager_excepts: Optional[Exception]
@@ -138,7 +137,7 @@ class MonitoringHub(RepresentationMixin):
         self.exception_q: Queue[Tuple[str, str]]
         self.exception_q = SizedQueue(maxsize=10)
 
-        self.resource_msgs: Queue[Union[AddressedMonitoringMessage, Tuple[Literal["STOP"], Literal[0]]]]
+        self.resource_msgs: Queue[Union[TaggedMonitoringMessage, Literal["STOP"]]]
         self.resource_msgs = SizedQueue()
 
         self.router_exit_event: ms.Event
@@ -170,15 +169,15 @@ class MonitoringHub(RepresentationMixin):
                                     daemon=True,
                                     )
         self.dbm_proc.start()
-        logger.info("Started the router process {} and DBM process {}".format(self.router_proc.pid, self.dbm_proc.pid))
+        logger.info("Started the router process %s and DBM process %s", self.router_proc.pid, self.dbm_proc.pid)
 
-        self.filesystem_proc = Process(target=filesystem_receiver,
-                                       args=(self.logdir, self.resource_msgs, dfk_run_dir),
-                                       name="Monitoring-Filesystem-Process",
-                                       daemon=True
-                                       )
+        self.filesystem_proc = ForkProcess(target=filesystem_receiver,
+                                           args=(self.logdir, self.resource_msgs, dfk_run_dir),
+                                           name="Monitoring-Filesystem-Process",
+                                           daemon=True
+                                           )
         self.filesystem_proc.start()
-        logger.info(f"Started filesystem radio receiver process {self.filesystem_proc.pid}")
+        logger.info("Started filesystem radio receiver process %s", self.filesystem_proc.pid)
 
         self.radio = MultiprocessingQueueRadioSender(self.resource_msgs)
 
@@ -191,7 +190,7 @@ class MonitoringHub(RepresentationMixin):
             raise MonitoringHubStartError()
 
         if isinstance(comm_q_result, str):
-            logger.error(f"MonitoringRouter sent an error message: {comm_q_result}")
+            logger.error("MonitoringRouter sent an error message: %s", comm_q_result)
             raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
 
         udp_port, zmq_port = comm_q_result
@@ -202,11 +201,10 @@ class MonitoringHub(RepresentationMixin):
 
         self.hub_zmq_port = zmq_port
 
-    # TODO: tighten the Any message format
-    def send(self, mtype: MessageType, message: Any) -> None:
-        logger.debug("Sending message type {}".format(mtype))
+    def send(self, message: TaggedMonitoringMessage) -> None:
+        logger.debug("Sending message type %s", message[0])
         t_before = time.time()
-        self.radio.send((mtype, message))
+        self.radio.send(message)
         t_after = time.time()
         logger.debug(f"Sent message in {t_after - t_before} seconds")
 
@@ -233,10 +231,9 @@ class MonitoringHub(RepresentationMixin):
             if exception_msgs:
                 for exception_msg in exception_msgs:
                     logger.error(
-                        "{} process delivered an exception: {}. Terminating all monitoring processes immediately.".format(
-                            exception_msg[0],
-                            exception_msg[1]
-                        )
+                        "%s process delivered an exception: %s. Terminating all monitoring processes immediately.",
+                        exception_msg[0],
+                        exception_msg[1]
                     )
                 self.router_proc.terminate()
                 self.dbm_proc.terminate()
@@ -249,7 +246,7 @@ class MonitoringHub(RepresentationMixin):
             logger.debug("Finished waiting for router termination")
             if len(exception_msgs) == 0:
                 logger.debug("Sending STOP to DBM")
-                self.resource_msgs.put(("STOP", 0))
+                self.resource_msgs.put("STOP")
             else:
                 logger.debug("Not sending STOP to DBM, because there were DBM exceptions")
             logger.debug("Waiting for DB termination")
@@ -273,7 +270,7 @@ class MonitoringHub(RepresentationMixin):
 
 
 @wrap_with_logs
-def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]", run_dir: str) -> None:
+def filesystem_receiver(logdir: str, q: Queue[TaggedMonitoringMessage], run_dir: str) -> None:
     logger = set_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
                              name="monitoring_filesystem_radio",
                              level=logging.INFO)
@@ -283,7 +280,7 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]
     base_path = f"{run_dir}/monitor-fs-radio/"
     tmp_dir = f"{base_path}/tmp/"
     new_dir = f"{base_path}/new/"
-    logger.debug(f"Creating new and tmp paths under {base_path}")
+    logger.debug("Creating new and tmp paths under %s", base_path)
 
     os.makedirs(tmp_dir, exist_ok=True)
     os.makedirs(new_dir, exist_ok=True)
@@ -294,15 +291,15 @@ def filesystem_receiver(logdir: str, q: "queue.Queue[AddressedMonitoringMessage]
         # iterate over files in new_dir
         for filename in os.listdir(new_dir):
             try:
-                logger.info(f"Processing filesystem radio file {filename}")
+                logger.info("Processing filesystem radio file %s", filename)
                 full_path_filename = f"{new_dir}/{filename}"
                 with open(full_path_filename, "rb") as f:
-                    message = deserialize(f.read())
-                logger.debug(f"Message received is: {message}")
+                    message = pickle.load(f)
+                logger.debug("Message received is: %s", message)
                 assert isinstance(message, tuple)
-                q.put(cast(AddressedMonitoringMessage, message))
+                q.put(cast(TaggedMonitoringMessage, message))
                 os.remove(full_path_filename)
             except Exception:
-                logger.exception(f"Exception processing {filename} - probably will be retried next iteration")
+                logger.exception("Exception processing %s - probably will be retried next iteration", filename)
 
         time.sleep(1)  # whats a good time for this poll?

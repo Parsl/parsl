@@ -115,7 +115,6 @@ Providers
     :nosignatures:
 
     parsl.providers.AWSProvider
-    parsl.providers.CobaltProvider
     parsl.providers.CondorProvider
     parsl.providers.GoogleCloudProvider
     parsl.providers.GridEngineProvider
@@ -171,12 +170,6 @@ Exceptions
     parsl.providers.errors.SchedulerMissingArgs
     parsl.providers.errors.ScriptPathError
     parsl.channels.errors.ChannelError
-    parsl.channels.errors.BadHostKeyException
-    parsl.channels.errors.BadScriptPath
-    parsl.channels.errors.BadPermsScriptPath
-    parsl.channels.errors.FileExists
-    parsl.channels.errors.AuthException
-    parsl.channels.errors.SSHException
     parsl.channels.errors.FileCopyException
     parsl.executors.high_throughput.errors.WorkerLost
     parsl.executors.high_throughput.interchange.ManagerLost

@@ -18,10 +18,7 @@ class ClusterProvider(ExecutionProvider):
       label : str
         Label for this provider.
       channel : Channel
-        Channel for accessing this provider. Possible channels include
-        :class:`~parsl.channels.LocalChannel` (the default),
-        :class:`~parsl.channels.SSHChannel`, or
-        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
+        Channel for accessing this provider.
       walltime : str
         Walltime requested per block in HH:MM:SS.
       launcher : Launcher

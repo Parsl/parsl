@@ -84,7 +84,7 @@ if __name__ == "__main__":
     run_dir = "/home/benc/parsl/src/parsl/runinfo/000/"   # TODO at least get the real version of this value, no matter how badly
 
     radio = FilesystemRadioSender(monitoring_url="",   # TODO: monitoring_hub_url and source_id real values?
-                                  source_id=0, run_dir=run_dir)
+                                  run_dir=run_dir)
 
     uid = str(uuid.uuid4())
 

@@ -452,7 +452,7 @@ class Interchange:
                     logger.debug("Received heartbeat from manager %r via tasks connection", manager_id)
                     self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_RESPONSE_CODE])
                 else:
-                    logger.warning("Received heartbeat via tasks connection for unregistered manager %r")
+                    logger.warning("Received heartbeat via tasks connection for not-registered manager %r", manager_id)
             elif msg['type'] == 'drain':
                 self._ready_managers[manager_id]['draining'] = True
                 logger.debug("Manager %r requested drain", manager_id)

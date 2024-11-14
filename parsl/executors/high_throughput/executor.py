@@ -63,7 +63,6 @@ DEFAULT_INTERCHANGE_LAUNCH_CMD = ["interchange.py"]
 
 GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionProvider`
        Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
-        :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
         :class:`~parsl.providers.condor.condor.Condor`,
         :class:`~parsl.providers.googlecloud.googlecloud.GoogleCloud`,
         :class:`~parsl.providers.gridEngine.gridEngine.GridEngine`,

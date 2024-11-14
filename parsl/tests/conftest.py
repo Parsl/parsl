@@ -146,10 +146,6 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
-        'sshd_required: Marks tests that require a SSHD'
-    )
-    config.addinivalue_line(
-        'markers',
         'multiple_cores_required: Marks tests that require multiple cores, such as htex affinity'
     )
     config.addinivalue_line(
@@ -163,6 +159,10 @@ def pytest_configure(config):
     config.addinivalue_line(
         'markers',
         'executor_supports_std_stream_tuples: Marks tests that require tuple support for stdout/stderr'
+    )
+    config.addinivalue_line(
+        'markers',
+        'shared_fs: Marks tests that require a shared_fs between the workers are the test client'
     )
 
 

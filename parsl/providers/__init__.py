@@ -1,7 +1,6 @@
 # Cloud Providers
 from parsl.providers.aws.aws import AWSProvider
 from parsl.providers.azure.azure import AzureProvider
-from parsl.providers.cobalt.cobalt import CobaltProvider
 from parsl.providers.condor.condor import CondorProvider
 from parsl.providers.googlecloud.googlecloud import GoogleCloudProvider
 from parsl.providers.grid_engine.grid_engine import GridEngineProvider
@@ -15,7 +14,6 @@ from parsl.providers.slurm.slurm import SlurmProvider
 from parsl.providers.torque.torque import TorqueProvider
 
 __all__ = ['LocalProvider',
-           'CobaltProvider',
            'CondorProvider',
            'GridEngineProvider',
            'SlurmProvider',

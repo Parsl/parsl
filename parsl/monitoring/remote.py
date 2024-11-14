@@ -153,14 +153,12 @@ def monitor_wrapper(*,
 def get_radio(radio_mode: str, monitoring_hub_url: str, task_id: int, run_dir: str) -> MonitoringRadioSender:
     radio: MonitoringRadioSender
     if radio_mode == "udp":
-        radio = UDPRadioSender(monitoring_hub_url,
-                               source_id=task_id)
+        radio = UDPRadioSender(monitoring_hub_url)
     elif radio_mode == "htex":
-        radio = HTEXRadioSender(monitoring_hub_url,
-                                source_id=task_id)
+        radio = HTEXRadioSender(monitoring_hub_url)
     elif radio_mode == "filesystem":
         radio = FilesystemRadioSender(monitoring_url=monitoring_hub_url,
-                                      source_id=task_id, run_dir=run_dir)
+                                      run_dir=run_dir)
     elif radio_mode == "results":
         radio = ResultsRadioSender(monitoring_url=monitoring_hub_url,
                                    source_id=task_id)
