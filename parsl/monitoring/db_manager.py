@@ -292,7 +292,7 @@ class DatabaseManager:
 
         logger.propagate = False
 
-        set_file_logger("{}/database_manager.log".format(self.run_dir), level=logging_level,
+        set_file_logger(f"{self.run_dir}/database_manager.log", level=logging_level,
                         format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s",
                         name="database_manager")
 
