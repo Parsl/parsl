@@ -4,7 +4,7 @@ import radical.pilot as rp
 
 import parsl.app.errors as pe
 from parsl.app.bash import remote_side_bash_executor
-from parsl.executors.high_throughput.process_worker_pool import execute_task
+from parsl.executors.execute_task import execute_task
 from parsl.serialize import serialize, unpack_res_spec_apply_message
 
 
