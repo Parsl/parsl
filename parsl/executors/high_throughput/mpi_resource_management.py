@@ -177,6 +177,7 @@ class MPITaskScheduler(TaskScheduler):
                 self._map_tasks_to_nodes[task_package["task_id"]] = allocated_nodes
                 buffer = pack_res_spec_apply_message(_f, _args, _kwargs, resource_spec)
                 task_package["buffer"] = buffer
+                task_package["resource_spec"] = resource_spec
 
         self.pending_task_q.put(task_package)
 
