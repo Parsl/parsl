@@ -7,7 +7,7 @@ def execute_task(bufs: bytes):
     """Deserialize the buffer and execute the task.
     Returns the result or throws exception.
     """
-    f, args, kwargs, resource_spec = unpack_res_spec_apply_message(bufs, copy=False)
+    f, args, kwargs, resource_spec = unpack_res_spec_apply_message(bufs)
 
     for varname in resource_spec:
         envname = "PARSL_" + str(varname).upper()
