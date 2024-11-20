@@ -33,7 +33,7 @@ class ParslWorker:
 
         try:
             buffer = rp.utils.deserialize_bson(task['description']['executable'])
-            func, args, kwargs, _resource_spec = unpack_res_spec_apply_message(buffer, {}, copy=False)
+            func, args, kwargs, _resource_spec = unpack_res_spec_apply_message(buffer)
             ret = remote_side_bash_executor(func, *args, **kwargs)
             exc = (None, None)
             val = None
