@@ -66,7 +66,8 @@ class MPIExecutor(HighThroughputExecutor):
                  worker_logdir_root: Optional[str] = None,
                  mpi_launcher: str = "mpiexec",
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
-                 encrypted: bool = False):
+                 encrypted: bool = False,
+                 enable_ipv6: bool = False):
         super().__init__(
             # Hard-coded settings
             cores_per_worker=1e-9,  # Ensures there will be at least an absurd number of workers
@@ -92,7 +93,8 @@ class MPIExecutor(HighThroughputExecutor):
             address_probe_timeout=address_probe_timeout,
             worker_logdir_root=worker_logdir_root,
             block_error_handler=block_error_handler,
-            encrypted=encrypted
+            encrypted=encrypted,
+            enable_ipv6=enable_ipv6,
         )
         self.enable_mpi_mode = True
         self.mpi_launcher = mpi_launcher

@@ -86,12 +86,14 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
 
     address : string
         An address to connect to the main Parsl process which is reachable from the network in which
-        workers will be running. This field expects an IPv4 address (xxx.xxx.xxx.xxx).
+        workers will be running. This field expects an IPv4 address (xxx.xxx.xxx.xxx) (when
+        ``enable_ipv6`` is not set)
         Most login nodes on clusters have several network interfaces available, only some of which
         can be reached from the compute nodes. This field can be used to limit the executor to listen
         only on a specific interface, and limiting connections to the internal network.
         By default, the executor will attempt to enumerate and connect through all possible addresses.
         Setting an address here overrides the default behavior.
+        If ``enable_ipv6`` is set, specify an IPv6 address in brackets, for eg: ``address=[::1]``
         default=None
 
     worker_ports : (int, int)
@@ -224,6 +226,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Parsl will create names as integers starting with 0.
 
         default: empty list
+
+    enable_ipv6: bool
+        Set this flag to enable communication over IPV6 in addition to IPV4.
+        default: False
     """
 
     @typeguard.typechecked
@@ -253,7 +259,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_logdir_root: Optional[str] = None,
                  manager_selector: ManagerSelector = RandomManagerSelector(),
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
-                 encrypted: bool = False):
+                 encrypted: bool = False,
+                 enable_ipv6: bool = False):
 
         logger.debug("Initializing HighThroughputExecutor")
 
@@ -268,6 +275,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.address = address
         self.address_probe_timeout = address_probe_timeout
         self.manager_selector = manager_selector
+        self.enable_ipv6 = enable_ipv6
+        if self.enable_ipv6:
+            # This will force usage of IPV6 for internal communication
+            self._internal_address = "[::1]"
+        else:
+            self._internal_address = "127.0.0.1"
+
         if self.address:
             self.all_addresses = address
         else:
@@ -408,13 +422,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             )
 
         self.outgoing_q = zmq_pipes.TasksOutgoing(
-            "127.0.0.1", self.interchange_port_range, self.cert_dir
+            self._internal_address, self.interchange_port_range, self.cert_dir
         )
         self.incoming_q = zmq_pipes.ResultsIncoming(
-            "127.0.0.1", self.interchange_port_range, self.cert_dir
+            self._internal_address, self.interchange_port_range, self.cert_dir
         )
         self.command_client = zmq_pipes.CommandClient(
-            "127.0.0.1", self.interchange_port_range, self.cert_dir
+            self._internal_address, self.interchange_port_range, self.cert_dir
         )
 
         self._result_queue_thread = None
@@ -515,7 +529,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         get the worker task and result ports that the interchange has bound to.
         """
 
-        interchange_config = {"client_address": "127.0.0.1",
+        interchange_config = {"client_address": self._internal_address,
                               "client_ports": (self.outgoing_q.port,
                                                self.incoming_q.port,
                                                self.command_client.port),

@@ -32,6 +32,7 @@ def probe_addresses(addresses, task_port, timeout=120):
     for addr in addresses:
         socket = context.socket(zmq.DEALER)
         socket.setsockopt(zmq.LINGER, 0)
+        socket.setsockopt(zmq.IPV6, True)
         url = "tcp://{}:{}".format(addr, task_port)
         logger.debug("Trying to connect back on {}".format(url))
         socket.connect(url)

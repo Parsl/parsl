@@ -10,6 +10,7 @@ def fresh_config():
         executors=[
             HighThroughputExecutor(
                 label="htex_local",
+                enable_ipv6=True,
                 worker_debug=True,
                 cores_per_worker=1,
                 encrypted=True,
