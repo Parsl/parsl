@@ -103,4 +103,5 @@ def test_limited_interface_binding(cert_dir: Optional[str]):
 
     matched_conns = [conn for conn in conns if conn.laddr.port == ix.worker_result_port]
     assert len(matched_conns) == 1
-    assert matched_conns[0].laddr.ip == address
+    # laddr.ip can return ::ffff:127.0.0.1 when using IPv6
+    assert address in matched_conns[0].laddr.ip
