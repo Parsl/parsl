@@ -161,17 +161,16 @@ def get_any_address() -> str:
 
 def tcp_url(address: str, port: Union[str, int, None] = None) -> str:
     """Construct a tcp url safe for IPv4 and IPv6"""
-    stripped_address = address.strip('[]')
     if address == "*":
         return "tcp://*"
 
-    ip_addr = ipaddress.ip_address(stripped_address)
+    ip_addr = ipaddress.ip_address(address)
 
     port_suffix = f":{port}" if port else ""
 
     if ip_addr.version == 6 and port_suffix:
-        url = f"tcp://[{stripped_address}]{port_suffix}"
+        url = f"tcp://[{address}]{port_suffix}"
     else:
-        url = f"tcp://{stripped_address}{port_suffix}"
+        url = f"tcp://{address}{port_suffix}"
 
     return url

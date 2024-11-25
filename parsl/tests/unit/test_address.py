@@ -11,7 +11,8 @@ from parsl.addresses import tcp_url
     ("::1", "55001", "tcp://[::1]:55001"),
     ("::ffff:127.0.0.1", 55001, "tcp://[::ffff:127.0.0.1]:55001"),
     ("::ffff:127.0.0.1", None, "tcp://::ffff:127.0.0.1"),
-    ("[::ffff:127.0.0.1]", None, "tcp://::ffff:127.0.0.1"),
+    ("::ffff:127.0.0.1", None, "tcp://::ffff:127.0.0.1"),
+    ("*", None, "tcp://*"),
 ])
 def test_tcp_url(address, port, expected):
     """Confirm valid address generation"""
