@@ -22,6 +22,7 @@ import psutil
 import zmq
 
 from parsl import curvezmq
+from parsl.addresses import tcp_url
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.execute_task import execute_task
 from parsl.executors.high_throughput.errors import WorkerLost
@@ -159,8 +160,8 @@ class Manager:
                 raise Exception("No viable address found")
             else:
                 logger.info("Connection to Interchange successful on {}".format(ix_address))
-                task_q_url = "tcp://{}:{}".format(ix_address, task_port)
-                result_q_url = "tcp://{}:{}".format(ix_address, result_port)
+                task_q_url = tcp_url(ix_address, task_port)
+                result_q_url = tcp_url(ix_address, result_port)
                 logger.info("Task url : {}".format(task_q_url))
                 logger.info("Result url : {}".format(result_q_url))
         except Exception:

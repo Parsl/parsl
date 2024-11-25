@@ -6,7 +6,7 @@ import uuid
 import zmq
 from zmq.utils.monitor import recv_monitor_message
 
-from parsl.addresses import get_all_addresses
+from parsl.addresses import get_all_addresses, tcp_url
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ def probe_addresses(addresses, task_port, timeout=120):
         socket = context.socket(zmq.DEALER)
         socket.setsockopt(zmq.LINGER, 0)
         socket.setsockopt(zmq.IPV6, True)
-        url = "tcp://{}:{}".format(addr, task_port)
+        url = tcp_url(addr, task_port)
         logger.debug("Trying to connect back on {}".format(url))
         socket.connect(url)
         addr_map[addr] = {'sock': socket,
@@ -72,8 +72,7 @@ class TestWorker:
 
         address = probe_addresses(addresses, port)
         print("Viable address :", address)
-        self.task_incoming.connect("tcp://{}:{}".format(address, port))
-        print("Here")
+        self.task_incoming.connect(tcp_url(address, port))
 
     def heartbeat(self):
         """ Send heartbeat to the incoming task queue

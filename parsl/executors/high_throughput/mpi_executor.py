@@ -50,6 +50,7 @@ class MPIExecutor(HighThroughputExecutor):
                  launch_cmd: Optional[str] = None,
                  interchange_launch_cmd: Optional[str] = None,
                  address: Optional[str] = None,
+                 loopback_address: str = "127.0.0.1",
                  worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
                  interchange_port_range: Optional[Tuple[int, int]] = (55000, 56000),
@@ -66,8 +67,7 @@ class MPIExecutor(HighThroughputExecutor):
                  worker_logdir_root: Optional[str] = None,
                  mpi_launcher: str = "mpiexec",
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
-                 encrypted: bool = False,
-                 enable_ipv6: bool = False):
+                 encrypted: bool = False):
         super().__init__(
             # Hard-coded settings
             cores_per_worker=1e-9,  # Ensures there will be at least an absurd number of workers
@@ -79,6 +79,7 @@ class MPIExecutor(HighThroughputExecutor):
             launch_cmd=launch_cmd,
             interchange_launch_cmd=interchange_launch_cmd,
             address=address,
+            loopback_address=loopback_address,
             worker_ports=worker_ports,
             worker_port_range=worker_port_range,
             interchange_port_range=interchange_port_range,
@@ -93,8 +94,7 @@ class MPIExecutor(HighThroughputExecutor):
             address_probe_timeout=address_probe_timeout,
             worker_logdir_root=worker_logdir_root,
             block_error_handler=block_error_handler,
-            encrypted=encrypted,
-            enable_ipv6=enable_ipv6,
+            encrypted=encrypted
         )
         self.enable_mpi_mode = True
         self.mpi_launcher = mpi_launcher
