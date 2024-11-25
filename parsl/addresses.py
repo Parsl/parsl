@@ -162,6 +162,9 @@ def get_any_address() -> str:
 def tcp_url(address: str, port: Union[str, int, None] = None) -> str:
     """Construct a tcp url safe for IPv4 and IPv6"""
     stripped_address = address.strip('[]')
+    if address == "*":
+        return "tcp://*"
+
     ip_addr = ipaddress.ip_address(stripped_address)
 
     port_suffix = f":{port}" if port else ""
