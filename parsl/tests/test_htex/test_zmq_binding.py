@@ -87,7 +87,7 @@ def test_interchange_binding_with_non_ipv4_address(cert_dir: Optional[str]):
 def test_interchange_binding_bad_address(cert_dir: Optional[str]):
     """Confirm that we raise a ZMQError when a bad address is supplied"""
     address = "550.0.0.0"
-    with pytest.raises(zmq.error.ZMQError):
+    with pytest.raises(ValueError):
         make_interchange(interchange_address=address, cert_dir=cert_dir)
 
 
