@@ -1,5 +1,4 @@
-from abc import ABCMeta, abstractmethod, abstractproperty
-from typing import Tuple
+from abc import ABCMeta, abstractproperty
 
 
 class Channel(metaclass=ABCMeta):
@@ -8,31 +7,7 @@ class Channel(metaclass=ABCMeta):
 
     For certain resources such as campus clusters or supercomputers at
     research laboratories, resource requirements may require authentication.
-
-    The only remaining Channel, *LocalChannel*, executes commands locally in a
-    shell.
-
-    Channels provide the ability to execute commands remotely, using the
-    execute_wait method, and manipulate the remote file system using methods
-    such as push_file, pull_file and makedirs.
-
-    Channels should ensure that each launched command runs in a new process
-    group, so that providers (such as LocalProvider) which terminate long
-    running commands using process groups can do so.
     """
-
-    @abstractmethod
-    def execute_wait(self, cmd: str, walltime: int = 0) -> Tuple[int, str, str]:
-        ''' Executes the cmd, with a defined walltime.
-
-        Args:
-            - cmd (string): Command string to execute over the channel
-            - walltime (int) : Timeout in seconds
-
-        Returns:
-            - (exit_code, stdout, stderr) (int, string, string)
-        '''
-        pass
 
     @abstractproperty
     def script_dir(self) -> str:
