@@ -86,13 +86,18 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
 
     address : string
         An address to connect to the main Parsl process which is reachable from the network in which
-        workers will be running. This field expects an IPv4 address (xxx.xxx.xxx.xxx).
+        workers will be running. This field expects an IPv4 or IPv6 address.
         Most login nodes on clusters have several network interfaces available, only some of which
         can be reached from the compute nodes. This field can be used to limit the executor to listen
         only on a specific interface, and limiting connections to the internal network.
         By default, the executor will attempt to enumerate and connect through all possible addresses.
         Setting an address here overrides the default behavior.
         default=None
+
+    loopback_address: string
+        Specify address used for internal communication between executor and interchange.
+        Supports IPv4 and IPv6 addresses
+        default=127.0.0.1
 
     worker_ports : (int, int)
         Specify the ports to be used by workers to connect to Parsl. If this option is specified,
@@ -224,6 +229,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Parsl will create names as integers starting with 0.
 
         default: empty list
+
     """
 
     @typeguard.typechecked
@@ -233,6 +239,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  launch_cmd: Optional[str] = None,
                  interchange_launch_cmd: Optional[Sequence[str]] = None,
                  address: Optional[str] = None,
+                 loopback_address: str = "127.0.0.1",
                  worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
                  interchange_port_range: Optional[Tuple[int, int]] = (55000, 56000),
@@ -268,6 +275,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.address = address
         self.address_probe_timeout = address_probe_timeout
         self.manager_selector = manager_selector
+        self.loopback_address = loopback_address
+
         if self.address:
             self.all_addresses = address
         else:
@@ -408,13 +417,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             )
 
         self.outgoing_q = zmq_pipes.TasksOutgoing(
-            "127.0.0.1", self.interchange_port_range, self.cert_dir
+            self.loopback_address, self.interchange_port_range, self.cert_dir
         )
         self.incoming_q = zmq_pipes.ResultsIncoming(
-            "127.0.0.1", self.interchange_port_range, self.cert_dir
+            self.loopback_address, self.interchange_port_range, self.cert_dir
         )
         self.command_client = zmq_pipes.CommandClient(
-            "127.0.0.1", self.interchange_port_range, self.cert_dir
+            self.loopback_address, self.interchange_port_range, self.cert_dir
         )
 
         self._result_queue_thread = None
@@ -515,7 +524,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         get the worker task and result ports that the interchange has bound to.
         """
 
-        interchange_config = {"client_address": "127.0.0.1",
+        interchange_config = {"client_address": self.loopback_address,
                               "client_ports": (self.outgoing_q.port,
                                                self.incoming_q.port,
                                                self.command_client.port),

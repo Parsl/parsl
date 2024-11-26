@@ -4,8 +4,8 @@ import argparse
 import logging
 import os
 
+from parsl.executors.execute_task import execute_task
 from parsl.executors.flux import TaskResult
-from parsl.executors.high_throughput.process_worker_pool import execute_task
 from parsl.serialize import serialize
 
 

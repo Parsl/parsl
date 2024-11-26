@@ -9,6 +9,7 @@ def fresh_config():
         executors=[
             HighThroughputExecutor(
                 label="htex_local",
+                loopback_address="::1",
                 worker_debug=True,
                 cores_per_worker=1,
                 encrypted=True,
