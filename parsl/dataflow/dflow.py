@@ -305,7 +305,7 @@ class DataFlowKernel:
             # make sure the task_id is None for inputs
             if not is_output:
                 file_log_info['task_id'] = None
-            self.monitoring.send(MessageType.FILE_INFO, file_log_info)
+            self.monitoring.send((MessageType.FILE_INFO, file_log_info))
 
     def _create_file_log_info(self, file: Union[File, DataFuture],
                               task_record: TaskRecord) -> Dict[str, Any]:
@@ -329,7 +329,7 @@ class DataFlowKernel:
         if self.monitoring and self.monitoring.capture_file_provenance:
             self._send_file_log_info(f, task_record, False)
             file_input_info = self._create_file_io_info(f, task_record)
-            self.monitoring.send(MessageType.INPUT_FILE, file_input_info)
+            self.monitoring.send((MessageType.INPUT_FILE, file_input_info))
 
     def register_as_output(self, f: Union[File, DataFuture],
                            task_record: TaskRecord):
@@ -337,7 +337,7 @@ class DataFlowKernel:
         if self.monitoring and self.monitoring.capture_file_provenance:
             self._send_file_log_info(f, task_record, True)
             file_output_info = self._create_file_io_info(f, task_record)
-            self.monitoring.send(MessageType.OUTPUT_FILE, file_output_info)
+            self.monitoring.send((MessageType.OUTPUT_FILE, file_output_info))
 
     def _create_file_io_info(self, file: Union[File, DataFuture],
                              task_record: TaskRecord) -> Dict[str, Any]:
@@ -355,7 +355,7 @@ class DataFlowKernel:
         """ Capture the environment information for the monitoring db. """
         if self.monitoring and self.monitoring.capture_file_provenance:
             environ_info = self._create_env_log_info(environ)
-            self.monitoring.send(MessageType.ENVIRONMENT_INFO, environ_info)
+            self.monitoring.send((MessageType.ENVIRONMENT_INFO, environ_info))
 
     def _create_env_log_info(self, environ: ParslExecutor) -> Dict[str, Any]:
         """
