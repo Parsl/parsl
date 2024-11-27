@@ -52,6 +52,7 @@ FILES = 'files'          # Files table include file info
 INPUT_FILES = 'input_files'  # Input files table include input file info
 OUTPUT_FILES = 'output_files'  # Output files table include output file info
 ENVIRONMENT = 'environment'    # Executor table include executor info
+MISC_INFO = 'misc_info'        # Misc info table include misc info
 
 class Database:
 
@@ -270,7 +271,6 @@ class Database:
         worker_init = Column('worker_init', Text, nullable=True)
         __table_args__ = (PrimaryKeyConstraint('environment_id'),)
 
-
     class InputFiles(Base):
         __tablename__ = INPUT_FILES
         file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"),
@@ -294,6 +294,16 @@ class Database:
         try_id = Column('try_id', Integer,
                         nullable=False)
         __table_args__ = (PrimaryKeyConstraint('file_id'),)
+
+    class MiscInfo(Base):
+        __tablename__ = MISC_INFO
+        run_id = Column('run_id', Text, nullable=False)
+        task_id = Column('task_id', Integer, nullable=True)
+        try_id = Column('try_id', Integer, nullable=False)
+        timestamp = Column('timestamp', DateTime, nullable=False)
+        info = Column('info', Text, nullable=False)
+        __table_args__ = (
+            PrimaryKeyConstraint('run_id', 'task_id', 'try_id', 'timestamp'),)
 
     class Resource(Base):
         __tablename__ = RESOURCE
@@ -449,6 +459,7 @@ class DatabaseManager:
                     input_file_update_messages, input_file_insert_messages, input_file_all_messages = [], [], []
                     output_file_update_messages, output_file_insert_messages, output_file_all_messages = [], [], []
                     environment_insert_messages = []
+                    misc_info_insert_messages = []
                     for msg_type, msg in priority_messages:
                         if msg_type == MessageType.WORKFLOW_INFO:
                             if "python_version" in msg:   # workflow start message
@@ -538,7 +549,9 @@ class DatabaseManager:
                             if msg['environment_id'] not in inserted_envs:
                                 environment_insert_messages.append(msg)
                                 inserted_envs.add(msg['environment_id'])
-
+                        elif msg_ype == MessageType.MISC_INFO:
+                            # no filtering, just insert each message
+                            misc_info_insert_messages.append(msg)
                         elif msg_type == MessageType.INPUT_FILE:
                             file_id = msg['file_id']
                             input_file_all_messages.append(msg)
@@ -614,6 +627,11 @@ class DatabaseManager:
                         logger.debug("Inserting {} OUTPUT_FILE to output_files table".format(len(output_file_insert_messages)))
                         self._insert(table=OUTPUT_FILES, messages=output_file_insert_messages)
                         logger.debug("There are {} inserted output file records".format(len(output_inserted_files)))
+
+                    if misc_info_insert_messages:
+                        logger.debug("Inserting {} MISC_INFO to misc_info table".format(len(misc_info_insert_messages)))
+                        self._insert(table=MISC_INFO, messages=misc_info_insert_messages)
+                        logger.debug("There are {} inserted misc info records".format(len(misc_info_insert_messages)))
 
                     if try_insert_messages:
                         logger.debug("Inserting {} TASK_INFO to try table".format(len(try_insert_messages)))
