@@ -5,7 +5,7 @@ import os
 import queue
 import threading
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, Union, cast
 
 import typeguard
 
@@ -407,9 +407,9 @@ class DatabaseManager:
         """
         like inserted_tasks but for Files
         """
-        inserted_files = dict()  # type: Dict[Str, Dict[Str, Union[None, datetime.datetime, Str, int]]]
-        input_inserted_files = dict()  # type: Dict[Str, List[Str]]
-        output_inserted_files = dict()  # type: Dict[Str, List[Str]]
+        inserted_files = dict()  # type: Dict[str, Dict[str, Union[None, datetime.datetime, str, int]]]
+        input_inserted_files = dict()  # type: Dict[str, List[str]]
+        output_inserted_files = dict()  # type: Dict[str, List[str]]
         inserted_envs = set()  # type: Set[object]
 
         # for any task ID, we can defer exactly one message, which is the
@@ -549,7 +549,7 @@ class DatabaseManager:
                             if msg['environment_id'] not in inserted_envs:
                                 environment_insert_messages.append(msg)
                                 inserted_envs.add(msg['environment_id'])
-                        elif msg_ype == MessageType.MISC_INFO:
+                        elif msg_type == MessageType.MISC_INFO:
                             # no filtering, just insert each message
                             misc_info_insert_messages.append(msg)
                         elif msg_type == MessageType.INPUT_FILE:
