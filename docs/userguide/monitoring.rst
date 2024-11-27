@@ -99,6 +99,7 @@ This functionality also enables you to log informational messages from you scrip
 
    my_cfg.log_info("This is an informational message")
 
+Known limitations: The file provenance feature will capture the creation of files and the use of files in an app, but currently does not capture the modification of files it already knows about.
 
 Visualization
 -------------
