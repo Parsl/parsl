@@ -110,8 +110,6 @@ class DataFlowKernel:
         self.monitoring = config.monitoring
 
         if self.monitoring:
-            if self.monitoring.logdir is None:
-                self.monitoring.logdir = self.run_dir
             self.monitoring.start(self.run_dir, self.config.run_dir)
 
         self.time_began = datetime.datetime.now()
