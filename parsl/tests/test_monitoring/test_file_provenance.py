@@ -56,9 +56,9 @@ def fresh_config(run_dir):
                     init_blocks=1,
                     min_blocks=1,
                     max_blocks=1,
-                    )
                 )
-            ],
+            )
+        ],
         strategy='simple',
         strategy_period=0.1,
         monitoring=MonitoringHub(
@@ -66,8 +66,8 @@ def fresh_config(run_dir):
                         hub_port=55055,
                         logging_endpoint=f"sqlite:///{run_dir}/monitoring.db",
                         capture_file_provenance=True,
-                        )
         )
+    )
 
 
 @pytest.mark.local

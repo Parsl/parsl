@@ -298,7 +298,7 @@ class DataFlowKernel:
         return task_log_info
 
     def _send_file_log_info(self, file: Union[File, DataFuture],
-                            task_record: TaskRecord, is_output:bool) -> None:
+                            task_record: TaskRecord, is_output: bool) -> None:
         """ Generate a message for the monitoring db about a file. """
         if self.monitoring and self.monitoring.capture_file_provenance:
             file_log_info = self._create_file_log_info(file, task_record)
@@ -367,7 +367,7 @@ class DataFlowKernel:
                         }
 
         env_log_info['address'] = getattr(environ, 'address', None)
-        provider= getattr(environ, 'provider', None)
+        provider = getattr(environ, 'provider', None)
         if provider is not None:
             env_log_info['provider'] = provider.label
             env_log_info['launcher'] = type(getattr(provider, 'launcher', None))

@@ -54,6 +54,7 @@ OUTPUT_FILES = 'output_files'  # Output files table include output file info
 ENVIRONMENT = 'environment'    # Executor table include executor info
 MISC_INFO = 'misc_info'        # Misc info table include misc info
 
+
 class Database:
 
     if not _sqlalchemy_enabled:
@@ -248,12 +249,9 @@ class Database:
         file_name = Column('file_name', Text, index=True, nullable=False)
         file_path = Column('file_path', Text, nullable=True)
         file_id = Column('file_id', Text, index=True, nullable=False)
-        run_id = Column('run_id', Text,
-                             nullable=False)
-        task_id = Column('task_id', Integer,
-                         nullable=True)
-        try_id = Column('try_id', Integer,
-                        nullable=True)
+        run_id = Column('run_id', Text, nullable=False)
+        task_id = Column('task_id', Integer, nullable=True)
+        try_id = Column('try_id', Integer, nullable=True)
         timestamp = Column('timestamp', DateTime, nullable=True)
         size = Column('size', BigInteger, nullable=True)
         md5sum = Column('md5sum', Text, nullable=True)
@@ -273,26 +271,18 @@ class Database:
 
     class InputFiles(Base):
         __tablename__ = INPUT_FILES
-        file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"),
-                         nullable=False)
-        run_id = Column('run_id', Text,
-                             nullable=False)
-        task_id = Column('task_id', Integer,
-                        nullable=False)
-        try_id = Column('try_id', Integer,
-                        nullable=False)
+        file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"), nullable=False)
+        run_id = Column('run_id', Text, nullable=False)
+        task_id = Column('task_id', Integer, nullable=False)
+        try_id = Column('try_id', Integer, nullable=False)
         __table_args__ = (PrimaryKeyConstraint('file_id'),)
 
     class OutputFiles(Base):
         __tablename__ = OUTPUT_FILES
-        file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"),
-                         nullable=False)
-        run_id = Column('run_id', Text,
-                             nullable=False)
-        task_id = Column('task_id', Integer,
-                        nullable=False)
-        try_id = Column('try_id', Integer,
-                        nullable=False)
+        file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"), nullable=False)
+        run_id = Column('run_id', Text, nullable=False)
+        task_id = Column('task_id', Integer, nullable=False)
+        try_id = Column('try_id', Integer, nullable=False)
         __table_args__ = (PrimaryKeyConstraint('file_id'),)
 
     class MiscInfo(Base):
@@ -454,8 +444,8 @@ class DatabaseManager:
                     task_info_update_messages, task_info_insert_messages, task_info_all_messages = [], [], []
                     try_update_messages, try_insert_messages, try_all_messages = [], [], []
                     file_update_messages, file_insert_messages, file_all_messages = [], [], []
-                    input_file_update_messages, input_file_insert_messages, input_file_all_messages = [], [], []
-                    output_file_update_messages, output_file_insert_messages, output_file_all_messages = [], [], []
+                    input_file_insert_messages, input_file_all_messages = [], []
+                    output_file_insert_messages, output_file_all_messages = [], []
                     environment_insert_messages = []
                     misc_info_insert_messages = []
                     for msg_type, msg in priority_messages:

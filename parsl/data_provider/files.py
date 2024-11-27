@@ -84,7 +84,7 @@ class File:
             f"path={self.path}",
             f"filename={self.filename}",
             f"uuid={self.uuid}",
-            ]
+        ]
         if self.local_path is not None:
             content.append(f"local_path={self.local_path}")
 
