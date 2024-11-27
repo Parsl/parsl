@@ -298,12 +298,10 @@ class Database:
     class MiscInfo(Base):
         __tablename__ = MISC_INFO
         run_id = Column('run_id', Text, nullable=False)
-        task_id = Column('task_id', Integer, nullable=True)
-        try_id = Column('try_id', Integer, nullable=False)
         timestamp = Column('timestamp', DateTime, nullable=False)
         info = Column('info', Text, nullable=False)
         __table_args__ = (
-            PrimaryKeyConstraint('run_id', 'task_id', 'try_id', 'timestamp'),)
+            PrimaryKeyConstraint('run_id', 'timestamp'),)
 
     class Resource(Base):
         __tablename__ = RESOURCE
@@ -758,7 +756,8 @@ class DatabaseManager:
         assert isinstance(x, tuple)
         assert len(x) == 2, "expected message tuple to have exactly two elements"
 
-        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO, MessageType.FILE_INFO, MessageType.INPUT_FILE, MessageType.OUTPUT_FILE, MessageType.ENVIRONMENT_INFO]:
+        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO, MessageType.FILE_INFO, MessageType.INPUT_FILE,
+                    MessageType.OUTPUT_FILE, MessageType.ENVIRONMENT_INFO, MessageType.MISC_INFO]:
             self.pending_priority_queue.put(cast(Any, x))
         elif x[0] == MessageType.RESOURCE_INFO:
             body = x[1]

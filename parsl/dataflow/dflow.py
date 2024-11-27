@@ -374,6 +374,32 @@ class DataFlowKernel:
             env_log_info['worker_init'] = getattr(provider, 'worker_init', None)
         return env_log_info
 
+    def log_info(self, msg: str) -> None:
+        """Log an info message to the monitoring db."""
+        if self.monitoring:
+            if self.monitoring.capture_file_provenance:
+                misc_msg = self._create_misc_log_info(msg)
+                if misc_msg is None:
+                    logger.info("Could not turn message into a str, so not sending message to monitoring db")
+                self.monitoring.send((MessageType.MISC_INFO, misc_msg))
+            else:
+                logger.info("File provenance is not enabled, so not sending message to monitoring db")
+        else:
+            logger.info("Monitoring is not enabled, so not sending message to monitoring db")
+
+    def _create_misc_log_info(self, msg: Any) -> Union[None, Dict[str, Any]]:
+        """
+        Create the dictionary that will be included in the monitoring db
+        """
+        try:
+            misc_log_info = {'run_id': self.run_id,
+                             'timestamp': datetime.datetime.now(),
+                             'info': str(msg)
+                             }
+            return misc_log_info
+        except Exception:
+            return None
+
     def _count_deps(self, depends: Sequence[Future]) -> int:
         """Count the number of unresolved futures in the list depends.
         """

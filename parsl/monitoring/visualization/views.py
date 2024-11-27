@@ -12,7 +12,8 @@ from parsl.monitoring.visualization.models import (
     Files,
     InputFiles,
     OutputFiles,
-    Environment
+    Environment,
+    MiscInfo,
     )
 from parsl.monitoring.visualization.plots.default.task_plots import (
     time_series_memory_per_task_plot,
@@ -152,12 +153,17 @@ def workflow(workflow_id):
         have_files = True
     else:
         have_files = False
+    misc_info = MiscInfo.query.filter_by(run_id=workflow_id).order_by(MiscInfo.timestamp.asc()).all()
+    if misc_info:
+        have_misc = True
+    else:
+        have_misc = False
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
                            task_gantt=task_gantt_plot(df_task, df_status, time_completed=workflow_details.time_completed),
                            task_per_app=task_per_app_plot(df_task_tries, df_status, time_completed=workflow_details.time_completed),
-                           have_files=have_files)
+                           have_files=have_files, misc_info=misc_info, have_misc=have_misc)
 
 
 @app.route('/workflow/<workflow_id>/environment/<environment_id>')
