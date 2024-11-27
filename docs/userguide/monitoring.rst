@@ -91,6 +91,7 @@ This functionality also enables you to log informational messages from you scrip
           hub_port=55055,
           monitoring_debug=False,
           resource_monitoring_interval=10,
+          capture_file_provenance=True,
       ),
       strategy='none'
    )
