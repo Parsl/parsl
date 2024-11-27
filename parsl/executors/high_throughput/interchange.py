@@ -14,6 +14,7 @@ from typing import Any, Dict, List, NoReturn, Optional, Sequence, Set, Tuple, ca
 import zmq
 
 from parsl import curvezmq
+from parsl.addresses import tcp_url
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import ManagerLost, VersionMismatch
 from parsl.executors.high_throughput.manager_record import ManagerRecord
@@ -115,13 +116,13 @@ class Interchange:
         self.zmq_context = curvezmq.ServerContext(self.cert_dir)
         self.task_incoming = self.zmq_context.socket(zmq.DEALER)
         self.task_incoming.set_hwm(0)
-        self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
+        self.task_incoming.connect(tcp_url(client_address, client_ports[0]))
         self.results_outgoing = self.zmq_context.socket(zmq.DEALER)
         self.results_outgoing.set_hwm(0)
-        self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
+        self.results_outgoing.connect(tcp_url(client_address, client_ports[1]))
 
         self.command_channel = self.zmq_context.socket(zmq.REP)
-        self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
+        self.command_channel.connect(tcp_url(client_address, client_ports[2]))
         logger.info("Connected to client")
 
         self.run_id = run_id
@@ -144,14 +145,14 @@ class Interchange:
             self.worker_task_port = self.worker_ports[0]
             self.worker_result_port = self.worker_ports[1]
 
-            self.task_outgoing.bind(f"tcp://{self.interchange_address}:{self.worker_task_port}")
-            self.results_incoming.bind(f"tcp://{self.interchange_address}:{self.worker_result_port}")
+            self.task_outgoing.bind(tcp_url(self.interchange_address, self.worker_task_port))
+            self.results_incoming.bind(tcp_url(self.interchange_address, self.worker_result_port))
 
         else:
-            self.worker_task_port = self.task_outgoing.bind_to_random_port(f"tcp://{self.interchange_address}",
+            self.worker_task_port = self.task_outgoing.bind_to_random_port(tcp_url(self.interchange_address),
                                                                            min_port=worker_port_range[0],
                                                                            max_port=worker_port_range[1], max_tries=100)
-            self.worker_result_port = self.results_incoming.bind_to_random_port(f"tcp://{self.interchange_address}",
+            self.worker_result_port = self.results_incoming.bind_to_random_port(tcp_url(self.interchange_address),
                                                                                 min_port=worker_port_range[0],
                                                                                 max_port=worker_port_range[1], max_tries=100)
 

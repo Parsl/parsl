@@ -44,7 +44,6 @@ class MonitoringHub(RepresentationMixin):
                  workflow_name: Optional[str] = None,
                  workflow_version: Optional[str] = None,
                  logging_endpoint: Optional[str] = None,
-                 logdir: Optional[str] = None,
                  monitoring_debug: bool = False,
                  resource_monitoring_enabled: bool = True,
                  resource_monitoring_interval: float = 30):  # in seconds
@@ -73,8 +72,6 @@ class MonitoringHub(RepresentationMixin):
              The database connection url for monitoring to log the information.
              These URLs follow RFC-1738, and can include username, password, hostname, database name.
              Default: sqlite, in the configured run_dir.
-        logdir : str
-             Parsl log directory paths. Logs and temp files go here. Default: '.'
         monitoring_debug : Bool
              Enable monitoring debug logging. Default: False
         resource_monitoring_enabled : boolean
@@ -96,7 +93,6 @@ class MonitoringHub(RepresentationMixin):
         self.hub_port_range = hub_port_range
 
         self.logging_endpoint = logging_endpoint
-        self.logdir = logdir
         self.monitoring_debug = monitoring_debug
 
         self.workflow_name = workflow_name
@@ -109,13 +105,10 @@ class MonitoringHub(RepresentationMixin):
 
         logger.debug("Starting MonitoringHub")
 
-        if self.logdir is None:
-            self.logdir = "."
-
         if self.logging_endpoint is None:
             self.logging_endpoint = f"sqlite:///{os.fspath(config_run_dir)}/monitoring.db"
 
-        os.makedirs(self.logdir, exist_ok=True)
+        os.makedirs(dfk_run_dir, exist_ok=True)
 
         self.monitoring_hub_active = True
 
@@ -151,7 +144,7 @@ class MonitoringHub(RepresentationMixin):
                                                "hub_address": self.hub_address,
                                                "udp_port": self.hub_port,
                                                "zmq_port_range": self.hub_port_range,
-                                               "logdir": self.logdir,
+                                               "run_dir": dfk_run_dir,
                                                "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                                },
                                        name="Monitoring-Router-Process",
@@ -161,7 +154,7 @@ class MonitoringHub(RepresentationMixin):
 
         self.dbm_proc = ForkProcess(target=dbm_starter,
                                     args=(self.exception_q, self.resource_msgs,),
-                                    kwargs={"logdir": self.logdir,
+                                    kwargs={"run_dir": dfk_run_dir,
                                             "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                             "db_url": self.logging_endpoint,
                                             },
@@ -172,7 +165,7 @@ class MonitoringHub(RepresentationMixin):
         logger.info("Started the router process %s and DBM process %s", self.router_proc.pid, self.dbm_proc.pid)
 
         self.filesystem_proc = ForkProcess(target=filesystem_receiver,
-                                           args=(self.logdir, self.resource_msgs, dfk_run_dir),
+                                           args=(self.resource_msgs, dfk_run_dir),
                                            name="Monitoring-Filesystem-Process",
                                            daemon=True
                                            )
@@ -270,8 +263,8 @@ class MonitoringHub(RepresentationMixin):
 
 
 @wrap_with_logs
-def filesystem_receiver(logdir: str, q: Queue[TaggedMonitoringMessage], run_dir: str) -> None:
-    logger = set_file_logger("{}/monitoring_filesystem_radio.log".format(logdir),
+def filesystem_receiver(q: Queue[TaggedMonitoringMessage], run_dir: str) -> None:
+    logger = set_file_logger(f"{run_dir}/monitoring_filesystem_radio.log",
                              name="monitoring_filesystem_radio",
                              level=logging.INFO)
 
@@ -281,6 +274,8 @@ def filesystem_receiver(logdir: str, q: Queue[TaggedMonitoringMessage], run_dir:
     tmp_dir = f"{base_path}/tmp/"
     new_dir = f"{base_path}/new/"
     logger.debug("Creating new and tmp paths under %s", base_path)
+
+    target_radio = MultiprocessingQueueRadioSender(q)
 
     os.makedirs(tmp_dir, exist_ok=True)
     os.makedirs(new_dir, exist_ok=True)
@@ -297,7 +292,7 @@ def filesystem_receiver(logdir: str, q: Queue[TaggedMonitoringMessage], run_dir:
                     message = pickle.load(f)
                 logger.debug("Message received is: %s", message)
                 assert isinstance(message, tuple)
-                q.put(cast(TaggedMonitoringMessage, message))
+                target_radio.send(cast(TaggedMonitoringMessage, message))
                 os.remove(full_path_filename)
             except Exception:
                 logger.exception("Exception processing %s - probably will be retried next iteration", filename)
