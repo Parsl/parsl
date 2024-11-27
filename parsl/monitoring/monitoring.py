@@ -196,7 +196,10 @@ class MonitoringHub(RepresentationMixin):
 
     def send(self, message: TaggedMonitoringMessage) -> None:
         logger.debug("Sending message type %s", message[0])
+        t_before = time.time()
         self.radio.send(message)
+        t_after = time.time()
+        logger.debug(f"Sent message in {t_after - t_before} seconds")
 
     def close(self) -> None:
         logger.info("Terminating Monitoring Hub")
@@ -209,6 +212,15 @@ class MonitoringHub(RepresentationMixin):
                 break
         if self.monitoring_hub_active:
             self.monitoring_hub_active = False
+
+            # some kind of filesystem_proc drain should happen here...
+            # which might take 10s of minutes based on my experience on cori (!)
+            # should this be message based? it probably doesn't need to be if
+            # we believe we've received all messages
+            # ... which we don't
+            logger.info("Terminating filesystem radio receiver process")
+            self.filesystem_proc.terminate()
+            self.filesystem_proc.join()
             if exception_msgs:
                 for exception_msg in exception_msgs:
                     logger.error(
