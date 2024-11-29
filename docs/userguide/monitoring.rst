@@ -42,7 +42,6 @@ configuration. Here the `parsl.monitoring.MonitoringHub` is specified to use por
       ],
       monitoring=MonitoringHub(
           hub_address=address_by_hostname(),
-          hub_port=55055,
           monitoring_debug=False,
           resource_monitoring_interval=10,
       ),
