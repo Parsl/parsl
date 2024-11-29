@@ -60,9 +60,9 @@ class MonitoringRouter:
             An event that the main Parsl process will set to signal that the monitoring router should shut down.
         """
         os.makedirs(run_dir, exist_ok=True)
-        self.logger = set_file_logger(f"{run_dir}/monitoring_router.log",
-                                      name="monitoring_router",
-                                      level=logging_level)
+        self.logger, _ = set_file_logger(f"{run_dir}/monitoring_router.log",
+                                         name="monitoring_router",
+                                         level=logging_level)
         self.logger.debug("Monitoring router starting")
 
         self.hub_address = hub_address
