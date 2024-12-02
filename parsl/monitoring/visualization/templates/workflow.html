@@ -44,25 +44,25 @@
     </div>
   </div>
 </div>
-{% if have_misc %}
-    <h5>Misc Info</h5>
-    <table class="table table-hover">
-      <thead>
-        <tr>
-            <th>Date</th>
-            <th>Info</th>
-        </tr>
-      </thead>
-      <tbody>
-      {% for m_info in misc_info %}
-          <tr>
-            <td>{{ m_info['timestamp'] | timeformat }}</td>
-            <td>{{ m_info['info'] }}</td>
-          </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-{% endif %}
+    {% if have_misc %}
+        <h5>Misc Info</h5>
+        <table class="table table-hover">
+            <thead>
+            <tr>
+                <th>Date</th>
+                <th>Info</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for m_info in misc_info %}
+                <tr>
+                    <td>{{ m_info['timestamp'] | timeformat }}</td>
+                    <td>{{ m_info['info'] }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
 <a href="dag_group_by_apps">View workflow DAG -- colored by apps</a>
 <br><a href="dag_group_by_states">View workflow DAG -- colored by task states</a>
 <br><a href="resource_usage">View workflow resource usage</a>

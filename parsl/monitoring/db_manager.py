@@ -52,7 +52,7 @@ FILES = 'files'          # Files table include file info
 INPUT_FILES = 'input_files'  # Input files table include input file info
 OUTPUT_FILES = 'output_files'  # Output files table include output file info
 ENVIRONMENT = 'environment'    # Executor table include executor info
-MISC_INFO = 'misc_info'        # Misc info table include misc info
+MISC_INFO = 'misc_info'  # Misc info table include misc info
 
 
 class Database:

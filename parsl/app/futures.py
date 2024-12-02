@@ -41,7 +41,8 @@ class DataFuture(Future):
             self.set_result(self.file_obj)
             if self.file_obj.scheme == 'file' and os.path.isfile(self.file_obj.filepath):
                 if not self.file_obj.timestamp:
-                    self.file_obj.timestamp = datetime.fromtimestamp(stat(self.file_obj.filepath).st_ctime, tz=timezone.utc)
+                    self.file_obj.timestamp = datetime.fromtimestamp(stat(self.file_obj.filepath).st_ctime,
+                                                                     tz=timezone.utc)
                 if not self.file_obj.size:
                     self.file_obj.size = stat(self.file_obj.filepath).st_size
                 if not self.file_obj.md5sum:

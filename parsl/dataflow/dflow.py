@@ -401,7 +401,7 @@ class DataFlowKernel:
         except Exception:
             return None
 
-    def _count_deps(self, depends: Sequence[Future]) -> int:
+    def _count_deps(self, task_record: TaskRecord) -> int:
         """Count the number of unresolved futures in the list depends.
         """
         count = 0
