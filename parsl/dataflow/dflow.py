@@ -111,8 +111,6 @@ class DataFlowKernel:
         self.monitoring = config.monitoring
 
         if self.monitoring:
-            if self.monitoring.logdir is None:
-                self.monitoring.logdir = self.run_dir
             self.monitoring.start(self.run_dir, self.config.run_dir)
 
         self.time_began = datetime.datetime.now()
@@ -233,82 +231,9 @@ class DataFlowKernel:
             raise InternalConsistencyError(f"Exit case for {mode} should be unreachable, validated by typeguard on Config()")
 
     def _send_task_log_info(self, task_record: TaskRecord) -> None:
-        if self.monitoring and self.monitoring.capture_file_provenance:
+        if self.monitoring:
             task_log_info = self._create_task_log_info(task_record)
             self.monitoring.send((MessageType.TASK_INFO, task_log_info))
-
-    def _send_file_log_info(self, file: Union[File, DataFuture, DynamicFileList.DynamicFile],
-                            task_record: TaskRecord, is_output:bool) -> None:
-        if self.monitoring and self.monitoring.capture_file_provenance:
-            file_log_info = self._create_file_log_info(file, task_record)
-            # make sure the task_id is None for inputs
-            if not is_output:
-                file_log_info['task_id'] = None
-            self.monitoring.send(MessageType.FILE_INFO, file_log_info)
-
-    def _create_file_log_info(self, file: Union[File, DataFuture, DynamicFileList.DynamicFile],
-                              task_record: TaskRecord) -> Dict[str, Any]:
-        """
-        Create the dictionary that will be included in the log.
-        """
-        file_log_info = {'file_name': file.filename,
-                         'file_id': str(file.uuid),
-                         'run_id': self.run_id,
-                         'task_id': task_record['id'],
-                         'try_id': task_record['try_id'],
-                         'timestamp': file.timestamp,
-                         'size': file.size,
-                         'md5sum': file.md5sum
-                         }
-        return file_log_info
-
-    def _create_env_log_info(self, environ: ParslExecutor) -> Dict[str, Any]:
-        """
-        Create the dictionary that will be included in the log.
-        """
-        env_log_info = {'run_id': environ.run_id,
-                        'environment_id': str(environ.uu_id),
-                        'label': environ.label
-                        }
-
-        env_log_info['address'] = getattr(environ, 'address', None)
-        provider= getattr(environ, 'provider', None)
-        if provider is not None:
-            env_log_info['provider'] = provider.label
-            env_log_info['launcher'] = type(getattr(provider, 'launcher', None))
-            env_log_info['worker_init'] = getattr(provider, 'worker_init', None)
-        return env_log_info
-
-    def _register_env(self, environ: ParslExecutor) -> None:
-        if self.monitoring and self.monitoring.capture_file_provenance:
-            environ_info = self._create_env_log_info(environ)
-            self.monitoring.send(MessageType.ENVIRONMENT_INFO, environ_info)
-
-    def register_as_input(self, f: Union(DynamicFileList.DynamicFile, File, DataFuture),
-                          task_record: TaskRecord):
-        if self.monitoring and self.monitoring.capture_file_provenance:
-            self._send_file_log_info(f, task_record, False)
-            file_input_info = self._create_file_io_info(f, task_record)
-            self.monitoring.send(MessageType.INPUT_FILE, file_input_info)
-
-    def register_as_output(self, f: Union(DynamicFileList.DynamicFile, File, DataFuture),
-                           task_record: TaskRecord):
-        if self.monitoring and self.monitoring.capture_file_provenance:
-            self._send_file_log_info(f, task_record, True)
-            file_output_info = self._create_file_io_info(f, task_record)
-            self.monitoring.send(MessageType.OUTPUT_FILE, file_output_info)
-
-    def _create_file_io_info(self, file: Union[File, DataFuture, DynamicFileList.DynamicFile],
-                                task_record: TaskRecord) -> Dict[str, Any]:
-        """
-        Create the dictionary that will be included in the log.
-        """
-        file_io_info = {'file_id': str(file.uuid),
-                        'run_id': self.run_id,
-                        'task_id': task_record['id'],
-                        'try_id': task_record['try_id'],
-                        }
-        return file_io_info
 
     def _create_task_log_info(self, task_record: TaskRecord) -> Dict[str, Any]:
         """
@@ -373,7 +298,110 @@ class DataFlowKernel:
 
         return task_log_info
 
-    def _count_deps(self, task_record: TaskRecord) -> int:
+    def _send_file_log_info(self, file: Union[File, DataFuture],
+                            task_record: TaskRecord, is_output: bool) -> None:
+        """ Generate a message for the monitoring db about a file. """
+        if self.monitoring and self.monitoring.capture_file_provenance:
+            file_log_info = self._create_file_log_info(file, task_record)
+            # make sure the task_id is None for inputs
+            if not is_output:
+                file_log_info['task_id'] = None
+            self.monitoring.send((MessageType.FILE_INFO, file_log_info))
+
+    def _create_file_log_info(self, file: Union[File, DataFuture],
+                              task_record: TaskRecord) -> Dict[str, Any]:
+        """
+        Create the dictionary that will be included in the ,omitoring db.
+        """
+        file_log_info = {'file_name': file.filename,
+                         'file_id': str(file.uuid),
+                         'run_id': self.run_id,
+                         'task_id': task_record['id'],
+                         'try_id': task_record['try_id'],
+                         'timestamp': file.timestamp,
+                         'size': file.size,
+                         'md5sum': file.md5sum
+                         }
+        return file_log_info
+
+    def register_as_input(self, f: Union[File, DataFuture],
+                          task_record: TaskRecord):
+        """ Register a file as an input to a task. """
+        if self.monitoring and self.monitoring.capture_file_provenance:
+            self._send_file_log_info(f, task_record, False)
+            file_input_info = self._create_file_io_info(f, task_record)
+            self.monitoring.send((MessageType.INPUT_FILE, file_input_info))
+
+    def register_as_output(self, f: Union[File, DataFuture],
+                           task_record: TaskRecord):
+        """ Register a file as an output of a task. """
+        if self.monitoring and self.monitoring.capture_file_provenance:
+            self._send_file_log_info(f, task_record, True)
+            file_output_info = self._create_file_io_info(f, task_record)
+            self.monitoring.send((MessageType.OUTPUT_FILE, file_output_info))
+
+    def _create_file_io_info(self, file: Union[File, DataFuture],
+                             task_record: TaskRecord) -> Dict[str, Any]:
+        """
+        Create the dictionary that will be included in the monitoring db
+        """
+        file_io_info = {'file_id': str(file.uuid),
+                        'run_id': self.run_id,
+                        'task_id': task_record['id'],
+                        'try_id': task_record['try_id'],
+                        }
+        return file_io_info
+
+    def _register_env(self, environ: ParslExecutor) -> None:
+        """ Capture the environment information for the monitoring db. """
+        if self.monitoring and self.monitoring.capture_file_provenance:
+            environ_info = self._create_env_log_info(environ)
+            self.monitoring.send((MessageType.ENVIRONMENT_INFO, environ_info))
+
+    def _create_env_log_info(self, environ: ParslExecutor) -> Dict[str, Any]:
+        """
+        Create the dictionary that will be included in the monitoring db
+        """
+        env_log_info = {'run_id': environ.run_id,
+                        'environment_id': str(environ.uu_id),
+                        'label': environ.label
+                        }
+
+        env_log_info['address'] = getattr(environ, 'address', None)
+        provider = getattr(environ, 'provider', None)
+        if provider is not None:
+            env_log_info['provider'] = provider.label
+            env_log_info['launcher'] = type(getattr(provider, 'launcher', None))
+            env_log_info['worker_init'] = getattr(provider, 'worker_init', None)
+        return env_log_info
+
+    def log_info(self, msg: str) -> None:
+        """Log an info message to the monitoring db."""
+        if self.monitoring:
+            if self.monitoring.capture_file_provenance:
+                misc_msg = self._create_misc_log_info(msg)
+                if misc_msg is None:
+                    logger.info("Could not turn message into a str, so not sending message to monitoring db")
+                self.monitoring.send((MessageType.MISC_INFO, misc_msg))
+            else:
+                logger.info("File provenance is not enabled, so not sending message to monitoring db")
+        else:
+            logger.info("Monitoring is not enabled, so not sending message to monitoring db")
+
+    def _create_misc_log_info(self, msg: Any) -> Union[None, Dict[str, Any]]:
+        """
+        Create the dictionary that will be included in the monitoring db
+        """
+        try:
+            misc_log_info = {'run_id': self.run_id,
+                             'timestamp': datetime.datetime.now(),
+                             'info': str(msg)
+                             }
+            return misc_log_info
+        except Exception:
+            return None
+
+    def _count_deps(self, depends: Sequence[Future]) -> int:
         """Count the number of unresolved futures in the list depends.
         """
         count = 0
@@ -853,8 +881,7 @@ class DataFlowKernel:
         return exec_fu
 
     def _add_input_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], func: Callable,
-                        task_record: TaskRecord) -> Tuple[Sequence[Any], Dict[str, Any],
-                                                                                                                   Callable]:
+                        task_record: TaskRecord) -> Tuple[Sequence[Any], Dict[str, Any], Callable]:
         """Look for inputs of the app that are files. Give the data manager
         the opportunity to replace a file with a data future for that file,
         for example wrapping the result of a staging action.

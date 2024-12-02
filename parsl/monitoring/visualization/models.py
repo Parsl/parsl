@@ -116,6 +116,14 @@ class OutputFiles(db.Model):
     __table_args__ = (db.PrimaryKeyConstraint('file_id'),)
 
 
+class MiscInfo(db.Model):
+    __tablename__ = 'misc_info'
+    run_id = db.Column('run_id', db.Text, nullable=False)
+    timestamp = db.Column('timestamp', db.DateTime, nullable=False)
+    info = db.Column('info', db.Text, nullable=False)
+    __table_args__ = (db.PrimaryKeyConstraint('run_id', 'timestamp'),)
+
+
 class Resource(db.Model):
     __tablename__ = RESOURCE
     task_id = db.Column('task_id', db.Integer, db.ForeignKey(

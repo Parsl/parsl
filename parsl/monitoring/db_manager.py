@@ -5,7 +5,7 @@ import os
 import queue
 import threading
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, Union, cast
 
 import typeguard
 
@@ -52,6 +52,8 @@ FILES = 'files'          # Files table include file info
 INPUT_FILES = 'input_files'  # Input files table include input file info
 OUTPUT_FILES = 'output_files'  # Output files table include output file info
 ENVIRONMENT = 'environment'    # Executor table include executor info
+MISC_INFO = 'misc_info'        # Misc info table include misc info
+
 
 class Database:
 
@@ -247,12 +249,9 @@ class Database:
         file_name = Column('file_name', Text, index=True, nullable=False)
         file_path = Column('file_path', Text, nullable=True)
         file_id = Column('file_id', Text, index=True, nullable=False)
-        run_id = Column('run_id', Text,
-                             nullable=False)
-        task_id = Column('task_id', Integer,
-                         nullable=True)
-        try_id = Column('try_id', Integer,
-                        nullable=True)
+        run_id = Column('run_id', Text, nullable=False)
+        task_id = Column('task_id', Integer, nullable=True)
+        try_id = Column('try_id', Integer, nullable=True)
         timestamp = Column('timestamp', DateTime, nullable=True)
         size = Column('size', BigInteger, nullable=True)
         md5sum = Column('md5sum', Text, nullable=True)
@@ -270,30 +269,29 @@ class Database:
         worker_init = Column('worker_init', Text, nullable=True)
         __table_args__ = (PrimaryKeyConstraint('environment_id'),)
 
-
     class InputFiles(Base):
         __tablename__ = INPUT_FILES
-        file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"),
-                         nullable=False)
-        run_id = Column('run_id', Text,
-                             nullable=False)
-        task_id = Column('task_id', Integer,
-                        nullable=False)
-        try_id = Column('try_id', Integer,
-                        nullable=False)
+        file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"), nullable=False)
+        run_id = Column('run_id', Text, nullable=False)
+        task_id = Column('task_id', Integer, nullable=False)
+        try_id = Column('try_id', Integer, nullable=False)
         __table_args__ = (PrimaryKeyConstraint('file_id'),)
 
     class OutputFiles(Base):
         __tablename__ = OUTPUT_FILES
-        file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"),
-                         nullable=False)
-        run_id = Column('run_id', Text,
-                             nullable=False)
-        task_id = Column('task_id', Integer,
-                        nullable=False)
-        try_id = Column('try_id', Integer,
-                        nullable=False)
+        file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"), nullable=False)
+        run_id = Column('run_id', Text, nullable=False)
+        task_id = Column('task_id', Integer, nullable=False)
+        try_id = Column('try_id', Integer, nullable=False)
         __table_args__ = (PrimaryKeyConstraint('file_id'),)
+
+    class MiscInfo(Base):
+        __tablename__ = MISC_INFO
+        run_id = Column('run_id', Text, nullable=False)
+        timestamp = Column('timestamp', DateTime, nullable=False)
+        info = Column('info', Text, nullable=False)
+        __table_args__ = (
+            PrimaryKeyConstraint('run_id', 'timestamp'),)
 
     class Resource(Base):
         __tablename__ = RESOURCE
@@ -338,7 +336,7 @@ class Database:
 class DatabaseManager:
     def __init__(self,
                  db_url: str = 'sqlite:///runinfo/monitoring.db',
-                 logdir: str = '.',
+                 run_dir: str = '.',
                  logging_level: int = logging.INFO,
                  batching_interval: float = 1,
                  batching_threshold: float = 99999,
@@ -346,12 +344,12 @@ class DatabaseManager:
 
         self.workflow_end = False
         self.workflow_start_message: Optional[MonitoringMessage] = None
-        self.logdir = logdir
-        os.makedirs(self.logdir, exist_ok=True)
+        self.run_dir = run_dir
+        os.makedirs(self.run_dir, exist_ok=True)
 
         logger.propagate = False
 
-        set_file_logger("{}/database_manager.log".format(self.logdir), level=logging_level,
+        set_file_logger(f"{self.run_dir}/database_manager.log", level=logging_level,
                         format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s",
                         name="database_manager")
 
@@ -397,9 +395,9 @@ class DatabaseManager:
         """
         like inserted_tasks but for Files
         """
-        inserted_files = dict()  # type: Dict[Str, Dict[Str, Union[None, datetime.datetime, Str, int]]]
-        input_inserted_files = dict()  # type: Dict[Str, List[Str]]
-        output_inserted_files = dict()  # type: Dict[Str, List[Str]]
+        inserted_files = dict()  # type: Dict[str, Dict[str, Union[None, datetime.datetime, str, int]]]
+        input_inserted_files = dict()  # type: Dict[str, List[str]]
+        output_inserted_files = dict()  # type: Dict[str, List[str]]
         inserted_envs = set()  # type: Set[object]
 
         # for any task ID, we can defer exactly one message, which is the
@@ -446,9 +444,10 @@ class DatabaseManager:
                     task_info_update_messages, task_info_insert_messages, task_info_all_messages = [], [], []
                     try_update_messages, try_insert_messages, try_all_messages = [], [], []
                     file_update_messages, file_insert_messages, file_all_messages = [], [], []
-                    input_file_update_messages, input_file_insert_messages, input_file_all_messages = [], [], []
-                    output_file_update_messages, output_file_insert_messages, output_file_all_messages = [], [], []
+                    input_file_insert_messages, input_file_all_messages = [], []
+                    output_file_insert_messages, output_file_all_messages = [], []
                     environment_insert_messages = []
+                    misc_info_insert_messages = []
                     for msg_type, msg in priority_messages:
                         if msg_type == MessageType.WORKFLOW_INFO:
                             if "python_version" in msg:   # workflow start message
@@ -538,7 +537,9 @@ class DatabaseManager:
                             if msg['environment_id'] not in inserted_envs:
                                 environment_insert_messages.append(msg)
                                 inserted_envs.add(msg['environment_id'])
-
+                        elif msg_type == MessageType.MISC_INFO:
+                            # no filtering, just insert each message
+                            misc_info_insert_messages.append(msg)
                         elif msg_type == MessageType.INPUT_FILE:
                             file_id = msg['file_id']
                             input_file_all_messages.append(msg)
@@ -614,6 +615,11 @@ class DatabaseManager:
                         logger.debug("Inserting {} OUTPUT_FILE to output_files table".format(len(output_file_insert_messages)))
                         self._insert(table=OUTPUT_FILES, messages=output_file_insert_messages)
                         logger.debug("There are {} inserted output file records".format(len(output_inserted_files)))
+
+                    if misc_info_insert_messages:
+                        logger.debug("Inserting {} MISC_INFO to misc_info table".format(len(misc_info_insert_messages)))
+                        self._insert(table=MISC_INFO, messages=misc_info_insert_messages)
+                        logger.debug("There are {} inserted misc info records".format(len(misc_info_insert_messages)))
 
                     if try_insert_messages:
                         logger.debug("Inserting {} TASK_INFO to try table".format(len(try_insert_messages)))
@@ -740,7 +746,8 @@ class DatabaseManager:
         assert isinstance(x, tuple)
         assert len(x) == 2, "expected message tuple to have exactly two elements"
 
-        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO, MessageType.FILE_INFO, MessageType.INPUT_FILE, MessageType.OUTPUT_FILE, MessageType.ENVIRONMENT_INFO]:
+        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO, MessageType.FILE_INFO, MessageType.INPUT_FILE,
+                    MessageType.OUTPUT_FILE, MessageType.ENVIRONMENT_INFO, MessageType.MISC_INFO]:
             self.pending_priority_queue.put(cast(Any, x))
         elif x[0] == MessageType.RESOURCE_INFO:
             body = x[1]
@@ -852,7 +859,7 @@ class DatabaseManager:
 def dbm_starter(exception_q: mpq.Queue,
                 resource_msgs: mpq.Queue,
                 db_url: str,
-                logdir: str,
+                run_dir: str,
                 logging_level: int) -> None:
     """Start the database manager process
 
@@ -863,7 +870,7 @@ def dbm_starter(exception_q: mpq.Queue,
 
     try:
         dbm = DatabaseManager(db_url=db_url,
-                              logdir=logdir,
+                              run_dir=run_dir,
                               logging_level=logging_level)
         logger.info("Starting dbm in dbm starter")
         dbm.start(resource_msgs)

@@ -39,12 +39,15 @@ class DataFuture(Future):
             self.set_exception(e)
         else:
             self.set_result(self.file_obj)
-            if not self.file_obj.timestamp:
-                self.file_obj.timestamp = datetime.fromtimestamp(stat(self.file_obj.filepath).st_ctime, tz=timezone.utc)
-            if not self.file_obj.size:
-                self.file_obj.size = stat(self.file_obj.filepath).st_size
-            if not self.file_obj.md5sum:
-                self.file_obj.md5sum = md5(open(self.file_obj, 'rb').read()).hexdigest()
+            if self.file_obj.scheme == 'file' and os.path.isfile(self.file_obj.filepath):
+                if not self.file_obj.timestamp:
+                    self.file_obj.timestamp = datetime.fromtimestamp(stat(self.file_obj.filepath).st_ctime, tz=timezone.utc)
+                if not self.file_obj.size:
+                    self.file_obj.size = stat(self.file_obj.filepath).st_size
+                if not self.file_obj.md5sum:
+                    self.file_obj.md5sum = md5(open(self.file_obj, 'rb').read()).hexdigest()
+            else:
+                self.file_obj.timestamp = datetime.now(tz=timezone.utc)
             if self.data_flow_kernel:
                 self.data_flow_kernel.register_as_output(self.file_obj, self.app_fut.task_record)
 
