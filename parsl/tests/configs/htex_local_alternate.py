@@ -62,7 +62,6 @@ def fresh_config():
         retries=2,
         monitoring=MonitoringHub(
                         hub_address="localhost",
-                        hub_port=55055,
                         monitoring_debug=False,
                         resource_monitoring_interval=1,
         ),
