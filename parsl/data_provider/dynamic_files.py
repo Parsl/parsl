@@ -559,6 +559,20 @@ class DynamicFileList(Future):
         # detach all the callbacks so that sub-lists can still be used
         self._sub_callbacks.clear()
 
+    def resize(self, idx: int) -> None:
+        """ Resize the list to the given length
+
+        Args:
+            - idx (int) : Length to resize the list to
+        """
+        if idx == len(self):
+            return
+        if idx < len(self):
+            for i in range(len(self) - 1, idx - 1, -1):
+                del self[i]
+        else:
+            self._expand(idx)
+
     def _call_callbacks(self):
         """ Call the callbacks for the sublists """
         if self._in_callback:

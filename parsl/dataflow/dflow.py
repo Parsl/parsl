@@ -930,7 +930,10 @@ class DataFlowKernel:
             app_fut._outputs = outputs
             return func
 
-        app_fut._outputs = []
+        if isinstance(outputs, DynamicFileList):
+            app_fut._outputs = DynamicFileList()
+        else:
+            app_fut._outputs = []
 
         # Pass over all possible outputs: the outputs kwarg, stdout and stderr
         # and for each of those, perform possible stage-out. This can result in:
