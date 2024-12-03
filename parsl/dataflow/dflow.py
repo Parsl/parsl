@@ -956,10 +956,10 @@ class DataFlowKernel:
                 stageout_fut = self.data_manager.stage_out(f_copy, executor, app_fut)
                 if stageout_fut:
                     logger.debug("Adding a dependency on stageout future for {}".format(repr(file)))
-                    df = DataFuture(stageout_fut, file, tid=app_fut.tid, app_fut=app_fut, dfk=self)
+                    df = DataFuture(stageout_fut, file, dfk=self, tid=app_fut.tid, app_fut=app_fut)
                 else:
                     logger.debug("No stageout dependency for {}".format(repr(file)))
-                    df = DataFuture(app_fut, file, tid=app_fut.tid, app_fut=app_fut, dfk=self)
+                    df = DataFuture(app_fut, file, dfk=self, tid=app_fut.tid, app_fut=app_fut)
 
                 # this is a hook for post-task stageout
                 # note that nothing depends on the output - which is maybe a bug
@@ -968,7 +968,7 @@ class DataFlowKernel:
                 return rewritable_func, f_copy, df
             else:
                 logger.debug("Not performing output staging for: {}".format(repr(file)))
-                return rewritable_func, file, DataFuture(app_fut, file, tid=app_fut.tid, app_fut=app_fut, dfk=self)
+                return rewritable_func, file, DataFuture(app_fut, file, dfk=self, tid=app_fut.tid, app_fut=app_fut)
 
         for idx, file in enumerate(outputs):
             func, outputs[idx], o = stageout_one_file(file, func)

@@ -5,11 +5,14 @@ from hashlib import md5
 import logging
 from os import stat
 from concurrent.futures import Future
-from typing import Optional, Any
+from typing import TYPE_CHECKING, Optional
 from datetime import datetime, timezone
 import typeguard
 
 from parsl.data_provider.files import File
+
+if TYPE_CHECKING:
+    from parsl.dataflow.dflow import DataFlowKernel
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +53,7 @@ class DataFuture(Future):
             self.data_flow_kernel.register_as_output(self.file_obj, self.app_fut.task_record)
 
     @typeguard.typechecked
-    def __init__(self, fut: Future, file_obj: File, tid: Optional[int] = None, app_fut: Optional[Future] = None,
-                 dfk: Optional[Any] = None) -> None:
+    def __init__(self, fut: Future, file_obj: File, dfk: "DataFlowKernel", tid: Optional[int] = None, app_fut: Optional[Future] = None) -> None:
         """Construct the DataFuture object.
 
         If the file_obj is a string convert to a File.

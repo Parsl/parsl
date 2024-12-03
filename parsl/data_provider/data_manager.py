@@ -63,7 +63,7 @@ class DataManager:
             # replace the input DataFuture with a new DataFuture which will complete at
             # the same time as the original one, but will contain the newly
             # copied file
-            input = DataFuture(input, file, tid=input.tid)
+            input = DataFuture(input, file, dfk=self.dfk, tid=input.tid)
         elif isinstance(input, File):
             file = input.cleancopy()
             input = file
