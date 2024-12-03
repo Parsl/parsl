@@ -304,7 +304,7 @@ class DataFlowKernel:
     def _send_file_log_info(self, file: Union[File, DataFuture],
                             task_record: TaskRecord, is_output: bool) -> None:
         """ Generate a message for the monitoring db about a file. """
-        if self.file_provenance:
+        if self.monitoring and self.file_provenance:
             file_log_info = self._create_file_log_info(file, task_record)
             # make sure the task_id is None for inputs
             if not is_output:
@@ -343,7 +343,7 @@ class DataFlowKernel:
     def register_as_input(self, f: Union[File, DataFuture],
                           task_record: TaskRecord):
         """ Register a file as an input to a task. """
-        if self.file_provenance:
+        if self.monitoring and self.file_provenance:
             self._send_file_log_info(f, task_record, False)
             file_input_info = self._create_file_io_info(f, task_record)
             self.monitoring.send((MessageType.INPUT_FILE, file_input_info))
@@ -351,7 +351,7 @@ class DataFlowKernel:
     def register_as_output(self, f: Union[File, DataFuture],
                            task_record: TaskRecord):
         """ Register a file as an output of a task. """
-        if self.file_provenance:
+        if self.monitoring and self.file_provenance:
             self._send_file_log_info(f, task_record, True)
             file_output_info = self._create_file_io_info(f, task_record)
             self.monitoring.send((MessageType.OUTPUT_FILE, file_output_info))
@@ -370,7 +370,7 @@ class DataFlowKernel:
 
     def _register_env(self, environ: ParslExecutor) -> None:
         """ Capture the environment information for the monitoring db. """
-        if self.file_provenance:
+        if self.monitoring and self.file_provenance:
             environ_info = self._create_env_log_info(environ)
             self.monitoring.send((MessageType.ENVIRONMENT_INFO, environ_info))
 
@@ -387,7 +387,7 @@ class DataFlowKernel:
         provider = getattr(environ, 'provider', None)
         if provider is not None:
             env_log_info['provider'] = provider.label
-            env_log_info['launcher'] = type(getattr(provider, 'launcher', None))
+            env_log_info['launcher'] = str(type(getattr(provider, 'launcher', None)))
             env_log_info['worker_init'] = getattr(provider, 'worker_init', None)
         return env_log_info
 

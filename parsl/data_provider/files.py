@@ -49,8 +49,8 @@ class File:
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
         # let the DFK set these values, if needed
-        self.size = None
-        self.md5sum = None
+        self.size: Optional[int] = None
+        self.md5sum: Optional[str] = None
         self.timestamp = timestamp
 
         self.local_path: Optional[str] = None

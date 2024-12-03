@@ -5,7 +5,7 @@ import os
 import queue
 import threading
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, Union, cast
 
 import typeguard
 
@@ -395,10 +395,10 @@ class DatabaseManager:
         """
         like inserted_tasks but for Files
         """
-        inserted_files = dict()  # type: Dict[str, Dict[str, Union[None, datetime.datetime, str, int]]]
-        input_inserted_files = dict()  # type: Dict[str, List[str]]
-        output_inserted_files = dict()  # type: Dict[str, List[str]]
-        inserted_envs = set()  # type: Set[object]
+        inserted_files: Dict[str, Dict[str, Union[None, datetime.datetime, str, int]]] = dict()
+        input_inserted_files: Dict[str, List[str]] = dict()
+        output_inserted_files: Dict[str, List[str]] = dict()
+        inserted_envs: Set[object] = set()
 
         # for any task ID, we can defer exactly one message, which is the
         # assumed-to-be-unique first message (with first message flag set).
