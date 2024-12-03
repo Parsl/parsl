@@ -317,13 +317,17 @@ class DataFlowKernel:
         Create the dictionary that will be included in the monitoring db.
         """
         # set file info if needed
-        if file.file_obj.scheme == 'file' and os.path.isfile(file.file_obj.filepath):
-            if not file.file_obj.timestamp:
-                file.file_obj.timestamp = datetime.datetime.fromtimestamp(os.stat(file.file_obj.filepath).st_ctime, tz=datetime.timezone.utc)
-            if not file.file_obj.size:
-                file.file_obj.size = os.stat(file.file_obj.filepath).st_size
-            if not file.file_obj.md5sum:
-                file.file_obj.md5sum = md5(open(file.file_obj, 'rb').read()).hexdigest()
+        if isinstance(file, DataFuture):
+            fo = file.file_obj
+        else:
+            fo = file
+        if fo.scheme == 'file' and os.path.isfile(fo.filepath):
+            if not fo.timestamp:
+                fo.timestamp = datetime.datetime.fromtimestamp(os.stat(fo.filepath).st_ctime, tz=datetime.timezone.utc)
+            if not fo.size:
+                fo.size = os.stat(fo.filepath).st_size
+            if not fo.md5sum:
+                fo.md5sum = md5(open(fo, 'rb').read()).hexdigest()
 
         file_log_info = {'file_name': file.filename,
                          'file_id': str(file.uuid),
