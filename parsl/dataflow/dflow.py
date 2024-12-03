@@ -1148,9 +1148,8 @@ class DataFlowKernel:
                 executor.submit_monitoring_radio = self.monitoring.radio
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
-                    script_dir = os.path.join(self.run_dir, 'submit_scripts')
-                    executor.provider.script_dir = script_dir
-                    os.makedirs(script_dir, exist_ok=True)
+                    executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
+                    os.makedirs(executor.provider.script_dir, exist_ok=True)
 
             self.executors[executor.label] = executor
             executor.start()
