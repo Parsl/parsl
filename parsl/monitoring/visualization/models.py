@@ -81,11 +81,13 @@ class Task(db.Model):
 class File(db.Model):
     __tablename__ = FILE
     file_name = db.Column('file_name', db.Text, index=True, nullable=False)
+    file_path = db.Column('file_path', db.Text, nullable=True)
+    full_path = db.Column('full_path', db.Text, index=True, nullable=False)
     file_id = db.Column('file_id', db.Text, index=True, nullable=False)
-    run_id = db.Column('run_id', db.Text, nullable=False)
-    task_id = db.Column('task_id', db.Integer, nullable=False)
-    try_id = db.Column('try_id', db.Integer, nullable=False)
-    timestamp = db.Column('timestamp', db.DateTime, nullable=True)
+    run_id = db.Column('run_id', db.Text, index=True, nullable=False)
+    task_id = db.Column('task_id', db.Integer, index=True, nullable=True)
+    try_id = db.Column('try_id', db.Integer, index=True, nullable=True)
+    timestamp = db.Column('timestamp', db.DateTime, index=True, nullable=True)
     size = db.Column('size', db.BigInteger, nullable=True)
     md5sum = db.Column('md5sum', db.Text, nullable=True)
     __table_args__ = (db.PrimaryKeyConstraint('file_id'),)
@@ -93,8 +95,8 @@ class File(db.Model):
 
 class Environment(db.Model):
     __tablename__ = ENVIRONMENT
-    environment_id = db.Column('environment_id', db.Text, nullable=False)
-    run_id = db.Column('run_id', db.Text, nullable=False)
+    environment_id = db.Column('environment_id', db.Text, index=True, nullable=False)
+    run_id = db.Column('run_id', db.Text, index=True, nullable=False)
     label = db.Column('label', db.Text, nullable=False)
     address = db.Column('address', db.Text, nullable=True)
     provider = db.Column('provider', db.Text, nullable=True)
@@ -106,25 +108,25 @@ class Environment(db.Model):
 class InputFile(db.Model):
     __tablename__ = INPUT_FILE
     file_id = db.Column('file_id', db.Text, nullable=False)
-    run_id = db.Column('run_id', db.Text, nullable=False)
-    task_id = db.Column('task_id', db.Integer, nullable=False)
-    try_id = db.Column('try_id', db.Integer, nullable=False)
+    run_id = db.Column('run_id', db.Text, index=True, nullable=False)
+    task_id = db.Column('task_id', db.Integer, index=True, nullable=False)
+    try_id = db.Column('try_id', db.Integer, index=True, nullable=False)
     __table_args__ = (db.PrimaryKeyConstraint('file_id'),)
 
 
 class OutputFile(db.Model):
     __tablename__ = OUTPUT_FILE
     file_id = db.Column('file_id', db.Text, nullable=False)
-    run_id = db. Column('run_id', db.Text, nullable=False)
-    task_id = db.Column('task_id', db.Integer, nullable=False)
-    try_id = db.Column('try_id', db.Integer, nullable=False)
+    run_id = db. Column('run_id', db.Text, index=True, nullable=False)
+    task_id = db.Column('task_id', db.Integer, index=True, nullable=False)
+    try_id = db.Column('try_id', db.Integer, index=True, nullable=False)
     __table_args__ = (db.PrimaryKeyConstraint('file_id'),)
 
 
 class MiscInfo(db.Model):
     __tablename__ = MISC_INFO
-    run_id = db.Column('run_id', db.Text, nullable=False)
-    timestamp = db.Column('timestamp', db.DateTime, nullable=False)
+    run_id = db.Column('run_id', db.Text, index=True, nullable=False)
+    timestamp = db.Column('timestamp', db.DateTime, index=True, nullable=False)
     info = db.Column('info', db.Text, nullable=False)
     __table_args__ = (db.PrimaryKeyConstraint('run_id', 'timestamp'),)
 

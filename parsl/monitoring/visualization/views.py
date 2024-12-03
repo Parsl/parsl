@@ -77,7 +77,7 @@ def index():
 
 
 @app.route('/file/<file_id>/')
-def file(file_id):
+def file_id(file_id):
     file_details = File.query.filter_by(file_id=file_id).first()
     input_files = InputFile.query.filter_by(file_id=file_id).all()
     output_files = OutputFile.query.filter_by(file_id=file_id).first()
