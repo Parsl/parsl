@@ -65,7 +65,7 @@ The monitoring system can also be used to track file provenance. File provenance
 
 The purpose of the file provenance tracking is to provide a mechanism where the user can see exactly how a file was created and used in a workflow. This can be useful for debugging, understanding the workflow, for ensuring that the workflow is reproducible, and reviewing past work. The file provenance information is stored in the monitoring database and can be accessed using the ``parsl-visualize`` tool. To enable file provenance tracking, set the ``capture_file_provenance`` flag to ``True`` in the `parsl.monitoring.MonitoringHub` configuration.
 
-This functionality also enables you to log informational messages from you scripts, to capture anything not automatically gathered. The main change to your code to use this functionality is to assign the return value of the ``parsl.load`` to a variable. Then use the ``log_info`` function to log the messages in the database. Note that this feature is only available in the main script, not inside apps, unless you pass the variable (``my_cfg`` in the example below), as an argument to the app. The following example shows how to use this feature.
+This functionality also enables you to log informational messages from you scripts, to capture anything not automatically gathered. The main change to your code to use this functionality is to assign the return value of the ``parsl.load`` to a variable. Then use the ``log_info`` function to log the messages in the database. Note that this feature is only available in the main script, not inside Apps. Passing this vaiable, ``my_cfg`` in the example below to an App will have undefined behavior. The following example shows how to use this feature.
 
 .. code-block:: python
 
@@ -100,7 +100,7 @@ This functionality also enables you to log informational messages from you scrip
 
    my_cfg.log_info("This is an informational message")
 
-Known limitations: The file provenance feature will capture the creation of files and the use of files in an app, but currently does not capture the modification of files it already knows about.
+Known limitations: The file provenance feature will capture the creation of files and the use of files in an app, but does not capture the modification of files it already knows about.
 
 Visualization
 -------------
@@ -156,7 +156,7 @@ the various apps and invocation count for each.
 .. image:: ../images/mon_workflow_summary.png
 
 
-The workflow summary also presents three different views of the workflow:
+The workflow summary also presents several different views of the workflow:
 
 * Workflow DAG - with apps differentiated by colors: This visualization is useful to visually inspect the dependency
   structure of the workflow. Hovering over the nodes in the DAG shows a tooltip for the app represented by the node and it's task ID.
