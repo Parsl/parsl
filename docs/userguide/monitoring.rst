@@ -15,7 +15,7 @@ SQLite tools.
 Monitoring configuration
 ------------------------
 
-Parsl monitoring is only supported with the `parsl.executors.HighThroughputExecutor`.
+Parsl monitoring is only supported with the `parsl.executors.HighThroughputExecutor`. 
 
 The following example shows how to enable monitoring in the Parsl
 configuration. Here the `parsl.monitoring.MonitoringHub` is specified to use port
@@ -127,7 +127,7 @@ By default, the visualization web server listens on ``127.0.0.1:8080``. If the w
    $ ssh -L 50000:127.0.0.1:8080 username@cluster_address
 
 This command will bind your local machine's port 50000 to the remote cluster's port 8080.
-The dashboard can then be accessed via the local machine's browser at ``127.0.0.1:50000``.
+The dashboard can then be accessed via the local machine's browser at ``127.0.0.1:50000``. 
 
 .. warning:: Alternatively you can deploy the visualization server on a public interface. However, first check that this is allowed by the cluster's security policy. The following example shows how to deploy the web server on a public port (i.e., open to Internet via ``public_IP:55555``)::
 
@@ -151,12 +151,12 @@ Workflow Summary
 
 The workflow summary page captures the run level details of a workflow, including start and end times
 as well as task summary statistics. The workflow summary section is followed by the *App Summary* that lists
-the various apps and invocation count for each.
+the various apps and invocation count for each. 
 
 .. image:: ../images/mon_workflow_summary.png
 
 
-The workflow summary also presents three or four different views of the workflow (the number depends on whether file provenance is enabled and files were used in the workflow):
+The workflow summary also presents three different views of the workflow:
 
 * Workflow DAG - with apps differentiated by colors: This visualization is useful to visually inspect the dependency
   structure of the workflow. Hovering over the nodes in the DAG shows a tooltip for the app represented by the node and it's task ID.
