@@ -460,7 +460,7 @@ def sanitize_dns_subdomain_rfc1123(raw_string: str) -> str:
     return sanitized
 
 
-def execute_wait(cmd: str, walltime: Union[float, int, None] = None) -> Tuple[int, str, str]:
+def execute_wait(cmd: str, walltime: Optional[int] = None) -> Tuple[int, str, str]:
     ''' Synchronously execute a commandline string on the shell.
 
     Args:
