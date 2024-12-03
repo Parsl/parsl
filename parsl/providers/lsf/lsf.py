@@ -211,7 +211,7 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
         logger.debug("Requesting one block with {} nodes".format(self.nodes_per_block))
 
         job_config = {}
-        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config["submit_script_dir"] = self.script_dir
         job_config["nodes"] = self.nodes_per_block
         job_config["tasks_per_node"] = tasks_per_node
         job_config["walltime"] = wtime_to_minutes(self.walltime)
