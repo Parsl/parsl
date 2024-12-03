@@ -6,6 +6,7 @@ from parsl.launchers.base import Launcher
 from parsl.launchers.errors import BadLauncher
 from parsl.providers.base import ExecutionProvider
 from parsl.providers.errors import SchedulerMissingArgs, ScriptPathError
+from parsl.utils import execute_wait
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ class ClusterProvider(ExecutionProvider):
         t = self.cmd_timeout
         if timeout is not None:
             t = timeout
-        return self.channel.execute_wait(cmd, t)
+        return execute_wait(cmd, t)
 
     def _write_submit_script(self, template, script_filename, job_name, configs):
         """Generate submit script and write it to a file.

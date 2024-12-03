@@ -14,7 +14,7 @@ import typeguard
 import zmq
 
 from parsl.log_utils import set_file_logger
-from parsl.monitoring.radios import MultiprocessingQueueRadioSender
+from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle

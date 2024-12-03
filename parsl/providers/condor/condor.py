@@ -226,7 +226,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         job_config = {}
         job_config["job_name"] = job_name
-        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config["submit_script_dir"] = self.script_dir
         job_config["project"] = self.project
         job_config["nodes"] = self.nodes_per_block
         job_config["scheduler_options"] = scheduler_options
