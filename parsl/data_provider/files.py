@@ -49,14 +49,11 @@ class File:
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
-        if self.scheme == 'file' and os.path.isfile(self.path):
-            self.size = os.stat(self.path).st_size
-            self.md5sum = md5(open(self.path, 'rb').read()).hexdigest()
-            self.timestamp = datetime.datetime.fromtimestamp(os.path.getmtime(self.path), tz=datetime.timezone.utc)
-        else:
-            self.size = None
-            self.md5sum = None
-            self.timestamp = timestamp
+        # let the DFK set these values, if needed
+        self.size = None
+        self.md5sum = None
+        self.timestamp = timestamp
+
         self.local_path: Optional[str] = None
         if uu_id is not None:
             self.uuid = uu_id

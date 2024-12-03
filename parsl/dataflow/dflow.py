@@ -3,6 +3,7 @@ from __future__ import annotations
 import atexit
 import concurrent.futures as cf
 import datetime
+from hashlib import md5
 import inspect
 import logging
 import os
@@ -111,6 +112,9 @@ class DataFlowKernel:
 
         if self.monitoring:
             self.monitoring.start(self.run_dir, self.config.run_dir)
+            self.capture_file_provenance = self.monitoring.capture_file_provenance
+        else:
+            self.capture_file_provenance = False
 
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
@@ -300,7 +304,7 @@ class DataFlowKernel:
     def _send_file_log_info(self, file: Union[File, DataFuture],
                             task_record: TaskRecord, is_output: bool) -> None:
         """ Generate a message for the monitoring db about a file. """
-        if self.monitoring and self.monitoring.capture_file_provenance:
+        if self.capture_file_provenance:
             file_log_info = self._create_file_log_info(file, task_record)
             # make sure the task_id is None for inputs
             if not is_output:
@@ -310,8 +314,17 @@ class DataFlowKernel:
     def _create_file_log_info(self, file: Union[File, DataFuture],
                               task_record: TaskRecord) -> Dict[str, Any]:
         """
-        Create the dictionary that will be included in the ,omitoring db.
+        Create the dictionary that will be included in the monitoring db.
         """
+        # set file info if needed
+        if file.file_obj.scheme == 'file' and os.path.isfile(file.file_obj.filepath):
+            if not file.file_obj.timestamp:
+                file.file_obj.timestamp = datetime.datetime.fromtimestamp(os.stat(file.file_obj.filepath).st_ctime, tz=datetime.timezone.utc)
+            if not file.file_obj.size:
+                file.file_obj.size = os.stat(file.file_obj.filepath).st_size
+            if not file.file_obj.md5sum:
+                file.file_obj.md5sum = md5(open(file.file_obj, 'rb').read()).hexdigest()
+
         file_log_info = {'file_name': file.filename,
                          'file_id': str(file.uuid),
                          'run_id': self.run_id,
@@ -326,7 +339,7 @@ class DataFlowKernel:
     def register_as_input(self, f: Union[File, DataFuture],
                           task_record: TaskRecord):
         """ Register a file as an input to a task. """
-        if self.monitoring and self.monitoring.capture_file_provenance:
+        if self.capture_file_provenance:
             self._send_file_log_info(f, task_record, False)
             file_input_info = self._create_file_io_info(f, task_record)
             self.monitoring.send((MessageType.INPUT_FILE, file_input_info))
@@ -334,7 +347,7 @@ class DataFlowKernel:
     def register_as_output(self, f: Union[File, DataFuture],
                            task_record: TaskRecord):
         """ Register a file as an output of a task. """
-        if self.monitoring and self.monitoring.capture_file_provenance:
+        if self.capture_file_provenance:
             self._send_file_log_info(f, task_record, True)
             file_output_info = self._create_file_io_info(f, task_record)
             self.monitoring.send((MessageType.OUTPUT_FILE, file_output_info))
@@ -353,7 +366,7 @@ class DataFlowKernel:
 
     def _register_env(self, environ: ParslExecutor) -> None:
         """ Capture the environment information for the monitoring db. """
-        if self.monitoring and self.monitoring.capture_file_provenance:
+        if self.capture_file_provenance:
             environ_info = self._create_env_log_info(environ)
             self.monitoring.send((MessageType.ENVIRONMENT_INFO, environ_info))
 
