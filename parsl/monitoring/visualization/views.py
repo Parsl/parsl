@@ -110,7 +110,7 @@ def file():
                 filename = '%' + form.file_name.data
             else:
                 filename = form.file_name.data
-            file_list = File.query.filter(File.file_name.like(filename)).all()
+            file_list = File.query.filter(File.full_path.like(filename)).all()
         return render_template('file.html', form=form, file_list=file_list)
     return render_template('file.html', form=form)
 
@@ -126,7 +126,7 @@ def file_workflow(workflow_id):
     for wf in workflow_files:
         file_details[wf.file_id] = wf
         task_ids.add(wf.task_id)
-        file_map[wf.file_id] = ospath.basename(wf.file_name)
+        file_map[wf.file_id] = ospath.basename(wf.full_path)
     tasks = {}
 
     for tid in task_ids:

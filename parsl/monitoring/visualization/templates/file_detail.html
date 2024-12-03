@@ -6,13 +6,16 @@
     <h2>File Details</h2>
     <table class="table table-hover">
         <tr><td>Name:</td><td>{{ file_details['file_name'] }}</td></tr>
+        {% if file_details['file_path'] %}
+            <tr><td>Path:</td><td>{{ file_details['file_path'] }}</td></tr>
+        {% endif %}
         <tr><td>Id:</td><td>{{ file_details['file_id'] }}</td></tr>
         <tr><td>Size:</td><td>{{ file_details['size'] }} bytes</td></tr>
         <tr><td>md5sum:</td><td>{{ file_details['md5sum'] }}</td></tr>
         {% if file_details['timestamp'] %}
         <tr><td>Creation date:</td><td>{{ file_details['timestamp'] | timeformat }}</td></tr>
         {% endif %}
-        <tr><td>Workflow:</td><td><a href="workflow/{{ file_details['run_id'] }}/">{{ workflow.workflow_name }}</a></td></tr>
+        <tr><td>Workflow:</td><td><a href="/workflow/{{ file_details['run_id'] }}/">{{ workflow.workflow_name }}</a></td></tr>
         {% if output_files %}
             <tr><td>Created by:</td><td><a href="/workflow/{{ file_details['run_id'] }}/task/{{ output_files['task_id'] }}">{{ tasks[output_files['task_id']]['task_func_name'] }}</a></td></tr>
         {% endif %}

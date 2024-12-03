@@ -33,7 +33,7 @@
       <tbody>
       {% for file in file_list %}
           <tr>
-            <td><a href="/file/{{ file['file_id'] }}/">{{ file['file_name'] }}</a></td>
+            <td><a href="/file/{{ file['file_id'] }}/">{{ file['full_path'] }}</a></td>
             <td>{{ file['size'] }}</td>
             <td>{{ file['timestamp'] | timeformat }}</td>
           </tr>

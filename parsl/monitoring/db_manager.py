@@ -48,11 +48,11 @@ STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
 BLOCK = 'block'          # Block table include the status for block polling
-FILE = 'file  '          # Files table include file info
+FILE = 'file'            # Files table include file info
 INPUT_FILE = 'input_file'  # Input files table include input file info
 OUTPUT_FILE = 'output_file'  # Output files table include output file info
 ENVIRONMENT = 'environment'  # Executor table include executor info
-MISC_INFO = 'misc_info' # Misc info table include misc info
+MISC_INFO = 'misc_info'  # Misc info table include misc info
 
 
 class Database:
@@ -248,6 +248,7 @@ class Database:
         __tablename__ = FILE
         file_name = Column('file_name', Text, index=True, nullable=False)
         file_path = Column('file_path', Text, nullable=True)
+        full_path = Column('full_path', Text, index=True, nullable=False)
         file_id = Column('file_id', Text, index=True, nullable=False)
         run_id = Column('run_id', Text, index=True, nullable=False)
         task_id = Column('task_id', Integer, index=True, nullable=True)
@@ -486,6 +487,12 @@ class DatabaseManager:
                         elif msg_type == MessageType.FILE_INFO:
                             file_id = msg['file_id']
                             file_all_messages.append(msg)
+                            msg['full_path'] = msg['file_name']
+                            loc = msg['file_name'].rfind("/")
+                            if loc >= 0:
+                                msg['file_path'] = msg['file_name'][:loc]
+                                msg['file_name'] = msg['file_name'][loc + 1:]
+
                             if file_id in inserted_files:
                                 new_item = False
                                 # once certain items are set, they should not be changed

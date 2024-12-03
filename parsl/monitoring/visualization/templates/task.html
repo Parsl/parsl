@@ -32,7 +32,7 @@
         {% if not task_details['task_inputs'].empty %}
           <ul>
             {% for ifile in task_details['task_inputs'].itertuples() %}
-                <li><a href="/file/{{ ifile.file_id }}">{{ ifile.file_name }}</a></li>
+                <li><a href="/file/{{ ifile.file_id }}">{{ ifile.full_path }}</a></li>
             {% endfor %}
           </ul>
         {% else %}
