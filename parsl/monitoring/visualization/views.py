@@ -9,9 +9,9 @@ from parsl.monitoring.visualization.models import (
     Task,
     Workflow,
     db,
-    Files,
-    InputFiles,
-    OutputFiles,
+    File,
+    InputFile,
+    OutputFile,
     Environment,
     MiscInfo,
 )
@@ -70,38 +70,38 @@ def index():
         workflow.status = 'Running'
         if workflow.time_completed is not None:
             workflow.status = 'Completed'
-        file_list = Files.query.filter_by(run_id=workflow.run_id).first()
+        file_list = File.query.filter_by(run_id=workflow.run_id).first()
         if file_list:
             have_files.append(workflow.run_id)
     return render_template('workflows_summary.html', workflows=workflows, have_files=have_files)
 
 
-@app.route('/files/<file_id>/')
+@app.route('/file/<file_id>/')
 def file(file_id):
-    file_details = Files.query.filter_by(file_id=file_id).first()
-    input_files = InputFiles.query.filter_by(file_id=file_id).all()
-    output_file = OutputFiles.query.filter_by(file_id=file_id).first()
+    file_details = File.query.filter_by(file_id=file_id).first()
+    input_files = InputFile.query.filter_by(file_id=file_id).all()
+    output_files = OutputFile.query.filter_by(file_id=file_id).first()
     task_ids = set()
-    environment = None
+    environ = None
 
     for f in input_files:
         task_ids.add(f.task_id)
-    if output_file:
-        task_ids.add(output_file.task_id)
+    if output_files:
+        task_ids.add(output_files.task_id)
     tasks = {}
     for tid in task_ids:
         tasks[tid] = Task.query.filter_by(run_id=file_details.run_id, task_id=tid).first()
     workflow_details = Workflow.query.filter_by(run_id=file_details.run_id).first()
-    if output_file:
-        environment = Environment.query.filter_by(environment_id=tasks[output_file.task_id].task_environment).first()
+    if output_files:
+        environ = Environment.query.filter_by(environment_id=tasks[output_files.task_id].task_environment).first()
 
     return render_template('file_detail.html', file_details=file_details,
-                           input_files=input_files, output_file=output_file,
-                           tasks=tasks, workflow=workflow_details, environment=environment)
+                           input_files=input_files, output_files=output_files,
+                           tasks=tasks, workflow=workflow_details, environment=environ)
 
 
-@app.route('/files', methods=['GET', 'POST'])
-def files():
+@app.route('/file', methods=['GET', 'POST'])
+def file():
     form = FileForm()
     if request.method == 'POST':
         file_list = []
@@ -110,14 +110,14 @@ def files():
                 filename = '%' + form.file_name.data
             else:
                 filename = form.file_name.data
-            file_list = Files.query.filter(Files.file_name.like(filename)).all()
-        return render_template('files.html', form=form, file_list=file_list)
-    return render_template('files.html', form=form)
+            file_list = File.query.filter(File.file_name.like(filename)).all()
+        return render_template('file.html', form=form, file_list=file_list)
+    return render_template('file.html', form=form)
 
 
-@app.route('/files/workflow/<workflow_id>/')
-def files_workflow(workflow_id):
-    workflow_files = Files.query.filter_by(run_id=workflow_id).all()
+@app.route('/file/workflow/<workflow_id>/')
+def file_workflow(workflow_id):
+    workflow_files = File.query.filter_by(run_id=workflow_id).all()
     file_map = {}
     workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
     task_ids = set()
@@ -131,9 +131,9 @@ def files_workflow(workflow_id):
 
     for tid in task_ids:
         tasks[tid] = Task.query.filter_by(run_id=workflow_id, task_id=tid).first()
-        files_by_task[tid] = {'inputs': InputFiles.query.filter_by(run_id=workflow_id, task_id=tid).all(),
-                              'outputs': OutputFiles.query.filter_by(run_id=workflow_id, task_id=tid).all()}
-    return render_template('files_workflow.html', workflow=workflow_details,
+        files_by_task[tid] = {'inputs': InputFile.query.filter_by(run_id=workflow_id, task_id=tid).all(),
+                              'outputs': OutputFile.query.filter_by(run_id=workflow_id, task_id=tid).all()}
+    return render_template('file_workflow.html', workflow=workflow_details,
                            task_files=files_by_task, tasks=tasks, file_map=file_map)
 
 
@@ -148,7 +148,7 @@ def workflow(workflow_id):
     df_task = queries.completion_times_for_workflow(workflow_id, db.engine)
     df_task_tries = queries.tries_for_workflow(workflow_id, db.engine)
     task_summary = queries.app_counts_for_workflow(workflow_id, db.engine)
-    file_list = Files.query.filter_by(run_id=workflow_id).first()
+    file_list = File.query.filter_by(run_id=workflow_id).first()
     if file_list:
         have_files = True
     else:

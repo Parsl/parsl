@@ -7,8 +7,8 @@
 
      Files by <a href="/">workflow</a>.
     <p>
-    Search for a specific file (use % as a wildcard):
-<form method="POST" action="/files">
+    Search for files by name or path (use % as a wildcard):
+<form method="POST" action="/file">
     {{ form.hidden_tag() }}
     {{ form.file_name.label }} {{ form.file_name(size=32) }}
     {{ form.submit() }}
@@ -33,7 +33,7 @@
       <tbody>
       {% for file in file_list %}
           <tr>
-            <td><a href="/files/{{ file['file_id'] }}/">{{ file['file_name'] }}</a></td>
+            <td><a href="/file/{{ file['file_id'] }}/">{{ file['file_name'] }}</a></td>
             <td>{{ file['size'] }}</td>
             <td>{{ file['timestamp'] | timeformat }}</td>
           </tr>

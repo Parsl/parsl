@@ -48,11 +48,11 @@ STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
 BLOCK = 'block'          # Block table include the status for block polling
-FILES = 'files'          # Files table include file info
-INPUT_FILES = 'input_files'  # Input files table include input file info
-OUTPUT_FILES = 'output_files'  # Output files table include output file info
-ENVIRONMENT = 'environment'    # Executor table include executor info
-MISC_INFO = 'misc_info'        # Misc info table include misc info
+FILE = 'file  '          # Files table include file info
+INPUT_FILE = 'input_file'  # Input files table include input file info
+OUTPUT_FILE = 'output_file'  # Output files table include output file info
+ENVIRONMENT = 'environment'  # Executor table include executor info
+MISC_INFO = 'misc_info' # Misc info table include misc info
 
 
 class Database:
@@ -244,24 +244,23 @@ class Database:
             PrimaryKeyConstraint('run_id', 'block_id', 'executor_label', 'timestamp'),
         )
 
-    class Files(Base):
-        __tablename__ = FILES
+    class File(Base):
+        __tablename__ = FILE
         file_name = Column('file_name', Text, index=True, nullable=False)
         file_path = Column('file_path', Text, nullable=True)
         file_id = Column('file_id', Text, index=True, nullable=False)
-        run_id = Column('run_id', Text, nullable=False)
-        task_id = Column('task_id', Integer, nullable=True)
-        try_id = Column('try_id', Integer, nullable=True)
-        timestamp = Column('timestamp', DateTime, nullable=True)
+        run_id = Column('run_id', Text, index=True, nullable=False)
+        task_id = Column('task_id', Integer, index=True, nullable=True)
+        try_id = Column('try_id', Integer, index=True, nullable=True)
+        timestamp = Column('timestamp', DateTime, index=True, nullable=True)
         size = Column('size', BigInteger, nullable=True)
         md5sum = Column('md5sum', Text, nullable=True)
-        sa.Index("files_task_run_id_idx", "task_run_id", "task_id", "try_id")
         __table_args__ = (PrimaryKeyConstraint('file_id'),)
 
     class Environment(Base):
         __tablename__ = ENVIRONMENT
-        environment_id = Column('environment_id', Text, nullable=False)
-        run_id = Column('run_id', Text, nullable=False)
+        environment_id = Column('environment_id', Text, index=True, nullable=False)
+        run_id = Column('run_id', Text, index=True, nullable=False)
         label = Column('label', Text, nullable=False)
         address = Column('address', Text, nullable=True)
         provider = Column('provider', Text, nullable=True)
@@ -269,26 +268,26 @@ class Database:
         worker_init = Column('worker_init', Text, nullable=True)
         __table_args__ = (PrimaryKeyConstraint('environment_id'),)
 
-    class InputFiles(Base):
-        __tablename__ = INPUT_FILES
-        file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"), nullable=False)
-        run_id = Column('run_id', Text, nullable=False)
-        task_id = Column('task_id', Integer, nullable=False)
-        try_id = Column('try_id', Integer, nullable=False)
+    class InputFile(Base):
+        __tablename__ = INPUT_FILE
+        file_id = Column('file_id', Text, sa.ForeignKey(FILE + ".file_id"), nullable=False)
+        run_id = Column('run_id', Text, index=True, nullable=False)
+        task_id = Column('task_id', Integer, index=True, nullable=False)
+        try_id = Column('try_id', Integer, index=True, nullable=False)
         __table_args__ = (PrimaryKeyConstraint('file_id'),)
 
-    class OutputFiles(Base):
-        __tablename__ = OUTPUT_FILES
-        file_id = Column('file_id', Text, sa.ForeignKey(FILES + ".file_id"), nullable=False)
-        run_id = Column('run_id', Text, nullable=False)
-        task_id = Column('task_id', Integer, nullable=False)
-        try_id = Column('try_id', Integer, nullable=False)
+    class OutputFile(Base):
+        __tablename__ = OUTPUT_FILE
+        file_id = Column('file_id', Text, sa.ForeignKey(FILE + ".file_id"), nullable=False)
+        run_id = Column('run_id', Text, index=True, nullable=False)
+        task_id = Column('task_id', Integer, index=True, nullable=False)
+        try_id = Column('try_id', Integer, index=True, nullable=False)
         __table_args__ = (PrimaryKeyConstraint('file_id'),)
 
     class MiscInfo(Base):
         __tablename__ = MISC_INFO
-        run_id = Column('run_id', Text, nullable=False)
-        timestamp = Column('timestamp', DateTime, nullable=False)
+        run_id = Column('run_id', Text, index=True, nullable=False)
+        timestamp = Column('timestamp', DateTime, index=True, nullable=False)
         info = Column('info', Text, nullable=False)
         __table_args__ = (
             PrimaryKeyConstraint('run_id', 'timestamp'),)
@@ -488,43 +487,43 @@ class DatabaseManager:
                             file_id = msg['file_id']
                             file_all_messages.append(msg)
                             if file_id in inserted_files:
-                                changed = False
+                                new_item = False
                                 # once certain items are set, they should not be changed
                                 if inserted_files[file_id]['timestamp'] is None:
                                     if msg['timestamp'] is not None:
                                         inserted_files[file_id]['timestamp'] = msg['timestamp']
-                                        changed = True
+                                        new_item = True
                                 else:
                                     msg['timestamp'] = inserted_files[file_id]['timestamp']
                                 if inserted_files[file_id]['size'] is None:
                                     if msg['size'] is not None:
                                         inserted_files[file_id]['size'] = msg['size']
-                                        changed = True
+                                        new_item = True
                                 else:
                                     msg['size'] = inserted_files[file_id]['size']
                                 if inserted_files[file_id]['md5sum'] is None:
                                     if msg['md5sum'] is not None:
                                         inserted_files[file_id]['md5sum'] = msg['md5sum']
-                                        changed = True
+                                        new_item = True
                                 else:
                                     msg['md5sum'] = inserted_files[file_id]['md5sum']
                                 if inserted_files[file_id]['task_id'] is None:
                                     if msg['task_id'] is not None:
                                         inserted_files[file_id]['task_id'] = msg['task_id']
                                         inserted_files[file_id]['try_id'] = msg['try_id']
-                                        changed = True
+                                        new_item = True
                                 else:
                                     if msg['task_id'] == inserted_files[file_id]['task_id']:
                                         if inserted_files[file_id]['try_id'] is None:
                                             inserted_files[file_id]['try_id'] = msg['try_id']
-                                            changed = True
+                                            new_item = True
                                         elif msg['try_id'] > inserted_files[file_id]['try_id']:
                                             inserted_files[file_id]['try_id'] = msg['try_id']
-                                            changed = True
+                                            new_item = True
                                     else:
                                         msg['task_id'] = inserted_files[file_id]['task_id']
                                         msg['try_id'] = inserted_files[file_id]['try_id']
-                                if changed:
+                                if new_item:
                                     file_update_messages.append(msg)
                             else:
                                 inserted_files[file_id] = {'size': msg['size'],
@@ -589,8 +588,8 @@ class DatabaseManager:
                     self._insert(table=STATUS, messages=task_info_all_messages)
 
                     if file_insert_messages:
-                        logger.debug("Inserting {} FILES_INFO to files table".format(len(file_insert_messages)))
-                        self._insert(table=FILES, messages=file_insert_messages)
+                        logger.debug("Inserting {} FILE_INFO to file table".format(len(file_insert_messages)))
+                        self._insert(table=FILE, messages=file_insert_messages)
                         logger.debug(
                             "There are {} inserted file records".format(len(inserted_files)))
 
@@ -601,19 +600,19 @@ class DatabaseManager:
                             "There are {} inserted environment records".format(len(inserted_envs)))
 
                     if file_update_messages:
-                        logger.debug("Updating {} FILE_INFO into files table".format(len(file_update_messages)))
-                        self._update(table=FILES,
+                        logger.debug("Updating {} FILE_INFO into file table".format(len(file_update_messages)))
+                        self._update(table=FILE,
                                      columns=['timestamp', 'size', 'md5sum', 'file_id', 'task_id', 'try_id'],
                                      messages=file_update_messages)
 
                     if input_file_insert_messages:
                         logger.debug("Inserting {} INPUT_FILE to input_files table".format(len(input_file_insert_messages)))
-                        self._insert(table=INPUT_FILES, messages=input_file_insert_messages)
+                        self._insert(table=INPUT_FILE, messages=input_file_insert_messages)
                         logger.debug("There are {} inserted input file records".format(len(input_inserted_files)))
 
                     if output_file_insert_messages:
                         logger.debug("Inserting {} OUTPUT_FILE to output_files table".format(len(output_file_insert_messages)))
-                        self._insert(table=OUTPUT_FILES, messages=output_file_insert_messages)
+                        self._insert(table=OUTPUT_FILE, messages=output_file_insert_messages)
                         logger.debug("There are {} inserted output file records".format(len(output_inserted_files)))
 
                     if misc_info_insert_messages:

@@ -40,7 +40,7 @@ class DataFuture(Future):
         else:
             self.set_result(self.file_obj)
             # only update the file object if it is a file
-            if self.data_flow_kernel.capture_file_provenance and self.file_obj.scheme == 'file' and os.path.isfile(self.file_obj.filepath):
+            if self.data_flow_kernel.file_provenance and self.file_obj.scheme == 'file' and os.path.isfile(self.file_obj.filepath):
                 if not self.file_obj.timestamp:
                     self.file_obj.timestamp = datetime.fromtimestamp(stat(self.file_obj.filepath).st_ctime, tz=timezone.utc)
                 if not self.file_obj.size:
@@ -76,7 +76,7 @@ class DataFuture(Future):
             self.app_fut = fut
         self.data_flow_kernel = dfk
         self.parent.add_done_callback(self.parent_callback)
-        if os.path.exists(file_obj.path):
+        if self.file_obj.scheme == 'file' and os.path.exists(file_obj.path):
             file_stat = os.stat(file_obj.path)
             self.file_obj.timestamp = datetime.fromtimestamp(file_stat.st_ctime, tz=timezone.utc)
             self.file_obj.size = file_stat.st_size

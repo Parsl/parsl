@@ -5,6 +5,11 @@ TASK = 'task'            # Task table includes task metadata
 STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
+FILE = 'file'            # Files table include file info
+INPUT_FILE = 'input_file'  # Input files table include input file info
+OUTPUT_FILE = 'output_file'  # Output files table include output file info
+ENVIRONMENT = 'environment'  # Executor table include executor info
+MISC_INFO = 'misc_info'  # Misc info table include misc info
 
 db = SQLAlchemy()
 
@@ -73,8 +78,8 @@ class Task(db.Model):
     )
 
 
-class Files(db.Model):
-    __tablename__ = 'files'
+class File(db.Model):
+    __tablename__ = FILE
     file_name = db.Column('file_name', db.Text, index=True, nullable=False)
     file_id = db.Column('file_id', db.Text, index=True, nullable=False)
     run_id = db.Column('run_id', db.Text, nullable=False)
@@ -87,7 +92,7 @@ class Files(db.Model):
 
 
 class Environment(db.Model):
-    __tablename__ = 'environment'
+    __tablename__ = ENVIRONMENT
     environment_id = db.Column('environment_id', db.Text, nullable=False)
     run_id = db.Column('run_id', db.Text, nullable=False)
     label = db.Column('label', db.Text, nullable=False)
@@ -98,8 +103,8 @@ class Environment(db.Model):
     __table_args__ = (db.PrimaryKeyConstraint('environment_id'),)
 
 
-class InputFiles(db.Model):
-    __tablename__ = 'input_files'
+class InputFile(db.Model):
+    __tablename__ = INPUT_FILE
     file_id = db.Column('file_id', db.Text, nullable=False)
     run_id = db.Column('run_id', db.Text, nullable=False)
     task_id = db.Column('task_id', db.Integer, nullable=False)
@@ -107,8 +112,8 @@ class InputFiles(db.Model):
     __table_args__ = (db.PrimaryKeyConstraint('file_id'),)
 
 
-class OutputFiles(db.Model):
-    __tablename__ = 'output_files'
+class OutputFile(db.Model):
+    __tablename__ = OUTPUT_FILE
     file_id = db.Column('file_id', db.Text, nullable=False)
     run_id = db. Column('run_id', db.Text, nullable=False)
     task_id = db.Column('task_id', db.Integer, nullable=False)
@@ -117,7 +122,7 @@ class OutputFiles(db.Model):
 
 
 class MiscInfo(db.Model):
-    __tablename__ = 'misc_info'
+    __tablename__ = MISC_INFO
     run_id = db.Column('run_id', db.Text, nullable=False)
     timestamp = db.Column('timestamp', db.DateTime, nullable=False)
     info = db.Column('info', db.Text, nullable=False)

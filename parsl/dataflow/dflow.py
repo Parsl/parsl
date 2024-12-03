@@ -112,9 +112,9 @@ class DataFlowKernel:
 
         if self.monitoring:
             self.monitoring.start(self.run_dir, self.config.run_dir)
-            self.capture_file_provenance = self.monitoring.capture_file_provenance
+            self.file_provenance = self.monitoring.file_provenance
         else:
-            self.capture_file_provenance = False
+            self.file_provenance = False
 
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
@@ -304,7 +304,7 @@ class DataFlowKernel:
     def _send_file_log_info(self, file: Union[File, DataFuture],
                             task_record: TaskRecord, is_output: bool) -> None:
         """ Generate a message for the monitoring db about a file. """
-        if self.capture_file_provenance:
+        if self.file_provenance:
             file_log_info = self._create_file_log_info(file, task_record)
             # make sure the task_id is None for inputs
             if not is_output:
@@ -339,7 +339,7 @@ class DataFlowKernel:
     def register_as_input(self, f: Union[File, DataFuture],
                           task_record: TaskRecord):
         """ Register a file as an input to a task. """
-        if self.capture_file_provenance:
+        if self.file_provenance:
             self._send_file_log_info(f, task_record, False)
             file_input_info = self._create_file_io_info(f, task_record)
             self.monitoring.send((MessageType.INPUT_FILE, file_input_info))
@@ -347,7 +347,7 @@ class DataFlowKernel:
     def register_as_output(self, f: Union[File, DataFuture],
                            task_record: TaskRecord):
         """ Register a file as an output of a task. """
-        if self.capture_file_provenance:
+        if self.file_provenance:
             self._send_file_log_info(f, task_record, True)
             file_output_info = self._create_file_io_info(f, task_record)
             self.monitoring.send((MessageType.OUTPUT_FILE, file_output_info))
@@ -366,7 +366,7 @@ class DataFlowKernel:
 
     def _register_env(self, environ: ParslExecutor) -> None:
         """ Capture the environment information for the monitoring db. """
-        if self.capture_file_provenance:
+        if self.file_provenance:
             environ_info = self._create_env_log_info(environ)
             self.monitoring.send((MessageType.ENVIRONMENT_INFO, environ_info))
 
@@ -390,11 +390,12 @@ class DataFlowKernel:
     def log_info(self, msg: str) -> None:
         """Log an info message to the monitoring db."""
         if self.monitoring:
-            if self.monitoring.capture_file_provenance:
+            if self.file_provenance:
                 misc_msg = self._create_misc_log_info(msg)
                 if misc_msg is None:
                     logger.info("Could not turn message into a str, so not sending message to monitoring db")
-                self.monitoring.send((MessageType.MISC_INFO, misc_msg))
+                else:
+                    self.monitoring.send((MessageType.MISC_INFO, misc_msg))
             else:
                 logger.info("File provenance is not enabled, so not sending message to monitoring db")
         else:
@@ -404,12 +405,11 @@ class DataFlowKernel:
         """
         Create the dictionary that will be included in the monitoring db
         """
-        try:
-            misc_log_info = {'run_id': self.run_id,
-                             'timestamp': datetime.datetime.now(),
-                             'info': str(msg)
-                             }
-            return misc_log_info
+        try:  # exception should only be raised if msg cannot be cast to a str
+            return {'run_id': self.run_id,
+                    'timestamp': datetime.datetime.now(),
+                    'info': str(msg)
+                    }
         except Exception:
             return None
 
@@ -1014,8 +1014,7 @@ class DataFlowKernel:
             check_dep(dep)
 
         # Check for futures in inputs=[<fut>...]
-        inp = kwargs.get('inputs', [])
-        for dep in inp:
+        for dep in kwargs.get('inputs', []):
             check_dep(dep)
 
         return depends

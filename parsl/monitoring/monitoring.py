@@ -47,7 +47,7 @@ class MonitoringHub(RepresentationMixin):
                  monitoring_debug: bool = False,
                  resource_monitoring_enabled: bool = True,
                  resource_monitoring_interval: float = 30,
-                 capture_file_provenance: bool = False):  # in seconds
+                 file_provenance: bool = False):  # in seconds
         """
         Parameters
         ----------
@@ -84,7 +84,7 @@ class MonitoringHub(RepresentationMixin):
              If set to 0, only start and end information will be logged, and no periodic monitoring will
              be made.
              Default: 30 seconds
-        capture_file_provenance : bool
+        file_provenance : bool
              Set this field to True to enable logging of file provenance information.
              Default: False
         """
@@ -105,7 +105,7 @@ class MonitoringHub(RepresentationMixin):
         self.resource_monitoring_enabled = resource_monitoring_enabled
         self.resource_monitoring_interval = resource_monitoring_interval
 
-        self.capture_file_provenance = capture_file_provenance
+        self.file_provenance = file_provenance
 
     def start(self, dfk_run_dir: str, config_run_dir: Union[str, os.PathLike]) -> None:
 

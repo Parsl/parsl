@@ -23,7 +23,7 @@
             <td>
                 {% if task['task_inputs'] %}
                     {% for input in task_files[tid]['inputs'] %}
-                        <a href="/files/{{ input['file_id'] }}/">{{ file_map[input['file_id']] }}</a><br />
+                        <a href="/file/{{ input['file_id'] }}/">{{ file_map[input['file_id']] }}</a><br />
                     {% endfor %}
                 {% else %}
                     None
@@ -32,7 +32,7 @@
             <td>
                 {% if task['task_outputs'] %}
                     {% for output in task_files[tid]['outputs'] %}
-                        <a href="/files/{{ output['file_id'] }}/">{{ file_map[output['file_id']] }}</a><br />
+                        <a href="/file/{{ output['file_id'] }}/">{{ file_map[output['file_id']] }}</a><br />
                     {% endfor %}
                 {% else %}
                     None

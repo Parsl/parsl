@@ -31,7 +31,7 @@ class File:
     """
 
     @typeguard.typechecked
-    def __init__(self, url: Union[os.PathLike, str], uu_id: Union[uuid.UUID, None] = None,
+    def __init__(self, url: Union[os.PathLike, str], uu_id: Optional[uuid.UUID] = None,
                  timestamp: Optional[datetime.datetime] = None):
         """Construct a File object from an url string.
 
@@ -58,7 +58,7 @@ class File:
         if uu_id is not None:
             self.uuid = uu_id
         else:
-            self.uuid = uuid.uuid1()
+            self.uuid = uuid.uuid4()
 
     def cleancopy(self) -> "File":
         """Returns a copy of the file containing only the global immutable state,

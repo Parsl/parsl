@@ -32,7 +32,7 @@
         {% if not task_details['task_inputs'].empty %}
           <ul>
             {% for ifile in task_details['task_inputs'].itertuples() %}
-                <li><a href="/files/{{ ifile.file_id }}">{{ ifile.file_name }}</a></li>
+                <li><a href="/file/{{ ifile.file_id }}">{{ ifile.file_name }}</a></li>
             {% endfor %}
           </ul>
         {% else %}
@@ -43,7 +43,7 @@
         {% if not task_details['task_outputs'].empty %}
           <ul>
             {% for ofile in task_details['task_outputs'].itertuples() %}
-                <li><a href="/files/{{ ofile.file_id }}">{{ ofile.file_name }}</a></li>
+                <li><a href="/file/{{ ofile.file_id }}">{{ ofile.file_name }}</a></li>
             {% endfor %}
           </ul>
         {% else %}

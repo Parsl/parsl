@@ -13,8 +13,8 @@
         <tr><td>Creation date:</td><td>{{ file_details['timestamp'] | timeformat }}</td></tr>
         {% endif %}
         <tr><td>Workflow:</td><td><a href="workflow/{{ file_details['run_id'] }}/">{{ workflow.workflow_name }}</a></td></tr>
-        {% if output_file %}
-            <tr><td>Created by:</td><td><a href="/workflow/{{ file_details['run_id'] }}/task/{{ output_file['task_id'] }}">{{ tasks[output_file['task_id']]['task_func_name'] }}</a></td></tr>
+        {% if output_files %}
+            <tr><td>Created by:</td><td><a href="/workflow/{{ file_details['run_id'] }}/task/{{ output_files['task_id'] }}">{{ tasks[output_files['task_id']]['task_func_name'] }}</a></td></tr>
         {% endif %}
         {% if input_files %}
             <tr><td>Used by:</td><td>

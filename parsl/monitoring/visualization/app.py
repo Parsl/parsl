@@ -23,7 +23,6 @@ def cli_run():
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = args.db_path
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SECRET_KEY'] = os.urandom(24)
     db.init_app(app)
 
     with app.app_context():

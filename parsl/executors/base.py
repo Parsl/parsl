@@ -62,7 +62,7 @@ class ParslExecutor(metaclass=ABCMeta):
         self.submit_monitoring_radio = submit_monitoring_radio
         self.run_dir = os.path.abspath(run_dir)
         self.run_id = run_id
-        self.uu_id = uuid.uuid1()
+        self.uu_id = uuid.uuid4()
 
     def __enter__(self) -> Self:
         return self

@@ -67,7 +67,7 @@
 <br><a href="dag_group_by_states">View workflow DAG -- colored by task states</a>
 <br><a href="resource_usage">View workflow resource usage</a>
     {% if have_files %}
-<br><a href="/files/workflow/{{ workflow_details['run_id'] }}/">View workflow file provenance</a>
+<br><a href="/file/workflow/{{ workflow_details['run_id'] }}/">View workflow file provenance</a>
     {% endif %}
 {{ task_gantt | safe }}
 {{ task_per_app |safe }}
