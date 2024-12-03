@@ -1,12 +1,13 @@
 """This module implements DataFutures.
 """
-import os.path
-from hashlib import md5
 import logging
-from os import stat
+import os.path
 from concurrent.futures import Future
-from typing import TYPE_CHECKING, Optional
 from datetime import datetime, timezone
+from hashlib import md5
+from os import stat
+from typing import TYPE_CHECKING, Optional
+
 import typeguard
 
 from parsl.data_provider.files import File

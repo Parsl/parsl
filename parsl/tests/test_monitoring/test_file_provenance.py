@@ -1,13 +1,14 @@
-import pytest
 import os
 import shutil
 import time
 
+import pytest
+
 import parsl
 from parsl.config import Config
+from parsl.data_provider.files import File
 from parsl.executors import ThreadPoolExecutor
 from parsl.monitoring import MonitoringHub
-from parsl.data_provider.files import File
 
 
 @parsl.bash_app

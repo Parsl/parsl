@@ -3,7 +3,6 @@ from __future__ import annotations
 import atexit
 import concurrent.futures as cf
 import datetime
-from hashlib import md5
 import inspect
 import logging
 import os
@@ -15,6 +14,7 @@ import time
 from concurrent.futures import Future
 from functools import partial
 from getpass import getuser
+from hashlib import md5
 from socket import gethostname
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 from uuid import uuid4

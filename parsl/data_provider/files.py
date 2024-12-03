@@ -5,13 +5,12 @@ to transfer the file as well as to give the appropriate filepath depending
 on where (client-side, remote-side, intermediary-side) the File.filepath is
 being called from.
 """
-import logging
-from hashlib import md5
-import os
 import datetime
+import logging
+import os
+import uuid
 from typing import Optional, Union
 from urllib.parse import urlparse
-import uuid
 
 import typeguard
 

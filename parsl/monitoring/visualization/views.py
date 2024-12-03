@@ -1,19 +1,22 @@
+import datetime
+import os.path as ospath
+
 import pandas as pd
 from flask import current_app as app
 from flask import render_template, request
-import os.path as ospath
 
 import parsl.monitoring.queries.pandas as queries
+from parsl.monitoring.visualization.form_fields import FileForm
 from parsl.monitoring.visualization.models import (
+    Environment,
+    File,
+    InputFile,
+    MiscInfo,
+    OutputFile,
     Status,
     Task,
     Workflow,
     db,
-    File,
-    InputFile,
-    OutputFile,
-    Environment,
-    MiscInfo,
 )
 from parsl.monitoring.visualization.plots.default.task_plots import (
     time_series_memory_per_task_plot,
@@ -28,10 +31,6 @@ from parsl.monitoring.visualization.plots.default.workflow_resource_plots import
     resource_efficiency,
     worker_efficiency,
 )
-
-from parsl.monitoring.visualization.form_fields import FileForm
-
-import datetime
 
 dummy = True
 
