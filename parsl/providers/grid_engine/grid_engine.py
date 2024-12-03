@@ -100,7 +100,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
             self.nodes_per_block, tasks_per_node))
 
         job_config = {}
-        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config["submit_script_dir"] = self.script_dir
         job_config["nodes"] = self.nodes_per_block
         job_config["walltime"] = self.walltime
         job_config["scheduler_options"] = self.scheduler_options

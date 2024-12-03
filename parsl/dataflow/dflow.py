@@ -1151,8 +1151,6 @@ class DataFlowKernel:
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
                     os.makedirs(executor.provider.script_dir, exist_ok=True)
 
-                    executor.provider.channel.script_dir = executor.provider.script_dir
-
             self.executors[executor.label] = executor
             executor.start()
         block_executors = [e for e in executors if isinstance(e, BlockProviderExecutor)]
