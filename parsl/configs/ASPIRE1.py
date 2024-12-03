@@ -34,7 +34,6 @@ config = Config(
         ],
         monitoring=MonitoringHub(
             hub_address=address_by_interface('ib0'),
-            hub_port=55055,
             resource_monitoring_interval=10,
         ),
         strategy='simple',
