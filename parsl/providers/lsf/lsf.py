@@ -3,7 +3,6 @@ import math
 import os
 import time
 
-from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.cluster_provider import ClusterProvider
@@ -32,8 +31,6 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
 
     Parameters
     ----------
-    channel : Channel
-        Channel for accessing this provider.
     nodes_per_block : int
         Nodes to provision per block.
         When request_by_nodes is False, it is computed by cores_per_block / cores_per_node.
@@ -77,7 +74,6 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
     """
 
     def __init__(self,
-                 channel=LocalChannel(),
                  nodes_per_block=1,
                  cores_per_block=None,
                  cores_per_node=None,
@@ -96,7 +92,6 @@ class LSFProvider(ClusterProvider, RepresentationMixin):
                  launcher=SingleNodeLauncher()):
         label = 'LSF'
         super().__init__(label,
-                         channel,
                          nodes_per_block,
                          init_blocks,
                          min_blocks,

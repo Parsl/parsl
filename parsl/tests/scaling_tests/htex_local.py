@@ -1,4 +1,3 @@
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.providers import LocalProvider
@@ -12,7 +11,6 @@ config = Config(
             max_workers_per_node=8,
             encrypted=True,
             provider=LocalProvider(
-                channel=LocalChannel(),
                 init_blocks=1,
                 max_blocks=1,
             ),

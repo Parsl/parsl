@@ -1,4 +1,3 @@
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SrunLauncher
@@ -20,7 +19,6 @@ def fresh_config():
                 encrypted=True,
                 provider=SlurmProvider(
                     cmd_timeout=60,     # Add extra time for slow scheduler responses
-                    channel=LocalChannel(),
                     nodes_per_block=2,
                     init_blocks=1,
                     min_blocks=1,
