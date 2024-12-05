@@ -1,3 +1,4 @@
+import traceback
 from typing import Optional, Sequence, Tuple
 
 from parsl.errors import ParslError
@@ -48,8 +49,12 @@ class DependencyError(DataFlowException):
         self.task_id = task_id
 
     def __str__(self) -> str:
-        deps = ", ".join(tid for _exc, tid in self.dependent_exceptions_tids)
-        return f"Dependency failure for task {self.task_id} with failed dependencies from {deps}"
+        e: Exception = self
+        dep_ids = []
+        while isinstance(e, DependencyError) and len(e.dependent_exceptions_tids) >= 1:
+            dep_ids.append(e.dependent_exceptions_tids[0][1])
+            e = e.dependent_exceptions_tids[0][0]
+        return f"Dependency failure for task {self.task_id}, caused (via {' <- '.join(dep_ids)}) by: \n{''.join(traceback.format_exception(e))}"
 
 
 class JoinError(DataFlowException):
