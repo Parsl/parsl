@@ -38,15 +38,9 @@ Configuration
 Channels
 ========
 
-.. autosummary::
-    :toctree: stubs
-    :nosignatures:
-
-    parsl.channels.base.Channel
-    parsl.channels.LocalChannel
-    parsl.channels.SSHChannel
-    parsl.channels.OAuthSSHChannel
-    parsl.channels.SSHInteractiveLoginChannel
+Channels are deprecated in Parsl. See
+`issue 3515 <https://github.com/Parsl/parsl/issues/3515>`_
+for further discussion.
 
 Data management
 ===============
@@ -84,6 +78,16 @@ Executors
     parsl.executors.FluxExecutor
     parsl.executors.radical.RadicalPilotExecutor
 
+Manager Selectors
+=================
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.executors.high_throughput.manager_selector.RandomManagerSelector
+    parsl.executors.high_throughput.manager_selector.BlockIdManagerSelector
+
 Launchers
 =========
 
@@ -99,6 +103,7 @@ Launchers
     parsl.launchers.SrunMPILauncher
     parsl.launchers.GnuParallelLauncher
     parsl.launchers.MpiExecLauncher
+    parsl.launchers.MpiRunLauncher
     parsl.launchers.JsrunLauncher
     parsl.launchers.WrappedLauncher
 
@@ -109,9 +114,7 @@ Providers
     :toctree: stubs
     :nosignatures:
 
-    parsl.providers.AdHocProvider
     parsl.providers.AWSProvider
-    parsl.providers.CobaltProvider
     parsl.providers.CondorProvider
     parsl.providers.GoogleCloudProvider
     parsl.providers.GridEngineProvider
@@ -166,14 +169,6 @@ Exceptions
     parsl.providers.errors.ScaleOutFailed
     parsl.providers.errors.SchedulerMissingArgs
     parsl.providers.errors.ScriptPathError
-    parsl.channels.errors.ChannelError
-    parsl.channels.errors.BadHostKeyException
-    parsl.channels.errors.BadScriptPath
-    parsl.channels.errors.BadPermsScriptPath
-    parsl.channels.errors.FileExists
-    parsl.channels.errors.AuthException
-    parsl.channels.errors.SSHException
-    parsl.channels.errors.FileCopyException
     parsl.executors.high_throughput.errors.WorkerLost
     parsl.executors.high_throughput.interchange.ManagerLost
     parsl.serialize.errors.DeserializationError

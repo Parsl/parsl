@@ -7,12 +7,10 @@ from multiprocessing import Event
 from typing import Any, Callable, Dict, List, Sequence, Tuple
 
 from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.radios import (
-    FilesystemRadio,
-    HTEXRadio,
-    MonitoringRadio,
-    UDPRadio,
-)
+from parsl.monitoring.radios.base import MonitoringRadioSender
+from parsl.monitoring.radios.filesystem import FilesystemRadioSender
+from parsl.monitoring.radios.htex import HTEXRadioSender
+from parsl.monitoring.radios.udp import UDPRadioSender
 from parsl.multiprocessing import ForkProcess
 from parsl.process_loggers import wrap_with_logs
 
@@ -100,17 +98,15 @@ def monitor_wrapper(*,
     return (wrapped, args, new_kwargs)
 
 
-def get_radio(radio_mode: str, monitoring_hub_url: str, task_id: int, run_dir: str) -> MonitoringRadio:
-    radio: MonitoringRadio
+def get_radio(radio_mode: str, monitoring_hub_url: str, task_id: int, run_dir: str) -> MonitoringRadioSender:
+    radio: MonitoringRadioSender
     if radio_mode == "udp":
-        radio = UDPRadio(monitoring_hub_url,
-                         source_id=task_id)
+        radio = UDPRadioSender(monitoring_hub_url)
     elif radio_mode == "htex":
-        radio = HTEXRadio(monitoring_hub_url,
-                          source_id=task_id)
+        radio = HTEXRadioSender(monitoring_hub_url)
     elif radio_mode == "filesystem":
-        radio = FilesystemRadio(monitoring_url=monitoring_hub_url,
-                                source_id=task_id, run_dir=run_dir)
+        radio = FilesystemRadioSender(monitoring_url=monitoring_hub_url,
+                                      run_dir=run_dir)
     else:
         raise RuntimeError(f"Unknown radio mode: {radio_mode}")
     return radio
@@ -199,10 +195,10 @@ def monitor(pid: int,
 
     pm = psutil.Process(pid)
 
-    children_user_time = {}  # type: Dict[int, float]
-    children_system_time = {}  # type: Dict[int, float]
-    children_num_ctx_switches_voluntary = {}  # type: Dict[int, float]
-    children_num_ctx_switches_involuntary = {}  # type: Dict[int, float]
+    children_user_time: Dict[int, float] = {}
+    children_system_time: Dict[int, float] = {}
+    children_num_ctx_switches_voluntary: Dict[int, float] = {}
+    children_num_ctx_switches_involuntary: Dict[int, float] = {}
 
     def accumulate_and_prepare() -> Dict[str, Any]:
         d = {"psutil_process_" + str(k): v for k, v in pm.as_dict().items() if k in simple}

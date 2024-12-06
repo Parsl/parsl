@@ -9,6 +9,7 @@ import zmq
 
 from parsl import curvezmq
 from parsl.executors.high_throughput.interchange import Interchange
+from parsl.executors.high_throughput.manager_selector import RandomManagerSelector
 
 
 def make_interchange(*, interchange_address: Optional[str], cert_dir: Optional[str]) -> Interchange:
@@ -23,7 +24,9 @@ def make_interchange(*, interchange_address: Optional[str], cert_dir: Optional[s
                        heartbeat_threshold=60,
                        logdir=".",
                        logging_level=logging.INFO,
-                       poll_period=10)
+                       manager_selector=RandomManagerSelector(),
+                       poll_period=10,
+                       run_id="test_run_id")
 
 
 @pytest.fixture
@@ -84,7 +87,7 @@ def test_interchange_binding_with_non_ipv4_address(cert_dir: Optional[str]):
 def test_interchange_binding_bad_address(cert_dir: Optional[str]):
     """Confirm that we raise a ZMQError when a bad address is supplied"""
     address = "550.0.0.0"
-    with pytest.raises(zmq.error.ZMQError):
+    with pytest.raises(ValueError):
         make_interchange(interchange_address=address, cert_dir=cert_dir)
 
 
@@ -100,4 +103,5 @@ def test_limited_interface_binding(cert_dir: Optional[str]):
 
     matched_conns = [conn for conn in conns if conn.laddr.port == ix.worker_result_port]
     assert len(matched_conns) == 1
-    assert matched_conns[0].laddr.ip == address
+    # laddr.ip can return ::ffff:127.0.0.1 when using IPv6
+    assert address in matched_conns[0].laddr.ip

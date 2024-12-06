@@ -10,7 +10,7 @@ Installation
 
 Parsl is available on `PyPI <https://pypi.org/project/parsl/>`_ and `conda-forge <https://anaconda.org/conda-forge/parsl>`_. 
 
-Parsl requires Python3.8+ and has been tested on Linux and macOS.
+Parsl requires Python3.9+ and has been tested on Linux.
 
 
 Installation using Pip
@@ -31,7 +31,7 @@ Installation using Conda
 
 1. Create and activate a new conda environment::
 
-     $ conda create --name parsl_py38 python=3.8
+     $ conda create --name parsl_py38 python=3.9
      $ source activate parsl_py38
 
 2. Install Parsl::
@@ -176,12 +176,17 @@ This script runs on a system that must stay on-line until all of your tasks comp
 much computing power, such as the login node for a supercomputer.
 
 The :class:`~parsl.config.Config` object holds definitions of Executors and the Providers and Launchers they rely on.
-An example which launches 512 workers on 128 nodes of the Polaris supercomputer looks like
+An example which launches 4 workers on 1 node of the Polaris supercomputer looks like
 
 .. code-block:: python
 
+    from parsl import Config
+    from parsl.executors import HighThroughputExecutor
+    from parsl.providers import PBSProProvider
+    from parsl.launchers import MpiExecLauncher
+
     config = Config(
-        retires=1,  # Restart task if they fail once
+        retries=1,  # Restart task if they fail once
         executors=[
             HighThroughputExecutor(
                 available_accelerators=4,  # Maps one worker per GPU
@@ -191,13 +196,13 @@ An example which launches 512 workers on 128 nodes of the Polaris supercomputer 
                     account="example",
                     worker_init="module load conda; conda activate parsl",
                     walltime="1:00:00",
-                    queue="prod",
+                    queue="debug",
                     scheduler_options="#PBS -l filesystems=home:eagle",  # Change if data on other filesystem
                     launcher=MpiExecLauncher(
                         bind_cmd="--cpu-bind", overrides="--depth=64 --ppn 1"
                     ),  # Ensures 1 manger per node and allows it to divide work to all 64 cores
                     select_options="ngpus=4",
-                    nodes_per_block=128,
+                    nodes_per_block=1,
                     cpus_per_node=64,
                 ),
             ),
@@ -236,7 +241,7 @@ for reporting purposes.
 
 As an NSF-funded project, our ability to track usage metrics is important for continued funding. 
 
-You can opt-in by setting ``usage_tracking=True`` in the configuration object (`parsl.config.Config`). 
+You can opt-in by setting ``usage_tracking=3`` in the configuration object (`parsl.config.Config`). 
 
 To read more about what information is collected and how it is used see :ref:`label-usage-tracking`.
 

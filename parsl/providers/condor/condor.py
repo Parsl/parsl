@@ -5,7 +5,6 @@ import time
 
 import typeguard
 
-from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.launchers.base import Launcher
@@ -17,8 +16,6 @@ from parsl.utils import RepresentationMixin
 logger = logging.getLogger(__name__)
 
 from typing import Dict, List, Optional
-
-from parsl.channels.base import Channel
 
 # See http://pages.cs.wisc.edu/~adesmet/status.html
 translate_table = {
@@ -36,11 +33,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
     Parameters
     ----------
-    channel : Channel
-        Channel for accessing this provider. Possible channels include
-        :class:`~parsl.channels.LocalChannel` (the default),
-        :class:`~parsl.channels.SSHChannel`, or
-        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
     cores_per_slot : int
@@ -82,7 +74,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
     """
     @typeguard.typechecked
     def __init__(self,
-                 channel: Channel = LocalChannel(),
                  nodes_per_block: int = 1,
                  cores_per_slot: Optional[int] = None,
                  mem_per_slot: Optional[float] = None,
@@ -103,7 +94,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         label = 'condor'
         super().__init__(label,
-                         channel,
                          nodes_per_block,
                          init_blocks,
                          min_blocks,
@@ -229,7 +219,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         job_config = {}
         job_config["job_name"] = job_name
-        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config["submit_script_dir"] = self.script_dir
         job_config["project"] = self.project
         job_config["nodes"] = self.nodes_per_block
         job_config["scheduler_options"] = scheduler_options
@@ -248,16 +238,14 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
         with open(userscript_path, 'w') as f:
             f.write(job_config["worker_init"] + '\n' + wrapped_command)
 
-        user_script_path = self.channel.push_file(userscript_path, self.channel.script_dir)
-        the_input_files = [user_script_path] + self.transfer_input_files
+        the_input_files = [userscript_path] + self.transfer_input_files
         job_config["input_files"] = ','.join(the_input_files)
-        job_config["job_script"] = os.path.basename(user_script_path)
+        job_config["job_script"] = os.path.basename(userscript_path)
 
         # Construct and move the submit script
         self._write_submit_script(template_string, script_path, job_name, job_config)
-        channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
 
-        cmd = "condor_submit {0}".format(channel_script_path)
+        cmd = "condor_submit {0}".format(script_path)
         try:
             retcode, stdout, stderr = self.execute_wait(cmd)
         except Exception as e:

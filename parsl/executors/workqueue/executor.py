@@ -28,7 +28,7 @@ import parsl.utils as putils
 from parsl.data_provider.files import File
 from parsl.data_provider.staging import Staging
 from parsl.errors import OptionalModuleMissing
-from parsl.executors.errors import ExecutorError
+from parsl.executors.errors import ExecutorError, InvalidResourceSpecification
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.workqueue import exec_parsl_function
 from parsl.process_loggers import wrap_with_logs
@@ -419,7 +419,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 message = "Task resource specification only accepts these types of resources: {}".format(
                         ', '.join(acceptable_fields))
                 logger.error(message)
-                raise ExecutorError(self, message)
+                raise InvalidResourceSpecification(keys, message)
 
             # this checks that either all of the required resource types are specified, or
             # that none of them are: the `required_resource_types` are not actually required,
@@ -430,9 +430,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 logger.error("Running with `autolabel=False`. In this mode, "
                              "task resource specification requires "
                              "three resources to be specified simultaneously: cores, memory, and disk")
-                raise ExecutorError(self, "Task resource specification requires "
-                                          "three resources to be specified simultaneously: cores, memory, and disk. "
-                                          "Try setting autolabel=True if you are unsure of the resource usage")
+                raise InvalidResourceSpecification(keys,
+                                                   "Task resource specification requires "
+                                                   "three resources to be specified simultaneously: cores, memory, and disk. "
+                                                   "Try setting autolabel=True if you are unsure of the resource usage")
 
             for k in keys:
                 if k == 'cores':
@@ -689,24 +690,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     def workers_per_node(self) -> Union[int, float]:
         return self.scaling_cores_per_worker
 
-    def scale_in(self, count: int) -> List[str]:
-        """Scale in method.
-        """
-        # Obtain list of blocks to kill
-        to_kill = list(self.blocks_to_job_id.keys())[:count]
-        kill_ids = [self.blocks_to_job_id[block] for block in to_kill]
-
-        # Cancel the blocks provisioned
-        if self.provider:
-            logger.info(f"Scaling in jobs: {kill_ids}")
-            r = self.provider.cancel(kill_ids)
-            job_ids = self._filter_scale_in_ids(kill_ids, r)
-            block_ids_killed = [self.job_ids_to_block[jid] for jid in job_ids]
-            return block_ids_killed
-        else:
-            logger.error("No execution provider available to scale in")
-            return []
-
     def shutdown(self, *args, **kwargs):
         """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the Work Queue system submission.
@@ -722,6 +705,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         logger.debug("Joining on submit process")
         self.submit_process.join()
+        self.submit_process.close()
+
         logger.debug("Joining on collector thread")
         self.collector_thread.join()
 

@@ -2,7 +2,6 @@ import logging
 import os
 import time
 
-from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.cluster_provider import ClusterProvider
@@ -36,11 +35,6 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
 
     Parameters
     ----------
-    channel : Channel
-        Channel for accessing this provider. Possible channels include
-        :class:`~parsl.channels.LocalChannel` (the default),
-        :class:`~parsl.channels.SSHChannel`, or
-        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
     nodes_per_block : int
         Nodes to provision per block.
     min_blocks : int
@@ -65,7 +59,6 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
     """
 
     def __init__(self,
-                 channel=LocalChannel(),
                  nodes_per_block=1,
                  init_blocks=1,
                  min_blocks=0,
@@ -79,7 +72,6 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
                  queue=None):
         label = 'grid_engine'
         super().__init__(label,
-                         channel,
                          nodes_per_block,
                          init_blocks,
                          min_blocks,
@@ -103,7 +95,7 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
             self.nodes_per_block, tasks_per_node))
 
         job_config = {}
-        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config["submit_script_dir"] = self.script_dir
         job_config["nodes"] = self.nodes_per_block
         job_config["walltime"] = self.walltime
         job_config["scheduler_options"] = self.scheduler_options
@@ -145,11 +137,10 @@ class GridEngineProvider(ClusterProvider, RepresentationMixin):
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
 
-        channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
         if self.queue is not None:
-            cmd = "qsub -q {0} -terse {1}".format(self.queue, channel_script_path)
+            cmd = "qsub -q {0} -terse {1}".format(self.queue, script_path)
         else:
-            cmd = "qsub -terse {0}".format(channel_script_path)
+            cmd = "qsub -terse {0}".format(script_path)
         retcode, stdout, stderr = self.execute_wait(cmd)
 
         if retcode == 0:

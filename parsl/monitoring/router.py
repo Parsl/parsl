@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 import logging
+import multiprocessing.queues as mpq
 import os
 import pickle
-import queue
 import socket
+import threading
 import time
 from multiprocessing.synchronize import Event
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
+import typeguard
 import zmq
 
 from parsl.log_utils import set_file_logger
-from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.types import AddressedMonitoringMessage, TaggedMonitoringMessage
+from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
+from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
@@ -29,10 +31,11 @@ class MonitoringRouter:
                  zmq_port_range: Tuple[int, int] = (55050, 56000),
 
                  monitoring_hub_address: str = "127.0.0.1",
-                 logdir: str = ".",
-                 run_id: str,
+                 run_dir: str = ".",
                  logging_level: int = logging.INFO,
-                 atexit_timeout: int = 3    # in seconds
+                 atexit_timeout: int = 3,   # in seconds
+                 resource_msgs: mpq.Queue,
+                 exit_event: Event,
                  ):
         """ Initializes a monitoring configuration class.
 
@@ -45,23 +48,25 @@ class MonitoringRouter:
         zmq_port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
              Default: (55050, 56000)
-        logdir : str
+        run_dir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         logging_level : int
              Logging level as defined in the logging module. Default: logging.INFO
         atexit_timeout : float, optional
             The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
-
+        resource_msgs : multiprocessing.Queue
+            A multiprocessing queue to receive messages to be routed onwards to the database process
+        exit_event : Event
+            An event that the main Parsl process will set to signal that the monitoring router should shut down.
         """
-        os.makedirs(logdir, exist_ok=True)
-        self.logger = set_file_logger("{}/monitoring_router.log".format(logdir),
+        os.makedirs(run_dir, exist_ok=True)
+        self.logger = set_file_logger(f"{run_dir}/monitoring_router.log",
                                       name="monitoring_router",
                                       level=logging_level)
         self.logger.debug("Monitoring router starting")
 
         self.hub_address = hub_address
         self.atexit_timeout = atexit_timeout
-        self.run_id = run_id
 
         self.loop_freq = 10.0  # milliseconds
 
@@ -93,22 +98,57 @@ class MonitoringRouter:
                                                                                min_port=zmq_port_range[0],
                                                                                max_port=zmq_port_range[1])
 
-    def start(self,
-              priority_msgs: "queue.Queue[AddressedMonitoringMessage]",
-              node_msgs: "queue.Queue[AddressedMonitoringMessage]",
-              block_msgs: "queue.Queue[AddressedMonitoringMessage]",
-              resource_msgs: "queue.Queue[AddressedMonitoringMessage]",
-              exit_event: Event) -> None:
+        self.target_radio = MultiprocessingQueueRadioSender(resource_msgs)
+        self.exit_event = exit_event
+
+    @wrap_with_logs(target="monitoring_router")
+    def start(self) -> None:
+        self.logger.info("Starting UDP listener thread")
+        udp_radio_receiver_thread = threading.Thread(target=self.start_udp_listener, daemon=True)
+        udp_radio_receiver_thread.start()
+
+        self.logger.info("Starting ZMQ listener thread")
+        zmq_radio_receiver_thread = threading.Thread(target=self.start_zmq_listener, daemon=True)
+        zmq_radio_receiver_thread.start()
+
+        self.logger.info("Joining on ZMQ listener thread")
+        zmq_radio_receiver_thread.join()
+        self.logger.info("Joining on UDP listener thread")
+        udp_radio_receiver_thread.join()
+        self.logger.info("Joined on both ZMQ and UDP listener threads")
+
+    @wrap_with_logs(target="monitoring_router")
+    def start_udp_listener(self) -> None:
         try:
-            while not exit_event.is_set():
+            while not self.exit_event.is_set():
                 try:
                     data, addr = self.udp_sock.recvfrom(2048)
                     resource_msg = pickle.loads(data)
                     self.logger.debug("Got UDP Message from {}: {}".format(addr, resource_msg))
-                    resource_msgs.put((resource_msg, addr))
+                    self.target_radio.send(resource_msg)
                 except socket.timeout:
                     pass
 
+            self.logger.info("UDP listener draining")
+            last_msg_received_time = time.time()
+            while time.time() - last_msg_received_time < self.atexit_timeout:
+                try:
+                    data, addr = self.udp_sock.recvfrom(2048)
+                    msg = pickle.loads(data)
+                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
+                    self.target_radio.send(msg)
+                    last_msg_received_time = time.time()
+                except socket.timeout:
+                    pass
+
+            self.logger.info("UDP listener finishing normally")
+        finally:
+            self.logger.info("UDP listener finished")
+
+    @wrap_with_logs(target="monitoring_router")
+    def start_zmq_listener(self) -> None:
+        try:
+            while not self.exit_event.is_set():
                 try:
                     dfk_loop_start = time.time()
                     while time.time() - dfk_loop_start < 1.0:  # TODO make configurable
@@ -120,28 +160,7 @@ class MonitoringRouter:
                         assert len(msg) >= 1, "ZMQ Receiver expects tuples of length at least 1, got {}".format(msg)
                         assert len(msg) == 2, "ZMQ Receiver expects message tuples of exactly length 2, got {}".format(msg)
 
-                        msg_0: AddressedMonitoringMessage
-                        msg_0 = (msg, 0)
-
-                        if msg[0] == MessageType.NODE_INFO:
-                            msg[1]['run_id'] = self.run_id
-                            node_msgs.put(msg_0)
-                        elif msg[0] == MessageType.RESOURCE_INFO:
-                            resource_msgs.put(msg_0)
-                        elif msg[0] == MessageType.BLOCK_INFO:
-                            block_msgs.put(msg_0)
-                        elif msg[0] == MessageType.TASK_INFO:
-                            priority_msgs.put(msg_0)
-                        elif msg[0] == MessageType.WORKFLOW_INFO:
-                            priority_msgs.put(msg_0)
-                        else:
-                            # There is a type: ignore here because if msg[0]
-                            # is of the correct type, this code is unreachable,
-                            # but there is no verification that the message
-                            # received from zmq_receiver_channel.recv_pyobj() is actually
-                            # of that type.
-                            self.logger.error("Discarding message "  # type: ignore[unreachable]
-                                              f"from interchange with unknown type {msg[0].value}")
+                        self.target_radio.send(msg)
                 except zmq.Again:
                     pass
                 except Exception:
@@ -151,47 +170,34 @@ class MonitoringRouter:
                     # thing to do.
                     self.logger.warning("Failure processing a ZMQ message", exc_info=True)
 
-            self.logger.info("Monitoring router draining")
-            last_msg_received_time = time.time()
-            while time.time() - last_msg_received_time < self.atexit_timeout:
-                try:
-                    data, addr = self.udp_sock.recvfrom(2048)
-                    msg = pickle.loads(data)
-                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
-                    resource_msgs.put((msg, addr))
-                    last_msg_received_time = time.time()
-                except socket.timeout:
-                    pass
-
-            self.logger.info("Monitoring router finishing normally")
+            self.logger.info("ZMQ listener finishing normally")
         finally:
-            self.logger.info("Monitoring router finished")
+            self.logger.info("ZMQ listener finished")
 
 
 @wrap_with_logs
-def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
-                   exception_q: "queue.Queue[Tuple[str, str]]",
-                   priority_msgs: "queue.Queue[AddressedMonitoringMessage]",
-                   node_msgs: "queue.Queue[AddressedMonitoringMessage]",
-                   block_msgs: "queue.Queue[AddressedMonitoringMessage]",
-                   resource_msgs: "queue.Queue[AddressedMonitoringMessage]",
+@typeguard.typechecked
+def router_starter(*,
+                   comm_q: mpq.Queue,
+                   exception_q: mpq.Queue,
+                   resource_msgs: mpq.Queue,
                    exit_event: Event,
 
                    hub_address: str,
                    udp_port: Optional[int],
                    zmq_port_range: Tuple[int, int],
 
-                   logdir: str,
-                   logging_level: int,
-                   run_id: str) -> None:
+                   run_dir: str,
+                   logging_level: int) -> None:
     setproctitle("parsl: monitoring router")
     try:
         router = MonitoringRouter(hub_address=hub_address,
                                   udp_port=udp_port,
                                   zmq_port_range=zmq_port_range,
-                                  logdir=logdir,
+                                  run_dir=run_dir,
                                   logging_level=logging_level,
-                                  run_id=run_id)
+                                  resource_msgs=resource_msgs,
+                                  exit_event=exit_event)
     except Exception as e:
         logger.error("MonitoringRouter construction failed.", exc_info=True)
         comm_q.put(f"Monitoring router construction failed: {e}")
@@ -200,7 +206,7 @@ def router_starter(comm_q: "queue.Queue[Union[Tuple[int, int], str]]",
 
         router.logger.info("Starting MonitoringRouter in router_starter")
         try:
-            router.start(priority_msgs, node_msgs, block_msgs, resource_msgs, exit_event)
+            router.start()
         except Exception as e:
             router.logger.exception("router.start exception")
             exception_q.put(('Hub', str(e)))

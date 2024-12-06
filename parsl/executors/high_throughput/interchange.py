@@ -6,8 +6,6 @@ import os
 import pickle
 import platform
 import queue
-import random
-import signal
 import sys
 import threading
 import time
@@ -16,10 +14,14 @@ from typing import Any, Dict, List, NoReturn, Optional, Sequence, Set, Tuple, ca
 import zmq
 
 from parsl import curvezmq
+from parsl.addresses import tcp_url
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import ManagerLost, VersionMismatch
 from parsl.executors.high_throughput.manager_record import ManagerRecord
+from parsl.executors.high_throughput.manager_selector import ManagerSelector
 from parsl.monitoring.message_type import MessageType
+from parsl.monitoring.radios.base import MonitoringRadioSender
+from parsl.monitoring.radios.zmq import ZMQRadioSender
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize as serialize_object
 from parsl.utils import setproctitle
@@ -53,6 +55,8 @@ class Interchange:
                  logging_level: int,
                  poll_period: int,
                  cert_dir: Optional[str],
+                 manager_selector: ManagerSelector,
+                 run_id: str,
                  ) -> None:
         """
         Parameters
@@ -64,7 +68,7 @@ class Interchange:
              If specified the interchange will only listen on this address for connections from workers
              else, it binds to all addresses.
 
-        client_ports : triple(int, int, int)
+        client_ports : tuple(int, int, int)
              The ports at which the client can be reached
 
         worker_ports : tuple(int, int)
@@ -102,7 +106,6 @@ class Interchange:
         os.makedirs(self.logdir, exist_ok=True)
 
         start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
-        logger.propagate = False
         logger.debug("Initializing Interchange process")
 
         self.client_address = client_address
@@ -114,14 +117,16 @@ class Interchange:
         self.zmq_context = curvezmq.ServerContext(self.cert_dir)
         self.task_incoming = self.zmq_context.socket(zmq.DEALER)
         self.task_incoming.set_hwm(0)
-        self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
+        self.task_incoming.connect(tcp_url(client_address, client_ports[0]))
         self.results_outgoing = self.zmq_context.socket(zmq.DEALER)
         self.results_outgoing.set_hwm(0)
-        self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
+        self.results_outgoing.connect(tcp_url(client_address, client_ports[1]))
 
         self.command_channel = self.zmq_context.socket(zmq.REP)
-        self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
+        self.command_channel.connect(tcp_url(client_address, client_ports[2]))
         logger.info("Connected to client")
+
+        self.run_id = run_id
 
         self.hub_address = hub_address
         self.hub_zmq_port = hub_zmq_port
@@ -141,14 +146,14 @@ class Interchange:
             self.worker_task_port = self.worker_ports[0]
             self.worker_result_port = self.worker_ports[1]
 
-            self.task_outgoing.bind(f"tcp://{self.interchange_address}:{self.worker_task_port}")
-            self.results_incoming.bind(f"tcp://{self.interchange_address}:{self.worker_result_port}")
+            self.task_outgoing.bind(tcp_url(self.interchange_address, self.worker_task_port))
+            self.results_incoming.bind(tcp_url(self.interchange_address, self.worker_result_port))
 
         else:
-            self.worker_task_port = self.task_outgoing.bind_to_random_port(f"tcp://{self.interchange_address}",
+            self.worker_task_port = self.task_outgoing.bind_to_random_port(tcp_url(self.interchange_address),
                                                                            min_port=worker_port_range[0],
                                                                            max_port=worker_port_range[1], max_tries=100)
-            self.worker_result_port = self.results_incoming.bind_to_random_port(f"tcp://{self.interchange_address}",
+            self.worker_result_port = self.results_incoming.bind_to_random_port(tcp_url(self.interchange_address),
                                                                                 min_port=worker_port_range[0],
                                                                                 max_port=worker_port_range[1], max_tries=100)
 
@@ -159,6 +164,8 @@ class Interchange:
         self.connected_block_history: List[str] = []
 
         self.heartbeat_threshold = heartbeat_threshold
+
+        self.manager_selector = manager_selector
 
         self.current_platform = {'parsl_v': PARSL_VERSION,
                                  'python_v': "{}.{}.{}".format(sys.version_info.major,
@@ -216,27 +223,16 @@ class Interchange:
             task_counter += 1
             logger.debug(f"Fetched {task_counter} tasks so far")
 
-    def _create_monitoring_channel(self) -> Optional[zmq.Socket]:
-        if self.hub_address and self.hub_zmq_port:
-            logger.info("Connecting to MonitoringHub")
-            # This is a one-off because monitoring is unencrypted
-            hub_channel = zmq.Context().socket(zmq.DEALER)
-            hub_channel.set_hwm(0)
-            hub_channel.connect("tcp://{}:{}".format(self.hub_address, self.hub_zmq_port))
-            logger.info("Connected to MonitoringHub")
-            return hub_channel
-        else:
-            return None
-
-    def _send_monitoring_info(self, hub_channel: Optional[zmq.Socket], manager: ManagerRecord) -> None:
-        if hub_channel:
+    def _send_monitoring_info(self, monitoring_radio: Optional[MonitoringRadioSender], manager: ManagerRecord) -> None:
+        if monitoring_radio:
             logger.info("Sending message {} to MonitoringHub".format(manager))
 
             d: Dict = cast(Dict, manager.copy())
             d['timestamp'] = datetime.datetime.now()
             d['last_heartbeat'] = datetime.datetime.fromtimestamp(d['last_heartbeat'])
+            d['run_id'] = self.run_id
 
-            hub_channel.send_pyobj((MessageType.NODE_INFO, d))
+            monitoring_radio.send((MessageType.NODE_INFO, d))
 
     @wrap_with_logs(target="interchange")
     def _command_server(self) -> NoReturn:
@@ -244,8 +240,11 @@ class Interchange:
         """
         logger.debug("Command Server Starting")
 
-        # Need to create a new ZMQ socket for command server thread
-        hub_channel = self._create_monitoring_channel()
+        if self.hub_address is not None and self.hub_zmq_port is not None:
+            logger.debug("Creating monitoring radio to %s:%s", self.hub_address, self.hub_zmq_port)
+            monitoring_radio = ZMQRadioSender(self.hub_address, self.hub_zmq_port)
+        else:
+            monitoring_radio = None
 
         reply: Any  # the type of reply depends on the command_req received (aka this needs dependent types...)
 
@@ -253,13 +252,7 @@ class Interchange:
             try:
                 command_req = self.command_channel.recv_pyobj()
                 logger.debug("Received command request: {}".format(command_req))
-                if command_req == "OUTSTANDING_C":
-                    outstanding = self.pending_task_queue.qsize()
-                    for manager in self._ready_managers.values():
-                        outstanding += len(manager['tasks'])
-                    reply = outstanding
-
-                elif command_req == "CONNECTED_BLOCKS":
+                if command_req == "CONNECTED_BLOCKS":
                     reply = self.connected_block_history
 
                 elif command_req == "WORKERS":
@@ -295,7 +288,7 @@ class Interchange:
                     if manager_id in self._ready_managers:
                         m = self._ready_managers[manager_id]
                         m['active'] = False
-                        self._send_monitoring_info(hub_channel, m)
+                        self._send_monitoring_info(monitoring_radio, m)
                     else:
                         logger.warning("Worker to hold was not in ready managers list")
 
@@ -320,19 +313,14 @@ class Interchange:
         """ Start the interchange
         """
 
-        # If a user workflow has set its own signal handler for sigterm, that
-        # handler will be inherited by the interchange process because it is
-        # launched as a multiprocessing fork process.
-        # That can interfere with the interchange shutdown mechanism, which is
-        # to receive a SIGTERM and exit immediately.
-        # See Parsl issue #2343 (Threads and multiprocessing cannot be
-        # intermingled without deadlocks) which talks about other fork-related
-        # parent-process-inheritance problems.
-        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        logger.info("Starting main interchange method")
 
-        logger.info("Incoming ports bound")
-
-        hub_channel = self._create_monitoring_channel()
+        if self.hub_address is not None and self.hub_zmq_port is not None:
+            logger.debug("Creating monitoring radio to %s:%s", self.hub_address, self.hub_zmq_port)
+            monitoring_radio = ZMQRadioSender(self.hub_address, self.hub_zmq_port)
+            logger.debug("Created monitoring radio")
+        else:
+            monitoring_radio = None
 
         poll_period = self.poll_period
 
@@ -363,21 +351,21 @@ class Interchange:
         while not kill_event.is_set():
             self.socks = dict(poller.poll(timeout=poll_period))
 
-            self.process_task_outgoing_incoming(interesting_managers, hub_channel, kill_event)
-            self.process_results_incoming(interesting_managers, hub_channel)
-            self.expire_bad_managers(interesting_managers, hub_channel)
-            self.expire_drained_managers(interesting_managers, hub_channel)
+            self.process_task_outgoing_incoming(interesting_managers, monitoring_radio, kill_event)
+            self.process_results_incoming(interesting_managers, monitoring_radio)
+            self.expire_bad_managers(interesting_managers, monitoring_radio)
+            self.expire_drained_managers(interesting_managers, monitoring_radio)
             self.process_tasks_to_send(interesting_managers)
 
         self.zmq_context.destroy()
         delta = time.time() - start
-        logger.info("Processed {} tasks in {} seconds".format(self.count, delta))
+        logger.info(f"Processed {self.count} tasks in {delta} seconds")
         logger.warning("Exiting")
 
     def process_task_outgoing_incoming(
             self,
             interesting_managers: Set[bytes],
-            hub_channel: Optional[zmq.Socket],
+            monitoring_radio: Optional[MonitoringRadioSender],
             kill_event: threading.Event
     ) -> None:
         """Process one message from manager on the task_outgoing channel.
@@ -392,9 +380,8 @@ class Interchange:
             try:
                 msg = json.loads(message[1].decode('utf-8'))
             except Exception:
-                logger.warning("Got Exception reading message from manager: {!r}".format(
-                    manager_id), exc_info=True)
-                logger.debug("Message: \n{!r}\n".format(message[1]))
+                logger.warning(f"Got Exception reading message from manager: {manager_id!r}", exc_info=True)
+                logger.debug("Message:\n %r\n", message[1])
                 return
 
             # perform a bit of validation on the structure of the deserialized
@@ -402,7 +389,7 @@ class Interchange:
             # in obviously malformed cases
             if not isinstance(msg, dict) or 'type' not in msg:
                 logger.error(f"JSON message was not correctly formatted from manager: {manager_id!r}")
-                logger.debug("Message: \n{!r}\n".format(message[1]))
+                logger.debug("Message:\n %r\n", message[1])
                 return
 
             if msg['type'] == 'registration':
@@ -410,6 +397,7 @@ class Interchange:
                 self._ready_managers[manager_id] = {'last_heartbeat': time.time(),
                                                     'idle_since': time.time(),
                                                     'block_id': None,
+                                                    'start_time': msg['start_time'],
                                                     'max_capacity': 0,
                                                     'worker_count': 0,
                                                     'active': True,
@@ -420,7 +408,7 @@ class Interchange:
                 self.connected_block_history.append(msg['block_id'])
 
                 interesting_managers.add(manager_id)
-                logger.info("Adding manager: {!r} to ready queue".format(manager_id))
+                logger.info(f"Adding manager: {manager_id!r} to ready queue")
                 m = self._ready_managers[manager_id]
 
                 # m is a ManagerRecord, but msg is a dict[Any,Any] and so can
@@ -429,12 +417,12 @@ class Interchange:
                 # later.
                 m.update(msg)  # type: ignore[typeddict-item]
 
-                logger.info("Registration info for manager {!r}: {}".format(manager_id, msg))
-                self._send_monitoring_info(hub_channel, m)
+                logger.info(f"Registration info for manager {manager_id!r}: {msg}")
+                self._send_monitoring_info(monitoring_radio, m)
 
                 if (msg['python_v'].rsplit(".", 1)[0] != self.current_platform['python_v'].rsplit(".", 1)[0] or
                     msg['parsl_v'] != self.current_platform['parsl_v']):
-                    logger.error("Manager {!r} has incompatible version info with the interchange".format(manager_id))
+                    logger.error(f"Manager {manager_id!r} has incompatible version info with the interchange")
                     logger.debug("Setting kill event")
                     kill_event.set()
                     e = VersionMismatch("py.v={} parsl.v={}".format(self.current_platform['python_v'].rsplit(".", 1)[0],
@@ -447,21 +435,24 @@ class Interchange:
                     self.results_outgoing.send(pkl_package)
                     logger.error("Sent failure reports, shutting down interchange")
                 else:
-                    logger.info("Manager {!r} has compatible Parsl version {}".format(manager_id, msg['parsl_v']))
-                    logger.info("Manager {!r} has compatible Python version {}".format(manager_id,
-                                                                                       msg['python_v'].rsplit(".", 1)[0]))
+                    logger.info(f"Manager {manager_id!r} has compatible Parsl version {msg['parsl_v']}")
+                    logger.info(f"Manager {manager_id!r} has compatible Python version {msg['python_v'].rsplit('.', 1)[0]}")
             elif msg['type'] == 'heartbeat':
-                self._ready_managers[manager_id]['last_heartbeat'] = time.time()
-                logger.debug("Manager {!r} sent heartbeat via tasks connection".format(manager_id))
-                self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
+                manager = self._ready_managers.get(manager_id)
+                if manager:
+                    manager['last_heartbeat'] = time.time()
+                    logger.debug("Manager %r sent heartbeat via tasks connection", manager_id)
+                    self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
+                else:
+                    logger.warning("Received heartbeat via tasks connection for not-registered manager %r", manager_id)
             elif msg['type'] == 'drain':
                 self._ready_managers[manager_id]['draining'] = True
-                logger.debug(f"Manager {manager_id!r} requested drain")
+                logger.debug("Manager %r requested drain", manager_id)
             else:
                 logger.error(f"Unexpected message type received from manager: {msg['type']}")
             logger.debug("leaving task_outgoing section")
 
-    def expire_drained_managers(self, interesting_managers: Set[bytes], hub_channel: Optional[zmq.Socket]) -> None:
+    def expire_drained_managers(self, interesting_managers: Set[bytes], monitoring_radio: Optional[MonitoringRadioSender]) -> None:
 
         for manager_id in list(interesting_managers):
             # is it always true that a draining manager will be in interesting managers?
@@ -474,18 +465,19 @@ class Interchange:
                 self._ready_managers.pop(manager_id)
 
                 m['active'] = False
-                self._send_monitoring_info(hub_channel, m)
+                self._send_monitoring_info(monitoring_radio, m)
 
     def process_tasks_to_send(self, interesting_managers: Set[bytes]) -> None:
         # Check if there are tasks that could be sent to managers
 
-        logger.debug("Managers count (interesting/total): {interesting}/{total}".format(
-            total=len(self._ready_managers),
-            interesting=len(interesting_managers)))
+        logger.debug(
+            "Managers count (interesting/total): %d/%d",
+            len(interesting_managers),
+            len(self._ready_managers)
+        )
 
         if interesting_managers and not self.pending_task_queue.empty():
-            shuffled_managers = list(interesting_managers)
-            random.shuffle(shuffled_managers)
+            shuffled_managers = self.manager_selector.sort_managers(self._ready_managers, interesting_managers)
 
             while shuffled_managers and not self.pending_task_queue.empty():  # cf. the if statement above...
                 manager_id = shuffled_managers.pop()
@@ -493,7 +485,7 @@ class Interchange:
                 tasks_inflight = len(m['tasks'])
                 real_capacity = m['max_capacity'] - tasks_inflight
 
-                if (real_capacity and m['active'] and not m['draining']):
+                if real_capacity and m["active"] and not m["draining"]:
                     tasks = self.get_tasks(real_capacity)
                     if tasks:
                         self.task_outgoing.send_multipart([manager_id, b'', pickle.dumps(tasks)])
@@ -502,31 +494,31 @@ class Interchange:
                         tids = [t['task_id'] for t in tasks]
                         m['tasks'].extend(tids)
                         m['idle_since'] = None
-                        logger.debug("Sent tasks: {} to manager {!r}".format(tids, manager_id))
+                        logger.debug("Sent tasks: %s to manager %r", tids, manager_id)
                         # recompute real_capacity after sending tasks
                         real_capacity = m['max_capacity'] - tasks_inflight
                         if real_capacity > 0:
-                            logger.debug("Manager {!r} has free capacity {}".format(manager_id, real_capacity))
+                            logger.debug("Manager %r has free capacity %s", manager_id, real_capacity)
                             # ... so keep it in the interesting_managers list
                         else:
-                            logger.debug("Manager {!r} is now saturated".format(manager_id))
+                            logger.debug("Manager %r is now saturated", manager_id)
                             interesting_managers.remove(manager_id)
                 else:
                     interesting_managers.remove(manager_id)
                     # logger.debug("Nothing to send to manager {}".format(manager_id))
-            logger.debug("leaving _ready_managers section, with {} managers still interesting".format(len(interesting_managers)))
+            logger.debug("leaving _ready_managers section, with %s managers still interesting", len(interesting_managers))
         else:
             logger.debug("either no interesting managers or no tasks, so skipping manager pass")
 
-    def process_results_incoming(self, interesting_managers: Set[bytes], hub_channel: Optional[zmq.Socket]) -> None:
+    def process_results_incoming(self, interesting_managers: Set[bytes], monitoring_radio: Optional[MonitoringRadioSender]) -> None:
         # Receive any results and forward to client
         if self.results_incoming in self.socks and self.socks[self.results_incoming] == zmq.POLLIN:
             logger.debug("entering results_incoming section")
             manager_id, *all_messages = self.results_incoming.recv_multipart()
             if manager_id not in self._ready_managers:
-                logger.warning("Received a result from a un-registered manager: {!r}".format(manager_id))
+                logger.warning(f"Received a result from a un-registered manager: {manager_id!r}")
             else:
-                logger.debug(f"Got {len(all_messages)} result items in batch from manager {manager_id!r}")
+                logger.debug("Got %s result items in batch from manager %r", len(all_messages), manager_id)
 
                 b_messages = []
 
@@ -538,16 +530,15 @@ class Interchange:
                     elif r['type'] == 'monitoring':
                         # the monitoring code makes the assumption that no
                         # monitoring messages will be received if monitoring
-                        # is not configured, and that hub_channel will only
+                        # is not configured, and that monitoring_radio will only
                         # be None when monitoring is not configurated.
-                        assert hub_channel is not None
+                        assert monitoring_radio is not None
 
-                        hub_channel.send_pyobj(r['payload'])
+                        monitoring_radio.send(r['payload'])
                     elif r['type'] == 'heartbeat':
-                        logger.debug(f"Manager {manager_id!r} sent heartbeat via results connection")
-                        b_messages.append((p_message, r))
+                        logger.debug("Manager %r sent heartbeat via results connection", manager_id)
                     else:
-                        logger.error("Interchange discarding result_queue message of unknown type: {}".format(r['type']))
+                        logger.error("Interchange discarding result_queue message of unknown type: %s", r["type"])
 
                 got_result = False
                 m = self._ready_managers[manager_id]
@@ -556,14 +547,16 @@ class Interchange:
                     if r['type'] == 'result':
                         got_result = True
                         try:
-                            logger.debug(f"Removing task {r['task_id']} from manager record {manager_id!r}")
+                            logger.debug("Removing task %s from manager record %r", r["task_id"], manager_id)
                             m['tasks'].remove(r['task_id'])
                         except Exception:
                             # If we reach here, there's something very wrong.
-                            logger.exception("Ignoring exception removing task_id {} for manager {!r} with task list {}".format(
+                            logger.exception(
+                                "Ignoring exception removing task_id %s for manager %r with task list %s",
                                 r['task_id'],
                                 manager_id,
-                                m['tasks']))
+                                m["tasks"]
+                            )
 
                 b_messages_to_send = []
                 for (b_message, _) in b_messages:
@@ -574,7 +567,7 @@ class Interchange:
                     self.results_outgoing.send_multipart(b_messages_to_send)
                     logger.debug("Sent messages on results_outgoing")
 
-                logger.debug(f"Current tasks on manager {manager_id!r}: {m['tasks']}")
+                logger.debug("Current tasks on manager %r: %s", manager_id, m["tasks"])
                 if len(m['tasks']) == 0 and m['idle_since'] is None:
                     m['idle_since'] = time.time()
 
@@ -586,7 +579,7 @@ class Interchange:
                     interesting_managers.add(manager_id)
             logger.debug("leaving results_incoming section")
 
-    def expire_bad_managers(self, interesting_managers: Set[bytes], hub_channel: Optional[zmq.Socket]) -> None:
+    def expire_bad_managers(self, interesting_managers: Set[bytes], monitoring_radio: Optional[MonitoringRadioSender]) -> None:
         bad_managers = [(manager_id, m) for (manager_id, m) in self._ready_managers.items() if
                         time.time() - m['last_heartbeat'] > self.heartbeat_threshold]
         for (manager_id, m) in bad_managers:
@@ -594,7 +587,7 @@ class Interchange:
             logger.warning(f"Too many heartbeats missed for manager {manager_id!r} - removing manager")
             if m['active']:
                 m['active'] = False
-                self._send_monitoring_info(hub_channel, m)
+                self._send_monitoring_info(monitoring_radio, m)
 
             logger.warning(f"Cancelling htex tasks {m['tasks']} on removed manager")
             for tid in m['tasks']:

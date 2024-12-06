@@ -16,8 +16,8 @@ executor to run code on the local submitting host, while another executor can
 run the same code on a large supercomputer.
 
 
-Providers, Launchers and Channels
----------------------------------
+Providers and Launchers
+-----------------------
 Some executors are based on blocks of workers (for example the
 `parsl.executors.HighThroughputExecutor`: the submit side requires a
 batch system (eg slurm, kubernetes) to start worker processes, which then
@@ -33,11 +33,6 @@ A `Launcher` modifies that command line when run inside the allocation to
 add on any wrappers that are needed to launch the command (eg srun inside
 slurm). Providers and launchers are usually paired together for a particular
 system type.
-
-A `Channel` allows the commands used to interact with an `ExecutionProvider` to be
-executed on a remote system. The default channel executes commands on the
-local system, but a few variants of an `parsl.channels.SSHChannel` are provided.
-
 
 File staging
 ------------
@@ -102,3 +97,10 @@ such as tuples, lists, sets and dicts.
 This plugin interface might be used to interface other task-like or future-like
 objects to the Parsl dependency mechanism, by describing how they can be
 interpreted as a Future.
+
+Removed interfaces
+------------------
+
+Parsl had a deprecated ``Channel`` abstraction. See
+`issue 3515 <https://github.com/Parsl/parsl/issues/3515>`_
+for further discussion on its removal.

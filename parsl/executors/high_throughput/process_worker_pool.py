@@ -9,6 +9,7 @@ import os
 import pickle
 import platform
 import queue
+import subprocess
 import sys
 import threading
 import time
@@ -21,7 +22,9 @@ import psutil
 import zmq
 
 from parsl import curvezmq
+from parsl.addresses import tcp_url
 from parsl.app.errors import RemoteExceptionWrapper
+from parsl.executors.execute_task import execute_task
 from parsl.executors.high_throughput.errors import WorkerLost
 from parsl.executors.high_throughput.mpi_prefix_composer import (
     VALID_LAUNCHERS,
@@ -34,7 +37,7 @@ from parsl.executors.high_throughput.mpi_resource_management import (
 from parsl.executors.high_throughput.probe import probe_addresses
 from parsl.multiprocessing import SpawnContext
 from parsl.process_loggers import wrap_with_logs
-from parsl.serialize import serialize, unpack_res_spec_apply_message
+from parsl.serialize import serialize
 from parsl.version import VERSION as PARSL_VERSION
 
 HEARTBEAT_CODE = (2 ** 32) - 1
@@ -157,8 +160,8 @@ class Manager:
                 raise Exception("No viable address found")
             else:
                 logger.info("Connection to Interchange successful on {}".format(ix_address))
-                task_q_url = "tcp://{}:{}".format(ix_address, task_port)
-                result_q_url = "tcp://{}:{}".format(ix_address, result_port)
+                task_q_url = tcp_url(ix_address, task_port)
+                result_q_url = tcp_url(ix_address, result_port)
                 logger.info("Task url : {}".format(task_q_url))
                 logger.info("Result url : {}".format(result_q_url))
         except Exception:
@@ -183,6 +186,7 @@ class Manager:
 
         self.uid = uid
         self.block_id = block_id
+        self.start_time = time.time()
 
         self.enable_mpi_mode = enable_mpi_mode
         self.mpi_launcher = mpi_launcher
@@ -262,6 +266,7 @@ class Manager:
                'worker_count': self.worker_count,
                'uid': self.uid,
                'block_id': self.block_id,
+               'start_time': self.start_time,
                'prefetch_capacity': self.prefetch_capacity,
                'max_capacity': self.worker_count + self.prefetch_capacity,
                'os': platform.system(),
@@ -359,7 +364,7 @@ class Manager:
                 if tasks == HEARTBEAT_CODE:
                     logger.debug("Got heartbeat from interchange")
                 elif tasks == DRAINED_CODE:
-                    logger.info("Got fulled drained message from interchange - setting kill flag")
+                    logger.info("Got fully drained message from interchange - setting kill flag")
                     kill_event.set()
                 else:
                     task_recv_counter += len(tasks)
@@ -587,45 +592,13 @@ def update_resource_spec_env_vars(mpi_launcher: str, resource_spec: Dict, node_i
         os.environ[key] = prefix_table[key]
 
 
-def execute_task(bufs, mpi_launcher: Optional[str] = None):
-    """Deserialize the buffer and execute the task.
-
-    Returns the result or throws exception.
-    """
-    user_ns = locals()
-    user_ns.update({'__builtins__': __builtins__})
-
-    f, args, kwargs, resource_spec = unpack_res_spec_apply_message(bufs, user_ns, copy=False)
-
-    for varname in resource_spec:
-        envname = "PARSL_" + str(varname).upper()
-        os.environ[envname] = str(resource_spec[varname])
-
-    if resource_spec.get("MPI_NODELIST"):
-        worker_id = os.environ['PARSL_WORKER_RANK']
-        nodes_for_task = resource_spec["MPI_NODELIST"].split(',')
-        logger.info(f"Launching task on provisioned nodes: {nodes_for_task}")
-        assert mpi_launcher
-        update_resource_spec_env_vars(mpi_launcher,
-                                      resource_spec=resource_spec,
-                                      node_info=nodes_for_task)
-    # We might need to look into callability of the function from itself
-    # since we change it's name in the new namespace
-    prefix = "parsl_"
-    fname = prefix + "f"
-    argname = prefix + "args"
-    kwargname = prefix + "kwargs"
-    resultname = prefix + "result"
-
-    user_ns.update({fname: f,
-                    argname: args,
-                    kwargname: kwargs,
-                    resultname: resultname})
-
-    code = "{0} = {1}(*{2}, **{3})".format(resultname, fname,
-                                           argname, kwargname)
-    exec(code, user_ns, user_ns)
-    return user_ns.get(resultname)
+def _init_mpi_env(mpi_launcher: str, resource_spec: Dict):
+    node_list = resource_spec.get("MPI_NODELIST")
+    if node_list is None:
+        return
+    nodes_for_task = node_list.split(',')
+    logger.info(f"Launching task on provisioned nodes: {nodes_for_task}")
+    update_resource_spec_env_vars(mpi_launcher=mpi_launcher, resource_spec=resource_spec, node_info=nodes_for_task)
 
 
 @wrap_with_logs(target="worker_log")
@@ -647,14 +620,6 @@ def worker(
     debug: bool,
     mpi_launcher: str,
 ):
-    """
-
-    Put request token into queue
-    Get task from task_queue
-    Pop request from queue
-    Put result into result_queue
-    """
-
     # override the global logger inherited from the __main__ process (which
     # usually logs to manager.log) with one specific to this worker.
     global logger
@@ -733,7 +698,26 @@ def worker(
 
     # If desired, pin to accelerator
     if accelerator is not None:
-        os.environ["CUDA_VISIBLE_DEVICES"] = accelerator
+
+        # If CUDA devices, find total number of devices to allow for MPS
+        # See: https://developer.nvidia.com/system-management-interface
+        nvidia_smi_cmd = "nvidia-smi -L > /dev/null && nvidia-smi -L | wc -l"
+        nvidia_smi_ret = subprocess.run(nvidia_smi_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if nvidia_smi_ret.returncode == 0:
+            num_cuda_devices = int(nvidia_smi_ret.stdout.split()[0])
+        else:
+            num_cuda_devices = None
+
+        try:
+            if num_cuda_devices is not None:
+                procs_per_cuda_device = pool_size // num_cuda_devices
+                partitioned_accelerator = str(int(accelerator) // procs_per_cuda_device)  # multiple workers will share a GPU
+                os.environ["CUDA_VISIBLE_DEVICES"] = partitioned_accelerator
+                logger.info(f'Pinned worker to partitioned cuda device: {partitioned_accelerator}')
+            else:
+                os.environ["CUDA_VISIBLE_DEVICES"] = accelerator
+        except (TypeError, ValueError, ZeroDivisionError):
+            os.environ["CUDA_VISIBLE_DEVICES"] = accelerator
         os.environ["ROCR_VISIBLE_DEVICES"] = accelerator
         os.environ["ZE_AFFINITY_MASK"] = accelerator
         os.environ["ZE_ENABLE_PCI_ID_DEVICE_ORDER"] = '1'
@@ -772,8 +756,10 @@ def worker(
             ready_worker_count.value -= 1
         worker_enqueued = False
 
+        _init_mpi_env(mpi_launcher=mpi_launcher, resource_spec=req["resource_spec"])
+
         try:
-            result = execute_task(req['buffer'], mpi_launcher=mpi_launcher)
+            result = execute_task(req['buffer'])
             serialized_result = serialize(result, buffer_threshold=1000000)
         except Exception as e:
             logger.info('Caught an exception: {}'.format(e))

@@ -6,26 +6,32 @@ from typing import Dict
 import pytest
 
 import parsl
-from parsl import bash_app, python_app
-from parsl.executors.high_throughput.mpi_prefix_composer import (
-    MissingResourceSpecification,
-)
-from parsl.tests.configs.htex_local import fresh_config
+from parsl import Config, bash_app, python_app
+from parsl.executors import MPIExecutor
+from parsl.executors.errors import InvalidResourceSpecification
+from parsl.launchers import SimpleLauncher
+from parsl.providers import LocalProvider
 
 EXECUTOR_LABEL = "MPI_TEST"
 
 
 def local_setup():
-    config = fresh_config()
-    config.executors[0].label = EXECUTOR_LABEL
-    config.executors[0].max_workers_per_node = 2
-    config.executors[0].enable_mpi_mode = True
-    config.executors[0].mpi_launcher = "mpiexec"
 
     cwd = os.path.abspath(os.path.dirname(__file__))
     pbs_nodefile = os.path.join(cwd, "mocks", "pbs_nodefile")
 
-    config.executors[0].provider.worker_init = f"export PBS_NODEFILE={pbs_nodefile}"
+    config = Config(
+        executors=[
+            MPIExecutor(
+                label=EXECUTOR_LABEL,
+                max_workers_per_block=2,
+                mpi_launcher="mpiexec",
+                provider=LocalProvider(
+                    worker_init=f"export PBS_NODEFILE={pbs_nodefile}",
+                    launcher=SimpleLauncher()
+                )
+            )
+        ])
 
     parsl.load(config)
 
@@ -177,6 +183,6 @@ def test_simulated_load(rounds: int = 100):
 @pytest.mark.local
 def test_missing_resource_spec():
 
-    with pytest.raises(MissingResourceSpecification):
+    with pytest.raises(InvalidResourceSpecification):
         future = mock_app(sleep_dur=0.4)
         future.result(timeout=10)

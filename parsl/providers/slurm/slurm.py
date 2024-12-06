@@ -3,12 +3,10 @@ import math
 import os
 import re
 import time
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import typeguard
 
-from parsl.channels import LocalChannel
-from parsl.channels.base import Channel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.launchers.base import Launcher
@@ -20,7 +18,7 @@ from parsl.utils import RepresentationMixin, wtime_to_minutes
 logger = logging.getLogger(__name__)
 
 # From https://slurm.schedmd.com/sacct.html#SECTION_JOB-STATE-CODES
-translate_table = {
+sacct_translate_table = {
     'PENDING': JobState.PENDING,
     'RUNNING': JobState.RUNNING,
     'CANCELLED': JobState.CANCELLED,
@@ -35,6 +33,20 @@ translate_table = {
     'SUSPENDED': JobState.HELD,
     'PREEMPTED': JobState.TIMEOUT,
     'REQUEUED': JobState.PENDING
+}
+
+squeue_translate_table = {
+    'PD': JobState.PENDING,
+    'R': JobState.RUNNING,
+    'CA': JobState.CANCELLED,
+    'CF': JobState.PENDING,  # (configuring),
+    'CG': JobState.RUNNING,  # (completing),
+    'CD': JobState.COMPLETED,
+    'F': JobState.FAILED,  # (failed),
+    'TO': JobState.TIMEOUT,  # (timeout),
+    'NF': JobState.FAILED,  # (node failure),
+    'RV': JobState.FAILED,  # (revoked) and
+    'SE': JobState.FAILED   # (special exit state)
 }
 
 
@@ -56,11 +68,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         Slurm queue to place job in. If unspecified or ``None``, no queue slurm directive will be specified.
     constraint : str
         Slurm job constraint, often used to choose cpu or gpu type. If unspecified or ``None``, no constraint slurm directive will be added.
-    channel : Channel
-        Channel for accessing this provider. Possible channels include
-        :class:`~parsl.channels.LocalChannel` (the default),
-        :class:`~parsl.channels.SSHChannel`, or
-        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
+    clusters : str
+        Slurm cluster name, or comma seperated cluster list, used to choose between different clusters in a federated Slurm instance.
+        If unspecified or ``None``, no slurm directive for clusters will be added.
     nodes_per_block : int
         Nodes to provision per block.
     cores_per_node : int
@@ -96,7 +106,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
         :class:`~parsl.launchers.SrunLauncher`, or
         :class:`~parsl.launchers.AprunLauncher`
-    move_files : Optional[Bool]: should files be moved? by default, Parsl will try to move files.
     """
 
     @typeguard.typechecked
@@ -105,7 +114,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  account: Optional[str] = None,
                  qos: Optional[str] = None,
                  constraint: Optional[str] = None,
-                 channel: Channel = LocalChannel(),
+                 clusters: Optional[str] = None,
                  nodes_per_block: int = 1,
                  cores_per_node: Optional[int] = None,
                  mem_per_node: Optional[int] = None,
@@ -119,11 +128,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  worker_init: str = '',
                  cmd_timeout: int = 10,
                  exclusive: bool = True,
-                 move_files: bool = True,
                  launcher: Launcher = SingleNodeLauncher()):
         label = 'slurm'
         super().__init__(label,
-                         channel,
                          nodes_per_block,
                          init_blocks,
                          min_blocks,
@@ -137,10 +144,10 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         self.cores_per_node = cores_per_node
         self.mem_per_node = mem_per_node
         self.exclusive = exclusive
-        self.move_files = move_files
         self.account = account
         self.qos = qos
         self.constraint = constraint
+        self.clusters = clusters
         self.scheduler_options = scheduler_options + '\n'
         if exclusive:
             self.scheduler_options += "#SBATCH --exclusive\n"
@@ -152,9 +159,36 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             self.scheduler_options += "#SBATCH --qos={}\n".format(qos)
         if constraint:
             self.scheduler_options += "#SBATCH --constraint={}\n".format(constraint)
+        if clusters:
+            self.scheduler_options += "#SBATCH --clusters={}\n".format(clusters)
 
         self.regex_job_id = regex_job_id
         self.worker_init = worker_init + '\n'
+        # Check if sacct works and if not fall back to squeue
+        cmd = "sacct -X"
+        logger.debug("Executing %s", cmd)
+        retcode, stdout, stderr = self.execute_wait(cmd)
+        # If sacct fails it should return retcode=1 stderr="Slurm accounting storage is disabled"
+        logger.debug(f"sacct returned retcode={retcode} stderr={stderr}")
+        if retcode == 0:
+            logger.debug("using sacct to get job status")
+            _cmd = "sacct"
+            # Add clusters option to sacct if provided
+            if self.clusters:
+                _cmd += f" --clusters={self.clusters}"
+            # Using state%20 to get enough characters to not truncate output
+            # of the state. Without output can look like "<job_id>     CANCELLED+"
+            self._cmd = _cmd + " -X --noheader --format=jobid,state%20 --job '{0}'"
+            self._translate_table = sacct_translate_table
+        else:
+            logger.debug(f"sacct failed with retcode={retcode}")
+            logger.debug("falling back to using squeue to get job status")
+            _cmd = "squeue"
+            # Add clusters option to squeue if provided
+            if self.clusters:
+                _cmd += f" --clusters={self.clusters}"
+            self._cmd = _cmd + " --noheader --format='%i %t' --job '{0}'"
+            self._translate_table = squeue_translate_table
 
     def _status(self):
         '''Returns the status list for a list of job_ids
@@ -172,16 +206,14 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             logger.debug('No active jobs, skipping status update')
             return
 
-        # Using state%20 to get enough characters to not truncate output
-        # of the state. Without output can look like "<job_id>     CANCELLED+"
-        cmd = "sacct -X --noheader --format=jobid,state%20 --job '{0}'".format(job_id_list)
+        cmd = self._cmd.format(job_id_list)
         logger.debug("Executing %s", cmd)
         retcode, stdout, stderr = self.execute_wait(cmd)
-        logger.debug("sacct returned %s %s", stdout, stderr)
+        logger.debug("sacct/squeue returned %s %s", stdout, stderr)
 
         # Execute_wait failed. Do no update
         if retcode != 0:
-            logger.warning("sacct failed with non-zero exit code {}".format(retcode))
+            logger.warning("sacct/squeue failed with non-zero exit code {}".format(retcode))
             return
 
         jobs_missing = set(self.resources.keys())
@@ -193,9 +225,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             # For example "<job_id> CANCELLED by <user_id>"
             # This splits and ignores anything past the first two unpacked values
             job_id, slurm_state, *ignore = line.split()
-            if slurm_state not in translate_table:
+            if slurm_state not in self._translate_table:
                 logger.warning(f"Slurm status {slurm_state} is not recognized")
-            status = translate_table.get(slurm_state, JobState.UNKNOWN)
+            status = self._translate_table.get(slurm_state, JobState.UNKNOWN)
             logger.debug("Updating job {} with slurm status {} to parsl state {!s}".format(job_id, slurm_state, status))
             self.resources[job_id]['status'] = JobStatus(status,
                                                          stdout_path=self.resources[job_id]['job_stdout_path'],
@@ -203,9 +235,10 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             jobs_missing.remove(job_id)
 
         # sacct can get job info after jobs have completed so this path shouldn't be hit
-        # log a warning if there are missing jobs for some reason
+        # squeue does not report on jobs that are not running. So we are filling in the
+        # blanks for missing jobs, we might lose some information about why the jobs failed.
         for missing_job in jobs_missing:
-            logger.warning("Updating missing job {} to completed status".format(missing_job))
+            logger.debug("Updating missing job {} to completed status".format(missing_job))
             self.resources[missing_job]['status'] = JobStatus(
                 JobState.COMPLETED, stdout_path=self.resources[missing_job]['job_stdout_path'],
                 stderr_path=self.resources[missing_job]['job_stderr_path'])
@@ -247,8 +280,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         logger.debug("Requesting one block with {} nodes".format(self.nodes_per_block))
 
-        job_config = {}
-        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config: Dict[str, Any] = {}
+        job_config["submit_script_dir"] = self.script_dir
         job_config["nodes"] = self.nodes_per_block
         job_config["tasks_per_node"] = tasks_per_node
         job_config["walltime"] = wtime_to_minutes(self.walltime)
@@ -266,14 +299,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
 
-        if self.move_files:
-            logger.debug("moving files")
-            channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
-        else:
-            logger.debug("not moving files")
-            channel_script_path = script_path
-
-        retcode, stdout, stderr = self.execute_wait("sbatch {0}".format(channel_script_path))
+        retcode, stdout, stderr = self.execute_wait("sbatch {0}".format(script_path))
 
         if retcode == 0:
             for line in stdout.split('\n'):
@@ -317,7 +343,14 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = self.execute_wait("scancel {0}".format(job_id_list))
+
+        # Make the command to cancel jobs
+        _cmd = "scancel"
+        if self.clusters:
+            _cmd += f" --clusters={self.clusters}"
+        _cmd += " {0}"
+
+        retcode, stdout, stderr = self.execute_wait(_cmd.format(job_id_list))
         rets = None
         if retcode == 0:
             for jid in job_ids:

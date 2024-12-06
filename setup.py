@@ -21,7 +21,6 @@ extras_require = {
     ],
     'aws' : ['boto3'],
     'kubernetes' : ['kubernetes'],
-    'oauth_ssh' : ['oauth-ssh>=0.9'],
     'docs' : [
         'ipython<=8.6.0',
         'nbsphinx',
@@ -53,7 +52,7 @@ setup(
     include_package_data=True,
     package_data={'parsl': ['py.typed']},
     packages=find_packages(),
-    python_requires=">=3.8.0",
+    python_requires=">=3.9.0",
     install_requires=install_requires,
     scripts = ['parsl/executors/high_throughput/process_worker_pool.py',
                'parsl/executors/high_throughput/interchange.py',
@@ -70,7 +69,6 @@ setup(
         # Licence, must match with licence above
         'License :: OSI Approved :: Apache Software License',
         # Python versions supported
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',

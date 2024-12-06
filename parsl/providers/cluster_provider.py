@@ -6,6 +6,7 @@ from parsl.launchers.base import Launcher
 from parsl.launchers.errors import BadLauncher
 from parsl.providers.base import ExecutionProvider
 from parsl.providers.errors import SchedulerMissingArgs, ScriptPathError
+from parsl.utils import execute_wait
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +18,6 @@ class ClusterProvider(ExecutionProvider):
     ----------
       label : str
         Label for this provider.
-      channel : Channel
-        Channel for accessing this provider. Possible channels include
-        :class:`~parsl.channels.LocalChannel` (the default),
-        :class:`~parsl.channels.SSHChannel`, or
-        :class:`~parsl.channels.SSHInteractiveLoginChannel`.
       walltime : str
         Walltime requested per block in HH:MM:SS.
       launcher : Launcher
@@ -47,7 +43,6 @@ class ClusterProvider(ExecutionProvider):
 
     def __init__(self,
                  label,
-                 channel,
                  nodes_per_block,
                  init_blocks,
                  min_blocks,
@@ -58,7 +53,6 @@ class ClusterProvider(ExecutionProvider):
                  cmd_timeout=10):
 
         self._label = label
-        self.channel = channel
         self.nodes_per_block = nodes_per_block
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks
@@ -79,7 +73,7 @@ class ClusterProvider(ExecutionProvider):
         t = self.cmd_timeout
         if timeout is not None:
             t = timeout
-        return self.channel.execute_wait(cmd, t)
+        return execute_wait(cmd, t)
 
     def _write_submit_script(self, template, script_filename, job_name, configs):
         """Generate submit script and write it to a file.

@@ -58,7 +58,7 @@ def tmpd_cwd_session(pytestconfig):
 
     config = re.sub(r"[^A-z0-9_-]+", "_", pytestconfig.getoption('config')[0])
     cwd = pathlib.Path(os.getcwd())
-    pytest_dir = cwd / ".pytest"
+    pytest_dir = cwd / "pytest-parsl"
     pytest_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
 
     test_dir_prefix = "parsltest-"
@@ -145,10 +145,6 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
-        'sshd_required: Marks tests that require a SSHD'
-    )
-    config.addinivalue_line(
-        'markers',
         'multiple_cores_required: Marks tests that require multiple cores, such as htex affinity'
     )
     config.addinivalue_line(
@@ -162,6 +158,10 @@ def pytest_configure(config):
     config.addinivalue_line(
         'markers',
         'executor_supports_std_stream_tuples: Marks tests that require tuple support for stdout/stderr'
+    )
+    config.addinivalue_line(
+        'markers',
+        'shared_fs: Marks tests that require a shared_fs between the workers are the test client'
     )
 
 

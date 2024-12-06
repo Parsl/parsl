@@ -6,7 +6,6 @@ import datetime
 import inspect
 import logging
 import os
-import pathlib
 import pickle
 import random
 import sys
@@ -25,7 +24,6 @@ from typeguard import typechecked
 import parsl
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.app.futures import DataFuture
-from parsl.channels import Channel
 from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
@@ -49,7 +47,6 @@ from parsl.monitoring import MonitoringHub
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.remote import monitor_wrapper
 from parsl.process_loggers import wrap_with_logs
-from parsl.providers.base import ExecutionProvider
 from parsl.usage_tracking.usage import UsageTracker
 from parsl.utils import Timer, get_all_checkpoints, get_std_fname_mode, get_version
 
@@ -113,14 +110,8 @@ class DataFlowKernel:
         self.monitoring: Optional[MonitoringHub]
         self.monitoring = config.monitoring
 
-        # hub address and port for interchange to connect
-        self.hub_address = None  # type: Optional[str]
-        self.hub_zmq_port = None  # type: Optional[int]
         if self.monitoring:
-            if self.monitoring.logdir is None:
-                self.monitoring.logdir = self.run_dir
-            self.hub_address = self.monitoring.hub_address
-            self.hub_zmq_port = self.monitoring.start(self.run_id, self.run_dir, self.config.run_dir)
+            self.monitoring.start(self.run_dir, self.config.run_dir)
 
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
@@ -166,8 +157,8 @@ class DataFlowKernel:
         }
 
         if self.monitoring:
-            self.monitoring.send(MessageType.WORKFLOW_INFO,
-                                 workflow_info)
+            self.monitoring.send((MessageType.WORKFLOW_INFO,
+                                 workflow_info))
 
         if config.checkpoint_files is not None:
             checkpoints = self.load_checkpoints(config.checkpoint_files)
@@ -242,7 +233,7 @@ class DataFlowKernel:
     def _send_task_log_info(self, task_record: TaskRecord) -> None:
         if self.monitoring:
             task_log_info = self._create_task_log_info(task_record)
-            self.monitoring.send(MessageType.TASK_INFO, task_log_info)
+            self.monitoring.send((MessageType.TASK_INFO, task_log_info))
 
     def _create_task_log_info(self, task_record: TaskRecord) -> Dict[str, Any]:
         """
@@ -991,7 +982,7 @@ class DataFlowKernel:
             - app_kwargs (dict) : Rest of the kwargs to the fn passed as dict.
 
         Returns:
-               (AppFuture) [DataFutures,]
+            AppFuture
 
         """
 
@@ -1147,55 +1138,18 @@ class DataFlowKernel:
 
         logger.info("End of summary")
 
-    def _create_remote_dirs_over_channel(self, provider: ExecutionProvider, channel: Channel) -> None:
-        """Create script directories across a channel
-
-        Parameters
-        ----------
-        provider: Provider obj
-           Provider for which scripts dirs are being created
-        channel: Channel obj
-           Channel over which the remote dirs are to be created
-        """
-        run_dir = self.run_dir
-        if channel.script_dir is None:
-
-            # This case will be detected as unreachable by mypy, because of
-            # the type of script_dir, which is str, not Optional[str].
-            # The type system doesn't represent the initialized/uninitialized
-            # state of a channel so cannot represent that a channel needs
-            # its script directory set or not.
-
-            channel.script_dir = os.path.join(run_dir, 'submit_scripts')  # type: ignore[unreachable]
-
-            # Only create dirs if we aren't on a shared-fs
-            if not channel.isdir(run_dir):
-                parent, child = pathlib.Path(run_dir).parts[-2:]
-                remote_run_dir = os.path.join(parent, child)
-                channel.script_dir = os.path.join(remote_run_dir, 'remote_submit_scripts')
-                provider.script_dir = os.path.join(run_dir, 'local_submit_scripts')
-
-        channel.makedirs(channel.script_dir, exist_ok=True)
-
     def add_executors(self, executors: Sequence[ParslExecutor]) -> None:
         for executor in executors:
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
-            executor.hub_address = self.hub_address
-            executor.hub_zmq_port = self.hub_zmq_port
             if self.monitoring:
-                executor.monitoring_radio = self.monitoring.radio
+                executor.hub_address = self.monitoring.hub_address
+                executor.hub_zmq_port = self.monitoring.hub_zmq_port
+                executor.submit_monitoring_radio = self.monitoring.radio
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
                     os.makedirs(executor.provider.script_dir, exist_ok=True)
-
-                    if hasattr(executor.provider, 'channels'):
-                        logger.debug("Creating script_dir across multiple channels")
-                        for channel in executor.provider.channels:
-                            self._create_remote_dirs_over_channel(executor.provider, channel)
-                    else:
-                        self._create_remote_dirs_over_channel(executor.provider, executor.provider.channel)
 
             self.executors[executor.label] = executor
             executor.start()
@@ -1282,12 +1236,12 @@ class DataFlowKernel:
 
         if self.monitoring:
             logger.info("Sending final monitoring message")
-            self.monitoring.send(MessageType.WORKFLOW_INFO,
+            self.monitoring.send((MessageType.WORKFLOW_INFO,
                                  {'tasks_failed_count': self.task_state_counts[States.failed],
                                   'tasks_completed_count': self.task_state_counts[States.exec_done],
                                   "time_began": self.time_began,
                                   'time_completed': self.time_completed,
-                                  'run_id': self.run_id, 'rundir': self.run_dir})
+                                  'run_id': self.run_id, 'rundir': self.run_dir}))
 
             logger.info("Terminating monitoring")
             self.monitoring.close()
@@ -1443,8 +1397,6 @@ class DataFlowKernel:
         Returns:
              - dict containing, hashed -> future mappings
         """
-        self.memo_lookup_table = None
-
         if checkpointDirs:
             return self._load_checkpoints(checkpointDirs)
         else:
