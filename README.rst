@@ -1,6 +1,6 @@
 Parsl - Parallel Scripting Library
 ==================================
-|licence| |docs| |NSF-1550588| |NSF-1550476| |NSF-1550562| |NSF-1550528| |CZI-EOSS|
+|licence| |docs| |NSF-1550588| |NSF-1550476| |NSF-1550562| |NSF-1550528| |NumFOCUS| |CZI-EOSS| 
 
 Parsl extends parallelism in Python beyond a single computer.
 
@@ -66,6 +66,9 @@ determine how to use parallelism best in your application.
 .. |CZI-EOSS| image:: https://chanzuckerberg.github.io/open-science/badges/CZI-EOSS.svg
    :target: https://czi.co/EOSS
    :alt: CZI's Essential Open Source Software for Science
+.. |NumFOCUS| image:: https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A
+    :target: https://numfocus.org
+    :alt: Powered by NumFOCUS
 
 
 Quickstart
