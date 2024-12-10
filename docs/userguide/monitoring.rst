@@ -62,7 +62,7 @@ The monitoring system can also be used to track file provenance. File provenance
 * What inputs were given to the task that created the file
 * What environment was used (e.g. the 'worker_init' entry from a :py:class:`~parsl.providers.ExecutionProvider`), not available with every provider.
 
-The purpose of the file provenance tracking is to provide a mechanism where the user can see exactly how a file was created and used in a workflow. This can be useful for debugging, understanding the workflow, for ensuring that the workflow is reproducible, and reviewing past work. The file provenance information is stored in the monitoring database and can be accessed using the ``parsl-visualize`` tool. To enable file provenance tracking, set the ``capture_file_provenance`` flag to ``True`` in the `parsl.monitoring.MonitoringHub` configuration.
+The purpose of the file provenance tracking is to provide a mechanism where the user can see exactly how a file was created and used in a workflow. This can be useful for debugging, understanding the workflow, for ensuring that the workflow is reproducible, and reviewing past work. The file provenance information is stored in the monitoring database and can be accessed using the ``parsl-visualize`` tool. To enable file provenance tracking, set the ``file_provenance`` flag to ``True`` in the `parsl.monitoring.MonitoringHub` configuration.
 
 This functionality also enables you to log informational messages from you scripts, to capture anything not automatically gathered. The main change to your code to use this functionality is to assign the return value of the ``parsl.load`` to a variable. Then use the ``log_info`` function to log the messages in the database. Note that this feature is only available in the main script, not inside Apps. Passing this vaiable, ``my_cfg`` in the example below to an App will have undefined behavior. The following example shows how to use this feature.
 
@@ -90,7 +90,7 @@ This functionality also enables you to log informational messages from you scrip
           hub_port=55055,
           monitoring_debug=False,
           resource_monitoring_interval=10,
-          capture_file_provenance=True,
+          file_provenance=True,
       ),
       strategy='none'
    )
