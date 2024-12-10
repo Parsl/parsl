@@ -6,9 +6,9 @@ Parsl extends parallelism in Python beyond a single computer.
 
 You can use Parsl
 `just like Python's parallel executors <https://parsl.readthedocs.io/en/stable/userguide/workflow.html#parallel-workflows-with-loops>`_
-but across *multiple cores and nodes*.
-However, the real power of Parsl is in expressing multi-step workflows of functions.
-Parsl lets you chain functions together and will launch each function as inputs and computing resources are available.
+but across *multiple cores and nodes*. However, the real power of Parsl is in expressing multi-step
+workflows of functions. Parsl lets you chain functions together and will launch each function as
+inputs and computing resources are available.
 
 .. code-block:: python
 
@@ -37,8 +37,10 @@ Parsl lets you chain functions together and will launch each function as inputs 
         assert future.result() == 7
 
 
-Start with the `configuration quickstart <https://parsl.readthedocs.io/en/stable/quickstart.html#getting-started>`_ to learn how to tell Parsl how to use your computing resource,
-then explore the `parallel computing patterns <https://parsl.readthedocs.io/en/stable/userguide/workflow.html>`_ to determine how to use parallelism best in your application.
+Start with the `configuration quickstart <https://parsl.readthedocs.io/en/stable/quickstart.html#getting-started>`_
+to learn how to tell Parsl how to use your computing resource, then explore the
+`parallel computing patterns <https://parsl.readthedocs.io/en/stable/userguide/workflow.html>`_ to
+determine how to use parallelism best in your application.
 
 .. |licence| image:: https://img.shields.io/badge/License-Apache%202.0-blue.svg
    :target: https://github.com/Parsl/parsl/blob/master/LICENSE
@@ -68,7 +70,7 @@ then explore the `parallel computing patterns <https://parsl.readthedocs.io/en/s
     :target: https://numfocus.org
     :alt: Powered by NumFOCUS
 
-   
+
 Quickstart
 ==========
 
@@ -80,16 +82,20 @@ To run the Parsl tutorial notebooks you will need to install Jupyter::
 
     $ pip3 install jupyter
 
-Detailed information about setting up Jupyter with Python is available `here <https://jupyter.readthedocs.io/en/latest/install.html>`_
+Detailed information about setting up Jupyter with Python is available
+`here <https://jupyter.readthedocs.io/en/latest/install.html>`_
 
-Note: Parsl uses an opt-in model to collect usage statistics for reporting and improvement purposes. To understand what stats are collected and enable collection please refer to the `usage tracking guide <http://parsl.readthedocs.io/en/stable/userguide/usage_tracking.html>`__
+Note: Parsl uses an opt-in model to collect usage statistics for reporting and improvement purposes.
+To understand what stats are collected and enable collection please refer to the
+`usage tracking guide <http://parsl.readthedocs.io/en/stable/userguide/usage_tracking.html>`__
 
 Documentation
 =============
 
 The complete parsl documentation is hosted `here <http://parsl.readthedocs.io/en/stable/>`_.
 
-The Parsl tutorial is hosted on live Jupyter notebooks `here <https://mybinder.org/v2/gh/Parsl/parsl-tutorial/master>`_
+The Parsl tutorial is hosted on live Jupyter notebooks
+`here <https://mybinder.org/v2/gh/Parsl/parsl-tutorial/master>`_
 
 
 For Developers
@@ -120,14 +126,18 @@ For Developers
 Requirements
 ============
 
-Parsl is supported in Python 3.9+. Requirements can be found `here <requirements.txt>`_. Requirements for running tests can be found `here <test-requirements.txt>`_.
+Parsl is supported in Python 3.9+. Requirements can be found `here <requirements.txt>`_.
+Requirements for running tests can be found `here <test-requirements.txt>`_.
 
 Code of Conduct
 ===============
 
-Parsl seeks to foster an open and welcoming environment - Please see the `Parsl Code of Conduct <https://github.com/Parsl/parsl?tab=coc-ov-file#parsl-code-of-conduct>`_ for more details.
+Parsl seeks to foster an open and welcoming environment - Please see the
+`Parsl Code of Conduct <https://github.com/Parsl/parsl?tab=coc-ov-file#parsl-code-of-conduct>`_ for
+more details.
 
 Contributing
 ============
 
-We welcome contributions from the community. Please see our `contributing guide <https://github.com/Parsl/parsl/blob/master/CONTRIBUTING.rst>`_.
+We welcome contributions from the community. Please see our
+`contributing guide <https://github.com/Parsl/parsl/blob/master/CONTRIBUTING.rst>`_.

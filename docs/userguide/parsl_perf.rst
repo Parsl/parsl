@@ -3,25 +3,20 @@
 Measuring performance with parsl-perf
 =====================================
 
-``parsl-perf`` is tool for making basic performance measurements of Parsl
-configurations.
+``parsl-perf`` is tool for making basic performance measurements of Parsl configurations.
 
-It runs increasingly large numbers of no-op apps until a batch takes
-(by default) 120 seconds, giving a measurement of tasks per second.
+It runs increasingly large numbers of no-op apps until a batch takes (by default) 120 seconds,
+giving a measurement of tasks per second.
 
-This can give a basic measurement of some of the overheads in task
-execution.
+This can give a basic measurement of some of the overheads in task execution.
 
-``parsl-perf`` must be invoked with a configuration file, which is a Python
-file containing a variable ``config`` which contains a `Config` object, or
-a function ``fresh_config`` which returns a `Config` object. The
-``fresh_config`` format is the same as used with the pytest test suite.
+``parsl-perf`` must be invoked with a configuration file, which is a Python file containing a
+variable ``config`` which contains a `Config` object, or a function ``fresh_config`` which returns a
+`Config` object. The ``fresh_config`` format is the same as used with the pytest test suite.
 
-To specify a ``parsl_resource_specification`` for tasks, add a ``--resources``
-argument.
+To specify a ``parsl_resource_specification`` for tasks, add a ``--resources`` argument.
 
-To change the target runtime from the default of 120 seconds, add a
-``--time`` parameter.
+To change the target runtime from the default of 120 seconds, add a ``--time`` parameter.
 
 For example:
 
@@ -50,4 +45,4 @@ For example:
     Tasks per second: 158.184
     Cleaning up DFK
     The end
-    
+

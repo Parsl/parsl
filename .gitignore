@@ -121,3 +121,7 @@ ENV/
 
 # emacs buffers
 \#*
+
+docs/stubs/
+
+docs/1-parsl-introduction.ipynb

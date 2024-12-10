@@ -13,8 +13,8 @@ Steps to release
    * ``parsl/README.rst``
 
 3. Commit and push the changes to github
-4. Run the ``tag_and_release.sh`` script. This script will verify that
-   version number matches the version specified.
+4. Run the ``tag_and_release.sh`` script. This script will verify that version number matches the
+   version specified.
 
    .. code:: bash
 
