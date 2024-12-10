@@ -11,6 +11,7 @@ from parsl.executors.taskvine import exec_parsl_function
 from parsl.executors.taskvine.utils import VineTaskToParsl, run_parsl_function
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
+from parsl.serialize import deserialize, serialize
 
 try:
     from ndcctools.taskvine import FunctionCall, Manager, Task, cvine
@@ -135,6 +136,20 @@ def _prepare_environment_regular(m, manager_config, t, task, poncho_env_to_file,
         t.add_environment(poncho_env_file)
 
 
+def _deserialize_object_from_file(path):
+    """Deserialize an object from a given file path."""
+    with open(path, 'rb') as f_in:
+        obj = deserialize(f_in.read())
+    return obj
+
+def _serialize_object_to_file(path, obj):
+    """Serialize an object to the given file path."""
+    serialized_obj = serialize(obj)
+    with open(path, 'wb') as f_out:
+        written = 0
+        while written < len(serialized_obj):
+            written += f_out.write(serialized_obj[written:])
+
 @wrap_with_logs
 def _taskvine_submit_wait(ready_task_queue=None,
                           finished_task_queue=None,
@@ -195,8 +210,9 @@ def _taskvine_submit_wait(ready_task_queue=None,
     # Declare helper script as cache-able and peer-transferable
     exec_parsl_function_file = m.declare_file(exec_parsl_function.__file__, cache=True, peer_transfer=True)
 
-    # Flag to make sure library for serverless tasks is declared and installed only once.
-    lib_installed = False
+    # Mapping from function names to library names
+    # This assumes that there's 1 library per function and vice versa (1-to-1 correspondence).
+    libs_installed = {}
 
     # Create cache dir for environment files
     env_cache_dir = os.path.join(manager_config.vine_log_dir, 'vine-cache', 'vine-poncho-env-cache')
@@ -220,6 +236,7 @@ def _taskvine_submit_wait(ready_task_queue=None,
             except queue.Empty:
                 logger.debug("Queue is empty")
                 continue
+
             if task.exec_mode == 'regular':
                 # Create command string
                 launch_cmd = "python3 exec_parsl_function.py {mapping} {function} {argument} {result}"
@@ -242,37 +259,43 @@ def _taskvine_submit_wait(ready_task_queue=None,
                                                                    status=-1))
                     continue
             elif task.exec_mode == 'serverless':
-                if not lib_installed:
-                    # Declare and install common library for serverless tasks.
+                if task.func_name not in libs_installed:
+                    # Declare and install one library for serverless tasks per category, and vice versa.
                     # Library requires an environment setup properly, which is
                     # different from setup of regular tasks.
                     # If shared_fs is True, then no environment preparation is done.
                     # Only the core serverless code is created.
                     poncho_env_path = _prepare_environment_serverless(manager_config, env_cache_dir, poncho_create_script)
 
+                    # Deserialize the function to add it to the library
+                    # This cost is paid only once per function/app.
+                    func = _deserialize_object_from_file(task.function_file)
+
                     # Don't automatically add environment so manager can declare and cache the vine file associated with the environment file
                     add_env = False
-                    serverless_lib = m.create_library_from_functions('common-parsl-taskvine-lib',
-                                                                     run_parsl_function,
+                    lib_name = f'{task.func_name}-lib'
+                    serverless_lib = m.create_library_from_functions(lib_name,
+                                                                     func,
                                                                      poncho_env=poncho_env_path,
                                                                      init_command=manager_config.init_command,
                                                                      add_env=add_env,
                                                                      hoisting_modules=[parsl.serialize, run_parsl_function])
+                                                                     exec_mode='direct')
 
                     # Configure the library if provided
                     if manager_config.library_config:
                         lib_cores = manager_config.library_config.get('cores', None)
                         lib_memory = manager_config.library_config.get('memory', None)
                         lib_disk = manager_config.library_config.get('disk', None)
-                        lib_slots = manager_config.library_config.get('num_slots', None)
+                        # 1 function call per library at any given moment
+                        lib_slots = manager_config.library_config.get('num_slots', 1)
                         if lib_cores:
                             serverless_lib.set_cores(lib_cores)
                         if lib_memory:
                             serverless_lib.set_memory(lib_memory)
                         if lib_disk:
                             serverless_lib.set_disk(lib_disk)
-                        if lib_slots:
-                            serverless_lib.set_function_slots(lib_slots)
+                        serverless_lib.set_function_slots(lib_slots)
 
                     if poncho_env_path:
                         serverless_lib_env_file = m.declare_poncho(poncho_env_path, cache=True, peer_transfer=True)
@@ -283,12 +306,15 @@ def _taskvine_submit_wait(ready_task_queue=None,
                         logger.debug('Created minimal library task with no environment.')
 
                     m.install_library(serverless_lib)
-                    lib_installed = True
+                    libs_installed[task.func_name] = lib_name
                 try:
-                    # run_parsl_function only needs remote names of map_file, function_file, argument_file,
-                    # and result_file, which are simply named map, function, argument, result.
-                    # These names are given when these files are declared below.
-                    t = FunctionCall('common-parsl-taskvine-lib', run_parsl_function.__name__, 'map', 'function', 'argument', 'result')
+                    # deserialize the arguments to the function call so they can be serialized again in TaskVine way.
+                    # this double serialization hurts the performance of the system, but there's no way around it at the moment. Mark as TODO for future work.
+                    all_args = _deserialize_object_from_file(task.argument_file)
+                    args = all_args['args']
+                    kwargs = all_args['kwargs']
+
+                    t = FunctionCall(libs_installed[task.func_name], task.func_name, *args, **kwargs)
                 except Exception as e:
                     logger.error("Unable to create executor task (mode:serverless): {}".format(e))
                     finished_task_queue.put_nowait(VineTaskToParsl(executor_id=task.executor_id,
@@ -344,18 +370,18 @@ def _taskvine_submit_wait(ready_task_queue=None,
                 # only needed to add as file for tasks with 'regular' mode
                 t.add_input(exec_parsl_function_file, "exec_parsl_function.py")
 
-            # Declare and add task-specific function, data, and result files to task
-            task_function_file = m.declare_file(task.function_file, cache=False, peer_transfer=False)
-            t.add_input(task_function_file, "function")
+                # Declare and add task-specific function, data, and result files to task
+                task_function_file = m.declare_file(task.function_file, cache=False, peer_transfer=False)
+                t.add_input(task_function_file, "function")
 
-            task_argument_file = m.declare_file(task.argument_file, cache=False, peer_transfer=False)
-            t.add_input(task_argument_file, "argument")
+                task_argument_file = m.declare_file(task.argument_file, cache=False, peer_transfer=False)
+                t.add_input(task_argument_file, "argument")
 
-            task_map_file = m.declare_file(task.map_file, cache=False, peer_transfer=False)
-            t.add_input(task_map_file, "map")
+                task_map_file = m.declare_file(task.map_file, cache=False, peer_transfer=False)
+                t.add_input(task_map_file, "map")
 
-            task_result_file = m.declare_file(task.result_file, cache=False, peer_transfer=False)
-            t.add_output(task_result_file, "result")
+                task_result_file = m.declare_file(task.result_file, cache=False, peer_transfer=False)
+                t.add_output(task_result_file, "result")
 
             result_file_of_task_id[str(task.executor_id)] = task.result_file
 
@@ -405,13 +431,14 @@ def _taskvine_submit_wait(ready_task_queue=None,
         # If the queue is not empty wait on the TaskVine queue for a task
         task_found = True
         while not m.empty() and task_found and not should_stop.is_set():
-            # Obtain the task from the queue
+            # Obtain a task from the queue
             t = m.wait(1)
             if t is None:
                 task_found = False
                 continue
             logger.debug('Found a task')
             executor_task_id = vine_id_to_executor_task_id[str(t.id)][0]
+            exec_mode = vine_id_to_executor_task_id[str(t.id)][1]
             vine_id_to_executor_task_id.pop(str(t.id))
 
             # When a task is found
@@ -419,12 +446,23 @@ def _taskvine_submit_wait(ready_task_queue=None,
 
             logger.debug(f"completed executor task info: {executor_task_id}, {t.category}, {t.command}, {t.std_output}")
 
+            # This serializes the result to a file again.
+            # Also a double serialization, mark as TODO.
+            is_serverless_output_ok = True
+            if exec_mode == "serverless":
+                try:
+                    if t.successful():
+                        _serialize_object_to_file(result_file, t.output)
+                except:
+                    is_serverless_output_ok = False
+
+
             # A tasks completes 'succesfully' if it has result file.
             # A check whether the Python object represented using this file can be
             # deserialized happens later in the collector thread of the executor
             # process.
             logger.debug("Looking for result in {}".format(result_file))
-            if os.path.exists(result_file):
+            if os.path.exists(result_file) and is_serverless_output_ok:
                 logger.debug("Found result in {}".format(result_file))
                 finished_task_queue.put_nowait(VineTaskToParsl(executor_id=executor_task_id,
                                                                result_received=True,
