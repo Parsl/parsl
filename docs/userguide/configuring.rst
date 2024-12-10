@@ -85,7 +85,7 @@ How to Configure
 
 .. note::
    All configuration examples below must be customized for the user's allocation, Python environment,
-file system, etc.
+   file system, etc.
 
 
 The configuration specifies what, and how, resources are to be used for executing the Parsl program
@@ -185,7 +185,7 @@ Stepping through the following question should help formulate a suitable configu
 
 .. note::
    If using a Cray system, you most likely need to use the `parsl.launchers.AprunLauncher` to launch
-workers unless you are on a **native Slurm** system like :ref:`configuring_nersc_cori`
+   workers unless you are on a **native Slurm** system like :ref:`configuring_nersc_cori`
 
 
 Heterogeneous Resources
@@ -285,8 +285,8 @@ Then add the following to your config:
 
 .. note::
    There will be a noticeable delay the first time Work Queue sees an app; it is creating and
-packaging a complete Python environment. This packaged environment is cached, so subsequent app
-invocations should be much faster.
+   packaging a complete Python environment. This packaged environment is cached, so subsequent app
+   invocations should be much faster.
 
 Using this approach, it is possible to run Parsl applications on nodes that don't have Python
 available at all. The packaged environment includes a Python interpreter, and Work Queue does not
@@ -294,8 +294,8 @@ require Python to run.
 
 .. note::
    The automatic packaging feature only supports packages installed via ``pip`` or ``conda``.
-Importing from other locations (e.g. via ``$PYTHONPATH``) or importing other modules in the same
-directory is not supported.
+   Importing from other locations (e.g. via ``$PYTHONPATH``) or importing other modules in the same
+   directory is not supported.
 
 
 Accelerators
@@ -454,10 +454,8 @@ connect to AWS.
 .. literalinclude:: ../../parsl/configs/ec2.py
 
 
-ASPIRE 1 (NSCC)
----------------
-
-.. image:: https://www.nscc.sg/wp-content/uploads/2017/04/ASPIRE1Img.png
+ASPIRE 1 (NSCC) (Decommissioned)
+--------------------------------
 
 The following snippet shows an example configuration for accessing NSCC's **ASPIRE 1** supercomputer.
 This example uses the `parsl.executors.HighThroughputExecutor` executor and connects to ASPIRE1's
@@ -635,13 +633,13 @@ Polaris uses `parsl.providers.PBSProProvider` and `parsl.launchers.MpiExecLaunch
 onto the HPC system.
 
 
-Stampede2 (TACC)
-----------------
+Stampede2 (TACC) (Decommissioned)
+---------------------------------
 
-.. image:: https://www.tacc.utexas.edu/documents/1084364/1413880/stampede2-0717.jpg/
+.. image:: https://tacc.utexas.edu/media/filer_public_thumbnails/filer_public/5d/7c/5d7cd2e7-b2a0-461c-9b91-ecb608e85884/stampede2.jpg__992x992_q85_subsampling-2.jpg
 
 The following snippet shows an example configuration for accessing TACC's **Stampede2**
-supercomputer. This example uses theHighThroughput executor and connects to Stampede2's Slurm
+supercomputer. This example uses the HighThroughput executor and connects to Stampede2's Slurm
 scheduler.
 
 .. literalinclude:: ../../parsl/configs/stampede2.py
