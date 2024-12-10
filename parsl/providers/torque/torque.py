@@ -2,7 +2,6 @@ import logging
 import os
 import time
 
-from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import AprunLauncher
 from parsl.providers.cluster_provider import ClusterProvider
@@ -33,8 +32,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
     Parameters
     ----------
-    channel : Channel
-        Channel for accessing this provider.
     account : str
         Account the job will be charged against.
     queue : str
@@ -65,7 +62,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
 
     """
     def __init__(self,
-                 channel=LocalChannel(),
                  account=None,
                  queue=None,
                  scheduler_options='',
@@ -80,7 +76,6 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                  cmd_timeout=120):
         label = 'torque'
         super().__init__(label,
-                         channel,
                          nodes_per_block,
                          init_blocks,
                          min_blocks,
@@ -170,8 +165,7 @@ class TorqueProvider(ClusterProvider, RepresentationMixin):
                      tasks_per_node)
 
         job_config = {}
-        # TODO : script_path might need to change to accommodate script dir set via channels
-        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config["submit_script_dir"] = self.script_dir
         job_config["nodes"] = self.nodes_per_block
         job_config["task_blocks"] = self.nodes_per_block * tasks_per_node
         job_config["nodes_per_block"] = self.nodes_per_block

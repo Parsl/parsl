@@ -11,18 +11,18 @@ DB = Any
 def input_files_for_task(workflow_id: Any, task_id: Any, db: DB) -> pd.DataFrame:
     return pd.read_sql_query("""
         SELECT *
-          FROM input_files, files
-         WHERE input_files.run_id='%s' AND input_files.task_id='%s'
-           AND input_files.file_id = files.file_id;
+          FROM input_file, file
+         WHERE input_file.run_id='%s' AND input_file.task_id='%s'
+           AND input_file.file_id = file.file_id;
         """ % (workflow_id, task_id), db)
 
 
 def output_files_for_task(workflow_id: Any, task_id: Any, db: DB) -> pd.DataFrame:
     return pd.read_sql_query("""
         SELECT *
-          FROM output_files, files
-         WHERE output_files.run_id='%s' AND output_files.task_id='%s'
-           AND output_files.file_id = files.file_id;
+          FROM output_file, file
+         WHERE output_file.run_id='%s' AND output_file.task_id='%s'
+           AND output_file.file_id = file.file_id;
         """ % (workflow_id, task_id), db)
 
 

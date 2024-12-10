@@ -14,6 +14,7 @@ import time
 from concurrent.futures import Future
 from functools import partial
 from getpass import getuser
+from hashlib import md5
 from socket import gethostname
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 from uuid import uuid4
@@ -112,6 +113,9 @@ class DataFlowKernel:
 
         if self.monitoring:
             self.monitoring.start(self.run_dir, self.config.run_dir)
+            self.file_provenance = self.monitoring.file_provenance
+        else:
+            self.file_provenance = False
 
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
@@ -301,7 +305,7 @@ class DataFlowKernel:
     def _send_file_log_info(self, file: Union[File, DataFuture],
                             task_record: TaskRecord, is_output: bool) -> None:
         """ Generate a message for the monitoring db about a file. """
-        if self.monitoring and self.monitoring.capture_file_provenance:
+        if self.monitoring and self.file_provenance:
             file_log_info = self._create_file_log_info(file, task_record)
             # make sure the task_id is None for inputs
             if not is_output:
@@ -311,8 +315,21 @@ class DataFlowKernel:
     def _create_file_log_info(self, file: Union[File, DataFuture],
                               task_record: TaskRecord) -> Dict[str, Any]:
         """
-        Create the dictionary that will be included in the ,omitoring db.
+        Create the dictionary that will be included in the monitoring db.
         """
+        # set file info if needed
+        if isinstance(file, DataFuture):
+            fo = file.file_obj
+        else:
+            fo = file
+        if fo.scheme == 'file' and os.path.isfile(fo.filepath):
+            if not fo.timestamp:
+                fo.timestamp = datetime.datetime.fromtimestamp(os.stat(fo.filepath).st_ctime, tz=datetime.timezone.utc)
+            if not fo.size:
+                fo.size = os.stat(fo.filepath).st_size
+            if not fo.md5sum:
+                fo.md5sum = md5(open(fo, 'rb').read()).hexdigest()
+
         file_log_info = {'file_name': file.filename,
                          'file_id': str(file.uuid),
                          'run_id': self.run_id,
@@ -327,7 +344,7 @@ class DataFlowKernel:
     def register_as_input(self, f: Union[File, DataFuture],
                           task_record: TaskRecord):
         """ Register a file as an input to a task. """
-        if self.monitoring and self.monitoring.capture_file_provenance:
+        if self.monitoring and self.file_provenance:
             self._send_file_log_info(f, task_record, False)
             file_input_info = self._create_file_io_info(f, task_record)
             self.monitoring.send((MessageType.INPUT_FILE, file_input_info))
@@ -335,7 +352,7 @@ class DataFlowKernel:
     def register_as_output(self, f: Union[File, DataFuture],
                            task_record: TaskRecord):
         """ Register a file as an output of a task. """
-        if self.monitoring and self.monitoring.capture_file_provenance:
+        if self.monitoring and self.file_provenance:
             self._send_file_log_info(f, task_record, True)
             file_output_info = self._create_file_io_info(f, task_record)
             self.monitoring.send((MessageType.OUTPUT_FILE, file_output_info))
@@ -354,7 +371,7 @@ class DataFlowKernel:
 
     def _register_env(self, environ: ParslExecutor) -> None:
         """ Capture the environment information for the monitoring db. """
-        if self.monitoring and self.monitoring.capture_file_provenance:
+        if self.monitoring and self.file_provenance:
             environ_info = self._create_env_log_info(environ)
             self.monitoring.send((MessageType.ENVIRONMENT_INFO, environ_info))
 
@@ -371,18 +388,19 @@ class DataFlowKernel:
         provider = getattr(environ, 'provider', None)
         if provider is not None:
             env_log_info['provider'] = provider.label
-            env_log_info['launcher'] = type(getattr(provider, 'launcher', None))
+            env_log_info['launcher'] = str(type(getattr(provider, 'launcher', None)))
             env_log_info['worker_init'] = getattr(provider, 'worker_init', None)
         return env_log_info
 
     def log_info(self, msg: str) -> None:
         """Log an info message to the monitoring db."""
         if self.monitoring:
-            if self.monitoring.capture_file_provenance:
+            if self.file_provenance:
                 misc_msg = self._create_misc_log_info(msg)
                 if misc_msg is None:
                     logger.info("Could not turn message into a str, so not sending message to monitoring db")
-                self.monitoring.send((MessageType.MISC_INFO, misc_msg))
+                else:
+                    self.monitoring.send((MessageType.MISC_INFO, misc_msg))
             else:
                 logger.info("File provenance is not enabled, so not sending message to monitoring db")
         else:
@@ -392,16 +410,15 @@ class DataFlowKernel:
         """
         Create the dictionary that will be included in the monitoring db
         """
-        try:
-            misc_log_info = {'run_id': self.run_id,
-                             'timestamp': datetime.datetime.now(),
-                             'info': str(msg)
-                             }
-            return misc_log_info
+        try:  # exception should only be raised if msg cannot be cast to a str
+            return {'run_id': self.run_id,
+                    'timestamp': datetime.datetime.now(),
+                    'info': str(msg)
+                    }
         except Exception:
             return None
 
-    def _count_deps(self, task_record: TaskRecord) -> int:
+    def _count_deps(self, depends: Sequence[Future]) -> int:
         """Count the number of unresolved futures in the list depends.
         """
         count = 0
@@ -957,10 +974,10 @@ class DataFlowKernel:
                 stageout_fut = self.data_manager.stage_out(f_copy, executor, app_fut)
                 if stageout_fut:
                     logger.debug("Adding a dependency on stageout future for {}".format(repr(file)))
-                    df = DataFuture(stageout_fut, file, tid=app_fut.tid, app_fut=app_fut, dfk=self)
+                    df = DataFuture(stageout_fut, file, dfk=self, tid=app_fut.tid, app_fut=app_fut)
                 else:
                     logger.debug("No stageout dependency for {}".format(repr(file)))
-                    df = DataFuture(app_fut, file, tid=app_fut.tid, app_fut=app_fut, dfk=self)
+                    df = DataFuture(app_fut, file, dfk=self, tid=app_fut.tid, app_fut=app_fut)
 
                 # this is a hook for post-task stageout
                 # note that nothing depends on the output - which is maybe a bug
@@ -969,7 +986,7 @@ class DataFlowKernel:
                 return rewritable_func, f_copy, df
             else:
                 logger.debug("Not performing output staging for: {}".format(repr(file)))
-                return rewritable_func, file, DataFuture(app_fut, file, tid=app_fut.tid, app_fut=app_fut, dfk=self)
+                return rewritable_func, file, DataFuture(app_fut, file, dfk=self, tid=app_fut.tid, app_fut=app_fut)
 
         for idx, file in enumerate(outputs):
             func, outputs[idx], o = stageout_one_file(file, func)
@@ -1285,8 +1302,6 @@ class DataFlowKernel:
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
                     os.makedirs(executor.provider.script_dir, exist_ok=True)
-
-                    executor.provider.channel.script_dir = executor.provider.script_dir
 
             self.executors[executor.label] = executor
             executor.start()

@@ -5,7 +5,6 @@ import time
 
 import typeguard
 
-from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.launchers.base import Launcher
@@ -17,8 +16,6 @@ from parsl.utils import RepresentationMixin
 logger = logging.getLogger(__name__)
 
 from typing import Dict, List, Optional
-
-from parsl.channels.base import Channel
 
 # See http://pages.cs.wisc.edu/~adesmet/status.html
 translate_table = {
@@ -36,8 +33,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
     Parameters
     ----------
-    channel : Channel
-        Channel for accessing this provider.
     nodes_per_block : int
         Nodes to provision per block.
     cores_per_slot : int
@@ -79,7 +74,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
     """
     @typeguard.typechecked
     def __init__(self,
-                 channel: Channel = LocalChannel(),
                  nodes_per_block: int = 1,
                  cores_per_slot: Optional[int] = None,
                  mem_per_slot: Optional[float] = None,
@@ -100,7 +94,6 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         label = 'condor'
         super().__init__(label,
-                         channel,
                          nodes_per_block,
                          init_blocks,
                          min_blocks,
@@ -226,7 +219,7 @@ class CondorProvider(RepresentationMixin, ClusterProvider):
 
         job_config = {}
         job_config["job_name"] = job_name
-        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config["submit_script_dir"] = self.script_dir
         job_config["project"] = self.project
         job_config["nodes"] = self.nodes_per_block
         job_config["scheduler_options"] = scheduler_options

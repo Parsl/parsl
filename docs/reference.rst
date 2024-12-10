@@ -51,7 +51,6 @@ Data management
 
     parsl.app.futures.DataFuture
     parsl.data_provider.data_manager.DataManager
-    parsl.data_provider.dynamic_files.DynamicFileList
     parsl.data_provider.staging.Staging
     parsl.data_provider.files.File
     parsl.data_provider.ftp.FTPSeparateTaskStaging
@@ -170,8 +169,6 @@ Exceptions
     parsl.providers.errors.ScaleOutFailed
     parsl.providers.errors.SchedulerMissingArgs
     parsl.providers.errors.ScriptPathError
-    parsl.channels.errors.ChannelError
-    parsl.channels.errors.FileCopyException
     parsl.executors.high_throughput.errors.WorkerLost
     parsl.executors.high_throughput.interchange.ManagerLost
     parsl.serialize.errors.DeserializationError

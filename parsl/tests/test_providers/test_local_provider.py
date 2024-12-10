@@ -11,7 +11,6 @@ import time
 
 import pytest
 
-from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers import LocalProvider
@@ -63,7 +62,7 @@ def _run_tests(p: LocalProvider):
 def test_local_channel():
     with tempfile.TemporaryDirectory() as script_dir:
         script_dir = tempfile.mkdtemp()
-        p = LocalProvider(channel=LocalChannel(), launcher=SingleNodeLauncher(debug=False))
+        p = LocalProvider(launcher=SingleNodeLauncher(debug=False))
         p.script_dir = script_dir
         _run_tests(p)
 

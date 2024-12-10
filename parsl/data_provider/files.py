@@ -5,13 +5,12 @@ to transfer the file as well as to give the appropriate filepath depending
 on where (client-side, remote-side, intermediary-side) the File.filepath is
 being called from.
 """
-import logging
-from hashlib import md5
-import os
 import datetime
+import logging
+import os
+import uuid
 from typing import Optional, Union
 from urllib.parse import urlparse
-import uuid
 
 import typeguard
 
@@ -31,7 +30,7 @@ class File:
     """
 
     @typeguard.typechecked
-    def __init__(self, url: Union[os.PathLike, str], uu_id: Union[uuid.UUID, None] = None,
+    def __init__(self, url: Union[os.PathLike, str], uu_id: Optional[uuid.UUID] = None,
                  timestamp: Optional[datetime.datetime] = None):
         """Construct a File object from an url string.
 
@@ -49,19 +48,16 @@ class File:
         self.netloc = parsed_url.netloc
         self.path = parsed_url.path
         self.filename = os.path.basename(self.path)
-        if self.scheme == 'file' and os.path.isfile(self.path):
-            self.size = os.stat(self.path).st_size
-            self.md5sum = md5(open(self.path, 'rb').read()).hexdigest()
-            self.timestamp = datetime.datetime.fromtimestamp(os.path.getmtime(self.path), tz=datetime.timezone.utc)
-        else:
-            self.size = None
-            self.md5sum = None
-            self.timestamp = timestamp
+        # let the DFK set these values, if needed
+        self.size: Optional[int] = None
+        self.md5sum: Optional[str] = None
+        self.timestamp = timestamp
+
         self.local_path: Optional[str] = None
         if uu_id is not None:
             self.uuid = uu_id
         else:
-            self.uuid = uuid.uuid1()
+            self.uuid = uuid.uuid4()
 
     def cleancopy(self) -> "File":
         """Returns a copy of the file containing only the global immutable state,

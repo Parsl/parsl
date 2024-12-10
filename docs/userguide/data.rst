@@ -3,7 +3,7 @@
 Passing Python objects
 ======================
 
-Parsl apps can communicate via standard Python function parameter passing
+Parsl apps can communicate via standard Python function parameter passing 
 and return statements. The following example shows how a Python string
 can be passed to, and returned from, a Parsl app.
 
@@ -12,21 +12,21 @@ can be passed to, and returned from, a Parsl app.
     @python_app
     def example(name):
         return 'hello {0}'.format(name)
-
+	
     r = example('bob')
     print(r.result())
 
-Parsl uses the dill and pickle libraries to serialize Python objects
+Parsl uses the dill and pickle libraries to serialize Python objects 
 into a sequence of bytes that can be passed over a network from the submitting
 machine to executing workers.
 
-Thus, Parsl apps can receive and return standard Python data types
+Thus, Parsl apps can receive and return standard Python data types 
 such as booleans, integers, tuples, lists, and dictionaries. However, not
-all objects can be serialized with these methods (e.g., closures, generators,
+all objects can be serialized with these methods (e.g., closures, generators, 
 and system objects), and so those objects cannot be used with all executors.
 
-Parsl will raise a `SerializationError` if it encounters an object that it cannot
-serialize. This applies to objects passed as arguments to an app, as well as objects
+Parsl will raise a `SerializationError` if it encounters an object that it cannot 
+serialize. This applies to objects passed as arguments to an app, as well as objects 
 returned from an app. See :ref:`label_serialization_error`.
 
 
@@ -34,9 +34,9 @@ Staging data files
 ==================
 
 Parsl apps can take and return data files. A file may be passed as an input
-argument to an app, or returned from an app after execution. Parsl
-provides support to automatically transfer (stage) files between
-the main Parsl program, worker nodes, and external data storage systems.
+argument to an app, or returned from an app after execution. Parsl 
+provides support to automatically transfer (stage) files between 
+the main Parsl program, worker nodes, and external data storage systems. 
 
 Input files can be passed as regular arguments, or a list of them may be
 specified in the special ``inputs`` keyword argument to an app invocation.
@@ -69,13 +69,13 @@ interface.
 Parsl files
 -----------
 
-Parsl uses a custom :py:class:`~parsl.data_provider.files.File` to provide a
-location-independent way of referencing and accessing files.
-Parsl files are defined by specifying the URL *scheme* and a path to the file.
+Parsl uses a custom :py:class:`~parsl.data_provider.files.File` to provide a 
+location-independent way of referencing and accessing files.  
+Parsl files are defined by specifying the URL *scheme* and a path to the file. 
 Thus a file may represent an absolute path on the submit-side file system
 or a URL to an external file.
 
-The scheme defines the protocol via which the file may be accessed.
+The scheme defines the protocol via which the file may be accessed. 
 Parsl supports the following schemes: file, ftp, http, https, and globus.
 If no scheme is specified Parsl will default to the file scheme.
 
@@ -89,8 +89,8 @@ README file.
     File('https://github.com/Parsl/parsl/blob/master/README.rst')
 
 
-Parsl automatically translates the file's location relative to the
-environment in which it is accessed (e.g., the Parsl program or an app).
+Parsl automatically translates the file's location relative to the 
+environment in which it is accessed (e.g., the Parsl program or an app). 
 The following example shows how a file can be accessed in the app
 irrespective of where that app executes.
 
@@ -113,214 +113,22 @@ As described below, the method by which this files are transferred
 depends on the scheme and the staging providers specified in the Parsl
 configuration.
 
-Dynamic File Lists
-------------------
-
-When Parsl constructs the DAG for a workflow, it needs to know the input and
-output files for each app. This works well when the number of files is known
-in advance, and the lists of files are fully constructed before the workflow
-is submitted. However, in some cases, the number of files produced by an app
-is not know until the app executes. In these cases, Parsl provides a mechanism
-called :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList` to dynamically
-construct the list of files. This class inherits from both the Python
-`Future <https://en.wikipedia.org/wiki/Futures_and_promises>`_ and
-`list <https://docs.python.org/3/tutorial/datastructures.html>`_ classes, but
-differs from traditional lists in the a few notable ways:
-
-1. It can only contain :py:class:`~parsl.data_provider.files.File` and :py:class:`~parsl.app.futures.DataFuture` objects.
-2. It is truly dynamic, meaning that you can access an item in the list which is beyond the current length of the list. The list will grow to accomodate the request and return a future that will be resolved when the item is available. (see `Dynamic Scaling`_ for more details)
-
-
-Dynamic Scaling
-^^^^^^^^^^^^^^^
-
-The :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList` is designed
-to be used in cases where the number of files produced by an app is not known
-until the app executes. In these cases, the list can be accessed beyond its
-current length, and the list will grow to accomodate the request. In addition
-to the traditional methods of expanding a list (via ``append`` or ``extend``,
-the :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList` will grow
-when assigning a member by index to a position beyond its current length or
-when accessing a member by index beyond the current length. In each of these
-cases the list is expanded and filled with
-:py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile`
-objects that are initialized with ``None``. When the file is available, the
-``None`` is replaced with the actual file. This behavior allows for the
-following code to work:
-
-.. code-block:: python
-
-    from parsl.app.app import python_app
-    from parsl.data_provider.dynamic_files import DynamicFileList
-    from parsl.data_provider.files import File
-
-
-    dfl = DynamicFileList()                    # dfl = []
-                                               #          A       B       C
-    dfl[2] = File('file://path/to/file')       # dfl = [File(), File(), File('file://path/to/file')]
-
-    myfile = dfl[0]                            # myfile is a reference to the File() labeled A in dfl
-
-    dfl[0] = File('file://path/to/file.2')     # dfl = [File('file://path/to/file.2'), File(),
-                                               #        File('file://path/to/file')]
-                                               # but myfile still points to the File() labeled A
-
-    fh = open(myfile, 'r')                     # works
-
-    dfl[3] = File('file://path/to/file.3')     # dfl = [File('file://path/to/file.2'), File(),
-                                               #        File('file://path/to/file'), File('file://path/to/file.3')]
-
-    myfile2 = dfl[1]                           # myfile2 is a reference to the File() labeled B in dfl
-
-    dfl[1] = File('file://path/to/file.4')     # dfl = [File('file://path/to/file.2'), File('file://path/to/file.4'),
-                                               #        File('file://path/to/file'), File('file://path/to/file.3')]
-                                               # myfile2 still points to the File() labeled B
-
-    fh2 = open(myfile2, 'r')                   # works
-
-    dfl[5] = File('file://path/to/file.5')     # dfl = [File('file://path/to/file.2'), File('file://path/to/file.4'),
-                                               #        File('file://path/to/file'), File('file://path/to/file.3'),
-                                               #        None, File('file://path/to/file.5')]
-
-    myfile3 = dfl[4]                           # myfile3 is a reference to the DynamicFile() labeled None in dfl
-
-    dfl[4] = File('file://path/to/file.6')     # dfl = [File('file://path/to/file.2'), File('file://path/to
-
-Specifically, the behavior will allow Parsl Apps to use as input files which
-do not exist at the time the App is created, but are produced by other Apps
-in the workflow, even when the number of output files is not know beforehand.
-For example:
-
-.. code-block:: python
-
-    from parsl.app.app import python_app
-    from parsl.data_provider.dynamic_files import DynamicFileList
-    from parsl.data_provider.files import File
-
-    @python_app
-    def produce(outputs=[]):
-        from random import random
-        from parsl.data_provider.files import File
-
-        def analyze(i):
-            f = File(f'file://path/to/file{i}.log}')
-            with open(f.filepath, 'w') as out:
-                # do some kind of anaylsis
-                # write out log messages
-            return f
-
-        count = int(random() * 10)
-        fl = File(f'file://path/to/master.log')
-        outputs.append(fl)
-        with open(fl.filepath, 'w') as log:
-            log.write(f'Producing {count} files\n')
-            for i in range(count):
-                log.write(f"Running analysis {i}\n")
-                outputs.append(analyze(i))
-
-    @python_app
-    def consume(inputs=[]):
-        for i in range(len(inputs)):
-            with open(inputs[i].filepath, 'r') as inp:
-                content = inp.read()
-                # do something with the log content
-
-    dfl = DynamicFileList()                    # dfl = []
-
-    f = produce(dfl)                           # dfl starts out empty, but is populated by produce
-
-    r = consume(inputs=[dfl[1:]])              # consume waits to run until files are available,
-                                               #    then does its work on the selected log files
-    r.result()
-
-Without a :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList`,
-the above code would not work because when the DAG is constructed, the
-``inputs`` to ``consume`` is a slice of an empty list. However, the
-:py:class:`~parsl.data_provider.dynamic_files.DynamicFileList` will populate
-the ``dfl`` list with two empty :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile`
-objects (indicies 0 and 1) and then fill them in with the actual files produced by
-``produce`` when they are available. The ``consume`` app will then wait
-until the files are available before running.
-
-Dynamic Files
-^^^^^^^^^^^^^
-
-Technically the :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList`
-holds instances of :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile`,
-a `Future <https://en.wikipedia.org/wiki/Futures_and_promises>`_, which itself
-wraps the :py:class:`~parsl.data_provider.files.File` and :py:class:`~parsl.app.futures.DataFuture`
-objects. However, this class is not intended to be used directly, and is only
-mentioned here for completeness. This wrapping is done automatically when you
-add an item to the list by direct assignment, ``append``, or ``extend``. Any
-access to the members of the list is passed by the
-:py:class:`~parsl.data_provider .dynamic_files.DynamicFileList.DynamicFile`
-instance directly to the underlying object, thus making it an invisible layer to
-the user.
-
-The :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile`
-can also be instantiated with `None`,creating a placeholder for a
-:py:class:`~parsl.data_provider.files.File` or :py:class:`~parsl.app.futures.DataFuture`.
-This was done to resolve any indexing issues arrising from the dynamic nature
-of the list. For example, without wrapping items in a
-:py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile` the
-following code will not work:
-
-.. code-block:: python
-
-    from parsl.data_provider.dynamic_files import DynamicFileList
-    from parsl.data_provider.files import File
-
-    dfl = DynamicFileList()                    # dfl = []
-                                               #          A       B       C
-    dfl[2] = File('file://path/to/file')       # dfl = [File(), File(), File('file://path/to/file')]
-
-    myfile = dfl[0]                            # myfile is a reference to the File() labeled A in dfl
-
-    dfl[0] = File('file://path/to/file.2')     # dfl = [File('file://path/to/file.2'), File(),
-                                               #        File('file://path/to/file')]
-                                               # but myfile still points to the File() labeled A
-
-    fh = open(myfile, 'r')                     # fails because myfile points to an empty File
-
-
-But by utilizing the :py:class:`~parsl.data_provider.dynamic_files.DynamicFileList.DynamicFile` to wrap items,
-the code will now work:
-
-.. code-block:: python
-
-    from parsl.data_provider.dynamic_files import DynamicFileList
-    from parsl.data_provider.files import File
-
-    dfl = DynamicFileList()                    # dfl = []
-                                               #          A               B              C
-    dfl[2] = File('file://path/to/file')       # dfl = [DynamicFile(), DynamicFile(), DynamicFile(File('file://path/to/file'))]
-
-    myfile = dfl[0]                            # myfile is a reference to the DynamicFile() labeled A in dfl
-
-    dfl[0] = File('file://path/to/file.2')     # dfl = [DynamicFile(File('file://path/to/file.2')),
-                                               #        File(),
-                                               #        File('file://path/to/file')]
-                                               # myfile still points to the DynamicFile() labeled A, which now contains a file
-
-    fh = open(myfile, 'r')                     # works
-
-
 Staging providers
 -----------------
 
-Parsl is able to transparently stage files between at-rest locations and
+Parsl is able to transparently stage files between at-rest locations and 
 execution locations by specifying a list of
-:py:class:`~parsl.data_provider.staging.Staging` instances for an executor.
+:py:class:`~parsl.data_provider.staging.Staging` instances for an executor. 
 These staging instances define how to transfer files in and out of an execution
 location. This list should be supplied as the ``storage_access``
-parameter to an executor when it is constructed.
+parameter to an executor when it is constructed. 
 
-Parsl includes several staging providers for moving files using the
+Parsl includes several staging providers for moving files using the 
 schemes defined above. By default, Parsl executors are created with
-three common staging providers:
+three common staging providers: 
 the NoOpFileStaging provider for local and shared file systems
 and the HTTP(S) and FTP staging providers for transferring
-files to and from remote storage locations. The following
+files to and from remote storage locations. The following 
 example shows how to explicitly set the default staging providers.
 
 .. code-block:: python
@@ -338,12 +146,12 @@ example shows how to explicitly set the default staging providers.
             )
         ]
     )
-
-
-Parsl further differentiates when staging occurs relative to
-the app invocation that requires or produces files.
+				
+		
+Parsl further differentiates when staging occurs relative to 
+the app invocation that requires or produces files. 
 Staging either occurs with the executing task (*in-task staging*)
-or as a separate task (*separate task staging*) before app execution.
+or as a separate task (*separate task staging*) before app execution.  
 In-task staging
 uses a wrapper that is executed around the Parsl task and thus
 occurs on the resource on which the task is executed. Separate
@@ -359,9 +167,9 @@ NoOpFileStaging for Local/Shared File Systems
 The NoOpFileStaging provider assumes that files specified either
 with a path or with the ``file`` URL scheme are available both
 on the submit and execution side. This occurs, for example, when there is a
-shared file system. In this case, files will not moved, and the
+shared file system. In this case, files will not moved, and the 
 File object simply presents the same file path to the Parsl program
-and any executing tasks.
+and any executing tasks. 
 
 Files defined as follows will be handled by the NoOpFileStaging provider.
 
@@ -399,14 +207,14 @@ will be executed as a separate
 Parsl task that will complete before the corresponding app
 executes. These providers cannot be used to stage out output files.
 
-The following example defines a file accessible on a remote FTP server.
+The following example defines a file accessible on a remote FTP server. 
 
 .. code-block:: python
 
     File('ftp://www.iana.org/pub/mirror/rirstats/arin/ARIN-STATS-FORMAT-CHANGE.txt')
 
 When such a file object is passed as an input to an app, Parsl will download the file to whatever location is selected for the app to execute.
-The following example illustrates how the remote file is implicitly downloaded from an FTP server and then converted. Note that the app does not need to know the location of the downloaded file on the remote computer, as Parsl abstracts this translation.
+The following example illustrates how the remote file is implicitly downloaded from an FTP server and then converted. Note that the app does not need to know the location of the downloaded file on the remote computer, as Parsl abstracts this translation. 
 
 .. code-block:: python
 
@@ -426,8 +234,8 @@ The following example illustrates how the remote file is implicitly downloaded f
     # call the convert app with the Parsl file
     f = convert(inputs=[inp], outputs=[out])
     f.result()
-
-HTTP and FTP separate task staging providers can be configured as follows.
+		
+HTTP and FTP separate task staging providers can be configured as follows. 
 
 .. code-block:: python
 
@@ -435,8 +243,8 @@ HTTP and FTP separate task staging providers can be configured as follows.
     from parsl.executors import HighThroughputExecutor
     from parsl.data_provider.http import HTTPSeparateTaskStaging
     from parsl.data_provider.ftp import FTPSeparateTaskStaging
-
-    config = Config(
+    
+		config = Config(
         executors=[
             HighThroughputExecutor(
                 storage_access=[HTTPSeparateTaskStaging(), FTPSeparateTaskStaging()]
@@ -455,10 +263,10 @@ task staging providers described above, but will do so in a wrapper around
 individual app invocations, which guarantees that they will stage files to
 a file system visible to the app.
 
-A downside of this staging approach is that the staging tasks are less visible
+A downside of this staging approach is that the staging tasks are less visible 
 to Parsl, as they are not performed as separate Parsl tasks.
 
-In-task staging providers can be configured as follows.
+In-task staging providers can be configured as follows. 
 
 .. code-block:: python
 
@@ -537,16 +345,16 @@ In some cases, for example when using a Globus `shared endpoint <https://www.glo
                 )
             ]
         )
-
+        
 
 Globus Authorization
 """"""""""""""""""""
 
-In order to transfer files with Globus, the user must first authenticate.
-The first time that Globus is used with Parsl on a computer, the program
+In order to transfer files with Globus, the user must first authenticate. 
+The first time that Globus is used with Parsl on a computer, the program 
 will prompt the user to follow an authentication and authorization
 procedure involving a web browser. Users can authorize out of band by
-running the parsl-globus-auth utility. This is useful, for example,
+running the parsl-globus-auth utility. This is useful, for example, 
 when running a Parsl program in a batch system where it will be unattended.
 
 .. code-block:: bash
@@ -562,7 +370,7 @@ rsync
 
 The ``rsync`` utility can be used to transfer files in the ``file`` scheme in configurations where
 workers cannot access the submit-side file system directly, such as when executing
-on an AWS EC2 instance or on a cluster without a shared file system.
+on an AWS EC2 instance or on a cluster without a shared file system. 
 However, the submit-side file system must be exposed using rsync.
 
 rsync Configuration
@@ -591,13 +399,13 @@ and public IP address of the submitting system.
 rsync Authorization
 """""""""""""""""""
 
-The rsync staging provider delegates all authentication and authorization to the
-underlying ``rsync`` command. This command must be correctly authorized to connect back to
-the submit-side system. The form of this authorization will depend on the systems in
+The rsync staging provider delegates all authentication and authorization to the 
+underlying ``rsync`` command. This command must be correctly authorized to connect back to 
+the submit-side system. The form of this authorization will depend on the systems in 
 question.
 
-The following example installs an ssh key from the submit-side file system and turns off host key
-checking, in the ``worker_init`` initialization of an EC2 instance. The ssh key must have
+The following example installs an ssh key from the submit-side file system and turns off host key 
+checking, in the ``worker_init`` initialization of an EC2 instance. The ssh key must have 
 sufficient privileges to run ``rsync`` over ssh on the submit-side system.
 
 .. code-block:: python
