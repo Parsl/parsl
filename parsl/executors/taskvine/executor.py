@@ -183,6 +183,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Path to directory that holds all tasks' data and results.
         self._function_data_dir = ""
 
+        # Mapping of function names to function objects
+        # Helpful to detect inconsistencies in serverless functions
+        self._map_func_names_to_func_objs = {}
+
         # Helper scripts to prepare package tarballs for Parsl apps
         self._package_analyze_script = shutil.which("poncho_package_analyze")
         self._package_create_script = shutil.which("poncho_package_create")
@@ -330,10 +334,28 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             Keyword arguments to the Parsl app
         """
 
+        # a Parsl function must have a name
+        if func.__name__ is None:
+            raise ValueError('A Parsl function must have a name')
+
         logger.debug(f'Got resource specification: {resource_specification}')
+
+        is_monitoring_enabled = resource_specification.get('is_monitoring_enabled', False)
 
         # Default execution mode of apps is regular
         exec_mode = resource_specification.get('exec_mode', self.function_exec_mode)
+
+        if exec_mode == 'serverless':
+            if func.__name__ not in self._map_func_names_to_func_objs:
+                self._map_func_names_to_func_objs[func.__name__] = func
+            else:
+                if id(func) != id(self._map_func_names_to_func_objs[func.__name__]):
+                    logger.warning('Inconsistency in a serverless function call detected. A function name cannot point to two different function objects. Falling back to executing it as a regular task.')
+                    exec_mode = 'regular'
+
+            if is_monitoring_enabled:
+                logger.warning("A serverless task cannot run with Parsl monitoring enabled. Falling back to execute this task as a regular task.")
+                exec_mode = 'regular'
 
         # Detect resources and features of a submitted Parsl app
         cores = None
@@ -431,6 +453,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             category = func.__name__ if self.manager_config.autocategory else 'parsl-default'
 
         task_info = ParslTaskToVine(executor_id=executor_task_id,
+                                    func_name=func.__name__,
                                     exec_mode=exec_mode,
                                     category=category,
                                     input_files=input_files,
