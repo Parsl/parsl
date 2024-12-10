@@ -5,7 +5,6 @@ import psutil
 
 import parsl
 from parsl.app.app import python_app  # , bash_app
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SingleNodeLauncher
@@ -30,7 +29,6 @@ def test_simple(mem_per_worker):
                 suppress_failure=True,
                 encrypted=True,
                 provider=LocalProvider(
-                    channel=LocalChannel(),
                     init_blocks=1,
                     max_blocks=1,
                     launcher=SingleNodeLauncher(),
