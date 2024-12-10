@@ -24,6 +24,7 @@ class ParslTaskToVine:
                  env_pkg: Optional[str],           # path to a poncho environment tarball
                  ):
         self.executor_id = executor_id
+        self.func_name = func_name
         self.exec_mode = exec_mode
         self.category = category
         self.map_file = map_file
