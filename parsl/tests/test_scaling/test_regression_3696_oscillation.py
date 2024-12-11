@@ -9,7 +9,8 @@ from parsl.jobs.strategy import Strategy
 
 
 @pytest.mark.local
-def test_htex_strategy_does_not_oscillate():
+@pytest.mark.parametrize("ns", [ (14,48) ])
+def test_htex_strategy_does_not_oscillate(ns):
     """Check for oscillations in htex scaling.
     In issue 3696, with a large number of workers per block
     and a smaller number of active tasks, the htex scaling
@@ -20,7 +21,9 @@ def test_htex_strategy_does_not_oscillate():
     from issue #3696.
     """
 
-    s = Strategy(strategy='htex_auto_scale', max_idletime=math.inf)
+    n_tasks, n_workers = ns
+
+    s = Strategy(strategy='htex_auto_scale', max_idletime=0)
 
     provider = MagicMock()
     executor = MagicMock(spec=HighThroughputExecutor)
@@ -28,9 +31,9 @@ def test_htex_strategy_does_not_oscillate():
     statuses = {}
 
     executor.provider = provider
-    executor.outstanding = 14
+    executor.outstanding = n_tasks
     executor.status_facade = statuses
-    executor.workers_per_node = 48
+    executor.workers_per_node = n_workers
 
     provider.parallelism = 1
     provider.init_blocks = 0
@@ -47,18 +50,18 @@ def test_htex_strategy_does_not_oscillate():
     def scale_in(n, max_idletime=None):
         # find n PENDING jobs and set them to CANCELLED
         for k in statuses:
+            if n == 0:
+                return
             if statuses[k].state == JobState.PENDING:
                 statuses[k].state = JobState.CANCELLED
                 n -= 1
-            if n == 0:
-                return
 
     executor.scale_in_facade.side_effect = scale_in
 
     s.add_executors([executor])
 
     # In issue #3696, this first strategise does initial and load based
-    # scale outs, because 14 > 48*0
+    # scale outs, because n_tasks > n_workers*0
     s.strategize([executor])
 
     executor.scale_out_facade.assert_called()
@@ -70,7 +73,7 @@ def test_htex_strategy_does_not_oscillate():
 
     executor.scale_in_facade.assert_not_called()
 
-    # In issue #3696, this second strategize does a scale in, because 14 < 48*1
+    # In issue #3696, this second strategize does a scale in, because n_tasks < n_workers*1
     s.strategize([executor])
 
     # assert that there should still be 1 pending blocks

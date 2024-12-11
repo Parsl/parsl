@@ -306,8 +306,8 @@ class Strategy:
                     # Scale in for htex
                     if isinstance(executor, HighThroughputExecutor):
                         if active_blocks > min_blocks:
-                            excess_slots = math.ceil(active_slots - (active_tasks * parallelism))
-                            excess_blocks = math.ceil(float(excess_slots) / (tasks_per_node * nodes_per_block))
+                            excess_slots = math.floor(active_slots - (active_tasks * parallelism))
+                            excess_blocks = math.floor(float(excess_slots) / (tasks_per_node * nodes_per_block))
                             excess_blocks = min(excess_blocks, active_blocks - min_blocks)
                             logger.debug(f"Requesting scaling in by {excess_blocks} blocks with idle time {self.max_idletime}s")
                             executor.scale_in_facade(excess_blocks, max_idletime=self.max_idletime)
