@@ -17,14 +17,12 @@ those timing parameters control.
 
 import os
 
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.data_provider.file_noop import NoOpFileStaging
 from parsl.data_provider.ftp import FTPInTaskStaging
 from parsl.data_provider.http import HTTPInTaskStaging
 from parsl.data_provider.zip import ZipFileStaging
 from parsl.executors import HighThroughputExecutor
-from parsl.executors.high_throughput.executor import DEFAULT_LAUNCH_CMD
 from parsl.launchers import SingleNodeLauncher
 
 # imports for monitoring:
@@ -39,7 +37,6 @@ def fresh_config():
         executors=[
             HighThroughputExecutor(
                 address="127.0.0.1",
-                launch_cmd="davidadams_reporter.py /tmp/ " + DEFAULT_LAUNCH_CMD,
                 label="htex_Local",
                 working_dir=working_dir,
                 storage_access=[ZipFileStaging(), FTPInTaskStaging(), HTTPInTaskStaging(), NoOpFileStaging()],
@@ -50,7 +47,6 @@ def fresh_config():
                 poll_period=100,
                 encrypted=True,
                 provider=LocalProvider(
-                    channel=LocalChannel(),
                     init_blocks=0,
                     min_blocks=0,
                     max_blocks=5,
@@ -60,11 +56,11 @@ def fresh_config():
             )
         ],
         strategy='simple',
+        strategy_period=0.5,
         app_cache=True, checkpoint_mode='task_exit',
         retries=2,
         monitoring=MonitoringHub(
                         hub_address="localhost",
-                        hub_port=55055,
                         monitoring_debug=False,
                         resource_monitoring_interval=1,
         ),

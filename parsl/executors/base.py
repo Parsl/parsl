@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, Optional
 
 from typing_extensions import Literal, Self
 
-from parsl.monitoring.radios import MonitoringRadioSender
+from parsl.monitoring.radios.base import MonitoringRadioSender
 
 
 class ParslExecutor(metaclass=ABCMeta):

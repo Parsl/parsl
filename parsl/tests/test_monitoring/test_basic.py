@@ -12,11 +12,9 @@ from parsl.monitoring import MonitoringHub
 
 @parsl.python_app
 def this_app():
-    # this delay needs to be several times the resource monitoring
-    # period configured in the test configuration, so that some
-    # messages are actually sent - there is no guarantee that any
-    # (non-first) resource message will be sent at all for a short app.
-    time.sleep(3)
+    # TODO: deleted this sleep because we will always send a final resource message
+    # rather than requiring polling to happen - since TODO PR #####
+    # time.sleep(3)
 
     return 5
 
@@ -66,6 +64,7 @@ def workqueue_config():
 def taskvine_config():
     c = Config(executors=[TaskVineExecutor(manager_config=TaskVineManagerConfig(port=9000),
                                            worker_launch_method='provider')],
+               strategy_period=0.5,
 
                monitoring=MonitoringHub(hub_address="localhost",
                                         resource_monitoring_interval=1))
@@ -88,8 +87,12 @@ def test_row_counts(tmpd_cwd, fresh_config):
     config.run_dir = tmpd_cwd
     config.monitoring.logging_endpoint = db_url
 
+    print(f"load {time.time()}")
     with parsl.load(config):
+        print(f"start {time.time()}")
         assert this_app().result() == 5
+        print(f"end {time.time()}")
+    print(f"unload {time.time()}")
 
     # at this point, we should find one row in the monitoring database.
 

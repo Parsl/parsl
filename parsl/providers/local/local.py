@@ -2,7 +2,6 @@ import logging
 import os
 import time
 
-from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.base import ExecutionProvider
@@ -11,7 +10,7 @@ from parsl.providers.errors import (
     ScriptPathError,
     SubmitException,
 )
-from parsl.utils import RepresentationMixin
+from parsl.utils import RepresentationMixin, execute_wait
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +36,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
     """
 
     def __init__(self,
-                 channel=LocalChannel(),
                  nodes_per_block=1,
                  launcher=SingleNodeLauncher(),
                  init_blocks=1,
@@ -46,7 +44,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  worker_init='',
                  cmd_timeout=30,
                  parallelism=1):
-        self.channel = channel
         self._label = 'local'
         self.nodes_per_block = nodes_per_block
         self.launcher = launcher
@@ -118,7 +115,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         return [self.resources[jid]['status'] for jid in job_ids]
 
     def _is_alive(self, job_dict):
-        retcode, stdout, stderr = self.channel.execute_wait(
+        retcode, stdout, stderr = execute_wait(
             'ps -p {} > /dev/null 2> /dev/null; echo "STATUS:$?" '.format(
                 job_dict['remote_pid']), self.cmd_timeout)
         for line in stdout.split('\n'):
@@ -223,11 +220,11 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
         #      cancel the task later.
         #
         # We need to do the >/dev/null 2>&1 so that bash closes stdout, otherwise
-        # channel.execute_wait hangs reading the process stdout until all the
+        # execute_wait hangs reading the process stdout until all the
         # background commands complete.
         cmd = '/bin/bash -c \'echo - >{0}.ec && {{ {{ bash {0} 1>{0}.out 2>{0}.err ; ' \
               'echo $? > {0}.ec ; }} >/dev/null 2>&1 & echo "PID:$!" ; }}\''.format(script_path)
-        retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
+        retcode, stdout, stderr = execute_wait(cmd, self.cmd_timeout)
         if retcode != 0:
             raise SubmitException(job_name, "Launch command exited with code {0}".format(retcode),
                                   stdout, stderr)
@@ -258,7 +255,7 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
             job_dict['cancelled'] = True
             logger.debug("Terminating job/process ID: {0}".format(job))
             cmd = "kill -- -$(ps -o pgid= {} | grep -o '[0-9]*')".format(job_dict['remote_pid'])
-            retcode, stdout, stderr = self.channel.execute_wait(cmd, self.cmd_timeout)
+            retcode, stdout, stderr = execute_wait(cmd, self.cmd_timeout)
             if retcode != 0:
                 logger.warning("Failed to kill PID: {} and child processes on {}".format(job_dict['remote_pid'],
                                                                                          self.label))

@@ -18,7 +18,6 @@ def fresh_config():
     return Config(executors=[executor],
                   monitoring=MonitoringHub(
                     hub_address="localhost",
-                    hub_port=55055,
                     resource_monitoring_interval=3,
                 )
                 )
