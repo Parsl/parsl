@@ -340,6 +340,8 @@ class Timer:
         self._thread.start()
 
     def _wake_up_timer(self) -> None:
+        self.make_callback()
+
         while not self._kill_event.wait(self.interval):
             self.make_callback()
 
