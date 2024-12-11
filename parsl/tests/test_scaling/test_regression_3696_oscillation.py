@@ -49,7 +49,12 @@ def test_htex_strategy_does_not_oscillate():
     # In issue #3696, this first strategise does initial and load based
     # scale outs, because 14 > 48*0
     s.strategize([executor])
+
     executor.scale_out_facade.assert_called()
+    assert len(statuses) == 1, "Only one block should have been launched"
+    # there might be several calls to scale_out_facade inside strategy,
+    # but the end effect should be that exactly one block is scaled out.
+
     executor.scale_in_facade.assert_not_called()
 
     # In issue #3696, this second strategize does a scale in, because 14 < 48*1
