@@ -9,7 +9,13 @@ from parsl.jobs.strategy import Strategy
 
 
 @pytest.mark.local
-@pytest.mark.parametrize("ns", [ (14,48) ])
+@pytest.mark.parametrize("ns", [(14, 48, 1),    # issue #3696 regression
+                                (1, 1, 1),      # basic one task/one block behaviour
+                                (100, 1, 20),   # many one-task blocks, hitting max blocks
+                                (47, 48, 1),    # edge cases around #3696
+                                (48, 48, 1),    # "
+                                (49, 48, 2),    # "
+                                (149, 50, 3)])  # "
 def test_htex_strategy_does_not_oscillate(ns):
     """Check for oscillations in htex scaling.
     In issue 3696, with a large number of workers per block
@@ -21,7 +27,7 @@ def test_htex_strategy_does_not_oscillate(ns):
     from issue #3696.
     """
 
-    n_tasks, n_workers = ns
+    n_tasks, n_workers, n_blocks = ns
 
     s = Strategy(strategy='htex_auto_scale', max_idletime=0)
 
@@ -38,7 +44,7 @@ def test_htex_strategy_does_not_oscillate(ns):
     provider.parallelism = 1
     provider.init_blocks = 0
     provider.min_blocks = 0
-    provider.max_blocks = 2
+    provider.max_blocks = 20
     provider.nodes_per_block = 1
 
     def scale_out(n):
@@ -65,9 +71,8 @@ def test_htex_strategy_does_not_oscillate(ns):
     s.strategize([executor])
 
     executor.scale_out_facade.assert_called()
-    print(f"BENC: {statuses}")
-    assert len(statuses) == 1, "Only one block should have been launched"
-    assert len([k for k in statuses if statuses[k].state == JobState.PENDING]) == 1
+    assert len(statuses) == n_blocks, "Should have launched n_blocks"
+    assert len([k for k in statuses if statuses[k].state == JobState.PENDING]) == n_blocks
     # there might be several calls to scale_out_facade inside strategy,
     # but the end effect should be that exactly one block is scaled out.
 
@@ -76,8 +81,8 @@ def test_htex_strategy_does_not_oscillate(ns):
     # In issue #3696, this second strategize does a scale in, because n_tasks < n_workers*1
     s.strategize([executor])
 
-    # assert that there should still be 1 pending blocks
-    assert len([k for k in statuses if statuses[k].state == JobState.PENDING]) == 1
+    # assert that there should still be n_blocks pending blocks
+    assert len([k for k in statuses if statuses[k].state == JobState.PENDING]) == n_blocks
     # this assert fails due to issue #3696
 
     # Now check scale in happens with 0 load
