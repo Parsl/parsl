@@ -429,10 +429,13 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # arguments, result, and map of input and output files
         if exec_mode == 'serverless':
             if func.__name__ not in self._map_func_names_to_serialized_func_file:
-                function_file = self._path_in_task(func.__name__, "function")
-                self._map_func_names_to_serialized_func_file[func.__name__] = function_file
+                function_file = os.path.join(self._function_data_dir.name, func.__name__, 'function')
+                self._map_func_names_to_serialized_func_file[func.__name__] = {'function_file': function_file, 'is_serialized': False}
+                os.makedirs(os.path.join(self._function_data_dir.name, func.__name__))
             else:
-                function_file = self._map_func_names_to_serialized_func_file[func.__name__]
+                function_file = self._map_func_names_to_serialized_func_file[func.__name__]['function_file']
+        else:
+            function_file = self._path_in_task(executor_task_id, "function")
         argument_file = self._path_in_task(executor_task_id, "argument")
         result_file = self._path_in_task(executor_task_id, "result")
         map_file = self._path_in_task(executor_task_id, "map")
@@ -441,7 +444,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 and result to be found at: {}".format(executor_task_id, function_file, argument_file, result_file))
 
         # Serialize function object and arguments, separately
-        self._serialize_object_to_file(function_file, func)
+        if exec_mode == 'regular' or not self._map_func_names_to_serialized_func_file[func.__name__]['is_serialized']:
+            self._serialize_object_to_file(function_file, func)
+            if exec_mode == 'serverless':
+                self._map_func_names_to_serialized_func_file[func.__name__]['is_serialized'] = True
         args_dict = {'args': args, 'kwargs': kwargs}
         self._serialize_object_to_file(argument_file, args_dict)
 
