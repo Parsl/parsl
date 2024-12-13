@@ -429,8 +429,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # arguments, result, and map of input and output files
         if exec_mode == 'serverless':
             if func.__name__ not in self._map_func_names_to_serialized_func_file:
-                function_file = self._path_in_task(executor_task_id, "function")
-                self._map_func_names_to_serialized_func_file
+                function_file = self._path_in_task(func.__name__, "function")
+                self._map_func_names_to_serialized_func_file[func.__name__] = function_file
+            else:
+                function_file = self._map_func_names_to_serialized_func_file[func.__name__]
         argument_file = self._path_in_task(executor_task_id, "argument")
         result_file = self._path_in_task(executor_task_id, "result")
         map_file = self._path_in_task(executor_task_id, "map")
