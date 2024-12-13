@@ -84,8 +84,12 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             pre-warmed forked python process.
             Default is 'regular'.
 
+        use_tmp_dir_for_staging: bool
+            Whether to use tmp dir for staging functions, arguments, and results.
+            Default is True.
+
         manager_config: TaskVineManagerConfig
-            Configuration for the TaskVine manager. Default
+            Configuration for the TaskVine manager.
 
         factory_config: TaskVineFactoryConfig
             Configuration for the TaskVine factory.
@@ -105,6 +109,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  label: str = "TaskVineExecutor",
                  worker_launch_method: Union[Literal['provider'], Literal['factory'], Literal['manual']] = 'factory',
                  function_exec_mode: Union[Literal['regular'], Literal['serverless']] = 'regular',
+                 use_tmp_dir_for_staging: bool = True,
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  factory_config: TaskVineFactoryConfig = TaskVineFactoryConfig(),
                  provider: Optional[ExecutionProvider] = None,
@@ -135,6 +140,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.label = label
         self.worker_launch_method = worker_launch_method
         self.function_exec_mode = function_exec_mode
+        self.use_tmp_dir_for_staging = use_tmp_dir_for_staging
         self.manager_config = manager_config
         self.factory_config = factory_config
         self.storage_access = storage_access
@@ -237,8 +243,12 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Create directories for data and results
         log_dir = os.path.join(run_dir, self.label)
         os.makedirs(log_dir)
-        tmp_prefix = f'{self.label}-{getpass.getuser()}-{datetime.now().strftime("%Y%m%d%H%M%S%f")}-'
-        self._function_data_dir = tempfile.TemporaryDirectory(prefix=tmp_prefix)
+
+        if self.use_tmp_dir_for_staging:
+            tmp_prefix = f'{self.label}-{getpass.getuser()}-{datetime.now().strftime("%Y%m%d%H%M%S%f")}-'
+            self._function_data_dir = tempfile.TemporaryDirectory(prefix=tmp_prefix)
+        else:
+            self._function_data_dir = os.path.join(log_dir, 'function')
 
         # put TaskVine logs outside of a Parsl run as TaskVine caches between runs while
         # Parsl does not.
