@@ -187,6 +187,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Helpful to detect inconsistencies in serverless functions
         self._map_func_names_to_func_objs = {}
 
+        # Mapping of function names to file containing functions' serialization
+        # Helpful to deduplicate the same function
+        self._map_func_names_to_serialized_func_file = {}
+
         # Helper scripts to prepare package tarballs for Parsl apps
         self._package_analyze_script = shutil.which("poncho_package_analyze")
         self._package_create_script = shutil.which("poncho_package_create")
@@ -423,7 +427,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Get path to files that will contain the pickled function,
         # arguments, result, and map of input and output files
-        function_file = self._path_in_task(executor_task_id, "function")
+        if exec_mode == 'serverless':
+            if func.__name__ not in self._map_func_names_to_serialized_func_file:
+                function_file = self._path_in_task(executor_task_id, "function")
+                self._map_func_names_to_serialized_func_file
         argument_file = self._path_in_task(executor_task_id, "argument")
         result_file = self._path_in_task(executor_task_id, "result")
         map_file = self._path_in_task(executor_task_id, "map")
