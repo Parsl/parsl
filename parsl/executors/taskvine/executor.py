@@ -434,6 +434,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         argument_file = None
         result_file = None
         map_file = None
+        function_context_file = None
 
         # Get path to files that will contain the pickled function,
         # arguments, result, and map of input and output files
@@ -449,6 +450,19 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         argument_file = self._path_in_task(executor_task_id, "argument")
         result_file = self._path_in_task(executor_task_id, "result")
         map_file = self._path_in_task(executor_task_id, "map")
+
+        if exec_mode == 'serverless':
+            if 'function_context' in resource_specification:
+                if 'function_context_file' not in self._map_func_names_to_serialized_func_file[func.__name__]:
+                    function_context = resource_specification.get('function_context')
+                    function_context_args = resource_specification.get('function_context_args', [])
+                    function_context_kwargs = resource_specification.get('function_context_kwargs', {})
+                    function_context_file = os.path.join(self._function_data_dir.name, func.__name__, 'function_context')
+                    self._serialize_object_to_file(function_context_file, [function_context, function_context_args, function_context_kwargs])
+                    self._map_func_names_to_serialized_func_file[func.__name__]['function_context_file'] = function_context_file
+                else:
+                    function_context_file = self._map_func_names_to_serialized_func_file[func.__name__]['function_context_file']
+
 
         logger.debug("Creating executor task {} with function at: {}, argument at: {}, \
                 and result to be found at: {}".format(executor_task_id, function_file, argument_file, result_file))
@@ -487,6 +501,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                     function_file=function_file,
                                     argument_file=argument_file,
                                     result_file=result_file,
+                                    function_context_file=function_context_file,
                                     cores=cores,
                                     memory=memory,
                                     disk=disk,
