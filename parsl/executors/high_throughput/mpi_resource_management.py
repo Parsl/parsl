@@ -17,7 +17,6 @@ class Scheduler(Enum):
     Unknown = 0
     Slurm = 1
     PBS = 2
-    Cobalt = 3
 
 
 def get_slurm_hosts_list() -> List[str]:
@@ -37,13 +36,6 @@ def get_pbs_hosts_list() -> List[str]:
         return [line.strip() for line in f.readlines()]
 
 
-def get_cobalt_hosts_list() -> List[str]:
-    """Get list of COBALT hosts from envvar: COBALT_NODEFILE"""
-    nodefile_name = os.environ["COBALT_NODEFILE"]
-    with open(nodefile_name) as f:
-        return [line.strip() for line in f.readlines()]
-
-
 def get_nodes_in_batchjob(scheduler: Scheduler) -> List[str]:
     """Get nodelist from all supported schedulers"""
     nodelist = []
@@ -51,8 +43,6 @@ def get_nodes_in_batchjob(scheduler: Scheduler) -> List[str]:
         nodelist = get_slurm_hosts_list()
     elif scheduler == Scheduler.PBS:
         nodelist = get_pbs_hosts_list()
-    elif scheduler == Scheduler.Cobalt:
-        nodelist = get_cobalt_hosts_list()
     else:
         raise RuntimeError(f"mpi_mode does not support scheduler:{scheduler}")
     return nodelist
@@ -64,8 +54,6 @@ def identify_scheduler() -> Scheduler:
         return Scheduler.Slurm
     elif os.environ.get("PBS_NODEFILE"):
         return Scheduler.PBS
-    elif os.environ.get("COBALT_NODEFILE"):
-        return Scheduler.Cobalt
     else:
         return Scheduler.Unknown
 
@@ -172,9 +160,7 @@ class MPITaskScheduler(TaskScheduler):
         """Schedule task if resources are available otherwise backlog the task"""
         user_ns = locals()
         user_ns.update({"__builtins__": __builtins__})
-        _f, _args, _kwargs, resource_spec = unpack_res_spec_apply_message(
-            task_package["buffer"], user_ns, copy=False
-        )
+        _f, _args, _kwargs, resource_spec = unpack_res_spec_apply_message(task_package["buffer"])
 
         nodes_needed = resource_spec.get("num_nodes")
         if nodes_needed:
@@ -189,6 +175,7 @@ class MPITaskScheduler(TaskScheduler):
                 self._map_tasks_to_nodes[task_package["task_id"]] = allocated_nodes
                 buffer = pack_res_spec_apply_message(_f, _args, _kwargs, resource_spec)
                 task_package["buffer"] = buffer
+                task_package["resource_spec"] = resource_spec
 
         self.pending_task_q.put(task_package)
 

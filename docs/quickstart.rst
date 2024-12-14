@@ -176,12 +176,17 @@ This script runs on a system that must stay on-line until all of your tasks comp
 much computing power, such as the login node for a supercomputer.
 
 The :class:`~parsl.config.Config` object holds definitions of Executors and the Providers and Launchers they rely on.
-An example which launches 512 workers on 128 nodes of the Polaris supercomputer looks like
+An example which launches 4 workers on 1 node of the Polaris supercomputer looks like
 
 .. code-block:: python
 
+    from parsl import Config
+    from parsl.executors import HighThroughputExecutor
+    from parsl.providers import PBSProProvider
+    from parsl.launchers import MpiExecLauncher
+
     config = Config(
-        retires=1,  # Restart task if they fail once
+        retries=1,  # Restart task if they fail once
         executors=[
             HighThroughputExecutor(
                 available_accelerators=4,  # Maps one worker per GPU
@@ -191,13 +196,13 @@ An example which launches 512 workers on 128 nodes of the Polaris supercomputer 
                     account="example",
                     worker_init="module load conda; conda activate parsl",
                     walltime="1:00:00",
-                    queue="prod",
+                    queue="debug",
                     scheduler_options="#PBS -l filesystems=home:eagle",  # Change if data on other filesystem
                     launcher=MpiExecLauncher(
                         bind_cmd="--cpu-bind", overrides="--depth=64 --ppn 1"
                     ),  # Ensures 1 manger per node and allows it to divide work to all 64 cores
                     select_options="ngpus=4",
-                    nodes_per_block=128,
+                    nodes_per_block=1,
                     cpus_per_node=64,
                 ),
             ),
