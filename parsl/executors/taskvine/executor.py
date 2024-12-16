@@ -357,6 +357,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Default execution mode of apps is regular
         exec_mode = resource_specification.get('exec_mode', self.function_exec_mode)
 
+        if exec_mode == 'serverless' and is_monitoring_enabled:
+            logger.warning("A serverless task cannot run with Parsl monitoring enabled. Falling back to execute this task as a regular task.")
+            exec_mode = 'regular'
+
         if exec_mode == 'serverless':
             if func.__name__ not in self._map_func_names_to_func_details or 'func_obj' not in self._map_func_names_to_func_details[func.__name__]:
                 self._map_func_names_to_func_details[func.__name__] = {'func_obj': func}
@@ -364,10 +368,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 if id(func) != id(self._map_func_names_to_func_details[func.__name__]['func_obj']):
                     logger.warning('Inconsistency in a serverless function call detected. A function name cannot point to two different function objects. Falling back to executing it as a regular task.')
                     exec_mode = 'regular'
-
-            if is_monitoring_enabled:
-                logger.warning("A serverless task cannot run with Parsl monitoring enabled. Falling back to execute this task as a regular task.")
-                exec_mode = 'regular'
 
         # Detect resources and features of a submitted Parsl app
         cores = None
