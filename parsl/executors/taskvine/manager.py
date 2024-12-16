@@ -10,8 +10,8 @@ import parsl
 from parsl.executors.taskvine import exec_parsl_function
 from parsl.executors.taskvine.utils import VineTaskToParsl, run_parsl_function
 from parsl.process_loggers import wrap_with_logs
-from parsl.utils import setproctitle
 from parsl.serialize import deserialize, serialize
+from parsl.utils import setproctitle
 
 try:
     from ndcctools.taskvine import FunctionCall, Manager, Task, cvine
