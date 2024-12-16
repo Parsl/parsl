@@ -15,7 +15,7 @@ class ParslTaskToVine:
                  function_file: Optional[str],     # pickled file containing the function information
                  argument_file: Optional[str],     # pickled file containing the arguments to the function call
                  result_file: Optional[str],       # path to the pickled result object of the function execution
-                 function_context_file: Optional[list], # path to the pickled list of function context details for serverless functions
+                 function_context_file: Optional[list],  # path to the pickled list of function context details for serverless functions
                  cores: Optional[float],           # number of cores to allocate
                  memory: Optional[int],            # amount of memory in MBs to allocate
                  disk: Optional[int],              # amount of disk in MBs to allocate

@@ -8,7 +8,7 @@ import uuid
 
 import parsl
 from parsl.executors.taskvine import exec_parsl_function
-from parsl.executors.taskvine.utils import VineTaskToParsl, run_parsl_function
+from parsl.executors.taskvine.utils import VineTaskToParsl
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import deserialize, serialize
 from parsl.utils import setproctitle
@@ -142,6 +142,7 @@ def _deserialize_object_from_file(path):
         obj = deserialize(f_in.read())
     return obj
 
+
 def _serialize_object_to_file(path, obj):
     """Serialize an object to the given file path."""
     serialized_obj = serialize(obj)
@@ -149,6 +150,7 @@ def _serialize_object_to_file(path, obj):
         written = 0
         while written < len(serialized_obj):
             written += f_out.write(serialized_obj[written:])
+
 
 @wrap_with_logs
 def _taskvine_submit_wait(ready_task_queue=None,
@@ -316,7 +318,8 @@ def _taskvine_submit_wait(ready_task_queue=None,
                     libs_installed[task.func_name] = lib_name
                 try:
                     # deserialize the arguments to the function call so they can be serialized again in TaskVine way.
-                    # this double serialization hurts the performance of the system, but there's no way around it at the moment. Mark as TODO for future work.
+                    # this double serialization hurts the performance of the system,
+                    # but there's no way around it at the moment. Mark as TODO for future work.
                     all_args = _deserialize_object_from_file(task.argument_file)
                     args = all_args['args']
                     kwargs = all_args['kwargs']
@@ -460,9 +463,8 @@ def _taskvine_submit_wait(ready_task_queue=None,
                 try:
                     if t.successful():
                         _serialize_object_to_file(result_file, t.output)
-                except:
+                except Exception:
                     is_serverless_output_ok = False
-
 
             # A tasks completes 'succesfully' if it has result file.
             # A check whether the Python object represented using this file can be
