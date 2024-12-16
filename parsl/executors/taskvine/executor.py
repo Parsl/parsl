@@ -189,12 +189,13 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Path to directory that holds all tasks' data and results.
         self._function_data_dir = ""
 
-        # Mapping of function names to function details
-        # Currently the values include function objects, path to serialized functions, path to serialized function contexts, and whether functions are serialized
-        # Helpful to detect inconsistencies in serverless functions
-        # Helpful to deduplicate the same function
+        # Mapping of function names to function details.
+        # Currently the values include function objects, path to serialized functions,
+        # path to serialized function contexts, and whether functions are serialized.
+        # Helpful to detect inconsistencies in serverless functions.
+        # Helpful to deduplicate the same function.
         self._map_func_names_to_func_details = {}
-    
+
         # Helper scripts to prepare package tarballs for Parsl apps
         self._package_analyze_script = shutil.which("poncho_package_analyze")
         self._package_create_script = shutil.which("poncho_package_create")
@@ -362,11 +363,14 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             exec_mode = 'regular'
 
         if exec_mode == 'serverless':
-            if func.__name__ not in self._map_func_names_to_func_details or 'func_obj' not in self._map_func_names_to_func_details[func.__name__]:
+            if func.__name__ not in self._map_func_names_to_func_details or\
+                    'func_obj' not in self._map_func_names_to_func_details[func.__name__]:
                 self._map_func_names_to_func_details[func.__name__] = {'func_obj': func}
             else:
                 if id(func) != id(self._map_func_names_to_func_details[func.__name__]['func_obj']):
-                    logger.warning('Inconsistency in a serverless function call detected. A function name cannot point to two different function objects. Falling back to executing it as a regular task.')
+                    logger.warning('Inconsistency in a serverless function call detected.\
+                                   A function name cannot point to two different function objects.\
+                                   Falling back to executing it as a regular task.')
                     exec_mode = 'regular'
 
         # Detect resources and features of a submitted Parsl app
@@ -437,7 +441,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Get path to files that will contain the pickled function,
         # arguments, result, and map of input and output files
         if exec_mode == 'serverless':
-            if func.__name__ not in self._map_func_names_to_func_details or 'function_file' not in self._map_func_names_to_func_details[func.__name__]:
+            if func.__name__ not in self._map_func_names_to_func_details or\
+                    'function_file' not in self._map_func_names_to_func_details[func.__name__]:
                 function_file = os.path.join(self._function_data_dir.name, func.__name__, 'function')
                 self._map_func_names_to_func_details[func.__name__] = {'function_file': function_file, 'is_serialized': False}
                 os.makedirs(os.path.join(self._function_data_dir.name, func.__name__))
@@ -460,7 +465,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                     self._map_func_names_to_func_details[func.__name__]['function_context_file'] = function_context_file
                 else:
                     function_context_file = self._map_func_names_to_func_details[func.__name__]['function_context_file']
-
 
         logger.debug("Creating executor task {} with function at: {}, argument at: {}, \
                 and result to be found at: {}".format(executor_task_id, function_file, argument_file, result_file))
