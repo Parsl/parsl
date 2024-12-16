@@ -513,7 +513,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         """
 
         if self.benc_interchange_cli == "rust":
-            self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange " + str(self.cert_dir) + " >/dev/null 2>/dev/null"], shell=True)
+            self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange " + str(self.cert_dir)], shell=True)
+            # when i was playing with performance, I did a dev/null redirect here to reduce console load. but then you lose panic-style debug output
+            # self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange " + str(self.cert_dir) + " >/dev/null 2>/dev/null"], shell=True)
         elif self.benc_interchange_cli == "elixir":
             # this is going to leave residual elixirchange around because killing shell won't kill children...
             self.interchange_proc = subprocess.Popen(args=["cd elixirchange; MIX_ENV=prod mix run --no-halt"], shell=True)
