@@ -189,14 +189,12 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Path to directory that holds all tasks' data and results.
         self._function_data_dir = ""
 
-        # Mapping of function names to function objects
+        # Mapping of function names to function details
+        # Currently the values include function objects, path to serialized functions, path to serialized function contexts, and whether functions are serialized
         # Helpful to detect inconsistencies in serverless functions
-        self._map_func_names_to_func_objs = {}
-
-        # Mapping of function names to file containing functions' serialization
         # Helpful to deduplicate the same function
-        self._map_func_names_to_serialized_func_file = {}
-
+        self._map_func_names_to_func_details = {}
+    
         # Helper scripts to prepare package tarballs for Parsl apps
         self._package_analyze_script = shutil.which("poncho_package_analyze")
         self._package_create_script = shutil.which("poncho_package_create")
@@ -360,10 +358,10 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         exec_mode = resource_specification.get('exec_mode', self.function_exec_mode)
 
         if exec_mode == 'serverless':
-            if func.__name__ not in self._map_func_names_to_func_objs:
-                self._map_func_names_to_func_objs[func.__name__] = func
+            if func.__name__ not in self._map_func_names_to_func_details or 'func_obj' not in self._map_func_names_to_func_details[func.__name__]:
+                self._map_func_names_to_func_details[func.__name__] = {'func_obj': func}
             else:
-                if id(func) != id(self._map_func_names_to_func_objs[func.__name__]):
+                if id(func) != id(self._map_func_names_to_func_details[func.__name__]['func_obj']):
                     logger.warning('Inconsistency in a serverless function call detected. A function name cannot point to two different function objects. Falling back to executing it as a regular task.')
                     exec_mode = 'regular'
 
@@ -439,12 +437,12 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Get path to files that will contain the pickled function,
         # arguments, result, and map of input and output files
         if exec_mode == 'serverless':
-            if func.__name__ not in self._map_func_names_to_serialized_func_file:
+            if func.__name__ not in self._map_func_names_to_func_details or 'function_file' not in self._map_func_names_to_func_details[func.__name__]:
                 function_file = os.path.join(self._function_data_dir.name, func.__name__, 'function')
-                self._map_func_names_to_serialized_func_file[func.__name__] = {'function_file': function_file, 'is_serialized': False}
+                self._map_func_names_to_func_details[func.__name__] = {'function_file': function_file, 'is_serialized': False}
                 os.makedirs(os.path.join(self._function_data_dir.name, func.__name__))
             else:
-                function_file = self._map_func_names_to_serialized_func_file[func.__name__]['function_file']
+                function_file = self._map_func_names_to_func_details[func.__name__]['function_file']
         else:
             function_file = self._path_in_task(executor_task_id, "function")
         argument_file = self._path_in_task(executor_task_id, "argument")
@@ -453,25 +451,25 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         if exec_mode == 'serverless':
             if 'function_context' in resource_specification:
-                if 'function_context_file' not in self._map_func_names_to_serialized_func_file[func.__name__]:
+                if 'function_context_file' not in self._map_func_names_to_func_details[func.__name__]:
                     function_context = resource_specification.get('function_context')
                     function_context_args = resource_specification.get('function_context_args', [])
                     function_context_kwargs = resource_specification.get('function_context_kwargs', {})
                     function_context_file = os.path.join(self._function_data_dir.name, func.__name__, 'function_context')
                     self._serialize_object_to_file(function_context_file, [function_context, function_context_args, function_context_kwargs])
-                    self._map_func_names_to_serialized_func_file[func.__name__]['function_context_file'] = function_context_file
+                    self._map_func_names_to_func_details[func.__name__]['function_context_file'] = function_context_file
                 else:
-                    function_context_file = self._map_func_names_to_serialized_func_file[func.__name__]['function_context_file']
+                    function_context_file = self._map_func_names_to_func_details[func.__name__]['function_context_file']
 
 
         logger.debug("Creating executor task {} with function at: {}, argument at: {}, \
                 and result to be found at: {}".format(executor_task_id, function_file, argument_file, result_file))
 
         # Serialize function object and arguments, separately
-        if exec_mode == 'regular' or not self._map_func_names_to_serialized_func_file[func.__name__]['is_serialized']:
+        if exec_mode == 'regular' or not self._map_func_names_to_func_details[func.__name__]['is_serialized']:
             self._serialize_object_to_file(function_file, func)
             if exec_mode == 'serverless':
-                self._map_func_names_to_serialized_func_file[func.__name__]['is_serialized'] = True
+                self._map_func_names_to_func_details[func.__name__]['is_serialized'] = True
         args_dict = {'args': args, 'kwargs': kwargs}
         self._serialize_object_to_file(argument_file, args_dict)
 
