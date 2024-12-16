@@ -354,7 +354,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         logger.debug(f'Got resource specification: {resource_specification}')
 
-        is_monitoring_enabled = resource_specification.get('is_monitoring_enabled', False)
+        is_monitoring_enabled = resource_specification.get('_is_monitoring_enabled', False)
 
         # Default execution mode of apps is regular
         exec_mode = resource_specification.get('exec_mode', self.function_exec_mode)
