@@ -89,9 +89,14 @@ int glue_zmq_get_socket_events(void *sock) {
 }
 
 
-void glue_zmq_alloc_send_bytes(void *sock, void *bytes, int len) {
+void glue_zmq_alloc_send_bytes(void *sock, void *bytes, int len, int more) {
     int n;
-    n = zmq_send(sock, bytes, len, 0);
+    int flags;
+    flags = 0;
+    if(more == 1) {
+        flags = ZMQ_SNDMORE;
+    }
+    n = zmq_send(sock, bytes, len, flags);
     assert(n == len);
     // TODO: could be -1 on failure and we should do *something* with that
 }

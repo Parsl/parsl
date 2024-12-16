@@ -38,9 +38,9 @@ WORKER_RESULT_PORT = 9004
 
 record MatchState where
   constructor MkMatchState
-  managers: List JSON
+  managers: List ((n : Nat ** ByteBlock n), JSON)
   tasks: List PickleAST
-%runElab derive "MatchState" [Generic, Meta, Show]
+-- %runElab derive "MatchState" [Generic, Meta, Show]
 
 
 
@@ -84,8 +84,8 @@ dispatch_cmd "CONNECTED_BLOCKS" = do
 dispatch_cmd _ = ?error_cmd_not_implemented
 
 
-matchmake :  (State MatchState MatchState es, HasErr AppHasIO es) => App es ()
-matchmake = do
+matchmake :  (State MatchState MatchState es, HasErr AppHasIO es) => ZMQSocket -> App es ()
+matchmake tasks_interchange_to_worker_socket = do
   log "Matchmaker starting"
   -- we can make a match if we have a manager with capacity and a task in the
   -- task queue. This is the point that in the real htex interchange can do
@@ -126,17 +126,32 @@ matchmake = do
       -- as many as listed in the original count.
       case managers of
         [] => log "No managers registered - no match possible"
-        m :: rest_managers => do
+        ((n ** b), m) :: rest_managers => do
           logv "Considering manager for match" m
           let c = lookup "max_capacity" m
           case c of
             Just (JNumber c) => do
               logv "This manager has capacity" c
               if c > 0
-                then ?notimpl_matchmake
+                then do
+                  -- TODO: update the record to have one less available capacity unit
+
+                  -- this task_msg looks like: 
+                  --   self.task_outgoing.send_multipart([manager_id, b'', pickle.dumps(tasks)])
+
+                  -- TODO: if we matchmake a lot of tasks at once, this singleton
+                  -- list could contain many matched tasks destined for the same
+                  -- manager.
+                  let task_msg = PickleList [task]
+                  logv "Dispatching task" task_msg
+                  (n ** resp_bytes) <- pickle task_msg
+                  -- TODO: i need to finish off dict serialization items for SETITEMS in Pickle.idr
+                  zmq_alloc_send_bytes tasks_interchange_to_worker_socket b True
+                  zmq_alloc_send_bytes tasks_interchange_to_worker_socket emptyByteBlock True
+                  zmq_alloc_send_bytes tasks_interchange_to_worker_socket resp_bytes False
                 else ?notimpl_manager_oversubscribed
             _ => ?error_registration_bad_max_capacity
-  log "Matchmaker (no-op) completed"
+  log "Matchmaker completed"
 
 
 ||| this drains ZMQ when there's a poll. this is a bit complicated and
@@ -179,7 +194,7 @@ zmq_poll_command_channel_loop command_socket = do
         resp <- dispatch_cmd cmd
         logv "Response to command" resp
         (n ** resp_bytes) <- pickle resp
-        zmq_alloc_send_bytes command_socket resp_bytes
+        zmq_alloc_send_bytes command_socket resp_bytes False
         -- need to do some appropriate de-alloc for a message here?
         -- or is it done inside alloc_send_bytes?
 
@@ -188,8 +203,8 @@ zmq_poll_command_channel_loop command_socket = do
         zmq_poll_command_channel_loop command_socket
 
 -- TODO: factor ZMQ_EVENTS handling with other channels
-covering zmq_poll_tasks_submit_to_interchange_loop : (State MatchState MatchState es, HasErr AppHasIO es) => ZMQSocket -> App es ()
-zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket = do
+covering zmq_poll_tasks_submit_to_interchange_loop : (State MatchState MatchState es, HasErr AppHasIO es) => ZMQSocket -> ZMQSocket -> App es ()
+zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket = do
   -- need to run this in a loop until it returns no events left
   events <- zmq_get_socket_events tasks_submit_to_interchange_socket
   logv "ZMQ poll tasks submit to interchange loop got these zmq events" events
@@ -216,17 +231,17 @@ zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket = d
         -- TODO: add to match state
 
         old_state@(MkMatchState managers tasks) <- get MatchState
-        logv "Old match state" old_state
+        -- logv "Old match state" old_state
         put MatchState (MkMatchState managers (task :: tasks))
         log "Put new task into match state" 
-        matchmake
+        matchmake tasks_interchange_to_worker_socket
 
         -- TODO: deallocate the message and bytes (after unpickling)
 
         -- TODO: so now we've received a message... we'll need to eventually deallocate
         -- and also do something with the message
 
-        zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket
+        zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket
 
 covering zmq_poll_tasks_interchange_to_worker_loop : (State MatchState MatchState es, HasErr AppHasIO es) => ZMQSocket -> App es ()
 zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = do
@@ -249,8 +264,11 @@ zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = d
       [] => log "No message received on task interchange->worker channel"
       [addr_part, json_part] => do
         bb@(s ** bytes) <- zmq_msg_as_bytes json_part
+        addr_bytes <- zmq_msg_as_bytes addr_part
         logv "Received two-part message on task interchange->worker channel, size" s
         ascii_dump bb
+        log "Address bytes:"
+        ascii_dump addr_bytes
 
         (msg_as_str, _) <- primIO $ str_from_bytes (cast s) bytes
         let mj = parse msg_as_str
@@ -266,9 +284,9 @@ zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = d
             case t of
               Just (JString "registration") => do
                 old_state@(MkMatchState managers tasks) <- get MatchState
-                put MatchState (MkMatchState (j :: managers) tasks)
+                put MatchState (MkMatchState ((addr_bytes, j) :: managers) tasks)
                 log "Put new manager into match state" 
-                matchmake
+                matchmake tasks_interchange_to_worker_socket
               _ => ?error_unknown_registration_like_type
         zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket
       _ => ?error_tasks_to_interchange_expected_two_parts
@@ -439,7 +457,7 @@ poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to
 
   when ((index 1 poll_outputs).revents /= 0) $ do
     log "Got a poll result for tasks submit to interchange channel. Doing ZMQ-specific event handling."
-    zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket
+    zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket
 
   when ((index 2 poll_outputs).revents /= 0) $ do
     log "Got a poll result for tasks interchange to workers channel. Doing ZMQ-specific event handling."

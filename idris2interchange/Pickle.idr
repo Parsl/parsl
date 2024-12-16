@@ -437,9 +437,29 @@ pickle_BININT (n ** bytes) v = do
 
   pure (S (S (S (S (S n)))) ** bytes)
 
+
+pickle_DICT : HasErr AppHasIO es => (n ** ByteBlock n) -> List (PickleAST, PickleAST) -> App es (m ** ByteBlock m)
+pickle_DICT (n ** bytes) entries = do
+  log "Pickling DICT"
+
+  -- so what does a dict pickle look like?
+  -- according to Lib/pickletools.py:
+  --   pydict markobject key_1 value_1 ... key_n value_n
+
+  bytes <- primIO $ bb_append bytes 125  -- EMPTY_DICT opcode is ASCII '}', decimal 125
+
+  bytes <- primIO $ bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
+
+  -- (len ** bytes) <- foldlM fold_AST ((S (S n)) ** bytes) entries
+
+  bytes <- primIO $ bb_append bytes 117  -- SETITEMS opcode is ASCII 'u'
+  pure ((S (S (S n))) ** bytes) -- TODO: restore this sn to len+1 coming from foldlM when its implemented
+
+
 pickle_ast bytes (PickleTuple elements) = pickle_TUPLE bytes elements
 pickle_ast bytes (PickleList elements) = pickle_LIST bytes elements
 pickle_ast bytes (PickleInteger v) = pickle_BININT bytes v
+pickle_ast bytes (PickleDict l) = pickle_DICT bytes l
 pickle_ast _ _ = ?notimpl_pickle_ast_others
 
 ||| Takes some PickleAST and turns it into a Pickle bytestream.

@@ -165,11 +165,12 @@ zmq_get_socket_events (MkZMQSocket sock_ptr) = do
 
 
 %foreign (gluezmq "glue_zmq_alloc_send_bytes")
-prim__zmq_alloc_send_bytes : AnyPtr -> AnyPtr -> Int -> PrimIO ()
+prim__zmq_alloc_send_bytes : AnyPtr -> AnyPtr -> Int -> Int -> PrimIO ()
 
 public export
-zmq_alloc_send_bytes : HasErr AppHasIO es => ZMQSocket -> ByteBlock n -> App es ()
-zmq_alloc_send_bytes (MkZMQSocket sock_ptr) (MkByteBlock byte_ptr size) = do
+zmq_alloc_send_bytes : HasErr AppHasIO es => ZMQSocket -> ByteBlock n -> Bool -> App es ()
+zmq_alloc_send_bytes (MkZMQSocket sock_ptr) (MkByteBlock byte_ptr size) more = do
   log "sending bytes"
-  primIO $ primIO $ prim__zmq_alloc_send_bytes sock_ptr byte_ptr (cast size)
+  let more_i = if more then 1 else 0
+  primIO $ primIO $ prim__zmq_alloc_send_bytes sock_ptr byte_ptr (cast size) more_i
   log "sent bytes"
