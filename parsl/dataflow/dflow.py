@@ -724,13 +724,6 @@ class DataFlowKernel:
                                                        monitor_resources=executor.monitor_resources(),
                                                        run_dir=self.run_dir)
 
-            # hint executors that this function will be monitored
-            if task_record['resource_specification']:
-                task_record['resource_specification'].update({'_is_monitoring_enabled': True})
-        else:
-            if task_record['resource_specification']:
-                task_record['resource_specification'].update({'_is_monitoring_enabled': False})
-
         with self.submitter_lock:
             exec_fu = executor.submit(function, task_record['resource_specification'], *args, **kwargs)
         self._update_task_state(task_record, States.launched)
