@@ -124,9 +124,20 @@ matchmake = do
       -- task results come in.
       -- In the rust impl, I represented managers using multiple slot objects,
       -- as many as listed in the original count.
-      ?notimpl_matchmaker
+      case managers of
+        [] => log "No managers registered - no match possible"
+        m :: rest_managers => do
+          logv "Considering manager for match" m
+          let c = lookup "max_capacity" m
+          case c of
+            Just (JNumber c) => do
+              logv "This manager has capacity" c
+              if c > 0
+                then ?notimpl_matchmake
+                else ?notimpl_manager_oversubscribed
+            _ => ?error_registration_bad_max_capacity
   log "Matchmaker (no-op) completed"
-      
+
 
 ||| this drains ZMQ when there's a poll. this is a bit complicated and
 ||| not like a regular level-triggered poll.
