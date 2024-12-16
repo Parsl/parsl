@@ -279,7 +279,7 @@ class Database:
 class DatabaseManager:
     def __init__(self,
                  db_url: str = 'sqlite:///runinfo/monitoring.db',
-                 logdir: str = '.',
+                 run_dir: str = '.',
                  logging_level: int = logging.INFO,
                  batching_interval: float = 1,
                  batching_threshold: float = 99999,
@@ -287,12 +287,12 @@ class DatabaseManager:
 
         self.workflow_end = False
         self.workflow_start_message: Optional[MonitoringMessage] = None
-        self.logdir = logdir
-        os.makedirs(self.logdir, exist_ok=True)
+        self.run_dir = run_dir
+        os.makedirs(self.run_dir, exist_ok=True)
 
         logger.propagate = False
 
-        set_file_logger("{}/database_manager.log".format(self.logdir), level=logging_level,
+        set_file_logger(f"{self.run_dir}/database_manager.log", level=logging_level,
                         format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s",
                         name="database_manager")
 
@@ -556,7 +556,7 @@ class DatabaseManager:
             logger.debug("Checking STOP conditions: kill event: %s, queue has entries: %s",
                          kill_event.is_set(), logs_queue.qsize() != 0)
             try:
-                x, addr = logs_queue.get(timeout=0.1)
+                x = logs_queue.get(timeout=0.1)
             except queue.Empty:
                 continue
             else:
@@ -681,7 +681,7 @@ class DatabaseManager:
 def dbm_starter(exception_q: mpq.Queue,
                 resource_msgs: mpq.Queue,
                 db_url: str,
-                logdir: str,
+                run_dir: str,
                 logging_level: int) -> None:
     """Start the database manager process
 
@@ -692,7 +692,7 @@ def dbm_starter(exception_q: mpq.Queue,
 
     try:
         dbm = DatabaseManager(db_url=db_url,
-                              logdir=logdir,
+                              run_dir=run_dir,
                               logging_level=logging_level)
         logger.info("Starting dbm in dbm starter")
         dbm.start(resource_msgs)

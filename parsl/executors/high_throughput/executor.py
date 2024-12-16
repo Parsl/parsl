@@ -16,15 +16,16 @@ from parsl import curvezmq
 from parsl.addresses import get_all_addresses
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.staging import Staging
-from parsl.executors.errors import BadMessage, ScalingFailed
+from parsl.executors.errors import (
+    BadMessage,
+    InvalidResourceSpecification,
+    ScalingFailed,
+)
 from parsl.executors.high_throughput import zmq_pipes
 from parsl.executors.high_throughput.errors import CommandClientTimeoutError
 from parsl.executors.high_throughput.manager_selector import (
     ManagerSelector,
     RandomManagerSelector,
-)
-from parsl.executors.high_throughput.mpi_prefix_composer import (
-    InvalidResourceSpecification,
 )
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
@@ -62,7 +63,6 @@ DEFAULT_INTERCHANGE_LAUNCH_CMD = ["interchange.py"]
 
 GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionProvider`
        Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
-        :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
         :class:`~parsl.providers.condor.condor.Condor`,
         :class:`~parsl.providers.googlecloud.googlecloud.GoogleCloud`,
         :class:`~parsl.providers.gridEngine.gridEngine.GridEngine`,
@@ -86,13 +86,18 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
 
     address : string
         An address to connect to the main Parsl process which is reachable from the network in which
-        workers will be running. This field expects an IPv4 address (xxx.xxx.xxx.xxx).
+        workers will be running. This field expects an IPv4 or IPv6 address.
         Most login nodes on clusters have several network interfaces available, only some of which
         can be reached from the compute nodes. This field can be used to limit the executor to listen
         only on a specific interface, and limiting connections to the internal network.
         By default, the executor will attempt to enumerate and connect through all possible addresses.
         Setting an address here overrides the default behavior.
         default=None
+
+    loopback_address: string
+        Specify address used for internal communication between executor and interchange.
+        Supports IPv4 and IPv6 addresses
+        default=127.0.0.1
 
     worker_ports : (int, int)
         Specify the ports to be used by workers to connect to Parsl. If this option is specified,
@@ -145,6 +150,11 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
 
     encrypted : bool
         Flag to enable/disable encryption (CurveZMQ). Default is False.
+
+    manager_selector: ManagerSelector
+        Determines what strategy the interchange uses to select managers during task distribution.
+        See API reference under "Manager Selectors" regarding the various manager selectors.
+        Default: 'RandomManagerSelector'
 """  # Documentation for params used by both HTEx and MPIEx
 
 
@@ -219,6 +229,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Parsl will create names as integers starting with 0.
 
         default: empty list
+
     """
 
     @typeguard.typechecked
@@ -228,6 +239,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  launch_cmd: Optional[str] = None,
                  interchange_launch_cmd: Optional[Sequence[str]] = None,
                  address: Optional[str] = None,
+                 loopback_address: str = "127.0.0.1",
                  worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
                  interchange_port_range: Optional[Tuple[int, int]] = (55000, 56000),
@@ -265,6 +277,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.address = address
         self.address_probe_timeout = address_probe_timeout
         self.manager_selector = manager_selector
+        self.loopback_address = loopback_address
+
         if self.address:
             self.all_addresses = address
         else:
@@ -319,6 +333,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             interchange_launch_cmd = DEFAULT_INTERCHANGE_LAUNCH_CMD
         self.interchange_launch_cmd = interchange_launch_cmd
 
+        self._result_queue_thread_exit = threading.Event()
+        self._result_queue_thread: Optional[threading.Thread] = None
+
     radio_mode = "htex"
     enable_mpi_mode: bool = False
     mpi_launcher: str = "mpiexec"
@@ -342,15 +359,17 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         return self.logdir
 
     def validate_resource_spec(self, resource_specification: dict):
-        """HTEX does not support *any* resource_specification options and
-        will raise InvalidResourceSpecification is any are passed to it"""
+        """HTEX supports the following *Optional* resource specifications:
+        priority: lower value is higher priority"""
         if resource_specification:
-            raise InvalidResourceSpecification(
-                set(resource_specification.keys()),
-                ("HTEX does not support the supplied resource_specifications."
-                 "For MPI applications consider using the MPIExecutor. "
-                 "For specifications for core count/memory/walltime, consider using WorkQueueExecutor. ")
-            )
+            acceptable_fields = {'priority'}
+            keys = set(resource_specification.keys())
+            invalid_keys = keys - acceptable_fields
+            if invalid_keys:
+                message = "Task resource specification only accepts these types of resources: {}".format(
+                    ', '.join(acceptable_fields))
+                logger.error(message)
+                raise InvalidResourceSpecification(set(invalid_keys), message)
         return
 
     def initialize_scaling(self):
@@ -403,13 +422,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             )
 
         self.outgoing_q = zmq_pipes.TasksOutgoing(
-            "127.0.0.1", self.interchange_port_range, self.cert_dir
+            self.loopback_address, self.interchange_port_range, self.cert_dir
         )
         self.incoming_q = zmq_pipes.ResultsIncoming(
-            "127.0.0.1", self.interchange_port_range, self.cert_dir
+            self.loopback_address, self.interchange_port_range, self.cert_dir
         )
         self.command_client = zmq_pipes.CommandClient(
-            "127.0.0.1", self.interchange_port_range, self.cert_dir
+            self.loopback_address, self.interchange_port_range, self.cert_dir
         )
 
         self._result_queue_thread = None
@@ -441,9 +460,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         """
         logger.debug("Result queue worker starting")
 
-        while not self.bad_state_is_set:
+        while not self.bad_state_is_set and not self._result_queue_thread_exit.is_set():
             try:
-                msgs = self.incoming_q.get()
+                msgs = self.incoming_q.get(timeout_ms=self.poll_period)
+                if msgs is None:  # timeout
+                    continue
 
             except IOError as e:
                 logger.exception("Caught broken queue with exception code {}: {}".format(e.errno, e))
@@ -461,9 +482,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                     except pickle.UnpicklingError:
                         raise BadMessage("Message received could not be unpickled")
 
-                    if msg['type'] == 'heartbeat':
-                        continue
-                    elif msg['type'] == 'result':
+                    if msg['type'] == 'result':
                         try:
                             tid = msg['task_id']
                         except Exception:
@@ -503,6 +522,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                     else:
                         raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
+        logger.info("Closing result ZMQ pipe")
+        self.incoming_q.close()
         logger.info("Result queue worker finished")
 
     def _start_local_interchange_process(self) -> None:
@@ -524,11 +545,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                                            "gcc -shared gluezmq.c -lzmq -o glue_zmq.so && gcc -shared pollhelper.c -o pollhelper.so && gcc -shared bytes.c -o bytes.so && "
                                                            "rm -rf build/ && idris2 Main.idr -p sop -p elab-util -p contrib -x main"], shell=True)
                                                            # "idris2 main.idr -o ixg && LD_LIBRARY_PATH=$(pwd)/build/exec/ixg_app gdb chezscheme"], shell=True)
-
         elif self.benc_interchange_cli == "python":
             # TODO: all these arguments below aren't used... so are they necessary? should there be
             # tests discovering they aren't used/passed?
-            interchange_config = {"client_address": "127.0.0.1",
+
+            interchange_config = {"client_address": self.loopback_address,
                                   "client_ports": (self.outgoing_q.port,
                                                    self.incoming_q.port,
                                                    self.command_client.port),
@@ -545,6 +566,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                   "manager_selector": self.manager_selector,
                                   "run_id": self.run_id,
                                   }
+
 
             logger.error(f"BENC: interchange_config = {interchange_config}")
             config_pickle = pickle.dumps(interchange_config)
@@ -609,7 +631,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     def outstanding(self) -> int:
         """Returns the count of tasks outstanding across the interchange
         and managers"""
-        return self.command_client.run("OUTSTANDING_C")
+        return len(self.tasks)
 
     @property
     def connected_workers(self) -> int:
@@ -686,7 +708,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         except TypeError:
             raise SerializationError(func.__name__)
 
-        msg = {"task_id": task_id, "buffer": fn_buf}
+        msg = {"task_id": task_id, "resource_spec": resource_specification, "buffer": fn_buf}
 
         # Post task to the outgoing queue
         self.outgoing_q.put(msg)
@@ -842,6 +864,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         logger.info("Attempting HighThroughputExecutor shutdown")
 
+        logger.info("Terminating interchange and result queue thread")
+        self._result_queue_thread_exit.set()
         self.interchange_proc.terminate()
         try:
             self.interchange_proc.wait(timeout=timeout)
@@ -865,6 +889,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         if hasattr(self, 'command_client'):
             logger.info("Closing command client")
             self.command_client.close()
+
+        logger.info("Waiting for result queue thread exit")
+        if self._result_queue_thread:
+            self._result_queue_thread.join()
 
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 

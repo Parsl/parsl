@@ -21,7 +21,6 @@ extras_require = {
     ],
     'aws' : ['boto3'],
     'kubernetes' : ['kubernetes'],
-    'oauth_ssh' : ['oauth-ssh>=0.9'],
     'docs' : [
         'ipython<=8.6.0',
         'nbsphinx',
@@ -35,7 +34,6 @@ extras_require = {
     'flux': ['pyyaml', 'cffi', 'jsonschema'],
     'proxystore': ['proxystore'],
     'radical-pilot': ['radical.pilot==1.60', 'radical.utils==1.60'],
-    'ssh': ['paramiko'],
     # Disabling psi-j since github direct links are not allowed by pypi
     # 'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
 }

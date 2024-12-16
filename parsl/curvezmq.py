@@ -160,6 +160,9 @@ class ServerContext(BaseContext):
             except zmq.ZMQError as e:
                 raise ValueError("Invalid CurveZMQ key format") from e
             sock.setsockopt(zmq.CURVE_SERVER, True)  # Must come before bind
+
+        # This flag enables IPV6 in addition to IPV4
+        sock.setsockopt(zmq.IPV6, True)
         return sock
 
     def term(self):
@@ -202,4 +205,5 @@ class ClientContext(BaseContext):
                 sock.setsockopt(zmq.CURVE_SERVERKEY, server_public_key)
             except zmq.ZMQError as e:
                 raise ValueError("Invalid CurveZMQ key format") from e
+        sock.setsockopt(zmq.IPV6, True)
         return sock

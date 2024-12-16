@@ -6,7 +6,6 @@ import os
 import pickle
 import platform
 import queue
-import signal
 import sys
 import threading
 import time
@@ -15,12 +14,14 @@ from typing import Any, Dict, List, NoReturn, Optional, Sequence, Set, Tuple, ca
 import zmq
 
 from parsl import curvezmq
+from parsl.addresses import tcp_url
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.executors.high_throughput.errors import ManagerLost, VersionMismatch
 from parsl.executors.high_throughput.manager_record import ManagerRecord
 from parsl.executors.high_throughput.manager_selector import ManagerSelector
 from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.radios import MonitoringRadioSender, ZMQRadioSender
+from parsl.monitoring.radios.base import MonitoringRadioSender
+from parsl.monitoring.radios.zmq import ZMQRadioSender
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize as serialize_object
 from parsl.utils import setproctitle
@@ -67,7 +68,7 @@ class Interchange:
              If specified the interchange will only listen on this address for connections from workers
              else, it binds to all addresses.
 
-        client_ports : triple(int, int, int)
+        client_ports : tuple(int, int, int)
              The ports at which the client can be reached
 
         worker_ports : tuple(int, int)
@@ -105,7 +106,6 @@ class Interchange:
         os.makedirs(self.logdir, exist_ok=True)
 
         start_file_logger("{}/interchange.log".format(self.logdir), level=logging_level)
-        logger.propagate = False
         logger.debug("Initializing Interchange process")
 
         self.client_address = client_address
@@ -117,13 +117,13 @@ class Interchange:
         self.zmq_context = curvezmq.ServerContext(self.cert_dir)
         self.task_incoming = self.zmq_context.socket(zmq.DEALER)
         self.task_incoming.set_hwm(0)
-        self.task_incoming.connect("tcp://{}:{}".format(client_address, client_ports[0]))
+        self.task_incoming.connect(tcp_url(client_address, client_ports[0]))
         self.results_outgoing = self.zmq_context.socket(zmq.DEALER)
         self.results_outgoing.set_hwm(0)
-        self.results_outgoing.connect("tcp://{}:{}".format(client_address, client_ports[1]))
+        self.results_outgoing.connect(tcp_url(client_address, client_ports[1]))
 
         self.command_channel = self.zmq_context.socket(zmq.REP)
-        self.command_channel.connect("tcp://{}:{}".format(client_address, client_ports[2]))
+        self.command_channel.connect(tcp_url(client_address, client_ports[2]))
         logger.info("Connected to client")
 
         self.run_id = run_id
@@ -146,14 +146,14 @@ class Interchange:
             self.worker_task_port = self.worker_ports[0]
             self.worker_result_port = self.worker_ports[1]
 
-            self.task_outgoing.bind(f"tcp://{self.interchange_address}:{self.worker_task_port}")
-            self.results_incoming.bind(f"tcp://{self.interchange_address}:{self.worker_result_port}")
+            self.task_outgoing.bind(tcp_url(self.interchange_address, self.worker_task_port))
+            self.results_incoming.bind(tcp_url(self.interchange_address, self.worker_result_port))
 
         else:
-            self.worker_task_port = self.task_outgoing.bind_to_random_port(f"tcp://{self.interchange_address}",
+            self.worker_task_port = self.task_outgoing.bind_to_random_port(tcp_url(self.interchange_address),
                                                                            min_port=worker_port_range[0],
                                                                            max_port=worker_port_range[1], max_tries=100)
-            self.worker_result_port = self.results_incoming.bind_to_random_port(f"tcp://{self.interchange_address}",
+            self.worker_result_port = self.results_incoming.bind_to_random_port(tcp_url(self.interchange_address),
                                                                                 min_port=worker_port_range[0],
                                                                                 max_port=worker_port_range[1], max_tries=100)
 
@@ -252,13 +252,7 @@ class Interchange:
             try:
                 command_req = self.command_channel.recv_pyobj()
                 logger.debug("Received command request: {}".format(command_req))
-                if command_req == "OUTSTANDING_C":
-                    outstanding = self.pending_task_queue.qsize()
-                    for manager in self._ready_managers.values():
-                        outstanding += len(manager['tasks'])
-                    reply = outstanding
-
-                elif command_req == "CONNECTED_BLOCKS":
+                if command_req == "CONNECTED_BLOCKS":
                     # TODO: this can contain duplicates, because one per manager
                     # - see issue #3366
                     reply = self.connected_block_history
@@ -320,16 +314,6 @@ class Interchange:
     def start(self) -> None:
         """ Start the interchange
         """
-
-        # If a user workflow has set its own signal handler for sigterm, that
-        # handler will be inherited by the interchange process because it is
-        # launched as a multiprocessing fork process.
-        # That can interfere with the interchange shutdown mechanism, which is
-        # to receive a SIGTERM and exit immediately.
-        # See Parsl issue #2343 (Threads and multiprocessing cannot be
-        # intermingled without deadlocks) which talks about other fork-related
-        # parent-process-inheritance problems.
-        signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
         logger.info("Starting main interchange method")
 
@@ -456,9 +440,13 @@ class Interchange:
                     logger.info(f"Manager {manager_id!r} has compatible Parsl version {msg['parsl_v']}")
                     logger.info(f"Manager {manager_id!r} has compatible Python version {msg['python_v'].rsplit('.', 1)[0]}")
             elif msg['type'] == 'heartbeat':
-                self._ready_managers[manager_id]['last_heartbeat'] = time.time()
-                logger.debug("Manager %r sent heartbeat via tasks connection", manager_id)
-                self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
+                manager = self._ready_managers.get(manager_id)
+                if manager:
+                    manager['last_heartbeat'] = time.time()
+                    logger.debug("Manager %r sent heartbeat via tasks connection", manager_id)
+                    self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
+                else:
+                    logger.warning("Received heartbeat via tasks connection for not-registered manager %r", manager_id)
             elif msg['type'] == 'drain':
                 self._ready_managers[manager_id]['draining'] = True
                 logger.debug("Manager %r requested drain", manager_id)
@@ -551,7 +539,6 @@ class Interchange:
                         monitoring_radio.send(r['payload'])
                     elif r['type'] == 'heartbeat':
                         logger.debug("Manager %r sent heartbeat via results connection", manager_id)
-                        b_messages.append((p_message, r))
                     else:
                         logger.error("Interchange discarding result_queue message of unknown type: %s", r["type"])
 

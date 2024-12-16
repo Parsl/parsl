@@ -27,8 +27,7 @@ retrieve the status of an allocation (e.g., squeue), and cancel a running
 job (e.g., scancel). Parsl implements providers for local execution
 (fork), for various cloud platforms using cloud-specific APIs, and
 for clusters and supercomputers that use a Local Resource Manager
-(LRM) to manage access to resources, such as Slurm, HTCondor, 
-and Cobalt.
+(LRM) to manage access to resources, such as Slurm and HTCondor.
 
 Each provider implementation may allow users to specify additional parameters for further configuration. Parameters are generally mapped to LRM submission script or cloud API options.
 Examples of LRM-specific options are partition, wall clock time,
@@ -39,15 +38,14 @@ parameters include access keys, instance type, and spot bid price
 Parsl currently supports the following providers:
 
 1. `parsl.providers.LocalProvider`: The provider allows you to run locally on your laptop or workstation.
-2. `parsl.providers.CobaltProvider`: This provider allows you to schedule resources via the Cobalt scheduler. **This provider is deprecated and will be removed by 2024.04**.
-3. `parsl.providers.SlurmProvider`: This provider allows you to schedule resources via the Slurm scheduler.
-4. `parsl.providers.CondorProvider`: This provider allows you to schedule resources via the Condor scheduler.
-5. `parsl.providers.GridEngineProvider`: This provider allows you to schedule resources via the GridEngine scheduler.
-6. `parsl.providers.TorqueProvider`: This provider allows you to schedule resources via the Torque scheduler.
-7. `parsl.providers.AWSProvider`: This provider allows you to provision and manage cloud nodes from Amazon Web Services.
-8. `parsl.providers.GoogleCloudProvider`: This provider allows you to provision and manage cloud nodes from Google Cloud.
-9. `parsl.providers.KubernetesProvider`: This provider allows you to provision and manage containers on a Kubernetes cluster.
-10. `parsl.providers.LSFProvider`: This provider allows you to schedule resources via IBM's LSF scheduler.
+2. `parsl.providers.SlurmProvider`: This provider allows you to schedule resources via the Slurm scheduler.
+3. `parsl.providers.CondorProvider`: This provider allows you to schedule resources via the Condor scheduler.
+4. `parsl.providers.GridEngineProvider`: This provider allows you to schedule resources via the GridEngine scheduler.
+5. `parsl.providers.TorqueProvider`: This provider allows you to schedule resources via the Torque scheduler.
+6. `parsl.providers.AWSProvider`: This provider allows you to provision and manage cloud nodes from Amazon Web Services.
+7. `parsl.providers.GoogleCloudProvider`: This provider allows you to provision and manage cloud nodes from Google Cloud.
+8. `parsl.providers.KubernetesProvider`: This provider allows you to provision and manage containers on a Kubernetes cluster.
+9. `parsl.providers.LSFProvider`: This provider allows you to schedule resources via IBM's LSF scheduler.
 
 
 

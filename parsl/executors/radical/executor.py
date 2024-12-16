@@ -133,6 +133,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         self.resource = resource
         self._uid = RPEX.lower()
         self.bulk_mode = bulk_mode
+        self._terminate = mt.Event()
         self.working_dir = working_dir
         self.pilot_kwargs = rpex_pilot_kwargs
         self.future_tasks: Dict[str, Future] = {}
@@ -532,7 +533,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
 
         bulk = list()
 
-        while True:
+        while not self._terminate.is_set():
 
             now = time.time()  # time of last submission
 
@@ -550,6 +551,9 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                     bulk.append(task)
 
                 if len(bulk) >= self._max_bulk_size:
+                    break
+
+                if self._terminate.is_set():
                     break
 
             if bulk:
@@ -588,6 +592,13 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
     def shutdown(self, hub=True, targets='all', block=False):
         """Shutdown the executor, including all RADICAL-Pilot components."""
         logger.info("RadicalPilotExecutor is terminating...")
+
+        self._terminate.set()
+
+        # ensure we are in the bulk submssion mode
+        if self.bulk_mode:
+            self._bulk_thread.join()
+
         self.session.close(download=True)
         logger.info("RadicalPilotExecutor is terminated.")
 

@@ -9,7 +9,7 @@ environment. Configuration is described by a Python object (:class:`~parsl.confi
 so that developers can 
 introspect permissible options, validate settings, and retrieve/edit
 configurations dynamically during execution. A configuration object specifies 
-details of the provider, executors, connection channel, allocation size, 
+details of the provider, executors, allocation size,
 queues, durations, and data management options. 
 
 The following example shows a basic configuration object (:class:`~parsl.config.Config`) for the Frontera
@@ -123,9 +123,6 @@ Stepping through the following question should help formulate a suitable configu
 | Torque/PBS based    | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.TorqueProvider`       |
 | system              | * `parsl.executors.WorkQueueExecutor`         |                                        |
 +---------------------+-----------------------------------------------+----------------------------------------+
-| Cobalt based system | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.CobaltProvider`       |
-|                     | * `parsl.executors.WorkQueueExecutor`         |                                        |
-+---------------------+-----------------------------------------------+----------------------------------------+
 | GridEngine based    | * `parsl.executors.HighThroughputExecutor`    | `parsl.providers.GridEngineProvider`   |
 | system              | * `parsl.executors.WorkQueueExecutor`         |                                        |
 +---------------------+-----------------------------------------------+----------------------------------------+
@@ -184,8 +181,6 @@ Stepping through the following question should help formulate a suitable configu
 +=====================================+==========================+====================================================+
 | `parsl.providers.TorqueProvider`    | Any                      | * `parsl.launchers.AprunLauncher`                  |
 |                                     |                          | * `parsl.launchers.MpiExecLauncher`                |
-+-------------------------------------+--------------------------+----------------------------------------------------+
-| `parsl.providers.CobaltProvider`    | Any                      | * `parsl.launchers.AprunLauncher`                  |
 +-------------------------------------+--------------------------+----------------------------------------------------+
 | `parsl.providers.SlurmProvider`     | Any                      | * `parsl.launchers.SrunLauncher`  if native slurm  |
 |                                     |                          | * `parsl.launchers.AprunLauncher`, otherwise       |

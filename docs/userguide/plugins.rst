@@ -34,10 +34,6 @@ add on any wrappers that are needed to launch the command (eg srun inside
 slurm). Providers and launchers are usually paired together for a particular
 system type.
 
-Parsl also has a deprecated ``Channel`` abstraction.  See
-`issue 3515 <https://github.com/Parsl/parsl/issues/3515>`_
-for further discussion.
-
 File staging
 ------------
 Parsl can copy input files from an arbitrary URL into a task's working
@@ -101,3 +97,10 @@ such as tuples, lists, sets and dicts.
 This plugin interface might be used to interface other task-like or future-like
 objects to the Parsl dependency mechanism, by describing how they can be
 interpreted as a Future.
+
+Removed interfaces
+------------------
+
+Parsl had a deprecated ``Channel`` abstraction. See
+`issue 3515 <https://github.com/Parsl/parsl/issues/3515>`_
+for further discussion on its removal.
