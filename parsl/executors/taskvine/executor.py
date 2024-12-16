@@ -20,7 +20,7 @@ import threading
 import uuid
 from concurrent.futures import Future
 from datetime import datetime
-from typing import List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 
 # Import other libraries
 import typeguard
@@ -194,7 +194,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # path to serialized function contexts, and whether functions are serialized.
         # Helpful to detect inconsistencies in serverless functions.
         # Helpful to deduplicate the same function.
-        self._map_func_names_to_func_details = {}
+        self._map_func_names_to_func_details: Dict[str, Dict] = {}
 
         # Helper scripts to prepare package tarballs for Parsl apps
         self._package_analyze_script = shutil.which("poncho_package_analyze")
