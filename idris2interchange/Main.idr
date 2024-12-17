@@ -243,6 +243,16 @@ zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket tas
 
         zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket
 
+
+covering zmq_poll_results_worker_to_interchange_loop : HasErr AppHasIO es => ZMQSocket -> App es ()
+zmq_poll_results_worker_to_interchange_loop results_worker_to_interchange_socket = do
+  events <- zmq_get_socket_events results_worker_to_interchange_socket
+  logv "ZMQ poll tasks submit to interchange loop got these zmq events" events
+  
+  when (events `mod` 2 == 1) $ do -- read
+    log "Trying to receive a message from results worker->interchange channel"
+    ?notimpl_RESULTS
+
 covering zmq_poll_tasks_interchange_to_worker_loop : (State MatchState MatchState es, HasErr AppHasIO es) => ZMQSocket -> App es ()
 zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = do
   events <- zmq_get_socket_events tasks_interchange_to_worker_socket
@@ -295,7 +305,7 @@ zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = d
 
 -- TODO: is there anything to distinguish these three sockets at the type
 -- level that ties into their expected use?
-covering poll_loop : (State MatchState MatchState es, HasErr AppHasIO es) => ZMQSocket -> ZMQSocket -> ZMQSocket -> App es ()
+covering poll_loop : (State MatchState MatchState es, HasErr AppHasIO es) => ZMQSocket -> ZMQSocket -> ZMQSocket -> ZMQSocket -> App es ()
 
 covering app_main : (HasErr AppHasIO es, State MatchState MatchState es) => App es ()
 app_main = do
@@ -362,12 +372,16 @@ app_main = do
 
   log "Created worker task socket"
 
-  poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket
+  log "Creating worker result socket"
+  results_worker_to_interchange_socket <- new_zmq_socket zmq_ctx ZMQSocketROUTER
+  zmq_bind results_worker_to_interchange_socket "tcp://0.0.0.0:9004"
+  log "Created worker result socket"
+
+  poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket results_worker_to_interchange_socket
 
   -- TODO move these sockets into elixir style single state object
 
-poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket = do
-  -- TODO: probably should create result socket here
+poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket results_worker_to_interchange_socket = do
 
   -- TODO: polling of some kind here to decide which socket we're going to
   -- ask for a message (or other kind of event that might happen - eg.
@@ -407,21 +421,19 @@ poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to
   -- API in something that looks more like a function... (eg take an fd
   -- and events list, and return a list of fd, revents?)
 
-  -- we will poll:
-  --  tasks_submit_to_interchange_socket
-  --  command_socket
-
-  -- so first we need to ask those two sockets for their FDs
+  -- so first we need to ask those three sockets for their FDs
   -- TODO: these could have a "HasFD" or "IsPollable" interface rather than
   -- explicitly asking for the FD? So that you might specify: (Pollable, continuation) as a pair
   -- for the interface of this loop?
   tasks_submit_to_interchange_fd <- zmq_get_socket_fd tasks_submit_to_interchange_socket
   command_fd <- zmq_get_socket_fd command_socket
   tasks_interchange_to_worker_fd <- zmq_get_socket_fd tasks_interchange_to_worker_socket
+  results_worker_to_interchange_fd <- zmq_get_socket_fd results_worker_to_interchange_socket
 
   poll_outputs <- poll [MkPollInput command_fd 0,
                         MkPollInput tasks_submit_to_interchange_fd 0,
-                        MkPollInput tasks_interchange_to_worker_fd 0]
+                        MkPollInput tasks_interchange_to_worker_fd 0,
+                        MkPollInput results_worker_to_interchange_fd 0]
                        (MkTimeMS (-1)) -- -1 means infinity. should either be infinity or managed as part of a timed events queue that is not fd driven?
 
   log "poll completed"
@@ -463,7 +475,11 @@ poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to
     log "Got a poll result for tasks interchange to workers channel. Doing ZMQ-specific event handling."
     zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket
 
-  poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket
+  when ((index 3 poll_outputs).revents /= 0) $ do
+    log "Got a poll result for results worker to interchange channel. Doing ZMQ-specific event handling."
+    zmq_poll_results_worker_to_interchange_loop results_worker_to_interchange_socket
+
+  poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket results_worker_to_interchange_socket
 
   log "Idris2 interchange ending"
 
