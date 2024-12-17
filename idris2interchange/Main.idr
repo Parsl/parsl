@@ -253,7 +253,10 @@ zmq_poll_tasks_submit_to_interchange_loop sockets = do
 
 covering process_result_part : HasErr AppHasIO es => SocketState -> () -> ZMQMsg -> App es ()
 process_result_part sockets () msg_part = do
-  log "Discarding result part"
+  bytes <- zmq_msg_as_bytes msg_part
+  result <- unpickle bytes
+  logv "Unpickled result" result
+  ?discard_result
   pure ()
 
 covering zmq_poll_results_worker_to_interchange_loop : HasErr AppHasIO es => SocketState -> App es ()
