@@ -79,6 +79,7 @@ zmq_bind : HasErr AppHasIO es => ZMQSocket -> String -> App es ()
 zmq_bind (MkZMQSocket sock_ptr) dest = 
   primIO $ primIO $ prim__zmq_bind sock_ptr dest
 
+public export
 data ZMQMsg = MkZMQMsg AnyPtr
 
 -- void *glue_zmq_recv_msg_alloc(void *sock) {

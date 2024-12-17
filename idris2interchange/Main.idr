@@ -250,6 +250,12 @@ zmq_poll_tasks_submit_to_interchange_loop sockets = do
 
         zmq_poll_tasks_submit_to_interchange_loop sockets
 
+
+covering process_result_part : HasErr AppHasIO es => SocketState -> () -> ZMQMsg -> App es ()
+process_result_part sockets () msg_part = do
+  log "Discarding result part"
+  pure ()
+
 covering zmq_poll_results_worker_to_interchange_loop : HasErr AppHasIO es => SocketState -> App es ()
 zmq_poll_results_worker_to_interchange_loop sockets = do
   events <- zmq_get_socket_events sockets.results_worker_to_interchange
@@ -257,22 +263,31 @@ zmq_poll_results_worker_to_interchange_loop sockets = do
   
   when (events `mod` 2 == 1) $ do -- read
     log "Trying to receive a message from results worker->interchange channel"
-    maybe_msg <- zmq_recv_msg_alloc sockets.results_worker_to_interchange
-    case maybe_msg of
-      Nothing => log "No message received on results worker->inerchange channel"
-      Just msg => do
-        s <- zmq_msg_size msg
+    -- TODO: this will be a multipart message.
+    -- First part will be the manager ID. Subsequent parts will be individual
+    -- resuts as their own zmq message parts.
+    msgs <- zmq_recv_msgs_multipart_alloc sockets.results_worker_to_interchange
+    case msgs of
+      [] => log "No message received on results worker->interchange channel"
+      (addr_part :: other_parts) => do
+        s <- zmq_msg_size addr_part
         logv "Received result-like message on results worker->interchange channel, size" s
-        bytes <- zmq_msg_as_bytes msg
-        ascii_dump bytes
+        remote_id <- zmq_msg_as_bytes addr_part
+        ascii_dump remote_id
 
-        result <- unpickle bytes
+        logv "Number of result parts in this multipart message" (length other_parts)
 
-        logv "Unpickled result" result 
+        foldlM (process_result_part sockets) () other_parts
+
+        -- TODO: handling of more than one result at once
+        -- let (msg :: _) = other_parts
+        -- bytes <- zmq_msg_as_bytes addr_part
+        -- result <- unpickle bytes
+        -- logv "Unpickled result" result 
 
         -- TODO: forward result onto submit side
         -- TODO: release manager/task allocation
-        ?notimpl_RESULTS
+        -- ?notimpl_RESULTS
         zmq_poll_results_worker_to_interchange_loop sockets
 
 covering zmq_poll_tasks_interchange_to_worker_loop : (State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()

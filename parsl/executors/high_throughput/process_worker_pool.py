@@ -431,7 +431,7 @@ class Manager:
             if len(items) >= self.max_queue_size or time.time() > last_beat + push_poll_period:
                 last_beat = time.time()
                 if items:
-                    logger.debug(f"Result send: Pushing {len(items)} items")
+                    logger.debug(f"Result send: Pushing {len(items)} items, items={items}")
                     self.result_outgoing.send_multipart(items)
                     logger.debug("Result send: Pushed")
                     items = []
