@@ -42,6 +42,12 @@ record MatchState where
   tasks: List PickleAST
 -- %runElab derive "MatchState" [Generic, Meta, Show]
 
+record SocketState where
+  constructor MkSocketState
+  command : ZMQSocket
+  tasks_submit_to_interchange : ZMQSocket
+  tasks_interchange_to_worker : ZMQSocket
+  results_worker_to_interchange : ZMQSocket
 
 
 -- this should be total, proved by decreasing n
@@ -307,7 +313,7 @@ zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = d
 
 -- TODO: is there anything to distinguish these three sockets at the type
 -- level that ties into their expected use?
-covering poll_loop : (State MatchState MatchState es, HasErr AppHasIO es) => ZMQSocket -> ZMQSocket -> ZMQSocket -> ZMQSocket -> App es ()
+covering poll_loop : (State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
 
 covering app_main : (HasErr AppHasIO es, State MatchState MatchState es) => App es ()
 app_main = do
@@ -379,13 +385,21 @@ app_main = do
   zmq_bind results_worker_to_interchange_socket "tcp://0.0.0.0:9004"
   log "Created worker result socket"
 
-  poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket results_worker_to_interchange_socket
+  -- TODO: is there a named record syntax for construction?
+  -- I can't find one? I want this for the same reason
+  -- as I want Python kwonly args - maintainable style
+  let sockets = MkSocketState
+       command_socket
+       tasks_submit_to_interchange_socket
+       tasks_interchange_to_worker_socket
+       results_worker_to_interchange_socket
+
+  poll_loop sockets
 
   log "Idris2 interchange ending"
 
-  -- TODO move these sockets into elixir style single state object
 
-poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket results_worker_to_interchange_socket = do
+poll_loop sockets = do
 
   -- TODO: polling of some kind here to decide which socket we're going to
   -- ask for a message (or other kind of event that might happen - eg.
@@ -429,10 +443,10 @@ poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to
   -- TODO: these could have a "HasFD" or "IsPollable" interface rather than
   -- explicitly asking for the FD? So that you might specify: (Pollable, continuation) as a pair
   -- for the interface of this loop?
-  tasks_submit_to_interchange_fd <- zmq_get_socket_fd tasks_submit_to_interchange_socket
-  command_fd <- zmq_get_socket_fd command_socket
-  tasks_interchange_to_worker_fd <- zmq_get_socket_fd tasks_interchange_to_worker_socket
-  results_worker_to_interchange_fd <- zmq_get_socket_fd results_worker_to_interchange_socket
+  tasks_submit_to_interchange_fd <- zmq_get_socket_fd sockets.tasks_submit_to_interchange
+  command_fd <- zmq_get_socket_fd sockets.command
+  tasks_interchange_to_worker_fd <- zmq_get_socket_fd sockets.tasks_interchange_to_worker
+  results_worker_to_interchange_fd <- zmq_get_socket_fd sockets.results_worker_to_interchange
 
   poll_outputs <- poll [MkPollInput command_fd 0,
                         MkPollInput tasks_submit_to_interchange_fd 0,
@@ -469,22 +483,21 @@ poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to
 
   when ((index 0 poll_outputs).revents /= 0) $ do
     log "Got a poll result for command channel. Doing ZMQ-specific event handling."
-    zmq_poll_command_channel_loop command_socket
+    zmq_poll_command_channel_loop sockets.command
 
   when ((index 1 poll_outputs).revents /= 0) $ do
     log "Got a poll result for tasks submit to interchange channel. Doing ZMQ-specific event handling."
-    zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket
+    zmq_poll_tasks_submit_to_interchange_loop sockets.tasks_submit_to_interchange sockets.tasks_interchange_to_worker
 
   when ((index 2 poll_outputs).revents /= 0) $ do
     log "Got a poll result for tasks interchange to workers channel. Doing ZMQ-specific event handling."
-    zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket
+    zmq_poll_tasks_interchange_to_worker_loop sockets.tasks_interchange_to_worker
 
   when ((index 3 poll_outputs).revents /= 0) $ do
     log "Got a poll result for results worker to interchange channel. Doing ZMQ-specific event handling."
-    zmq_poll_results_worker_to_interchange_loop results_worker_to_interchange_socket
+    zmq_poll_results_worker_to_interchange_loop sockets.results_worker_to_interchange
 
-  poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket results_worker_to_interchange_socket
-
+  poll_loop sockets
 
 
 covering main : IO ()
