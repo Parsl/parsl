@@ -253,10 +253,13 @@ zmq_poll_tasks_submit_to_interchange_loop sockets = do
 
 covering process_result_part : HasErr AppHasIO es => SocketState -> () -> ZMQMsg -> App es ()
 process_result_part sockets () msg_part = do
-  bytes <- zmq_msg_as_bytes msg_part
+  bytes@(n ** bb) <- zmq_msg_as_bytes msg_part
   result <- unpickle bytes
   logv "Unpickled result" result
-  ?discard_result
+
+  zmq_alloc_send_bytes sockets.results_interchange_to_submit bb False
+
+  -- TODO: release worker/task binding/count
   pure ()
 
 covering zmq_poll_results_worker_to_interchange_loop : HasErr AppHasIO es => SocketState -> App es ()
@@ -282,15 +285,6 @@ zmq_poll_results_worker_to_interchange_loop sockets = do
 
         foldlM (process_result_part sockets) () other_parts
 
-        -- TODO: handling of more than one result at once
-        -- let (msg :: _) = other_parts
-        -- bytes <- zmq_msg_as_bytes addr_part
-        -- result <- unpickle bytes
-        -- logv "Unpickled result" result 
-
-        -- TODO: forward result onto submit side
-        -- TODO: release manager/task allocation
-        -- ?notimpl_RESULTS
         zmq_poll_results_worker_to_interchange_loop sockets
 
 covering zmq_poll_tasks_interchange_to_worker_loop : (State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
