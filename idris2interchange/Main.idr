@@ -135,6 +135,7 @@ matchmake tasks_interchange_to_worker_socket = do
               if c > 0
                 then do
                   -- TODO: update the record to have one less available capacity unit
+                  --       and if implementing ManagerLost, track task/manager allocation.
 
                   -- this task_msg looks like: 
                   --   self.task_outgoing.send_multipart([manager_id, b'', pickle.dumps(tasks)])
@@ -251,6 +252,8 @@ zmq_poll_results_worker_to_interchange_loop results_worker_to_interchange_socket
   
   when (events `mod` 2 == 1) $ do -- read
     log "Trying to receive a message from results worker->interchange channel"
+    -- TODO: forward result onto submit side
+    -- TODO: release manager/task allocation
     ?notimpl_RESULTS
 
 covering zmq_poll_tasks_interchange_to_worker_loop : (State MatchState MatchState es, HasErr AppHasIO es) => ZMQSocket -> App es ()
