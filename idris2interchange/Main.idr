@@ -146,7 +146,6 @@ matchmake tasks_interchange_to_worker_socket = do
                   let task_msg = PickleList [task]
                   logv "Dispatching task" task_msg
                   (n ** resp_bytes) <- pickle task_msg
-                  -- TODO: i need to finish off dict serialization items for SETITEMS in Pickle.idr
                   zmq_alloc_send_bytes tasks_interchange_to_worker_socket b True
                   zmq_alloc_send_bytes tasks_interchange_to_worker_socket emptyByteBlock True
                   zmq_alloc_send_bytes tasks_interchange_to_worker_socket resp_bytes False
