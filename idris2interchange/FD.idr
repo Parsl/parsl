@@ -6,6 +6,26 @@ import System.FFI
 
 import Logging
 
+-- got this ambiguity error on index when adding an extra log line, i guess
+-- because that added in an extra >> which then made ambiguity resolution
+-- need one more step.
+{-
+Error: While processing right hand side of poll. Maximum ambiguity depth exceeded in FD.poll:
+FD.PollOutput.(.fd) --> Prelude.Interfaces.(>>) --> Prelude.Interfaces.(>>) --> Prelude.Interfaces.(>>) 
+
+FD:151:29--151:34
+ 147 |      -- we aren't verifying in the type system that it is the *correct*
+ 148 |      -- n that we intended - that still happens by human reasoning.
+ 149 |      -- (also theres no '.fd is an unknown attribute' runtime error...
+ 150 |      -- that's also a compile time error)
+ 151 |      logv "FD at this pos" (index i inputs).fd
+                                   ^^^^^
+
+Suggestion: the default ambiguity depth limit is 3, the %ambiguity_depth pragma can be used to extend this limit, but beware
+compilation times can be severely impacted.
+-}
+%ambiguity_depth 4
+
 %language ElabReflection
 -- %default total
 
@@ -137,6 +157,7 @@ poll inputs timeout = do
      -- and so then can be used safely to index inputs
      -- as used in print statement below
      log "---"
+     log "Preparing poll structure"
      logv "AllFins member" i
      -- ... here index will fail at compile time if it cannot statically
      -- verify that i is in range for inputs - there's no notion of a
