@@ -295,6 +295,7 @@ step {n = S m} bb state = do
       46 => step_STOP bb' state
       66 => step_BINBYTES bb' state
       75 => step_BININT1 bb' state
+      104 => ?error_BINGET_notimpl
       117 => step_SETITEMS bb' state
       125 => step_EMPTYDICT bb' state
       128 => step_PROTO {n = m} bb' state
