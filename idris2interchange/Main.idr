@@ -381,6 +381,8 @@ app_main = do
 
   poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket results_worker_to_interchange_socket
 
+  log "Idris2 interchange ending"
+
   -- TODO move these sockets into elixir style single state object
 
 poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket results_worker_to_interchange_socket = do
@@ -483,7 +485,6 @@ poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to
 
   poll_loop command_socket tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket results_worker_to_interchange_socket
 
-  log "Idris2 interchange ending"
 
 
 covering main : IO ()
