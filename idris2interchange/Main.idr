@@ -48,6 +48,7 @@ record SocketState where
   tasks_submit_to_interchange : ZMQSocket
   tasks_interchange_to_worker : ZMQSocket
   results_worker_to_interchange : ZMQSocket
+  results_interchange_to_submit : ZMQSocket
 
 
 -- this should be total, proved by decreasing n
@@ -90,8 +91,8 @@ dispatch_cmd "CONNECTED_BLOCKS" = do
 dispatch_cmd _ = ?error_cmd_not_implemented
 
 
-matchmake :  (State MatchState MatchState es, HasErr AppHasIO es) => ZMQSocket -> App es ()
-matchmake tasks_interchange_to_worker_socket = do
+matchmake :  (State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
+matchmake sockets = do
   log "Matchmaker starting"
   -- we can make a match if we have a manager with capacity and a task in the
   -- task queue. This is the point that in the real htex interchange can do
@@ -152,9 +153,9 @@ matchmake tasks_interchange_to_worker_socket = do
                   let task_msg = PickleList [task]
                   logv "Dispatching task" task_msg
                   (n ** resp_bytes) <- pickle task_msg
-                  zmq_alloc_send_bytes tasks_interchange_to_worker_socket b True
-                  zmq_alloc_send_bytes tasks_interchange_to_worker_socket emptyByteBlock True
-                  zmq_alloc_send_bytes tasks_interchange_to_worker_socket resp_bytes False
+                  zmq_alloc_send_bytes sockets.tasks_interchange_to_worker b True
+                  zmq_alloc_send_bytes sockets.tasks_interchange_to_worker emptyByteBlock True
+                  zmq_alloc_send_bytes sockets.tasks_interchange_to_worker resp_bytes False
                 else ?notimpl_manager_oversubscribed
             _ => ?error_registration_bad_max_capacity
   log "Matchmaker completed"
@@ -209,10 +210,10 @@ zmq_poll_command_channel_loop command_socket = do
         zmq_poll_command_channel_loop command_socket
 
 -- TODO: factor ZMQ_EVENTS handling with other channels
-covering zmq_poll_tasks_submit_to_interchange_loop : (State MatchState MatchState es, HasErr AppHasIO es) => ZMQSocket -> ZMQSocket -> App es ()
-zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket = do
+covering zmq_poll_tasks_submit_to_interchange_loop : (State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
+zmq_poll_tasks_submit_to_interchange_loop sockets = do
   -- need to run this in a loop until it returns no events left
-  events <- zmq_get_socket_events tasks_submit_to_interchange_socket
+  events <- zmq_get_socket_events sockets.tasks_submit_to_interchange
   logv "ZMQ poll tasks submit to interchange loop got these zmq events" events
 
   -- TODO: ignoring writeability of this channel. I think thats the right
@@ -221,7 +222,7 @@ zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket tas
 
   when (events `mod` 2 == 1) $ do  -- read
     log "Trying to receive a message from task submit->interchange channel"
-    maybe_msg <- zmq_recv_msg_alloc tasks_submit_to_interchange_socket
+    maybe_msg <- zmq_recv_msg_alloc sockets.tasks_submit_to_interchange
     case maybe_msg of
       Nothing => log "No message received on task submit->interchange channel"
       Just msg => do
@@ -240,15 +241,14 @@ zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket tas
         -- logv "Old match state" old_state
         put MatchState (MkMatchState managers (task :: tasks))
         log "Put new task into match state" 
-        matchmake tasks_interchange_to_worker_socket
+        matchmake sockets
 
         -- TODO: deallocate the message and bytes (after unpickling)
 
         -- TODO: so now we've received a message... we'll need to eventually deallocate
         -- and also do something with the message
 
-        zmq_poll_tasks_submit_to_interchange_loop tasks_submit_to_interchange_socket tasks_interchange_to_worker_socket
-
+        zmq_poll_tasks_submit_to_interchange_loop sockets
 
 covering zmq_poll_results_worker_to_interchange_loop : HasErr AppHasIO es => ZMQSocket -> App es ()
 zmq_poll_results_worker_to_interchange_loop results_worker_to_interchange_socket = do
@@ -261,9 +261,9 @@ zmq_poll_results_worker_to_interchange_loop results_worker_to_interchange_socket
     -- TODO: release manager/task allocation
     ?notimpl_RESULTS
 
-covering zmq_poll_tasks_interchange_to_worker_loop : (State MatchState MatchState es, HasErr AppHasIO es) => ZMQSocket -> App es ()
-zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = do
-  events <- zmq_get_socket_events tasks_interchange_to_worker_socket
+covering zmq_poll_tasks_interchange_to_worker_loop : (State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
+zmq_poll_tasks_interchange_to_worker_loop sockets = do
+  events <- zmq_get_socket_events sockets.tasks_interchange_to_worker
   logv "ZMQ poll tasks interchange to worker loop got these zmq events" events
   -- TODO: we'll be both reading and writing from this socket
 
@@ -277,7 +277,7 @@ zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = d
 
     -- TODO: Idris2 level API for receiving multipart messages, returning a
     -- list of msg objects, instead of a Maybe.
-    msgs <- zmq_recv_msgs_multipart_alloc tasks_interchange_to_worker_socket
+    msgs <- zmq_recv_msgs_multipart_alloc sockets.tasks_interchange_to_worker
     case msgs of
       [] => log "No message received on task interchange->worker channel"
       [addr_part, json_part] => do
@@ -304,9 +304,9 @@ zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket = d
                 old_state@(MkMatchState managers tasks) <- get MatchState
                 put MatchState (MkMatchState ((addr_bytes, j) :: managers) tasks)
                 log "Put new manager into match state" 
-                matchmake tasks_interchange_to_worker_socket
+                matchmake sockets
               _ => ?error_unknown_registration_like_type
-        zmq_poll_tasks_interchange_to_worker_loop tasks_interchange_to_worker_socket
+        zmq_poll_tasks_interchange_to_worker_loop sockets
       _ => ?error_tasks_to_interchange_expected_two_parts
 
 
@@ -348,6 +348,10 @@ app_main = do
   -- of those requirements as we need for the interchange...
   zmq_connect tasks_submit_to_interchange_socket "tcp://127.0.0.1:9000"
   log "Connected interchange tasks submit->interchange channel"
+
+  log "Creating results interchange->submit socket"
+  results_interchange_to_submit_socket <- new_zmq_socket zmq_ctx ZMQSocketDEALER
+  zmq_connect results_interchange_to_submit_socket "tcp://127.0.0.1:9001"
 
   -- TODO: in req/rep socket pair, the rep socket can be in two states:
   -- it's ready to recv a req, or it's received a req and is ready to send
@@ -393,6 +397,7 @@ app_main = do
        tasks_submit_to_interchange_socket
        tasks_interchange_to_worker_socket
        results_worker_to_interchange_socket
+       results_interchange_to_submit_socket
 
   poll_loop sockets
 
@@ -487,11 +492,11 @@ poll_loop sockets = do
 
   when ((index 1 poll_outputs).revents /= 0) $ do
     log "Got a poll result for tasks submit to interchange channel. Doing ZMQ-specific event handling."
-    zmq_poll_tasks_submit_to_interchange_loop sockets.tasks_submit_to_interchange sockets.tasks_interchange_to_worker
+    zmq_poll_tasks_submit_to_interchange_loop sockets
 
   when ((index 2 poll_outputs).revents /= 0) $ do
     log "Got a poll result for tasks interchange to workers channel. Doing ZMQ-specific event handling."
-    zmq_poll_tasks_interchange_to_worker_loop sockets.tasks_interchange_to_worker
+    zmq_poll_tasks_interchange_to_worker_loop sockets
 
   when ((index 3 poll_outputs).revents /= 0) $ do
     log "Got a poll result for results worker to interchange channel. Doing ZMQ-specific event handling."
