@@ -331,6 +331,8 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
                 put MatchState (MkMatchState ((addr_bytes, j) :: managers) tasks)
                 log "Put new manager into match state" 
                 matchmake sockets
+              Just (JString "heartbeat") => 
+                log "Ignoring heartbeat"  -- TODO: reply else we'll get a timeout...
               _ => ?error_unknown_registration_like_type
         zmq_poll_tasks_interchange_to_worker_loop sockets
       _ => ?error_tasks_to_interchange_expected_two_parts

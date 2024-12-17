@@ -89,6 +89,23 @@ read_uint4 bb = do
   pure (v, bb4)
 
 
+read_uint2 : HasErr AppHasIO es => {n: Nat} -> ByteBlock (S (S n)) -> App es (Int, ByteBlock n)
+read_uint2 bb = do
+  (byte1, bb1) <- primIO $ bb_uncons bb 
+  (byte2, bb2) <- primIO $ bb_uncons bb1 
+
+  logv "byte1" byte1
+  logv "byte2" byte2
+
+  -- bytes are bytes but we want an Int...
+
+  let v = (
+              cast byte2) * 256 +
+              cast byte1
+
+  logv "byte combined to v" v
+  pure (v, bb2)
+
 
 -- define this signature before the body because we are mutually
 -- recursive (or I could use a mutual block? what's the difference?)
@@ -119,6 +136,20 @@ step_BININT1 {n = S n'} bb (MkVMState stack memo) = do
   logv "1-byte unsigned integer" v
   let new_state = MkVMState ((PickleInteger (cast v))::stack) memo
   step {n = n'} bb' new_state 
+
+
+step_BININT2 : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+
+step_BININT2 {n = S (S n')} bb (MkVMState stack memo) = do
+  log "Opcode: BININT2"
+  (v, bb') <- read_uint2 bb
+  logv "2-byte unsigned integer" v
+  let new_state = MkVMState ((PickleInteger (cast v))::stack) memo
+  step {n = n'} bb' new_state 
+
+step_BININT2 {n = _} bb state = do
+  ?error_BININT2_ran_off_end
+  pure state
 
 step_BINGET : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_BINGET {n = Z} _ _ = ?error_BINGET_out_of_data
@@ -330,6 +361,7 @@ step {n = S m} bb state = do
       66 => step_BINBYTES bb' state
       67 => step_SHORT_BINBYTES bb' state
       75 => step_BININT1 bb' state
+      77 => step_BININT2 bb' state
       104 => step_BINGET bb' state
       117 => step_SETITEMS bb' state
       125 => step_EMPTYDICT bb' state
