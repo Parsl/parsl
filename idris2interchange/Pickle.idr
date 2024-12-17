@@ -191,6 +191,21 @@ step_BINBYTES {n} bb (MkVMState stack memo) = do
       step bb'' new_state
     _ => ?error_BINBYTES_not_enough_to_count
 
+step_SHORT_BINBYTES : HasErr AppHasIO es => {n: Nat} -> ByteBlock n -> VMState -> App es VMState
+step_SHORT_BINBYTES {n} bb (MkVMState stack memo) = do
+  log "Opcode: SHORT_BINBYTES"
+  case n of
+    (S k) => do
+      (block_len, bb') <- primIO $ bb_uncons bb
+      logv "Byte count" block_len
+      -- TODO: is there a library function for this?
+      (bytes, (l ** bb'')) <- foldlM binbytes_folder ([], (k ** bb')) [1..(cast block_len)] 
+      let new_state = MkVMState ((PickleBytes bytes)::stack) memo
+
+      step bb'' new_state
+    _ => ?error_SHORT_BINBYTES_not_enough_to_count
+
+
 -- The reasoning about lengths here is more complicated than PROTO or FRAME,
 -- and maybe pushes more into runtime: the number of bytes we want is encoded
 --  in the first remaining byte of the ByteBlock.
@@ -313,6 +328,7 @@ step {n = S m} bb state = do
       40 => step_MARK bb' state
       46 => step_STOP bb' state
       66 => step_BINBYTES bb' state
+      67 => step_SHORT_BINBYTES bb' state
       75 => step_BININT1 bb' state
       104 => step_BINGET bb' state
       117 => step_SETITEMS bb' state
