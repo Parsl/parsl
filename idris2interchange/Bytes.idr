@@ -62,6 +62,17 @@ bb_append (MkByteBlock ptr n) v = do
   new_ptr <- primIO $ prim__copy_and_append ptr (cast n) v
   pure (MkByteBlock (new_ptr) (S n))
 
+
+covering export
+bb_append_bytes : ByteBlock n -> (m ** ByteBlock m) -> IO (nm ** ByteBlock nm)
+bb_append_bytes a@(MkByteBlock _ al) (m ** b) = case m of
+  Z => pure (al ** a)
+  S x => do
+    (v, rest) <- bb_uncons b
+    a' <- bb_append a v
+    bb_append_bytes a' (x ** rest)
+    
+
 export
 length : ByteBlock n -> Nat
 length (MkByteBlock _ l) = l
@@ -76,3 +87,17 @@ str_from_bytes l (MkByteBlock p l') = do
   s <- primIO $ prim__str_from_bytes (cast l) p
   let rest = MkByteBlock (incPtrBy (cast l) p) (l' `minus` l)
   pure (s, rest)
+
+%foreign "C:unicode_byte_len,bytes"
+prim__unicode_byte_len : String -> PrimIO Int
+
+%foreign "C:unicode_bytes,bytes"
+prim__unicode_bytes : String -> PrimIO AnyPtr
+
+export
+bytes_from_str : String -> IO (n : Nat ** ByteBlock n)
+bytes_from_str s = do
+  len <- primIO $ prim__unicode_byte_len s
+  strbytes <- primIO $ prim__unicode_bytes s
+  pure (cast len ** MkByteBlock strbytes (cast len))
+

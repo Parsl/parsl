@@ -411,32 +411,40 @@ pickle_TUPLE (n ** bytes) entries = do
 -- ports response:
 --   PickleTuple [PickleInteger 9000, PickleInteger 9001]
 
+store_INT : HasErr AppHasIO es => (n ** ByteBlock n) -> Int -> App es (m ** ByteBlock m)
+store_INT (n ** bytes) v = do
+  let b1 = v `mod` 256
+  let b2 = (v `div` 256) `mod` 256
+  let b3 = (v `div` 256 `div` 256) `mod` 256
+  let b4 = (v `div` 256 `div` 256 `div` 256)
+
+  -- if v is too big, this will overflow a Bits8...
+  -- I'm not sure if thats a silent or raising error?
+  -- dividing b5 to give a b5, and checking b5 is 0
+  -- would be a test for that
+
+  bytes <- primIO $ bb_append bytes (cast b1)
+  bytes <- primIO $ bb_append bytes (cast b2)
+  bytes <- primIO $ bb_append bytes (cast b3)
+  bytes <- primIO $ bb_append bytes (cast b4)
+  pure (S (S (S (S n))) ** bytes)
+
+
 pickle_BININT : HasErr AppHasIO es => (n ** ByteBlock n) -> Int -> App es (m ** ByteBlock m)
 pickle_BININT (n ** bytes) v = do
   logv "Pickling BININT" v
 
   if v < 0 then ?notimpl_BININT_negatives
            else log "this isn't negative - ok"
-
-  -- TODO: decompose 32-bit signed v into 4 bytes little-endian
-  let b1 = v `mod` 256
-  let b2 = (v `div` 256) `mod` 256
-  let b3 = (v `div` 256 `div` 256) `mod` 256
-  let b4 = (v `div` 256 `div` 256 `div` 256)
-
-  -- if v is too big, this will overflow a Bit8...
-  -- I'm not sure if thats a silent or raising error?
-  -- dividing b5 to give a b5, and checking b5 is 0
-  -- would be a test for that
-
   bytes <- primIO $ bb_append bytes 74   -- opcode is ASCII 'J'
-  bytes <- primIO $ bb_append bytes (cast b1)
-  bytes <- primIO $ bb_append bytes (cast b2)
-  bytes <- primIO $ bb_append bytes (cast b3)
-  bytes <- primIO $ bb_append bytes (cast b4)
+  (m ** bytes) <- store_INT (S n ** bytes) v
+  pure (m ** bytes)
 
-  pure (S (S (S (S (S n)))) ** bytes)
-
+fold_DICT_entry : HasErr AppHasIO es => (n ** ByteBlock n) -> (PickleAST, PickleAST) -> App es (m ** ByteBlock m)
+fold_DICT_entry (n ** bytes) (ast1, ast2) = do
+  log "Folding over DICT element"
+  (n' ** bytes') <- pickle_ast (n ** bytes) ast1
+  pickle_ast (n' ** bytes') ast2
 
 pickle_DICT : HasErr AppHasIO es => (n ** ByteBlock n) -> List (PickleAST, PickleAST) -> App es (m ** ByteBlock m)
 pickle_DICT (n ** bytes) entries = do
@@ -450,16 +458,37 @@ pickle_DICT (n ** bytes) entries = do
 
   bytes <- primIO $ bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
 
-  -- (len ** bytes) <- foldlM fold_AST ((S (S n)) ** bytes) entries
+  (len ** bytes) <- foldlM fold_DICT_entry ((S (S n)) ** bytes) entries
 
   bytes <- primIO $ bb_append bytes 117  -- SETITEMS opcode is ASCII 'u'
-  pure ((S (S (S n))) ** bytes) -- TODO: restore this sn to len+1 coming from foldlM when its implemented
+  pure ((S len) ** bytes)
 
+
+pickle_UNICODE : HasErr AppHasIO es => (n ** ByteBlock n) -> String -> App es (m ** ByteBlock m)
+pickle_UNICODE (n ** bytes) s = do
+  bytes <- primIO $ bb_append bytes 140  -- SHORT_BINUNICODE - single byte for length
+  sbytes@(slen ** _) <- primIO $ bytes_from_str s
+  bytes <- primIO $ bb_append bytes (cast slen) -- TODO no check for slen overflowing in this cast
+  (l ** bytes) <- primIO $ bb_append_bytes bytes sbytes
+  pure (l ** bytes)
+
+fold_byte : HasErr AppHasIO es => (n ** ByteBlock n) -> Bits8 -> App es (m ** ByteBlock m)
+fold_byte (n ** bytes) b = do
+  bytes <- primIO $ bb_append bytes b
+  pure ((S n) ** bytes)
+
+pickle_BYTES : HasErr AppHasIO es => (n ** ByteBlock n) -> List Bits8 -> App es (m ** ByteBlock m)
+pickle_BYTES (n ** bytes) b = do
+  bytes <- primIO $ bb_append bytes 66  -- BINBYTES, opcode ASCII 'B'
+  bytes <- store_INT ((S n) ** bytes) ((cast . length) b)
+  foldlM fold_byte bytes b
 
 pickle_ast bytes (PickleTuple elements) = pickle_TUPLE bytes elements
 pickle_ast bytes (PickleList elements) = pickle_LIST bytes elements
 pickle_ast bytes (PickleInteger v) = pickle_BININT bytes v
 pickle_ast bytes (PickleDict l) = pickle_DICT bytes l
+pickle_ast bytes (PickleUnicodeString s) = pickle_UNICODE bytes s
+pickle_ast bytes (PickleBytes b) = pickle_BYTES bytes b
 pickle_ast _ _ = ?notimpl_pickle_ast_others
 
 ||| Takes some PickleAST and turns it into a Pickle bytestream.
