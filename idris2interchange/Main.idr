@@ -88,6 +88,11 @@ dispatch_cmd "CONNECTED_BLOCKS" = do
   -- list. So that's what I'll do here.
   pure (PickleList [])
 
+dispatch_cmd "MANAGERS" = do
+  log "MANAGERS requested"
+  -- TODO: notimpl, but maybe this is enough for tests?
+  pure (PickleDict [])
+
 dispatch_cmd _ = ?error_cmd_not_implemented
 
 
