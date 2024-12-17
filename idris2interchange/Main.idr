@@ -250,16 +250,30 @@ zmq_poll_tasks_submit_to_interchange_loop sockets = do
 
         zmq_poll_tasks_submit_to_interchange_loop sockets
 
-covering zmq_poll_results_worker_to_interchange_loop : HasErr AppHasIO es => ZMQSocket -> App es ()
-zmq_poll_results_worker_to_interchange_loop results_worker_to_interchange_socket = do
-  events <- zmq_get_socket_events results_worker_to_interchange_socket
+covering zmq_poll_results_worker_to_interchange_loop : HasErr AppHasIO es => SocketState -> App es ()
+zmq_poll_results_worker_to_interchange_loop sockets = do
+  events <- zmq_get_socket_events sockets.results_worker_to_interchange
   logv "ZMQ poll tasks submit to interchange loop got these zmq events" events
   
   when (events `mod` 2 == 1) $ do -- read
     log "Trying to receive a message from results worker->interchange channel"
-    -- TODO: forward result onto submit side
-    -- TODO: release manager/task allocation
-    ?notimpl_RESULTS
+    maybe_msg <- zmq_recv_msg_alloc sockets.results_worker_to_interchange
+    case maybe_msg of
+      Nothing => log "No message received on results worker->inerchange channel"
+      Just msg => do
+        s <- zmq_msg_size msg
+        logv "Received result-like message on results worker->interchange channel, size" s
+        bytes <- zmq_msg_as_bytes msg
+        ascii_dump bytes
+
+        result <- unpickle bytes
+
+        logv "Unpickled result" result 
+
+        -- TODO: forward result onto submit side
+        -- TODO: release manager/task allocation
+        ?notimpl_RESULTS
+        zmq_poll_results_worker_to_interchange_loop sockets
 
 covering zmq_poll_tasks_interchange_to_worker_loop : (State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
 zmq_poll_tasks_interchange_to_worker_loop sockets = do
@@ -500,7 +514,7 @@ poll_loop sockets = do
 
   when ((index 3 poll_outputs).revents /= 0) $ do
     log "Got a poll result for results worker to interchange channel. Doing ZMQ-specific event handling."
-    zmq_poll_results_worker_to_interchange_loop sockets.results_worker_to_interchange
+    zmq_poll_results_worker_to_interchange_loop sockets
 
   poll_loop sockets
 
