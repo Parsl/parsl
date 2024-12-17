@@ -253,11 +253,19 @@ zmq_poll_tasks_submit_to_interchange_loop sockets = do
 
 covering process_result_part : HasErr AppHasIO es => SocketState -> () -> ZMQMsg -> App es ()
 process_result_part sockets () msg_part = do
+  -- TODO: only forward on this result if it is a result-tag
+  -- (rather than eg. monitoring or heartbeat)
   bytes@(n ** bb) <- zmq_msg_as_bytes msg_part
   result <- unpickle bytes
   logv "Unpickled result" result
+  case result of
+    PickleDict pairs => do
+      let tag = lookup "type" pairs
+      logv "result tag" tag
 
-  zmq_alloc_send_bytes sockets.results_interchange_to_submit bb False
+      zmq_alloc_send_bytes sockets.results_interchange_to_submit bb False
+      ?foo
+    _ => ?error_bad_pickle_object_on_result_channel
 
   -- TODO: release worker/task binding/count
   pure ()
