@@ -15,7 +15,11 @@ extras_require = {
         'networkx>=2.5,<2.6',
         'Flask>=1.0.2',
         'flask_sqlalchemy',
-        'pandas<2.3',
+
+        # pandas uses "loose semantic versioning"
+        # https://pandas.pydata.org/docs/development/policies.html#version-policy
+        'pandas<3,>=2.2',
+
         'plotly',
         'python-daemon'
     ],
