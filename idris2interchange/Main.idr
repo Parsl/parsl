@@ -260,11 +260,14 @@ process_result_part sockets () msg_part = do
   logv "Unpickled result" result
   case result of
     PickleDict pairs => do
-      let tag = lookup "type" pairs
+      let tag = lookup (PickleUnicodeString "type") pairs
       logv "result tag" tag
-
-      zmq_alloc_send_bytes sockets.results_interchange_to_submit bb False
-      ?foo
+      case tag of
+        Just (PickleUnicodeString "result") => do
+          log "Result, so sending onwards"
+          zmq_alloc_send_bytes sockets.results_interchange_to_submit bb False
+        _ => log "Ignoring non-result"
+      
     _ => ?error_bad_pickle_object_on_result_channel
 
   -- TODO: release worker/task binding/count

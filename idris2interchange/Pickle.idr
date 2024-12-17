@@ -20,6 +20,10 @@ import Logging
 ||| of executing a pickle.
 ||| PickleMark is a special thing here because its used on the stack
 ||| but not expected to be exposed as part of the final value.
+|||
+||| TODO: the Eq instance derived automatically here will have different
+||| equality behaviour to Python, because it will be compared in order,
+||| while Python equality is key-order independent.
 public export
 data PickleAST = PickleUnicodeString String
                | PickleInteger Int
@@ -28,7 +32,7 @@ data PickleAST = PickleUnicodeString String
                | PickleDict (List (PickleAST, PickleAST))
                | PickleMark
                | PickleBytes (List Bits8)
-%runElab derive "PickleAST" [Generic, Meta, Show]
+%runElab derive "PickleAST" [Generic, Meta, Show, Eq]
 
 record VMState where
   constructor MkVMState
