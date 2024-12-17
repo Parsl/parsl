@@ -418,12 +418,13 @@ app_main = do
   -- TODO: is there a named record syntax for construction?
   -- I can't find one? I want this for the same reason
   -- as I want Python kwonly args - maintainable style
-  let sockets = MkSocketState
-       command_socket
-       tasks_submit_to_interchange_socket
-       tasks_interchange_to_worker_socket
-       results_worker_to_interchange_socket
-       results_interchange_to_submit_socket
+  let sockets = MkSocketState {
+       command = command_socket,
+       tasks_submit_to_interchange = tasks_submit_to_interchange_socket,
+       tasks_interchange_to_worker = tasks_interchange_to_worker_socket,
+       results_worker_to_interchange = results_worker_to_interchange_socket,
+       results_interchange_to_submit = results_interchange_to_submit_socket
+       }
 
   poll_loop sockets
 
