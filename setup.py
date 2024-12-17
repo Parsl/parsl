@@ -15,7 +15,7 @@ extras_require = {
         'networkx>=2.5,<2.6',
         'Flask>=1.0.2',
         'flask_sqlalchemy',
-        'pandas<2.2',
+        'pandas<2.3',
         'plotly',
         'python-daemon'
     ],
