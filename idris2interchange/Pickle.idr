@@ -108,10 +108,10 @@ step_PROTO {n = S n'} bb state = do
   step {n = n'} bb' state 
 
 step_BININT1 : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+
 step_BININT1 {n = Z} bb state = do
   ?error_BININT1_ran_off_end
   pure state
-
 step_BININT1 {n = S n'} bb (MkVMState stack memo) = do
   log "Opcode: BININT1"
   -- read an unsigned uint1
@@ -119,6 +119,25 @@ step_BININT1 {n = S n'} bb (MkVMState stack memo) = do
   logv "1-byte unsigned integer" v
   let new_state = MkVMState ((PickleInteger (cast v))::stack) memo
   step {n = n'} bb' new_state 
+
+step_BINGET : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_BINGET {n = Z} _ _ = ?error_BINGET_out_of_data
+step_BINGET {n = S n'} bb state@(MkVMState stack memo) = do
+  log "Opcode: BINGET"
+  (memo_slot_bits8, bb') <- primIO $ bb_uncons bb
+  logv "Retrieving memoization slot" memo_slot_bits8
+
+  let memo_slot = the Nat (cast memo_slot_bits8)
+
+  case inBounds memo_slot memo of
+    Yes p => do
+      let memo_val = index memo_slot memo
+      let state' = MkVMState (memo_val :: stack) memo
+      step {n = n'} bb' state'
+    No _ => do 
+      ?error_memo_index_out_of_bounds
+      pure state
+
 
 step_FRAME : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_FRAME bb state = do
@@ -295,7 +314,7 @@ step {n = S m} bb state = do
       46 => step_STOP bb' state
       66 => step_BINBYTES bb' state
       75 => step_BININT1 bb' state
-      104 => ?error_BINGET_notimpl
+      104 => step_BINGET bb' state
       117 => step_SETITEMS bb' state
       125 => step_EMPTYDICT bb' state
       128 => step_PROTO {n = m} bb' state
