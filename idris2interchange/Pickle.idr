@@ -335,6 +335,18 @@ step_SETITEMS {n} bb (MkVMState stack memo) = do
       step {n} bb (MkVMState new_stack memo)
     _ => ?error_stack_malformed_for_SETITEMS
 
+step_SETITEM : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_SETITEM {n} bb (MkVMState stack memo) = do
+  log "Opcode: SETITEM"
+
+  -- TODO: there's better let/alternative syntax here that I can't remember
+  case stack of
+    (v :: k :: (PickleDict old_items) :: rest_stack) => do
+      let new_stack = (PickleDict ([(k, v)] ++ old_items)) :: rest_stack
+      step {n} bb (MkVMState new_stack memo)
+    _ => ?error_stack_malformed_for_SETITEM
+
+
 step_MARK : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_MARK {n} bb (MkVMState stack memo) = do
   log "Opcode: MARK"
@@ -363,6 +375,7 @@ step {n = S m} bb state = do
       75 => step_BININT1 bb' state
       77 => step_BININT2 bb' state
       104 => step_BINGET bb' state
+      115 => step_SETITEM bb' state
       117 => step_SETITEMS bb' state
       125 => step_EMPTYDICT bb' state
       128 => step_PROTO {n = m} bb' state
