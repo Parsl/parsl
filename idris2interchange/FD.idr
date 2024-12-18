@@ -37,6 +37,7 @@ compilation times can be severely impacted.
 public export
 data FD = MkFD Int
 
+stdin = MkFD 0  -- well-known fd number
 
 -- cast is deliberatly one-way: we can easily remove the FD-ness of
 -- the value, but not easily/accidentally add it onto a particular
@@ -195,3 +196,25 @@ poll inputs timeout = do
    pure r
 
 
+-- unix read() looks like:
+--        ssize_t read(int fd, void buf[.count], size_t count);
+-- type safe use would require buf to have [.count] enforced on it by the
+-- type system. which is maybe OK in small areas.
+-- or I could always allocate a fresh buffer here, with the given size?
+
+%foreign "C:read,libc"
+prim_read : Int -> AnyPtr -> Int -> PrimIO Int
+-- TODO: are ssize_t and size_t suitable to be Ints?
+
+public export
+read : HasErr AppHasIO es => FD -> Nat -> App es (Int, AnyPtr)
+read (MkFD fd_int) count = do
+  -- allocate memory and read into it. that probably isn't the right
+  -- way to do things linearly... or the right way to do things with
+  -- garbage collection
+  let count_int = the Int (cast count)
+  memory <- primIO $ malloc count_int
+  -- TODO: do I need to check memory is not NULL? (because unix malloc can
+  -- return NULL...)
+  read_count <- primIO $ primIO $ prim_read fd_int memory count_int
+  pure (read_count, memory)

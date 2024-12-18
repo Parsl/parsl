@@ -5,6 +5,7 @@ import subprocess
 import threading
 import typing
 import warnings
+import os
 from collections import defaultdict
 from concurrent.futures import Future
 from dataclasses import dataclass
@@ -532,6 +533,31 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Starts the interchange process locally and uses the command queue to
         get the worker task and result ports that the interchange has bound to.
         """
+        # TODO: all these arguments below aren't used... so are they necessary? should there be
+        # tests discovering they aren't used/passed?
+
+        interchange_config = {"client_address": self.loopback_address,
+                              "client_ports": (self.outgoing_q.port,
+                                               self.incoming_q.port,
+                                               self.command_client.port),
+                              "interchange_address": self.address,
+                              "worker_ports": self.worker_ports,
+                              "worker_port_range": self.worker_port_range,
+                              "hub_address": self.hub_address,
+                              "hub_zmq_port": self.hub_zmq_port,
+                              "logdir": self.logdir,
+                              "heartbeat_threshold": self.heartbeat_threshold,
+                              "poll_period": self.poll_period,
+                              "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
+                              "cert_dir": self.cert_dir,
+                              "manager_selector": self.manager_selector,
+                              "run_id": self.run_id,
+                              "submit_pid": os.getpid()  # race condition here: the workflow could end and the pid be re-used before the interchange process starts looking for that pid using pidfd: there's nothing to keep that pid allocated over the launch.
+                              }
+
+
+        logger.error(f"BENC: interchange_config = {interchange_config}")
+        config_pickle = pickle.dumps(interchange_config)
 
         if self.benc_interchange_cli == "rust":
             self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange " + str(self.cert_dir)], shell=True)
@@ -543,47 +569,21 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         elif self.benc_interchange_cli == "idris2":
             self.interchange_proc = subprocess.Popen(args=["cd idris2interchange ; "
                                                            "gcc -shared gluezmq.c -lzmq -o glue_zmq.so && gcc -shared pollhelper.c -o pollhelper.so && gcc -shared bytes.c -o bytes.so && "
-                                                           "rm -rf build/ && idris2 Main.idr -p sop -p elab-util -p contrib -x main"], shell=True)
+                                                           "rm -rf build/ && idris2 Main.idr -p sop -p elab-util -p contrib -x main"], shell=True, stdin=subprocess.PIPE)
                                                            # "idris2 main.idr -o ixg && LD_LIBRARY_PATH=$(pwd)/build/exec/ixg_app gdb chezscheme"], shell=True)
         elif self.benc_interchange_cli == "python":
-            # TODO: all these arguments below aren't used... so are they necessary? should there be
-            # tests discovering they aren't used/passed?
-
-            interchange_config = {"client_address": self.loopback_address,
-                                  "client_ports": (self.outgoing_q.port,
-                                                   self.incoming_q.port,
-                                                   self.command_client.port),
-                                  "interchange_address": self.address,
-                                  "worker_ports": self.worker_ports,
-                                  "worker_port_range": self.worker_port_range,
-                                  "hub_address": self.hub_address,
-                                  "hub_zmq_port": self.hub_zmq_port,
-                                  "logdir": self.logdir,
-                                  "heartbeat_threshold": self.heartbeat_threshold,
-                                  "poll_period": self.poll_period,
-                                  "logging_level": logging.DEBUG if self.worker_debug else logging.INFO,
-                                  "cert_dir": self.cert_dir,
-                                  "manager_selector": self.manager_selector,
-                                  "run_id": self.run_id,
-                                  "submit_pid": os.getpid()  # race condition here: the workflow could end and the pid be re-used before the interchange process starts looking for that pid using pidfd: there's nothing to keep that pid allocated over the launch.
-                                  }
-
-
-            logger.error(f"BENC: interchange_config = {interchange_config}")
-            config_pickle = pickle.dumps(interchange_config)
-
             self.interchange_proc = subprocess.Popen(b"interchange.py", stdin=subprocess.PIPE)
-            stdin = self.interchange_proc.stdin
-            assert stdin is not None, "Popen should have created an IO object (vs default None) because of PIPE mode"
-
-            logger.debug("Popened interchange process. Writing config object")
-            stdin.write(config_pickle)
-            stdin.flush()
-            stdin.close()
-            logger.debug("Sent config object")
-
         else:
             raise RuntimeError("unknown benc-interchange type")
+
+        stdin = self.interchange_proc.stdin
+        assert stdin is not None, "Popen should have created an IO object (vs default None) because of PIPE mode"
+
+        logger.debug("Popened interchange process. Writing config object")
+        stdin.write(config_pickle)
+        stdin.flush()
+        stdin.close()
+        logger.debug("Sent config object")
 
         logger.debug("Requesting worker ports")
         try:

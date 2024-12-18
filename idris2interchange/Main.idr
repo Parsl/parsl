@@ -364,9 +364,36 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
 -- level that ties into their expected use?
 covering poll_loop : (State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
 
+
+-- TODO: this really only reads up to 128kb. which should be enough for test interchange configs.
+readStdinToEnd : HasErr AppHasIO es => App es (n ** ByteBlock n)
+readStdinToEnd = do
+  (count, buf_ptr) <- read stdin 128000
+  let n = cast count
+  pure (n ** (MkByteBlock buf_ptr n))
+
+covering readStdinConfig : HasErr AppHasIO es => App es PickleAST
+readStdinConfig = do
+  log "Reading config"
+  -- this is a Python pickle. in the Python side, it reads
+  -- from the stream parsing until the natural end of the
+  -- pickle at a STOP opcode (I think). but my pickle impl
+  -- here wants a byte sequence - so I guess i will read until
+  -- eof, and hope there really is an EOF (rather than the
+  -- submit side leaving the stdin open)
+
+  bytes <- readStdinToEnd
+  config <- unpickle bytes
+
+  logv "Config" config
+
+  pure config
+
 covering app_main : (HasErr AppHasIO es, State MatchState MatchState es) => App es ()
 app_main = do
   log "Idris2 interchange starting"
+
+  cfg <- readStdinConfig
 
   -- could use some with-style notation? zmq context doesn't need any cleanup
   -- if the process will just be terminated, and I think it doesn't have much
