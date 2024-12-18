@@ -565,6 +565,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                   "cert_dir": self.cert_dir,
                                   "manager_selector": self.manager_selector,
                                   "run_id": self.run_id,
+                                  "submit_pid": os.getpid()  # race condition here: the workflow could end and the pid be re-used before the interchange process starts looking for that pid using pidfd: there's nothing to keep that pid allocated over the launch.
                                   }
 
 
