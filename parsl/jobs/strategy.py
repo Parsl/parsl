@@ -275,6 +275,14 @@ class Strategy:
                     logger.debug(f"Strategy case 2b: active_blocks {active_blocks} < max_blocks {max_blocks} so scaling out")
                     excess_slots = math.ceil((active_tasks * parallelism) - active_slots)
                     excess_blocks = math.ceil(float(excess_slots) / (tasks_per_node * nodes_per_block))
+                    print(f"BENC: active_tasks {active_tasks}")
+                    print(f"BENC: active_slots {active_slots}")
+                    print(f"BENC: excess slots {excess_slots}")
+                    print(f"BENC: tpn {tasks_per_node}")
+                    print(f"BENC: npb {nodes_per_block}")
+                    print(f"BENC: excess blocks {excess_blocks}")
+                    print(f"BENC: max blocks {max_blocks}")
+                    print(f"BENC: active blocks {active_blocks}")
                     excess_blocks = min(excess_blocks, max_blocks - active_blocks)
                     logger.debug(f"Requesting {excess_blocks} more blocks")
                     executor.scale_out_facade(excess_blocks)
@@ -298,8 +306,8 @@ class Strategy:
                     # Scale in for htex
                     if isinstance(executor, HighThroughputExecutor):
                         if active_blocks > min_blocks:
-                            excess_slots = math.ceil(active_slots - (active_tasks * parallelism))
-                            excess_blocks = math.ceil(float(excess_slots) / (tasks_per_node * nodes_per_block))
+                            excess_slots = math.floor(active_slots - (active_tasks * parallelism))
+                            excess_blocks = math.floor(float(excess_slots) / (tasks_per_node * nodes_per_block))
                             excess_blocks = min(excess_blocks, active_blocks - min_blocks)
                             logger.debug(f"Requesting scaling in by {excess_blocks} blocks with idle time {self.max_idletime}s")
                             executor.scale_in_facade(excess_blocks, max_idletime=self.max_idletime)
