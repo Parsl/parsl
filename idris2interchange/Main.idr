@@ -124,7 +124,8 @@ matchmake sockets = do
   (MkMatchState managers tasks) <- get MatchState
 
   case tasks of
-    [] => log "No tasks in matchmaker - no match possible"
+    [] => log "No match possible: No tasks in matchmaker"
+    -- TODO: rest_tasks is discarded rather than being processed
     task :: rest_tasks => do
       logv "This task is available for matchmaking" task
       -- manager selection more complicated, especially with replacement/removal
@@ -137,7 +138,7 @@ matchmake sockets = do
       -- In the rust impl, I represented managers using multiple slot objects,
       -- as many as listed in the original count.
       case managers of
-        [] => log "No managers registered - no match possible"
+        [] => log "No match possible: no managers registered"
         ((n ** b), m) :: rest_managers => do
           logv "Considering manager for match" m
           let c = lookup "max_capacity" m
@@ -161,9 +162,13 @@ matchmake sockets = do
                   zmq_alloc_send_bytes sockets.tasks_interchange_to_worker b True
                   zmq_alloc_send_bytes sockets.tasks_interchange_to_worker emptyByteBlock True
                   zmq_alloc_send_bytes sockets.tasks_interchange_to_worker resp_bytes False
+
+                  -- TODO: update MatchState to remove one task and keep rest_tasks, as well as updating
+                  -- manager capacity. Iterate until no more matches are possible.
+                  put MatchState (MkMatchState managers rest_tasks)
+                  matchmake sockets  -- this must be a tail call (can I assert that? I think not... but it would be nice)
                 else ?notimpl_manager_oversubscribed
             _ => ?error_registration_bad_max_capacity
-  log "Matchmaker completed"
 
 
 ||| this drains ZMQ when there's a poll. this is a bit complicated and
