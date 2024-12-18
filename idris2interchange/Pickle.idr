@@ -128,6 +128,17 @@ step_PROTO {n = S n'} bb state = do
   logv "Pickle protocol version" proto_ver
   step {n = n'} bb' state 
 
+step_TUPLE3 : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+
+step_TUPLE3 bb (MkVMState (a::b::c::rest) memo) = do
+  log "Opcode: TUPLE3"
+  let new_stack = (PickleTuple [a,b,c]) :: rest
+  -- TODO: this might be the wrong order
+  step bb (MkVMState new_stack memo)
+
+step_TUPLE3 _ _ = do
+  ?error_bad_stack_for_TUPLE3
+
 step_BININT1 : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 
 step_BININT1 {n = Z} bb state = do
@@ -383,6 +394,7 @@ step {n = S m} bb state = do
       117 => step_SETITEMS bb' state
       125 => step_EMPTYDICT bb' state
       128 => step_PROTO {n = m} bb' state
+      135 => step_TUPLE3 bb' state
       140 => step_SHORT_BINUNICODE bb' state
       148 => step_MEMOIZE bb' state
       149 => step_FRAME {n = m} bb' state
