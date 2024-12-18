@@ -32,6 +32,7 @@ data PickleAST = PickleUnicodeString String
                | PickleDict (List (PickleAST, PickleAST))
                | PickleMark
                | PickleBytes (List Bits8)
+               | PickleNone
 %runElab derive "PickleAST" [Generic, Meta, Show, Eq]
 
 record VMState where
@@ -128,6 +129,17 @@ step_PROTO {n = S n'} bb state = do
   logv "Pickle protocol version" proto_ver
   step {n = n'} bb' state 
 
+step_TUPLE2 : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+
+step_TUPLE2 bb (MkVMState (a::b::rest) memo) = do
+  log "Opcode: TUPLE2"
+  let new_stack = (PickleTuple [a,b]) :: rest
+  -- TODO: this might be the wrong order
+  step bb (MkVMState new_stack memo)
+
+step_TUPLE2 _ _ = do
+  ?error_bad_stack_for_TUPLE2
+
 step_TUPLE3 : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 
 step_TUPLE3 bb (MkVMState (a::b::c::rest) memo) = do
@@ -165,6 +177,12 @@ step_BININT2 {n = S (S n')} bb (MkVMState stack memo) = do
 step_BININT2 {n = _} bb state = do
   ?error_BININT2_ran_off_end
   pure state
+
+step_NONE : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_NONE bb (MkVMState stack memo) = do
+  log "Opcode: NONE"
+  let new_state = MkVMState (PickleNone :: stack) memo
+  step bb new_state 
 
 step_BINGET : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_BINGET {n = Z} _ _ = ?error_BINGET_out_of_data
@@ -389,11 +407,13 @@ step {n = S m} bb state = do
       67 => step_SHORT_BINBYTES bb' state
       75 => step_BININT1 bb' state
       77 => step_BININT2 bb' state
+      78 => step_NONE bb' state
       104 => step_BINGET bb' state
       115 => step_SETITEM bb' state
       117 => step_SETITEMS bb' state
       125 => step_EMPTYDICT bb' state
       128 => step_PROTO {n = m} bb' state
+      134 => step_TUPLE2 bb' state
       135 => step_TUPLE3 bb' state
       140 => step_SHORT_BINUNICODE bb' state
       148 => step_MEMOIZE bb' state
