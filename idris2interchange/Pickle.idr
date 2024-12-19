@@ -34,6 +34,7 @@ data PickleAST = PickleUnicodeString String
                | PickleBytes (List Bits8)
                | PickleNone
                | PickleGlobal PickleAST PickleAST  -- should always be a pair of strings, i think?
+               | PickleObj PickleAST PickleAST  -- NEWOBJ creates a class object (eg PickleGlobal) and args to __new__
 %runElab derive "PickleAST" [Generic, Meta, Show, Eq]
 
 record VMState where
@@ -129,6 +130,15 @@ step_PROTO {n = S n'} bb state = do
   (proto_ver, bb') <- primIO $ bb_uncons bb
   logv "Pickle protocol version" proto_ver
   step {n = n'} bb' state 
+
+
+step_NEWOBJ : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_NEWOBJ bb (MkVMState (a :: b :: rest) memo) = do
+  log "Opcode: NEWOBJ"
+  let o = PickleObj a b
+  step bb (MkVMState (o :: rest) memo)
+step_NEWOBJ _ _ = ?error_NEWOBJ_bad_stack
+
 
 step_TUPLE2 : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 
@@ -438,6 +448,7 @@ step {n = S m} bb state = do
       117 => step_SETITEMS bb' state
       125 => step_EMPTYDICT bb' state
       128 => step_PROTO {n = m} bb' state
+      129 => step_NEWOBJ bb' state
       134 => step_TUPLE2 bb' state
       135 => step_TUPLE3 bb' state
       140 => step_SHORT_BINUNICODE bb' state
