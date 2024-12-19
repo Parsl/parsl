@@ -33,6 +33,7 @@ data PickleAST = PickleUnicodeString String
                | PickleMark
                | PickleBytes (List Bits8)
                | PickleNone
+               | PickleGlobal PickleAST PickleAST  -- should always be a pair of strings, i think?
 %runElab derive "PickleAST" [Generic, Meta, Show, Eq]
 
 record VMState where
@@ -300,6 +301,20 @@ step_SHORT_BINUNICODE {n} bb (MkVMState stack memo) = do
 
     Z => ?error_SHORT_BINUNICODE_no_length
 
+
+step_STACK_GLOBAL : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_STACK_GLOBAL bb (MkVMState (a :: b :: stack) memo) = do
+  log "Opcode: STACK_GLOBAL"
+
+  let g = PickleGlobal a b
+
+  let new_state = MkVMState (g :: stack) memo
+
+  step {n} bb new_state 
+
+step_STACK_GLOBAL _ _ = ?error_bad_stack_for_STACK_GLOBAL
+
+
 step_EMPTYDICT : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_EMPTYDICT {n} bb (MkVMState stack memo) = do
   log "Opcode: EMPTYDICT"
@@ -307,6 +322,15 @@ step_EMPTYDICT {n} bb (MkVMState stack memo) = do
   let new_state = MkVMState ((PickleDict [])::stack) memo
 
   step {n} bb new_state 
+
+step_EMPTY_TUPLE : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_EMPTY_TUPLE {n} bb (MkVMState stack memo) = do
+  log "Opcode: EMPTY_TUPLE"
+
+  let new_state = MkVMState ((PickleTuple [])::stack) memo
+
+  step {n} bb new_state 
+
 
 notMark : PickleAST -> Bool
 notMark (PickleMark) = False
@@ -402,6 +426,7 @@ step {n = S m} bb state = do
 
     case opcode of 
       40 => step_MARK bb' state
+      41 => step_EMPTY_TUPLE bb' state
       46 => step_STOP bb' state
       66 => step_BINBYTES bb' state
       67 => step_SHORT_BINBYTES bb' state
@@ -416,6 +441,7 @@ step {n = S m} bb state = do
       134 => step_TUPLE2 bb' state
       135 => step_TUPLE3 bb' state
       140 => step_SHORT_BINUNICODE bb' state
+      147 => step_STACK_GLOBAL bb' state
       148 => step_MEMOIZE bb' state
       149 => step_FRAME {n = m} bb' state
       _ => ?error_unknown_opcode
