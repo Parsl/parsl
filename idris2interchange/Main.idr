@@ -49,6 +49,7 @@ record SocketState where
   tasks_interchange_to_worker : ZMQSocket
   results_worker_to_interchange : ZMQSocket
   results_interchange_to_submit : ZMQSocket
+  submit_pidfd : FD
 
 
 -- this should be total, proved by decreasing n
@@ -485,8 +486,6 @@ app_main = do
  
   logv "Created submitter pidfd" submit_pidfd
 
-
-
   -- TODO: is there a named record syntax for construction?
   -- I can't find one? I want this for the same reason
   -- as I want Python kwonly args - maintainable style
@@ -495,7 +494,8 @@ app_main = do
        tasks_submit_to_interchange = tasks_submit_to_interchange_socket,
        tasks_interchange_to_worker = tasks_interchange_to_worker_socket,
        results_worker_to_interchange = results_worker_to_interchange_socket,
-       results_interchange_to_submit = results_interchange_to_submit_socket
+       results_interchange_to_submit = results_interchange_to_submit_socket,
+       submit_pidfd = submit_pidfd
        }
 
   poll_loop sockets
@@ -555,7 +555,8 @@ poll_loop sockets = do
   poll_outputs <- poll [MkPollInput command_fd 0,
                         MkPollInput tasks_submit_to_interchange_fd 0,
                         MkPollInput tasks_interchange_to_worker_fd 0,
-                        MkPollInput results_worker_to_interchange_fd 0]
+                        MkPollInput results_worker_to_interchange_fd 0,
+                        MkPollInput (submit_pidfd sockets) 0]
                        (MkTimeMS (-1)) -- -1 means infinity. should either be infinity or managed as part of a timed events queue that is not fd driven?
 
   log "poll completed"
@@ -600,6 +601,10 @@ poll_loop sockets = do
   when ((index 3 poll_outputs).revents /= 0) $ do
     log "Got a poll result for results worker to interchange channel. Doing ZMQ-specific event handling."
     zmq_poll_results_worker_to_interchange_loop sockets
+
+  when ((index 4 poll_outputs).revents /= 0) $ do
+    log "Got a pidfd event from submit process - crashing out (but I should make this more graceful)"
+    ?fake_graceful_exit
 
   poll_loop sockets
 
