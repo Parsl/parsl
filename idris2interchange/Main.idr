@@ -465,6 +465,21 @@ app_main = do
   zmq_bind results_worker_to_interchange_socket "tcp://0.0.0.0:9004"
   log "Created worker result socket"
 
+  PickleDict config_dict <- pure cfg
+    | _ => ?error_config_is_not_a_dict
+
+  -- TODO: overload strings so that can say lookup "submit_pid" without
+  -- the PickleUnicodeString constructor
+  let submit_pid = lookup (PickleUnicodeString "submit_pid") config_dict
+
+  logv "Submit pid" submit_pid
+
+  log "Creating submitter pidfd"
+  parent_pidfd <- ?pidfd_open submit_pid
+ 
+  log "Created submitter pidfd"
+
+
   -- TODO: is there a named record syntax for construction?
   -- I can't find one? I want this for the same reason
   -- as I want Python kwonly args - maintainable style
