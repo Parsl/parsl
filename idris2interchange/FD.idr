@@ -218,3 +218,15 @@ read (MkFD fd_int) count = do
   -- return NULL...)
   read_count <- primIO $ primIO $ prim_read fd_int memory count_int
   pure (read_count, memory)
+
+
+%foreign "C:pidfd_open,libc"
+prim_pidfd_open : Int -> Int -> PrimIO Int
+-- this assumes pid_t and unsigned int both work as `Int`
+
+public export
+pidfd_open : HasErr AppHasIO es => Int -> App es FD
+pidfd_open pid = do
+  pidfd <- primIO $ primIO $ prim_pidfd_open pid 0
+  -- TODO: error handling on pidfd return value
+  pure (MkFD pidfd)

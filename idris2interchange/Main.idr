@@ -465,19 +465,26 @@ app_main = do
   zmq_bind results_worker_to_interchange_socket "tcp://0.0.0.0:9004"
   log "Created worker result socket"
 
+  -- This `pure` is to get access to bind/| syntax which I think doesn't exist
+  -- for `let` -- but I haven't checked for sure?
   PickleDict config_dict <- pure cfg
     | _ => ?error_config_is_not_a_dict
 
   -- TODO: overload strings so that can say lookup "submit_pid" without
   -- the PickleUnicodeString constructor
-  let submit_pid = lookup (PickleUnicodeString "submit_pid") config_dict
+  (Just (PickleInteger submit_pid)) <- pure $ lookup (PickleUnicodeString "submit_pid") config_dict
+    | _ => ?error_pidfd_is_not_an_int
 
   logv "Submit pid" submit_pid
 
   log "Creating submitter pidfd"
-  parent_pidfd <- ?pidfd_open submit_pid
+  -- There's a race condition in this approach (as with any "name the process
+  -- with a pid" approach) that the process might be gone and replaced by a
+  -- new unrelated process by this time.
+  submit_pidfd <- pidfd_open submit_pid
  
-  log "Created submitter pidfd"
+  logv "Created submitter pidfd" submit_pidfd
+
 
 
   -- TODO: is there a named record syntax for construction?
