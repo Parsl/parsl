@@ -228,5 +228,6 @@ public export
 pidfd_open : HasErr AppHasIO es => Int -> App es FD
 pidfd_open pid = do
   pidfd <- primIO $ primIO $ prim_pidfd_open pid 0
-  -- TODO: error handling on pidfd return value
-  pure (MkFD pidfd)
+  case pidfd of
+    -1 => ?error_pidfd_open_returned_error
+    p => pure (MkFD p)

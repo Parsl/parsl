@@ -189,6 +189,19 @@ step_BININT2 {n = _} bb state = do
   ?error_BININT2_ran_off_end
   pure state
 
+step_BININT : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+
+step_BININT {n = (S (S ( S (S n'))))} bb (MkVMState stack memo) = do
+  log "Opcode: BININT4"
+  (v, bb') <- read_uint4 bb
+  logv "4-byte unsigned integer" v
+  let new_state = MkVMState ((PickleInteger (cast v))::stack) memo
+  step {n = n'} bb' new_state 
+
+step_BININT {n = _} bb state = do
+  ?error_BININT_ran_off_end
+  pure state
+
 step_NONE : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_NONE bb (MkVMState stack memo) = do
   log "Opcode: NONE"
@@ -440,6 +453,7 @@ step {n = S m} bb state = do
       46 => step_STOP bb' state
       66 => step_BINBYTES bb' state
       67 => step_SHORT_BINBYTES bb' state
+      74 => step_BININT bb' state
       75 => step_BININT1 bb' state
       77 => step_BININT2 bb' state
       78 => step_NONE bb' state
