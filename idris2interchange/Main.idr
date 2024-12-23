@@ -363,7 +363,7 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
 
 -- TODO: is there anything to distinguish these three sockets at the type
 -- level that ties into their expected use?
-covering poll_loop : (State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
+covering poll_loop : (State Bool Bool es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
 
 
 -- TODO: this really only reads up to 128kb. which should be enough for test interchange configs.
@@ -390,7 +390,7 @@ readStdinConfig = do
 
   pure config
 
-covering app_main : (HasErr AppHasIO es, State MatchState MatchState es) => App es ()
+covering app_main : (State Bool Bool es, HasErr AppHasIO es, State MatchState MatchState es) => App es ()
 app_main = do
   log "Idris2 interchange starting"
 
@@ -499,8 +499,7 @@ app_main = do
        }
 
   poll_loop sockets
-
-  log "Idris2 interchange ending"
+  log "Idris2 interchange ending gracefully"
 
 
 poll_loop sockets = do
@@ -603,11 +602,14 @@ poll_loop sockets = do
     zmq_poll_results_worker_to_interchange_loop sockets
 
   when ((index 4 poll_outputs).revents /= 0) $ do
-    log "Got a pidfd event from submit process - crashing out (but I should make this more graceful)"
-    ?fake_graceful_exit
+    log "Got a pidfd event from submit process. Setting exit state."
+    put Bool False
 
-  poll_loop sockets
+  continue <- get Bool
+  if continue
+    then poll_loop sockets
+    else log "Ending poll loop"
 
 
 covering main : IO ()
-main = run (new (MkMatchState [] []) app_main)
+main = run (new True (new (MkMatchState [] []) app_main))
