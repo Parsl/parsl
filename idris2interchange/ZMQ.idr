@@ -94,6 +94,15 @@ zmq_recv_msg_alloc (MkZMQSocket sock_ptr) = do
       then pure $ Nothing
       else pure $ Just $ MkZMQMsg msg_ptr
 
+%foreign "C:zmq_msg_close,libzmq"
+prim__zmq_msg_close : AnyPtr -> PrimIO ()
+
+public export
+zmq_msg_close : HasErr AppHasIO es => ZMQMsg -> App es ()
+zmq_msg_close (MkZMQMsg msg_ptr) = do
+  primIO $ primIO $ prim__zmq_msg_close msg_ptr
+
+
 %foreign (gluezmq "glue_zmq_msg_more")
 prim__zmq_msg_more : AnyPtr -> PrimIO Int
 

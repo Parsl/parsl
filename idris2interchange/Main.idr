@@ -216,6 +216,8 @@ zmq_poll_command_channel_loop command_socket = do
 
         -- after this send, command socket is back is ready-for-a-REQ state
 
+        zmq_msg_close msg
+
         zmq_poll_command_channel_loop command_socket
 
 -- TODO: factor ZMQ_EVENTS handling with other channels
@@ -241,6 +243,8 @@ zmq_poll_tasks_submit_to_interchange_loop sockets = do
         ascii_dump bytes
 
         task <- unpickle bytes
+
+        zmq_msg_close msg
 
         logv "Unpickled task" task
 
@@ -280,12 +284,14 @@ process_result_part sockets () msg_part = do
     _ => ?error_bad_pickle_object_on_result_channel
 
   -- TODO: release worker/task binding/count
+
+  zmq_msg_close msg_part
   pure ()
 
 covering zmq_poll_results_worker_to_interchange_loop : HasErr AppHasIO es => SocketState -> App es ()
 zmq_poll_results_worker_to_interchange_loop sockets = do
   events <- zmq_get_socket_events sockets.results_worker_to_interchange
-  logv "ZMQ poll tasks submit to interchange loop got these zmq events" events
+  logv "ZMQ poll results worker to interchange loop got these zmq events" events
   
   when (events `mod` 2 == 1) $ do -- read
     log "Trying to receive a message from results worker->interchange channel"
@@ -300,6 +306,7 @@ zmq_poll_results_worker_to_interchange_loop sockets = do
         logv "Received result-like message on results worker->interchange channel, size" s
         remote_id <- zmq_msg_as_bytes addr_part
         ascii_dump remote_id
+        zmq_msg_close addr_part
 
         logv "Number of result parts in this multipart message" (length other_parts)
 
@@ -354,6 +361,8 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
               Just (JString "heartbeat") => 
                 log "Ignoring heartbeat"  -- TODO: reply else we'll get a timeout...
               _ => ?error_unknown_registration_like_type
+        zmq_msg_close addr_part
+        zmq_msg_close json_part
         zmq_poll_tasks_interchange_to_worker_loop sockets
       _ => ?error_tasks_to_interchange_expected_two_parts
 

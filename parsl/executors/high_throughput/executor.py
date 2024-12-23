@@ -570,6 +570,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             self.interchange_proc = subprocess.Popen(args=["cd idris2interchange ; "
                                                            "gcc -shared gluezmq.c -lzmq -o glue_zmq.so && gcc -shared pollhelper.c -o pollhelper.so && gcc -shared bytes.c -o bytes.so && "
                                                            "rm -rf build/ && idris2 Main.idr -p sop -p elab-util -p contrib -x main"], shell=True, stdin=subprocess.PIPE)
+                                                           # "rm -rf build/ && idris2 Main.idr -p sop -p elab-util -p contrib -x main 2>&1 | tee i2ic.log"], shell=True, stdin=subprocess.PIPE)
                                                            # "rm -rf build/ && valgrind --trace-children=yes --leak-check=full idris2 Main.idr -p sop -p elab-util -p contrib -x main"], shell=True, stdin=subprocess.PIPE)
                                                            # "idris2 main.idr -o ixg && LD_LIBRARY_PATH=$(pwd)/build/exec/ixg_app gdb chezscheme"], shell=True)
         elif self.benc_interchange_cli == "python":
