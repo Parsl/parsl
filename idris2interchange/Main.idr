@@ -160,9 +160,9 @@ matchmake sockets = do
                   let task_msg = PickleList [task]
                   logv "Dispatching task" task_msg
                   (n ** resp_bytes) <- pickle task_msg
-                  zmq_alloc_send_bytes sockets.tasks_interchange_to_worker b True
-                  zmq_alloc_send_bytes sockets.tasks_interchange_to_worker emptyByteBlock True
-                  zmq_alloc_send_bytes sockets.tasks_interchange_to_worker resp_bytes False
+                  zmq_send_bytes sockets.tasks_interchange_to_worker b True
+                  zmq_send_bytes sockets.tasks_interchange_to_worker emptyByteBlock True
+                  zmq_send_bytes sockets.tasks_interchange_to_worker resp_bytes False
 
                   -- TODO: update MatchState to remove one task and keep rest_tasks, as well as updating
                   -- manager capacity. Iterate until no more matches are possible.
@@ -212,9 +212,7 @@ zmq_poll_command_channel_loop command_socket = do
         resp <- dispatch_cmd cmd
         logv "Response to command" resp
         (n ** resp_bytes) <- pickle resp
-        zmq_alloc_send_bytes command_socket resp_bytes False
-        -- need to do some appropriate de-alloc for a message here?
-        -- or is it done inside alloc_send_bytes?
+        zmq_send_bytes command_socket resp_bytes False
 
         -- after this send, command socket is back is ready-for-a-REQ state
 
@@ -276,7 +274,7 @@ process_result_part sockets () msg_part = do
       case tag of
         Just (PickleUnicodeString "result") => do
           log "Result, so sending onwards"
-          zmq_alloc_send_bytes sockets.results_interchange_to_submit bb False
+          zmq_send_bytes sockets.results_interchange_to_submit bb False
         _ => log "Ignoring non-result"
       
     _ => ?error_bad_pickle_object_on_result_channel

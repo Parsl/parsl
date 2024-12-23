@@ -89,7 +89,7 @@ int glue_zmq_get_socket_events(void *sock) {
 }
 
 
-void glue_zmq_alloc_send_bytes(void *sock, void *bytes, int len, int more) {
+void glue_zmq_send_bytes(void *sock, void *bytes, int len, int more) {
     int n;
     int flags;
     flags = 0;
