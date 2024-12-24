@@ -25,9 +25,6 @@ emptyByteBlock = MkByteBlock prim__getNullAnyPtr 0
 %foreign "C:readByteAt,bytes"
 prim__readByteAt : AnyPtr -> PrimIO Bits8
 
-readByteAt : AnyPtr -> IO Bits8
-readByteAt p = primIO $ prim__readByteAt p
-
 %foreign "C:incPtrBy,bytes"
 prim__incPtrBy : Int -> AnyPtr -> AnyPtr
 
@@ -41,7 +38,9 @@ incPtrBy n p = prim__incPtrBy n p
 export
 bb_uncons : ByteBlock (S n) -> IO (Bits8, ByteBlock n)
 bb_uncons (MkByteBlock ptr (S n)) = do
-  v <- readByteAt ptr
+
+  v <- primIO $ prim__readByteAt ptr
+
   let ptr_inc = incPtr ptr
   let rest = MkByteBlock ptr_inc n
 
