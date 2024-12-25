@@ -42,6 +42,18 @@ def htex_udp_config():
     return c
 
 
+def htex_filesystem_config():
+    """This config will force filesystem radio"""
+    from parsl.tests.configs.htex_local_alternate import fresh_config
+    c = fresh_config()
+    assert len(c.executors) == 1
+
+    assert c.executors[0].radio_mode == "htex", "precondition: htex has a radio mode attribute, configured for htex radio"
+    c.executors[0].radio_mode = "filesystem"
+
+    return c
+
+
 def workqueue_config():
     from parsl.tests.configs.workqueue_ex import fresh_config
     c = fresh_config()
@@ -61,7 +73,7 @@ def taskvine_config():
 
 
 @pytest.mark.local
-@pytest.mark.parametrize("fresh_config", [htex_config, htex_udp_config, workqueue_config, taskvine_config])
+@pytest.mark.parametrize("fresh_config", [htex_config, htex_filesystem_config, htex_udp_config, workqueue_config, taskvine_config])
 def test_row_counts(tmpd_cwd, fresh_config):
     # this is imported here rather than at module level because
     # it isn't available in a plain parsl install, so this module

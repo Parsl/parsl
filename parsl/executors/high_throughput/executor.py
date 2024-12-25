@@ -63,7 +63,6 @@ DEFAULT_INTERCHANGE_LAUNCH_CMD = ["interchange.py"]
 
 GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionProvider`
        Provider to access computation resources. Can be one of :class:`~parsl.providers.aws.aws.EC2Provider`,
-        :class:`~parsl.providers.cobalt.cobalt.Cobalt`,
         :class:`~parsl.providers.condor.condor.Condor`,
         :class:`~parsl.providers.googlecloud.googlecloud.GoogleCloud`,
         :class:`~parsl.providers.gridEngine.gridEngine.GridEngine`,
@@ -87,13 +86,18 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
 
     address : string
         An address to connect to the main Parsl process which is reachable from the network in which
-        workers will be running. This field expects an IPv4 address (xxx.xxx.xxx.xxx).
+        workers will be running. This field expects an IPv4 or IPv6 address.
         Most login nodes on clusters have several network interfaces available, only some of which
         can be reached from the compute nodes. This field can be used to limit the executor to listen
         only on a specific interface, and limiting connections to the internal network.
         By default, the executor will attempt to enumerate and connect through all possible addresses.
         Setting an address here overrides the default behavior.
         default=None
+
+    loopback_address: string
+        Specify address used for internal communication between executor and interchange.
+        Supports IPv4 and IPv6 addresses
+        default=127.0.0.1
 
     worker_ports : (int, int)
         Specify the ports to be used by workers to connect to Parsl. If this option is specified,
@@ -225,6 +229,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Parsl will create names as integers starting with 0.
 
         default: empty list
+
     """
 
     @typeguard.typechecked
@@ -234,6 +239,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  launch_cmd: Optional[str] = None,
                  interchange_launch_cmd: Optional[Sequence[str]] = None,
                  address: Optional[str] = None,
+                 loopback_address: str = "127.0.0.1",
                  worker_ports: Optional[Tuple[int, int]] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
                  interchange_port_range: Optional[Tuple[int, int]] = (55000, 56000),
@@ -269,6 +275,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.address = address
         self.address_probe_timeout = address_probe_timeout
         self.manager_selector = manager_selector
+        self.loopback_address = loopback_address
+
         if self.address:
             self.all_addresses = address
         else:
@@ -322,6 +330,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         if not interchange_launch_cmd:
             interchange_launch_cmd = DEFAULT_INTERCHANGE_LAUNCH_CMD
         self.interchange_launch_cmd = interchange_launch_cmd
+
+        self._result_queue_thread_exit = threading.Event()
+        self._result_queue_thread: Optional[threading.Thread] = None
 
     radio_mode = "htex"
     enable_mpi_mode: bool = False
@@ -409,13 +420,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             )
 
         self.outgoing_q = zmq_pipes.TasksOutgoing(
-            "127.0.0.1", self.interchange_port_range, self.cert_dir
+            self.loopback_address, self.interchange_port_range, self.cert_dir
         )
         self.incoming_q = zmq_pipes.ResultsIncoming(
-            "127.0.0.1", self.interchange_port_range, self.cert_dir
+            self.loopback_address, self.interchange_port_range, self.cert_dir
         )
         self.command_client = zmq_pipes.CommandClient(
-            "127.0.0.1", self.interchange_port_range, self.cert_dir
+            self.loopback_address, self.interchange_port_range, self.cert_dir
         )
 
         self._result_queue_thread = None
@@ -447,9 +458,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         """
         logger.debug("Result queue worker starting")
 
-        while not self.bad_state_is_set:
+        while not self.bad_state_is_set and not self._result_queue_thread_exit.is_set():
             try:
-                msgs = self.incoming_q.get()
+                msgs = self.incoming_q.get(timeout_ms=self.poll_period)
+                if msgs is None:  # timeout
+                    continue
 
             except IOError as e:
                 logger.exception("Caught broken queue with exception code {}: {}".format(e.errno, e))
@@ -507,6 +520,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                     else:
                         raise BadMessage("Message received with unknown type {}".format(msg['type']))
 
+        logger.info("Closing result ZMQ pipe")
+        self.incoming_q.close()
         logger.info("Result queue worker finished")
 
     def _start_local_interchange_process(self) -> None:
@@ -516,7 +531,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         get the worker task and result ports that the interchange has bound to.
         """
 
-        interchange_config = {"client_address": "127.0.0.1",
+        interchange_config = {"client_address": self.loopback_address,
                               "client_ports": (self.outgoing_q.port,
                                                self.incoming_q.port,
                                                self.command_client.port),
@@ -809,6 +824,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         logger.info("Attempting HighThroughputExecutor shutdown")
 
+        logger.info("Terminating interchange and result queue thread")
+        self._result_queue_thread_exit.set()
         self.interchange_proc.terminate()
         try:
             self.interchange_proc.wait(timeout=timeout)
@@ -832,6 +849,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         if hasattr(self, 'command_client'):
             logger.info("Closing command client")
             self.command_client.close()
+
+        logger.info("Waiting for result queue thread exit")
+        if self._result_queue_thread:
+            self._result_queue_thread.join()
 
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 

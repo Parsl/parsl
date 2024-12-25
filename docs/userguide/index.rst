@@ -21,3 +21,4 @@ User guide
    usage_tracking
    plugins
    parsl_perf
+   glossary 
