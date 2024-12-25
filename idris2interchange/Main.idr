@@ -1,5 +1,9 @@
 module Main
 
+-- here's a kinda related effort (with webgl) that has a bunch
+-- of journal-ish documentation:
+-- https://drbearhands.com/idris-webgl/
+
 -- wow it took a long time before importing a library module...
 -- the source code was 290 lines long before adding the first
 -- import...
