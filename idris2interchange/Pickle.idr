@@ -212,8 +212,9 @@ step_BINGET bb state@(MkVMState stack memo) = do
 
 
 step_FRAME : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
-step_FRAME bb@(MkByteBlock _ n) state = do
+step_FRAME bb state = do
   log "Opcode: FRAME"
+  let n = length bb
   case n of
     (S (S (S (S (S (S (S (S k)))))))) => do
       (frame_len, bb') <- read_uint8 bb
@@ -242,7 +243,8 @@ step_STOP bb state = do
 
 
 binbytes_folder : HasErr AppHasIO es => (List Bits8, ByteBlock) -> Int -> App es (List Bits8, ByteBlock)
-binbytes_folder (l, bb@(MkByteBlock _ k)) _ = do
+binbytes_folder (l, bb) _ = do
+  let k = length bb
   case k of
     (S k') => do
       (v, bb') <- primIO $ bb_uncons bb
@@ -250,8 +252,9 @@ binbytes_folder (l, bb@(MkByteBlock _ k)) _ = do
     _ => ?error_binbytes_folder_exhausted_bytes
 
 step_BINBYTES : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
-step_BINBYTES bb@(MkByteBlock _ n) (MkVMState stack memo) = do
+step_BINBYTES bb (MkVMState stack memo) = do
   log "Opcode: BINBYTES"
+  let n = length bb
   case n of
     (S (S (S (S k)))) => do
       (block_len, bb') <- read_uint4 bb
@@ -264,8 +267,9 @@ step_BINBYTES bb@(MkByteBlock _ n) (MkVMState stack memo) = do
     _ => ?error_BINBYTES_not_enough_to_count
 
 step_SHORT_BINBYTES : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
-step_SHORT_BINBYTES bb@(MkByteBlock _ n) (MkVMState stack memo) = do
+step_SHORT_BINBYTES bb (MkVMState stack memo) = do
   log "Opcode: SHORT_BINBYTES"
+  let n = length bb
   case n of
     (S k) => do
       (block_len, bb') <- primIO $ bb_uncons bb
@@ -282,8 +286,9 @@ step_SHORT_BINBYTES bb@(MkByteBlock _ n) (MkVMState stack memo) = do
 -- and maybe pushes more into runtime: the number of bytes we want is encoded
 --  in the first remaining byte of the ByteBlock.
 step_SHORT_BINUNICODE : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
-step_SHORT_BINUNICODE bb@(MkByteBlock _ n) (MkVMState stack memo) = do
+step_SHORT_BINUNICODE bb (MkVMState stack memo) = do
   log "Opcode: SHORT_BINUNICODE"
+  let n = length bb
   case n of
     (S k) => do
       (strlen, bb') <- primIO $ bb_uncons bb
@@ -611,7 +616,8 @@ pickle_DICT bytes entries = do
 pickle_UNICODE : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> String -> App es ByteBlock
 pickle_UNICODE bytes s = do
   bytes <- primIO $ bb_append bytes 140  -- SHORT_BINUNICODE - single byte for length
-  sbytes@(MkByteBlock _ slen) <- primIO $ bytes_from_str s
+  sbytes <- primIO $ bytes_from_str s
+  let slen = length sbytes
   bytes <- primIO $ bb_append bytes (cast slen) -- TODO no check for slen overflowing in this cast
   bytes <- primIO $ bb_append_bytes bytes sbytes
   pure bytes
