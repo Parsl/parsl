@@ -72,7 +72,7 @@ read_uint8 bb = do
   pure (v, bb8)
 
 
-read_uint4 : HasErr AppHasIO es => {n: Nat} -> ByteBlock (S (S (S (S n)))) -> App es (Int, ByteBlock n)
+read_uint4 : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n: Nat} -> ByteBlock (S (S (S (S n)))) -> App es (Int, ByteBlock n)
 read_uint4 bb = do
   (byte1, bb1) <- primIO $ bb_uncons bb 
   (byte2, bb2) <- primIO $ bb_uncons bb1 
@@ -96,7 +96,7 @@ read_uint4 bb = do
   pure (v, bb4)
 
 
-read_uint2 : HasErr AppHasIO es => {n: Nat} -> ByteBlock (S (S n)) -> App es (Int, ByteBlock n)
+read_uint2 : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n: Nat} -> ByteBlock (S (S n)) -> App es (Int, ByteBlock n)
 read_uint2 bb = do
   (byte1, bb1) <- primIO $ bb_uncons bb 
   (byte2, bb2) <- primIO $ bb_uncons bb1 
@@ -116,9 +116,9 @@ read_uint2 bb = do
 
 -- define this signature before the body because we are mutually
 -- recursive (or I could use a mutual block? what's the difference?)
-step : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 
-step_PROTO : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_PROTO : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 
 step_PROTO {n = Z} bb state = do
   ?error_PROTO_ran_off_end
@@ -132,7 +132,7 @@ step_PROTO {n = S n'} bb state = do
   step {n = n'} bb' state 
 
 
-step_NEWOBJ : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_NEWOBJ : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_NEWOBJ bb (MkVMState (a :: b :: rest) memo) = do
   log "Opcode: NEWOBJ"
   let o = PickleObj a b
@@ -140,7 +140,7 @@ step_NEWOBJ bb (MkVMState (a :: b :: rest) memo) = do
 step_NEWOBJ _ _ = ?error_NEWOBJ_bad_stack
 
 
-step_TUPLE2 : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_TUPLE2 : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 
 step_TUPLE2 bb (MkVMState (a::b::rest) memo) = do
   log "Opcode: TUPLE2"
@@ -151,7 +151,7 @@ step_TUPLE2 bb (MkVMState (a::b::rest) memo) = do
 step_TUPLE2 _ _ = do
   ?error_bad_stack_for_TUPLE2
 
-step_TUPLE3 : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_TUPLE3 : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 
 step_TUPLE3 bb (MkVMState (a::b::c::rest) memo) = do
   log "Opcode: TUPLE3"
@@ -162,7 +162,7 @@ step_TUPLE3 bb (MkVMState (a::b::c::rest) memo) = do
 step_TUPLE3 _ _ = do
   ?error_bad_stack_for_TUPLE3
 
-step_BININT1 : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_BININT1 : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 
 step_BININT1 {n = Z} bb state = do
   ?error_BININT1_ran_off_end
@@ -176,7 +176,7 @@ step_BININT1 {n = S n'} bb (MkVMState stack memo) = do
   step {n = n'} bb' new_state 
 
 
-step_BININT2 : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_BININT2 : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 
 step_BININT2 {n = S (S n')} bb (MkVMState stack memo) = do
   log "Opcode: BININT2"
@@ -189,7 +189,7 @@ step_BININT2 {n = _} bb state = do
   ?error_BININT2_ran_off_end
   pure state
 
-step_BININT : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_BININT : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 
 step_BININT {n = (S (S ( S (S n'))))} bb (MkVMState stack memo) = do
   log "Opcode: BININT4"
@@ -202,13 +202,13 @@ step_BININT {n = _} bb state = do
   ?error_BININT_ran_off_end
   pure state
 
-step_NONE : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_NONE : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_NONE bb (MkVMState stack memo) = do
   log "Opcode: NONE"
   let new_state = MkVMState (PickleNone :: stack) memo
   step bb new_state 
 
-step_BINGET : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_BINGET : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_BINGET {n = Z} _ _ = ?error_BINGET_out_of_data
 step_BINGET {n = S n'} bb state@(MkVMState stack memo) = do
   log "Opcode: BINGET"
@@ -227,7 +227,7 @@ step_BINGET {n = S n'} bb state@(MkVMState stack memo) = do
       pure state
 
 
-step_FRAME : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_FRAME : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_FRAME bb state = do
   log "Opcode: FRAME"
   case n of
@@ -244,14 +244,14 @@ step_FRAME bb state = do
       step bb' state
     _ => ?error_not_enough_bytes_left_for_FRAME
 
-step_MEMOIZE : HasErr AppHasIO es => {n: Nat} -> ByteBlock n -> VMState -> App es VMState
+step_MEMOIZE : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n: Nat} -> ByteBlock n -> VMState -> App es VMState
 step_MEMOIZE bb (MkVMState (v::rest_stack) memo) = do
   log "Opcode: MEMOIZE"
   step bb (MkVMState (v::rest_stack) (memo ++ [v]))
 step_MEMOIZE bb (MkVMState [] memo) = ?error_MEMOIZE_with_empty_stack
 
 
-step_STOP : HasErr AppHasIO es => ByteBlock n -> VMState -> App es VMState
+step_STOP : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock n -> VMState -> App es VMState
 step_STOP bb state = do
   log "Opcode: STOP"
   pure state
@@ -265,7 +265,7 @@ binbytes_folder (l, (k ** bb)) _ = do
       pure (l ++ [v], (k' ** bb'))
     _ => ?error_binbytes_folder_exhausted_bytes
 
-step_BINBYTES : HasErr AppHasIO es => {n: Nat} -> ByteBlock n -> VMState -> App es VMState
+step_BINBYTES : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n: Nat} -> ByteBlock n -> VMState -> App es VMState
 step_BINBYTES {n} bb (MkVMState stack memo) = do
   log "Opcode: BINBYTES"
   case n of
@@ -279,7 +279,7 @@ step_BINBYTES {n} bb (MkVMState stack memo) = do
       step bb'' new_state
     _ => ?error_BINBYTES_not_enough_to_count
 
-step_SHORT_BINBYTES : HasErr AppHasIO es => {n: Nat} -> ByteBlock n -> VMState -> App es VMState
+step_SHORT_BINBYTES : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n: Nat} -> ByteBlock n -> VMState -> App es VMState
 step_SHORT_BINBYTES {n} bb (MkVMState stack memo) = do
   log "Opcode: SHORT_BINBYTES"
   case n of
@@ -297,7 +297,7 @@ step_SHORT_BINBYTES {n} bb (MkVMState stack memo) = do
 -- The reasoning about lengths here is more complicated than PROTO or FRAME,
 -- and maybe pushes more into runtime: the number of bytes we want is encoded
 --  in the first remaining byte of the ByteBlock.
-step_SHORT_BINUNICODE : HasErr AppHasIO es => {n: Nat} -> ByteBlock n -> VMState -> App es VMState
+step_SHORT_BINUNICODE : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n: Nat} -> ByteBlock n -> VMState -> App es VMState
 step_SHORT_BINUNICODE {n} bb (MkVMState stack memo) = do
   log "Opcode: SHORT_BINUNICODE"
   case n of
@@ -325,7 +325,7 @@ step_SHORT_BINUNICODE {n} bb (MkVMState stack memo) = do
     Z => ?error_SHORT_BINUNICODE_no_length
 
 
-step_STACK_GLOBAL : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_STACK_GLOBAL : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_STACK_GLOBAL bb (MkVMState (a :: b :: stack) memo) = do
   log "Opcode: STACK_GLOBAL"
 
@@ -338,7 +338,7 @@ step_STACK_GLOBAL bb (MkVMState (a :: b :: stack) memo) = do
 step_STACK_GLOBAL _ _ = ?error_bad_stack_for_STACK_GLOBAL
 
 
-step_EMPTYDICT : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_EMPTYDICT : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_EMPTYDICT {n} bb (MkVMState stack memo) = do
   log "Opcode: EMPTYDICT"
 
@@ -346,7 +346,7 @@ step_EMPTYDICT {n} bb (MkVMState stack memo) = do
 
   step {n} bb new_state 
 
-step_EMPTY_TUPLE : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_EMPTY_TUPLE : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_EMPTY_TUPLE {n} bb (MkVMState stack memo) = do
   log "Opcode: EMPTY_TUPLE"
 
@@ -376,7 +376,7 @@ split_pairs _ = ?error_split_list_not_even
 -- case, that's probably ok, because I don't think memoized objects are
 -- every used in the interchange (and the memoize retrieval opcodes are not
 -- implemented...)
-step_SETITEMS : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_SETITEMS : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_SETITEMS {n} bb (MkVMState stack memo) = do
   log "Opcode: SETITEMS"
 
@@ -415,7 +415,7 @@ step_SETITEMS {n} bb (MkVMState stack memo) = do
       step {n} bb (MkVMState new_stack memo)
     _ => ?error_stack_malformed_for_SETITEMS
 
-step_SETITEM : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_SETITEM : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_SETITEM {n} bb (MkVMState stack memo) = do
   log "Opcode: SETITEM"
 
@@ -427,7 +427,7 @@ step_SETITEM {n} bb (MkVMState stack memo) = do
     _ => ?error_stack_malformed_for_SETITEM
 
 
-step_MARK : HasErr AppHasIO es => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
+step_MARK : (State LogConfig LogConfig es, HasErr AppHasIO es) => {n : Nat} -> ByteBlock n -> VMState -> App es VMState
 step_MARK {n} bb (MkVMState stack memo) = do
   log "Opcode: MARK"
 
@@ -483,7 +483,7 @@ step {n = S m} bb state = do
 ||| functionally? maybe need some linear stuff on usage of msg object
 ||| to let that happen, session style?
 export
-unpickle : HasErr AppHasIO es => (n: Nat ** (ByteBlock n)) -> App es PickleAST
+unpickle : (State LogConfig LogConfig es, HasErr AppHasIO es) => (n: Nat ** (ByteBlock n)) -> App es PickleAST
 unpickle ((S n) ** bb) = do
   log "beginning unpickle"
 
@@ -499,7 +499,7 @@ unpickle (Z ** bb) = do
   log "unpickle not defined on empty byte sequence"
   ?error_unpickle_Z
 
-pickle_PROTO : HasErr AppHasIO es => (n ** ByteBlock n) -> Nat -> App es (m ** ByteBlock m)
+pickle_PROTO : (State LogConfig LogConfig es, HasErr AppHasIO es) => (n ** ByteBlock n) -> Nat -> App es (m ** ByteBlock m)
 pickle_PROTO (n ** bytes) v = do
   log "Pickling PROTO opcode"
   -- write PROTO byte
@@ -529,14 +529,14 @@ pickle_PROTO (n ** bytes) v = do
 
   pure ((S (S n)) ** bytes)
 
-pickle_ast : HasErr AppHasIO es => (n: Nat ** ByteBlock n) -> PickleAST -> App es (m: Nat ** (ByteBlock m))
+pickle_ast : (State LogConfig LogConfig es, HasErr AppHasIO es) => (n: Nat ** ByteBlock n) -> PickleAST -> App es (m: Nat ** (ByteBlock m))
 
-fold_AST : HasErr AppHasIO es => (n ** ByteBlock n) -> PickleAST -> App es (m ** ByteBlock m)
+fold_AST : (State LogConfig LogConfig es, HasErr AppHasIO es) => (n ** ByteBlock n) -> PickleAST -> App es (m ** ByteBlock m)
 fold_AST (n ** bytes) ast = do
   log "Folding over an AST element"
   pickle_ast (n ** bytes) ast
 
-pickle_STOP : HasErr AppHasIO es => (n ** ByteBlock n) -> App es (m ** ByteBlock m)
+pickle_STOP : (State LogConfig LogConfig es, HasErr AppHasIO es) => (n ** ByteBlock n) -> App es (m ** ByteBlock m)
 pickle_STOP (n ** bytes) = do
   log "Pickling STOP opcode"
   bytes <- primIO $ bb_append bytes 46  -- STOP is ASCII 46
@@ -544,7 +544,7 @@ pickle_STOP (n ** bytes) = do
 
 
 -- this is the same code as pickle_TUPLE except for the opcode
-pickle_LIST : HasErr AppHasIO es => (n ** ByteBlock n) -> List PickleAST -> App es (m ** ByteBlock m)
+pickle_LIST : (State LogConfig LogConfig es, HasErr AppHasIO es) => (n ** ByteBlock n) -> List PickleAST -> App es (m ** ByteBlock m)
 pickle_LIST (n ** bytes) entries = do
   log "Pickling LIST"
   bytes <- primIO $ bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
@@ -553,7 +553,7 @@ pickle_LIST (n ** bytes) entries = do
   pure ((S len) ** bytes)
 
 
-pickle_TUPLE : HasErr AppHasIO es => (n ** ByteBlock n) -> List PickleAST -> App es (m ** ByteBlock m)
+pickle_TUPLE : (State LogConfig LogConfig es, HasErr AppHasIO es) => (n ** ByteBlock n) -> List PickleAST -> App es (m ** ByteBlock m)
 pickle_TUPLE (n ** bytes) entries = do
   log "Pickling TUPLE"
   bytes <- primIO $ bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
@@ -598,7 +598,7 @@ store_INT (n ** bytes) v = do
   pure (S (S (S (S n))) ** bytes)
 
 
-pickle_BININT : HasErr AppHasIO es => (n ** ByteBlock n) -> Int -> App es (m ** ByteBlock m)
+pickle_BININT : (State LogConfig LogConfig es, HasErr AppHasIO es) => (n ** ByteBlock n) -> Int -> App es (m ** ByteBlock m)
 pickle_BININT (n ** bytes) v = do
   logv "Pickling BININT" v
 
@@ -608,13 +608,13 @@ pickle_BININT (n ** bytes) v = do
   (m ** bytes) <- store_INT (S n ** bytes) v
   pure (m ** bytes)
 
-fold_DICT_entry : HasErr AppHasIO es => (n ** ByteBlock n) -> (PickleAST, PickleAST) -> App es (m ** ByteBlock m)
+fold_DICT_entry : (State LogConfig LogConfig es, HasErr AppHasIO es) => (n ** ByteBlock n) -> (PickleAST, PickleAST) -> App es (m ** ByteBlock m)
 fold_DICT_entry (n ** bytes) (ast1, ast2) = do
   log "Folding over DICT element"
   (n' ** bytes') <- pickle_ast (n ** bytes) ast1
   pickle_ast (n' ** bytes') ast2
 
-pickle_DICT : HasErr AppHasIO es => (n ** ByteBlock n) -> List (PickleAST, PickleAST) -> App es (m ** ByteBlock m)
+pickle_DICT : (State LogConfig LogConfig es, HasErr AppHasIO es) => (n ** ByteBlock n) -> List (PickleAST, PickleAST) -> App es (m ** ByteBlock m)
 pickle_DICT (n ** bytes) entries = do
   log "Pickling DICT"
 
@@ -632,7 +632,7 @@ pickle_DICT (n ** bytes) entries = do
   pure ((S len) ** bytes)
 
 
-pickle_UNICODE : HasErr AppHasIO es => (n ** ByteBlock n) -> String -> App es (m ** ByteBlock m)
+pickle_UNICODE : (State LogConfig LogConfig es, HasErr AppHasIO es) => (n ** ByteBlock n) -> String -> App es (m ** ByteBlock m)
 pickle_UNICODE (n ** bytes) s = do
   bytes <- primIO $ bb_append bytes 140  -- SHORT_BINUNICODE - single byte for length
   sbytes@(slen ** _) <- primIO $ bytes_from_str s
@@ -661,7 +661,7 @@ pickle_ast _ _ = ?notimpl_pickle_ast_others
 
 ||| Takes some PickleAST and turns it into a Pickle bytestream.
 export
-pickle : HasErr AppHasIO es => PickleAST -> App es (n: Nat ** (ByteBlock n))
+pickle : (State LogConfig LogConfig es, HasErr AppHasIO es) => PickleAST -> App es (n: Nat ** (ByteBlock n))
 pickle ast = do
   -- TODO: needs some kinds of ByteBlock access that we can write to in
   -- the ways that this code wants. I think that only means appending,

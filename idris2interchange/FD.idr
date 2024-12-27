@@ -145,7 +145,7 @@ pollhelper_poll (MkPollMemPtr ptr) (MkTimeMS t) =
   primIO $ primIO $ prim_poll ptr (cast n) t
 
 public export
-poll: HasErr AppHasIO es => {n: Nat} -> Vect n PollInput -> TimeMS -> App es (Vect n PollOutput)
+poll: (State LogConfig LogConfig es, HasErr AppHasIO es) => {n: Nat} -> Vect n PollInput -> TimeMS -> App es (Vect n PollOutput)
 poll inputs timeout = do
    -- we can't do this alloc using idris2 memory alloc because
    -- we don't have a sizeof operator or calloc (or equiv)

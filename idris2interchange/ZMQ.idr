@@ -155,7 +155,7 @@ zmq_msg_as_bytes msg = do
 prim__zmq_get_socket_fd : AnyPtr -> PrimIO Int
 
 public export
-zmq_get_socket_fd : HasErr AppHasIO es => ZMQSocket -> App es FD
+zmq_get_socket_fd : (State LogConfig LogConfig es, HasErr AppHasIO es) => ZMQSocket -> App es FD
 zmq_get_socket_fd (MkZMQSocket sock_ptr) = do
   log "calling get_socket_fd"
   fd <- (primIO $ primIO $ prim__zmq_get_socket_fd sock_ptr)
@@ -166,7 +166,7 @@ zmq_get_socket_fd (MkZMQSocket sock_ptr) = do
 prim__zmq_get_socket_events : AnyPtr -> PrimIO Int
 
 public export
-zmq_get_socket_events : HasErr AppHasIO es => ZMQSocket -> App es Int
+zmq_get_socket_events : (State LogConfig LogConfig es, HasErr AppHasIO es) => ZMQSocket -> App es Int
 zmq_get_socket_events (MkZMQSocket sock_ptr) = do
   log "calling get_socket_events"
   events <- primIO $ primIO $ prim__zmq_get_socket_events sock_ptr
@@ -178,7 +178,7 @@ zmq_get_socket_events (MkZMQSocket sock_ptr) = do
 prim__zmq_send_bytes : AnyPtr -> AnyPtr -> Int -> Int -> PrimIO ()
 
 public export
-zmq_send_bytes : HasErr AppHasIO es => ZMQSocket -> ByteBlock n -> Bool -> App es ()
+zmq_send_bytes : (State LogConfig LogConfig es, HasErr AppHasIO es) => ZMQSocket -> ByteBlock n -> Bool -> App es ()
 zmq_send_bytes (MkZMQSocket sock_ptr) (MkByteBlock byte_ptr size) more = do
   log "sending bytes"
   let more_i = if more then 1 else 0

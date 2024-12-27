@@ -5,28 +5,45 @@ import System.Clock
 
 %default total
 
+
+public export
+record LogConfig where
+  constructor MkLogConfig
+  enabled : Bool
+
+public export
+loggingEnabled : State LogConfig LogConfig es => App es Bool
+loggingEnabled = do
+  MkLogConfig v <- get LogConfig
+  pure v
+
+
 ||| Output a log message
 |||
 ||| This is just a print right now...
 ||| What would it look like if I was trying to do macro-style eliding
 ||| of log calls entirely? something involving the elaborator?
 covering public export
-log : HasErr AppHasIO es => String -> App es ()
-log msg = primIO $ do
-  putStr " * "
-  now <- clockTime UTC
-  print now
-  putStr " "
-  putStrLn msg
+log : (State LogConfig LogConfig es, HasErr AppHasIO es) => String -> App es ()
+log msg = do
+  en <- loggingEnabled
+  when en $ primIO $ do
+    putStr " * "
+    now <- clockTime UTC
+    print now
+    putStr " "
+    putStrLn msg
 
 
 covering public export
-logv : HasErr AppHasIO es => Show s => String -> s -> App es ()
-logv msg v = primIO $ do
-  putStr " * "
-  now <- clockTime UTC
-  print now
-  putStr " "
-  putStr msg
-  putStr ": "
-  printLn v
+logv : (State LogConfig LogConfig es, HasErr AppHasIO es) => Show s => String -> s -> App es ()
+logv msg v = do
+  en <- loggingEnabled
+  when en $ primIO $ do
+    putStr " * "
+    now <- clockTime UTC
+    print now
+    putStr " "
+    putStr msg
+    putStr ": "
+    printLn v

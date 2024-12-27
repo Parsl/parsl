@@ -55,7 +55,6 @@ record SocketState where
   results_interchange_to_submit : ZMQSocket
   submit_pidfd : FD
 
-
 -- this should be total, proved by decreasing n
 -- but apparently not? cheat by using assert_smaller...
 inner_ascii_dump : HasErr AppHasIO es => (n : Nat ** ByteBlock n) -> App es ()
@@ -69,15 +68,16 @@ inner_ascii_dump i@(S n' ** bytes) = do
 
 ascii_dump : HasErr AppHasIO es => (n : Nat ** ByteBlock n) -> App es ()
 ascii_dump v = do
-  inner_ascii_dump v
-  primIO $ putStrLn ""
+  pure ()
+  -- inner_ascii_dump v
+  -- primIO $ putStrLn ""
 
 
 -- the Python type contained in the returned AST depends on the supplied
 -- command... TODO: maybe I can describe that typing in the idris2 code
 -- rather than returning an equivalent to Python Any... so that the
 -- individual dispatch_cmd pieces can be typechecked a bit?
-dispatch_cmd : HasErr AppHasIO es => String -> App es PickleAST
+dispatch_cmd : (State LogConfig LogConfig es, HasErr AppHasIO es) => String -> App es PickleAST
 
 dispatch_cmd "WORKER_PORTS" = do
   log "WORKER_PORTS requested"
@@ -101,7 +101,7 @@ dispatch_cmd "MANAGERS" = do
 dispatch_cmd _ = ?error_cmd_not_implemented
 
 
-matchmake :  (State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
+matchmake :  (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
 matchmake sockets = do
   log "Matchmaker starting"
   -- we can make a match if we have a manager with capacity and a task in the
@@ -181,7 +181,7 @@ matchmake sockets = do
 ||| Some reading:
 ||| https://funcptr.net/2012/09/10/zeromq---edge-triggered-notification/
 ||| https://github.com/zeromq/libzmq/issues/3641
-covering zmq_poll_command_channel_loop : HasErr AppHasIO es => ZMQSocket -> App es ()
+covering zmq_poll_command_channel_loop : (State LogConfig LogConfig es, HasErr AppHasIO es) => ZMQSocket -> App es ()
 zmq_poll_command_channel_loop command_socket = do
   -- need to run this in a loop until it returns no events left
   events <- zmq_get_socket_events command_socket
@@ -225,7 +225,7 @@ zmq_poll_command_channel_loop command_socket = do
         zmq_poll_command_channel_loop command_socket
 
 -- TODO: factor ZMQ_EVENTS handling with other channels
-covering zmq_poll_tasks_submit_to_interchange_loop : (State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
+covering zmq_poll_tasks_submit_to_interchange_loop : (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
 zmq_poll_tasks_submit_to_interchange_loop sockets = do
   -- need to run this in a loop until it returns no events left
   events <- zmq_get_socket_events sockets.tasks_submit_to_interchange
@@ -268,7 +268,7 @@ zmq_poll_tasks_submit_to_interchange_loop sockets = do
         zmq_poll_tasks_submit_to_interchange_loop sockets
 
 
-covering process_result_part : HasErr AppHasIO es => SocketState -> () -> ZMQMsg -> App es ()
+covering process_result_part : (State LogConfig LogConfig es, HasErr AppHasIO es) => SocketState -> () -> ZMQMsg -> App es ()
 process_result_part sockets () msg_part = do
   -- TODO: only forward on this result if it is a result-tag
   -- (rather than eg. monitoring or heartbeat)
@@ -292,7 +292,7 @@ process_result_part sockets () msg_part = do
   zmq_msg_close msg_part
   pure ()
 
-covering zmq_poll_results_worker_to_interchange_loop : HasErr AppHasIO es => SocketState -> App es ()
+covering zmq_poll_results_worker_to_interchange_loop : (State LogConfig LogConfig es, HasErr AppHasIO es) => SocketState -> App es ()
 zmq_poll_results_worker_to_interchange_loop sockets = do
   events <- zmq_get_socket_events sockets.results_worker_to_interchange
   logv "ZMQ poll results worker to interchange loop got these zmq events" events
@@ -318,7 +318,7 @@ zmq_poll_results_worker_to_interchange_loop sockets = do
 
         zmq_poll_results_worker_to_interchange_loop sockets
 
-covering zmq_poll_tasks_interchange_to_worker_loop : (State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
+covering zmq_poll_tasks_interchange_to_worker_loop : (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
 zmq_poll_tasks_interchange_to_worker_loop sockets = do
   events <- zmq_get_socket_events sockets.tasks_interchange_to_worker
   logv "ZMQ poll tasks interchange to worker loop got these zmq events" events
@@ -374,7 +374,7 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
 
 -- TODO: is there anything to distinguish these three sockets at the type
 -- level that ties into their expected use?
-covering poll_loop : (State Bool Bool es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
+covering poll_loop : (State LogConfig LogConfig es, State Bool Bool es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
 
 
 -- TODO: this really only reads up to 128kb. which should be enough for test interchange configs.
@@ -384,7 +384,7 @@ readStdinToEnd = do
   let n = cast count
   pure (n ** (MkByteBlock buf_ptr n))
 
-covering readStdinConfig : HasErr AppHasIO es => App es PickleAST
+covering readStdinConfig : (State LogConfig LogConfig es, HasErr AppHasIO es) => App es PickleAST
 readStdinConfig = do
   log "Reading config"
   -- this is a Python pickle. in the Python side, it reads
@@ -401,7 +401,7 @@ readStdinConfig = do
 
   pure config
 
-covering app_main : (State Bool Bool es, HasErr AppHasIO es, State MatchState MatchState es) => App es ()
+covering app_main : (State LogConfig LogConfig es, State Bool Bool es, HasErr AppHasIO es, State MatchState MatchState es) => App es ()
 app_main = do
   log "Idris2 interchange starting"
 
@@ -623,4 +623,6 @@ poll_loop sockets = do
 
 
 covering main : IO ()
-main = run (new True (new (MkMatchState [] []) app_main))
+main = run (new True
+           (new (MkLogConfig False)
+           (new (MkMatchState [] []) app_main)))
