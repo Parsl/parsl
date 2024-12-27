@@ -61,13 +61,13 @@ void* glue_zmq_msg_data(void *msg) {
 int glue_zmq_get_socket_fd(void *sock) {
     int fd, r;
     size_t optionlen;
-    printf("in glue_zmq_get_socket_fd: pre getsockopt\n");
-    printf("sock is %p\n", sock);
-    printf("&fd is %p\n", &fd);
-    printf("&optionlen is %p\n", &optionlen);
+    // printf("in glue_zmq_get_socket_fd: pre getsockopt\n");
+    // printf("sock is %p\n", sock);
+    // printf("&fd is %p\n", &fd);
+    // printf("&optionlen is %p\n", &optionlen);
     optionlen = sizeof(fd);
     r = zmq_getsockopt(sock, ZMQ_FD, &fd, &optionlen);
-    printf("in glue_zmq_get_socket_fd: post getsockopt\n");
+    // printf("in glue_zmq_get_socket_fd: post getsockopt\n");
     // TODO: do something with unused r?
     assert (optionlen == sizeof(int));
     return fd;
@@ -79,12 +79,12 @@ int glue_zmq_get_socket_events(void *sock) {
 
     optionlen = sizeof(events);
 
-    printf("in glue_zmq_socket_events\n");
+    // printf("in glue_zmq_socket_events\n");
     int ret = zmq_getsockopt(sock, ZMQ_EVENTS, &events, &optionlen);
 
     assert (optionlen == sizeof(uint32_t));
     assert (ret == 0);
-    printf("done with glue_zmq_socket_events\n");
+    // printf("done with glue_zmq_socket_events\n");
     return events;
 }
 
