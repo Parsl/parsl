@@ -36,7 +36,7 @@ log msg = do
 
 
 covering public export
-logv : (State LogConfig LogConfig es, HasErr AppHasIO es) => Show s => String -> s -> App es ()
+logv : (State LogConfig LogConfig es, HasErr AppHasIO es) => Show s => String -> Lazy s -> App es ()
 logv msg v = do
   en <- loggingEnabled
   when en $ primIO $ do
