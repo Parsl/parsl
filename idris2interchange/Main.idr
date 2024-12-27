@@ -58,8 +58,9 @@ record SocketState where
 -- this should be total, proved by decreasing n
 -- but apparently not? cheat by using assert_smaller...
 inner_ascii_dump : HasErr AppHasIO es => ByteBlock -> App es ()
-inner_ascii_dump (MkByteBlock _ Z) = pure ()
-inner_ascii_dump bytes@(MkByteBlock _ _) = do
+inner_ascii_dump bytes with (length bytes)
+ inner_ascii_dump _ | Z = pure ()
+ inner_ascii_dump bytes | S _ = do
   (b, rest) <- primIO $ bb_uncons bytes
   if b >= 32 && b < 128
     then primIO $ putStr (singleton (chr $ cast b))
