@@ -66,10 +66,12 @@ inner_ascii_dump bytes@(MkByteBlock _ _) = do
     else primIO $ putStr "."
   inner_ascii_dump rest
 
-ascii_dump : HasErr AppHasIO es => ByteBlock -> App es ()
+ascii_dump : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> App es ()
 ascii_dump v = do
-  inner_ascii_dump v
-  primIO $ putStrLn ""
+  en <- loggingEnabled
+  when en $ do
+    inner_ascii_dump v
+    primIO $ putStrLn ""
 
 
 -- the Python type contained in the returned AST depends on the supplied
