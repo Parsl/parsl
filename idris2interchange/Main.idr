@@ -341,7 +341,8 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
       [] => log "No message received on task interchange->worker channel"
       [addr_part, json_part] => do
         addr_bytes <- zmq_msg_as_bytes addr_part
-        bytes@(MkByteBlock _ s) <- zmq_msg_as_bytes json_part
+        bytes <- zmq_msg_as_bytes json_part
+        let s = length bytes
         logv "Received two-part message on task interchange->worker channel, JSON part size" s
         ascii_dump bytes
         log "Address bytes:"
