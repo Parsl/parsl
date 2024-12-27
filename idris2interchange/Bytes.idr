@@ -8,18 +8,16 @@ module Bytes
 %default total
 
 public export
-data ByteBlock : Nat -> Type where
-  MkByteBlock : AnyPtr -> (l: Nat) -> ByteBlock l
+data ByteBlock = MkByteBlock AnyPtr Nat
 
 
 -- i think this doesn't need to be in IO because its
 -- not doing anything that allocates resources: it
--- uses a NULL pointer, and the length 0 means that
--- nothing will ever try to dereference that pointer,
--- although need to have caution on any kind of
--- realloc/free... 
+-- uses a NULL pointer for the memory allocation, and
+-- because it is length 0, nothing should ever
+-- dereference that.
 export
-emptyByteBlock : ByteBlock 0
+emptyByteBlock : ByteBlock
 emptyByteBlock = MkByteBlock prim__getNullAnyPtr 0
 
 %foreign "C:readByteAt,bytes"
@@ -36,7 +34,7 @@ incPtrBy n p = prim__incPtrBy n p
 
 -- S n gives us proof that ByteBlock is not empty
 export
-bb_uncons : ByteBlock (S n) -> IO (Bits8, ByteBlock n)
+bb_uncons : ByteBlock -> IO (Bits8, ByteBlock)
 bb_uncons (MkByteBlock ptr (S n)) = do
 
   v <- primIO $ prim__readByteAt ptr
@@ -46,11 +44,14 @@ bb_uncons (MkByteBlock ptr (S n)) = do
 
   pure (v, rest)
 
+bb_uncons (MkByteBlock _ Z) = ?error_unconsing_from_empty_byteblock
+
+
 %foreign "C:copy_and_append,bytes"
 prim__copy_and_append: AnyPtr -> Int -> Bits8 -> PrimIO AnyPtr
 
 export
-bb_append : ByteBlock n -> Bits8 -> IO (ByteBlock (S n))
+bb_append : ByteBlock -> Bits8 -> IO ByteBlock
 bb_append (MkByteBlock ptr n) v = do
   -- can't necessarily realloc here, because ptr is not
   -- necessarily a malloced ptr: it might be a pointer
@@ -63,17 +64,17 @@ bb_append (MkByteBlock ptr n) v = do
 
 
 covering export
-bb_append_bytes : ByteBlock n -> (m ** ByteBlock m) -> IO (nm ** ByteBlock nm)
-bb_append_bytes a@(MkByteBlock _ al) (m ** b) = case m of
-  Z => pure (al ** a)
+bb_append_bytes : ByteBlock -> ByteBlock -> IO ByteBlock
+bb_append_bytes a@(MkByteBlock _ _) b@(MkByteBlock _ m) = case m of
+  Z => pure a
   S x => do
     (v, rest) <- bb_uncons b
     a' <- bb_append a v
-    bb_append_bytes a' (x ** rest)
+    bb_append_bytes a' rest
     
 
 export
-length : ByteBlock n -> Nat
+length : ByteBlock -> Nat
 length (MkByteBlock _ l) = l
 
 
@@ -81,7 +82,7 @@ length (MkByteBlock _ l) = l
 prim__str_from_bytes : Int -> AnyPtr -> PrimIO String
 
 export
-str_from_bytes : (m : Nat) -> ByteBlock n -> IO (String, ByteBlock (minus n m))
+str_from_bytes : Nat -> ByteBlock -> IO (String, ByteBlock)
 str_from_bytes l (MkByteBlock p l') = do
   s <- primIO $ prim__str_from_bytes (cast l) p
   let rest = MkByteBlock (incPtrBy (cast l) p) (l' `minus` l)
@@ -94,9 +95,9 @@ prim__unicode_byte_len : String -> PrimIO Int
 prim__unicode_bytes : String -> PrimIO AnyPtr
 
 export
-bytes_from_str : String -> IO (n : Nat ** ByteBlock n)
+bytes_from_str : String -> IO ByteBlock
 bytes_from_str s = do
   len <- primIO $ prim__unicode_byte_len s
   strbytes <- primIO $ prim__unicode_bytes s
-  pure (cast len ** MkByteBlock strbytes (cast len))
+  pure $ MkByteBlock strbytes (cast len)
 

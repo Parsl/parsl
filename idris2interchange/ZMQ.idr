@@ -145,11 +145,11 @@ zmq_msg_data : HasErr AppHasIO es => ZMQMsg -> App es AnyPtr
 zmq_msg_data (MkZMQMsg msg_ptr) = primIO $ primIO $ prim__zmq_msg_data msg_ptr
 
 export
-zmq_msg_as_bytes : HasErr AppHasIO es => ZMQMsg -> App es (n: Nat ** (ByteBlock n))
+zmq_msg_as_bytes : HasErr AppHasIO es => ZMQMsg -> App es ByteBlock
 zmq_msg_as_bytes msg = do
   size <- cast <$> zmq_msg_size msg
   byte_ptr <- zmq_msg_data msg
-  pure (size ** (MkByteBlock byte_ptr size))
+  pure (MkByteBlock byte_ptr size)
 
 %foreign (gluezmq "glue_zmq_get_socket_fd")
 prim__zmq_get_socket_fd : AnyPtr -> PrimIO Int
@@ -178,7 +178,7 @@ zmq_get_socket_events (MkZMQSocket sock_ptr) = do
 prim__zmq_send_bytes : AnyPtr -> AnyPtr -> Int -> Int -> PrimIO ()
 
 public export
-zmq_send_bytes : (State LogConfig LogConfig es, HasErr AppHasIO es) => ZMQSocket -> ByteBlock n -> Bool -> App es ()
+zmq_send_bytes : (State LogConfig LogConfig es, HasErr AppHasIO es) => ZMQSocket -> ByteBlock -> Bool -> App es ()
 zmq_send_bytes (MkZMQSocket sock_ptr) (MkByteBlock byte_ptr size) more = do
   log "sending bytes"
   let more_i = if more then 1 else 0

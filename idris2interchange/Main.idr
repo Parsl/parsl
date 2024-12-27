@@ -42,7 +42,7 @@ WORKER_RESULT_PORT = 9004
 
 record MatchState where
   constructor MkMatchState
-  managers: List ((n : Nat ** ByteBlock n), JSON)
+  managers: List (ByteBlock, JSON)
   tasks: List PickleAST
 -- %runElab derive "MatchState" [Generic, Meta, Show]
 
@@ -57,20 +57,19 @@ record SocketState where
 
 -- this should be total, proved by decreasing n
 -- but apparently not? cheat by using assert_smaller...
-inner_ascii_dump : HasErr AppHasIO es => (n : Nat ** ByteBlock n) -> App es ()
-inner_ascii_dump (Z ** _) = pure ()
-inner_ascii_dump i@(S n' ** bytes) = do
+inner_ascii_dump : HasErr AppHasIO es => ByteBlock -> App es ()
+inner_ascii_dump (MkByteBlock _ Z) = pure ()
+inner_ascii_dump bytes@(MkByteBlock _ _) = do
   (b, rest) <- primIO $ bb_uncons bytes
   if b >= 32 && b < 128
     then primIO $ putStr (singleton (chr $ cast b))
     else primIO $ putStr "."
-  inner_ascii_dump (assert_smaller i (n' ** rest))
+  inner_ascii_dump rest
 
-ascii_dump : HasErr AppHasIO es => (n : Nat ** ByteBlock n) -> App es ()
+ascii_dump : HasErr AppHasIO es => ByteBlock -> App es ()
 ascii_dump v = do
-  pure ()
-  -- inner_ascii_dump v
-  -- primIO $ putStrLn ""
+  inner_ascii_dump v
+  primIO $ putStrLn ""
 
 
 -- the Python type contained in the returned AST depends on the supplied
@@ -144,7 +143,7 @@ matchmake sockets = do
       -- as many as listed in the original count.
       case managers of
         [] => log "No match possible: no managers registered"
-        ((n ** b), m) :: rest_managers => do
+        (b, m) :: rest_managers => do
           logv "Considering manager for match" m
           let c = lookup "max_capacity" m
           case c of
@@ -163,7 +162,7 @@ matchmake sockets = do
                   -- manager.
                   let task_msg = PickleList [task]
                   logv "Dispatching task" task_msg
-                  (n ** resp_bytes) <- pickle task_msg
+                  resp_bytes <- pickle task_msg
                   zmq_send_bytes sockets.tasks_interchange_to_worker b True
                   zmq_send_bytes sockets.tasks_interchange_to_worker emptyByteBlock True
                   zmq_send_bytes sockets.tasks_interchange_to_worker resp_bytes False
@@ -215,7 +214,7 @@ zmq_poll_command_channel_loop command_socket = do
         logv "Command received this command" cmd
         resp <- dispatch_cmd cmd
         logv "Response to command" resp
-        (n ** resp_bytes) <- pickle resp
+        resp_bytes <- pickle resp
         zmq_send_bytes command_socket resp_bytes False
 
         -- after this send, command socket is back is ready-for-a-REQ state
@@ -272,7 +271,7 @@ covering process_result_part : (State LogConfig LogConfig es, HasErr AppHasIO es
 process_result_part sockets () msg_part = do
   -- TODO: only forward on this result if it is a result-tag
   -- (rather than eg. monitoring or heartbeat)
-  bytes@(n ** bb) <- zmq_msg_as_bytes msg_part
+  bytes <- zmq_msg_as_bytes msg_part
   result <- unpickle bytes
   logv "Unpickled result" result
   case result of
@@ -282,7 +281,7 @@ process_result_part sockets () msg_part = do
       case tag of
         Just (PickleUnicodeString "result") => do
           log "Result, so sending onwards"
-          zmq_send_bytes sockets.results_interchange_to_submit bb False
+          zmq_send_bytes sockets.results_interchange_to_submit bytes False
         _ => log "Ignoring non-result"
       
     _ => ?error_bad_pickle_object_on_result_channel
@@ -338,10 +337,10 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
     case msgs of
       [] => log "No message received on task interchange->worker channel"
       [addr_part, json_part] => do
-        bb@(s ** bytes) <- zmq_msg_as_bytes json_part
         addr_bytes <- zmq_msg_as_bytes addr_part
-        logv "Received two-part message on task interchange->worker channel, size" s
-        ascii_dump bb
+        bytes@(MkByteBlock _ s) <- zmq_msg_as_bytes json_part
+        logv "Received two-part message on task interchange->worker channel, JSON part size" s
+        ascii_dump bytes
         log "Address bytes:"
         ascii_dump addr_bytes
 
@@ -378,11 +377,11 @@ covering poll_loop : (State LogConfig LogConfig es, State Bool Bool es, State Ma
 
 
 -- TODO: this really only reads up to 128kb. which should be enough for test interchange configs.
-readStdinToEnd : HasErr AppHasIO es => App es (n ** ByteBlock n)
+readStdinToEnd : HasErr AppHasIO es => App es ByteBlock
 readStdinToEnd = do
   (count, buf_ptr) <- read stdin 128000
   let n = cast count
-  pure (n ** (MkByteBlock buf_ptr n))
+  pure (MkByteBlock buf_ptr n)
 
 covering readStdinConfig : (State LogConfig LogConfig es, HasErr AppHasIO es) => App es PickleAST
 readStdinConfig = do
