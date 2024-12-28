@@ -31,7 +31,11 @@ def make_rundir(path: str) -> str:
             x = sorted([int(os.path.basename(x)) for x in prev_rundirs])[-1]
             current_rundir = os.path.join(path, '{0:03}'.format(x + 1))
 
-        os.makedirs(current_rundir)
+        try:
+            os.makedirs(current_rundir)
+        except FileExistsError:
+            logger.debug("Allocated rundir {0} exists. Making rundir again.".format(current_rundir))
+            return make_rundir(path)
         logger.debug("Parsl run initializing in rundir: {0}".format(current_rundir))
         return os.path.abspath(current_rundir)
 
