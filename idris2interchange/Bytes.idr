@@ -12,6 +12,7 @@ import Control.App
 -- AppHasIO breaks totality...
 -- Error: bb_uncons is not total, possibly not terminating due to function Control.App.PrimIO at Control.App:353:1--359:62 being reachable via Control.App.PrimIO implementation at Control.App:361:1--377:35 -> Control.App.PrimIO at Control.App:353:1--359:62
 -- That's a shame because I'd hoped that I could have total rather than covering definitions for more stuff here...
+-- but maybe I don't have to use IO here? the IO is to do primIO FFI stuff, but FFI doesn't have to be done within IO - perhaps theres some linear types to be done here instead?
 
 -- %default total
 
