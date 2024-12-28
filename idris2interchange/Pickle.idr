@@ -49,14 +49,14 @@ record VMState where
 -- rather than threading the shrinking bb?
 read_uint8 : HasErr AppHasIO es => ByteBlock -> App es (Int, ByteBlock)
 read_uint8 bb = do
-  (byte1, bb1) <- primIO $ bb_uncons bb 
-  (byte2, bb2) <- primIO $ bb_uncons bb1 
-  (byte3, bb3) <- primIO $ bb_uncons bb2
-  (byte4, bb4) <- primIO $ bb_uncons bb3 
-  (byte5, bb5) <- primIO $ bb_uncons bb4 
-  (byte6, bb6) <- primIO $ bb_uncons bb5 
-  (byte7, bb7) <- primIO $ bb_uncons bb6 
-  (byte8, bb8) <- primIO $ bb_uncons bb7 
+  (byte1, bb1) <- bb_uncons bb 
+  (byte2, bb2) <- bb_uncons bb1 
+  (byte3, bb3) <- bb_uncons bb2
+  (byte4, bb4) <- bb_uncons bb3 
+  (byte5, bb5) <- bb_uncons bb4 
+  (byte6, bb6) <- bb_uncons bb5 
+  (byte7, bb7) <- bb_uncons bb6 
+  (byte8, bb8) <- bb_uncons bb7 
 
   -- bytes are bytes but we want an Int...
 
@@ -74,10 +74,10 @@ read_uint8 bb = do
 
 read_uint4 : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> App es (Int, ByteBlock)
 read_uint4 bb = do
-  (byte1, bb1) <- primIO $ bb_uncons bb 
-  (byte2, bb2) <- primIO $ bb_uncons bb1 
-  (byte3, bb3) <- primIO $ bb_uncons bb2
-  (byte4, bb4) <- primIO $ bb_uncons bb3 
+  (byte1, bb1) <- bb_uncons bb 
+  (byte2, bb2) <- bb_uncons bb1 
+  (byte3, bb3) <- bb_uncons bb2
+  (byte4, bb4) <- bb_uncons bb3 
 
   logv "byte1" byte1
   logv "byte2" byte2
@@ -98,8 +98,8 @@ read_uint4 bb = do
 
 read_uint2 : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> App es (Int, ByteBlock)
 read_uint2 bb = do
-  (byte1, bb1) <- primIO $ bb_uncons bb 
-  (byte2, bb2) <- primIO $ bb_uncons bb1 
+  (byte1, bb1) <- bb_uncons bb 
+  (byte2, bb2) <- bb_uncons bb1 
 
   logv "byte1" byte1
   logv "byte2" byte2
@@ -123,7 +123,7 @@ step_PROTO : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> 
 step_PROTO bb state = do
   log "Opcode: PROTO"
   -- read a uint1
-  (proto_ver, bb') <- primIO $ bb_uncons bb
+  (proto_ver, bb') <- bb_uncons bb
   logv "Pickle protocol version" proto_ver
   step bb' state 
 
@@ -163,7 +163,7 @@ step_BININT1 : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -
 step_BININT1 bb (MkVMState stack memo) = do
   log "Opcode: BININT1"
   -- read an unsigned uint1
-  (v, bb') <- primIO $ bb_uncons bb
+  (v, bb') <- bb_uncons bb
   logv "1-byte unsigned integer" v
   let new_state = MkVMState ((PickleInteger (cast v))::stack) memo
   step bb' new_state 
@@ -196,7 +196,7 @@ step_NONE bb (MkVMState stack memo) = do
 step_BINGET : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
 step_BINGET bb state@(MkVMState stack memo) = do
   log "Opcode: BINGET"
-  (memo_slot_bits8, bb') <- primIO $ bb_uncons bb
+  (memo_slot_bits8, bb') <- bb_uncons bb
   logv "Retrieving memoization slot" memo_slot_bits8
 
   let memo_slot = the Nat (cast memo_slot_bits8)
@@ -247,7 +247,7 @@ binbytes_folder (l, bb) _ = do
   let k = length bb
   case k of
     (S k') => do
-      (v, bb') <- primIO $ bb_uncons bb
+      (v, bb') <- bb_uncons bb
       pure (l ++ [v], bb')
     _ => ?error_binbytes_folder_exhausted_bytes
 
@@ -272,7 +272,7 @@ step_SHORT_BINBYTES bb (MkVMState stack memo) = do
   let n = length bb
   case n of
     (S k) => do
-      (block_len, bb') <- primIO $ bb_uncons bb
+      (block_len, bb') <- bb_uncons bb
       logv "Byte count" block_len
       -- TODO: is there a library function for this?
       (bytes, bb'') <- foldlM binbytes_folder ([], bb') [1..(cast block_len)] 
@@ -291,7 +291,7 @@ step_SHORT_BINUNICODE bb (MkVMState stack memo) = do
   let n = length bb
   case n of
     (S k) => do
-      (strlen, bb') <- primIO $ bb_uncons bb
+      (strlen, bb') <- bb_uncons bb
       logv "UTF-8 byte sequence length" strlen
 
       -- the buffer contains strlen bytes of UTF-8 encoding, which we need to
@@ -428,7 +428,7 @@ step bb state = do
 
     logv "Stack pre-step" state.stack
 
-    (opcode, bb') <- primIO $ bb_uncons bb
+    (opcode, bb') <- bb_uncons bb
 
     logv "Opcode number" opcode
 
@@ -505,8 +505,8 @@ pickle_PROTO bytes v = do
   -- so lets take the dangerous (without linear types) route
   -- and do reallocs...
 
-  bytes <- primIO $ bb_append bytes 128   -- PROTO=128
-  bytes <- primIO $ bb_append bytes (cast v)
+  bytes <- bb_append bytes 128   -- PROTO=128
+  bytes <- bb_append bytes (cast v)
 
   pure bytes
 
@@ -520,7 +520,7 @@ fold_AST bytes ast = do
 pickle_STOP : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> App es ByteBlock
 pickle_STOP bytes = do
   log "Pickling STOP opcode"
-  bytes <- primIO $ bb_append bytes 46  -- STOP is ASCII 46
+  bytes <- bb_append bytes 46  -- STOP is ASCII 46
   pure bytes
 
 
@@ -528,22 +528,22 @@ pickle_STOP bytes = do
 pickle_LIST : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> List PickleAST -> App es ByteBlock
 pickle_LIST bytes entries = do
   log "Pickling LIST"
-  bytes <- primIO $ bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
+  bytes <- bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
   bytes <- foldlM fold_AST bytes entries
-  bytes <- primIO $ bb_append bytes 108  -- opcode is ASCII l
+  bytes <- bb_append bytes 108  -- opcode is ASCII l
   pure bytes
 
 
 pickle_TUPLE : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> List PickleAST -> App es ByteBlock
 pickle_TUPLE bytes entries = do
   log "Pickling TUPLE"
-  bytes <- primIO $ bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
+  bytes <- bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
 
   -- Do some kind of fold over the entries list, to generate
   -- a stack section that contains all those entries.
   bytes <- foldlM fold_AST bytes entries
   
-  bytes <- primIO $ bb_append bytes 116  -- opcode is ASCII t, decimal 116
+  bytes <- bb_append bytes 116  -- opcode is ASCII t, decimal 116
 
   pure bytes
 
@@ -572,10 +572,10 @@ store_INT bytes v = do
   -- dividing b5 to give a b5, and checking b5 is 0
   -- would be a test for that
 
-  bytes <- primIO $ bb_append bytes (cast b1)
-  bytes <- primIO $ bb_append bytes (cast b2)
-  bytes <- primIO $ bb_append bytes (cast b3)
-  bytes <- primIO $ bb_append bytes (cast b4)
+  bytes <- bb_append bytes (cast b1)
+  bytes <- bb_append bytes (cast b2)
+  bytes <- bb_append bytes (cast b3)
+  bytes <- bb_append bytes (cast b4)
   pure bytes
 
 
@@ -585,7 +585,7 @@ pickle_BININT bytes v = do
 
   if v < 0 then ?notimpl_BININT_negatives
            else log "this isn't negative - ok"
-  bytes <- primIO $ bb_append bytes 74   -- opcode is ASCII 'J'
+  bytes <- bb_append bytes 74   -- opcode is ASCII 'J'
   bytes <- store_INT bytes v
   pure bytes
 
@@ -603,33 +603,33 @@ pickle_DICT bytes entries = do
   -- according to Lib/pickletools.py:
   --   pydict markobject key_1 value_1 ... key_n value_n
 
-  bytes <- primIO $ bb_append bytes 125  -- EMPTY_DICT opcode is ASCII '}', decimal 125
+  bytes <- bb_append bytes 125  -- EMPTY_DICT opcode is ASCII '}', decimal 125
 
-  bytes <- primIO $ bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
+  bytes <- bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
 
   bytes <- foldlM fold_DICT_entry bytes entries
 
-  bytes <- primIO $ bb_append bytes 117  -- SETITEMS opcode is ASCII 'u'
+  bytes <- bb_append bytes 117  -- SETITEMS opcode is ASCII 'u'
   pure bytes
 
 
 pickle_UNICODE : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> String -> App es ByteBlock
 pickle_UNICODE bytes s = do
-  bytes <- primIO $ bb_append bytes 140  -- SHORT_BINUNICODE - single byte for length
+  bytes <- bb_append bytes 140  -- SHORT_BINUNICODE - single byte for length
   sbytes <- primIO $ bytes_from_str s
   let slen = length sbytes
-  bytes <- primIO $ bb_append bytes (cast slen) -- TODO no check for slen overflowing in this cast
-  bytes <- primIO $ bb_append_bytes bytes sbytes
+  bytes <- bb_append bytes (cast slen) -- TODO no check for slen overflowing in this cast
+  bytes <- bb_append_bytes bytes sbytes
   pure bytes
 
 fold_byte : HasErr AppHasIO es => ByteBlock -> Bits8 -> App es ByteBlock
 fold_byte bytes b = do
-  bytes <- primIO $ bb_append bytes b
+  bytes <- bb_append bytes b
   pure bytes
 
 pickle_BYTES : HasErr AppHasIO es => ByteBlock -> List Bits8 -> App es ByteBlock
 pickle_BYTES bytes b = do
-  bytes <- primIO $ bb_append bytes 66  -- BINBYTES, opcode ASCII 'B'
+  bytes <- bb_append bytes 66  -- BINBYTES, opcode ASCII 'B'
   bytes <- store_INT bytes ((cast . length) b)
   foldlM fold_byte bytes b
 
