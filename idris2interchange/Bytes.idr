@@ -3,6 +3,8 @@
 ||| allocation, with a length. The intention is to represent the
 ||| message piece of a zmq_msg_t for the purposes of parsing it
 ||| using a pickle decoder.
+||| I would like access to it to be linearly typed (eg with
+||| App1) to enforce memory freeing.
 module Bytes
 
 import Control.App
@@ -24,7 +26,9 @@ data ByteBlock = MkByteBlock AnyPtr Nat
 -- not doing anything that allocates resources: it
 -- uses a NULL pointer for the memory allocation, and
 -- because it is length 0, nothing should ever
--- dereference that.
+-- dereference that, and nothing needs to free it.
+-- But if something *does* free it, that's fine, because
+-- libc free() will take a NULL pointer without harm.
 export
 emptyByteBlock : ByteBlock
 emptyByteBlock = MkByteBlock prim__getNullAnyPtr 0
@@ -41,7 +45,6 @@ incPtr p = prim__incPtrBy 1 p
 incPtrBy : Int -> AnyPtr -> AnyPtr
 incPtrBy n p = prim__incPtrBy n p
 
--- S n gives us proof that ByteBlock is not empty
 export
 bb_uncons : HasErr AppHasIO es => ByteBlock -> App es (Bits8, ByteBlock)
 bb_uncons (MkByteBlock ptr (S n)) = do
