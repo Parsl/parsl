@@ -153,7 +153,7 @@ poll inputs timeout = do
 
    -- this for needs to be index by n so that we can claim that
    -- we're updating the right place
-   for_ (Data.Fin.List.allFins n) $ \i => do
+   for_ (Data.Fin.List.allFins n) $ \i => the (App es ()) $ do
      -- in here, we know that i is in the range of n
      -- and so then can be used safely to index inputs
      -- as used in print statement below
@@ -171,6 +171,7 @@ poll inputs timeout = do
      -- it also doesn't check we are passing in the right memory block
      -- to pollhelper_set_entry that happens to have the same count/size
      pollhelper_set_entry buf i (index i inputs)
+     ?hole
 
    -- the above "allocate and set values later" looks quite like the
    -- linear immutable hole filling stuff talked about by Arnauld at tweag,

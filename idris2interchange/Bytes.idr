@@ -46,24 +46,24 @@ incPtrBy : Int -> AnyPtr -> AnyPtr
 incPtrBy n p = prim__incPtrBy n p
 
 export
-bb_uncons : HasErr AppHasIO es => ByteBlock -> App es (Bits8, ByteBlock)
+bb_uncons : HasErr AppHasIO es => (1 _ : ByteBlock) -> App1 es (Res Bits8 (const ByteBlock))
 bb_uncons (MkByteBlock ptr (S n)) = do
 
-  v <- primIO $ primIO $ prim__readByteAt ptr
+  v <- app $ primIO $ primIO $ prim__readByteAt ptr
 
   let ptr_inc = incPtr ptr
   let rest = MkByteBlock ptr_inc n
 
-  pure (v, rest)
+  pure1 (v # rest)
 
 bb_uncons (MkByteBlock _ Z) = ?error_unconsing_from_empty_byteblock
 
 
 %foreign "C:copy_and_append,bytes"
-prim__copy_and_append: AnyPtr -> Int -> Bits8 -> PrimIO AnyPtr
+prim__copy_and_append: (1 _ : AnyPtr) -> Int -> Bits8 -> AnyPtr
 
 export
-bb_append : HasErr AppHasIO es => ByteBlock -> Bits8 -> App es ByteBlock
+bb_append : HasErr AppHasIO es => (1 _ : ByteBlock) -> Bits8 -> App1 es ByteBlock
 bb_append (MkByteBlock ptr n) v = do
   -- can't necessarily realloc here, because ptr is not
   -- necessarily a malloced ptr: it might be a pointer
@@ -71,25 +71,45 @@ bb_append (MkByteBlock ptr n) v = do
   -- linearity we don't have any guarantee about other
   -- ByteBlocks sharing the same underlying memory...
   -- (which is also a problem for arbitrary mutability)
-  new_ptr <- primIO $ primIO $ prim__copy_and_append ptr (cast n) v
-  pure (MkByteBlock (new_ptr) (S n))
+  let new_ptr = prim__copy_and_append ptr (cast n) v
+  pure1 (MkByteBlock (new_ptr) (S n))
 
-
-covering export
-bb_append_bytes : HasErr AppHasIO es => ByteBlock -> ByteBlock -> App es ByteBlock
-bb_append_bytes a@(MkByteBlock _ _) b@(MkByteBlock _ m) = case m of
-  Z => pure a
-  S x => do
-    (v, rest) <- bb_uncons b
-    a' <- bb_append a v
-    bb_append_bytes a' rest
-    
 
 export
 length : ByteBlock -> Nat
 length (MkByteBlock _ l) = l
 
+export
+length1 : (1 _ : ByteBlock) -> Res Nat (const ByteBlock)
+length1 (MkByteBlock p l) = l # (MkByteBlock p l)
 
+
+%foreign "C:free,libc"
+prim__free : (1 _ : AnyPtr) -> ()
+
+public export
+free : (1 _ : ByteBlock) -> App {l = NoThrow} es ()
+free (MkByteBlock p n) = pure $ prim__free p
+
+public export
+free1 : (1 _ : ByteBlock) -> App1 {u=Any} es ()
+free1 bb = app $ free bb
+
+covering export
+bb_append_bytes : HasErr AppHasIO es => (1 _ : ByteBlock) -> (1 _ : ByteBlock) -> App1 es ByteBlock
+bb_append_bytes a b = do
+
+  let (m # b') = length1 b
+
+  case m of
+    Z => do
+      app $ free b'
+      pure1 a   -- need to use b in this path -- i guess can free it? even though because of Z, we should know that there is no ptr - that fact isn't type-encoded, but it could be if using two constructors? using free here requires that ptr came from a malloc-style allocation directly.
+    S x => do
+      (v # rest) <- bb_uncons b'
+      a' <- bb_append a v
+      bb_append_bytes a' rest
+    
 %foreign "C:str_from_bytes,bytes"
 prim__str_from_bytes : Int -> AnyPtr -> PrimIO String
 

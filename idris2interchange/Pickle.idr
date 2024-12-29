@@ -47,16 +47,16 @@ record VMState where
 -- if there are not 8 bytes left in ByteBlock, explode...
 -- TODO: this could look nicer with a parser monad/parser applicative
 -- rather than threading the shrinking bb?
-read_uint8 : HasErr AppHasIO es => ByteBlock -> App es (Int, ByteBlock)
+read_uint8 : HasErr AppHasIO es => (1 _ : ByteBlock) -> App1 es (Res Int (const ByteBlock))
 read_uint8 bb = do
-  (byte1, bb1) <- bb_uncons bb 
-  (byte2, bb2) <- bb_uncons bb1 
-  (byte3, bb3) <- bb_uncons bb2
-  (byte4, bb4) <- bb_uncons bb3 
-  (byte5, bb5) <- bb_uncons bb4 
-  (byte6, bb6) <- bb_uncons bb5 
-  (byte7, bb7) <- bb_uncons bb6 
-  (byte8, bb8) <- bb_uncons bb7 
+  (byte1 # bb1) <- bb_uncons bb 
+  (byte2 # bb2) <- bb_uncons bb1 
+  (byte3 # bb3) <- bb_uncons bb2
+  (byte4 # bb4) <- bb_uncons bb3 
+  (byte5 # bb5) <- bb_uncons bb4 
+  (byte6 # bb6) <- bb_uncons bb5 
+  (byte7 # bb7) <- bb_uncons bb6 
+  (byte8 # bb8) <- bb_uncons bb7 
 
   -- bytes are bytes but we want an Int...
 
@@ -69,15 +69,15 @@ read_uint8 bb = do
               cast byte3) * 256 + 
               cast byte2) * 256 +
               cast byte1
-  pure (v, bb8)
+  pure1 $ v # bb8
 
 
-read_uint4 : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> App es (Int, ByteBlock)
+read_uint4 : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> App1 es (Res Int (const ByteBlock))
 read_uint4 bb = do
-  (byte1, bb1) <- bb_uncons bb 
-  (byte2, bb2) <- bb_uncons bb1 
-  (byte3, bb3) <- bb_uncons bb2
-  (byte4, bb4) <- bb_uncons bb3 
+  (byte1 # bb1) <- bb_uncons bb 
+  (byte2 # bb2) <- bb_uncons bb1 
+  (byte3 # bb3) <- bb_uncons bb2
+  (byte4 # bb4) <- bb_uncons bb3 
 
   logv "byte1" byte1
   logv "byte2" byte2
@@ -93,13 +93,13 @@ read_uint4 bb = do
               cast byte1
 
   logv "byte combined to v" v
-  pure (v, bb4)
+  pure1 $ v # bb4
 
 
-read_uint2 : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> App es (Int, ByteBlock)
+read_uint2 : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> App1 es (Res Int (const ByteBlock))
 read_uint2 bb = do
-  (byte1, bb1) <- bb_uncons bb 
-  (byte2, bb2) <- bb_uncons bb1 
+  (byte1 # bb1) <- bb_uncons bb 
+  (byte2 # bb2) <- bb_uncons bb1 
 
   logv "byte1" byte1
   logv "byte2" byte2
@@ -111,24 +111,24 @@ read_uint2 bb = do
               cast byte1
 
   logv "byte combined to v" v
-  pure (v, bb2)
+  pure1 $ v # bb2
 
 
 -- define this signature before the body because we are mutually
 -- recursive (or I could use a mutual block? what's the difference?)
-step : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 
-step_PROTO : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_PROTO : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App1 {u=Any} es VMState
 
 step_PROTO bb state = do
   log "Opcode: PROTO"
   -- read a uint1
-  (proto_ver, bb') <- bb_uncons bb
+  (proto_ver # bb') <- bb_uncons bb
   logv "Pickle protocol version" proto_ver
   step bb' state 
 
 
-step_NEWOBJ : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_NEWOBJ : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_NEWOBJ bb (MkVMState (a :: b :: rest) memo) = do
   log "Opcode: NEWOBJ"
   let o = PickleObj a b
@@ -136,7 +136,7 @@ step_NEWOBJ bb (MkVMState (a :: b :: rest) memo) = do
 step_NEWOBJ _ _ = ?error_NEWOBJ_bad_stack
 
 
-step_TUPLE2 : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_TUPLE2 : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 
 step_TUPLE2 bb (MkVMState (a::b::rest) memo) = do
   log "Opcode: TUPLE2"
@@ -147,7 +147,7 @@ step_TUPLE2 bb (MkVMState (a::b::rest) memo) = do
 step_TUPLE2 _ _ = do
   ?error_bad_stack_for_TUPLE2
 
-step_TUPLE3 : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_TUPLE3 : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 
 step_TUPLE3 bb (MkVMState (a::b::c::rest) memo) = do
   log "Opcode: TUPLE3"
@@ -158,45 +158,45 @@ step_TUPLE3 bb (MkVMState (a::b::c::rest) memo) = do
 step_TUPLE3 _ _ = do
   ?error_bad_stack_for_TUPLE3
 
-step_BININT1 : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_BININT1 : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 
 step_BININT1 bb (MkVMState stack memo) = do
   log "Opcode: BININT1"
   -- read an unsigned uint1
-  (v, bb') <- bb_uncons bb
+  (v # bb') <- bb_uncons bb
   logv "1-byte unsigned integer" v
   let new_state = MkVMState ((PickleInteger (cast v))::stack) memo
   step bb' new_state 
 
 
-step_BININT2 : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_BININT2 : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 
 step_BININT2 bb (MkVMState stack memo) = do
   log "Opcode: BININT2"
-  (v, bb') <- read_uint2 bb
+  (v # bb') <- read_uint2 bb
   logv "2-byte unsigned integer" v
   let new_state = MkVMState ((PickleInteger (cast v))::stack) memo
   step bb' new_state 
 
-step_BININT : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_BININT : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 
 step_BININT bb (MkVMState stack memo) = do
   log "Opcode: BININT4"
-  (v, bb') <- read_uint4 bb
+  (v # bb') <- read_uint4 bb
   logv "4-byte unsigned integer" v
   let new_state = MkVMState ((PickleInteger (cast v))::stack) memo
   step bb' new_state 
 
-step_NONE : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_NONE : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_NONE bb (MkVMState stack memo) = do
   log "Opcode: NONE"
   let new_state = MkVMState (PickleNone :: stack) memo
   step bb new_state 
 
-step_BINGET : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_BINGET : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_BINGET bb state@(MkVMState stack memo) = do
   log "Opcode: BINGET"
-  (memo_slot_bits8, bb') <- bb_uncons bb
+  (memo_slot_bits8 # bb') <- bb_uncons bb
   logv "Retrieving memoization slot" memo_slot_bits8
 
   let memo_slot = the Nat (cast memo_slot_bits8)
@@ -211,15 +211,23 @@ step_BINGET bb state@(MkVMState stack memo) = do
       pure state
 
 
-step_FRAME : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_FRAME : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_FRAME bb state = do
   log "Opcode: FRAME"
-  let n = length bb
+  let (n # bb) = length1 bb
   case n of
     (S (S (S (S (S (S (S (S k)))))))) => do
-      (frame_len, bb') <- read_uint8 bb
+      (frame_len # bb') <- read_uint8 bb
       logv "Frame length is" frame_len
-      logv "Bytes remaining in buffer" (length bb')
+
+      -- NOTE:
+      -- This length used to be inlines as the logv call argument,
+      -- using non-linear `length`, but since transition to linear
+      -- byte buffers, the returned bb' needs to be bound too, so
+      -- can't use function style notation here any more.
+      let (bblen # bb') = length1 bb'
+
+      logv "Bytes remaining in buffer" (bblen)
       -- TODO: out of interest, validate FRAME against ByteBlock length.
       -- In pickle in general we can't do that because the input is a
       -- stream, not a fixed length block... but we know the length of
@@ -229,38 +237,40 @@ step_FRAME bb state = do
       step bb' state
     _ => ?error_not_enough_bytes_left_for_FRAME
 
-step_MEMOIZE : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_MEMOIZE : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_MEMOIZE bb (MkVMState (v::rest_stack) memo) = do
   log "Opcode: MEMOIZE"
   step bb (MkVMState (v::rest_stack) (memo ++ [v]))
 step_MEMOIZE bb (MkVMState [] memo) = ?error_MEMOIZE_with_empty_stack
 
-
-step_STOP : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+-- Linear typing changes force bb to be deallocated here (or *something* has
+-- to be done with it, such as returning it for the next level up to free).
+-- > Error: While processing right hand side of step_STOP. There are 0 uses of linear name bb. 
+-- This is probably going to reveal bugs in ByteBlock construction where the
+-- byte-blocks are not all malloc-allocated due to pointer movement.
+step_STOP : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_STOP bb state = do
   log "Opcode: STOP"
+  free1 bb
   pure state
 
 
-binbytes_folder : HasErr AppHasIO es => (List Bits8, ByteBlock) -> Int -> App es (List Bits8, ByteBlock)
+binbytes_folder : HasErr AppHasIO es => (List Bits8, ByteBlock) -> Int -> App1 es (Res (List Bits8) (const ByteBlock))
 binbytes_folder (l, bb) _ = do
-  let k = length bb
-  case k of
-    (S k') => do
-      (v, bb') <- bb_uncons bb
-      pure (l ++ [v], bb')
-    _ => ?error_binbytes_folder_exhausted_bytes
+  (v # bb') <- bb_uncons bb
+  pure1 $ (l ++ [v]) # bb'
 
-step_BINBYTES : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_BINBYTES : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_BINBYTES bb (MkVMState stack memo) = do
   log "Opcode: BINBYTES"
-  let n = length bb
+  let (n # bb) = length1 bb
   case n of
     (S (S (S (S k)))) => do
-      (block_len, bb') <- read_uint4 bb
+      (block_len # bb') <- read_uint4 bb
       logv "Byte count" block_len
-      -- TODO: is there a library function for this?
-      (bytes, bb'') <- foldlM binbytes_folder ([], bb') [1..block_len] 
+      -- TODO: what's this foldlM going to look like with a linear Res
+      -- threaded through it?
+      (bytes # bb'') <- foldlM binbytes_folder ([] # bb') [1..block_len] 
       let new_state = MkVMState ((PickleBytes bytes)::stack) memo
 
       step bb'' new_state
