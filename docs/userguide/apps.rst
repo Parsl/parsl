@@ -111,6 +111,8 @@ Practically, this means
         return input_list
 
 
+.. _functions-from-modules:
+
 Functions from Modules
 ++++++++++++++++++++++
 
