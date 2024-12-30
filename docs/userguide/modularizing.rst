@@ -17,7 +17,7 @@ Large applications that use Parsl often divide into several core components:
    :local:
    :depth: 2
 
-The following sections use an example where component is in a separate file:
+The following sections use an example where each component is in a separate file:
 
 .. code-block::
 
