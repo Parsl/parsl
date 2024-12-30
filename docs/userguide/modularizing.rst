@@ -69,6 +69,9 @@ Key points to note:
   Keeping Parsl out of the function definitions simplifies testing
   because you will not need to run Parsl when testing the code.
 
+- *Advanced*: Consider including Parsl decorators in the library if using complex workflow patterns,
+  :ref:`join apps <label-joinapp>` or such as functions which take :ref:`special arguments <special-kwargs>`.
+
 .. literalinclude:: examples/library/app.py
    :caption: library/app.py
 

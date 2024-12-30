@@ -196,6 +196,8 @@ Learn more about the types of data allowed in `the data section <data.html>`_.
 
     Any changes to mutable input arguments will be ignored.
 
+.. _special-kwargs:
+
 Special Keyword Arguments
 +++++++++++++++++++++++++
 
