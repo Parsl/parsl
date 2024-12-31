@@ -1,89 +1,5 @@
-.. _configuration-section:
-
-Configuration
-=============
-
-Parsl separates program logic from execution configuration, enabling
-programs to be developed entirely independently from their execution
-environment. Configuration is described by a Python object (:class:`~parsl.config.Config`) 
-so that developers can 
-introspect permissible options, validate settings, and retrieve/edit
-configurations dynamically during execution. A configuration object specifies 
-details of the provider, executors, allocation size,
-queues, durations, and data management options. 
-
-The following example shows a basic configuration object (:class:`~parsl.config.Config`) for the Frontera
-supercomputer at TACC.
-This config uses the `parsl.executors.HighThroughputExecutor` to submit
-tasks from a login node. It requests an allocation of
-128 nodes, deploying 1 worker for each of the 56 cores per node, from the normal partition.
-To limit network connections to just the internal network the config specifies the address
-used by the infiniband interface with ``address_by_interface('ib0')``
-
-.. code-block:: python
-
-    from parsl.config import Config
-    from parsl.providers import SlurmProvider
-    from parsl.executors import HighThroughputExecutor
-    from parsl.launchers import SrunLauncher
-    from parsl.addresses import address_by_interface
-
-    config = Config(
-        executors=[
-            HighThroughputExecutor(
-                label="frontera_htex",
-                address=address_by_interface('ib0'),
-                max_workers_per_node=56,
-                provider=SlurmProvider(
-                    nodes_per_block=128,
-                    init_blocks=1,
-                    partition='normal',                                 
-                    launcher=SrunLauncher(),
-                ),
-            )
-        ],
-    )
-
-.. contents:: Configuration How-To and Examples:
-
-
-Creating and Using Config Objects
----------------------------------
-
-:class:`~parsl.config.Config` objects are loaded to define the "Data Flow Kernel" (DFK) that will manage tasks.
-All Parsl applications start by creating or importing a configuration then calling the load function.
-
-.. code-block:: python
-
-    from parsl.configs.htex_local import config
-    import parsl
-
-    with parsl.load(config):
-
-The ``load`` statement can happen after Apps are defined but must occur before tasks are started.
-Loading the Config object within context manager like ``with`` is recommended
-for implicit cleaning of DFK on exiting the context manager  
-
-The :class:`~parsl.config.Config` object may not be used again after loaded.
-Consider a configuration function if the application will shut down and re-launch the DFK.
-
-.. code-block:: python
-
-    from parsl.config import Config
-    import parsl
-
-    def make_config() -> Config:
-        return Config(...)
-
-    with parsl.load(make_config()):
-        # Your workflow here
-    parsl.clear()  # Stops Parsl
-    with parsl.load(make_config()):  # Re-launches with a fresh configuration
-        # Your workflow here
-
-
-How to Configure
-----------------
+Example configurations
+======================
 
 .. note::
    All configuration examples below must be customized for the user's
@@ -93,7 +9,7 @@ How to Configure
 The configuration specifies what, and how, resources are to be used for executing
 the Parsl program and its apps.
 It is important to carefully consider the needs of the Parsl program and its apps,
-and the characteristics of the compute resources, to determine an ideal configuration. 
+and the characteristics of the compute resources, to determine an ideal configuration.
 Aspects to consider include:
 1) where the Parsl apps will execute;
 2) how many nodes will be used to execute the apps, and how long the apps will run;
@@ -157,10 +73,10 @@ Stepping through the following question should help formulate a suitable configu
 .. [*] The maximum number of nodes tested for the `parsl.executors.WorkQueueExecutor` is 10,000 GPU cores and
        20,000 CPU cores.
 
-.. [*] The maximum number of nodes tested for the `parsl.executors.taskvine.TaskVineExecutor` is 
+.. [*] The maximum number of nodes tested for the `parsl.executors.taskvine.TaskVineExecutor` is
        10,000 GPU cores and 20,000 CPU cores.
 
-3. Should Parsl request multiple nodes in an individual scheduler job? 
+3. Should Parsl request multiple nodes in an individual scheduler job?
 (Here the term block is equivalent to a single scheduler job.)
 
 +--------------------------------------------------------------------------------------------+
@@ -189,236 +105,6 @@ Stepping through the following question should help formulate a suitable configu
 .. note:: If using a Cray system, you most likely need to use the `parsl.launchers.AprunLauncher` to launch workers unless you
           are on a **native Slurm** system like :ref:`configuring_nersc_cori`
 
-
-Heterogeneous Resources
------------------------
-
-In some cases, it can be difficult to specify the resource requirements for running a workflow.
-For example, if the compute nodes a site provides are not uniform, there is no "correct" resource configuration;
-the amount of parallelism depends on which node (large or small) each job runs on.
-In addition, the software and filesystem setup can vary from node to node.
-A Condor cluster may not provide shared filesystem access at all,
-and may include nodes with a variety of Python versions and available libraries.
-
-The `parsl.executors.WorkQueueExecutor` provides several features to work with heterogeneous resources.
-By default, Parsl only runs one app at a time on each worker node.
-However, it is possible to specify the requirements for a particular app,
-and Work Queue will automatically run as many parallel instances as possible on each node.
-Work Queue automatically detects the amount of cores, memory, and other resources available on each execution node.
-To activate this feature, add a resource specification to your apps. A resource specification is a dictionary with
-the following three keys: ``cores`` (an integer corresponding to the number of cores required by the task),
-``memory`` (an integer corresponding to the task's memory requirement in MB), and ``disk`` (an integer corresponding to
-the task's disk requirement in MB), passed to an app via the special keyword argument ``parsl_resource_specification``. The specification can be set for all app invocations via a default, for example:
-
-   .. code-block:: python
-
-      @python_app
-      def compute(x, parsl_resource_specification={'cores': 1, 'memory': 1000, 'disk': 1000}):
-          return x*2
-
-
-or updated when the app is invoked:
-
-   .. code-block:: python
-
-      spec = {'cores': 1, 'memory': 500, 'disk': 500}
-      future = compute(x, parsl_resource_specification=spec)
-
-This ``parsl_resource_specification`` special keyword argument will inform Work Queue about the resources this app requires.
-When placing instances of ``compute(x)``, Work Queue will run as many parallel instances as possible based on each worker node's available resources.
-
-If an app's resource requirements are not known in advance,
-Work Queue has an auto-labeling feature that measures the actual resource usage of your apps and automatically chooses resource labels for you.
-With auto-labeling, it is not necessary to provide ``parsl_resource_specification``;
-Work Queue collects stats in the background and updates resource labels as your workflow runs.
-To activate this feature, add the following flags to your executor config:
-
-   .. code-block:: python
-
-      config = Config(
-          executors=[
-              WorkQueueExecutor(
-                  # ...other options go here
-                  autolabel=True,
-                  autocategory=True
-              )
-          ]
-      )
-
-The ``autolabel`` flag tells Work Queue to automatically generate resource labels.
-By default, these labels are shared across all apps in your workflow.
-The ``autocategory`` flag puts each app into a different category,
-so that Work Queue will choose separate resource requirements for each app.
-This is important if e.g. some of your apps use a single core and some apps require multiple cores.
-Unless you know that all apps have uniform resource requirements,
-you should turn on ``autocategory`` when using ``autolabel``.
-
-The Work Queue executor can also help deal with sites that have non-uniform software environments across nodes.
-Parsl assumes that the Parsl program and the compute nodes all use the same Python version.
-In addition, any packages your apps import must be available on compute nodes.
-If no shared filesystem is available or if node configuration varies,
-this can lead to difficult-to-trace execution problems.
-
-If your Parsl program is running in a Conda environment,
-the Work Queue executor can automatically scan the imports in your apps,
-create a self-contained software package,
-transfer the software package to worker nodes,
-and run your code inside the packaged and uniform environment.
-First, make sure that the Conda environment is active and you have the required packages installed (via either ``pip`` or ``conda``):
-
-- ``python``
-- ``parsl``
-- ``ndcctools``
-- ``conda-pack``
-
-Then add the following to your config:
-
-   .. code-block:: python
-
-      config = Config(
-          executors=[
-              WorkQueueExecutor(
-                  # ...other options go here
-                  pack=True
-              )
-          ]
-      )
-
-.. note::
-   There will be a noticeable delay the first time Work Queue sees an app;
-   it is creating and packaging a complete Python environment.
-   This packaged environment is cached, so subsequent app invocations should be much faster.
-
-Using this approach, it is possible to run Parsl applications on nodes that don't have Python available at all.
-The packaged environment includes a Python interpreter,
-and Work Queue does not require Python to run.
-
-.. note::
-   The automatic packaging feature only supports packages installed via ``pip`` or ``conda``.
-   Importing from other locations (e.g. via ``$PYTHONPATH``) or importing other modules in the same directory is not supported.
-
-
-Accelerators
-------------
-
-Many modern clusters provide multiple accelerators per compute note, yet many applications are best suited to using a
-single accelerator per task. Parsl supports pinning each worker to different accelerators using
-``available_accelerators`` option of the :class:`~parsl.executors.HighThroughputExecutor`. Provide either the number of
-executors (Parsl will assume they are named in integers starting from zero) or a list of the names of the accelerators
-available on the node. Parsl will limit the number of workers it launches to the number of accelerators specified,
-in other words, you cannot have more workers per node than there are accelerators. By default, Parsl will launch
-as many workers as the accelerators specified via ``available_accelerators``.
-
-.. code-block:: python
-
-    local_config = Config(
-        executors=[
-            HighThroughputExecutor(
-                label="htex_Local",
-                worker_debug=True,
-                available_accelerators=2,
-                provider=LocalProvider(
-                    init_blocks=1,
-                    max_blocks=1,
-                ),
-            )
-        ],
-        strategy='none',
-    )
-
-It is possible to bind multiple/specific accelerators to each worker by specifying a list of comma separated strings
-each specifying accelerators. In the context of binding to NVIDIA GPUs, this works by setting ``CUDA_VISIBLE_DEVICES``
-on each worker to a specific string in the list supplied to ``available_accelerators``.
-
-Here's an example:
-
-.. code-block:: python
-
-    # The following config is trimmed for clarity
-    local_config = Config(
-        executors=[
-            HighThroughputExecutor(
-                # Starts 2 workers per node, each bound to 2 GPUs
-                available_accelerators=["0,1", "2,3"],
-
-                # Start a single worker bound to all 4 GPUs
-                # available_accelerators=["0,1,2,3"]
-            )
-        ],
-    )
-
-GPU Oversubscription
-""""""""""""""""""""
-
-For hardware that uses Nvidia devices, Parsl allows for the oversubscription of workers to GPUS.  This is intended to
-make use of Nvidia's `Multi-Process Service (MPS) <https://docs.nvidia.com/deploy/mps/>`_ available on many of their
-GPUs that allows users to run multiple concurrent processes on a single GPU.  The user needs to set in the
-``worker_init`` commands to start MPS on every node in the block (this is machine dependent).  The
-``available_accelerators`` option should then be set to the total number of GPU partitions run on a single node in the
-block.  For example, for a node with 4 Nvidia GPUs, to create 8 workers per GPU, set ``available_accelerators=32``.
-GPUs will be assigned to workers in ascending order in contiguous blocks.  In the example, workers 0-7 will be placed
-on GPU 0, workers 8-15 on GPU 1, workers 16-23 on GPU 2, and workers 24-31 on GPU 3.
-    
-Multi-Threaded Applications
----------------------------
-
-Workflows which launch multiple workers on a single node which perform multi-threaded tasks (e.g., NumPy, Tensorflow operations) may run into thread contention issues.
-Each worker may try to use the same hardware threads, which leads to performance penalties.
-Use the ``cpu_affinity`` feature of the :class:`~parsl.executors.HighThroughputExecutor` to assign workers to specific threads.  Users can pin threads to 
-workers either with a strategy method or an explicit list.
-
-The strategy methods will auto assign all detected hardware threads to workers.  
-Allowed strategies that can be assigned to ``cpu_affinity`` are ``block``, ``block-reverse``, and ``alternating``.  
-The ``block`` method pins threads to workers in sequential order (ex: 4 threads are grouped (0, 1) and (2, 3) on two workers);
-``block-reverse`` pins threads in reverse sequential order (ex: (3, 2) and (1, 0)); and ``alternating`` alternates threads among workers (ex: (0, 2) and (1, 3)).
-
-Select the best blocking strategy for processor's cache hierarchy (choose ``alternating`` if in doubt) to ensure workers to not compete for cores.
-
-.. code-block:: python
-
-    local_config = Config(
-        executors=[
-            HighThroughputExecutor(
-                label="htex_Local",
-                worker_debug=True,
-                cpu_affinity='alternating',
-                provider=LocalProvider(
-                    init_blocks=1,
-                    max_blocks=1,
-                ),
-            )
-        ],
-        strategy='none',
-    )
-
-Users can also use ``cpu_affinity`` to assign explicitly threads to workers with a string that has the format of 
-``cpu_affinity="list:<worker1_threads>:<worker2_threads>:<worker3_threads>"``.
-
-Each worker's threads can be specified as a comma separated list or a hyphenated range:
-``thread1,thread2,thread3``
-or
-``thread_start-thread_end``.
-
-An example for 12 workers on a node with 208 threads is:
-
-.. code-block:: python
-
-    cpu_affinity="list:0-7,104-111:8-15,112-119:16-23,120-127:24-31,128-135:32-39,136-143:40-47,144-151:52-59,156-163:60-67,164-171:68-75,172-179:76-83,180-187:84-91,188-195:92-99,196-203"
-
-This example assigns 16 threads each to 12 workers. Note that in this example there are threads that are skipped.  
-If a thread is not explicitly assigned to a worker, it will be left idle.
-The number of thread "ranks" (colon separated thread lists/ranges) must match the total number of workers on the node; otherwise an exception will be raised.
-
-
-
-Thread affinity is accomplished in two ways.
-Each worker first sets the affinity for the Python process using `the affinity mask <https://docs.python.org/3/library/os.html#os.sched_setaffinity>`_,
-which may not be available on all operating systems.
-It then sets environment variables to control 
-`OpenMP thread affinity <https://hpc-tutorials.llnl.gov/openmp/ProcessThreadAffinity.pdf>`_
-so that any subprocesses launched by a worker which use OpenMP know which processors are valid.
-These include ``OMP_NUM_THREADS``, ``GOMP_COMP_AFFINITY``, and ``KMP_THREAD_AFFINITY``.
-
 Ad-Hoc Clusters
 ---------------
 
@@ -432,7 +118,7 @@ for further discussion.
 Amazon Web Services
 -------------------
 
-.. image:: ./aws_image.png
+.. image:: img/aws_image.png
 
 .. note::
    To use AWS with Parsl, install Parsl with AWS dependencies via ``python3 -m pip install 'parsl[aws]'``
@@ -442,7 +128,7 @@ The following snippet shows how Parsl can be configured to provision nodes from 
 The first time this configuration is used, Parsl will configure a Virtual Private Cloud and other networking and security infrastructure that will be
 re-used in subsequent executions. The configuration uses the `parsl.providers.AWSProvider` to connect to AWS.
 
-.. literalinclude:: ../../parsl/configs/ec2.py
+.. literalinclude:: ../../../parsl/configs/ec2.py
 
 
 ASPIRE 1 (NSCC)
@@ -452,7 +138,7 @@ ASPIRE 1 (NSCC)
 
 The following snippet shows an example configuration for accessing NSCC's **ASPIRE 1** supercomputer. This example uses the `parsl.executors.HighThroughputExecutor` executor and connects to ASPIRE1's PBSPro scheduler. It also shows how ``scheduler_options`` parameter could be used for scheduling array jobs in PBSPro.
 
-.. literalinclude:: ../../parsl/configs/ASPIRE1.py
+.. literalinclude:: ../../../parsl/configs/ASPIRE1.py
 
 
 
@@ -466,7 +152,7 @@ The following snippet shows an example configuration for executing on the Illino
 The configuration assumes the user is running on a login node and uses the `parsl.providers.SlurmProvider` to interface
 with the scheduler, and uses the `parsl.launchers.SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/illinoiscluster.py
+.. literalinclude:: ../../../parsl/configs/illinoiscluster.py
 
 Bridges (PSC)
 -------------
@@ -477,7 +163,7 @@ The following snippet shows an example configuration for executing on the Bridge
 The configuration assumes the user is running on a login node and uses the `parsl.providers.SlurmProvider` to interface
 with the scheduler, and uses the `parsl.launchers.SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/bridges.py
+.. literalinclude:: ../../../parsl/configs/bridges.py
 
 
 
@@ -490,7 +176,7 @@ The snippet below shows an example configuration for executing from a login node
 The configuration uses the `parsl.providers.LocalProvider` to run on a login node primarily to avoid GSISSH, which Parsl does not support.
 This system uses Grid Engine which Parsl interfaces with using the `parsl.providers.GridEngineProvider`.
 
-.. literalinclude:: ../../parsl/configs/cc_in2p3.py
+.. literalinclude:: ../../../parsl/configs/cc_in2p3.py
 
 
 CCL (Notre Dame, TaskVine)
@@ -514,7 +200,7 @@ This examples uses the `parsl.executors.taskvine.TaskVineExecutor` to schedule t
 For more information on using TaskVine, including configurations for remote execution, visit the 
 `TaskVine/Parsl documentation online <https://cctools.readthedocs.io/en/latest/taskvine/#parsl>`_.
 
-.. literalinclude::  ../../parsl/configs/vineex_local.py
+.. literalinclude::  ../../../parsl/configs/vineex_local.py
 
 TaskVine's predecessor, WorkQueue, may continue to be used with Parsl.
 For more information on using WorkQueue visit the `CCTools documentation online <https://cctools.readthedocs.io/en/latest/help/>`_.
@@ -528,7 +214,7 @@ The following snippet shows an example configuration for executing remotely on S
 Center's **Expanse** supercomputer. The example is designed to be executed on the login nodes, using the
 `parsl.providers.SlurmProvider` to interface with the Slurm scheduler used by Comet and the `parsl.launchers.SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/expanse.py
+.. literalinclude:: ../../../parsl/configs/expanse.py
 
 
 Improv (Argonne LCRC)
@@ -540,7 +226,7 @@ Improv (Argonne LCRC)
 Center (LCRC). The following snippet is an example configuration that uses `parsl.providers.PBSProProvider`
 and `parsl.launchers.MpiRunLauncher` to run on multinode jobs.
 
-.. literalinclude:: ../../parsl/configs/improv.py
+.. literalinclude:: ../../../parsl/configs/improv.py
 
 
 .. _configuring_nersc_cori:
@@ -562,7 +248,7 @@ Deployed in June 2019, Frontera is the 5th most powerful supercomputer in the wo
 and is the first deployment in the National Science Foundation's petascale computing program. The configuration below assumes that the user is
 running on a login node and uses the `parsl.providers.SlurmProvider` to interface with the scheduler, and uses the `parsl.launchers.SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/frontera.py
+.. literalinclude:: ../../../parsl/configs/frontera.py
 
 
 Kubernetes Clusters
@@ -574,7 +260,7 @@ Kubernetes is an open-source system for container management, such as automating
 The snippet below shows an example configuration for deploying pods as workers on a Kubernetes cluster.
 The KubernetesProvider exploits the Python Kubernetes API, which assumes that you have kube config in ``~/.kube/config``.
 
-.. literalinclude:: ../../parsl/configs/kubernetes.py
+.. literalinclude:: ../../../parsl/configs/kubernetes.py
 
 
 Midway (RCC, UChicago)
@@ -587,7 +273,7 @@ The snippet below shows an example configuration for executing remotely on Midwa
 The configuration assumes the user is running on a login node and uses the `parsl.providers.SlurmProvider` to interface
 with the scheduler, and uses the `parsl.launchers.SrunLauncher` to launch workers.
 
-.. literalinclude:: ../../parsl/configs/midway.py
+.. literalinclude:: ../../../parsl/configs/midway.py
 
 
 Open Science Grid
@@ -599,7 +285,7 @@ The Open Science Grid (OSG) is a national, distributed computing Grid spanning o
 The snippet below shows an example configuration for executing remotely on OSG. You will need to have a valid project name on the OSG.
 The configuration uses the `parsl.providers.CondorProvider` to interface with the scheduler.
 
-.. literalinclude:: ../../parsl/configs/osg.py
+.. literalinclude:: ../../../parsl/configs/osg.py
 
 
 Polaris (ALCF)
@@ -620,7 +306,7 @@ Stampede2 (TACC)
 
 The following snippet shows an example configuration for accessing TACC's **Stampede2** supercomputer. This example uses theHighThroughput executor and connects to Stampede2's Slurm scheduler.
 
-.. literalinclude:: ../../parsl/configs/stampede2.py
+.. literalinclude:: ../../../parsl/configs/stampede2.py
 
 
 Summit (ORNL)
@@ -629,9 +315,9 @@ Summit (ORNL)
 .. image:: https://www.olcf.ornl.gov/wp-content/uploads/2018/06/Summit_Exaop-1500x844.jpg
 
 The following snippet shows an example configuration for executing from the login node on Summit, the leadership class supercomputer hosted at the Oak Ridge National Laboratory.
-The example uses the `parsl.providers.LSFProvider` to provision compute nodes from the LSF cluster scheduler and the `parsl.launchers.JsrunLauncher` to launch workers across the compute nodes.
+The example uses the :class:`parsl.providers.LSFProvider` to provision compute nodes from the LSF cluster scheduler and the `parsl.launchers.JsrunLauncher` to launch workers across the compute nodes.
 
-.. literalinclude:: ../../parsl/configs/summit.py
+.. literalinclude:: ../../../parsl/configs/summit.py
 
 
 TOSS3 (LLNL)
@@ -644,15 +330,4 @@ machines, such as Quartz, Ruby, Topaz, Jade, or Magma. This example uses the `pa
 and connects to Slurm using the `parsl.providers.SlurmProvider`. This configuration assumes that the script
 is being executed on the login nodes of one of the machines.
 
-.. literalinclude:: ../../parsl/configs/toss3_llnl.py
-
-
-Further help
-------------
-
-For help constructing a configuration, you can click on class names such as :class:`~parsl.config.Config` or :class:`~parsl.executors.HighThroughputExecutor` to see the associated class documentation. The same documentation can be accessed interactively at the python command line via, for example:
-
-.. code-block:: python
-
-    from parsl.config import Config
-    help(Config)
+.. literalinclude:: ../../../parsl/configs/toss3_llnl.py

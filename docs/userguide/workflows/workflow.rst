@@ -233,7 +233,7 @@ to aggregate values into a single result.
 These tasks execute concurrently, synchronized  by the ``mapped_results`` variable.
 The following figure shows the resulting task graph. 
 
-.. image:: ../images/MapReduce.png
+.. image:: ../../images/MapReduce.png
 
 Caching expensive initialisation between tasks
 ----------------------------------------------

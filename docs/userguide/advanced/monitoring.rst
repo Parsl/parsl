@@ -88,7 +88,7 @@ The workflows page lists all Parsl workflows that have been executed with monito
 with the selected database.
 It provides a high level summary of workflow state as shown below:
 
-.. image:: ../images/mon_workflows_page.png
+.. image:: ../../images/mon_workflows_page.png
 
 Throughout the dashboard, all blue elements are clickable. For example, clicking a specific worklow
 name from the table takes you to the Workflow Summary page described in the next section.
@@ -100,7 +100,7 @@ The workflow summary page captures the run level details of a workflow, includin
 as well as task summary statistics. The workflow summary section is followed by the *App Summary* that lists
 the various apps and invocation count for each. 
 
-.. image:: ../images/mon_workflow_summary.png
+.. image:: ../../images/mon_workflow_summary.png
 
 
 The workflow summary also presents three different views of the workflow:
@@ -108,14 +108,14 @@ The workflow summary also presents three different views of the workflow:
 * Workflow DAG - with apps differentiated by colors: This visualization is useful to visually inspect the dependency
   structure of the workflow. Hovering over the nodes in the DAG shows a tooltip for the app represented by the node and it's task ID.
 
-.. image:: ../images/mon_task_app_grouping.png
+.. image:: ../../images/mon_task_app_grouping.png
 
 * Workflow DAG - with task states differentiated by colors: This visualization is useful to identify what tasks have been completed, failed, or are currently pending.
 
-.. image:: ../images/mon_task_state_grouping.png
+.. image:: ../../images/mon_task_state_grouping.png
 
 * Workflow resource usage: This visualization provides resource usage information at the workflow level.
   For example, cumulative CPU/Memory utilization across workers over time.
 
-.. image:: ../images/mon_resource_summary.png
+.. image:: ../../images/mon_resource_summary.png
 

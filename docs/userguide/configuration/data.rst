@@ -1,35 +1,5 @@
 .. _label-data:
 
-Passing Python objects
-======================
-
-Parsl apps can communicate via standard Python function parameter passing 
-and return statements. The following example shows how a Python string
-can be passed to, and returned from, a Parsl app.
-
-.. code-block:: python
-
-    @python_app
-    def example(name):
-        return 'hello {0}'.format(name)
-	
-    r = example('bob')
-    print(r.result())
-
-Parsl uses the dill and pickle libraries to serialize Python objects 
-into a sequence of bytes that can be passed over a network from the submitting
-machine to executing workers.
-
-Thus, Parsl apps can receive and return standard Python data types 
-such as booleans, integers, tuples, lists, and dictionaries. However, not
-all objects can be serialized with these methods (e.g., closures, generators, 
-and system objects), and so those objects cannot be used with all executors.
-
-Parsl will raise a `SerializationError` if it encounters an object that it cannot 
-serialize. This applies to objects passed as arguments to an app, as well as objects 
-returned from an app. See :ref:`label_serialization_error`.
-
-
 Staging data files
 ==================
 
