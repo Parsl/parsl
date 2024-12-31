@@ -481,13 +481,13 @@ step bb state = do
 ||| functionally? maybe need some linear stuff on usage of msg object
 ||| to let that happen, session style?
 export
-unpickle : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> App es PickleAST
+unpickle : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> App es PickleAST
 unpickle bb = do
   log "beginning unpickle"
 
   let init_vm_state = MkVMState [] []
 
-  (MkVMState (stack_head::rest) end_memo) <- step bb init_vm_state
+  (MkVMState (stack_head::rest) end_memo) <- app1 $ step bb init_vm_state
     | _ => ?error_stack_was_empty_at_end
 
   log "done with unpickle"
