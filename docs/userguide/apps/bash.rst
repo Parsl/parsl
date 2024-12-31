@@ -62,5 +62,5 @@ MPI Apps
 ^^^^^^^^
 
 Applications which employ MPI to span multiple nodes are a special case of Bash apps,
-and require special modification of Parsl's `execution environment <execution.html>`_ to function.
+and require special modification of Parsl's `execution environment <../configuration/execution.html>`_ to function.
 Support for MPI applications is described `in a later section <mpi_apps.html>`_.

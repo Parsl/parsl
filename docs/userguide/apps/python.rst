@@ -168,10 +168,10 @@ There are several classes of allowed types, each with different rules.
     capital_future = capitalize(first_line_future)
     print(capital_future.result())
 
-  See the section on `Futures <futures.html>`_ for more details.
+  See the section on `Futures <../workflows/futures.html>`_ for more details.
 
 
-Learn more about the types of data allowed in `the data section <data.html>`_.
+Learn more about the types of data allowed in `the data section <../configuration/data.html>`_.
 
 .. note::
 

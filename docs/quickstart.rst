@@ -70,7 +70,7 @@ We describe these components briefly here, and link to more details in the `User
 
 .. note::
 
-    Parsl's documentation includes `templates for many supercomputers <userguide/configuring.html>`_.
+    Parsl's documentation includes `templates for many supercomputers <userguide/configuring/examples.html>`_.
     Even though you may not need to write a configuration from a blank slate,
     understanding the basic terminology below will be very useful.
 
@@ -112,7 +112,7 @@ with hello world Python and Bash apps.
     with open('hello-stdout', 'r') as f:
         print(f.read())
 
-Learn more about the types of Apps and their options `here <userguide/apps.html>`__.
+Learn more about the types of Apps and their options `here <userguide/apps/index.html>`__.
 
 Executors
 ^^^^^^^^^
@@ -127,7 +127,7 @@ You can dynamically set the number of workers based on available memory and
 pin each worker to specific GPUs or CPU cores
 among other powerful features.
 
-Learn more about Executors `here <userguide/execution.html#executors>`__.
+Learn more about Executors `here <userguide/configuration/execution.html#executors>`__.
 
 Execution Providers
 ^^^^^^^^^^^^^^^^^^^
@@ -141,7 +141,7 @@ Another key role of Providers is defining how to start an Executor on a remote c
 Often, this simply involves specifying the correct Python environment and
 (described below) how to launch the Executor on each acquired computers.
 
-Learn more about Providers `here <userguide/execution.html#execution-providers>`__.
+Learn more about Providers `here <userguide/configuration/execution.html#execution-providers>`__.
 
 Launchers
 ^^^^^^^^^
@@ -151,7 +151,7 @@ A common example is an :class:`~parsl.launchers.launchers.MPILauncher`, which us
 for starting a single program on multiple computing nodes.
 Like Providers, Parsl comes packaged with Launchers for most supercomputers and clouds.
 
-Learn more about Launchers `here <userguide/execution.html#launchers>`__.
+Learn more about Launchers `here <userguide/configuration/execution.html#launchers>`__.
 
 
 Benefits of a Data-Flow Kernel
@@ -164,7 +164,7 @@ and performs the many other functions needed to execute complex workflows.
 The flexibility and performance of the DFK enables applications with
 intricate dependencies between tasks to execute on thousands of parallel workers.
 
-Start with the Tutorial or the `parallel patterns <userguide/workflow.html>`_
+Start with the Tutorial or the `parallel patterns <userguide/workflows/workflow.html>`_
 to see the complex types of workflows you can make with Parsl.
 
 Starting Parsl
@@ -210,7 +210,7 @@ An example which launches 4 workers on 1 node of the Polaris supercomputer looks
     )
 
 
-The documentation has examples for other supercomputers `here <userguide/configuring.html>`__.
+The documentation has examples for other supercomputers `here <userguide/configuration/examples.html>`_.
 
 The next step is to load the configuration
 
