@@ -17,7 +17,7 @@ char *str_from_bytes(int n, char *p) {
   b[n] = '\0';
   return b;
   // idris2 runtime will de-alloc this malloc as part
-  // of the FFI definition.
+  // of the FFI definition.  (maybe?)
 }
 
 // copy_and_append: AnyPtr -> Int -> Bits8 -> PrimIO AnyPtr

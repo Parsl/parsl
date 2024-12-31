@@ -114,11 +114,12 @@ bb_append_bytes a b = do
 prim__str_from_bytes : Int -> AnyPtr -> PrimIO String
 
 export
-str_from_bytes : Nat -> ByteBlock -> IO (String, ByteBlock)
+str_from_bytes : HasErr AppHasIO es => Nat -> (1 _ : ByteBlock) -> App1 es (Res String (const ByteBlock))
 str_from_bytes l (MkByteBlock p l') = do
-  s <- primIO $ prim__str_from_bytes (cast l) p
+  s <- app $ primIO $ primIO $ prim__str_from_bytes (cast l) p
   let rest = MkByteBlock (incPtrBy (cast l) p) (l' `minus` l)
-  pure (s, rest)
+  pure1 $ s # rest
+  -- TODO: who unallocates the malloc in prim__str_from_bytes?
 
 %foreign "C:unicode_byte_len,bytes"
 prim__unicode_byte_len : String -> PrimIO Int

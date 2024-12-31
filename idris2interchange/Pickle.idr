@@ -118,7 +118,7 @@ read_uint2 bb = do
 -- recursive (or I could use a mutual block? what's the difference?)
 step : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 
-step_PROTO : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App1 {u=Any} es VMState
+step_PROTO : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 
 step_PROTO bb state = do
   log "Opcode: PROTO"
@@ -255,53 +255,55 @@ step_STOP bb state = do
   pure state
 
 
-binbytes_folder : HasErr AppHasIO es => (List Bits8, ByteBlock) -> Int -> App1 es (Res (List Bits8) (const ByteBlock))
-binbytes_folder (l, bb) _ = do
-  (v # bb') <- bb_uncons bb
-  pure1 $ (l ++ [v]) # bb'
+-- TODO: this isn't tail recursive
+takeNbytes : HasErr AppHasIO es => Nat -> (1 _ : ByteBlock) -> App1 es (Res (List Bits8) (const ByteBlock))
+takeNbytes Z bb = pure1 $ [] # bb
+takeNbytes (S n) bb = do
+  (v # bb) <- bb_uncons bb
+  (rest # bb) <- takeNbytes n bb
+  pure1 $ ( [v] ++ rest ) # bb
+
 
 step_BINBYTES : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_BINBYTES bb (MkVMState stack memo) = do
   log "Opcode: BINBYTES"
   let (n # bb) = length1 bb
-  case n of
+  case n of   -- TODO don't need this case any more because bb_uncons raises a runtime error rather than type-failure
     (S (S (S (S k)))) => do
       (block_len # bb') <- read_uint4 bb
       logv "Byte count" block_len
       -- TODO: what's this foldlM going to look like with a linear Res
       -- threaded through it?
-      (bytes # bb'') <- foldlM binbytes_folder ([] # bb') [1..block_len] 
+      (bytes # bb'') <- takeNbytes (the Nat (cast block_len)) bb'
+      -- fold across a linear resource...
       let new_state = MkVMState ((PickleBytes bytes)::stack) memo
 
       step bb'' new_state
     _ => ?error_BINBYTES_not_enough_to_count
 
-step_SHORT_BINBYTES : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_SHORT_BINBYTES : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_SHORT_BINBYTES bb (MkVMState stack memo) = do
   log "Opcode: SHORT_BINBYTES"
-  let n = length bb
+  let (n # bb) = length1 bb
   case n of
     (S k) => do
-      (block_len, bb') <- bb_uncons bb
+      (block_len # bb') <- bb_uncons bb
       logv "Byte count" block_len
       -- TODO: is there a library function for this?
-      (bytes, bb'') <- foldlM binbytes_folder ([], bb') [1..(cast block_len)] 
+      (bytes # bb'') <- takeNbytes (the Nat (cast block_len)) bb'
       let new_state = MkVMState ((PickleBytes bytes)::stack) memo
 
       step bb'' new_state
     _ => ?error_SHORT_BINBYTES_not_enough_to_count
 
 
--- The reasoning about lengths here is more complicated than PROTO or FRAME,
--- and maybe pushes more into runtime: the number of bytes we want is encoded
---  in the first remaining byte of the ByteBlock.
-step_SHORT_BINUNICODE : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_SHORT_BINUNICODE : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_SHORT_BINUNICODE bb (MkVMState stack memo) = do
   log "Opcode: SHORT_BINUNICODE"
-  let n = length bb
+  let (n # bb) = length1 bb
   case n of
     (S k) => do
-      (strlen, bb') <- bb_uncons bb
+      (strlen # bb') <- bb_uncons bb
       logv "UTF-8 byte sequence length" strlen
 
       -- the buffer contains strlen bytes of UTF-8 encoding, which we need to
@@ -313,7 +315,7 @@ step_SHORT_BINUNICODE bb (MkVMState stack memo) = do
       -- it into a char? that seems like a lot of faff compared to going via
       -- a C buffer...
 
-      (str, bb'') <- primIO $ str_from_bytes (cast strlen) bb'
+      (str # bb'') <- str_from_bytes (cast strlen) bb'
 
       logv "String is" str
 
@@ -324,7 +326,7 @@ step_SHORT_BINUNICODE bb (MkVMState stack memo) = do
     Z => ?error_SHORT_BINUNICODE_no_length
 
 
-step_STACK_GLOBAL : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_STACK_GLOBAL : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_STACK_GLOBAL bb (MkVMState (a :: b :: stack) memo) = do
   log "Opcode: STACK_GLOBAL"
 
@@ -337,7 +339,7 @@ step_STACK_GLOBAL bb (MkVMState (a :: b :: stack) memo) = do
 step_STACK_GLOBAL _ _ = ?error_bad_stack_for_STACK_GLOBAL
 
 
-step_EMPTYDICT : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_EMPTYDICT : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_EMPTYDICT bb (MkVMState stack memo) = do
   log "Opcode: EMPTYDICT"
 
@@ -345,7 +347,7 @@ step_EMPTYDICT bb (MkVMState stack memo) = do
 
   step bb new_state 
 
-step_EMPTY_TUPLE : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_EMPTY_TUPLE : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_EMPTY_TUPLE bb (MkVMState stack memo) = do
   log "Opcode: EMPTY_TUPLE"
 
@@ -375,7 +377,7 @@ split_pairs _ = ?error_split_list_not_even
 -- case, that's probably ok, because I don't think memoized objects are
 -- every used in the interchange (and the memoize retrieval opcodes are not
 -- implemented...)
-step_SETITEMS : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_SETITEMS : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_SETITEMS bb (MkVMState stack memo) = do
   log "Opcode: SETITEMS"
 
@@ -414,7 +416,8 @@ step_SETITEMS bb (MkVMState stack memo) = do
       step bb (MkVMState new_stack memo)
     _ => ?error_stack_malformed_for_SETITEMS
 
-step_SETITEM : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+
+step_SETITEM : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_SETITEM bb (MkVMState stack memo) = do
   log "Opcode: SETITEM"
 
@@ -426,7 +429,7 @@ step_SETITEM bb (MkVMState stack memo) = do
     _ => ?error_stack_malformed_for_SETITEM
 
 
-step_MARK : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> VMState -> App es VMState
+step_MARK : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_MARK bb (MkVMState stack memo) = do
   log "Opcode: MARK"
 
@@ -438,7 +441,7 @@ step bb state = do
 
     logv "Stack pre-step" state.stack
 
-    (opcode, bb') <- bb_uncons bb
+    (opcode # bb') <- bb_uncons bb
 
     logv "Opcode number" opcode
 
