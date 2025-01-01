@@ -493,7 +493,7 @@ unpickle bb = do
   log "done with unpickle"
   pure stack_head
 
-pickle_PROTO : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> Nat -> App es ByteBlock
+pickle_PROTO : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> Nat -> App1 es ByteBlock
 pickle_PROTO bytes v = do
   log "Pickling PROTO opcode"
   -- write PROTO byte
@@ -521,7 +521,7 @@ pickle_PROTO bytes v = do
   bytes <- bb_append bytes 128   -- PROTO=128
   bytes <- bb_append bytes (cast v)
 
-  pure bytes
+  pure1 bytes
 
 pickle_ast : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> PickleAST -> App es ByteBlock
 
@@ -530,21 +530,21 @@ fold_AST bytes ast = do
   log "Folding over an AST element"
   pickle_ast bytes ast
 
-pickle_STOP : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> App es ByteBlock
+pickle_STOP : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> App1 es ByteBlock
 pickle_STOP bytes = do
   log "Pickling STOP opcode"
   bytes <- bb_append bytes 46  -- STOP is ASCII 46
-  pure bytes
+  pure1 bytes
 
 
 -- this is the same code as pickle_TUPLE except for the opcode
-pickle_LIST : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> List PickleAST -> App es ByteBlock
+pickle_LIST : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> List PickleAST -> App1 es ByteBlock
 pickle_LIST bytes entries = do
   log "Pickling LIST"
   bytes <- bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
   bytes <- foldlM fold_AST bytes entries
   bytes <- bb_append bytes 108  -- opcode is ASCII l
-  pure bytes
+  pure1 bytes
 
 
 pickle_TUPLE : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> List PickleAST -> App es ByteBlock
