@@ -631,22 +631,23 @@ pickle_DICT bytes entries = do
 pickle_UNICODE : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> String -> App1 es ByteBlock
 pickle_UNICODE bytes s = do
   bytes <- bb_append bytes 140  -- SHORT_BINUNICODE - single byte for length
-  sbytes <- primIO $ bytes_from_str s
-  let slen = length sbytes
+  sbytes <- bytes_from_str s
+  let (slen # sbytes) = length1 sbytes
   bytes <- bb_append bytes (cast slen) -- TODO no check for slen overflowing in this cast
   bytes <- bb_append_bytes bytes sbytes
   pure1 bytes
 
-fold_byte : HasErr AppHasIO es => ByteBlock -> Bits8 -> App es ByteBlock
-fold_byte bytes b = do
+fold_bytes : HasErr AppHasIO es => (1 _ : ByteBlock) -> List Bits8 -> App1 es ByteBlock
+fold_bytes bytes [] = pure1 bytes
+fold_bytes bytes (b::rest) = do
   bytes <- bb_append bytes b
-  pure bytes
+  fold_bytes bytes rest
 
 pickle_BYTES : HasErr AppHasIO es => (1 _ : ByteBlock) -> List Bits8 -> App1 es ByteBlock
 pickle_BYTES bytes b = do
   bytes <- bb_append bytes 66  -- BINBYTES, opcode ASCII 'B'
   bytes <- store_INT bytes ((cast . length) b)
-  foldlM fold_byte bytes b
+  fold_bytes bytes b
 
 pickle_ast bytes (PickleTuple elements) = pickle_TUPLE bytes elements
 pickle_ast bytes (PickleList elements) = pickle_LIST bytes elements

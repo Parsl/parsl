@@ -128,9 +128,9 @@ prim__unicode_byte_len : String -> PrimIO Int
 prim__unicode_bytes : String -> PrimIO AnyPtr
 
 export
-bytes_from_str : String -> IO ByteBlock
+bytes_from_str : HasErr AppHasIO es => String -> App1 es ByteBlock
 bytes_from_str s = do
-  len <- primIO $ prim__unicode_byte_len s
-  strbytes <- primIO $ prim__unicode_bytes s
-  pure $ MkByteBlock strbytes (cast len)
+  len <- app $ primIO $ primIO $ prim__unicode_byte_len s
+  strbytes <- app $ primIO $ primIO $ prim__unicode_bytes s
+  pure1 $ MkByteBlock strbytes (cast len)
 
