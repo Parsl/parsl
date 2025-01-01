@@ -523,9 +523,9 @@ pickle_PROTO bytes v = do
 
   pure1 bytes
 
-pickle_ast : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> PickleAST -> App es ByteBlock
+pickle_ast : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> PickleAST -> App1 es ByteBlock
 
-fold_AST : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> PickleAST -> App es ByteBlock
+fold_AST : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> PickleAST -> App1 es ByteBlock
 fold_AST bytes ast = do
   log "Folding over an AST element"
   pickle_ast bytes ast
@@ -547,7 +547,7 @@ pickle_LIST bytes entries = do
   pure1 bytes
 
 
-pickle_TUPLE : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> List PickleAST -> App es ByteBlock
+pickle_TUPLE : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> List PickleAST -> App1 es ByteBlock
 pickle_TUPLE bytes entries = do
   log "Pickling TUPLE"
   bytes <- bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
@@ -573,7 +573,7 @@ pickle_TUPLE bytes entries = do
 -- ports response:
 --   PickleTuple [PickleInteger 9000, PickleInteger 9001]
 
-store_INT : HasErr AppHasIO es => ByteBlock -> Int -> App es ByteBlock
+store_INT : HasErr AppHasIO es => (1 _ : ByteBlock) -> Int -> App1 es ByteBlock
 store_INT bytes v = do
   let b1 = v `mod` 256
   let b2 = (v `div` 256) `mod` 256
@@ -589,10 +589,10 @@ store_INT bytes v = do
   bytes <- bb_append bytes (cast b2)
   bytes <- bb_append bytes (cast b3)
   bytes <- bb_append bytes (cast b4)
-  pure bytes
+  pure1 bytes
 
 
-pickle_BININT : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> Int -> App es ByteBlock
+pickle_BININT : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> Int -> App1 es ByteBlock
 pickle_BININT bytes v = do
   logv "Pickling BININT" v
 
@@ -600,7 +600,7 @@ pickle_BININT bytes v = do
            else log "this isn't negative - ok"
   bytes <- bb_append bytes 74   -- opcode is ASCII 'J'
   bytes <- store_INT bytes v
-  pure bytes
+  pure1 bytes
 
 fold_DICT_entry : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> (PickleAST, PickleAST) -> App es ByteBlock
 fold_DICT_entry bytes (ast1, ast2) = do
@@ -626,21 +626,21 @@ pickle_DICT bytes entries = do
   pure bytes
 
 
-pickle_UNICODE : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> String -> App es ByteBlock
+pickle_UNICODE : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> String -> App1 es ByteBlock
 pickle_UNICODE bytes s = do
   bytes <- bb_append bytes 140  -- SHORT_BINUNICODE - single byte for length
   sbytes <- primIO $ bytes_from_str s
   let slen = length sbytes
   bytes <- bb_append bytes (cast slen) -- TODO no check for slen overflowing in this cast
   bytes <- bb_append_bytes bytes sbytes
-  pure bytes
+  pure1 bytes
 
 fold_byte : HasErr AppHasIO es => ByteBlock -> Bits8 -> App es ByteBlock
 fold_byte bytes b = do
   bytes <- bb_append bytes b
   pure bytes
 
-pickle_BYTES : HasErr AppHasIO es => ByteBlock -> List Bits8 -> App es ByteBlock
+pickle_BYTES : HasErr AppHasIO es => (1 _ : ByteBlock) -> List Bits8 -> App1 es ByteBlock
 pickle_BYTES bytes b = do
   bytes <- bb_append bytes 66  -- BINBYTES, opcode ASCII 'B'
   bytes <- store_INT bytes ((cast . length) b)
@@ -656,7 +656,7 @@ pickle_ast _ _ = ?notimpl_pickle_ast_others
 
 ||| Takes some PickleAST and turns it into a Pickle bytestream.
 export
-pickle : (State LogConfig LogConfig es, HasErr AppHasIO es) => PickleAST -> App es ByteBlock
+pickle : (State LogConfig LogConfig es, HasErr AppHasIO es) => PickleAST -> App1 es ByteBlock
 pickle ast = do
   -- TODO: needs some kinds of ByteBlock access that we can write to in
   -- the ways that this code wants. I think that only means appending,
@@ -687,4 +687,4 @@ pickle ast = do
 
   complete_bytes <- pickle_STOP ast_bytes
 
-  pure complete_bytes
+  pure1 complete_bytes
