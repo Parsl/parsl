@@ -525,10 +525,11 @@ pickle_PROTO bytes v = do
 
 pickle_ast : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> PickleAST -> App1 es ByteBlock
 
-fold_AST : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> PickleAST -> App1 es ByteBlock
-fold_AST bytes ast = do
-  log "Folding over an AST element"
-  pickle_ast bytes ast
+pickle_AST_list : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> List PickleAST -> App1 es ByteBlock
+pickle_AST_list bb [] = pure1 bb
+pickle_AST_list bb (ast::rest) = do
+  bb <- pickle_ast bb ast
+  pickle_AST_list bb rest
 
 pickle_STOP : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> App1 es ByteBlock
 pickle_STOP bytes = do
@@ -542,7 +543,7 @@ pickle_LIST : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteB
 pickle_LIST bytes entries = do
   log "Pickling LIST"
   bytes <- bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
-  bytes <- foldlM fold_AST bytes entries
+  bytes <- pickle_AST_list bytes entries
   bytes <- bb_append bytes 108  -- opcode is ASCII l
   pure1 bytes
 
@@ -554,11 +555,11 @@ pickle_TUPLE bytes entries = do
 
   -- Do some kind of fold over the entries list, to generate
   -- a stack section that contains all those entries.
-  bytes <- foldlM fold_AST bytes entries
+  bytes <- pickle_AST_list bytes entries
   
   bytes <- bb_append bytes 116  -- opcode is ASCII t, decimal 116
 
-  pure bytes
+  pure1 bytes
 
 -- TODO: byte block contains n at runtime ... so maybe its possible
 -- to rearrange this dependent pair uses to treat ByteBlock as the
@@ -602,13 +603,14 @@ pickle_BININT bytes v = do
   bytes <- store_INT bytes v
   pure1 bytes
 
-fold_DICT_entry : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> (PickleAST, PickleAST) -> App es ByteBlock
-fold_DICT_entry bytes (ast1, ast2) = do
+pickle_DICT_entries : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> List (PickleAST, PickleAST) -> App1 es ByteBlock
+pickle_DICT_entries bb [] = pure1 bb
+pickle_DICT_entries bb ((ast1, ast2)::rest) = do
   log "Folding over DICT element"
-  bytes' <- pickle_ast bytes ast1
-  pickle_ast bytes' ast2
+  bb <- pickle_ast bb ast1
+  pickle_ast bb ast2
 
-pickle_DICT : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> List (PickleAST, PickleAST) -> App es ByteBlock
+pickle_DICT : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> List (PickleAST, PickleAST) -> App1 es ByteBlock
 pickle_DICT bytes entries = do
   log "Pickling DICT"
 
@@ -620,10 +622,10 @@ pickle_DICT bytes entries = do
 
   bytes <- bb_append bytes 40  -- MARK opcode is ASCII '(', decimal 40
 
-  bytes <- foldlM fold_DICT_entry bytes entries
+  bytes <- pickle_DICT_entries bytes entries
 
   bytes <- bb_append bytes 117  -- SETITEMS opcode is ASCII 'u'
-  pure bytes
+  pure1 bytes
 
 
 pickle_UNICODE : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> String -> App1 es ByteBlock
