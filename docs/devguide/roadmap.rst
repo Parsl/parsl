@@ -15,7 +15,7 @@ Code Maintenance
 * **Type Annotations and Static Type Checking**: Add static type annotations throughout the codebase and add typeguard checks.
 * **Release Process**: `Improve the overall release process <https://github.com/Parsl/parsl/issues?q=is%3Aopen+is%3Aissue+label%3Arelease_process>`_ to synchronize docs and code releases, automatically produce changelog documentation.
 * **Components Maturity Model**: Defines the `component maturity model <https://github.com/Parsl/parsl/issues/2554>`_ and tags components with their appropriate maturity level.
-* **Define and Document Interfaces**: Identify and document interfaces via which `external components <https://parsl.readthedocs.io/en/stable/userguide/plugins.html>`_ can augment the Parsl ecosystem.
+* **Define and Document Interfaces**: Identify and document interfaces via which `external components <https://parsl.readthedocs.io/en/stable/userguide/advanced/plugins.html>`_ can augment the Parsl ecosystem.
 * **Distributed Testing Process**: All tests should be run against all possible schedulers, using different executors, on a variety of remote systems. Explore the use of containerized schedulers and remote testing on real systems.
 
 New Features and Integrations
