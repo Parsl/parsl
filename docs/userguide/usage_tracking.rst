@@ -1,7 +1,7 @@
 :orphan:
 
 .. meta::
-    :content http-equiv="refresh": 1;url=advanced/usage_tracking.html
+    :content http-equiv="refresh": 0;url=advanced/usage_tracking.html
 
 Redirect
 --------

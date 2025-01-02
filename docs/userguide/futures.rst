@@ -1,7 +1,7 @@
 :orphan:
 
 .. meta::
-    :content http-equiv="refresh": 1;url=execution/futures.html
+    :content http-equiv="refresh": 0;url=execution/futures.html
 
 Redirect
 --------

@@ -1,7 +1,7 @@
 :orphan:
 
 .. meta::
-    :content http-equiv="refresh": 1;url=workflows/workflow.html
+    :content http-equiv="refresh": 0;url=workflows/workflow.html
 
 Redirect
 --------
