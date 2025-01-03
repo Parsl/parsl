@@ -22,7 +22,6 @@ import ZMQ
 %language ElabReflection
 -- %default total
 
-
 -- TODO: this should eventually be chosen according to
 -- config supplied on stdin, or by random bind.
 WORKER_TASK_PORT : Int
@@ -57,22 +56,30 @@ record SocketState where
 
 -- this should be total, proved by decreasing n
 -- but apparently not? cheat by using assert_smaller...
-inner_ascii_dump : HasErr AppHasIO es => ByteBlock -> App es ()
-inner_ascii_dump bytes with (length bytes)
- inner_ascii_dump _ | Z = pure ()
- inner_ascii_dump bytes | S _ = do
-  (b, rest) <- bb_uncons bytes
-  if b >= 32 && b < 128
-    then primIO $ putStr (singleton (chr $ cast b))
-    else primIO $ putStr "."
-  inner_ascii_dump rest
+inner_ascii_dump : HasErr AppHasIO es => (1 _ : ByteBlock) -> App1 es ByteBlock
+inner_ascii_dump bytes = do
+ let (l # bytes) = length1 bytes
+ case l of
+   Z => pure1 bytes
+   S _ => do
+     (b # rest) <- bb_uncons bytes  -- we know this won't fail because we're in S _ case, but that isn't indicated at the type level...
+     if b >= 32 && b < 128
+      then app $ primIO $ putStr (singleton (chr $ cast b))
+      else app $ primIO $ putStr "."
+     inner_ascii_dump rest
 
-ascii_dump : (State LogConfig LogConfig es, HasErr AppHasIO es) => ByteBlock -> App es ()
+ascii_dump : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> App1 es ByteBlock
 ascii_dump v = do
-  en <- loggingEnabled
-  when en $ do
-    inner_ascii_dump v
-    primIO $ putStrLn ""
+  en <- app $ loggingEnabled
+  app $ primIO $ pure () -- any use of IO here makes the bb_duplicate below work. otherwise, cannot resolve es... is this a BUG?
+  if en 
+    then do  -- is this using the wrong bind? bb_duplicate works outside the if, and if i put it there, it makes the below bb_duplicate work too - as if a different elaboration of `do` / >>= is happening?
+          (v # v') <- bb_duplicate v
+          v' <- inner_ascii_dump v'
+          free1 v'
+          app $ primIO $ putStrLn ""
+          pure1 v
+    else pure1 v
 
 
 -- the Python type contained in the returned AST depends on the supplied
@@ -165,10 +172,11 @@ matchmake sockets = do
                   -- manager.
                   let task_msg = PickleList [task]
                   logv "Dispatching task" task_msg
-                  resp_bytes <- pickle task_msg
-                  zmq_send_bytes sockets.tasks_interchange_to_worker b True
-                  zmq_send_bytes sockets.tasks_interchange_to_worker emptyByteBlock True
-                  zmq_send_bytes sockets.tasks_interchange_to_worker resp_bytes False
+                  app1 $ do
+                    resp_bytes <- pickle task_msg
+                    zmq_send_bytes sockets.tasks_interchange_to_worker b True
+                    zmq_send_bytes sockets.tasks_interchange_to_worker emptyByteBlock True
+                    zmq_send_bytes sockets.tasks_interchange_to_worker resp_bytes False
 
                   -- TODO: update MatchState to remove one task and keep rest_tasks, as well as updating
                   -- manager capacity. Iterate until no more matches are possible.
@@ -381,11 +389,11 @@ covering poll_loop : (State LogConfig LogConfig es, State Bool Bool es, State Ma
 
 
 -- TODO: this really only reads up to 128kb. which should be enough for test interchange configs.
-readStdinToEnd : HasErr AppHasIO es => App es ByteBlock
+readStdinToEnd : HasErr AppHasIO es => App1 es ByteBlock
 readStdinToEnd = do
   (count, buf_ptr) <- read stdin 128000
   let n = cast count
-  pure (MkByteBlock buf_ptr n)
+  pure1 (MkByteBlock buf_ptr n)
 
 covering readStdinConfig : (State LogConfig LogConfig es, HasErr AppHasIO es) => App es PickleAST
 readStdinConfig = do
@@ -397,8 +405,9 @@ readStdinConfig = do
   -- eof, and hope there really is an EOF (rather than the
   -- submit side leaving the stdin open)
 
-  bytes <- readStdinToEnd
-  config <- unpickle bytes
+  config <- app1 $ do
+    bytes <- readStdinToEnd
+    unpickle bytes
 
   logv "Config" config
 

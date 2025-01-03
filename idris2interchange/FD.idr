@@ -208,17 +208,17 @@ prim_read : Int -> AnyPtr -> Int -> PrimIO Int
 -- TODO: are ssize_t and size_t suitable to be Ints?
 
 public export
-read : HasErr AppHasIO es => FD -> Nat -> App es (Int, AnyPtr)
+read : HasErr AppHasIO es => FD -> Nat -> App1 es (Res Int (const AnyPtr))
 read (MkFD fd_int) count = do
   -- allocate memory and read into it. that probably isn't the right
   -- way to do things linearly... or the right way to do things with
   -- garbage collection
   let count_int = the Int (cast count)
-  memory <- primIO $ malloc count_int
+  memory <- app $ primIO $ malloc count_int
   -- TODO: do I need to check memory is not NULL? (because unix malloc can
   -- return NULL...)
-  read_count <- primIO $ primIO $ prim_read fd_int memory count_int
-  pure (read_count, memory)
+  read_count <- app $ primIO $ primIO $ prim_read fd_int memory count_int
+  pure1 (read_count # memory)
 
 
 %foreign "C:pidfd_open,libc"

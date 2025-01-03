@@ -50,3 +50,10 @@ void *unicode_bytes(char *s) {
 
   return b;
 }
+
+
+void *duplicate_block(void *p, int n) {
+  void *p2 = malloc(n);
+  assert(p2 != NULL);
+  memcpy(p2, p, n);
+}

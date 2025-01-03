@@ -134,3 +134,11 @@ bytes_from_str s = do
   strbytes <- app $ primIO $ primIO $ prim__unicode_bytes s
   pure1 $ MkByteBlock strbytes (cast len)
 
+%foreign "C:duplicate_block,bytes"
+prim__duplicate_block : AnyPtr -> Int -> PrimIO AnyPtr
+
+export
+bb_duplicate : HasErr AppHasIO es => (1 _ : ByteBlock) -> App1 es (LPair ByteBlock ByteBlock)
+bb_duplicate (MkByteBlock p l) = do
+  p' <- app $ primIO $ primIO $ prim__duplicate_block p (cast l)
+  pure1 $ (MkByteBlock p l) # (MkByteBlock p' l)
