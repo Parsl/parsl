@@ -137,6 +137,13 @@ bytes_from_str s = do
 %foreign "C:duplicate_block,bytes"
 prim__duplicate_block : AnyPtr -> Int -> PrimIO AnyPtr
 
+-- it would be interesting to figure out if I can express type-safe sharing of data
+-- rather than having to copy it here - eg type level counting of references or
+-- something like that?
+-- for example, a reference counted read-only structure (at runtime) and we use linear types
+-- to statically assure that the *reference count* is released, rather than the
+-- memory block itself (with the memory being released when the count hits 0
+-- dynamically?)
 export
 bb_duplicate : HasErr AppHasIO es => (1 _ : ByteBlock) -> App1 es (LPair ByteBlock ByteBlock)
 bb_duplicate (MkByteBlock p l) = do

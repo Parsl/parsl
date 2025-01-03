@@ -264,10 +264,11 @@ zmq_poll_tasks_submit_to_interchange_loop sockets = do
       Just msg => do
         s <- zmq_msg_size msg
         logv "Received task-like message on task submit->interchange channel, size" s
-        bytes <- zmq_msg_as_bytes msg
-        ascii_dump bytes
 
-        task <- unpickle bytes
+        task <- app1 $ do
+          bytes <- zmq_msg_as_bytes msg
+          bytes <- ascii_dump bytes
+          unpickle bytes
 
         zmq_msg_close msg
 
@@ -293,8 +294,11 @@ covering process_result_part : (State LogConfig LogConfig es, HasErr AppHasIO es
 process_result_part sockets () msg_part = do
   -- TODO: only forward on this result if it is a result-tag
   -- (rather than eg. monitoring or heartbeat)
+ app1 $ do
   bytes <- zmq_msg_as_bytes msg_part
+  (bytes # bytes') <- bb_duplicate bytes
   result <- unpickle bytes
+
   logv "Unpickled result" result
   case result of
     PickleDict pairs => do
@@ -303,15 +307,18 @@ process_result_part sockets () msg_part = do
       case tag of
         Just (PickleUnicodeString "result") => do
           log "Result, so sending onwards"
-          zmq_send_bytes sockets.results_interchange_to_submit bytes False
-        _ => log "Ignoring non-result"
+          bytes' <- zmq_send_bytes1 sockets.results_interchange_to_submit bytes' False
+          free1 bytes'
+        _ => do
+          log "Ignoring non-result"
+          free1 bytes'
       
     _ => ?error_bad_pickle_object_on_result_channel
 
   -- TODO: release worker/task binding/count
 
-  zmq_msg_close msg_part
-  pure ()
+ zmq_msg_close msg_part
+ pure ()
 
 covering zmq_poll_results_worker_to_interchange_loop : (State LogConfig LogConfig es, HasErr AppHasIO es) => SocketState -> App es ()
 zmq_poll_results_worker_to_interchange_loop sockets = do
@@ -329,8 +336,10 @@ zmq_poll_results_worker_to_interchange_loop sockets = do
       (addr_part :: other_parts) => do
         s <- zmq_msg_size addr_part
         logv "Received result-like message on results worker->interchange channel, size" s
-        remote_id <- zmq_msg_as_bytes addr_part
-        ascii_dump remote_id
+        app1 $ do
+          remote_id <- zmq_msg_as_bytes addr_part
+          remote_id <- ascii_dump remote_id
+          free1 remote_id
         zmq_msg_close addr_part
 
         logv "Number of result parts in this multipart message" (length other_parts)
