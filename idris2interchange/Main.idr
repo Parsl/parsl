@@ -174,9 +174,15 @@ matchmake sockets = do
                   logv "Dispatching task" task_msg
                   app1 $ do
                     resp_bytes <- pickle task_msg
-                    zmq_send_bytes sockets.tasks_interchange_to_worker b True
-                    zmq_send_bytes sockets.tasks_interchange_to_worker emptyByteBlock True
-                    zmq_send_bytes sockets.tasks_interchange_to_worker resp_bytes False
+                    -- TODO: something to do with read-only access here to b?
+                    -- Its a byte buffer I want to share all over, and it is small, so maybe
+                    -- it is interesting to have the garbage collector manage that, rather
+                    -- than linear types?
+                    -- these three sends demonstrate three different kind of memory policy
+                    app $ zmq_send_bytes sockets.tasks_interchange_to_worker b True
+                    app $ zmq_send_bytes sockets.tasks_interchange_to_worker emptyByteBlock True
+                    resp_bytes <- zmq_send_bytes1 sockets.tasks_interchange_to_worker resp_bytes False
+                    free1 resp_bytes
 
                   -- TODO: update MatchState to remove one task and keep rest_tasks, as well as updating
                   -- manager capacity. Iterate until no more matches are possible.
