@@ -142,3 +142,10 @@ bb_duplicate : HasErr AppHasIO es => (1 _ : ByteBlock) -> App1 es (LPair ByteBlo
 bb_duplicate (MkByteBlock p l) = do
   p' <- app $ primIO $ primIO $ prim__duplicate_block p (cast l)
   pure1 $ (MkByteBlock p l) # (MkByteBlock p' l)
+
+-- this copies an uncontrolled pointed-at byte block into a new linear ByteBlock
+export
+copy_into_bb : HasErr AppHasIO es => AnyPtr -> Int -> App1 es ByteBlock
+copy_into_bb p l = do
+  p' <- app $ primIO $ primIO $ prim__duplicate_block p (cast l)
+  pure1 $ MkByteBlock p' (cast l)

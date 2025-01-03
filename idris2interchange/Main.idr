@@ -71,7 +71,7 @@ inner_ascii_dump bytes = do
 ascii_dump : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> App1 es ByteBlock
 ascii_dump v = do
   en <- app $ loggingEnabled
-  app $ primIO $ pure () -- any use of IO here makes the bb_duplicate below work. otherwise, cannot resolve es... is this a BUG?
+  app $ primIO $ pure () -- any use of IO here makes the bb_duplicate below work. otherwise, cannot resolve es... is this a BUG? what is the magic unification thingy doing?
   if en 
     then do  -- is this using the wrong bind? bb_duplicate works outside the if, and if i put it there, it makes the below bb_duplicate work too - as if a different elaboration of `do` / >>= is happening?
           (v # v') <- bb_duplicate v
@@ -225,14 +225,19 @@ zmq_poll_command_channel_loop command_socket = do
         -- what msg contains here is a pickle-encoded two element dictionary,
         -- the task ID and the buffer.
         -- so... now its time to write a pickle decoder?
-        bytes <- zmq_msg_as_bytes msg
-        (PickleUnicodeString cmd) <- unpickle bytes
+        unpickled_msg <- app1 $ do
+          bytes <- zmq_msg_as_bytes msg
+          v <- unpickle bytes
+          pure v
+        (PickleUnicodeString cmd) <- pure unpickled_msg
             | _ => ?error_cmd_is_not_a_string
         logv "Command received this command" cmd
         resp <- dispatch_cmd cmd
         logv "Response to command" resp
-        resp_bytes <- pickle resp
-        zmq_send_bytes command_socket resp_bytes False
+        app1 $ do
+          resp_bytes <- pickle resp
+          resp_bytes <- zmq_send_bytes1 command_socket resp_bytes False
+          free1 resp_bytes
 
         -- after this send, command socket is back is ready-for-a-REQ state
 

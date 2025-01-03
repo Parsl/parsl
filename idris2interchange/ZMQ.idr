@@ -135,21 +135,28 @@ zmq_recv_msgs_multipart_alloc socket = do
 prim__zmq_msg_size : AnyPtr -> PrimIO Int
 
 public export
-zmq_msg_size : HasErr AppHasIO es => ZMQMsg -> App es Int
+zmq_msg_size : HasErr AppHasIO es => ZMQMsg -> App {l} es Int
 zmq_msg_size (MkZMQMsg msg_ptr) = primIO $ primIO $ prim__zmq_msg_size msg_ptr
 
 %foreign (gluezmq "glue_zmq_msg_data")
 prim__zmq_msg_data : AnyPtr -> PrimIO AnyPtr
 
-zmq_msg_data : HasErr AppHasIO es => ZMQMsg -> App es AnyPtr
+zmq_msg_data : HasErr AppHasIO es => ZMQMsg -> App {l} es AnyPtr
 zmq_msg_data (MkZMQMsg msg_ptr) = primIO $ primIO $ prim__zmq_msg_data msg_ptr
 
 export
-zmq_msg_as_bytes : HasErr AppHasIO es => ZMQMsg -> App es ByteBlock
+zmq_msg_as_bytes : HasErr AppHasIO es => ZMQMsg -> App1 es ByteBlock
 zmq_msg_as_bytes msg = do
-  size <- cast <$> zmq_msg_size msg
-  byte_ptr <- zmq_msg_data msg
-  pure (MkByteBlock byte_ptr size)
+  size <- app $ zmq_msg_size msg
+  byte_ptr <- (app $ zmq_msg_data msg)
+  -- we get a pointer here... but it is not managed by malloc, so it's not
+  -- safe to represent it with a ByteBlock. The memory release semantics are
+  -- (if i understand ZMQ) that the memory will be release when the ZMQMsg is
+  -- closed, rather than the pointer itself being released by the user. Maybe
+  -- there's some type annotations on the pointer that can be used to indicate
+  -- that? Right now it's probably easier to make a copy of the data into a
+  -- malloc area.
+  copy_into_bb byte_ptr size
 
 %foreign (gluezmq "glue_zmq_get_socket_fd")
 prim__zmq_get_socket_fd : AnyPtr -> PrimIO Int
