@@ -4,6 +4,7 @@ import Control.App
 import Generics.Derive
 import System.FFI
 
+import Bytes
 import Logging
 
 -- got this ambiguity error on index when adding an extra log line, i guess
@@ -24,7 +25,7 @@ FD:151:29--151:34
 Suggestion: the default ambiguity depth limit is 3, the %ambiguity_depth pragma can be used to extend this limit, but beware
 compilation times can be severely impacted.
 -}
-%ambiguity_depth 4
+%ambiguity_depth 6
 
 %language ElabReflection
 -- %default total
@@ -208,7 +209,7 @@ prim_read : Int -> AnyPtr -> Int -> PrimIO Int
 -- TODO: are ssize_t and size_t suitable to be Ints?
 
 public export
-read : HasErr AppHasIO es => FD -> Nat -> App1 es (Res Int (const AnyPtr))
+read : HasErr AppHasIO es => FD -> Nat -> App1 es ByteBlock
 read (MkFD fd_int) count = do
   -- allocate memory and read into it. that probably isn't the right
   -- way to do things linearly... or the right way to do things with
@@ -218,7 +219,7 @@ read (MkFD fd_int) count = do
   -- TODO: do I need to check memory is not NULL? (because unix malloc can
   -- return NULL...)
   read_count <- app $ primIO $ primIO $ prim_read fd_int memory count_int
-  pure1 (read_count # memory)
+  pure1 (MkByteBlock memory (cast read_count))
 
 
 %foreign "C:pidfd_open,libc"

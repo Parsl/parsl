@@ -19,6 +19,7 @@ import Logging
 import Pickle
 import ZMQ
 
+%ambiguity_depth 10
 %language ElabReflection
 -- %default total
 
@@ -383,13 +384,16 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
           let (s # bytes) = length1 bytes
           logv "JSON part size" s
           bytes <- ascii_dump bytes
-          (s # bytes) <- primIO $ str_from_bytes (cast s) bytes
+          (s # bytes) <- str_from_bytes (cast s) bytes
           free1 bytes
           pure s
 
         let mj = parse msg_as_str
 
-        case mj of
+        -- weirdness: the get/put/log/matchmake statements can't get constraint-solved in their return type
+        -- and fail with an error about cannot solve () vs a. I guess a is the eventual return type of the
+        -- whole case tree because if I force the return type here with `the`, then it resolves ok?
+        the (App es ()) $ case mj of
           Nothing => ?error_no_json_parse_of_registration_like
           Just j => do
             logv "Parsed JSON" j
@@ -399,12 +403,12 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
             let t = lookup "type" j
             case t of
               Just (JString "registration") => do
-                old_state@(MkMatchState managers tasks) <- get MatchState
+                (MkMatchState managers tasks) <- get MatchState
                 put MatchState (MkMatchState ((gc_addr_bytes, j) :: managers) tasks)
                 log "Put new manager into match state" 
                 matchmake sockets
               Just (JString "heartbeat") => 
-                log "Ignoring heartbeat"  -- TODO: reply else we'll get a timeout...
+                log "TODO: Ignoring heartbeat"  -- TODO: reply else we'll get a timeout...
               _ => ?error_unknown_registration_like_type
         zmq_msg_close addr_part
         zmq_msg_close json_part
@@ -418,12 +422,10 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
 covering poll_loop : (State LogConfig LogConfig es, State Bool Bool es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
 
 
--- TODO: this really only reads up to 128kb. which should be enough for test interchange configs.
+-- TODO: this only reads up to 128kb. which should be enough for test interchange configs. but is lame.
 readStdinToEnd : HasErr AppHasIO es => App1 es ByteBlock
-readStdinToEnd = do
-  (count, buf_ptr) <- read stdin 128000
-  let n = cast count
-  pure1 (MkByteBlock buf_ptr n)
+readStdinToEnd = read stdin 128000
+
 
 covering readStdinConfig : (State LogConfig LogConfig es, HasErr AppHasIO es) => App es PickleAST
 readStdinConfig = do
