@@ -606,9 +606,10 @@ pickle_BININT bytes v = do
 pickle_DICT_entries : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> List (PickleAST, PickleAST) -> App1 es ByteBlock
 pickle_DICT_entries bb [] = pure1 bb
 pickle_DICT_entries bb ((ast1, ast2)::rest) = do
-  log "Folding over DICT element"
+  logv "Pickling over DICT entry with key" ast1
   bb <- pickle_ast bb ast1
-  pickle_ast bb ast2
+  bb <- pickle_ast bb ast2
+  pickle_DICT_entries bb rest
 
 pickle_DICT : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> List (PickleAST, PickleAST) -> App1 es ByteBlock
 pickle_DICT bytes entries = do

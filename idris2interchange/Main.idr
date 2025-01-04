@@ -668,5 +668,5 @@ poll_loop sockets = do
 
 covering main : IO ()
 main = run (new True
-           (new (MkLogConfig False)
+           (new (MkLogConfig True)
            (new (MkMatchState [] []) app_main)))

@@ -23,6 +23,9 @@ import Control.App
 -- that as not exporting the constructor, and getting that
 -- into a single file, with other less trusted functions in
 -- this file moved elsewhere? Bytes.Kernel?
+-- The pointer in a byte block *must* be allocated by something
+-- malloc-like (which includes the NULL constant), because it
+-- will eventually be released by free().
 public export
 data ByteBlock = MkByteBlock AnyPtr Nat
 
@@ -44,40 +47,30 @@ prim__readByteAt : AnyPtr -> PrimIO Bits8
 %foreign "C:incPtrBy,bytes"
 prim__incPtrBy : Int -> AnyPtr -> AnyPtr
 
+-- TODO: probably any use of these two incPtr calls are
+-- dangerous because they'll usually be used to turn
+-- what should be a valid MkByteBlock ptr into one that
+-- is valid memory but no longer freeable...
 incPtr : AnyPtr -> AnyPtr
 incPtr p = prim__incPtrBy 1 p
 
 incPtrBy : Int -> AnyPtr -> AnyPtr
 incPtrBy n p = prim__incPtrBy n p
 
+%foreign "C:shift_down_one,bytes"
+prim__shift_down_one : AnyPtr -> Int -> PrimIO AnyPtr
+
 export
 bb_uncons : HasErr AppHasIO es => (1 _ : ByteBlock) -> App1 es (Res Bits8 (const ByteBlock))
 bb_uncons (MkByteBlock ptr (S n)) = do
 
   v <- app $ primIO $ primIO $ prim__readByteAt ptr
-
-  let ptr_inc = incPtr ptr
-  let rest = MkByteBlock ptr_inc n
+  ptr <- app $ primIO $ primIO $ prim__shift_down_one ptr (cast n)
+  let rest = MkByteBlock ptr n
 
   pure1 (v # rest)
 
 bb_uncons (MkByteBlock _ Z) = ?error_unconsing_from_empty_byteblock
-
-
-%foreign "C:copy_and_append,bytes"
-prim__copy_and_append: (1 _ : AnyPtr) -> Int -> Bits8 -> AnyPtr
-
-export
-bb_append : HasErr AppHasIO es => (1 _ : ByteBlock) -> Bits8 -> App1 es ByteBlock
-bb_append (MkByteBlock ptr n) v = do
-  -- can't necessarily realloc here, because ptr is not
-  -- necessarily a malloced ptr: it might be a pointer
-  -- further along into the block... and without any 
-  -- linearity we don't have any guarantee about other
-  -- ByteBlocks sharing the same underlying memory...
-  -- (which is also a problem for arbitrary mutability)
-  let new_ptr = prim__copy_and_append ptr (cast n) v
-  pure1 (MkByteBlock (new_ptr) (S n))
 
 
 export
@@ -100,6 +93,26 @@ public export
 free1 : (1 _ : ByteBlock) -> App1 {u=Any} es ()
 free1 bb = app $ free bb
 
+%foreign "C:copy_and_append,bytes"
+prim__copy_and_append: (1 _ : AnyPtr) -> Int -> Bits8 -> AnyPtr
+
+export
+bb_append : HasErr AppHasIO es => (1 _ : ByteBlock) -> Bits8 -> App1 es ByteBlock
+bb_append (MkByteBlock ptr n) v = do
+  -- old opinions:
+  -- can't necessarily realloc here, because ptr is not
+  -- necessarily a malloced ptr: it might be a pointer
+  -- further along into the block... and without any 
+  -- linearity we don't have any guarantee about other
+  -- ByteBlocks sharing the same underlying memory...
+  -- (which is also a problem for arbitrary mutability)
+
+  -- new opinion: we *can* realloc here to make bigger
+
+  let new_ptr = prim__copy_and_append ptr (cast n) v
+  pure $ prim__free ptr
+  pure1 (MkByteBlock (new_ptr) (S n))
+
 covering export
 bb_append_bytes : HasErr AppHasIO es => (1 _ : ByteBlock) -> (1 _ : ByteBlock) -> App1 es ByteBlock
 bb_append_bytes a b = do
@@ -109,23 +122,13 @@ bb_append_bytes a b = do
   case m of
     Z => do
       app $ free b'
-      pure1 a   -- need to use b in this path -- i guess can free it? even though because of Z, we should know that there is no ptr - that fact isn't type-encoded, but it could be if using two constructors? using free here requires that ptr came from a malloc-style allocation directly.
+      pure1 a 
     S x => do
       (v # rest) <- bb_uncons b'
       a' <- bb_append a v
       bb_append_bytes a' rest
-    
-%foreign "C:str_from_bytes,bytes"
-prim__str_from_bytes : Int -> AnyPtr -> PrimIO String
-
-export
-str_from_bytes : HasErr AppHasIO es => Nat -> (1 _ : ByteBlock) -> App1 es (Res String (const ByteBlock))
-str_from_bytes l (MkByteBlock p l') = do
-  s <- app $ primIO $ primIO $ prim__str_from_bytes (cast l) p
-  let rest = MkByteBlock (incPtrBy (cast l) p) (l' `minus` l)
-  pure1 $ s # rest
-  -- TODO: who unallocates the malloc in prim__str_from_bytes?
-
+ 
+   
 %foreign "C:unicode_byte_len,bytes"
 prim__unicode_byte_len : String -> PrimIO Int
 
@@ -161,6 +164,20 @@ copy_into_bb : HasErr AppHasIO es => AnyPtr -> Int -> App1 es ByteBlock
 copy_into_bb p l = do
   p' <- app $ primIO $ primIO $ prim__duplicate_block p (cast l)
   pure1 $ MkByteBlock p' (cast l)
+
+
+%foreign "C:str_from_bytes,bytes"
+prim__str_from_bytes : Int -> AnyPtr -> PrimIO String
+
+export
+str_from_bytes : HasErr AppHasIO es => Nat -> (1 _ : ByteBlock) -> App1 es (Res String (const ByteBlock))
+str_from_bytes l (MkByteBlock p l') = do
+  s <- app $ primIO $ primIO $ prim__str_from_bytes (cast l) p
+  rest <- copy_into_bb (incPtrBy (cast l) p) ((cast l') - (cast l))
+  pure $ prim__free p
+  pure1 $ s # rest
+  -- TODO: who unallocates the malloc in prim__str_from_bytes? is it idris FFI?
+
 
 -- don't deconstruct this except in the trusted memory kernel
 public export

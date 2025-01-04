@@ -30,6 +30,23 @@ void *copy_and_append(void *old_p, int old_n, char new_v) {
   return new_p;
 }
 
+void *shift_down_one(void *p, int n) {
+  void *old_p = p;
+
+  memmove(p, p+1, n);
+
+  // this realloc is optional: it isn't needed for
+  // correctness, but tells the memory allocator about
+  // reduced need for memory.
+  // this memory can move due to the realloc...
+  // so slightly weird to memmove *and* get a likely
+  // realloc copy...
+  // p = realloc(p, n);
+  // printf("shift_down_one realloc: old_p = %p, (new) p = %p\n", old_p, p);
+  // assert(p == old_p); // we'd expect the memory to not move. although for weird reasons it might?
+  return p;
+}
+
 /*
 %foreign "C:unicode_byte_len,bytes"
 prim__unicode_byte_len : String -> PrimIO Int
