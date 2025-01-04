@@ -18,6 +18,11 @@ import Control.App
 
 -- %default total
 
+-- don't deconstruct this except in the trusted memory kernel
+-- because raw anyptr is dangerous. Maybe I should formalize
+-- that as not exporting the constructor, and getting that
+-- into a single file, with other less trusted functions in
+-- this file moved elsewhere? Bytes.Kernel?
 public export
 data ByteBlock = MkByteBlock AnyPtr Nat
 
@@ -156,3 +161,25 @@ copy_into_bb : HasErr AppHasIO es => AnyPtr -> Int -> App1 es ByteBlock
 copy_into_bb p l = do
   p' <- app $ primIO $ primIO $ prim__duplicate_block p (cast l)
   pure1 $ MkByteBlock p' (cast l)
+
+-- don't deconstruct this except in the trusted memory kernel
+public export
+data GCByteBlock = MkGCByteBlock AnyPtr Nat
+
+-- TODO: this impl won't actually do a finalizer-based GC,
+-- but it should one day... in practice I think this is only
+-- being used for manager IDs, so very small number of small
+-- allocations.
+-- It should also probably be reference count based (see notes
+-- for bb_duplicate)
+public export
+to_gc_bytes : HasErr AppHasIO es => (1 _ : ByteBlock) -> App1 {u=Any} es GCByteBlock
+to_gc_bytes (MkByteBlock p l) = pure $ MkGCByteBlock p l
+-- TODO: at this point, a finalizer should be attached to
+-- take responsibility of freeing p. The current behaviour
+-- is to leak p.
+
+public export
+from_gc_bytes : HasErr AppHasIO es => GCByteBlock -> App1 es ByteBlock
+from_gc_bytes (MkGCByteBlock p l)= copy_into_bb p (cast l)
+

@@ -41,7 +41,7 @@ WORKER_RESULT_PORT = 9004
 
 record MatchState where
   constructor MkMatchState
-  managers: List (ByteBlock, JSON)
+  managers: List (GCByteBlock, JSON)
   tasks: List PickleAST
 -- %runElab derive "MatchState" [Generic, Meta, Show]
 
@@ -179,10 +179,12 @@ matchmake sockets = do
                     -- it is interesting to have the garbage collector manage that, rather
                     -- than linear types?
                     -- these three sends demonstrate three different kind of memory policy
-                    app $ zmq_send_bytes sockets.tasks_interchange_to_worker b True
+                    b <- from_gc_bytes b  -- changes type of b
+                    b <- zmq_send_bytes1 sockets.tasks_interchange_to_worker b True
                     app $ zmq_send_bytes sockets.tasks_interchange_to_worker emptyByteBlock True
                     resp_bytes <- zmq_send_bytes1 sockets.tasks_interchange_to_worker resp_bytes False
                     free1 resp_bytes
+                    free1 b
 
                   -- TODO: update MatchState to remove one task and keep rest_tasks, as well as updating
                   -- manager capacity. Iterate until no more matches are possible.
@@ -370,16 +372,21 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
       [addr_part, json_part] => do
         log "Received two-part message on task interchange->worker channel"
 
-        addr_bytes <- zmq_msg_as_bytes addr_part
-        log "Address bytes:"
-        ascii_dump addr_bytes
+        gc_addr_bytes <- app1 $ do
+          addr_bytes <- zmq_msg_as_bytes addr_part
+          log "Address bytes:"
+          addr_bytes <- ascii_dump addr_bytes
+          to_gc_bytes addr_bytes -- hands over deallocation responsibility to runtime GC, rather than linear typing
 
-        bytes <- zmq_msg_as_bytes json_part
-        let s = length bytes
-        logv "JSON part size" s
-        ascii_dump bytes
+        msg_as_str <- app1 $ do
+          bytes <- zmq_msg_as_bytes json_part
+          let (s # bytes) = length1 bytes
+          logv "JSON part size" s
+          bytes <- ascii_dump bytes
+          (s # bytes) <- primIO $ str_from_bytes (cast s) bytes
+          free1 bytes
+          pure s
 
-        (msg_as_str, _) <- primIO $ str_from_bytes (cast s) bytes
         let mj = parse msg_as_str
 
         case mj of
@@ -393,7 +400,7 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
             case t of
               Just (JString "registration") => do
                 old_state@(MkMatchState managers tasks) <- get MatchState
-                put MatchState (MkMatchState ((addr_bytes, j) :: managers) tasks)
+                put MatchState (MkMatchState ((gc_addr_bytes, j) :: managers) tasks)
                 log "Put new manager into match state" 
                 matchmake sockets
               Just (JString "heartbeat") => 
