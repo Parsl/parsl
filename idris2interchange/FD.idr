@@ -172,7 +172,6 @@ poll inputs timeout = do
      -- it also doesn't check we are passing in the right memory block
      -- to pollhelper_set_entry that happens to have the same count/size
      pollhelper_set_entry buf i (index i inputs)
-     ?hole
 
    -- the above "allocate and set values later" looks quite like the
    -- linear immutable hole filling stuff talked about by Arnauld at tweag,
