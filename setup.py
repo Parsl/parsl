@@ -15,11 +15,12 @@ extras_require = {
     'visualization' : [
 
         # this pydot bound is copied from networkx's pyproject.toml,
+        # version 3.2 (aa2de1adecea09f7b86ff6093b212ca86f22b3ef),
         # because networkx[extra] installs quite a lot of extra stuff
         # that needs more OS dependencies in addition to pydot.
-        'pydot>=3.0.1',
+        'pydot>=1.4.2',
 
-        'networkx>=3.4,<3.5',
+        'networkx>=3.2,<3.3',
         'Flask>=1.0.2',
         'flask_sqlalchemy',
 
