@@ -111,6 +111,8 @@ Practically, this means
         return input_list
 
 
+.. _functions-from-modules:
+
 Functions from Modules
 ++++++++++++++++++++++
 
@@ -193,6 +195,8 @@ Learn more about the types of data allowed in `the data section <data.html>`_.
 .. note::
 
     Any changes to mutable input arguments will be ignored.
+
+.. _special-kwargs:
 
 Special Keyword Arguments
 +++++++++++++++++++++++++
