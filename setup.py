@@ -8,7 +8,9 @@ with open('requirements.txt') as f:
 
 extras_require = {
     'monitoring' : [
-        'sqlalchemy>=1.4,<2'
+        # sqlalchemy does not use semantic versioning.
+        # see https://github.com/sqlalchemy/sqlalchemy/discussions/11391#discussioncomment-9472033
+        'sqlalchemy>=2,<2.1'
     ],
     'visualization' : [
         # this pydot bound is copied from networkx's pyproject.toml,
