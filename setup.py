@@ -14,7 +14,7 @@ extras_require = {
     ],
     'visualization' : [
         'pydot',
-        'networkx>=2.5,<2.6',
+        'networkx>=3.2,<3.3',
         'Flask>=1.0.2',
         'flask_sqlalchemy',
 
