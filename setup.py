@@ -13,8 +13,13 @@ extras_require = {
         'sqlalchemy>=2,<2.1'
     ],
     'visualization' : [
-        'pydot',
-        'networkx>=3.2,<3.3',
+
+        # this pydot bound is copied from networkx's pyproject.toml,
+        # because networkx[extra] installs quite a lot of extra stuff
+        # that needs more OS dependencies in addition to pydot.
+        'pydot>=3.0.1',
+
+        'networkx>=3.4,<3.5',
         'Flask>=1.0.2',
         'flask_sqlalchemy',
 
