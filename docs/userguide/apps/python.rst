@@ -1,22 +1,3 @@
-.. _apps:
-
-Apps
-====
-
-An **App** defines a computation that will be executed asynchronously by Parsl.
-Apps are Python functions marked with a decorator which
-designates that the function will run asynchronously and cause it to return
-a :class:`~concurrent.futures.Future` instead of the result.
-
-Apps can be one of three types of functions, each with their own type of decorator
-
-- ``@python_app``: Most Python functions
-- ``@bash_app``: A Python function which returns a command line program to execute
-- ``@join_app``: A function which launches one or more new Apps
-
-The intricacies of Python and Bash apps are documented below. Join apps are documented in a later
-section (see :ref:`label-joinapp`).
-
 Python Apps
 -----------
 
@@ -187,10 +168,10 @@ There are several classes of allowed types, each with different rules.
     capital_future = capitalize(first_line_future)
     print(capital_future.result())
 
-  See the section on `Futures <futures.html>`_ for more details.
+  See the section on `Futures <../workflows/futures.html>`_ for more details.
 
 
-Learn more about the types of data allowed in `the data section <data.html>`_.
+Learn more about the types of data allowed in `the data section <../configuration/data.html>`_.
 
 .. note::
 
@@ -203,7 +184,7 @@ Special Keyword Arguments
 
 Some keyword arguments to the Python function are treated differently by Parsl
 
-1. inputs: (list) This keyword argument defines a list of input :ref:`label-futures` or files. 
+1. inputs: (list) This keyword argument defines a list of input :ref:`label-futures` or files.
    Parsl will wait for the results of any listed :ref:`label-futures` to be resolved before executing the app.
    The ``inputs`` argument is useful both for passing files as arguments
    and when one wishes to pass in an arbitrary number of futures at call time.
@@ -225,7 +206,7 @@ Some keyword arguments to the Python function are treated differently by Parsl
 
 2. outputs: (list) This keyword argument defines a list of files that
    will be produced by the app. For each file thus listed, Parsl will create a future,
-   track the file, and ensure that it is correctly created. The future 
+   track the file, and ensure that it is correctly created. The future
    can then be passed to other apps as an input argument.
 
 .. code-block:: python
@@ -253,7 +234,7 @@ Outputs
 +++++++
 
 A Python app returns an AppFuture (see :ref:`label-futures`) as a proxy for the results that will be returned by the
-app once it is executed. This future can be inspected to obtain task status; 
+app once it is executed. This future can be inspected to obtain task status;
 and it can be used to wait for the result, and when complete, present the output Python object(s) returned by the app.
 In case of an error or app failure, the future holds the exception raised by the app.
 
@@ -282,70 +263,3 @@ To summarize, any Python function can be made a Python App with a few restrictio
 2. Functions must explicitly import any required modules if they are defined in script which starts Parsl.
 3. Parsl uses dill and pickle to serialize Python objects to/from apps. Therefore, Parsl require that all input and output objects can be serialized by dill or pickle. See :ref:`label_serialization_error`.
 4. STDOUT and STDERR produced by Python apps remotely are not captured.
-
-
-Bash Apps
----------
-
-.. code-block:: python
-
-       @bash_app
-       def echo(
-           name: str,
-           stdout=parsl.AUTO_LOGNAME  # Requests Parsl to return the stdout
-       ):
-           return f'echo "Hello, {name}!"'
-
-       future = echo('user')
-       future.result() # block until task has completed
-
-       with open(future.stdout, 'r') as f:
-           print(f.read())
-
-
-A Parsl Bash app executes an external application by making a command-line execution.
-Parsl will execute the string returned by the function as a command-line script on a remote worker.
-
-Rules for Function Contents
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Bash Apps follow the same rules :ref:`as Python Apps <function-rules>`.
-For example, imports may need to be inside functions and global variables will be inaccessible.
-
-Inputs and Outputs
-^^^^^^^^^^^^^^^^^^
-
-Bash Apps can use the same kinds of inputs as Python Apps, but only communicate results with Files.
-
-The Bash Apps, unlike Python Apps, can also return the content printed to the Standard Output and Error.
-
-Special Keywords Arguments
-++++++++++++++++++++++++++
-
-In addition to the ``inputs``, ``outputs``, and ``walltime`` keyword arguments
-described above, a Bash app can accept the following keywords:
-
-1. stdout: (string, tuple or ``parsl.AUTO_LOGNAME``) The path to a file to which standard output should be redirected. If set to ``parsl.AUTO_LOGNAME``, the log will be automatically named according to task id and saved under ``task_logs`` in the run directory. If set to a tuple ``(filename, mode)``, standard output will be redirected to the named file, opened with the specified mode as used by the Python `open <https://docs.python.org/3/library/functions.html#open>`_ function.
-2. stderr: (string or ``parsl.AUTO_LOGNAME``) Like stdout, but for the standard error stream.
-3. label: (string) If the app is invoked with ``stdout=parsl.AUTO_LOGNAME`` or ``stderr=parsl.AUTO_LOGNAME``, this argument will be appended to the log name.
-
-Outputs
-+++++++
-
-If the Bash app exits with Unix exit code 0, then the AppFuture will complete. If the Bash app
-exits with any other code, Parsl will treat this as a failure, and the AppFuture will instead
-contain an `BashExitFailure` exception. The Unix exit code can be accessed through the
-``exitcode`` attribute of that `BashExitFailure`.
-
-
-Execution Options
-^^^^^^^^^^^^^^^^^
-
-Bash Apps have the same execution options (e.g., pinning to specific sites) as the Python Apps.
-
-MPI Apps
-^^^^^^^^
-
-Applications which employ MPI to span multiple nodes are a special case of Bash apps,
-and require special modification of Parsl's `execution environment <execution.html>`_ to function.
-Support for MPI applications is described `in a later section <mpi_apps.html>`_.
