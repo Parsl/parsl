@@ -245,6 +245,9 @@ zmq_poll_command_channel_loop command_socket = do
         -- after this send, command socket is back is ready-for-a-REQ state
 
         zmq_msg_close msg
+        -- TODO: should be freeing msg space here
+        -- but would be nice to enforce that it must have been zmq_msg_close'd
+        -- before that?
 
         zmq_poll_command_channel_loop command_socket
 
