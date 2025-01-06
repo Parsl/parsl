@@ -13,7 +13,6 @@ extras_require = {
         'sqlalchemy>=2,<2.1'
     ],
     'visualization' : [
-
         # this pydot bound is copied from networkx's pyproject.toml,
         # version 3.2 (aa2de1adecea09f7b86ff6093b212ca86f22b3ef),
         # because networkx[extra] installs quite a lot of extra stuff
