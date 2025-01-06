@@ -1,4 +1,3 @@
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SrunLauncher
@@ -15,7 +14,6 @@ config = Config(
             max_workers_per_node=1,          # Set number of workers per node
             provider=SlurmProvider(
                 cmd_timeout=60,     # Add extra time for slow scheduler responses
-                channel=LocalChannel(),
                 nodes_per_block=2,
                 init_blocks=1,
                 min_blocks=1,

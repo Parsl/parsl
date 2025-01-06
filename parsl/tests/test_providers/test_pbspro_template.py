@@ -3,7 +3,6 @@ from unittest import mock
 
 import pytest
 
-from parsl.channels import LocalChannel
 from parsl.providers import PBSProProvider
 
 
@@ -12,7 +11,7 @@ def test_submit_script_basic(tmp_path):
     """Test slurm resources table"""
 
     provider = PBSProProvider(
-        queue="debug", channel=LocalChannel(script_dir=tmp_path)
+        queue="debug"
     )
     provider.script_dir = tmp_path
     job_id = str(random.randint(55000, 59000))

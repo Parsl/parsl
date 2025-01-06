@@ -3,7 +3,6 @@ import time
 import pytest
 
 import parsl
-from parsl.channels import LocalChannel
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import SimpleLauncher
@@ -28,7 +27,6 @@ def local_config():
                 cores_per_worker=1,
                 encrypted=True,
                 provider=LocalProvider(
-                    channel=LocalChannel(),
                     init_blocks=1,
                     min_blocks=0,
                     max_blocks=0,
