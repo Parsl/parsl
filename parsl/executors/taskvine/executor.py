@@ -1,3 +1,4 @@
+# Set worker launch option for this executor
 """ TaskVineExecutor utilizes the TaskVine distributed framework developed by the
 Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant,
 high-throughput system for delegating Parsl tasks to thousands of remote machines
@@ -110,8 +111,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  storage_access: Optional[List[Staging]] = None):
 
         # Set worker launch option for this executor
-        # This is to make repr work - otherwise it raises an attribute error
-        self.worker_launch_method = worker_launch_method
         if worker_launch_method == 'factory' or worker_launch_method == 'manual':
             provider = None
 
