@@ -1,4 +1,3 @@
-# Set worker launch option for this executor
 """ TaskVineExecutor utilizes the TaskVine distributed framework developed by the
 Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant,
 high-throughput system for delegating Parsl tasks to thousands of remote machines
