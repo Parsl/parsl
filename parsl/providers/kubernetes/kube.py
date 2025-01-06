@@ -189,7 +189,6 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                                                worker_init=self.worker_init)
 
         logger.debug("Pod name: %s", pod_name)
-
         self._create_pod(image=self.image,
                          pod_name=pod_name,
                          job_id=job_id,
