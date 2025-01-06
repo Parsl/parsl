@@ -8,11 +8,25 @@ from parsl.jobs.states import JobState, JobStatus
 from parsl.jobs.strategy import Strategy
 
 
+# the parameterize tuple consists of:
+# Input:
+#  * number of tasks to mock the load as
+#  * number of workers per node
+# Expected output:
+#  * the number of blocks we should expect to be launched
+#    in this situation
+#
+# This test will configure an executor, then run strategize
+# a few times, asserting that it converges to the correct
+# number of blocks without oscillating.
 @pytest.mark.local
-@pytest.mark.parametrize("ns", [(14, 48, 1),    # issue #3696 regression
-                                (1, 1, 1),      # basic one task/one block behaviour
-                                (100, 1, 20),   # many one-task blocks, hitting max blocks
-                                (47, 48, 1),    # edge cases around #3696
+@pytest.mark.parametrize("ns", [(14, 48, 1),    # values from issue #3696
+
+                                (1, 1, 1),      # one task needs one block
+
+                                (100, 1, 20),   # many one-task blocks, hitting hard-coded max blocks
+
+                                (47, 48, 1),    # some edge cases around #3696 values
                                 (48, 48, 1),    # "
                                 (49, 48, 2),    # "
                                 (149, 50, 3)])  # "
@@ -22,9 +36,6 @@ def test_htex_strategy_does_not_oscillate(ns):
     and a smaller number of active tasks, the htex scaling
     strategy oscillates between 0 and 1 active block, rather
     than converging to 1 active block.
-
-    The choices of 14 tasks and 48 workers per node are taken
-    from issue #3696.
     """
 
     n_tasks, n_workers, n_blocks = ns
