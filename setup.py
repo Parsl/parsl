@@ -11,8 +11,13 @@ extras_require = {
         'sqlalchemy>=1.4,<2'
     ],
     'visualization' : [
-        'pydot',
-        'networkx>=2.5,<2.6',
+        # this pydot bound is copied from networkx's pyproject.toml,
+        # version 3.2 (aa2de1adecea09f7b86ff6093b212ca86f22b3ef),
+        # because networkx[extra] installs quite a lot of extra stuff
+        # that needs more OS dependencies in addition to pydot.
+        'pydot>=1.4.2',
+
+        'networkx>=3.2,<3.3',
         'Flask>=1.0.2',
         'flask_sqlalchemy',
         'pandas<2.2',
@@ -21,7 +26,6 @@ extras_require = {
     ],
     'aws' : ['boto3'],
     'kubernetes' : ['kubernetes'],
-    'oauth_ssh' : ['oauth-ssh>=0.9'],
     'docs' : [
         'ipython<=8.6.0',
         'nbsphinx',
@@ -34,8 +38,7 @@ extras_require = {
     'workqueue': ['work_queue'],
     'flux': ['pyyaml', 'cffi', 'jsonschema'],
     'proxystore': ['proxystore'],
-    'radical-pilot': ['radical.pilot==1.60', 'radical.utils==1.60'],
-    'ssh': ['paramiko'],
+    'radical-pilot': ['radical.pilot==1.90', 'radical.utils==1.90'],
     # Disabling psi-j since github direct links are not allowed by pypi
     # 'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
 }
