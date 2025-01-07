@@ -14,8 +14,7 @@ mpi4py
 # sqlalchemy is needed for typechecking, so it's here
 # as well as at runtime for optional monitoring execution
 # (where it's specified in setup.py)
-sqlalchemy>=1.4,<2
-sqlalchemy2-stubs
+sqlalchemy>=2,<2.1
 
 Sphinx==4.5.0
 twine
