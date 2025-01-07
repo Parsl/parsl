@@ -25,6 +25,7 @@ class TaskVineManagerConfig:
     address: Optional[str]
         Address of the local machine.
         If None, socket.gethostname() will be used to determine the address.
+        XXXX ^ if None, looks like get_any_address is being used and in my kubernetes setup, choosing 127.0.0.1
 
     project_name: Optional[str]
         If given, TaskVine will periodically report its status and performance
