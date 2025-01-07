@@ -15,7 +15,6 @@ def fresh_config():
                 encrypted=False,  # needs certificate fs to be mounted in same place...
                 provider=KubernetesProvider(
                     worker_init=". /venv/bin/activate",
-                    # pod_name="override-pod-name", # can't use default name because of dots, without own bugfix
                     image="parsl:ci",
                     max_mem="2048Gi"  # was getting OOM-killing of workers with default... maybe this will help.
                     ),
