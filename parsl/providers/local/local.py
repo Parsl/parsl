@@ -2,7 +2,6 @@ import logging
 import os
 import time
 
-from parsl.channels import LocalChannel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.providers.base import ExecutionProvider
@@ -37,7 +36,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
     """
 
     def __init__(self,
-                 channel=LocalChannel(),
                  nodes_per_block=1,
                  launcher=SingleNodeLauncher(),
                  init_blocks=1,
@@ -46,7 +44,6 @@ class LocalProvider(ExecutionProvider, RepresentationMixin):
                  worker_init='',
                  cmd_timeout=30,
                  parallelism=1):
-        self.channel = channel
         self._label = 'local'
         self.nodes_per_block = nodes_per_block
         self.launcher = launcher

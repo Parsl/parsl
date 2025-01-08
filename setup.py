@@ -8,14 +8,25 @@ with open('requirements.txt') as f:
 
 extras_require = {
     'monitoring' : [
-        'sqlalchemy>=1.4,<2'
+        # sqlalchemy does not use semantic versioning.
+        # see https://github.com/sqlalchemy/sqlalchemy/discussions/11391#discussioncomment-9472033
+        'sqlalchemy>=2,<2.1'
     ],
     'visualization' : [
-        'pydot',
-        'networkx>=2.5,<2.6',
+        # this pydot bound is copied from networkx's pyproject.toml,
+        # version 3.2 (aa2de1adecea09f7b86ff6093b212ca86f22b3ef),
+        # because networkx[extra] installs quite a lot of extra stuff
+        # that needs more OS dependencies in addition to pydot.
+        'pydot>=1.4.2',
+
+        'networkx>=3.2,<3.3',
         'Flask>=1.0.2',
         'flask_sqlalchemy',
-        'pandas<2.2',
+
+        # pandas uses "loose semantic versioning"
+        # https://pandas.pydata.org/docs/development/policies.html#version-policy
+        'pandas<3,>=2.2',
+
         'plotly',
         'python-daemon'
     ],
@@ -33,7 +44,7 @@ extras_require = {
     'workqueue': ['work_queue'],
     'flux': ['pyyaml', 'cffi', 'jsonschema'],
     'proxystore': ['proxystore'],
-    'radical-pilot': ['radical.pilot==1.60', 'radical.utils==1.60'],
+    'radical-pilot': ['radical.pilot==1.90', 'radical.utils==1.90'],
     # Disabling psi-j since github direct links are not allowed by pypi
     # 'psij': ['psi-j-parsl@git+https://github.com/ExaWorks/psi-j-parsl']
 }

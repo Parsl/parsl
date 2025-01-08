@@ -7,8 +7,6 @@ from typing import Any, Dict, Optional
 
 import typeguard
 
-from parsl.channels import LocalChannel
-from parsl.channels.base import Channel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.launchers.base import Launcher
@@ -73,8 +71,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     clusters : str
         Slurm cluster name, or comma seperated cluster list, used to choose between different clusters in a federated Slurm instance.
         If unspecified or ``None``, no slurm directive for clusters will be added.
-    channel : Channel
-        Channel for accessing this provider.
     nodes_per_block : int
         Nodes to provision per block.
     cores_per_node : int
@@ -119,7 +115,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  qos: Optional[str] = None,
                  constraint: Optional[str] = None,
                  clusters: Optional[str] = None,
-                 channel: Channel = LocalChannel(),
                  nodes_per_block: int = 1,
                  cores_per_node: Optional[int] = None,
                  mem_per_node: Optional[int] = None,
@@ -136,7 +131,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  launcher: Launcher = SingleNodeLauncher()):
         label = 'slurm'
         super().__init__(label,
-                         channel,
                          nodes_per_block,
                          init_blocks,
                          min_blocks,

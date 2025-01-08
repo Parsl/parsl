@@ -18,8 +18,6 @@ class ClusterProvider(ExecutionProvider):
     ----------
       label : str
         Label for this provider.
-      channel : Channel
-        Channel for accessing this provider.
       walltime : str
         Walltime requested per block in HH:MM:SS.
       launcher : Launcher
@@ -45,7 +43,6 @@ class ClusterProvider(ExecutionProvider):
 
     def __init__(self,
                  label,
-                 channel,
                  nodes_per_block,
                  init_blocks,
                  min_blocks,
@@ -56,7 +53,6 @@ class ClusterProvider(ExecutionProvider):
                  cmd_timeout=10):
 
         self._label = label
-        self.channel = channel
         self.nodes_per_block = nodes_per_block
         self.init_blocks = init_blocks
         self.min_blocks = min_blocks

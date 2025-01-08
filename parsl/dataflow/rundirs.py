@@ -6,17 +6,16 @@ logger = logging.getLogger(__name__)
 
 
 def make_rundir(path: str) -> str:
-    """When a path has not been specified, make the run directory.
+    """Create a numbered run directory under the specified path.
 
-    Creates a rundir with the following hierarchy:
-        ./runinfo <- Home of all run directories
+        ./runinfo <- specified path
           |----000
           |----001 <- Directories for each run
           | ....
           |----NNN
 
-    Kwargs:
-        - path (str): String path to a specific run dir
+    Args:
+        - path (str): String path to root of all rundirs
     """
     try:
         if not os.path.exists(path):
