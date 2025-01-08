@@ -197,9 +197,11 @@ Internal
     parsl.utils.Timer
 
 Task Vine configuration
+=======================
 
 .. autosummary::
     :toctree: stubs
     :nosignatures:
 
     parsl.executors.taskvine.TaskVineManagerConfig
+    parsl.executors.taskvine.TaskVineFactoryConfig

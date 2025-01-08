@@ -32,7 +32,7 @@ class TaskVineFactoryConfig:
 
     worker_options: Optional[str]
         Additional options to pass to workers. Run
-        `vine_worker --help` for more details.
+        ``vine_worker --help`` for more details.
         Default is None.
 
     worker_executable: str
