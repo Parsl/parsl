@@ -697,12 +697,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Work Queue shutdown started")
         self.should_stop.value = True
 
-        # Remove the workers that are still going
-        kill_ids = [self.blocks_to_job_id[block] for block in self.blocks_to_job_id.keys()]
-        if self.provider:
-            logger.debug("Cancelling blocks")
-            self.provider.cancel(kill_ids)
-
         logger.debug("Joining on submit process")
         self.submit_process.join()
         self.submit_process.close()
