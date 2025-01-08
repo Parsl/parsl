@@ -56,7 +56,7 @@ class TaskVineManagerConfig:
         environment name is given, TaskVine will package the conda
         environment in a tarball and send it along with tasks to be
         executed in a replicated conda environment.
-        If a tarball of packages (*.tar.gz) is given, TaskVine
+        If a tarball of packages (``*.tar.gz``) is given, TaskVine
         skips the packaging step and sends the tarball along with
         tasks to be executed in a replicated conda environment.
 
