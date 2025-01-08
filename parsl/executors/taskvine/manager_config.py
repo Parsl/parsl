@@ -24,7 +24,7 @@ class TaskVineManagerConfig:
 
     address: Optional[str]
         Address of the local machine.
-        If None, ``parsl.addresses.get_any_address`` will be used to determine the address.
+        If None, :py:func:`parsl.addresses.get_any_address` will be used to determine the address.
 
     project_name: Optional[str]
         If given, TaskVine will periodically report its status and performance
