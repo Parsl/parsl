@@ -9,8 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence,
 
 from typing_extensions import TypedDict
 
-if TYPE_CHECKING:
-    from parsl.dataflow.futures import AppFuture
+import parsl.dataflow.futures as pdf
 
 import parsl.dataflow.dflow as dflow
 from parsl.dataflow.states import States
@@ -29,7 +28,7 @@ class TaskRecord(TypedDict, total=False):
 
     depends: List[Future]
 
-    app_fu: AppFuture
+    app_fu: pdf.AppFuture
     """The Future which was returned to the user when an app was invoked.
     """
 
