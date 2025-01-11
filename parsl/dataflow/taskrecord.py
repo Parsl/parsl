@@ -48,7 +48,7 @@ class TaskRecord(TypedDict, total=False):
     fail_cost: float
     fail_history: List[str]
 
-    checkpoint: bool  # this change is also in #1516
+    checkpoint: bool
     """Should this task be checkpointed?
     """
 
