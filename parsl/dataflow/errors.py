@@ -1,4 +1,4 @@
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Sequence, Tuple
 
 from parsl.errors import ParslError
 
@@ -32,12 +32,7 @@ class BadCheckpoint(DataFlowException):
         return self.__repr__()
 
 
-class PropagatedError(DataFlowException):
-    pass
-    # TODO: this should get a refactor of the handling from dependency and join error
-
-
-class DependencyError(PropagatedError):
+class PropagatedException(DataFlowException):
     """Error raised if an app cannot run because there was an error
        in a dependency.
 
@@ -48,9 +43,14 @@ class DependencyError(PropagatedError):
          - task_id: Task ID of the task that failed because of the dependency error
     """
 
-    def __init__(self, dependent_exceptions_tids: Sequence[Tuple[Exception, str]], task_id: int) -> None:
+    def __init__(self,
+                 dependent_exceptions_tids: Sequence[Tuple[BaseException, str]],
+                 task_id: int,
+                 *,
+                 failure_description: str) -> None:
         self.dependent_exceptions_tids = dependent_exceptions_tids
         self.task_id = task_id
+        self._failure_description = failure_description
 
         (cause, cause_sequence) = self._find_any_root_cause()
         self.__cause__ = cause
@@ -58,7 +58,8 @@ class DependencyError(PropagatedError):
 
     def __str__(self) -> str:
         sequence_text = " <- ".join(self._cause_sequence)
-        return f"Dependency failure for task {self.task_id}. The representative causing exception is via failure sequence {sequence_text}"
+        return f"{self._failure_description} for task {self.task_id}. " \
+               f"The representative causing exception is via failure sequence {sequence_text}"
 
     def _find_any_root_cause(self) -> Tuple[BaseException, List[str]]:
         """Looks recursively through self.dependent_exceptions_tids to find
@@ -69,6 +70,7 @@ class DependencyError(PropagatedError):
         dep_ids = []
         while isinstance(e, DependencyError) and len(e.dependent_exceptions_tids) >= 1:
             id_txt = e.dependent_exceptions_tids[0][1]
+            assert isinstance(id_txt, str)
             # if there are several causes for this exception, label that
             # there are more so that we know that the representative fail
             # sequence is not the full story.
@@ -79,17 +81,26 @@ class DependencyError(PropagatedError):
         return e, dep_ids
 
 
-# TODO: this exception should get the same treatment as dependency error
-# make superclass PropagatedError
-class JoinError(PropagatedError):
+class DependencyError(PropagatedException):
+    """Error raised if an app cannot run because there was an error
+       in a dependency.
+
+    Args:
+         - dependent_exceptions_tids: List of exceptions and identifiers for
+           dependencies which failed. The identifier might be a task ID or
+           the repr of a non-DFK Future.
+         - task_id: Task ID of the task that failed because of the dependency error
+    """
+    def __init__(self, dependent_exceptions_tids: Sequence[Tuple[BaseException, str]], task_id: int) -> None:
+        super().__init__(dependent_exceptions_tids, task_id,
+                         failure_description="Dependency failure")
+
+
+class JoinError(PropagatedException):
     """Error raised if apps joining into a join_app raise exceptions.
        There can be several exceptions (one from each joining app),
        and JoinError collects them all together.
     """
-    def __init__(self, dependent_exceptions_tids: Sequence[Tuple[BaseException, Optional[str]]], task_id: int) -> None:
-        self.dependent_exceptions_tids = dependent_exceptions_tids
-        self.task_id = task_id
-
-    def __str__(self) -> str:
-        dep_tids = [tid for (exception, tid) in self.dependent_exceptions_tids]
-        return "Join failure for task {} with failed join dependencies from tasks {}".format(self.task_id, dep_tids)
+    def __init__(self, dependent_exceptions_tids: Sequence[Tuple[BaseException, str]], task_id: int) -> None:
+        super().__init__(dependent_exceptions_tids, task_id,
+                         failure_description="Join failure")
