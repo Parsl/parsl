@@ -42,7 +42,6 @@ class TaskRecord(TypedDict, total=False):
     executed on.
     """
 
-    retries_left: int
     fail_count: int
     fail_cost: float
     fail_history: List[str]
