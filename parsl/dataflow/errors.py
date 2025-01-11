@@ -32,7 +32,12 @@ class BadCheckpoint(DataFlowException):
         return self.__repr__()
 
 
-class DependencyError(DataFlowException):
+class PropagatedError(DataFlowException):
+    pass
+    # TODO: this should get a refactor of the handling from dependency and join error
+
+
+class DependencyError(PropagatedError):
     """Error raised if an app cannot run because there was an error
        in a dependency.
 
@@ -53,7 +58,7 @@ class DependencyError(DataFlowException):
 
     def __str__(self) -> str:
         sequence_text = " <- ".join(self._cause_sequence)
-        return f"Dependency failure for task {self.task_id}. Example task failure sequence {sequence_text}"
+        return f"Dependency failure for task {self.task_id}. The representative causing exception is via failure sequence {sequence_text}"
 
     def _find_any_root_cause(self) -> Tuple[BaseException, List[str]]:
         """Looks recursively through self.dependent_exceptions_tids to find
@@ -63,13 +68,20 @@ class DependencyError(DataFlowException):
         e: BaseException = self
         dep_ids = []
         while isinstance(e, DependencyError) and len(e.dependent_exceptions_tids) >= 1:
+            id_txt = e.dependent_exceptions_tids[0][1]
+            # if there are several causes for this exception, label that
+            # there are more so that we know that the representative fail
+            # sequence is not the full story.
+            if len(e.dependent_exceptions_tids) > 1:
+                id_txt += " (+ others)"
             dep_ids.append(e.dependent_exceptions_tids[0][1])
             e = e.dependent_exceptions_tids[0][0]
         return e, dep_ids
 
 
 # TODO: this exception should get the same treatment as dependency error
-class JoinError(DataFlowException):
+# make superclass PropagatedError
+class JoinError(PropagatedError):
     """Error raised if apps joining into a join_app raise exceptions.
        There can be several exceptions (one from each joining app),
        and JoinError collects them all together.
