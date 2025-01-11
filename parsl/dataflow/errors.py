@@ -59,7 +59,7 @@ class PropagatedException(DataFlowException):
     def __str__(self) -> str:
         sequence_text = " <- ".join(self._cause_sequence)
         return f"{self._failure_description} for task {self.task_id}. " \
-               f"The representative causing exception is via failure sequence {sequence_text}"
+               f"The representative cause is via {sequence_text}"
 
     def _find_any_root_cause(self) -> Tuple[BaseException, List[str]]:
         """Looks recursively through self.dependent_exceptions_tids to find
