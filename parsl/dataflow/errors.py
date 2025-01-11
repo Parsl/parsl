@@ -33,8 +33,9 @@ class BadCheckpoint(DataFlowException):
 
 
 class PropagatedException(DataFlowException):
-    """Error raised if an app cannot run because there was an error
-       in a dependency.
+    """Error raised if an app fails because there was an error
+       in a related task. This is intended to be subclassed for
+       dependency and join_app errors.
 
     Args:
          - dependent_exceptions_tids: List of exceptions and brief descriptions
@@ -63,8 +64,8 @@ class PropagatedException(DataFlowException):
 
     def _find_any_root_cause(self) -> Tuple[BaseException, List[str]]:
         """Looks recursively through self.dependent_exceptions_tids to find
-        an exception that caused this dependency failure, that is not itself
-        a dependency failure.
+        an exception that caused this propagated error, that is not itself
+        a propagated error.
         """
         e: BaseException = self
         dep_ids = []
@@ -83,7 +84,8 @@ class PropagatedException(DataFlowException):
 
 class DependencyError(PropagatedException):
     """Error raised if an app cannot run because there was an error
-       in a dependency.
+       in a dependency. There can be several exceptions (one from each
+       dependency) and DependencyError collects them all together.
 
     Args:
          - dependent_exceptions_tids: List of exceptions and brief descriptions
