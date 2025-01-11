@@ -80,7 +80,7 @@ jobs:
         GLOBUS_COMPUTE_CLIENT_SECRET: ${{ secrets.GLOBUS_COMPUTE_SECRET_KEY }}
       run: |
         source .venv/bin/activate
-        export GLOBUS_COMPUTE_ENDPOINT=$(globus-compute-endpoint list | grep default | cut -c 3-38) 
+        export GLOBUS_COMPUTE_ENDPOINT=$(jq -r .endpoint_id < ~/.globus_compute/default/endpoint.json)
         echo "GLOBUS_COMPUTE_ENDPOINT = $GLOBUS_COMPUTE_ENDPOINT"
 
         export PARSL_TEST_PRESERVE_NUM_RUNS=7
