@@ -1435,7 +1435,7 @@ class DataFlowKernel:
         # in other cases look for AppFuture, DataFuture classes...
         # a type driven one would be better...
         # with possible slight behaviour changes?
-        if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
+        if isinstance(dep, AppFuture) and dep.task_record['dfk'] == self:
             tid = "task " + repr(dep.task_record['id'])
         else:
             tid = repr(dep)
