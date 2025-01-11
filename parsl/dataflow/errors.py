@@ -37,9 +37,9 @@ class PropagatedException(DataFlowException):
        in a dependency.
 
     Args:
-         - dependent_exceptions_tids: List of exceptions and identifiers for
-           dependencies which failed. The identifier might be a task ID or
-           the repr of a non-DFK Future.
+         - dependent_exceptions_tids: List of exceptions and brief descriptions
+           for dependencies which failed. The description might be a task ID or
+           the repr of a non-AppFuture.
          - task_id: Task ID of the task that failed because of the dependency error
     """
 
@@ -86,9 +86,9 @@ class DependencyError(PropagatedException):
        in a dependency.
 
     Args:
-         - dependent_exceptions_tids: List of exceptions and identifiers for
-           dependencies which failed. The identifier might be a task ID or
-           the repr of a non-DFK Future.
+         - dependent_exceptions_tids: List of exceptions and brief descriptions
+           for dependencies which failed. The description might be a task ID or
+           the repr of a non-AppFuture.
          - task_id: Task ID of the task that failed because of the dependency error
     """
     def __init__(self, dependent_exceptions_tids: Sequence[Tuple[BaseException, str]], task_id: int) -> None:
