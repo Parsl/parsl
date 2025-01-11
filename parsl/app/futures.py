@@ -2,7 +2,6 @@
 """
 import logging
 from concurrent.futures import Future
-from typing import Optional
 
 import typeguard
 
@@ -39,7 +38,7 @@ class DataFuture(Future):
             self.set_result(self.file_obj)
 
     @typeguard.typechecked
-    def __init__(self, fut: Future, file_obj: File, tid: Optional[int] = None) -> None:
+    def __init__(self, fut: Future, file_obj: File, tid: int) -> None:
         """Construct the DataFuture object.
 
         If the file_obj is a string convert to a File.
