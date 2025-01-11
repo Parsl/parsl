@@ -68,7 +68,7 @@ class PropagatedException(DataFlowException):
         """
         e: BaseException = self
         dep_ids = []
-        while isinstance(e, DependencyError) and len(e.dependent_exceptions_tids) >= 1:
+        while isinstance(e, PropagatedException) and len(e.dependent_exceptions_tids) >= 1:
             id_txt = e.dependent_exceptions_tids[0][1]
             assert isinstance(id_txt, str)
             # if there are several causes for this exception, label that
