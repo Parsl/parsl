@@ -1431,7 +1431,7 @@ class DataFlowKernel:
         # If this Future is associated with a task inside this DFK,
         # then refer to the task ID.
         # Otherwise make a repr of the Future object.
-        # TODO: in some cases of refactoring, look for task_record
+        # TODO: (note in PR): in some cases of refactoring, look for task_record
         # in other cases look for AppFuture, DataFuture classes...
         # a type driven one would be better...
         # with possible slight behaviour changes?
