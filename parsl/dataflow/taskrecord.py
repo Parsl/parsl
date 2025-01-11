@@ -68,7 +68,6 @@ class TaskRecord(TypedDict, total=False):
 
     # these three could be more strongly typed perhaps but I'm not thinking about that now
     func: Callable
-    fn_hash: str
     args: Sequence[Any]
     # in some places we uses a Tuple[Any, ...] and in some places a List[Any].
     # This is an attempt to correctly type both of those.
