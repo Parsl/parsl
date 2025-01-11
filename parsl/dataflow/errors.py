@@ -1,5 +1,4 @@
-import traceback
-from typing import Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 from parsl.errors import ParslError
 
@@ -48,15 +47,28 @@ class DependencyError(DataFlowException):
         self.dependent_exceptions_tids = dependent_exceptions_tids
         self.task_id = task_id
 
+        (cause, cause_sequence) = self._find_any_root_cause()
+        self.__cause__ = cause
+        self._cause_sequence = cause_sequence
+
     def __str__(self) -> str:
-        e: Exception = self
+        sequence_text = " <- ".join(self._cause_sequence)
+        return f"Dependency failure for task {self.task_id}. Example task failure sequence {sequence_text}"
+
+    def _find_any_root_cause(self) -> Tuple[BaseException, List[str]]:
+        """Looks recursively through self.dependent_exceptions_tids to find
+        an exception that caused this dependency failure, that is not itself
+        a dependency failure.
+        """
+        e: BaseException = self
         dep_ids = []
         while isinstance(e, DependencyError) and len(e.dependent_exceptions_tids) >= 1:
             dep_ids.append(e.dependent_exceptions_tids[0][1])
             e = e.dependent_exceptions_tids[0][0]
-        return f"Dependency failure for task {self.task_id}, caused (via {' <- '.join(dep_ids)}) by: \n{''.join(traceback.format_exception(e))}"
+        return e, dep_ids
 
 
+# TODO: this exception should get the same treatment as dependency error
 class JoinError(DataFlowException):
     """Error raised if apps joining into a join_app raise exceptions.
        There can be several exceptions (one from each joining app),
