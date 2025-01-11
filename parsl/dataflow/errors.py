@@ -76,7 +76,7 @@ class PropagatedException(DataFlowException):
             # sequence is not the full story.
             if len(e.dependent_exceptions_tids) > 1:
                 id_txt += " (+ others)"
-            dep_ids.append(e.dependent_exceptions_tids[0][1])
+            dep_ids.append(id_txt)
             e = e.dependent_exceptions_tids[0][0]
         return e, dep_ids
 
