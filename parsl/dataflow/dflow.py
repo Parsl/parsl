@@ -1438,7 +1438,7 @@ class DataFlowKernel:
         if isinstance(dep, AppFuture) and dep.task_record['dfk'] == self:
             tid = "task " + repr(dep.task_record['id'])
         elif isinstance(dep, DataFuture):
-            tid = "DataFuture from task " + str(tid)  # n.b. might be different DFK?
+            tid = "DataFuture from task " + str(dep.tid)  # n.b. might be different DFK?
         else:
             tid = repr(dep)
         return tid
