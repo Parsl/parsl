@@ -86,11 +86,19 @@ Parsl currently supports the following executors:
 4. `parsl.executors.taskvine.TaskVineExecutor`: This executor uses `TaskVine <https://ccl.cse.nd.edu/software/taskvine/>`_ as the execution backend. TaskVine scales up to tens of thousands of cores and actively uses local storage on compute nodes to offer a diverse array of performance-oriented features, including: smart caching and sharing common large files between tasks and compute nodes, reliable execution of tasks, dynamic resource sizing, automatic Python environment detection and sharing.
 These executors cover a broad range of execution requirements. As with other Parsl components, there is a standard interface (ParslExecutor) that can be implemented to add support for other executors.
 
+5. `parsl.executors.GlobusComputeExecutor`: This executor uses `Globus Compute <https://www.globus.org/compute>`_
+as the execution backend. Globus Compute is a distributed Function as a Service (FaaS) platform that enables secure
+execution of functions on heterogeneous remote computers, from laptops to campus clusters, clouds, and supercomputers.
+Functions are executed on `Globus Compute Endpoints <https://globus-compute.readthedocs.io/en/latest/endpoints/endpoints.html>`_
+that can be `configured <https://globus-compute.readthedocs.io/en/latest/endpoints/endpoint_examples.html>`_
+to scale execution on most batch schedulers automatically. Since Globus Compute Endpoints use `parsl.executors.HighThroughputExecutor`
+as the default execution system, this executor can be thought of as an extension of the `parsl.executors.HighThroughputExecutor` with
+a secure and reliable remote execution wrapper.
+
 .. note::
    Refer to :ref:`configuration-section` for information on how to configure these executors.
 
 
-Launchers
 ---------
 
 Many LRMs offer mechanisms for spawning applications across nodes 
