@@ -6,8 +6,8 @@ from concurrent.futures import Future
 from typing import Any, Optional, Sequence, Union
 
 import parsl.app.app as app
-from parsl.app.futures import DataFuture
 import parsl.dataflow.taskrecord as tr
+from parsl.app.futures import DataFuture
 
 logger = logging.getLogger(__name__)
 
