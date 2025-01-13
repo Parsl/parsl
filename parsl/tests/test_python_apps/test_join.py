@@ -97,7 +97,10 @@ def test_error():
     f = outer_error()
     e = f.exception()
     assert isinstance(e, JoinError)
+
+    assert len(e.dependent_exceptions_tids) == 1
     assert isinstance(e.dependent_exceptions_tids[0][0], InnerError)
+    assert e.dependent_exceptions_tids[0][1].startswith("task ")
 
 
 def test_two_errors():
