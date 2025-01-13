@@ -267,7 +267,7 @@ class GlobusStaging(Staging, RepresentationMixin):
 # this cannot be a class method, but must be a function, because I want
 # to be able to use partial() on it - and partial() does not work on
 # class methods
-def _globus_stage_in(provider, executor, outputs, parent_fut=None, _parsl_staging_inhibit=True):
+def _globus_stage_in(provider, executor, *, parent_fut=None, outputs, _parsl_staging_inhibit=True):
     globus_ep = provider._get_globus_endpoint(executor)
     file = outputs[0]
     dst_path = os.path.join(
@@ -280,7 +280,7 @@ def _globus_stage_in(provider, executor, outputs, parent_fut=None, _parsl_stagin
             file.path, dst_path)
 
 
-def _globus_stage_out(provider, executor, app_fu, inputs, _parsl_staging_inhibit=True):
+def _globus_stage_out(provider, executor, *, app_fu, inputs, _parsl_staging_inhibit=True):
     """
     Although app_fu isn't directly used in the stage out code,
     it is needed as an input dependency to ensure this code

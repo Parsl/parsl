@@ -96,7 +96,7 @@ class ZipFileStaging(Staging):
         return app_fut._outputs[0]
 
 
-def _zip_stage_out(zip_file, inside_path, working_dir, inputs, parent_fut=None, _parsl_staging_inhibit=True):
+def _zip_stage_out(zip_file, inside_path, working_dir, *, parent_fut=None, inputs, _parsl_staging_inhibit=True):
     file = inputs[0]
 
     os.makedirs(os.path.dirname(zip_file), exist_ok=True)

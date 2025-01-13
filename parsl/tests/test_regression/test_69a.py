@@ -10,7 +10,7 @@ local_config = config
 
 
 @bash_app
-def echo_slow_message(msg, outputs, sleep=0, fu=None, stderr='std.err', stdout='std.out'):
+def echo_slow_message(msg, *, sleep=0, fu=None, outputs, stderr='std.err', stdout='std.out'):
     cmd_line = 'sleep {sleep}; echo {0} > {outputs[0]}'
     return cmd_line
 
@@ -28,7 +28,7 @@ def test_immediate_datafuture():
     """
 
     import time
-    fu = echo_slow_message("Hello world", outputs=["hello.1.txt"], sleep=1)
+    fu = echo_slow_message("Hello world", sleep=1, outputs=["hello.1.txt"])
     d_fu = fu.outputs[0]
 
     time.sleep(0.1)
@@ -50,8 +50,8 @@ def test_delayed_datafuture():
     import time
     sleep_fu = sleep()
 
-    fu = echo_slow_message("Hello world", outputs=["hello.1.txt"], sleep=1,
-                           fu=sleep_fu)
+    fu = echo_slow_message("Hello world", sleep=1, fu=sleep_fu,
+                           outputs=["hello.1.txt"])
     d_fu = fu.outputs[0]
     state_1 = d_fu.__str__()
     print("State_1 : ", state_1, "Fu:", fu.parent)
