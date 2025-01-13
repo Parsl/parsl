@@ -7,7 +7,7 @@ from parsl.tests.configs.local_threads import config
 
 
 @bash_app
-def echo_to_file(inputs=(), outputs=(), walltime=0.01):
+def echo_to_file(inputs=None, outputs=None, walltime=0.01):
     return """echo "sleeping"; sleep 0.05"""
 
 

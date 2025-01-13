@@ -96,7 +96,7 @@ def remote_side_bash_executor(func, *args, **kwargs):
     # TODO : Add support for globs here
 
     missing = []
-    for outputfile in kwargs.get('outputs', []):
+    for outputfile in kwargs.get('outputs') or []:
         fpath = outputfile.filepath
 
         if not os.path.exists(fpath):
