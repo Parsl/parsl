@@ -2,7 +2,6 @@
 """
 import logging
 from concurrent.futures import Future
-from typing import Optional
 
 import typeguard
 
@@ -39,24 +38,23 @@ class DataFuture(Future):
             self.set_result(self.file_obj)
 
     @typeguard.typechecked
-    def __init__(self, fut: Future, file_obj: File, tid: Optional[int] = None) -> None:
+    def __init__(self, fut: Future, file_obj: File, tid: int) -> None:
         """Construct the DataFuture object.
 
         If the file_obj is a string convert to a File.
 
         Args:
-            - fut (AppFuture) : AppFuture that this DataFuture will track
-            - file_obj (string/File obj) : Something representing file(s)
+            - fut (Future) : Future that this DataFuture will track.
+                             Completion of ``fut`` indicates that the data is
+                             ready.
+            - file_obj (File) : File that this DataFuture represents the availability of
 
         Kwargs:
             - tid (task_id) : Task id that this DataFuture tracks
         """
         super().__init__()
         self._tid = tid
-        if isinstance(file_obj, File):
-            self.file_obj = file_obj
-        else:
-            raise ValueError("DataFuture must be initialized with a File, not {}".format(type(file_obj)))
+        self.file_obj = file_obj
         self.parent = fut
 
         self.parent.add_done_callback(self.parent_callback)

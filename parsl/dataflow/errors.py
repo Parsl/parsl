@@ -25,11 +25,8 @@ class BadCheckpoint(DataFlowException):
     def __init__(self, reason: str) -> None:
         self.reason = reason
 
-    def __repr__(self) -> str:
-        return self.reason
-
     def __str__(self) -> str:
-        return self.__repr__()
+        return self.reason
 
 
 class PropagatedException(DataFlowException):
