@@ -38,11 +38,8 @@ class WorkerLost(Exception):
         self.worker_id = worker_id
         self.hostname = hostname
 
-    def __repr__(self):
-        return "Task failure due to loss of worker {} on host {}".format(self.worker_id, self.hostname)
-
     def __str__(self):
-        return self.__repr__()
+        return "Task failure due to loss of worker {} on host {}".format(self.worker_id, self.hostname)
 
 
 class CommandClientTimeoutError(Exception):
