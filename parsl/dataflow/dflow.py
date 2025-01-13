@@ -944,7 +944,7 @@ class DataFlowKernel:
                 append_failure(e, dep)
 
         # Check for futures in inputs=[<fut>...]
-        if 'inputs' in kwargs:
+        if kwargs.get('inputs'):
             new_inputs = []
             for dep in kwargs['inputs']:
                 try:

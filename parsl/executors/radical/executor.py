@@ -422,9 +422,9 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
                 task.use_mpi = False
                 task.function = self._pack_and_apply_message(func, args, kwargs)
 
-        task.input_staging = self._stage_files(kwargs.get("inputs", []),
+        task.input_staging = self._stage_files(kwargs.get("inputs") or [],
                                                mode='in')
-        task.output_staging = self._stage_files(kwargs.get("outputs", []),
+        task.output_staging = self._stage_files(kwargs.get("outputs") or [],
                                                 mode='out')
 
         task.input_staging.extend(self._stage_files(list(args), mode='in'))
