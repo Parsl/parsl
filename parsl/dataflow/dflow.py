@@ -1428,13 +1428,12 @@ class DataFlowKernel:
                 kw))
 
     def render_future_description(self, dep: Future) -> str:
-        # If this Future is associated with a task inside this DFK,
-        # then refer to the task ID.
-        # Otherwise make a repr of the Future object.
+        """Renders a description of the future in the context of the current
+        DFK: if the future is an AppFuture associated with the current DFK,
+        render a task ID, otherwise use the object's repr.
+        """
         if isinstance(dep, AppFuture) and dep.task_record['dfk'] == self:
             tid = "task " + repr(dep.task_record['id'])
-        elif isinstance(dep, DataFuture):
-            tid = "DataFuture from task " + str(dep.tid)  # n.b. might be different DFK?
         else:
             tid = repr(dep)
         return tid
