@@ -45,7 +45,7 @@ class DataFuture(Future):
 
         Args:
             - fut (Future) : Future that this DataFuture will track.
-                             Completion of `fut` indicates that the data is
+                             Completion of ``fut`` indicates that the data is
                              ready.
             - file_obj (File) : File that this DataFuture represents the availability of
 
