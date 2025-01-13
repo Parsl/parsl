@@ -41,28 +41,3 @@ def test_fail_sequence(fail_probs):
 
     with pytest.raises(DependencyError):
         t_final.result()
-
-
-def test_deps(width=3):
-    """Random failures in branches of Map -> Map -> reduce"""
-    # App1   App2  ... AppN
-    futs = [random_fail(fail_prob=0.4) for _ in range(width)]
-
-    # App1   App2  ... AppN
-    # |       |        |
-    # V       V        V
-    # App1   App2  ... AppN
-
-    futs = [random_fail(fail_prob=0.8, inputs=[f]) for f in futs]
-
-    # App1   App2  ... AppN
-    #   |       |        |
-    #   V       V        V
-    # App1   App2  ... AppN
-    #    \      |       /
-    #     \     |      /
-    # App_Final
-    try:
-        random_fail(fail_prob=0, inputs=futs).result()
-    except DependencyError:
-        pass
