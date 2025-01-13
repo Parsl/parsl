@@ -9,7 +9,7 @@ class ManufacturedTestFailure(Exception):
 
 
 @python_app
-def random_fail(fail_prob: float, inputs=()):
+def random_fail(fail_prob: float, inputs=None):
     import random
     if random.random() < fail_prob:
         raise ManufacturedTestFailure("App failure")

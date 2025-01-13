@@ -9,7 +9,7 @@ import parsl
 
 
 @parsl.python_app
-def this_app(inputs=()):
+def this_app(inputs):
     return inputs[0]
 
 

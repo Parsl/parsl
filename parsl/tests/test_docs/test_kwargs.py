@@ -12,7 +12,7 @@ def test_inputs():
         return x * 2
 
     @python_app()
-    def reduce_app(inputs=()):
+    def reduce_app(inputs):
         return sum(inputs)
 
     map_futures = [map_app(x) for x in range(3)]
@@ -24,7 +24,7 @@ def test_inputs():
 @pytest.mark.shared_fs
 def test_outputs(tmpd_cwd):
     @python_app()
-    def write_app(message, outputs=()):
+    def write_app(message, outputs):
         """Write a single message to every file in outputs"""
         for path in outputs:
             with open(path, 'w') as fp:

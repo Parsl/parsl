@@ -5,7 +5,7 @@ from parsl.data_provider.files import File
 
 
 @bash_app
-def cat(inputs=(), outputs=(), stdout=None, stderr=None):
+def cat(inputs, outputs, stdout=None, stderr=None):
     infiles = " ".join(i.filepath for i in inputs)
     return f"cat {infiles} &> {outputs[0]}"
 

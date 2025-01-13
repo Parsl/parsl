@@ -5,7 +5,7 @@ from parsl.data_provider.files import File
 
 
 @bash_app
-def cat(inputs=(), outputs=(), stdout=None, stderr=None):
+def cat(inputs, outputs, stdout=None, stderr=None):
     infiles = " ".join(i.filepath for i in inputs)
     return f"cat {infiles} &> {outputs[0]}"
 
@@ -27,7 +27,7 @@ def test_files(setup_data):
 
 
 @bash_app
-def increment(inputs=(), outputs=(), stdout=None, stderr=None):
+def increment(inputs, outputs, stdout=None, stderr=None):
     return (
         f"x=$(cat {inputs[0]})\n"
         f"echo $(($x+1)) > {outputs[0]}"

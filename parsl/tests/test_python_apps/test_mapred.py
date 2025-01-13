@@ -9,7 +9,7 @@ def times_two(x):
 
 
 @python_app
-def accumulate(inputs=()):
+def accumulate(inputs):
     return sum(inputs)
 
 

@@ -20,7 +20,7 @@ def test_zip_path_split():
 
 
 @parsl.bash_app
-def output_something(outputs=()):
+def output_something(outputs):
     """This should output something into every specified output file:
     the position in the output sequence will be written into the
     corresponding output file.

@@ -11,7 +11,7 @@ from parsl.app.app import bash_app
 
 
 @bash_app
-def echo_to_file(inputs=(), outputs=(), stderr=None, stdout=None):
+def echo_to_file(inputs, outputs, stderr=None, stdout=None):
     res = ""
     for o in outputs:
         for i in inputs:

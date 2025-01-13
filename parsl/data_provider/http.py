@@ -73,7 +73,7 @@ def in_task_transfer_wrapper(func, file, working_dir):
     return wrapper
 
 
-def _http_stage_in(working_dir, parent_fut=None, outputs=[], _parsl_staging_inhibit=True):
+def _http_stage_in(working_dir, outputs, parent_fut=None, _parsl_staging_inhibit=True):
     file = outputs[0]
     if working_dir:
         os.makedirs(working_dir, exist_ok=True)
