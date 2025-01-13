@@ -495,10 +495,6 @@ class DataFlowKernel:
                 for future in joinable:
                     je = future.exception()
                     if je is not None:
-                        # TODO: looks like there was maybe a bug here in the
-                        # original code: was looking at joinable, not at
-                        # future, so always going down the render-as-future path?
-                        # should be easy to test...
                         tid = self.render_future_description(future)
                         exceptions_tids.append((je, tid))
             else:
