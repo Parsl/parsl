@@ -3,12 +3,16 @@ from __future__ import annotations
 import datetime
 import threading
 from concurrent.futures import Future
-from typing import Any, Callable, Dict, List, Optional, Sequence, Union
+
+# only for type checking:
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Union
 
 from typing_extensions import TypedDict
 
+if TYPE_CHECKING:
+    from parsl.dataflow.futures import AppFuture
+
 import parsl.dataflow.dflow as dflow
-import parsl.dataflow.futures as pdf
 from parsl.dataflow.states import States
 
 
@@ -25,7 +29,7 @@ class TaskRecord(TypedDict, total=False):
 
     depends: List[Future]
 
-    app_fu: pdf.AppFuture
+    app_fu: AppFuture
     """The Future which was returned to the user when an app was invoked.
     """
 

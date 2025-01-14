@@ -6,8 +6,8 @@ from concurrent.futures import Future
 from typing import Any, Optional, Sequence, Union
 
 import parsl.app.app as app
-import parsl.dataflow.taskrecord as tr
 from parsl.app.futures import DataFuture
+from parsl.dataflow.taskrecord import TaskRecord
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ class AppFuture(Future):
 
     """
 
-    def __init__(self, task_record: tr.TaskRecord) -> None:
+    def __init__(self, task_record: TaskRecord) -> None:
         """Initialize the AppFuture.
 
         Args:
