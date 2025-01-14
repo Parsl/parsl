@@ -495,10 +495,6 @@ class DataFlowKernel:
                 for future in joinable:
                     je = future.exception()
                     if je is not None:
-                        # TODO: looks like there was maybe a bug here in the
-                        # original code: was looking at joinable, not at
-                        # future, so always going down the render-as-future path?
-                        # should be easy to test...
                         tid = self.render_future_description(future)
                         exceptions_tids.append((je, tid))
             else:
@@ -1428,17 +1424,13 @@ class DataFlowKernel:
                 kw))
 
     def render_future_description(self, dep: Future) -> str:
-        # If this Future is associated with a task inside this DFK,
-        # then refer to the task ID.
-        # Otherwise make a repr of the Future object.
-        # TODO: (note in PR): in some cases of refactoring, look for task_record
-        # in other cases look for AppFuture, DataFuture classes...
-        # a type driven one would be better...
-        # with possible slight behaviour changes?
+        """Renders a description of the future in the context of the
+        current DFK.
+        """
         if isinstance(dep, AppFuture) and dep.task_record['dfk'] == self:
             tid = "task " + repr(dep.task_record['id'])
         elif isinstance(dep, DataFuture):
-            tid = "DataFuture from task " + str(dep.tid)  # n.b. might be different DFK?
+            tid = "DataFuture from task " + repr(dep.tid)
         else:
             tid = repr(dep)
         return tid
