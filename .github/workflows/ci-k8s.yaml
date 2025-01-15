@@ -25,6 +25,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
+        file: parsl/tests/ci_k8s/Dockerfile
         tags: parsl:ci
 
     - name: Push docker image into kubernetes cluster
@@ -38,7 +39,7 @@ jobs:
     - name: launch pytest Job
       run: |
         free -h
-        kubectl create -f ./pytest-task.yaml 
+        kubectl create -f parsl/tests/ci_k8s/pytest-task.yaml 
 
     - name: wait for pytest Job
       run: |

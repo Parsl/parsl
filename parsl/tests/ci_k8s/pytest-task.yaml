@@ -11,5 +11,5 @@ spec:
       containers:
       - name: pytest
         image: parsl:ci
-        command: ["bash", "runme.sh"]
+        command: ["bash", "/parsl/parsl/tests/ci_k8s/runme.sh"]
 
