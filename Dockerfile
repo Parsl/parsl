@@ -1,4 +1,4 @@
-FROM debian:trixie
+FROM debian:bookworm
 
 RUN apt-get update && apt-get upgrade -y
 
@@ -22,12 +22,12 @@ RUN apt-get update && apt-get install -y graphviz wget
 # for commandline access to monitoring database
 RUN apt-get update && apt-get install -y sqlite3
 
-RUN apt-get update && apt-get install -y python3.12 python3.12-dev
-RUN apt-get update && apt-get install -y python3.12-venv
+RUN apt-get update && apt-get install -y python python-dev
+RUN apt-get update && apt-get install -y python-venv
 
 RUN apt-get update && apt-get install -y gcc build-essential make pkg-config mpich
 
-RUN python3.12 -m venv /venv
+RUN python -m venv /venv
 
 ADD . /parsl
 WORKDIR /
