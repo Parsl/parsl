@@ -47,6 +47,7 @@ from parsl.monitoring import MonitoringHub
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.remote import monitor_wrapper
 from parsl.process_loggers import wrap_with_logs
+from parsl.usage_tracking.levels import DISABLED as USAGE_TRACKING_DISABLED
 from parsl.usage_tracking.usage import UsageTracker
 from parsl.utils import Timer, get_all_checkpoints, get_std_fname_mode, get_version
 
@@ -1200,10 +1201,11 @@ class DataFlowKernel:
                 self._checkpoint_timer.close()
 
         # Send final stats
-        logger.info("Sending end message for usage tracking")
-        self.usage_tracker.send_end_message()
-        self.usage_tracker.close()
-        logger.info("Closed usage tracking")
+        if self.usage_tracker.tracking_level != USAGE_TRACKING_DISABLED:
+            logger.info("Sending end message for usage tracking")
+            self.usage_tracker.send_end_message()
+            self.usage_tracker.close()
+            logger.info("Closed usage tracking")
 
         logger.info("Closing job status poller")
         self.job_status_poller.close()
