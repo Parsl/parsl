@@ -2,36 +2,19 @@ FROM debian:bookworm
 
 RUN apt-get update && apt-get upgrade -y
 
-RUN apt-get update && apt-get install -y sudo openssh-server
-
-RUN apt-get update && apt-get install -y curl less vim
-
 # git is needed for parsl to figure out it's own repo-specific
-# version string
-RUN apt-get update && apt-get install -y git
+# version string, from the github-checked-out repo
 
-# useful stuff to have around
-RUN apt-get update && apt-get install -y procps
+# gcc and similar are needed for building taskvine
 
-# for building documentation
-RUN apt-get update && apt-get install -y pandoc
-
-# for monitoring visualization
-RUN apt-get update && apt-get install -y graphviz wget
-
-# for commandline access to monitoring database
-RUN apt-get update && apt-get install -y sqlite3
-
-RUN apt-get update && apt-get install -y python3 python3-dev
-RUN apt-get update && apt-get install -y python3-venv
-
-RUN apt-get update && apt-get install -y gcc build-essential make pkg-config mpich
+RUN apt-get update && apt-get install -y git procps python3 python3-dev python3-venv gcc build-essential make pkg-config mpich
 
 RUN python3 -m venv /venv
 
 ADD . /parsl
 WORKDIR /
-RUN git clone https://github.com/cooperative-computing-lab/cctools
+RUN git clone https://github.com/cooperative-computing-lab/cctools --shallow -b release/7.8.0
+
 WORKDIR /cctools
 RUN . /venv/bin/activate && apt install -y swig && ./configure --prefix=/ && make && make install
 
