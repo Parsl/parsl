@@ -27,42 +27,26 @@ def test_no_deps():
             pass
 
 
-@pytest.mark.parametrize("fail_probs", ((1, 0), (0, 1)))
-def test_fail_sequence(fail_probs):
-    """Test failure in a sequence of dependencies
-
-    App1 -> App2 ... -> AppN
-    """
-
-    t1_fail_prob, t2_fail_prob = fail_probs
-    t1 = random_fail(fail_prob=t1_fail_prob)
-    t2 = random_fail(fail_prob=t2_fail_prob, inputs=[t1])
+def test_fail_sequence_first():
+    t1 = random_fail(fail_prob=1)
+    t2 = random_fail(fail_prob=0, inputs=[t1])
     t_final = random_fail(fail_prob=0, inputs=[t2])
 
     with pytest.raises(DependencyError):
         t_final.result()
 
+    assert len(t_final.exception().dependent_exceptions_tids) == 1
+    assert isinstance(t_final.exception().dependent_exceptions_tids[0][0], DependencyError)
+    assert t_final.exception().dependent_exceptions_tids[0][1].startswith("task ")
 
-def test_deps(width=3):
-    """Random failures in branches of Map -> Map -> reduce"""
-    # App1   App2  ... AppN
-    futs = [random_fail(fail_prob=0.4) for _ in range(width)]
 
-    # App1   App2  ... AppN
-    # |       |        |
-    # V       V        V
-    # App1   App2  ... AppN
+def test_fail_sequence_middle():
+    t1 = random_fail(fail_prob=0)
+    t2 = random_fail(fail_prob=1, inputs=[t1])
+    t_final = random_fail(fail_prob=0, inputs=[t2])
 
-    futs = [random_fail(fail_prob=0.8, inputs=[f]) for f in futs]
+    with pytest.raises(DependencyError):
+        t_final.result()
 
-    # App1   App2  ... AppN
-    #   |       |        |
-    #   V       V        V
-    # App1   App2  ... AppN
-    #    \      |       /
-    #     \     |      /
-    # App_Final
-    try:
-        random_fail(fail_prob=0, inputs=futs).result()
-    except DependencyError:
-        pass
+    assert len(t_final.exception().dependent_exceptions_tids) == 1
+    assert isinstance(t_final.exception().dependent_exceptions_tids[0][0], ManufacturedTestFailure)

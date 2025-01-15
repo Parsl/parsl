@@ -582,19 +582,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("TaskVine shutdown started")
         self._should_stop.set()
 
-        # BENC: removed this bit because the scaling code does this,
-        # and the kubernetes provider fails trying to scale in blocks
-        # that have already been deleted by the scaling code shutdown.
-        # This code assumes it can enumerate all blocks by using the
-        # blocks_to_job_id structure, but there's a not-very-strong
-        # principle that: you should not enumerate blocks_to_job_id
-        # (or the job to block map) and you should not call cancel on
-        # already cancelled blocks.
-        # kill_ids = [self.blocks_to_job_id[block] for block in self.blocks_to_job_id.keys()]
-        # if self.provider:
-        #    logger.debug("Cancelling blocks")
-        #    self.provider.cancel(kill_ids)
-
         # Join all processes before exiting
         logger.debug("Joining on submit process")
         self._submit_process.join()
