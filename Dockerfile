@@ -33,7 +33,7 @@ ADD . /parsl
 WORKDIR /
 RUN git clone https://github.com/cooperative-computing-lab/cctools
 WORKDIR /cctools
-RUN . /venv/bin/activate && apt install swig && ./configure --prefix=/ && make && make install
+RUN . /venv/bin/activate && apt install -y swig && ./configure --prefix=/ && make && make install
 
 WORKDIR /parsl
 RUN . /venv/bin/activate && pip3 install '.[kubernetes]' cloudpickle -r test-requirements.txt
