@@ -22,12 +22,12 @@ RUN apt-get update && apt-get install -y graphviz wget
 # for commandline access to monitoring database
 RUN apt-get update && apt-get install -y sqlite3
 
-RUN apt-get update && apt-get install -y python python-dev
-RUN apt-get update && apt-get install -y python-venv
+RUN apt-get update && apt-get install -y python3 python3-dev
+RUN apt-get update && apt-get install -y python3-venv
 
 RUN apt-get update && apt-get install -y gcc build-essential make pkg-config mpich
 
-RUN python -m venv /venv
+RUN python3 -m venv /venv
 
 ADD . /parsl
 WORKDIR /
