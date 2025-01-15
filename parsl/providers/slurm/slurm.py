@@ -3,12 +3,10 @@ import math
 import os
 import re
 import time
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import typeguard
 
-from parsl.channels import LocalChannel
-from parsl.channels.base import Channel
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
 from parsl.launchers.base import Launcher
@@ -70,8 +68,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         Slurm queue to place job in. If unspecified or ``None``, no queue slurm directive will be specified.
     constraint : str
         Slurm job constraint, often used to choose cpu or gpu type. If unspecified or ``None``, no constraint slurm directive will be added.
-    channel : Channel
-        Channel for accessing this provider.
+    clusters : str
+        Slurm cluster name, or comma seperated cluster list, used to choose between different clusters in a federated Slurm instance.
+        If unspecified or ``None``, no slurm directive for clusters will be added.
     nodes_per_block : int
         Nodes to provision per block.
     cores_per_node : int
@@ -107,7 +106,6 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         :class:`~parsl.launchers.SingleNodeLauncher` (the default),
         :class:`~parsl.launchers.SrunLauncher`, or
         :class:`~parsl.launchers.AprunLauncher`
-    move_files : Optional[Bool]: should files be moved? by default, Parsl will try to move files.
     """
 
     @typeguard.typechecked
@@ -116,7 +114,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  account: Optional[str] = None,
                  qos: Optional[str] = None,
                  constraint: Optional[str] = None,
-                 channel: Channel = LocalChannel(),
+                 clusters: Optional[str] = None,
                  nodes_per_block: int = 1,
                  cores_per_node: Optional[int] = None,
                  mem_per_node: Optional[int] = None,
@@ -130,11 +128,9 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
                  worker_init: str = '',
                  cmd_timeout: int = 10,
                  exclusive: bool = True,
-                 move_files: bool = True,
                  launcher: Launcher = SingleNodeLauncher()):
         label = 'slurm'
         super().__init__(label,
-                         channel,
                          nodes_per_block,
                          init_blocks,
                          min_blocks,
@@ -148,10 +144,10 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         self.cores_per_node = cores_per_node
         self.mem_per_node = mem_per_node
         self.exclusive = exclusive
-        self.move_files = move_files
         self.account = account
         self.qos = qos
         self.constraint = constraint
+        self.clusters = clusters
         self.scheduler_options = scheduler_options + '\n'
         if exclusive:
             self.scheduler_options += "#SBATCH --exclusive\n"
@@ -163,6 +159,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             self.scheduler_options += "#SBATCH --qos={}\n".format(qos)
         if constraint:
             self.scheduler_options += "#SBATCH --constraint={}\n".format(constraint)
+        if clusters:
+            self.scheduler_options += "#SBATCH --clusters={}\n".format(clusters)
 
         self.regex_job_id = regex_job_id
         self.worker_init = worker_init + '\n'
@@ -174,14 +172,22 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         logger.debug(f"sacct returned retcode={retcode} stderr={stderr}")
         if retcode == 0:
             logger.debug("using sacct to get job status")
+            _cmd = "sacct"
+            # Add clusters option to sacct if provided
+            if self.clusters:
+                _cmd += f" --clusters={self.clusters}"
             # Using state%20 to get enough characters to not truncate output
             # of the state. Without output can look like "<job_id>     CANCELLED+"
-            self._cmd = "sacct -X --noheader --format=jobid,state%20 --job '{0}'"
+            self._cmd = _cmd + " -X --noheader --format=jobid,state%20 --job '{0}'"
             self._translate_table = sacct_translate_table
         else:
             logger.debug(f"sacct failed with retcode={retcode}")
             logger.debug("falling back to using squeue to get job status")
-            self._cmd = "squeue --noheader --format='%i %t' --job '{0}'"
+            _cmd = "squeue"
+            # Add clusters option to squeue if provided
+            if self.clusters:
+                _cmd += f" --clusters={self.clusters}"
+            self._cmd = _cmd + " --noheader --format='%i %t' --job '{0}'"
             self._translate_table = squeue_translate_table
 
     def _status(self):
@@ -274,8 +280,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         logger.debug("Requesting one block with {} nodes".format(self.nodes_per_block))
 
-        job_config = {}
-        job_config["submit_script_dir"] = self.channel.script_dir
+        job_config: Dict[str, Any] = {}
+        job_config["submit_script_dir"] = self.script_dir
         job_config["nodes"] = self.nodes_per_block
         job_config["tasks_per_node"] = tasks_per_node
         job_config["walltime"] = wtime_to_minutes(self.walltime)
@@ -293,14 +299,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         logger.debug("Writing submit script")
         self._write_submit_script(template_string, script_path, job_name, job_config)
 
-        if self.move_files:
-            logger.debug("moving files")
-            channel_script_path = self.channel.push_file(script_path, self.channel.script_dir)
-        else:
-            logger.debug("not moving files")
-            channel_script_path = script_path
-
-        retcode, stdout, stderr = self.execute_wait("sbatch {0}".format(channel_script_path))
+        retcode, stdout, stderr = self.execute_wait("sbatch {0}".format(script_path))
 
         if retcode == 0:
             for line in stdout.split('\n'):
@@ -344,7 +343,14 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         '''
 
         job_id_list = ' '.join(job_ids)
-        retcode, stdout, stderr = self.execute_wait("scancel {0}".format(job_id_list))
+
+        # Make the command to cancel jobs
+        _cmd = "scancel"
+        if self.clusters:
+            _cmd += f" --clusters={self.clusters}"
+        _cmd += " {0}"
+
+        retcode, stdout, stderr = self.execute_wait(_cmd.format(job_id_list))
         rets = None
         if retcode == 0:
             for jid in job_ids:

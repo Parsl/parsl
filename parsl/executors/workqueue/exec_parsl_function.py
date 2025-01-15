@@ -94,7 +94,7 @@ def unpack_source_code_function(function_info, user_namespace):
 
 def unpack_byte_code_function(function_info, user_namespace):
     from parsl.serialize import unpack_apply_message
-    func, args, kwargs = unpack_apply_message(function_info["byte code"], user_namespace, copy=False)
+    func, args, kwargs = unpack_apply_message(function_info["byte code"])
     return (func, 'parsl_function_name', args, kwargs)
 
 

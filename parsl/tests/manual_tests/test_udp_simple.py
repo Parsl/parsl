@@ -15,7 +15,6 @@ def local_setup():
         ],
         monitoring=MonitoringHub(
             hub_address="127.0.0.1",
-            hub_port=55055,
             logging_level=logging.INFO,
             resource_monitoring_interval=10))
 

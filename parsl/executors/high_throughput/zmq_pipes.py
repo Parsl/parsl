@@ -8,6 +8,7 @@ from typing import Optional
 import zmq
 
 from parsl import curvezmq
+from parsl.addresses import tcp_url
 from parsl.errors import InternalConsistencyError
 from parsl.executors.high_throughput.errors import (
     CommandClientBadError,
@@ -52,11 +53,11 @@ class CommandClient:
         self.zmq_socket = self.zmq_context.socket(zmq.REQ)
         self.zmq_socket.setsockopt(zmq.LINGER, 0)
         if self.port is None:
-            self.port = self.zmq_socket.bind_to_random_port("tcp://{}".format(self.ip_address),
+            self.port = self.zmq_socket.bind_to_random_port(tcp_url(self.ip_address),
                                                             min_port=self.port_range[0],
                                                             max_port=self.port_range[1])
         else:
-            self.zmq_socket.bind("tcp://{}:{}".format(self.ip_address, self.port))
+            self.zmq_socket.bind(tcp_url(self.ip_address, self.port))
 
     def run(self, message, max_retries=3, timeout_s=None):
         """ This function needs to be fast at the same time aware of the possibility of
@@ -146,7 +147,7 @@ class TasksOutgoing:
         self.zmq_context = curvezmq.ClientContext(cert_dir)
         self.zmq_socket = self.zmq_context.socket(zmq.DEALER)
         self.zmq_socket.set_hwm(0)
-        self.port = self.zmq_socket.bind_to_random_port("tcp://{}".format(ip_address),
+        self.port = self.zmq_socket.bind_to_random_port(tcp_url(ip_address),
                                                         min_port=port_range[0],
                                                         max_port=port_range[1])
         self.poller = zmq.Poller()
@@ -202,15 +203,23 @@ class ResultsIncoming:
         self.zmq_context = curvezmq.ClientContext(cert_dir)
         self.results_receiver = self.zmq_context.socket(zmq.DEALER)
         self.results_receiver.set_hwm(0)
-        self.port = self.results_receiver.bind_to_random_port("tcp://{}".format(ip_address),
+        self.port = self.results_receiver.bind_to_random_port(tcp_url(ip_address),
                                                               min_port=port_range[0],
                                                               max_port=port_range[1])
+        self.poller = zmq.Poller()
+        self.poller.register(self.results_receiver, zmq.POLLIN)
 
-    def get(self):
-        logger.debug("Waiting for ResultsIncoming message")
-        m = self.results_receiver.recv_multipart()
-        logger.debug("Received ResultsIncoming message")
-        return m
+    def get(self, timeout_ms=None):
+        """Get a message from the queue, returning None if timeout expires
+        without a message. timeout is measured in milliseconds.
+        """
+        socks = dict(self.poller.poll(timeout=timeout_ms))
+        if self.results_receiver in socks and socks[self.results_receiver] == zmq.POLLIN:
+            m = self.results_receiver.recv_multipart()
+            logger.debug("Received ResultsIncoming message")
+            return m
+        else:
+            return None
 
     def close(self):
         self.results_receiver.close()

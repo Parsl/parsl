@@ -111,8 +111,6 @@ class DataFlowKernel:
         self.monitoring = config.monitoring
 
         if self.monitoring:
-            if self.monitoring.logdir is None:
-                self.monitoring.logdir = self.run_dir
             self.monitoring.start(self.run_dir, self.config.run_dir)
 
         self.time_began = datetime.datetime.now()
@@ -486,24 +484,18 @@ class DataFlowKernel:
 
             # now we know each joinable Future is done
             # so now look for any exceptions
-            exceptions_tids: List[Tuple[BaseException, Optional[str]]]
+            exceptions_tids: List[Tuple[BaseException, str]]
             exceptions_tids = []
             if isinstance(joinable, Future):
                 je = joinable.exception()
                 if je is not None:
-                    if hasattr(joinable, 'task_record'):
-                        tid = joinable.task_record['id']
-                    else:
-                        tid = None
+                    tid = self.render_future_description(joinable)
                     exceptions_tids = [(je, tid)]
             elif isinstance(joinable, list):
                 for future in joinable:
                     je = future.exception()
                     if je is not None:
-                        if hasattr(joinable, 'task_record'):
-                            tid = joinable.task_record['id']
-                        else:
-                            tid = None
+                        tid = self.render_future_description(future)
                         exceptions_tids.append((je, tid))
             else:
                 raise TypeError(f"Unknown joinable type {type(joinable)}")
@@ -920,13 +912,7 @@ class DataFlowKernel:
         dep_failures = []
 
         def append_failure(e: Exception, dep: Future) -> None:
-            # If this Future is associated with a task inside this DFK,
-            # then refer to the task ID.
-            # Otherwise make a repr of the Future object.
-            if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
-                tid = "task " + repr(dep.task_record['id'])
-            else:
-                tid = repr(dep)
+            tid = self.render_future_description(dep)
             dep_failures.extend([(e, tid)])
 
         # Replace item in args
@@ -1078,10 +1064,7 @@ class DataFlowKernel:
 
         depend_descs = []
         for d in depends:
-            if isinstance(d, AppFuture) or isinstance(d, DataFuture):
-                depend_descs.append("task {}".format(d.tid))
-            else:
-                depend_descs.append(repr(d))
+            depend_descs.append(self.render_future_description(d))
 
         if depend_descs != []:
             waiting_message = "waiting on {}".format(", ".join(depend_descs))
@@ -1152,8 +1135,6 @@ class DataFlowKernel:
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
                     os.makedirs(executor.provider.script_dir, exist_ok=True)
-
-                    executor.provider.channel.script_dir = executor.provider.script_dir
 
             self.executors[executor.label] = executor
             executor.start()
@@ -1441,6 +1422,18 @@ class DataFlowKernel:
                 taskrecord['func_name'],
                 '' if label is None else '_{}'.format(label),
                 kw))
+
+    def render_future_description(self, dep: Future) -> str:
+        """Renders a description of the future in the context of the
+        current DFK.
+        """
+        if isinstance(dep, AppFuture) and dep.task_record['dfk'] == self:
+            tid = "task " + repr(dep.task_record['id'])
+        elif isinstance(dep, DataFuture):
+            tid = "DataFuture from task " + repr(dep.tid)
+        else:
+            tid = repr(dep)
+        return tid
 
 
 class DataFlowKernelLoader:
