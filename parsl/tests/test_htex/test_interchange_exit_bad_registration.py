@@ -19,7 +19,7 @@ P_ms = 10
 
 
 @pytest.mark.local
-def test_exit_with_bad_registrationr(tmpd_cwd, try_assert):
+def test_exit_with_bad_registration(tmpd_cwd, try_assert):
     """Test that the interchange exits when it receives a bad registration message.
     This complements parsl/tests/test_scaling/test_worker_interchange_bad_messages_3262.py
     which tests that the interchange is resistent to other forms of bad message.
