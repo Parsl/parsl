@@ -357,17 +357,15 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         return self.logdir
 
     def validate_resource_spec(self, resource_specification: dict):
-        """HTEX supports the following *Optional* resource specifications:
-        priority: lower value is higher priority"""
+        """HTEX does not support *any* resource_specification options and
+        will raise InvalidResourceSpecification is any are passed to it"""
         if resource_specification:
-            acceptable_fields = {'priority'}
-            keys = set(resource_specification.keys())
-            invalid_keys = keys - acceptable_fields
-            if invalid_keys:
-                message = "Task resource specification only accepts these types of resources: {}".format(
-                    ', '.join(acceptable_fields))
-                logger.error(message)
-                raise InvalidResourceSpecification(set(invalid_keys), message)
+            raise InvalidResourceSpecification(
+                set(resource_specification.keys()),
+                ("HTEX does not support the supplied resource_specifications. "
+                 "For MPI applications consider using the MPIExecutor. "
+                 "For specifications for core count/memory/walltime, consider using WorkQueueExecutor.")
+            )
         return
 
     def initialize_scaling(self):
@@ -679,7 +677,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         except TypeError:
             raise SerializationError(func.__name__)
 
-        msg = {"task_id": task_id, "resource_spec": resource_specification, "buffer": fn_buf}
+        msg = {"task_id": task_id, "buffer": fn_buf}
 
         # Post task to the outgoing queue
         self.outgoing_q.put(msg)
