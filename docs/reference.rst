@@ -79,6 +79,7 @@ Executors
     parsl.executors.taskvine.TaskVineExecutor
     parsl.executors.FluxExecutor
     parsl.executors.radical.RadicalPilotExecutor
+    parsl.executors.GlobusComputeExecutor
 
 Manager Selectors
 =================

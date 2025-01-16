@@ -250,6 +250,30 @@ running on a login node and uses the `parsl.providers.SlurmProvider` to interfac
 
 .. literalinclude:: ../../../parsl/configs/frontera.py
 
+Globus Compute (Multisite)
+--------------------------
+
+Globus Compute is a distributed Function as a Service (FaaS) platform that enables secure
+execution of functions on heterogeneous remote computers, from laptops to campus clusters, clouds, and supercomputers.
+Functions are executed on `Globus Compute Endpoints <https://globus-compute.readthedocs.io/en/latest/endpoints/endpoints.html>`_
+that can be `configured <https://globus-compute.readthedocs.io/en/latest/endpoints/endpoint_examples.html>`_
+for most clusters/HPC systems. The example configuration below allows task submission
+to Globus Compute's hosted tutorial endpoint.
+
+.. literalinclude:: ../../../parsl/configs/gc_tutorial.py
+
+.. note:: The Globus Compute tutorial endpoint runs Python 3.11. We recommend
+   using the same Python environment to avoid potential serialization errors
+   caused by environment mismatches. Globus Compute will raise a warning if any
+   environment version mismatches are detected although minor version differences
+   may not cause faults (eg, Python3.11.7 vs Python3.11.8)
+
+The configuration below specifies two remote endpoints, one at `SDSC's Expanse Supercomputer <https://www.sdsc.edu/services/hpc/expanse/>`_
+and the other at `NERSC's Perlmutter Supercomputer <https://docs.nersc.gov/systems/perlmutter/architecture/>`_.
+
+.. literalinclude:: ../../../parsl/configs/gc_multisite.py
+
+
 
 Kubernetes Clusters
 -------------------
