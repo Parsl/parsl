@@ -25,7 +25,7 @@ def failing_memoizer(v, output_ref=False):
 
 
 @python_app(cache=True)
-def noop_app(x, inputs=[], cache=True):
+def noop_app(x, inputs=None, cache=True):
     return None
 
 

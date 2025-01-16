@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 @bash_app
-def touch(filename, outputs=()):
+def touch(filename, outputs=None):
     return f"touch {filename}"
 
 
@@ -51,7 +51,7 @@ def test_regression_stage_out_does_not_stage_in(storage_access_parsl, tmpd_cwd):
     storage_access_parsl(allow_stage_in=False)
 
     # Test that the helper app runs with no staging
-    touch(str(tmpd_cwd / "test.1"), outputs=[]).result()
+    touch(str(tmpd_cwd / "test.1"), outputs=None).result()
 
     # Test with stage-out, checking that provider stage-in is never
     # invoked. If stage-in is invoked, then the NoOpTestingFileStaging

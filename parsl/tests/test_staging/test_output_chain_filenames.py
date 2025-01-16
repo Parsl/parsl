@@ -7,12 +7,12 @@ from parsl.app.app import bash_app
 
 
 @bash_app
-def app1(inputs=(), outputs=(), stdout=None, stderr=None, mock=False):
+def app1(outputs, inputs=None, stdout=None, stderr=None, mock=False):
     return f"echo 'test' > {outputs[0]}"
 
 
 @bash_app
-def app2(inputs=(), outputs=(), stdout=None, stderr=None, mock=False):
+def app2(inputs, outputs, stdout=None, stderr=None, mock=False):
     return f"echo '{inputs[0]}' > {outputs[0]}"
 
 

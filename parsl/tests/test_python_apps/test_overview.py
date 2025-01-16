@@ -7,7 +7,7 @@ def app_double(x):
 
 
 @python_app
-def app_sum(inputs=()):
+def app_sum(inputs):
     return sum(inputs)
 
 

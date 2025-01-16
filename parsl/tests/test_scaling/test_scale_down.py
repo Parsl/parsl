@@ -41,7 +41,7 @@ def local_config():
 
 
 @python_app
-def waiting_app(ident: int, inputs=(), outputs=()):
+def waiting_app(ident: int, inputs=None, outputs=None):
     import pathlib
     import time
 
