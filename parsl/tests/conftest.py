@@ -237,6 +237,10 @@ def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
         assert pre_ac == post_ac, "test left threads running: " + repr(threading.enumerate())
         # assert threading.active_count() == 1, "test left threads running: " + repr(threading.enumerate())
 
+        end_fds = this_process.num_fds()
+        logger.error(f"BENC: end open fds: {end_fds} (vs {start_fds} at start)")
+        assert start_fds == end_fds, "number of open fds changed across test run"
+
     else:
         yield
 
@@ -307,6 +311,13 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
         assert pre_ac == post_ac, "test left threads running: " + repr(threading.enumerate())
 
         # assert threading.active_count() == 1, "test left threads running: " + repr(threading.enumerate())
+
+        end_fds = this_process.num_fds()
+        logger.error(f"BENC: open fds END: {end_fds}")
+        if end_fds > start_fds:
+            logger.error(f"Open files (not all fds, though?): {this_process.open_files()!r}")
+            os.system(f"ls -l /proc/{os.getpid()}/fd")
+            pytest.fail("BENC: number of open fds increased across test")
 
     else:
         yield
