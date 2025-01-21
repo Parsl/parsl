@@ -43,12 +43,11 @@ class TaskRecord(TypedDict, total=False):
     executed on.
     """
 
-    retries_left: int
     fail_count: int
     fail_cost: float
     fail_history: List[str]
 
-    checkpoint: bool  # this change is also in #1516
+    checkpoint: bool
     """Should this task be checkpointed?
     """
 
@@ -68,7 +67,6 @@ class TaskRecord(TypedDict, total=False):
 
     # these three could be more strongly typed perhaps but I'm not thinking about that now
     func: Callable
-    fn_hash: str
     args: Sequence[Any]
     # in some places we uses a Tuple[Any, ...] and in some places a List[Any].
     # This is an attempt to correctly type both of those.
