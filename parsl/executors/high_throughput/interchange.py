@@ -132,6 +132,11 @@ class Interchange:
         self.hub_zmq_port = hub_zmq_port
 
         self.pending_task_queue: queue.Queue[Any] = queue.Queue(maxsize=10 ** 6)
+
+        # count of tasks that have been received from the submit side
+        self.task_counter = 0
+
+        # count of tasks that have been sent out to worker pools
         self.count = 0
 
         self.worker_ports = worker_ports
@@ -200,28 +205,6 @@ class Interchange:
                 tasks.append(x)
 
         return tasks
-
-    @wrap_with_logs(target="interchange")
-    def task_puller(self) -> NoReturn:
-        """Pull tasks from the incoming tasks zmq pipe onto the internal
-        pending task queue
-        """
-        logger.info("Starting")
-        task_counter = 0
-
-        while True:
-            logger.debug("launching recv_pyobj")
-            try:
-                msg = self.task_incoming.recv_pyobj()
-            except zmq.Again:
-                # We just timed out while attempting to receive
-                logger.debug("zmq.Again with {} tasks in internal queue".format(self.pending_task_queue.qsize()))
-                continue
-
-            logger.debug("putting message onto pending_task_queue")
-            self.pending_task_queue.put(msg)
-            task_counter += 1
-            logger.debug(f"Fetched {task_counter} tasks so far")
 
     def _send_monitoring_info(self, monitoring_radio: Optional[MonitoringRadioSender], manager: ManagerRecord) -> None:
         if monitoring_radio:
@@ -326,11 +309,6 @@ class Interchange:
 
         start = time.time()
 
-        self._task_puller_thread = threading.Thread(target=self.task_puller,
-                                                    name="Interchange-Task-Puller",
-                                                    daemon=True)
-        self._task_puller_thread.start()
-
         self._command_thread = threading.Thread(target=self._command_server,
                                                 name="Interchange-Command",
                                                 daemon=True)
@@ -341,6 +319,7 @@ class Interchange:
         poller = zmq.Poller()
         poller.register(self.task_outgoing, zmq.POLLIN)
         poller.register(self.results_incoming, zmq.POLLIN)
+        poller.register(self.task_incoming, zmq.POLLIN)
 
         # These are managers which we should examine in an iteration
         # for scheduling a job (or maybe any other attention?).
@@ -351,6 +330,7 @@ class Interchange:
         while not kill_event.is_set():
             self.socks = dict(poller.poll(timeout=poll_period))
 
+            self.process_task_incoming()
             self.process_task_outgoing_incoming(interesting_managers, monitoring_radio, kill_event)
             self.process_results_incoming(interesting_managers, monitoring_radio)
             self.expire_bad_managers(interesting_managers, monitoring_radio)
@@ -361,6 +341,18 @@ class Interchange:
         delta = time.time() - start
         logger.info(f"Processed {self.count} tasks in {delta} seconds")
         logger.warning("Exiting")
+
+    def process_task_incoming(self) -> None:
+        """Process incoming task message(s).
+        """
+
+        if self.task_incoming in self.socks and self.socks[self.task_incoming] == zmq.POLLIN:
+            logger.debug("start task_incoming section")
+            msg = self.task_incoming.recv_pyobj()
+            logger.debug("putting message onto pending_task_queue")
+            self.pending_task_queue.put(msg)
+            self.task_counter += 1
+            logger.debug(f"Fetched {self.task_counter} tasks so far")
 
     def process_task_outgoing_incoming(
             self,
