@@ -1,7 +1,6 @@
 """This module implements the DynamicFileList class and DynamicFile subclass.
 
-The DynaicFile class is a drop in replacement/wrapper for the File and DataFuture classes. See
-the XXXXXX documentation for specifics.
+The DynamicFile class is a drop in replacement/wrapper for the File and DataFuture classes.
 
 The DynamicFileList class is intended to replace the list of Files for app `outputs`. It acts like a
 traditional Python `list`, but is also a Future. This allows for Files to be appended to the output list
@@ -27,13 +26,15 @@ logger = logging.getLogger(__name__)
 class DynamicFileList(Future):
     """A list of files that is also a Future.
 
-    This is used to represent the list of files that an app will produce.
+    The DynamicFileList class is intended to replace the list of Files for app `outputs`. It acts like a
+    traditional Python `list`, but is also a Future. This allows for Files to be appended to the output list
+    and have these Files properly treated by Parsl.
     """
 
     class DynamicFile(Future):
         """A wrapper for a File or DataFuture
 
-
+           Should not be instantiated from outside the DynamicFileList class.
         """
         def parent_callback(self, parent_fu: Future) -> None:
             """Callback from executor future to update the parent.
@@ -59,7 +60,7 @@ class DynamicFileList(Future):
                      file_obj: Optional[Union[File, DataFuture]] = None):
             """Construct a DynamicFile instance
 
-            If the file_obj is None, create an emptry instance, otherwise wrap file_obj.
+            If the file_obj is None, create an empty instance, otherwise wrap file_obj.
 
             Args:
                 - fut (AppFuture) : AppFuture that this DynamicFile will track
@@ -79,20 +80,29 @@ class DynamicFileList(Future):
             return self._staged_out
 
         @property
+        def scheme(self) -> str:
+            """Return the scheme for the wrapped file object."""
+            if self.empty:
+                return None
+            if self._is_df:
+                return self.file_obj.file_obj.scheme
+            return self.file_obj.scheme
+
+        @property
         def empty(self) -> bool:
             """Return whether this is an empty wrapper."""
             return self._empty
 
         @property
         def uuid(self) -> Union[str, None]:
-            """Return the uuid of the file object this datafuture represents."""
+            """Return the uuid of the file object this data-future represents."""
             if self._empty:
                 return None
             return self.file_obj.uuid
 
         @property
         def timestamp(self) -> Union[datetime, None]:
-            """Return the timestamp of the file object this datafuture represents."""
+            """Return the timestamp of the file object this data-future represents."""
             if self._empty:
                 return None
             return self.file_obj.timestamp
@@ -157,14 +167,14 @@ class DynamicFileList(Future):
 
         @property
         def filepath(self) -> Union[str, None]:
-            """Filepath of the File object this datafuture represents."""
+            """Filepath of the File object this data-future represents."""
             if self.file_obj is None:
                 return None
             return self.file_obj.filepath
 
         @property
         def filename(self) -> Union[str, None]:
-            """Filename of the File object this datafuture represents."""
+            """Filename of the File object this data-future represents."""
             if self.file_obj is None:
                 return None
             return self.file_obj.filepath
@@ -290,7 +300,7 @@ class DynamicFileList(Future):
         self.files_done[name] = func
 
     def stage_file(self, idx: int):
-        """ Stage a file at the given index, we do this now becuase so that the app and dataflow
+        """ Stage a file at the given index, we do this now because so that the app and dataflow
         can act accordingly when the app finishes.
 
         Args:

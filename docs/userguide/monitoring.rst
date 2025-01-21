@@ -52,7 +52,8 @@ configuration. Here the `parsl.monitoring.MonitoringHub` is specified to use por
 File Provenance
 ---------------
 
-The monitoring system can also be used to track file provenance. File provenance is defined as the history of a file including:
+The monitoring system can also be used to track file provenance. File provenance is defined as the
+history of a file including:
 
 * When the files was created
 * File size in bytes
@@ -60,11 +61,22 @@ The monitoring system can also be used to track file provenance. File provenance
 * What task created the file
 * What task(s) used the file
 * What inputs were given to the task that created the file
-* What environment was used (e.g. the 'worker_init' entry from a :py:class:`~parsl.providers.ExecutionProvider`), not available with every provider.
+* What environment was used (e.g. the 'worker_init' entry from a :py:class:`~parsl.providers.ExecutionProvider`),
+  not available with every provider.
 
-The purpose of the file provenance tracking is to provide a mechanism where the user can see exactly how a file was created and used in a workflow. This can be useful for debugging, understanding the workflow, for ensuring that the workflow is reproducible, and reviewing past work. The file provenance information is stored in the monitoring database and can be accessed using the ``parsl-visualize`` tool. To enable file provenance tracking, set the ``file_provenance`` flag to ``True`` in the `parsl.monitoring.MonitoringHub` configuration.
+The purpose of the file provenance tracking is to provide a mechanism where the user can see exactly
+how a file was created and used in a workflow. This can be useful for debugging, understanding the
+workflow, for ensuring that the workflow is reproducible, and reviewing past work. The file
+provenance information is stored in the monitoring database and can be accessed using the
+``parsl-visualize`` tool. To enable file provenance tracking, set the ``file_provenance`` flag to
+``True`` in the `parsl.monitoring.MonitoringHub` configuration.
 
-This functionality also enables you to log informational messages from you scripts, to capture anything not automatically gathered. The main change to your code to use this functionality is to assign the return value of the ``parsl.load`` to a variable. Then use the ``log_info`` function to log the messages in the database. Note that this feature is only available in the main script, not inside Apps. Passing this vaiable, ``my_cfg`` in the example below to an App will have undefined behavior. The following example shows how to use this feature.
+This functionality also enables you to log informational messages from you scripts, to capture
+anything not automatically gathered. The main change to your code to use this functionality is to
+assign the return value of the ``parsl.load`` to a variable. Then use the ``log_info`` function to
+log the messages in the database. Note that this feature is only available in the main script, not
+inside Apps. Passing this variable, ``my_cfg`` in the example below to an App will have undefined
+behavior. The following example shows how to use this feature.
 
 .. code-block:: python
 
@@ -99,9 +111,21 @@ This functionality also enables you to log informational messages from you scrip
 
    my_cfg.log_info("This is an informational message")
 
-Known limitations: The file provenance feature will capture the creation of files and the use of files in an app, but does not capture the modification of files it already knows about.
+The file provenance framework also works with the :ref:`label-dynamic-file-list` feature .When a
+:py:class:`parsl.data_provider.dynamic_files.DynamicFileList` is used the framework will wait until the app completes
+and any files contained in the :py:class:`parsl.data_provider.dynamic_files.DynamicFileList` are marked as done before
+completing its processing. The :ref:`bash watcher<label-bash-watcher>` can also be used to capture file provenance
+information from ``bash_apps``.
 
-This functionality also enables you to log informational messages from you scripts, to capture anything not automatically gathered. The main change to your code to use this functionality is to assign the return value of the ``parsl.load`` to a variable. Then use the ``log_info`` function to log the messages in the database. Note that this feature is only available in the main script, not inside apps, unless you pass the variable (``my_cfg`` in the example below), as an argument to the app. The following example shows how to use this feature.
+.. note::
+    Known limitations: The file provenance feature will capture the creation of files and the use of files in an app,
+    but does not capture the modification of files it already knows about.
+
+This functionality also enables you to log informational messages from you scripts, to capture anything not
+automatically gathered. The main change to your code to use this functionality is to assign the return value of the
+``parsl.load`` to a variable. Then use the ``log_info`` function to log the messages in the database. Note that this
+feature is only available in the main script, not inside apps, unless you pass the variable (``my_cfg`` in the example
+below), as an argument to the app. The following example shows how to use this feature.
 
 .. code-block:: python
 
@@ -135,8 +159,6 @@ This functionality also enables you to log informational messages from you scrip
    my_cfg = parsl.load(config)
 
    my_cfg.log_info("This is an informational message")
-
-Known limitations: The file provenance feature will capture the creation of files and the use of files in an app, but currently does not capture the modification of files it already knows about.
 
 Visualization
 -------------

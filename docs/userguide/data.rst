@@ -113,6 +113,159 @@ As described below, the method by which this files are transferred
 depends on the scheme and the staging providers specified in the Parsl
 configuration.
 
+
+.. _label-dynamic-file-list:
+
+Dynamic File List
+^^^^^^^^^^^^^^^^^
+
+In certain cases, you do not know the number of files that will be produced by an app. When this happens, your script
+will likely fail with an error ro do something unexpected, as Parsl needs to know about all files (input and output)
+before an app runs. For the circumstances the :py:class:`parsl.data_provider.dynamic_files.DynamicFileList` was
+developed. The purpose of the :py:class:`parsl.data_provider.dynamic_files.DynamicFileList` is to allow an app to add
+files to the outputs, without the outputs being pre-specified. The
+:py:class:`parsl.data_provider.dynamic_files.DynamicFileList` behaves like a list, but is also a Future. It can be used
+anywhere a list of :py:class:`~parsl.data_provider.files.File` objects is expected.
+
+Take this example:
+
+.. code-block:: python
+
+    import parsl
+    from parsl.config import Config
+    from parsl.executors import ThreadPoolExecutor
+    from parsl.data_provider.dynamic_files import DynamicFileList
+
+    config = Config(executors=[ThreadPoolExecutor(label="local_htex")])
+    parsl.load(config)
+
+    @parsl.python_app
+    def produce(outputs=[]):
+        import random
+        import string
+        from parsl.data_provider.files import File
+        count = random.randint(3, 9)
+        for i in range(count):
+            fl = File(f'data_{i}.log')
+            with open(fl, 'w') as fh:
+                fh.write(''.join(random.choices(string.ascii_letters, k=50)))
+            outputs.append(fl)
+        print(f"\n\nProduced {len(outputs)} files")
+
+    @parsl.python_app
+    def consume(inputs=[]):
+        from parsl.data_provider.files import File
+        print(f"Consuming {len(inputs)} files")
+        for inp in inputs:
+            with open(inp.filepath, 'r') as inp:
+                print(f"  Reading {inp}")
+                content = inp.read()
+
+The app ``produce`` produces a random number of output files, these could be log files, data files, etc.). The
+``consume`` function takes those files and reads them (it could really do anything with them). If we use the following
+code, we wil not get the expected result:
+
+.. code-block:: python
+
+    outp = []
+    prc = produce(outputs=outp)
+    cons = consume(inputs=outp)
+    cons.result()
+
+The code will output something like
+
+.. code-block:: bash
+
+    Consuming 0 files
+    Produced 3 files
+
+which is both out of order (the ``Produced`` line should be first) and incorrect (the ``Consuming`` line should have the
+same number as the ``Produced`` line). This is because when Parsl generates the DAG, it sees an empty list for the
+``inputs`` to consume and believes that there is no connection between the ``outputs`` of ``produce`` and these
+``inputs``. Thus generating a DAG that allows ``consume`` to run whenever there are processing resources available, even
+parallel with ``produce``. If we make a single line change (changing ``outp`` to be a
+:py:class:`parsl.data_provider.dynamic_files.DynamicFileList`), this can be fixed:
+
+.. code-block:: python
+
+    outp = DynamicFileList()
+    prc = produce(outputs=outp)
+    cons = consume(inputs=outp)
+    cons.result()
+
+The code will now work properly, reporting the correct number of files produced and consumed:
+
+.. code-block:: bash
+
+    Produced 7 files
+    Consuming 7 files
+      Reading <_io.TextIOWrapper name='data_0.log' mode='r' encoding='UTF-8'>
+      Reading <_io.TextIOWrapper name='data_1.log' mode='r' encoding='UTF-8'>
+      Reading <_io.TextIOWrapper name='data_2.log' mode='r' encoding='UTF-8'>
+      Reading <_io.TextIOWrapper name='data_3.log' mode='r' encoding='UTF-8'>
+      Reading <_io.TextIOWrapper name='data_4.log' mode='r' encoding='UTF-8'>
+      Reading <_io.TextIOWrapper name='data_5.log' mode='r' encoding='UTF-8'>
+      Reading <_io.TextIOWrapper name='data_6.log' mode='r' encoding='UTF-8'>
+
+This works because, as a Future, the :py:class:`parsl.data_provider.dynamic_files.DynamicFileList` causes Parsl to make
+a connection between the ``outputs`` of ``produce`` and the ``inputs`` of ``consume``. This causes the DAG to wait until
+``produce`` has completed before running ``consume``.
+
+The :py:class:`parsl.data_provider.dynamic_files.DynamicFileList` can also be used in more complex ways, such as slicing
+and will behave as expected. Lets take the previous example where ``produce`` generates an unknown number of files. You
+know that the first one produced is always a log file, which you don't really care about, but the remaining files are
+data that you are interested in. Traditionally you would do something like
+
+.. code-block:: python
+
+    outp = []
+    prc = produce(outputs=outp)
+    cons = consume(inputs=outp[1:])
+    cons.result()
+
+but this will either throw an exception or fail (depending on your Python version) as the first example above did with 0
+consumed files. But using a :py:class:`parsl.data_provider.dynamic_files.DynamicFileList` will work as expected:
+
+.. code-block:: python
+
+    outp = DynamicFileList()
+    f1 = process(outputs=outp)
+    r1 = consume(inputs=outp[1:])
+    r1.result()
+
+.. _label-bash-watcher:
+
+None of the above examples will necessarily work as expected if ``produce`` was a ``bash_app``. This is because the
+command line call returned by the ``bash_app`` may produce files that neither Python nor Parsl are aware of, there is no
+direct way to to know what files to track, without additional work. Parsl provides a function that can help with this.
+The :py:func:`parsl.app.watcher.bash_watcher` can be used to wrap and watch for files produced by a ``bash_app``. The
+``bash_app`` being wrapped does not need to change, just the way it is called. In the following example assume that
+there is a ``bash_app`` named my_func that takes two arguments and produces some files. Normally you would call it like
+this:
+
+.. code-block:: python
+
+    outp = [File('file1.txt'), File('file2.txt')]
+    a = my_func(my_arg1, my_arg2, outputs=outp)
+
+But if you don't know what files may be produced, you can use the :py:func:`parsl.app.watcher.bash_watch` like this:
+
+.. code-block:: python
+
+    from parsl.app.watcher import bash_watcher
+    from parsl.data_provider.dynamic_files import DynamicFileList
+
+    outp = DynamicFileList()
+    a = bash_watcher(my_func, outp, os.getcwd(), my_arg1, my_arg2)
+    res = a.result()
+
+The first argument is the ``bash_app`` to be watched. The second is a :py:class:`parsl.data_provider.dynamic_files.DynamicFileList`
+instance which will contain the files produced by the ``bash_app``. The third argument is the path or paths (as a list)
+of directories to watch, recursively, for new files in, the default is ".". It is recommended that the directory
+structure being watch is not overly complex as this can slow down the watcher. The remaining arguments are the same as
+those that would be passed to the ``bash_app``, both positional and keyword. The ``result()`` function must be called on
+the ``bash_watcher`` or Parsl may get into a deadlock situation.
+
 Staging providers
 -----------------
 
