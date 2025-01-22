@@ -2,7 +2,7 @@
 any files created by the bash_app. It can be used with or without the file provenance feature.
 
 """
-from typing import List, Union, Callable
+from typing import Callable, List, Union
 
 from parsl.app.app import python_app
 from parsl.data_provider.dynamic_files import DynamicFileList

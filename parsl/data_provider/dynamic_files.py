@@ -8,16 +8,16 @@ and have these Files properly treated by Parsl.
 """
 from __future__ import annotations
 
+import logging
 import sys
 from concurrent.futures import Future
 from datetime import datetime, timezone
-from typing import List, Optional, Union, Callable, Dict
+from typing import Callable, Dict, List, Optional, Union
 
 import typeguard
-import logging
 
-from parsl.data_provider.files import File
 from parsl.app.futures import DataFuture
+from parsl.data_provider.files import File
 from parsl.dataflow.futures import AppFuture
 
 logger = logging.getLogger(__name__)

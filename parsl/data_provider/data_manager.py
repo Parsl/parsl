@@ -3,12 +3,12 @@ from concurrent.futures import Future
 from typing import TYPE_CHECKING, Any, Callable, List, Optional
 
 from parsl.app.futures import DataFuture
+from parsl.data_provider.dynamic_files import DynamicFileList
 from parsl.data_provider.file_noop import NoOpFileStaging
 from parsl.data_provider.files import File
 from parsl.data_provider.ftp import FTPSeparateTaskStaging
 from parsl.data_provider.http import HTTPSeparateTaskStaging
 from parsl.data_provider.staging import Staging
-from parsl.data_provider.dynamic_files import DynamicFileList
 from parsl.data_provider.zip import ZipFileStaging
 
 if TYPE_CHECKING:
