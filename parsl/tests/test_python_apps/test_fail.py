@@ -39,7 +39,7 @@ def test_fail_sequence_first():
     assert isinstance(t_final.exception().dependent_exceptions_tids[0][0], DependencyError)
     assert t_final.exception().dependent_exceptions_tids[0][1].startswith("task ")
 
-    assert hasattr(t_final.exception(),'__cause__')
+    assert hasattr(t_final.exception(), '__cause__')
     assert t_final.exception().__cause__ == t1.exception()
 
 
@@ -54,5 +54,5 @@ def test_fail_sequence_middle():
     assert len(t_final.exception().dependent_exceptions_tids) == 1
     assert isinstance(t_final.exception().dependent_exceptions_tids[0][0], ManufacturedTestFailure)
 
-    assert hasattr(t_final.exception(),'__cause__')
+    assert hasattr(t_final.exception(), '__cause__')
     assert t_final.exception().__cause__ == t2.exception()
