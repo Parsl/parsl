@@ -28,7 +28,7 @@ from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 from parsl.dataflow.dependency_resolvers import SHALLOW_DEPENDENCY_RESOLVER
-from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
+from parsl.dataflow.errors import DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
@@ -161,13 +161,13 @@ class DataFlowKernel:
                                  workflow_info))
 
         if config.checkpoint_files is not None:
-            checkpoints = self.load_checkpoints(config.checkpoint_files)
+            checkpoint_files = config.checkpoint_files
         elif config.checkpoint_files is None and config.checkpoint_mode is not None:
-            checkpoints = self.load_checkpoints(get_all_checkpoints(self.run_dir))
+            checkpoint_files = get_all_checkpoints(self.run_dir)
         else:
-            checkpoints = {}
+            checkpoint_files = []
 
-        self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint=checkpoints)
+        self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint_files=checkpoint_files)
         self.checkpointed_tasks = 0
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
@@ -1316,74 +1316,6 @@ class DataFlowKernel:
                 logger.info("Done checkpointing {} tasks".format(count))
 
             return checkpoint_dir
-
-    def _load_checkpoints(self, checkpointDirs: Sequence[str]) -> Dict[str, Future[Any]]:
-        """Load a checkpoint file into a lookup table.
-
-        The data being loaded from the pickle file mostly contains input
-        attributes of the task: func, args, kwargs, env...
-        To simplify the check of whether the exact task has been completed
-        in the checkpoint, we hash these input params and use it as the key
-        for the memoized lookup table.
-
-        Args:
-            - checkpointDirs (list) : List of filepaths to checkpoints
-              Eg. ['runinfo/001', 'runinfo/002']
-
-        Returns:
-            - memoized_lookup_table (dict)
-        """
-        memo_lookup_table = {}
-
-        for checkpoint_dir in checkpointDirs:
-            logger.info("Loading checkpoints from {}".format(checkpoint_dir))
-            checkpoint_file = os.path.join(checkpoint_dir, 'tasks.pkl')
-            try:
-                with open(checkpoint_file, 'rb') as f:
-                    while True:
-                        try:
-                            data = pickle.load(f)
-                            # Copy and hash only the input attributes
-                            memo_fu: Future = Future()
-                            assert data['exception'] is None
-                            memo_fu.set_result(data['result'])
-                            memo_lookup_table[data['hash']] = memo_fu
-
-                        except EOFError:
-                            # Done with the checkpoint file
-                            break
-            except FileNotFoundError:
-                reason = "Checkpoint file was not found: {}".format(
-                    checkpoint_file)
-                logger.error(reason)
-                raise BadCheckpoint(reason)
-            except Exception:
-                reason = "Failed to load checkpoint: {}".format(
-                    checkpoint_file)
-                logger.error(reason)
-                raise BadCheckpoint(reason)
-
-            logger.info("Completed loading checkpoint: {0} with {1} tasks".format(checkpoint_file,
-                                                                                  len(memo_lookup_table.keys())))
-        return memo_lookup_table
-
-    @typeguard.typechecked
-    def load_checkpoints(self, checkpointDirs: Optional[Sequence[str]]) -> Dict[str, Future]:
-        """Load checkpoints from the checkpoint files into a dictionary.
-
-        The results are used to pre-populate the memoizer's lookup_table
-
-        Kwargs:
-             - checkpointDirs (list) : List of run folder to use as checkpoints
-               Eg. ['runinfo/001', 'runinfo/002']
-
-        Returns:
-             - dict containing, hashed -> future mappings
-        """
-        if checkpointDirs:
-            return self._load_checkpoints(checkpointDirs)
-        else:
-            return {}
 
     @staticmethod
     def _log_std_streams(task_record: TaskRecord) -> None:
