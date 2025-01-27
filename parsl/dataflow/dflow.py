@@ -1263,7 +1263,7 @@ class DataFlowKernel:
         Returns:
             Checkpoint dir if checkpoints were written successfully.
             By default the checkpoints are written to the RUNDIR of the current
-            run under RUNDIR/checkpoints/{tasks.pkl, dfk.pkl}
+            run under RUNDIR/checkpoints/tasks.pkl
         """
         with self.checkpoint_lock:
             if tasks:
@@ -1273,17 +1273,10 @@ class DataFlowKernel:
                 self.checkpointable_tasks = []
 
             checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
-            checkpoint_dfk = checkpoint_dir + '/dfk.pkl'
             checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
 
             if not os.path.exists(checkpoint_dir):
                 os.makedirs(checkpoint_dir, exist_ok=True)
-
-            with open(checkpoint_dfk, 'wb') as f:
-                state = {'rundir': self.run_dir,
-                         'task_count': self.task_count
-                         }
-                pickle.dump(state, f)
 
             count = 0
 
