@@ -111,6 +111,6 @@ class File:
             raise ValueError("No local_path set for {}".format(repr(self)))
 
     @property
-    def timesatmp(self) -> Optional[str]:
+    def timestamp(self) -> Optional[str]:
         """Stub to make this compatible with DynamicFile objects."""
         return None

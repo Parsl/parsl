@@ -46,8 +46,8 @@ class MonitoringHub(RepresentationMixin):
                  logging_endpoint: Optional[str] = None,
                  monitoring_debug: bool = False,
                  resource_monitoring_enabled: bool = True,
-                 resource_monitoring_interval: float = 30,
-                 file_provenance: bool = False):  # in seconds
+                 resource_monitoring_interval: float = 30,  # in seconds
+                 file_provenance: bool = False):
         """
         Parameters
         ----------
