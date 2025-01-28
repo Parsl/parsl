@@ -16,7 +16,9 @@ def bash_watch(func: Callable,
                **kwargs) -> int:
     """This function wraps a bash_app and captures any files created by the bash_app. This is done
     by using the watchdog library to watch the specified paths for file creation events. It is most
-    useful when using the file provenance framework.
+    useful when using the file provenance framework. Note: if multiple `bash_watch` instances
+    are monitoring the same path(s), there is no way for them to know which files were created by
+    which `bash_app` instance. This may lead to incorrect file provenance records.
 
     Parameters
     ----------
