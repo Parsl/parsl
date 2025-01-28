@@ -11,8 +11,7 @@ def random_uuid(x, cache=True):
 
 
 def test_python_memoization(n=2):
-    """Testing python memoization disable
-    """
+    """Testing python memoization."""
     x = random_uuid(0)
     print(x.result())
 
