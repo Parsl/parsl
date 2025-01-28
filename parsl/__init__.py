@@ -46,7 +46,6 @@ __all__ = [
     'bash_app',
     'python_app',
     'join_app',
-    'watch_app',
 
     # core
     'Config',
