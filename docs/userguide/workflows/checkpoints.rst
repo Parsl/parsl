@@ -10,10 +10,11 @@ This can save time and computational resources.
 
 This is done in two ways:
 
-* Firstly, *app caching* will allow reuse of results within the same run.
+* Firstly, *app caching* will allow reuse of results and exceptions within
+  the same run.
 
-* Building on top of that, *checkpointing* will store results on the filesystem
-  and reuse those results in later runs.
+* Building on top of that, *checkpointing* will store results (but not
+  exceptions) on the filesystem and reuse those results in later runs.
 
 .. _label-appcaching:
 
