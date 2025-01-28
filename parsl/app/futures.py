@@ -54,7 +54,7 @@ class DataFuture(Future):
             self.data_flow_kernel.register_as_output(self.file_obj, self.app_fut.task_record)
 
     @typeguard.typechecked
-    def __init__(self, fut: Future, file_obj: File, dfk: "DataFlowKernel", tid: Optional[int] = None, app_fut: Optional[Future] = None) -> None:
+    def __init__(self, fut: Future, file_obj: File, dfk: "DataFlowKernel", tid: int, app_fut: Optional[Future] = None) -> None:
         """Construct the DataFuture object.
 
         If the file_obj is a string convert to a File.
