@@ -78,12 +78,6 @@ class DataFuture(Future):
             self.app_fut = fut
         self.data_flow_kernel = dfk
         self.parent.add_done_callback(self.parent_callback)
-        # only capture this if needed
-        if self.data_flow_kernel.file_provenance and self.file_obj.scheme == 'file' and os.path.exists(file_obj.path):
-            file_stat = os.stat(file_obj.path)
-            self.file_obj.timestamp = datetime.fromtimestamp(file_stat.st_ctime, tz=timezone.utc)
-            self.file_obj.size = file_stat.st_size
-            self.file_obj.md5sum = md5(open(self.file_obj, 'rb').read()).hexdigest()
 
         logger.debug("Creating DataFuture with parent: %s and file: %s", self.parent, repr(self.file_obj))
 
