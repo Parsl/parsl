@@ -658,6 +658,33 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                 logger.debug("Sending hold to manager: {}".format(manager['manager']))
                 self._hold_manager(manager['manager'])
 
+    def submit_payload(self, task_payload: bytes, resource_specification, task_id) -> Future:
+        """Submits a serialized function payload to the internal queues
+
+        Returns:
+              Future
+        """
+
+        self.validate_resource_spec(resource_specification)
+
+        if self.bad_state_is_set:
+            raise self.executor_exception
+
+        self._task_counter += 1
+        task_id = self._task_counter
+
+        fut: Future = Future()
+        fut.parsl_executor_task_id = task_id  # type: ignore[attr-defined]
+        self.tasks[task_id] = fut
+
+        msg = {"task_id": task_id, "resource_spec": resource_specification, "buffer": task_payload}
+
+        # Post task to the outgoing queue
+        self.outgoing_q.put(msg)
+
+        # Return the future
+        return fut
+
     def submit(self, func, resource_specification, *args, **kwargs):
         """Submits work to the outgoing_q.
 
@@ -677,37 +704,26 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
               Future
         """
 
-        self.validate_resource_spec(resource_specification)
-
-        if self.bad_state_is_set:
-            raise self.executor_exception
-
         self._task_counter += 1
         task_id = self._task_counter
 
         # handle people sending blobs gracefully
         if logger.getEffectiveLevel() <= logging.DEBUG:
-            args_to_print = tuple([ar if len(ar := repr(arg)) < 100 else (ar[:100] + '...') for arg in args])
-            logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
-
-        fut = Future()
-        fut.parsl_executor_task_id = task_id
-        self.tasks[task_id] = fut
+            args_to_print = tuple(
+                [ar if len(ar := repr(arg)) < 100 else (ar[:100] + '...') for arg in
+                 args])
+            logger.debug(
+                "Pushing function {} to queue with args {}".format(func, args_to_print))
 
         try:
-            fn_buf = pack_res_spec_apply_message(func, args, kwargs,
-                                                 resource_specification=resource_specification,
-                                                 buffer_threshold=1024 * 1024)
+            task_payload = pack_res_spec_apply_message(func, args, kwargs,
+                                                       resource_specification=resource_specification,
+                                                       buffer_threshold=1024 * 1024)
         except TypeError:
             raise SerializationError(func.__name__)
 
-        msg = {"task_id": task_id, "resource_spec": resource_specification, "buffer": fn_buf}
+        return self.submit_payload(task_payload, resource_specification, task_id)
 
-        # Post task to the outgoing queue
-        self.outgoing_q.put(msg)
-
-        # Return the future
-        return fut
 
     @property
     def workers_per_node(self) -> Union[int, float]:
