@@ -25,7 +25,7 @@ Anatomy of an Executor
 
 Most Parsl executors are defined by three components:
 
-- *Worker Definition* which controls how many workers are placed on each :ref:`glossarynode`.
+- *Worker Definition* which controls how many workers are placed on each node..
   Options typically include how many workers per node, and
   :ref:`how each worker is mapped to CPUs or accelerators <affinity>`.
 - *Provider Description* which specifies how Parsl gains access to resources,
@@ -35,10 +35,10 @@ Most Parsl executors are defined by three components:
 - *Launcher Specification* which defines how the workers which execute Parsl tasks
   are placed on to the compute node.
 
-This section of the Parsl user guide will explain all three classes of components.
+The following pages of the Parsl user guide will explain all three classes of components.
 
-An Simple Example
-+++++++++++++++++
+A Simple Example
+++++++++++++++++
 
 The following example of a :class:`~parsl.config.Config` shows the major configuration options.
 
@@ -71,10 +71,10 @@ The following example of a :class:`~parsl.config.Config` shows the major configu
 The worker options are those for :class:`~parsl.executors.HighThroughputExecutor`.
 The options include a name for the workers of this type (``label``),
 how the worker connects to the main Parsl process (``address``),
-and how many workers to place on each compute node.
+and how many workers to place on each compute node (``max_workers_per_node``).
 
 The provider options are define the queue used for submission (``partition``)
-and sets Parsl to request on job (``init_blocks``) of 128 nodes (``nodes_per_block``)
+and sets Parsl to request one job (``init_blocks``) of 128 nodes (``nodes_per_block``).
 
 The launcher uses the default mechanism for starting programs on Frontera compute nodes, ``srun``.
 
@@ -111,6 +111,10 @@ Consider a configuration function if the application will shut down and re-launc
     with parsl.load(make_config()):  # Re-launches with a fresh configuration
         # Your workflow here
 
+Subsections
+-----------
+
+The following sections detail the many configuration options available in Parsl.
 
 .. toctree::
     :maxdepth: 2
