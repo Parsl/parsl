@@ -31,10 +31,8 @@ The following pages of the Parsl user guide will explain all three classes of co
     :maxdepth: 2
 
     config
+    executors/index
     execution
     elasticity
-    pinning
-    data
     heterogeneous
-    encryption
     examples

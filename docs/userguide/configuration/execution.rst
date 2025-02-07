@@ -48,52 +48,6 @@ Parsl currently supports the following providers:
 
 
 
-Executors
----------
-
-Parsl programs vary widely in terms of their
-execution requirements. Individual Apps may run for milliseconds
-or days, and available parallelism can vary between none for 
-sequential programs to millions for "pleasingly parallel" programs.
-Parsl executors, as the name suggests, execute Apps on one or more
-target execution resources such as multi-core workstations, clouds,
-or supercomputers. As it appears infeasible to implement a single
-execution strategy that will meet so many diverse requirements on
-such varied platforms, Parsl provides a modular executor interface
-and a collection of executors that are tuned for common execution
-patterns. 
-
-Parsl executors extend the Executor class offered by Python's
-concurrent.futures library, which allows Parsl to use 
-existing solutions in the Python Standard Library (e.g., ThreadPoolExecutor)
-and from other packages such as Work Queue. Parsl
-extends the concurrent.futures executor interface to support 
-additional capabilities such as automatic scaling of execution resources,
-monitoring, deferred initialization, and methods to set working
-directories.
-All executors share a common execution kernel that is responsible 
-for deserializing the task (i.e., the App and its input arguments)
-and executing the task in a sandboxed Python environment.
-
-Parsl currently supports the following executors:
-
-1. `parsl.executors.ThreadPoolExecutor`: This executor supports multi-thread execution on local resources.
-
-2. `parsl.executors.HighThroughputExecutor`: This executor implements hierarchical scheduling and batching using a pilot job model to deliver high throughput task execution on up to 4000 Nodes.
-
-3. `parsl.executors.WorkQueueExecutor`: This executor integrates `Work Queue <http://ccl.cse.nd.edu/software/workqueue/>`_ as an execution backend. Work Queue scales to tens of thousands of cores and implements reliable execution of tasks with dynamic resource sizing.
-
-4. `parsl.executors.taskvine.TaskVineExecutor`: This executor uses `TaskVine <https://ccl.cse.nd.edu/software/taskvine/>`_ as the execution backend. TaskVine scales up to tens of thousands of cores and actively uses local storage on compute nodes to offer a diverse array of performance-oriented features, including: smart caching and sharing common large files between tasks and compute nodes, reliable execution of tasks, dynamic resource sizing, automatic Python environment detection and sharing.
-These executors cover a broad range of execution requirements. As with other Parsl components, there is a standard interface (ParslExecutor) that can be implemented to add support for other executors.
-
-5. `parsl.executors.GlobusComputeExecutor`: This executor uses `Globus Compute <https://www.globus.org/compute>`_
-as the execution backend. Globus Compute is a distributed Function as a Service (FaaS) platform that enables secure
-execution of functions on heterogeneous remote computers, from laptops to campus clusters, clouds, and supercomputers.
-Functions are executed on `Globus Compute Endpoints <https://globus-compute.readthedocs.io/en/latest/endpoints/endpoints.html>`_
-that can be `configured <https://globus-compute.readthedocs.io/en/latest/endpoints/endpoint_examples.html>`_
-to scale execution on most batch schedulers automatically. Since Globus Compute Endpoints use `parsl.executors.HighThroughputExecutor`
-as the default execution system, this executor can be thought of as an extension of the `parsl.executors.HighThroughputExecutor` with
-a secure and reliable remote execution wrapper.
 
 .. note::
    Refer to :ref:`configuration-section` for information on how to configure these executors.
