@@ -1,12 +1,10 @@
-Heterogeneous resources
------------------------
+The WorkQueue Executor
+======================
 
-In some cases, it can be difficult to specify the resource requirements for running a workflow.
-For example, if the compute nodes a site provides are not uniform, there is no "correct" resource configuration;
-the amount of parallelism depends on which node (large or small) each job runs on.
-In addition, the software and filesystem setup can vary from node to node.
-A Condor cluster may not provide shared filesystem access at all,
-and may include nodes with a variety of Python versions and available libraries.
+The :class:`parsl.executors.WorkQueueExecutor` IS DESIGNED TO XYZ.
+
+Heterogeneous Resources
+-----------------------
 
 The :class:`parsl.executors.WorkQueueExecutor` provides several features to work with heterogeneous resources.
 By default, Parsl only runs one app at a time on each worker node.
@@ -60,6 +58,9 @@ so that Work Queue will choose separate resource requirements for each app.
 This is important if e.g. some of your apps use a single core and some apps require multiple cores.
 Unless you know that all apps have uniform resource requirements,
 you should turn on ``autocategory`` when using ``autolabel``.
+
+Software Environment Detection
+------------------------------
 
 The Work Queue executor can also help deal with sites that have non-uniform software environments across nodes.
 Parsl assumes that the Parsl program and the compute nodes all use the same Python version.
