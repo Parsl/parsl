@@ -1,6 +1,6 @@
 .. _label-execution:
 
-Execution
+Providers
 =========
 
 Contemporary computing environments may include a wide range of computational platforms or **execution providers**, from laptops and PCs to various clusters, supercomputers, and cloud computing platforms. Different execution providers may require or allow for the use of different **execution models**, such as threads (for efficient parallel execution on a multicore processor), processes, and pilot jobs for running many small tasks on a large parallel system. 
@@ -8,10 +8,6 @@ Contemporary computing environments may include a wide range of computational pl
 Parsl is designed to abstract these low-level details so that an identical Parsl program can run unchanged on different platforms or across multiple platforms. 
 To this end, Parsl uses a configuration file to specify which execution provider(s) and execution model(s) to use.
 Parsl provides a high level abstraction, called a *block*, for providing a uniform description of a compute resource irrespective of the specific execution provider.
-
-.. note::
-   Refer to :ref:`configuration-section` for information on how to configure the various components described
-   below for specific scenarios.
 
 Execution providers
 -------------------
@@ -118,14 +114,14 @@ Three different examples of block configurations are shown below.
 
 1. A single block comprised of a node executing one task:
 
-   .. image:: ../../images/N1_T1.png
+   .. image:: img/N1_T1.png
       :scale: 75%
 
 2. A single block with one node executing several tasks. This configuration is
    most suitable for single threaded apps running on multicore target systems.
    The number of tasks executed concurrently is proportional to the number of cores available on the system.
 
-   .. image:: ../../images/N1_T4.png
+   .. image:: img/N1_T4.png
        :scale: 75%
 
 3. A block comprised of several nodes and executing several tasks, where a task can span multiple nodes. This configuration
@@ -133,9 +129,16 @@ Three different examples of block configurations are shown below.
    MPI launcher that is supported on the target system (e.g., aprun, srun, mpirun, mpiexec).
    The `MPI Apps <mpi_apps.html>`_ documentation page describes how to configure Parsl for this case.
 
-   .. image:: ../../images/N4_T2.png
+   .. image:: img/N4_T2.png
 
 The configuration options for specifying the shape of each block are:
 
 1. ``workers_per_node``: Number of workers started per node, which corresponds to the number of tasks that can execute concurrently on a node.
 2. ``nodes_per_block``: Number of nodes requested per block.
+
+
+.. toctree::
+   :maxdepth: 2
+
+   elasticity
+   launchers

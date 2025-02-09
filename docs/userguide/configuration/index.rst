@@ -13,11 +13,13 @@ so that software can
 introspect permissible options, validate settings, and retrieve/edit
 configurations dynamically during execution.
 
-Most Parsl executors are defined by three components:
+The :class:`~parsl.config.Config` object, in short, is a list of **Executors**.
+Each executor represents a different type of worker Parsl will use to run tasks
+and an executor contains at least three components:
 
 - *Worker Definition* which controls how many workers are placed on each node..
-  Options typically include how many workers per node, and
-  :ref:`how each worker is mapped to CPUs or accelerators <affinity>`.
+  Options typically include how many workers per node and
+  how many resources (e.g., CPU cores) each worker is a allowed to use.
 - *Provider Description* which specifies how Parsl gains access to resources,
   such as by requesting nodes from a cluster's queuing system.
   Many types of provides require the name of a queue, how many nodes to request from the queue,
@@ -25,14 +27,17 @@ Most Parsl executors are defined by three components:
 - *Launcher Specification* which defines how the workers which execute Parsl tasks
   are placed on to the compute node.
 
-The following pages of the Parsl user guide will explain all three classes of components.
+Learn to build a :class:`~parsl.config.Config` by first learning about
+the `configuration object <config.html>`_ then
+the types of `Executors <executors/index.html>`_ available in Parsl, which
+each may require using a `resource provider and launcher <providers/index.html>`_.
+
+Alternatively, start by finding an `example configuration <examples.html>`_ which is simmilar to what you need.
 
 .. toctree::
     :maxdepth: 2
 
     config
     executors/index
-    execution
-    elasticity
-    heterogeneous
+    providers/index
     examples
