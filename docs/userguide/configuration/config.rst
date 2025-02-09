@@ -1,8 +1,8 @@
 Config Objects
 ==============
 
-A :class:`~parsl.config.Config` objects defines and implements how Parsl connects
-resources that execute its task
+A :class:`~parsl.config.Config` object defines and implements how Parsl connects
+to resources that execute tasks.
 
 The main part of the configuration is a list of
 **executors** which each define a certain type of worker
@@ -87,9 +87,10 @@ which is often used when the application uses tasks
 with different compute requirements.
 
 All executors define a ``label`` field that is used
-in log files and when determining where to run different tasks.
-
-Tasks from the following app will only run on an executor labelled "frontera_htex".
+route to specific workers.
+All types of apps include a ``executors`` option which takes
+a list of executor labels.
+For example, tasks from the following App will only run on an executor labelled "frontera_htex".
 
 .. code-block:: python
 
@@ -98,15 +99,11 @@ Tasks from the following app will only run on an executor labelled "frontera_hte
         return x * 2 + 1
 
 
-Tasks run on all available executors by default.
-
 Consider using multiple executors in the following cases:
-
-The common scenarios for this feature are:
 
 - *Different resource requirements between tasks*, such as a workflow
   with a simulation stage that runs on the CPU nodes of an HPC system
   followed by an analysis and visualization stage that runs on GPU nodes.
-* *Different scales between workflow stages*, such as a workflow
+- *Different scales between workflow stages*, such as a workflow
   with a "fan-out" stage of many long running running on a cluster
   and quick "fan-in" computations which can run on the login node.

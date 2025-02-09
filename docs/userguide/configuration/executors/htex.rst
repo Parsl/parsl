@@ -2,13 +2,19 @@ The High-Throughput Executor
 ============================
 
 The :class:`~parsl.executors.HighThroughputExecutor` (HTEx) is the standard Executor provided with Parsl.
-
-The unique points of
-
+The following sections detail the most-used configuration options of Parsl.
 
 .. contents::
    :local:
    :depth: 1
+
+Defining Workers Per Node
+-------------------------
+
+HTEx determines how many workers to run on each node individually.
+The number of nodes is the minimum of the ``max_workers_per_node``,
+the number of workers determined from ``cores_per_worker``,
+and the number of workers defined by ``mem_per_worker``.
 
 Resource pinning
 ----------------
@@ -129,8 +135,8 @@ GPU Oversubscription
 
 For hardware that uses Nvidia devices, Parsl allows for the oversubscription of workers to GPUS.  This is intended to
 make use of Nvidia's `Multi-Process Service (MPS) <https://docs.nvidia.com/deploy/mps/>`_ available on many of their
-GPUs that allows users to run multiple concurrent processes on a single GPU.  The user needs to set in the
-``worker_init`` commands to start MPS on every node in the block (this is machine dependent).  The
+GPUs that allows users to run multiple concurrent processes on a single GPU.  The user needs to set the
+``worker_init`` command of the Provider to start MPS on every node in the block (this is machine dependent).  The
 ``available_accelerators`` option should then be set to the total number of GPU partitions run on a single node in the
 block.  For example, for a node with 4 Nvidia GPUs, to create 8 workers per GPU, set ``available_accelerators=32``.
 GPUs will be assigned to workers in ascending order in contiguous blocks.  In the example, workers 0-7 will be placed

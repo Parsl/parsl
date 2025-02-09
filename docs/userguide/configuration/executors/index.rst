@@ -1,16 +1,13 @@
 Executors
 ---------
 
-Parsl provides different Executors to handle the wide variety
-of workloads with computational science.
+Parsl provides many Executors to handle a wide variety of workloads.
 
 Workloads that execute a small number of tasks which run locally
 benefit from the minimal configuration required for :class:`~parsl.executors.ThreadPoolExecutor`,
-whereas those which require to thousands of nodes should use the
+whereas those which require thousands of nodes should use the
 :class:`~parsl.executors.HighThroughputExecutor`.
-
-Select an Executor by reviewing the summary below and then,
-where available, consulting the documentation for each.
+These executors include:
 
 #. :class:`~parsl.executors.HighThroughputExecutor` (HTEx): The best starting choice for Parsl applications.
    HTEx deploys many identical Python workers as separate processes with across multiple compute nodes.
@@ -39,12 +36,15 @@ where available, consulting the documentation for each.
 
 #. :class:`~parsl.executors.ThreadPoolExecutor`: A lightweight executor that runs on the same computer as the Parsl script.
 
+Start by following the documentation for the chosen documentation.
+Continue by specifying how to request compute nodes in the `Provider <../providers/index.html>`_ documentation.
+
 .. toctree::
     :maxdepth: 2
+    :caption: Table of Contents
 
-    addresses
-    data
     htex
     heterogeneous
-
+    addresses
+    data
 
