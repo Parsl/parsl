@@ -290,10 +290,10 @@ def workflow_dag_plot(df_tasks, group_by_apps=True):
         edge_trace['y'] += tuple([y0, y1, None])
 
     # Create figure:
+    title = go.layout.Title(text='Workflow DAG', font=dict(size=16))
     fig = go.Figure(data=[edge_trace] + node_traces,
                     layout=go.Layout(
-                    title='Workflow DAG',
-                    titlefont=dict(size=16),
+                    title=title,
                     showlegend=True,
                     hovermode='closest',
                     margin=dict(b=20, l=5, r=5, t=40),   # noqa: E741
