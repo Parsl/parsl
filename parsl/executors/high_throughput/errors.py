@@ -27,7 +27,7 @@ class VersionMismatch(Exception):
     def __str__(self) -> str:
         return (
             f"Manager version info {self.manager_version} does not match interchange"
-            f" version info {self.interchange_version}, causing a critical failure"
+            f" version info {self.interchange_version}"
         )
 
 
