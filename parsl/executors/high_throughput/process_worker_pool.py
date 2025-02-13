@@ -939,34 +939,36 @@ if __name__ == "__main__":
 
     os.makedirs(os.path.join(args.logdir, "block-{}".format(args.block_id), args.uid), exist_ok=True)
 
+    logger = start_file_logger(
+        f'{args.logdir}/block-{args.block_id}/{args.uid}/manager.log',
+        0,
+        level=logging.DEBUG if args.debug is True else logging.INFO
+    )
+    logger.info(
+        f"\n  Python version: {sys.version}"
+        f"  Debug logging: {args.debug}"
+        f"  Certificates dir: {args.cert_dir}"
+        f"  Log dir: {args.logdir}"
+        f"  Manager ID: {args.uid}"
+        f"  Block ID: {args.block_id}"
+        f"  cores_per_worker: {args.cores_per_worker}"
+        f"  mem_per_worker: {args.mem_per_worker}"
+        f"  task_port: {args.task_port}"
+        f"  result_port: {args.result_port}"
+        f"  addresses: {args.addresses}"
+        f"  max_workers_per_node: {args.max_workers_per_node}"
+        f"  poll_period: {args.poll}"
+        f"  address_probe_timeout: {args.address_probe_timeout}"
+        f"  Prefetch capacity: {args.prefetch_capacity}"
+        f"  Heartbeat threshold: {args.hb_threshold}"
+        f"  Heartbeat period: {args.hb_period}"
+        f"  Drain period: {args.drain_period}"
+        f"  CPU affinity: {args.cpu_affinity}"
+        f"  Accelerators: {' '.join(args.available_accelerators)}"
+        f"  enable_mpi_mode: {args.enable_mpi_mode}"
+        f"  mpi_launcher: {args.mpi_launcher}"
+    )
     try:
-        logger = start_file_logger('{}/block-{}/{}/manager.log'.format(args.logdir, args.block_id, args.uid),
-                                   0,
-                                   level=logging.DEBUG if args.debug is True else logging.INFO)
-
-        logger.info("Python version: {}".format(sys.version))
-        logger.info("Debug logging: {}".format(args.debug))
-        logger.info("Certificates dir: {}".format(args.cert_dir))
-        logger.info("Log dir: {}".format(args.logdir))
-        logger.info("Manager ID: {}".format(args.uid))
-        logger.info("Block ID: {}".format(args.block_id))
-        logger.info("cores_per_worker: {}".format(args.cores_per_worker))
-        logger.info("mem_per_worker: {}".format(args.mem_per_worker))
-        logger.info("task_port: {}".format(args.task_port))
-        logger.info("result_port: {}".format(args.result_port))
-        logger.info("addresses: {}".format(args.addresses))
-        logger.info("max_workers_per_node: {}".format(args.max_workers_per_node))
-        logger.info("poll_period: {}".format(args.poll))
-        logger.info("address_probe_timeout: {}".format(args.address_probe_timeout))
-        logger.info("Prefetch capacity: {}".format(args.prefetch_capacity))
-        logger.info("Heartbeat threshold: {}".format(args.hb_threshold))
-        logger.info("Heartbeat period: {}".format(args.hb_period))
-        logger.info("Drain period: {}".format(args.drain_period))
-        logger.info("CPU affinity: {}".format(args.cpu_affinity))
-        logger.info("Accelerators: {}".format(" ".join(args.available_accelerators)))
-        logger.info("enable_mpi_mode: {}".format(args.enable_mpi_mode))
-        logger.info("mpi_launcher: {}".format(args.mpi_launcher))
-
         manager = Manager(task_port=args.task_port,
                           result_port=args.result_port,
                           addresses=args.addresses,
