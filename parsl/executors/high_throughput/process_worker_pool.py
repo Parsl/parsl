@@ -214,6 +214,8 @@ class Manager:
                                      math.floor(cores_on_node / cores_per_worker))
 
         self._mp_manager = SpawnContext.Manager()  # Starts a server process
+        self._tasks_in_progress = self._mp_manager.dict()
+        self._kill_event = threading.Event()
 
         self.monitoring_queue = self._mp_manager.Queue()
         self.pending_task_queue = SpawnContext.Queue()
@@ -507,9 +509,6 @@ class Manager:
 
         TODO: Move task receiving to a thread
         """
-        self._kill_event = threading.Event()
-        self._tasks_in_progress = self._mp_manager.dict()
-
         self.procs = {}
         for worker_id in range(self.worker_count):
             p = self._start_worker(worker_id)
