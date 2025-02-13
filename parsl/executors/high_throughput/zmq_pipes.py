@@ -212,7 +212,6 @@ class ResultsIncoming:
         """Get a message from the queue, returning None if timeout expires
         without a message. timeout is measured in milliseconds.
         """
-        # logger.debug("Waiting for ResultsIncoming message")
         socks = dict(self.poller.poll(timeout=timeout_ms))
         if self.results_receiver in socks and socks[self.results_receiver] == zmq.POLLIN:
             m = self.results_receiver.recv_multipart()
