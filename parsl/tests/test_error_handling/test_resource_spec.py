@@ -1,3 +1,5 @@
+import pytest
+
 import parsl
 from parsl.app.app import python_app
 from parsl.executors import WorkQueueExecutor
@@ -11,6 +13,7 @@ def double(x, parsl_resource_specification={}):
     return x * 2
 
 
+@pytest.mark.issue_3620
 def test_resource(n=2):
     executors = parsl.dfk().executors
     executor = None
