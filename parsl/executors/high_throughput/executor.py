@@ -434,8 +434,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self._start_result_queue_thread()
         self._start_local_interchange_process()
 
-        logger.debug("Created result queue thread: %s", self._result_queue_thread)
-
         self.initialize_scaling()
 
     @wrap_with_logs
@@ -534,6 +532,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         # TODO: all these arguments below aren't used... so are they necessary? should there be
         # tests discovering they aren't used/passed?
 
+        assert self.interchange_proc is None, f"Already exists! {self.interchange_proc!r}"
+
         interchange_config = {"client_address": self.loopback_address,
                               "client_ports": (self.outgoing_q.port,
                                                self.incoming_q.port,
@@ -594,7 +594,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             logger.error("Interchange has not completed initialization")
             # TODO: use a parsl exception...
             raise Exception("Interchange failed to start")
-        logger.debug("Got worker ports")
+        logger.debug(
+            "Interchange process started (%r).  Worker ports: %d, %d",
+            self.interchange_proc,
+            self.worker_task_port,
+            self.worker_result_port
+        )
 
     def _start_result_queue_thread(self):
         """Method to start the result queue thread as a daemon.
@@ -602,15 +607,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Checks if a thread already exists, then starts it.
         Could be used later as a restart if the result queue thread dies.
         """
-        if self._result_queue_thread is None:
-            logger.debug("Starting result queue thread")
-            self._result_queue_thread = threading.Thread(target=self._result_queue_worker, name="HTEX-Result-Queue-Thread")
-            self._result_queue_thread.daemon = True
-            self._result_queue_thread.start()
-            logger.debug("Started result queue thread")
+        assert self._result_queue_thread is None, f"Already exists! {self._result_queue_thread!r}"
 
-        else:
-            logger.error("Result queue thread already exists, returning")
+        logger.debug("Starting result queue thread")
+        self._result_queue_thread = threading.Thread(target=self._result_queue_worker, name="HTEX-Result-Queue-Thread")
+        self._result_queue_thread.daemon = True
+        self._result_queue_thread.start()
+        logger.debug("Started result queue thread: %r", self._result_queue_thread)
 
     def hold_worker(self, worker_id: str) -> None:
         """Puts a worker on hold, preventing scheduling of additional tasks to it.
