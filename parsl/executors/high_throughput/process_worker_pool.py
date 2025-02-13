@@ -517,23 +517,23 @@ class Manager:
 
         logger.debug("Workers started")
 
-        self._task_puller_thread = threading.Thread(target=self.pull_tasks,
-                                                    args=(self._kill_event,),
-                                                    name="Task-Puller")
-        self._result_pusher_thread = threading.Thread(target=self.push_results,
-                                                      args=(self._kill_event,),
-                                                      name="Result-Pusher")
-        self._worker_watchdog_thread = threading.Thread(target=self.worker_watchdog,
-                                                        args=(self._kill_event,),
-                                                        name="worker-watchdog")
-        self._monitoring_handler_thread = threading.Thread(target=self.handle_monitoring_messages,
-                                                           args=(self._kill_event,),
-                                                           name="Monitoring-Handler")
+        thr_task_puller = threading.Thread(target=self.pull_tasks,
+                                           args=(self._kill_event,),
+                                           name="Task-Puller")
+        thr_result_pusher = threading.Thread(target=self.push_results,
+                                             args=(self._kill_event,),
+                                             name="Result-Pusher")
+        thr_worker_watchdog = threading.Thread(target=self.worker_watchdog,
+                                               args=(self._kill_event,),
+                                               name="worker-watchdog")
+        thr_monitoring_handler = threading.Thread(target=self.handle_monitoring_messages,
+                                                  args=(self._kill_event,),
+                                                  name="Monitoring-Handler")
 
-        self._task_puller_thread.start()
-        self._result_pusher_thread.start()
-        self._worker_watchdog_thread.start()
-        self._monitoring_handler_thread.start()
+        thr_task_puller.start()
+        thr_result_pusher.start()
+        thr_worker_watchdog.start()
+        thr_monitoring_handler.start()
 
         logger.info("Manager threads started")
 
@@ -541,10 +541,10 @@ class Manager:
         self._kill_event.wait()
         logger.critical("Received kill event, terminating worker processes")
 
-        self._task_puller_thread.join()
-        self._result_pusher_thread.join()
-        self._worker_watchdog_thread.join()
-        self._monitoring_handler_thread.join()
+        thr_task_puller.join()
+        thr_result_pusher.join()
+        thr_worker_watchdog.join()
+        thr_monitoring_handler.join()
         for proc_id in self.procs:
             self.procs[proc_id].terminate()
             logger.critical("Terminating worker {}: is_alive()={}".format(self.procs[proc_id],
