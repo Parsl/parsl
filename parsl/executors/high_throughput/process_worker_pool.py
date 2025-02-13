@@ -828,7 +828,7 @@ def get_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-a",
         "--addresses",
-        default='',
+        required=True,
         help="Comma separated list of addresses at which the interchange could be reached",
     )
     parser.add_argument(

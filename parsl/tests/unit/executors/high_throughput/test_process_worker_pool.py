@@ -17,6 +17,7 @@ _known_required = (  # type: ignore[unreachable, unused-ignore]
     "--cpu-affinity",
     "--result_port",
     "--task_port",
+    "--addresses",
 )
 
 
@@ -62,6 +63,7 @@ def test_arg_parser_validates_cpu_affinity(valid, val):
     reqd_args.extend(("--cert_dir", "/some/path"))
     reqd_args.extend(("--result_port", "123"))
     reqd_args.extend(("--task_port", "123"))
+    reqd_args.extend(("--addresses", "asdf"))
     reqd_args.extend(("--cpu-affinity", val))
 
     p = process_worker_pool.get_arg_parser()
