@@ -57,6 +57,7 @@ class Interchange:
                  cert_dir: Optional[str],
                  manager_selector: ManagerSelector,
                  run_id: str,
+                 submit_pid: Any, # ignored in this impl TODO
                  ) -> None:
         """
         Parameters

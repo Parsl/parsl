@@ -1,11 +1,11 @@
 import logging
 import math
+import os
 import pickle
 import subprocess
 import threading
 import typing
 import warnings
-import os
 from collections import defaultdict
 from concurrent.futures import Future
 from dataclasses import dataclass
@@ -550,29 +550,44 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                               "cert_dir": self.cert_dir,
                               "manager_selector": self.manager_selector,
                               "run_id": self.run_id,
-                              "submit_pid": os.getpid()  # race condition here: the workflow could end and the pid be re-used before the interchange process starts looking for that pid using pidfd: there's nothing to keep that pid allocated over the launch.
+                              "submit_pid": os.getpid()
+                              # race condition here: the workflow could end and the pid be re-used before
+                              # the interchange process starts looking for that pid using pidfd: there's
+                              # nothing to keep that pid allocated over the launch.
                               }
-
 
         logger.error(f"BENC: interchange_config = {interchange_config}")
         config_pickle = pickle.dumps(interchange_config)
 
         if self.benc_interchange_cli == "rust":
             self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange " + str(self.cert_dir)], shell=True)
-            # when i was playing with performance, I did a dev/null redirect here to reduce console load. but then you lose panic-style debug output
-            # self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange " + str(self.cert_dir) + " >/dev/null 2>/dev/null"], shell=True)
+            # when i was playing with performance, I did a dev/null redirect here
+            # to reduce console load. but then you lose panic-style debug output
+            # self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange " +
+            #                           str(self.cert_dir) + " >/dev/null 2>/dev/null"], shell=True)
         elif self.benc_interchange_cli == "elixir":
             # this is going to leave residual elixirchange around because killing shell won't kill children...
             self.interchange_proc = subprocess.Popen(args=["cd elixirchange; MIX_ENV=prod mix run --no-halt"], shell=True)
         elif self.benc_interchange_cli == "idris2":
             self.interchange_proc = subprocess.Popen(args=["cd idris2interchange ; "
-                                                           "gcc -shared gluezmq.c -lzmq -o glue_zmq.so && gcc -shared pollhelper.c -o pollhelper.so && gcc -shared bytes.c -o bytes.so && "
-                                                           # "rm -rf build/ && idris2 Main.idr -p sop -p elab-util -p contrib -x main"], shell=True, stdin=subprocess.PIPE)
-                                                           # "rm -rf build/ && idris2 Main.idr -p sop -p elab-util -p contrib -x main 2>&1 | tee i2ic.log"], shell=True, stdin=subprocess.PIPE)
-                                                           # "rm -rf build/ && valgrind --trace-children=yes --leak-check=full idris2 Main.idr -p sop -p elab-util -p contrib -x main"], shell=True, stdin=subprocess.PIPE)
-                                                           "perf record idris2 Main.idr -p sop -p elab-util -p contrib -x main"], shell=True, stdin=subprocess.PIPE)
-                                                           # "rm -rf build/ && valgrind --trace-children=yes --tool=massif idris2 Main.idr -p sop -p elab-util -p contrib -x main"], shell=True, stdin=subprocess.PIPE)
-                                                           # "idris2 main.idr -o ixg && LD_LIBRARY_PATH=$(pwd)/build/exec/ixg_app gdb chezscheme"], shell=True)
+                                                           "gcc -shared gluezmq.c -lzmq -o glue_zmq.so && "
+                                                           "gcc -shared pollhelper.c -o pollhelper.so && gcc -shared bytes.c -o bytes.so && "
+                                                           # "rm -rf build/ && idris2 Main.idr -p sop -p elab-util -p contrib -x main"],
+                                                           # shell=True, stdin=subprocess.PIPE)
+                                                           # "rm -rf build/ && "
+                                                           # "idris2 Main.idr -p sop -p elab-util -p contrib -x main 2>&1 | tee i2ic.log"],
+                                                           # shell=True, stdin=subprocess.PIPE)
+                                                           # "rm -rf build/ && "
+                                                           # "valgrind --trace-children=yes --leak-check=full "
+                                                           # "idris2 Main.idr -p sop -p elab-util -p contrib -x main"],
+                                                           # shell=True, stdin=subprocess.PIPE)
+                                                           "perf record idris2 Main.idr -p sop -p elab-util -p contrib -x main"],
+                                                     shell=True, stdin=subprocess.PIPE)
+
+    # "rm -rf build/ && valgrind --trace-children=yes --tool=massif idris2 Main.idr -p sop -p elab-util -p contrib -x main"],
+    #  shell=True, stdin=subprocess.PIPE)
+    # "idris2 main.idr -o ixg && LD_LIBRARY_PATH=$(pwd)/build/exec/ixg_app gdb chezscheme"], shell=True)
+
         elif self.benc_interchange_cli == "python":
             self.interchange_proc = subprocess.Popen(b"interchange.py", stdin=subprocess.PIPE)
         else:

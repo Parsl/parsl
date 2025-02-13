@@ -8,7 +8,11 @@ from enum import Enum
 from typing import Dict, List
 
 from parsl.multiprocessing import SpawnContext
-from parsl.serialize import pack_res_spec_apply_message, unpack_res_spec_apply_message, serialize
+from parsl.serialize import (
+    pack_res_spec_apply_message,
+    serialize,
+    unpack_res_spec_apply_message,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +72,7 @@ class MPINodesUnavailable(Exception):
     def __str__(self):
         return f"MPINodesUnavailable(requested={self.requested} available={self.available})"
 
+
 class TaskScheduler:
     """Default TaskScheduler that does no taskscheduling
 
@@ -91,7 +96,7 @@ class TaskScheduler:
 
 
 # TODO: maybe this should be more pluggable?
-class FakeTaskScheduler:
+class FakeTaskScheduler(TaskScheduler):
     """Default TaskScheduler that does no taskscheduling
 
     This class simply acts as an abstraction over the task_q and result_q
@@ -114,7 +119,8 @@ class FakeTaskScheduler:
         # return a constant result
         result_package = {'type': 'result', 'task_id': task_id, 'result': self.serialized_result}
 
-        # TODO: we don't necessarily need to pickle this here, when the _q implementation (multiprocessing queue) will pickle this anyway...? (except we need to re-pickle it later to go into ZMQ...?)
+        # TODO: we don't necessarily need to pickle this here, when the _q implementation
+        # (multiprocessing queue) will pickle this anyway...? (except we need to re-pickle it later to go into ZMQ...?)
         self.pending_result_q.put(pickle.dumps(result_package))
 
         # return self.pending_task_q.put(task)

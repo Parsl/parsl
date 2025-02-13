@@ -28,8 +28,8 @@ from parsl.executors.high_throughput.mpi_prefix_composer import (
     compose_all,
 )
 from parsl.executors.high_throughput.mpi_resource_management import (
-    MPITaskScheduler,
     FakeTaskScheduler,
+    TaskScheduler,
 )
 from parsl.executors.high_throughput.probe import probe_addresses
 from parsl.multiprocessing import SpawnContext
@@ -597,7 +597,7 @@ def execute_task(bufs, mpi_launcher: Optional[str] = None):
     user_ns = locals()
     user_ns.update({'__builtins__': __builtins__})
 
-    f, args, kwargs, resource_spec = unpack_res_spec_apply_message(bufs, user_ns, copy=False)
+    f, args, kwargs, resource_spec = unpack_res_spec_apply_message(bufs)
 
     for varname in resource_spec:
         envname = "PARSL_" + str(varname).upper()

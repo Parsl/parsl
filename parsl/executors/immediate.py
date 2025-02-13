@@ -6,7 +6,6 @@ import typeguard
 
 from parsl.data_provider.staging import Staging
 from parsl.executors.base import ParslExecutor
-from parsl.executors.errors import UnsupportedFeatureError
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
