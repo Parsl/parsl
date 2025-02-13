@@ -9,7 +9,7 @@ import os
 from collections import defaultdict
 from concurrent.futures import Future
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Optional, Sequence, Set, Tuple, Union
 
 import typeguard
 
@@ -360,10 +360,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         return self.logdir
 
     def validate_resource_spec(self, resource_specification: dict):
-        """HTEX supports the following *Optional* resource specifications:
-        priority: lower value is higher priority"""
         if resource_specification:
-            acceptable_fields = {'priority'}
+            acceptable_fields: Set[str] = set()  # add new resource spec field names here to make htex accept them
             keys = set(resource_specification.keys())
             invalid_keys = keys - acceptable_fields
             if invalid_keys:
