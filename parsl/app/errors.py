@@ -70,8 +70,8 @@ class MissingOutputs(ParslError):
         self.reason = reason
         self.outputs = outputs
 
-    def __repr__(self) -> str:
-        return "Missing Outputs: {0}, Reason:{1}".format(self.outputs, self.reason)
+    def __str__(self) -> str:
+        return "Missing Outputs: {0}, Reason: {1}".format(self.outputs, self.reason)
 
 
 class BadStdStreamFile(ParslError):
@@ -85,11 +85,8 @@ class BadStdStreamFile(ParslError):
         super().__init__(reason)
         self._reason = reason
 
-    def __repr__(self) -> str:
-        return "Bad Stream File: {}".format(self._reason)
-
     def __str__(self) -> str:
-        return self.__repr__()
+        return "Bad Stream File: {}".format(self._reason)
 
 
 class RemoteExceptionWrapper:
