@@ -171,18 +171,9 @@ class Manager:
 
         self.cert_dir = cert_dir
         self.zmq_context = curvezmq.ClientContext(self.cert_dir)
-        self.task_incoming = self.zmq_context.socket(zmq.DEALER)
-        self.task_incoming.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
-        # Linger is set to 0, so that the manager can exit even when there might be
-        # messages in the pipe
-        self.task_incoming.setsockopt(zmq.LINGER, 0)
-        self.task_incoming.connect(task_q_url)
 
-        self.result_outgoing = self.zmq_context.socket(zmq.DEALER)
-        self.result_outgoing.setsockopt(zmq.IDENTITY, uid.encode('utf-8'))
-        self.result_outgoing.setsockopt(zmq.LINGER, 0)
-        self.result_outgoing.connect(result_q_url)
-        logger.info("Manager connected to interchange")
+        self._task_q_url = task_q_url
+        self._result_q_url = result_q_url
 
         self.uid = uid
         self.block_id = block_id
@@ -280,21 +271,23 @@ class Manager:
         b_msg = json.dumps(msg).encode('utf-8')
         return b_msg
 
-    def heartbeat_to_incoming(self):
+    @staticmethod
+    def heartbeat_to_incoming(task_incoming: zmq.Socket) -> None:
         """ Send heartbeat to the incoming task queue
         """
         msg = {'type': 'heartbeat'}
         # don't need to dumps and encode this every time - could do as a global on import?
         b_msg = json.dumps(msg).encode('utf-8')
-        self.task_incoming.send(b_msg)
+        task_incoming.send(b_msg)
         logger.debug("Sent heartbeat")
 
-    def drain_to_incoming(self):
+    @staticmethod
+    def drain_to_incoming(task_incoming: zmq.Socket) -> None:
         """ Send heartbeat to the incoming task queue
         """
         msg = {'type': 'drain'}
         b_msg = json.dumps(msg).encode('utf-8')
-        self.task_incoming.send(b_msg)
+        task_incoming.send(b_msg)
         logger.debug("Sent drain")
 
     @wrap_with_logs
@@ -303,13 +296,22 @@ class Manager:
         pending task queue
         """
         logger.info("starting")
+
+        # Linger is set to 0, so that the manager can exit even when there might be
+        # messages in the pipe
+        task_incoming = self.zmq_context.socket(zmq.DEALER)
+        task_incoming.setsockopt(zmq.IDENTITY, self.uid.encode('utf-8'))
+        task_incoming.setsockopt(zmq.LINGER, 0)
+        task_incoming.connect(self._task_q_url)
+        logger.info("Manager task pipe connected to interchange")
+
         poller = zmq.Poller()
-        poller.register(self.task_incoming, zmq.POLLIN)
+        poller.register(task_incoming, zmq.POLLIN)
 
         # Send a registration message
         msg = self.create_reg_message()
         logger.debug("Sending registration message: {}".format(msg))
-        self.task_incoming.send(msg)
+        task_incoming.send(msg)
         last_beat = time.time()
         last_interchange_contact = time.time()
         task_recv_counter = 0
@@ -336,12 +338,12 @@ class Manager:
                                                                        pending_task_count))
 
             if time.time() >= last_beat + self.heartbeat_period:
-                self.heartbeat_to_incoming()
+                self.heartbeat_to_incoming(task_incoming)
                 last_beat = time.time()
 
             if time.time() > self.drain_time:
                 logger.info("Requesting drain")
-                self.drain_to_incoming()
+                self.drain_to_incoming(task_incoming)
                 # This will start the pool draining...
                 # Drained exit behaviour does not happen here. It will be
                 # driven by the interchange sending a DRAINED_CODE message.
@@ -353,8 +355,8 @@ class Manager:
             poll_duration_s = max(0, next_interesting_event_time - time.time())
             socks = dict(poller.poll(timeout=poll_duration_s * 1000))
 
-            if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
-                _, pkl_msg = self.task_incoming.recv_multipart()
+            if socks.get(task_incoming) == zmq.POLLIN:
+                _, pkl_msg = task_incoming.recv_multipart()
                 tasks = pickle.loads(pkl_msg)
                 last_interchange_contact = time.time()
 
@@ -382,11 +384,22 @@ class Manager:
                     logger.critical("Exiting")
                     break
 
+        task_incoming.close()
+        logger.info("Exiting")
+
     @wrap_with_logs
     def push_results(self):
         """ Listens on the pending_result_queue and sends out results via zmq
         """
         logger.debug("Starting result push thread")
+
+        # Linger is set to 0, so that the manager can exit even when there might be
+        # messages in the pipe
+        result_outgoing = self.zmq_context.socket(zmq.DEALER)
+        result_outgoing.setsockopt(zmq.IDENTITY, self.uid.encode('utf-8'))
+        result_outgoing.setsockopt(zmq.LINGER, 0)
+        result_outgoing.connect(self._result_q_url)
+        logger.info("Manager result pipe connected to interchange")
 
         push_poll_period = max(10, self.poll_period) / 1000    # push_poll_period must be atleast 10 ms
         logger.debug("push poll period: {}".format(push_poll_period))
@@ -416,7 +429,7 @@ class Manager:
                 last_beat = time.time()
                 if items:
                     logger.debug(f"Result send: Pushing {len(items)} items")
-                    self.result_outgoing.send_multipart(items)
+                    result_outgoing.send_multipart(items)
                     logger.debug("Result send: Pushed")
                     items = []
                 else:
@@ -424,7 +437,8 @@ class Manager:
             else:
                 logger.debug(f"Result send: check condition not met - deferring {len(items)} result items")
 
-        logger.critical("Exiting")
+        result_outgoing.close()
+        logger.info("Exiting")
 
     @wrap_with_logs
     def worker_watchdog(self):
@@ -531,8 +545,6 @@ class Manager:
             self.procs[proc_id].join()
             logger.debug("Worker {} joined successfully".format(self.procs[proc_id]))
 
-        self.task_incoming.close()
-        self.result_outgoing.close()
         self.zmq_context.term()
         delta = time.time() - self._start_time
         logger.info("process_worker_pool ran for {} seconds".format(delta))
