@@ -617,6 +617,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         """
         return self.command_client.run("MANAGERS")
 
+    def connected_managers_packages(self) -> Dict[str, Dict[str, str]]:
+        """Returns a dict mapping each manager ID to a dict of installed
+        packages and their versions
+        """
+        return self.command_client.run("MANAGERS_PACKAGES")
+
     def connected_blocks(self) -> List[str]:
         """List of connected block ids"""
         return self.command_client.run("CONNECTED_BLOCKS")

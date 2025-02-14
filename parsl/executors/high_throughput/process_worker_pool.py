@@ -14,6 +14,7 @@ import sys
 import threading
 import time
 import uuid
+from importlib.metadata import distributions
 from multiprocessing.managers import DictProxy
 from multiprocessing.sharedctypes import Synchronized
 from typing import Dict, List, Optional, Sequence
@@ -265,6 +266,7 @@ class Manager:
                'python_v': "{}.{}.{}".format(sys.version_info.major,
                                              sys.version_info.minor,
                                              sys.version_info.micro),
+               'packages': {dist.metadata['Name']: dist.version for dist in distributions()},
                'worker_count': self.worker_count,
                'uid': self.uid,
                'block_id': self.block_id,
