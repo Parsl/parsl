@@ -5,7 +5,7 @@ import pickle
 import queue
 import subprocess
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from parsl.multiprocessing import SpawnContext
 from parsl.serialize import pack_res_spec_apply_message, unpack_res_spec_apply_message
@@ -86,8 +86,8 @@ class TaskScheduler:
     def put_task(self, task) -> None:
         return self.pending_task_q.put(task)
 
-    def get_result(self, block: bool, timeout: float):
-        return self.pending_result_q.get(block, timeout=timeout)
+    def get_result(self, block: bool = True, timeout: Optional[float] = None):
+        return self.pending_result_q.get(block, timeout)
 
 
 class MPITaskScheduler(TaskScheduler):
@@ -190,9 +190,9 @@ class MPITaskScheduler(TaskScheduler):
             # Keep attempting to schedule tasks till we are out of resources
             self._schedule_backlog_tasks()
 
-    def get_result(self, block: bool, timeout: float):
+    def get_result(self, block: bool = True, timeout: Optional[float] = None):
         """Return result and relinquish provisioned nodes"""
-        result_pkl = self.pending_result_q.get(block, timeout=timeout)
+        result_pkl = self.pending_result_q.get(block, timeout)
         result_dict = pickle.loads(result_pkl)
         # TODO (wardlt): If the task did not request nodes, it won't be in `self._map_tasks_to_nodes`.
         #  Causes Parsl to hang. See Issue #3427
