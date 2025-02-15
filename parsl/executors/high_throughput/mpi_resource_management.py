@@ -203,6 +203,8 @@ class MPITaskScheduler(TaskScheduler):
     def get_result(self, block: bool = True, timeout: Optional[float] = None):
         """Return result and relinquish provisioned nodes"""
         result_pkl = self.pending_result_q.get(block, timeout)
+        if result_pkl is None:
+            return None
         result_dict = pickle.loads(result_pkl)
         # TODO (wardlt): If the task did not request nodes, it won't be in `self._map_tasks_to_nodes`.
         #  Causes Parsl to hang. See Issue #3427
