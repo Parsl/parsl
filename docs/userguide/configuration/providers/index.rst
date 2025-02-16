@@ -3,51 +3,21 @@
 Providers
 =========
 
-Contemporary computing environments may include a wide range of computational platforms or **execution providers**, from laptops and PCs to various clusters, supercomputers, and cloud computing platforms. Different execution providers may require or allow for the use of different **execution models**, such as threads (for efficient parallel execution on a multicore processor), processes, and pilot jobs for running many small tasks on a large parallel system. 
+The **Provider** defines how to acquire then start Parsl workers on remote resources.
+Providers may, for example, interface with queuing system of a computer cluster,
+provision virtual machines from a cloud computing vendor,
+or manage containers via Kubernetes.
 
-Parsl is designed to abstract these low-level details so that an identical Parsl program can run unchanged on different platforms or across multiple platforms. 
-To this end, Parsl uses a configuration file to specify which execution provider(s) and execution model(s) to use.
-Parsl provides a high level abstraction, called a *block*, for providing a uniform description of a compute resource irrespective of the specific execution provider.
+Define a Provider by first selecting the `appropriate interface <providers.html>`_,
+specifying how to `launch workers on newly-acquired resources <launchers.html>`_
+then configuring how Parsl will adjust `amount of resources according to demand <elasticity.html>`_.
 
-Execution providers
--------------------
+.. toctree::
+   :maxdepth: 2
 
-Clouds, supercomputers, and local PCs offer vastly different modes of access. 
-To overcome these differences, and present a single uniform interface, 
-Parsl implements a simple provider abstraction. This
-abstraction is key to Parsl's ability to enable scripts to be moved
-between resources. The provider interface exposes three core actions: submit a
-job for execution (e.g., sbatch for the Slurm resource manager), 
-retrieve the status of an allocation (e.g., squeue), and cancel a running
-job (e.g., scancel). Parsl implements providers for local execution
-(fork), for various cloud platforms using cloud-specific APIs, and
-for clusters and supercomputers that use a Local Resource Manager
-(LRM) to manage access to resources, such as Slurm and HTCondor.
-
-Each provider implementation may allow users to specify additional parameters for further configuration. Parameters are generally mapped to LRM submission script or cloud API options.
-Examples of LRM-specific options are partition, wall clock time,
-scheduler options (e.g., #SBATCH arguments for Slurm), and worker
-initialization commands (e.g., loading a conda environment). Cloud
-parameters include access keys, instance type, and spot bid price
-
-Parsl currently supports the following providers:
-
-1. `parsl.providers.LocalProvider`: The provider allows you to run locally on your laptop or workstation.
-2. `parsl.providers.SlurmProvider`: This provider allows you to schedule resources via the Slurm scheduler.
-3. `parsl.providers.CondorProvider`: This provider allows you to schedule resources via the Condor scheduler.
-4. `parsl.providers.GridEngineProvider`: This provider allows you to schedule resources via the GridEngine scheduler.
-5. `parsl.providers.TorqueProvider`: This provider allows you to schedule resources via the Torque scheduler.
-6. `parsl.providers.AWSProvider`: This provider allows you to provision and manage cloud nodes from Amazon Web Services.
-7. `parsl.providers.GoogleCloudProvider`: This provider allows you to provision and manage cloud nodes from Google Cloud.
-8. `parsl.providers.KubernetesProvider`: This provider allows you to provision and manage containers on a Kubernetes cluster.
-9. `parsl.providers.LSFProvider`: This provider allows you to schedule resources via IBM's LSF scheduler.
-
-
-
-
-.. note::
-   Refer to :ref:`configuration-section` for information on how to configure these executors.
-
+   providers
+   launchers
+   elasticity
 
 ---------
 
@@ -135,10 +105,3 @@ The configuration options for specifying the shape of each block are:
 
 1. ``workers_per_node``: Number of workers started per node, which corresponds to the number of tasks that can execute concurrently on a node.
 2. ``nodes_per_block``: Number of nodes requested per block.
-
-
-.. toctree::
-   :maxdepth: 2
-
-   elasticity
-   launchers
