@@ -163,16 +163,17 @@ class MPITaskScheduler(TaskScheduler):
         _f, _args, _kwargs, resource_spec = unpack_res_spec_apply_message(task_package["buffer"])
 
         nodes_needed = resource_spec.get("num_nodes")
+        tid = task_package["task_id"]
         if nodes_needed:
             try:
                 allocated_nodes = self._get_nodes(nodes_needed)
             except MPINodesUnavailable:
-                logger.warning("Not enough resources, placing task into backlog")
+                logger.info(f"Not enough resources, placing task {tid} into backlog")
                 self._backlog_queue.put((nodes_needed, task_package))
                 return
             else:
                 resource_spec["MPI_NODELIST"] = ",".join(allocated_nodes)
-                self._map_tasks_to_nodes[task_package["task_id"]] = allocated_nodes
+                self._map_tasks_to_nodes[tid] = allocated_nodes
                 buffer = pack_res_spec_apply_message(_f, _args, _kwargs, resource_spec)
                 task_package["buffer"] = buffer
                 task_package["resource_spec"] = resource_spec
