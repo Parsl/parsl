@@ -1,8 +1,7 @@
 .. _label-data:
+
 Staging data files
 ==================
-
-# Start by mentioning where this config goes
 
 Parsl apps can take and return data files. A file may be passed as an input
 argument to an app, or returned from an app after execution. Parsl

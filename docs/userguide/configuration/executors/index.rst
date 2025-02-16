@@ -46,5 +46,3 @@ Continue by specifying how to request compute nodes in the `Provider <../provide
     htex
     wqex
     addresses
-    data
-
