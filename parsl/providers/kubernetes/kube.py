@@ -61,6 +61,10 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         Memory limits of the blocks (pods), in Mi or Gi.
         This is the memory "requests" option for resource specification on kubernetes.
         Check kubernetes docs for more details. Default is 250Mi.
+    extra_requests: Dict[str, str]
+        Extra resource requests of the blocks (pods). Check kubernetes docs for more details.
+    extra_limits: Dict[str, str]
+        Extra resource limits of the blocks (pods). Check kubernetes docs for more details.
     parallelism : float
         Ratio of provisioned task slots to active tasks. A parallelism value of 1 represents aggressive
         scaling where as many resources as possible are used; parallelism close to 0 represents
@@ -98,6 +102,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                  max_mem: str = "500Mi",
                  init_cpu: float = 1,
                  init_mem: str = "250Mi",
+                 extra_requests: Optional[Dict[str, str]] = {},
+                 extra_limits: Optional[Dict[str, str]] = {},
                  parallelism: float = 1,
                  worker_init: str = "",
                  pod_name: Optional[str] = None,
@@ -142,6 +148,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.max_mem = max_mem
         self.init_cpu = init_cpu
         self.init_mem = init_mem
+        self.extra_requests = extra_requests
+        self.extra_limits = extra_limits
         self.parallelism = parallelism
         self.worker_init = worker_init
         self.secret = secret
@@ -300,9 +308,9 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
             volume_mounts.append(client.V1VolumeMount(mount_path=volume[1],
                                                       name=volume[0]))
         resources = client.V1ResourceRequirements(limits={'cpu': str(self.max_cpu),
-                                                          'memory': self.max_mem},
+                                                          'memory': self.max_mem} | self.extra_limits,
                                                   requests={'cpu': str(self.init_cpu),
-                                                            'memory': self.init_mem}
+                                                            'memory': self.init_mem} | self.extra_requests,
                                                   )
         # Configure Pod template container
         container = client.V1Container(
