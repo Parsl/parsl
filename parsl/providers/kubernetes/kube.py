@@ -102,8 +102,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
                  max_mem: str = "500Mi",
                  init_cpu: float = 1,
                  init_mem: str = "250Mi",
-                 extra_requests: Optional[Dict[str, str]] = {},
-                 extra_limits: Optional[Dict[str, str]] = {},
+                 extra_requests: Optional[Dict[str, str]] = None,
+                 extra_limits: Optional[Dict[str, str]] = None,
                  parallelism: float = 1,
                  worker_init: str = "",
                  pod_name: Optional[str] = None,
@@ -148,8 +148,8 @@ class KubernetesProvider(ExecutionProvider, RepresentationMixin):
         self.max_mem = max_mem
         self.init_cpu = init_cpu
         self.init_mem = init_mem
-        self.extra_requests = extra_requests
-        self.extra_limits = extra_limits
+        self.extra_requests = extra_requests if extra_requests else {}
+        self.extra_limits = extra_limits if extra_limits else {}
         self.parallelism = parallelism
         self.worker_init = worker_init
         self.secret = secret
