@@ -623,8 +623,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 with self._tasks_lock:
                     future = self.tasks.pop(task_report.executor_id)
 
-                logger.debug(f'Updating Future for Parsl Task: {task_report.executor_id}. \
-                               Task {task_report.executor_id} has result_received set to {task_report.result_received}')
+                logger.debug(f'Updating Future for Parsl Task: {task_report.executor_id}. '
+                             f'Task {task_report.executor_id} has result_received set to {task_report.result_received}')
                 if task_report.result_received:
                     try:
                         with open(task_report.result_file, 'rb') as f_in:
