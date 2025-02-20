@@ -55,6 +55,12 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
 
         label:
             a label to name the executor
+
+        storage_access:
+            a list of staging providers that will be used for file staging
+            
+        working_dir:
+            The working dir to be used for file staging
         """
         if not _globus_compute_enabled:
             raise OptionalModuleMissing(
