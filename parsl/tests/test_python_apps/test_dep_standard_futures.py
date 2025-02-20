@@ -43,3 +43,6 @@ def test_future_fail_dependency():
     # Future, plain_fut, somewhere in its str
 
     assert repr(plain_fut) in str(ex)
+    assert len(ex.dependent_exceptions_tids) == 1
+    assert isinstance(ex.dependent_exceptions_tids[0][0], ValueError)
+    assert ex.dependent_exceptions_tids[0][1].startswith("<Future ")

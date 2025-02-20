@@ -213,12 +213,14 @@ class UsageTracker:
 
     def send_start_message(self) -> None:
         if self.tracking_level:
+            logger.info("Sending start message for usage tracking")
             self.start_time = time.time()
             message = self.construct_start_message()
             self.send_UDP_message(message)
 
     def send_end_message(self) -> None:
         if self.tracking_level == 3:
+            logger.info("Sending end message for usage tracking")
             message = self.construct_end_message()
             self.send_UDP_message(message)
 
@@ -229,11 +231,14 @@ class UsageTracker:
         definitely either: going to behave broadly the same as to SIGKILL,
         or won't respond to SIGTERM.
         """
-        for proc in self.procs:
-            logger.debug("Joining usage tracking process %s", proc)
-            proc.join(timeout=timeout)
-            if proc.is_alive():
-                logger.warning("Usage tracking process did not end itself; sending SIGKILL")
-                proc.kill()
+        if self.tracking_level:
+            logger.info("Closing usage tracking")
 
-            proc.close()
+            for proc in self.procs:
+                logger.debug("Joining usage tracking process %s", proc)
+                proc.join(timeout=timeout)
+                if proc.is_alive():
+                    logger.warning("Usage tracking process did not end itself; sending SIGKILL")
+                    proc.kill()
+
+                proc.close()

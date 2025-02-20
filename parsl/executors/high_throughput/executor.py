@@ -8,7 +8,7 @@ import warnings
 from collections import defaultdict
 from concurrent.futures import Future
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Optional, Sequence, Set, Tuple, Union
 
 import typeguard
 
@@ -357,10 +357,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         return self.logdir
 
     def validate_resource_spec(self, resource_specification: dict):
-        """HTEX supports the following *Optional* resource specifications:
-        priority: lower value is higher priority"""
         if resource_specification:
-            acceptable_fields = {'priority'}
+            acceptable_fields: Set[str] = set()  # add new resource spec field names here to make htex accept them
             keys = set(resource_specification.keys())
             invalid_keys = keys - acceptable_fields
             if invalid_keys:
@@ -432,8 +430,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self._result_queue_thread = None
         self._start_result_queue_thread()
         self._start_local_interchange_process()
-
-        logger.debug("Created result queue thread: %s", self._result_queue_thread)
 
         self.initialize_scaling()
 
@@ -531,6 +527,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         get the worker task and result ports that the interchange has bound to.
         """
 
+        assert self.interchange_proc is None, f"Already exists! {self.interchange_proc!r}"
+
         interchange_config = {"client_address": self.loopback_address,
                               "client_ports": (self.outgoing_q.port,
                                                self.incoming_q.port,
@@ -565,7 +563,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         except CommandClientTimeoutError:
             logger.error("Interchange has not completed initialization. Aborting")
             raise Exception("Interchange failed to start")
-        logger.debug("Got worker ports")
+        logger.debug(
+            "Interchange process started (%r).  Worker ports: %d, %d",
+            self.interchange_proc,
+            self.worker_task_port,
+            self.worker_result_port
+        )
 
     def _start_result_queue_thread(self):
         """Method to start the result queue thread as a daemon.
@@ -573,15 +576,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         Checks if a thread already exists, then starts it.
         Could be used later as a restart if the result queue thread dies.
         """
-        if self._result_queue_thread is None:
-            logger.debug("Starting result queue thread")
-            self._result_queue_thread = threading.Thread(target=self._result_queue_worker, name="HTEX-Result-Queue-Thread")
-            self._result_queue_thread.daemon = True
-            self._result_queue_thread.start()
-            logger.debug("Started result queue thread")
+        assert self._result_queue_thread is None, f"Already exists! {self._result_queue_thread!r}"
 
-        else:
-            logger.error("Result queue thread already exists, returning")
+        logger.debug("Starting result queue thread")
+        self._result_queue_thread = threading.Thread(target=self._result_queue_worker, name="HTEX-Result-Queue-Thread")
+        self._result_queue_thread.daemon = True
+        self._result_queue_thread.start()
+        logger.debug("Started result queue thread: %r", self._result_queue_thread)
 
     def hold_worker(self, worker_id: str) -> None:
         """Puts a worker on hold, preventing scheduling of additional tasks to it.
@@ -615,6 +616,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         worker_count, tasks(int), idle_durations(float), active(bool)
         """
         return self.command_client.run("MANAGERS")
+
+    def connected_managers_packages(self) -> Dict[str, Dict[str, str]]:
+        """Returns a dict mapping each manager ID to a dict of installed
+        packages and their versions
+        """
+        return self.command_client.run("MANAGERS_PACKAGES")
 
     def connected_blocks(self) -> List[str]:
         """List of connected block ids"""

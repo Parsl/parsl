@@ -51,6 +51,10 @@ clean_coverage:
 mypy: ## run mypy checks
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/
 
+.PHONY: gce_test
+gce_test: ## Run tests with GlobusComputeExecutor
+	pytest -v -k "not shared_fs and not issue_3620 and not staging_required" --config parsl/tests/configs/globus_compute.py parsl/tests/ --random-order --durations 10
+
 .PHONY: local_thread_test
 local_thread_test: ## run all tests with local_thread config
 	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/local_threads.py --random-order --durations 10

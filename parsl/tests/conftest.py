@@ -164,6 +164,10 @@ def pytest_configure(config):
         'markers',
         'shared_fs: Marks tests that require a shared_fs between the workers are the test client'
     )
+    config.addinivalue_line(
+        'markers',
+        'issue_3620: Marks tests that do not work correctly on GlobusComputeExecutor (ref: issue 3620)'
+    )
 
 
 @pytest.fixture(autouse=True, scope='session')

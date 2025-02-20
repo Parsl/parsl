@@ -3,6 +3,7 @@ import os
 import time
 
 import pytest
+from sqlalchemy import text
 
 import parsl
 
@@ -52,22 +53,22 @@ def test_row_counts():
     engine = sqlalchemy.create_engine("sqlite:///runinfo/monitoring.db")
     with engine.begin() as connection:
 
-        result = connection.execute("SELECT COUNT(*) FROM workflow")
+        result = connection.execute(text("SELECT COUNT(*) FROM workflow"))
         (c, ) = result.first()
         assert c == 1
 
-        result = connection.execute("SELECT COUNT(*) FROM task")
+        result = connection.execute(text("SELECT COUNT(*) FROM task"))
         (c, ) = result.first()
         assert c == 1
 
-        result = connection.execute("SELECT COUNT(*) FROM try")
+        result = connection.execute(text("SELECT COUNT(*) FROM try"))
         (c, ) = result.first()
         assert c == 1
 
-        result = connection.execute("SELECT COUNT(*) FROM status, try "
-                                    "WHERE status.task_id = try.task_id "
-                                    "AND status.task_status_name='exec_done' "
-                                    "AND task_try_time_running is NULL")
+        result = connection.execute(text("SELECT COUNT(*) FROM status, try "
+                                         "WHERE status.task_id = try.task_id "
+                                         "AND status.task_status_name='exec_done' "
+                                         "AND task_try_time_running is NULL"))
         (c, ) = result.first()
         assert c == 0
 
@@ -95,7 +96,7 @@ def test_row_counts():
         # (c, ) = result.first()
         # assert c >= 2
 
-        result = connection.execute("SELECT COUNT(*) FROM resource")
+        result = connection.execute(text("SELECT COUNT(*) FROM resource"))
         (c, ) = result.first()
         assert c >= 1
 

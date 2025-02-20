@@ -10,12 +10,12 @@ types-mock
 types-python-dateutil
 types-requests
 mpi4py
+globus-compute-sdk>=2.34.0
 
 # sqlalchemy is needed for typechecking, so it's here
 # as well as at runtime for optional monitoring execution
 # (where it's specified in setup.py)
-sqlalchemy>=1.4,<2
-sqlalchemy2-stubs
+sqlalchemy>=2,<2.1
 
 Sphinx==4.5.0
 twine

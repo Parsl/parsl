@@ -67,7 +67,7 @@ def test_app_name(get_app, expected_name, expected_result, tmpd_cwd):
     with engine.begin() as connection:
 
         def count_rows(table: str):
-            result = connection.execute(f"SELECT COUNT(*) FROM {table}")
+            result = connection.execute(sqlalchemy.text(f"SELECT COUNT(*) FROM {table}"))
             (c, ) = result.first()
             return c
 
@@ -81,6 +81,6 @@ def test_app_name(get_app, expected_name, expected_result, tmpd_cwd):
         assert count_rows("try") == 1
 
         # ... and has the expected name.
-        result = connection.execute("SELECT task_func_name FROM task")
+        result = connection.execute(sqlalchemy.text("SELECT task_func_name FROM task"))
         (c, ) = result.first()
         assert c == expected_name

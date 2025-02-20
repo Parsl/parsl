@@ -582,12 +582,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("TaskVine shutdown started")
         self._should_stop.set()
 
-        # Remove the workers that are still going
-        kill_ids = [self.blocks_to_job_id[block] for block in self.blocks_to_job_id.keys()]
-        if self.provider:
-            logger.debug("Cancelling blocks")
-            self.provider.cancel(kill_ids)
-
         # Join all processes before exiting
         logger.debug("Joining on submit process")
         self._submit_process.join()
@@ -627,8 +621,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 with self._tasks_lock:
                     future = self.tasks.pop(task_report.executor_id)
 
-                logger.debug(f'Updating Future for Parsl Task: {task_report.executor_id}. \
-                               Task {task_report.executor_id} has result_received set to {task_report.result_received}')
+                logger.debug(f'Updating Future for Parsl Task: {task_report.executor_id}. '
+                             f'Task {task_report.executor_id} has result_received set to {task_report.result_received}')
                 if task_report.result_received:
                     try:
                         with open(task_report.result_file, 'rb') as f_in:

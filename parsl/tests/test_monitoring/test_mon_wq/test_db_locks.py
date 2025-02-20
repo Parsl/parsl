@@ -4,6 +4,7 @@ import os
 import time
 
 import pytest
+from sqlalchemy import text
 
 import parsl
 
@@ -51,8 +52,8 @@ def test_row_counts():
 
     logger.info("Getting a read lock on the monitoring database")
     with engine.begin() as readlock_connection:
-        readlock_connection.execute("BEGIN TRANSACTION")
-        result = readlock_connection.execute("SELECT COUNT(*) FROM workflow")
+        readlock_connection.execute(text("BEGIN TRANSACTION"))
+        result = readlock_connection.execute(text("SELECT COUNT(*) FROM workflow"))
         (c, ) = result.first()
         assert c == 1
         # now readlock_connection should have a read lock that will
@@ -77,15 +78,15 @@ def test_row_counts():
     logger.info("checking database content")
     with engine.begin() as connection:
 
-        result = connection.execute("SELECT COUNT(*) FROM workflow")
+        result = connection.execute(text("SELECT COUNT(*) FROM workflow"))
         (c, ) = result.first()
         assert c == 1
 
-        result = connection.execute("SELECT COUNT(*) FROM task")
+        result = connection.execute(text("SELECT COUNT(*) FROM task"))
         (c, ) = result.first()
         assert c == 1
 
-        result = connection.execute("SELECT COUNT(*) FROM try")
+        result = connection.execute(text("SELECT COUNT(*) FROM try"))
         (c, ) = result.first()
         assert c == 1
 
