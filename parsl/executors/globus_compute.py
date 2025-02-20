@@ -58,7 +58,7 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
 
         storage_access:
             a list of staging providers that will be used for file staging
-            
+
         working_dir:
             The working dir to be used for file staging
         """
@@ -75,7 +75,7 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
         self.label = label
         self.storage_access = storage_access
         self.working_dir = working_dir
-        
+
     def start(self) -> None:
         """ Start the Globus Compute Executor """
         pass
