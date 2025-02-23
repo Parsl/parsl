@@ -1,101 +1,74 @@
 .. _label-elasticity:
 
 Elasticity
-----------
+==========
 
-Workload resource requirements often vary over time.
-For example, in the map-reduce paradigm the map phase may require more
-resources than the reduce phase. In general, reserving sufficient
-resources for the widest parallelism will result in underutilization
-during periods of lower load; conversely, reserving minimal resources
-for the thinnest parallelism will lead to optimal utilization
-but also extended execution time.
-Even simple bag-of-task applications may have tasks of different durations, leading to trailing
-tasks with a thin workload.
+Parsl can increase the amount of resources available depending as workloads vary over time.
+Allow the amount of workers used by Parsl to change elastically through two mecahnisms:
 
-To address dynamic workload requirements,
-Parsl implements a cloud-like elasticity model in which resource
-blocks are provisioned/deprovisioned in response to workload pressure.
-Given the general nature of the implementation,
-Parsl can provide elastic execution on clouds, clusters,
-and supercomputers. Of course, in an HPC setting, elasticity may
-be complicated by queue delays.
+1. Specifying the range of number of "blocks" allowed
+2. Controlling the target ratio of number of tasks to workers.
 
-Parsl's elasticity model includes a flow control system
-that monitors outstanding tasks and available compute capacity.
-This flow control monitor determines when to trigger scaling (in or out)
-events to match workload needs.
-
-The animated diagram below shows how blocks are elastically
-managed within an executor. The Parsl configuration for an executor
-defines the minimum, maximum, and initial number of blocks to be used.
+Controlling Number of Blocks
+----------------------------
 
 .. image:: img/parsl_scaling.gif
 
-The configuration options for specifying elasticity bounds are:
+All `Providers <providers.html>`_ request resources in "blocks" of nodes.
+The default for most Providers is to request a single block of workers
+at the beginning and only request another block if the current one expires.
 
-1. ``min_blocks``: Minimum number of blocks to maintain per executor.
+Allow Parsl to vary the amount of blocks through the following options:
+
+1. ``min_blocks``: Minimum number of blocks to maintain.
 2. ``init_blocks``: Initial number of blocks to provision at initialization of workflow.
-3. ``max_blocks``: Maximum number of blocks that can be active per executor.
-
+3. ``max_blocks``: Maximum number of blocks that can be active.
 
 
 Parallelism
-^^^^^^^^^^^
+-----------
 
-Parsl provides a user-managed model for controlling elasticity.
-In addition to setting the minimum
-and maximum number of blocks to be provisioned, users can also define
-the desired level of parallelism by setting a parameter (*p*).  Parallelism
-is expressed as the ratio of task execution capacity to the sum of running tasks
-and available tasks (tasks with their dependencies met, but waiting for execution).
-A parallelism value of 1 represents aggressive scaling where the maximum resources
-needed are used (i.e., max_blocks); parallelism close to 0 represents the opposite situation in which
-as few resources as possible (i.e., min_blocks) are used. By selecting a fraction between 0 and 1,
-the provisioning aggressiveness can be controlled.
+The ``parallelism`` option of a Provider controls how many blocks are requested as a function of demand.
+Parallelism is the ratio of the number of workers available to the number of tasks running or ready to run,
+and should be a value between 0 and 1.
 
 For example:
 
-- When p = 0: Use the fewest resources possible.  If there is no workload then no blocks will be provisioned, otherwise the fewest blocks specified (e.g., min_blocks, or 1 if min_blocks is set to 0) will be provisioned.
-
-.. code:: python
-
-   if active_tasks == 0:
-       blocks = min_blocks
-   else:
-       blocks = max(min_blocks, 1)
-
-- When p = 1: Use as many resources as possible. Provision sufficient nodes to execute all running and available tasks concurrently up to the max_blocks specified.
+- (default) ``parallelism=1``: Request as many workers as tasks until ``max_blocks`` is met.
 
 .. code-block:: python
 
-   blocks = min(max_blocks,
-                ceil((running_tasks + available_tasks) / (workers_per_node * nodes_per_block))
-
-- When p = 1/2: Queue up to 2 tasks per worker before requesting a new block.
+   blocks = min(max_blocks, ceil(num_tasks / (workers_per_node * nodes_per_block))
 
 
-Configuration
-^^^^^^^^^^^^^
+- ``parallelism=0``: Use the fewest resources possible. Request
 
-The example below shows how elasticity and parallelism can be configured. Here, a `parsl.executors.HighThroughputExecutor`
-is used with a minimum of 1 block and a maximum of 2 blocks, where each block may host
-up to 2 workers per node. Thus this setup is capable of servicing 2 tasks concurrently.
-Parallelism of 0.5 means that when more than 2 * the total task capacity (i.e., 4 tasks) are queued a new
-block will be requested. An example :class:`~parsl.config.Config` is:
+.. code:: python
+
+   blocks = min_blocks if active_tasks == 0 else max(min_blocks, 1)
+
+- ``parallelism=0.5``: Maintain one worker for every two tasks in queue.
+
+
+Example Configuration
+----------------------
+
+The following configuration shows a ``HighThroughputExecutor``
+which will run between 1 and 2 blocks depending on the number of tasks.
+Each block is one node in size and each node will host 2 workers (2 workers per block).
+Parallelism of 0.5 means that a new block will be requested for every 4 tasks (2 workers per block / 0.5 workers per task).
 
 .. code:: python
 
     from parsl.config import Config
-    from libsubmit.providers.local.local import Local
+    from parsl.providers import SlurmProvider
     from parsl.executors import HighThroughputExecutor
 
     config = Config(
         executors=[
             HighThroughputExecutor(
-                label='local_htex',
-                workers_per_node=2,
-                provider=Local(
+                max_workers_per_node=2,
+                provider=SlurmProvider(
                     min_blocks=1,
                     init_blocks=1,
                     max_blocks=2,
@@ -106,10 +79,8 @@ block will be requested. An example :class:`~parsl.config.Config` is:
         ]
     )
 
-The animated diagram below illustrates the behavior of this executor.
-In the diagram, the tasks are allocated to the first block, until
-5 tasks are submitted. At this stage, as more than double the available
-task capacity is used, Parsl provisions a new block for executing the remaining
-tasks.
+The animation below shows how the number of blocks will change with the workflow.
+Tasks are allocated to the first block until 5 tasks are submitted,
+at which point Parsl requests a new block.
 
 .. image:: img/parsl_parallelism.gif
