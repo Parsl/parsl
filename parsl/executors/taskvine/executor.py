@@ -40,6 +40,7 @@ from parsl.executors.taskvine.factory_config import TaskVineFactoryConfig
 from parsl.executors.taskvine.manager import _taskvine_submit_wait
 from parsl.executors.taskvine.manager_config import TaskVineManagerConfig
 from parsl.executors.taskvine.utils import ParslFileToVine, ParslTaskToVine
+from parsl.multiprocessing import SpawnContext
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import CondorProvider, LocalProvider
 from parsl.providers.base import ExecutionProvider
@@ -134,13 +135,13 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.storage_access = storage_access
 
         # Queue to send ready tasks from TaskVine executor process to TaskVine manager process
-        self._ready_task_queue: multiprocessing.Queue = multiprocessing.Queue()
+        self._ready_task_queue: multiprocessing.Queue = SpawnContext.Queue()
 
         # Queue to send finished tasks from TaskVine manager process to TaskVine executor process
-        self._finished_task_queue: multiprocessing.Queue = multiprocessing.Queue()
+        self._finished_task_queue: multiprocessing.Queue = SpawnContext.Queue()
 
         # Event to signal whether the manager and factory processes should stop running
-        self._should_stop = multiprocessing.Event()
+        self._should_stop = SpawnContext.Event()
 
         # TaskVine manager process
         self._submit_process = None
@@ -253,17 +254,17 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                  "finished_task_queue": self._finished_task_queue,
                                  "should_stop": self._should_stop,
                                  "manager_config": self.manager_config}
-        self._submit_process = multiprocessing.Process(target=_taskvine_submit_wait,
-                                                       name="TaskVine-Submit-Process",
-                                                       kwargs=submit_process_kwargs)
+        self._submit_process = SpawnContext.Process(target=_taskvine_submit_wait,
+                                                    name="TaskVine-Submit-Process",
+                                                    kwargs=submit_process_kwargs)
 
         # Create a process to run the TaskVine factory if enabled.
         if self.worker_launch_method == 'factory':
             factory_process_kwargs = {"should_stop": self._should_stop,
                                       "factory_config": self.factory_config}
-            self._factory_process = multiprocessing.Process(target=_taskvine_factory,
-                                                            name="TaskVine-Factory-Process",
-                                                            kwargs=factory_process_kwargs)
+            self._factory_process = SpawnContext.Process(target=_taskvine_factory,
+                                                         name="TaskVine-Factory-Process",
+                                                         kwargs=factory_process_kwargs)
 
         # Run thread to collect results and set tasks' futures.
         self._collector_thread = threading.Thread(target=self._collect_taskvine_results,
