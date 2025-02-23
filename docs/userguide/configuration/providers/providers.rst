@@ -9,6 +9,12 @@ job for execution (e.g., sbatch for the Slurm resource manager),
 retrieve the status of an allocation (e.g., squeue),
 and cancel a running job (e.g., scancel).
 
+All Providers manage resources in terms of **blocks**.
+Blocks are collections of one or more **nodes** that each
+run at least one worker. [#mpi]_
+Control the size of a block with the ``nodes_per_block`` option
+and the number of blocks with `elasticity settings <elasticity.html>`_.
+
 Start by selecting a scheduler from following classes,
 then configuring the details required.
 
@@ -61,3 +67,6 @@ Configure :class:`~parsl.providers.KubernetesProvider` by providing:
 1. Authentication details (e.g., user name, secrets)
 2. The type of each container (e.g., base image, RAM, CPU)
 3. Disk availability (e.g., which volumes containers can access)
+
+
+.. [#mpi] Except for Providers running `multi-node Apps <../../apps/mpi_apps.html>`_
