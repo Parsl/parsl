@@ -257,6 +257,13 @@ class Interchange:
                             'draining': m['draining']}
                     reply.append(resp)
 
+            elif command_req == "MANAGERS_PACKAGES":
+                reply = {}
+                for manager_id in self._ready_managers:
+                    m = self._ready_managers[manager_id]
+                    manager_id_str = manager_id.decode('utf-8')
+                    reply[manager_id_str] = m["packages"]
+
             elif command_req.startswith("HOLD_WORKER"):
                 cmd, s_manager = command_req.split(';')
                 manager_id = s_manager.encode('utf-8')
