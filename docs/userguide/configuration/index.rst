@@ -3,6 +3,12 @@
 Configuring Parsl
 =================
 
+.. note::
+
+    This part of the guide describes the how to configure Parsl from the start.
+    Consider starting with `example configurations <examples.html>`_ to
+    see if there is already an example which matches your needs.
+
 Parsl configuration objects (:class:`~parsl.config.Config`) define
 how to acquire resources to execute tasks,
 how to launch workers on the resources,
@@ -32,7 +38,7 @@ the `configuration object <config.html>`_ then
 the types of `Executors <executors/index.html>`_ available in Parsl, which
 each may require using a `resource provider and launcher <providers/index.html>`_.
 
-Alternatively, start by finding an `example configuration <examples.html>`_ which is simmilar to what you need.
+Alternatively, start by finding an `example configuration <examples.html>`_ which is similar to what you need.
 
 .. toctree::
     :maxdepth: 2

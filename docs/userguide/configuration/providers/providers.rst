@@ -2,7 +2,8 @@ Execution Providers
 ===================
 
 Parsl presents a uniform interface to managing compute resources
-for local systems, compute clusters, or cloud providers.
+from a single computer with a single user up to
+supercomputers managed through batch schedulers.
 Each provider exposes three core actions: submit a
 job for execution (e.g., sbatch for the Slurm resource manager),
 retrieve the status of an allocation (e.g., squeue),
@@ -43,26 +44,6 @@ Available options include:
 4. :class:`~parsl.providers.TorqueProvider`
 5. :class:`~parsl.providers.PBSProvider`
 6. :class:`~parsl.providers.LSFProvider`
-
-
-Cloud Providers
----------------
-
-Cloud compute vendors supply compute nodes as virtual machines on request.
-Users request a certain amount of virtual machines of a certain types and
-will, generally, maintain access to them as long as they pay.
-Parsl will manage provisioning and releasing reservations of virtual machines.
-
-Configuring a cloud provider often requires:
-
-1. Credentials to authenticate with vendor APIs
-2. Specifying the type of compute node (e.g., availability region, OS)
-3. Billing information (e.g., project information, spot bid proces).
-
-Parsl currently supports:
-
-1. :class:`~parsl.providers.AWSProvider`
-2. :class:`~parsl.providers.GoogleCloudProvider`
 
 Kubernetes
 ----------

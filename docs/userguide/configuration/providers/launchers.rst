@@ -12,19 +12,19 @@ Starting Parsl occurs in two steps, each with their own Provider option:
 1. Defining how to connect to each new compute node (``launcher``)
 2. Defining how to initialize the computational information (``worker_init``)
 
-Launchers
----------
-
+Selecting a Launcher
+--------------------
 
 Parsl uses **Launchers** to start workers on every node acquired by a Provider.
-Launchers are often only required when requesting more than one node per Job from a
+Launchers are required when requesting more than one node per batch job from a
 `cluster scheduler <providers.html#cluster-scheduler>`_.
 
-Parsl will use the same mechanism employed for launching MPI tasks on a compute.
+Parsl will use the same mechanism employed for launching MPI tasks across compute nodes.
 Consult the documentation or example scripts for a compute cluster to find how to launch MPI tasks,
 and then find the `launcher script which matches <../../reference.html#launchers>`_.
+
 No options are required in most cases.
-Simply provide an instance of the launcher to the ``launcher`` option of the Provider.
+Simply import the Launcher class and provide an instance of the launcher to the ``launcher`` option of the Provider.
 
 .. code-block:: python
 
@@ -59,7 +59,7 @@ Common cases for configuring a launcher include:
 Worker Initialization
 ---------------------
 
-The ``worker_init`` argument of all Provides accepts a script for readying a newly-acquired node to run Parsl.
+The ``worker_init`` argument of all Providers accepts a script for readying a newly-acquired node to run Parsl.
 Worker initialization commands typically perform tasks such as:
 
 1. Activating the Python virtual environment which contains Parsl
