@@ -1,6 +1,6 @@
-import logging
 import os
 import pickle
+import random
 from unittest import mock
 
 import pytest
@@ -161,3 +161,90 @@ def test_MPISched_contention():
     assert task_on_worker_side['task_id'] == 2
     _, _, _, resource_spec = unpack_res_spec_apply_message(task_on_worker_side['buffer'])
     assert len(resource_spec['MPI_NODELIST'].split(',')) == 8
+
+
+@pytest.mark.local
+def test_hashable_backlog_queue():
+    """Run multiple large tasks that to force entry into backlog_queue
+    where queue.PriorityQueue expects hashability/comparability
+    """
+
+    task_q, result_q = SpawnContext.Queue(), SpawnContext.Queue()
+    scheduler = MPITaskScheduler(task_q, result_q)
+
+    assert scheduler.available_nodes
+    assert len(scheduler.available_nodes) == 8
+
+    assert scheduler._free_node_counter.value == 8
+
+    for i in range(3):
+        mock_task_buffer = pack_res_spec_apply_message("func", "args", "kwargs",
+                                                       resource_specification={
+                                                           "num_nodes": 8,
+                                                           "ranks_per_node": 2
+                                                       })
+        task_package = {"task_id": i, "buffer": mock_task_buffer}
+        scheduler.put_task(task_package)
+    assert scheduler._backlog_queue.qsize() == 2, "Expected 2 backlogged tasks"
+
+
+@pytest.mark.local
+def test_larger_jobs_prioritized():
+    """Larger jobs should be scheduled first"""
+
+    task_q, result_q = SpawnContext.Queue(), SpawnContext.Queue()
+    scheduler = MPITaskScheduler(task_q, result_q)
+
+    max_nodes = len(scheduler.available_nodes)
+
+    # The first task will get scheduled with all the nodes,
+    # and the remainder hits the backlog queue.
+    node_request_list = [max_nodes] + [random.randint(1, 4) for _i in range(8)]
+
+    for task_id, num_nodes in enumerate(node_request_list):
+        mock_task_buffer = pack_res_spec_apply_message("func", "args", "kwargs",
+                                                       resource_specification={
+                                                           "num_nodes": num_nodes,
+                                                           "ranks_per_node": 2
+                                                       })
+        task_package = {"task_id": task_id, "buffer": mock_task_buffer}
+        scheduler.put_task(task_package)
+
+    # Confirm that the tasks are sorted in decreasing order
+    prev_priority = 0
+    for i in range(len(node_request_list) - 1):
+        p_task = scheduler._backlog_queue.get()
+        assert p_task.priority < 0
+        assert p_task.priority <= prev_priority
+
+
+@pytest.mark.local
+def test_tiny_large_loop():
+    """Run a set of tiny and large tasks in a loop"""
+
+    task_q, result_q = SpawnContext.Queue(), SpawnContext.Queue()
+    scheduler = MPITaskScheduler(task_q, result_q)
+
+    assert scheduler.available_nodes
+    assert len(scheduler.available_nodes) == 8
+
+    assert scheduler._free_node_counter.value == 8
+
+    for i in range(10):
+        num_nodes = 2 if i % 2 == 0 else 8
+        mock_task_buffer = pack_res_spec_apply_message("func", "args", "kwargs",
+                                                       resource_specification={
+                                                           "num_nodes": num_nodes,
+                                                           "ranks_per_node": 2
+                                                       })
+        task_package = {"task_id": i, "buffer": mock_task_buffer}
+        scheduler.put_task(task_package)
+
+    for i in range(10):
+        task = task_q.get(timeout=30)
+        result_pkl = pickle.dumps(
+            {"task_id": task["task_id"], "type": "result", "buffer": "RESULT BUF"})
+        result_q.put(result_pkl)
+        got_result = scheduler.get_result(True, 1)
+
+    assert got_result == result_pkl
