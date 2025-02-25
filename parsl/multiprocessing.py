@@ -6,6 +6,7 @@ import multiprocessing
 import multiprocessing.queues
 import platform
 from multiprocessing.context import ForkProcess as ForkProcessType
+from multiprocessing.context import SpawnProcess as SpawnProcessType
 from typing import Callable
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ ForkContext = multiprocessing.get_context("fork")
 SpawnContext = multiprocessing.get_context("spawn")
 
 ForkProcess: Callable[..., ForkProcessType] = ForkContext.Process
+SpawnProcess: Callable[..., SpawnProcessType] = SpawnContext.Process
 
 
 class MacSafeQueue(multiprocessing.queues.Queue):
