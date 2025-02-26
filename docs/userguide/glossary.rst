@@ -113,7 +113,7 @@ The following table highlights the differences between AppFuture and DataFuture:
 +===============+======================+========================+
 | Represents    | Function execution   | File produced by an app|
 | Use Case      | Track function call  | Track data dependency  |
-| Access Method | `.result()`          | `.fetch()`             |
+| Access Method | `.result()`          | `.result()`             |
 | Example       | `future = my_func()` | `data_future = write()`|
 +---------------+----------------------+------------------------+
 
