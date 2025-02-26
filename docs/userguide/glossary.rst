@@ -96,7 +96,30 @@ An executor is a manager that determines which app runs on which resource and wh
 Future
 ------
 
-A future is a placeholder for the result of a task that hasn't finished yet. Both AppFuture and DataFuture are types of Futures. You can use the ``.result()`` method to get the actual result when it's ready.
+A future is a placeholder for the result of a task that hasn't finished yet. Parsl provides two specialized types of futures: **AppFuture** and **DataFuture**.
+
+- **AppFuture** represents the result of an app (function execution) that runs in the background. You can retrieve the result using `.result()`.
+- **DataFuture** represents a **file-based dependency** produced by an app. You can retrieve it using `.fetch()`.
+
+Both types allow Parsl to manage and track asynchronous computations efficiently.
+
+Comparison: AppFuture vs. DataFuture
+------------------------------------
+
+The following table highlights the differences between AppFuture and DataFuture:
+
++---------------+----------------------+------------------------+
+| Feature       | AppFuture            | DataFuture             |
++===============+======================+========================+
+| Represents    | Function execution   | File produced by an app|
+| Use Case      | Track function call  | Track data dependency  |
+| Access Method | `.result()`          | `.fetch()`             |
+| Example       | `future = my_func()` | `data_future = write()`|
++---------------+----------------------+------------------------+
+
+This distinction helps users understand when to use **AppFuture** versus **DataFuture** in Parsl workflows.
+
+
 
 .. _jobglossary:
 
