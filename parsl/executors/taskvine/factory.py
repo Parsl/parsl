@@ -1,4 +1,5 @@
 import logging
+import os
 
 from parsl.executors.taskvine.errors import TaskVineFactoryFailure
 from parsl.process_loggers import wrap_with_logs
@@ -42,6 +43,9 @@ def _taskvine_factory(should_stop, factory_config):
     factory.min_workers = factory_config.min_workers
     factory.max_workers = factory_config.max_workers
     factory.workers_per_cycle = factory_config.workers_per_cycle
+
+    # create scratch dir if factory process gets ahead of the manager.
+    os.makedirs(factory.scratch_dir, exist_ok=True)
 
     if factory_config.worker_options:
         factory.extra_options = factory_config.worker_options
