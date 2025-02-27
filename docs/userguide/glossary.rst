@@ -104,7 +104,7 @@ A future is a placeholder for the result of a task that hasn't finished yet. Par
 Both types allow Parsl to manage and track asynchronous computations efficiently.
 
 Comparison: AppFuture vs. DataFuture
-------------------------------------
+++++++++++++++++++++++++++++++++++++
 
 The following table highlights the differences between AppFuture and DataFuture:
 
