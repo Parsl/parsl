@@ -44,8 +44,7 @@ def _taskvine_factory(should_stop, factory_config):
     factory.max_workers = factory_config.max_workers
     factory.workers_per_cycle = factory_config.workers_per_cycle
 
-    # fix race condition where this directory isn't created by the
-    # factory - despite parsl issue #3089, cctools #3672
+    # create scratch dir if factory process gets ahead of the manager.
     os.makedirs(factory.scratch_dir, exist_ok=True)
 
     if factory_config.worker_options:
