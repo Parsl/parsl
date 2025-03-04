@@ -15,7 +15,8 @@ import typeguard
 from parsl.log_utils import set_file_logger
 from parsl.monitoring.errors import MonitoringHubStartError
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
-from parsl.monitoring.router import router_starter
+from parsl.monitoring.radios.udp_router import udp_router_starter
+from parsl.monitoring.radios.zmq_router import zmq_router_starter
 from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import ForkProcess, SizedQueue
 from parsl.process_loggers import wrap_with_logs
@@ -121,11 +122,14 @@ class MonitoringHub(RepresentationMixin):
         # in the future, Queue will allow runtime subscripts.
 
         if TYPE_CHECKING:
-            comm_q: Queue[Union[Tuple[int, int], str]]
+            zmq_comm_q: Queue[Union[int, str]]
+            udp_comm_q: Queue[Union[int, str]]
         else:
-            comm_q: Queue
+            zmq_comm_q: Queue
+            udp_comm_q: Queue
 
-        comm_q = SizedQueue(maxsize=10)
+        zmq_comm_q = SizedQueue(maxsize=10)
+        udp_comm_q = SizedQueue(maxsize=10)
 
         self.exception_q: Queue[Tuple[str, str]]
         self.exception_q = SizedQueue(maxsize=10)
@@ -136,21 +140,35 @@ class MonitoringHub(RepresentationMixin):
         self.router_exit_event: ms.Event
         self.router_exit_event = Event()
 
-        self.router_proc = ForkProcess(target=router_starter,
-                                       kwargs={"comm_q": comm_q,
-                                               "exception_q": self.exception_q,
-                                               "resource_msgs": self.resource_msgs,
-                                               "exit_event": self.router_exit_event,
-                                               "hub_address": self.hub_address,
-                                               "udp_port": self.hub_port,
-                                               "zmq_port_range": self.hub_port_range,
-                                               "run_dir": dfk_run_dir,
-                                               "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                               },
-                                       name="Monitoring-Router-Process",
-                                       daemon=True,
-                                       )
-        self.router_proc.start()
+        self.zmq_router_proc = ForkProcess(target=zmq_router_starter,
+                                           kwargs={"comm_q": zmq_comm_q,
+                                                   "exception_q": self.exception_q,
+                                                   "resource_msgs": self.resource_msgs,
+                                                   "exit_event": self.router_exit_event,
+                                                   "hub_address": self.hub_address,
+                                                   "zmq_port_range": self.hub_port_range,
+                                                   "run_dir": dfk_run_dir,
+                                                   "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                                   },
+                                           name="Monitoring-ZMQ-Router-Process",
+                                           daemon=True,
+                                           )
+        self.zmq_router_proc.start()
+
+        self.udp_router_proc = ForkProcess(target=udp_router_starter,
+                                           kwargs={"comm_q": udp_comm_q,
+                                                   "exception_q": self.exception_q,
+                                                   "resource_msgs": self.resource_msgs,
+                                                   "exit_event": self.router_exit_event,
+                                                   "hub_address": self.hub_address,
+                                                   "udp_port": self.hub_port,
+                                                   "run_dir": dfk_run_dir,
+                                                   "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                                   },
+                                           name="Monitoring-UDP-Router-Process",
+                                           daemon=True,
+                                           )
+        self.udp_router_proc.start()
 
         self.dbm_proc = ForkProcess(target=dbm_starter,
                                     args=(self.exception_q, self.resource_msgs,),
@@ -162,7 +180,8 @@ class MonitoringHub(RepresentationMixin):
                                     daemon=True,
                                     )
         self.dbm_proc.start()
-        logger.info("Started the router process %s and DBM process %s", self.router_proc.pid, self.dbm_proc.pid)
+        logger.info("Started ZMQ router process %s, UDP router process %s and DBM process %s",
+                    self.zmq_router_proc.pid, self.udp_router_proc.pid, self.dbm_proc.pid)
 
         self.filesystem_proc = ForkProcess(target=filesystem_receiver,
                                            args=(self.resource_msgs, dfk_run_dir),
@@ -175,24 +194,35 @@ class MonitoringHub(RepresentationMixin):
         self.radio = MultiprocessingQueueRadioSender(self.resource_msgs)
 
         try:
-            comm_q_result = comm_q.get(block=True, timeout=120)
-            comm_q.close()
-            comm_q.join_thread()
+            zmq_comm_q_result = zmq_comm_q.get(block=True, timeout=120)
+            zmq_comm_q.close()
+            zmq_comm_q.join_thread()
         except queue.Empty:
-            logger.error("MonitoringRouter has not reported ports in 120s. Aborting")
+            logger.error("Monitoring ZMQ Router has not reported port in 120s. Aborting")
             raise MonitoringHubStartError()
 
-        if isinstance(comm_q_result, str):
-            logger.error("MonitoringRouter sent an error message: %s", comm_q_result)
-            raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
+        if isinstance(zmq_comm_q_result, str):
+            logger.error("MonitoringRouter sent an error message: %s", zmq_comm_q_result)
+            raise RuntimeError(f"MonitoringRouter failed to start: {zmq_comm_q_result}")
 
-        udp_port, zmq_port = comm_q_result
+        self.hub_zmq_port = zmq_comm_q_result
 
+        try:
+            udp_comm_q_result = udp_comm_q.get(block=True, timeout=120)
+            udp_comm_q.close()
+            udp_comm_q.join_thread()
+        except queue.Empty:
+            logger.error("Monitoring UDP router has not reported port in 120s. Aborting")
+            raise MonitoringHubStartError()
+
+        if isinstance(udp_comm_q_result, str):
+            logger.error("MonitoringRouter sent an error message: %s", udp_comm_q_result)
+            raise RuntimeError(f"MonitoringRouter failed to start: {udp_comm_q_result}")
+
+        udp_port = udp_comm_q_result
         self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
 
         logger.info("Monitoring Hub initialized")
-
-        self.hub_zmq_port = zmq_port
 
     def send(self, message: TaggedMonitoringMessage) -> None:
         logger.debug("Sending message type %s", message[0])
@@ -216,14 +246,21 @@ class MonitoringHub(RepresentationMixin):
                         exception_msg[0],
                         exception_msg[1]
                     )
-                self.router_proc.terminate()
+                self.zmq_router_proc.terminate()
+                self.udp_router_proc.terminate()
                 self.dbm_proc.terminate()
                 self.filesystem_proc.terminate()
             logger.info("Setting router termination event")
             self.router_exit_event.set()
-            logger.info("Waiting for router to terminate")
-            self.router_proc.join()
-            self.router_proc.close()
+
+            logger.info("Waiting for ZMQ router to terminate")
+            self.zmq_router_proc.join()
+            self.zmq_router_proc.close()
+
+            logger.info("Waiting for UDP router to terminate")
+            self.udp_router_proc.join()
+            self.udp_router_proc.close()
+
             logger.debug("Finished waiting for router termination")
             if len(exception_msgs) == 0:
                 logger.debug("Sending STOP to DBM")
