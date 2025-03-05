@@ -179,7 +179,7 @@ class MonitoringHub(RepresentationMixin):
             comm_q.close()
             comm_q.join_thread()
         except queue.Empty:
-            logger.error("Hub has not completed initialization in 120s. Aborting")
+            logger.error("MonitoringRouter has not reported ports in 120s. Aborting")
             raise MonitoringHubStartError()
 
         if isinstance(comm_q_result, str):
