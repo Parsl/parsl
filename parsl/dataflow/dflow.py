@@ -1128,7 +1128,6 @@ class DataFlowKernel:
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
             if self.monitoring:
-                executor.hub_address = self.monitoring.hub_address
                 executor.monitoring_messages = self.monitoring.resource_msgs
                 executor.submit_monitoring_radio = self.monitoring.radio
             if hasattr(executor, 'provider'):
