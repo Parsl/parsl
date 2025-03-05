@@ -30,7 +30,6 @@ class MonitoringRouter:
                  udp_port: Optional[int] = None,
                  zmq_port_range: Tuple[int, int] = (55050, 56000),
 
-                 monitoring_hub_address: str = "127.0.0.1",
                  run_dir: str = ".",
                  logging_level: int = logging.INFO,
                  atexit_timeout: int = 3,   # in seconds
