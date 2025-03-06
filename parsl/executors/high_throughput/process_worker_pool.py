@@ -403,44 +403,27 @@ class Manager:
         result_outgoing.connect(self._result_q_url)
         logger.info("Manager result pipe connected to interchange")
 
-        push_poll_period = max(10, self.poll_period) / 1000    # push_poll_period must be atleast 10 ms
-        logger.debug("push poll period: {}".format(push_poll_period))
-
-        last_beat = time.time()
-        last_result_beat = time.time()
-        items = []
-
         while not self._stop_event.is_set():
+            logger.debug("Starting pending_result_queue get")
             try:
-                logger.debug("Starting pending_result_queue get")
-                r = self.task_scheduler.get_result(block=True, timeout=push_poll_period)
-                logger.debug("Got a result item")
-                items.append(r)
-            except queue.Empty:
-                logger.debug("pending_result_queue get timeout without result item")
-            except Exception as e:
-                logger.exception("Got an exception: {}".format(e))
-
-            if time.time() > last_result_beat + self.heartbeat_period:
-                heartbeat_message = f"last_result_beat={last_result_beat} heartbeat_period={self.heartbeat_period} seconds"
-                logger.info(f"Sending heartbeat via results connection: {heartbeat_message}")
-                last_result_beat = time.time()
-                items.append(pickle.dumps({'type': 'heartbeat'}))
-
-            if len(items) >= self.max_queue_size or time.time() > last_beat + push_poll_period:
-                last_beat = time.time()
-                if items:
-                    logger.debug(f"Result send: Pushing {len(items)} items")
-                    result_outgoing.send_multipart(items)
-                    logger.debug("Result send: Pushed")
-                    items = []
-                else:
-                    logger.debug("Result send: No items to push")
-            else:
-                logger.debug(f"Result send: check condition not met - deferring {len(items)} result items")
+                r = self.task_scheduler.get_result()
+                if r is None:
+                    continue
+                logger.debug("Result received from worker: %s", id(r))
+                result_outgoing.send_multipart([r])
+                logger.debug("Result sent to interchange: %s", id(r))
+            except Exception:
+                logger.exception("Failed to send result to interchange")
 
         result_outgoing.close()
         logger.info("Exiting")
+
+    @wrap_with_logs
+    def heartbeater(self):
+        while not self._stop_event.wait(self.heartbeat_period):
+            heartbeat_message = f"heartbeat_period={self.heartbeat_period} seconds"
+            logger.info(f"Sending heartbeat via results connection: {heartbeat_message}")
+            self.pending_result_queue.put(pickle.dumps({'type': 'heartbeat'}))
 
     @wrap_with_logs
     def worker_watchdog(self):
@@ -524,11 +507,13 @@ class Manager:
         thr_monitoring_handler = threading.Thread(
             target=self.handle_monitoring_messages, name="Monitoring-Handler"
         )
+        thr_heartbeater = threading.Thread(target=self.heartbeater, name="Heartbeater")
 
         thr_task_puller.start()
         thr_result_pusher.start()
         thr_worker_watchdog.start()
         thr_monitoring_handler.start()
+        thr_heartbeater.start()
 
         logger.info("Manager threads started")
 
@@ -536,6 +521,10 @@ class Manager:
         self._stop_event.wait()
         logger.critical("Received kill event, terminating worker processes")
 
+        # Invite blocking threads to quit
+        self.pending_result_queue.put(None)
+
+        thr_heartbeater.join()
         thr_task_puller.join()
         thr_result_pusher.join()
         thr_worker_watchdog.join()
