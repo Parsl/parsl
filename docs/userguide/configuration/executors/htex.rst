@@ -1,10 +1,28 @@
+The High-Throughput Executor
+============================
+
+The :class:`~parsl.executors.HighThroughputExecutor` (HTEx) is the standard Executor provided with Parsl.
+The following sections detail the most-used configuration options of Parsl.
+
+.. contents::
+   :local:
+   :depth: 1
+
+Defining Workers Per Node
+-------------------------
+
+HTEx determines how many workers to run on each node individually.
+The number of nodes is the minimum of the ``max_workers_per_node``,
+the number of workers determined from ``cores_per_worker``,
+and the number of workers defined by ``mem_per_worker``.
+
 Resource pinning
-================
+----------------
 
 Resource pinning reduces contention between multiple workers using the same CPU cores or accelerators.
 
 Multi-Threaded Applications
----------------------------
++++++++++++++++++++++++++++
 
 Workflows which launch multiple workers on a single node which perform multi-threaded tasks (e.g., NumPy, Tensorflow operations) may run into thread contention issues.
 Each worker may try to use the same hardware threads, which leads to performance penalties.
@@ -64,7 +82,7 @@ so that any subprocesses launched by a worker which use OpenMP know which proces
 These include ``OMP_NUM_THREADS``, ``GOMP_COMP_AFFINITY``, and ``KMP_THREAD_AFFINITY``.
 
 Accelerators
-------------
+++++++++++++
 
 Many modern clusters provide multiple accelerators per compute node, yet many applications are best suited to using a
 single accelerator per task. Parsl supports pinning each worker to different accelerators using
@@ -113,13 +131,59 @@ Here's an example:
     )
 
 GPU Oversubscription
-""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^
 
 For hardware that uses Nvidia devices, Parsl allows for the oversubscription of workers to GPUS.  This is intended to
 make use of Nvidia's `Multi-Process Service (MPS) <https://docs.nvidia.com/deploy/mps/>`_ available on many of their
-GPUs that allows users to run multiple concurrent processes on a single GPU.  The user needs to set in the
-``worker_init`` commands to start MPS on every node in the block (this is machine dependent).  The
+GPUs that allows users to run multiple concurrent processes on a single GPU.  The user needs to set the
+``worker_init`` command of the Provider to start MPS on every node in the block (this is machine dependent).  The
 ``available_accelerators`` option should then be set to the total number of GPU partitions run on a single node in the
 block.  For example, for a node with 4 Nvidia GPUs, to create 8 workers per GPU, set ``available_accelerators=32``.
 GPUs will be assigned to workers in ascending order in contiguous blocks.  In the example, workers 0-7 will be placed
 on GPU 0, workers 8-15 on GPU 1, workers 16-23 on GPU 2, and workers 24-31 on GPU 3.
+
+Encryption
+----------
+
+Users can encrypt traffic between the Parsl DFK and ``HighThroughputExecutor`` instances by setting its ``encrypted``
+initialization argument to ``True``.
+
+For example,
+
+.. code-block:: python
+
+    from parsl.config import Config
+    from parsl.executors import HighThroughputExecutor
+
+    config = Config(
+        executors=[
+            HighThroughputExecutor(
+                encrypted=True
+            )
+        ]
+    )
+
+Under the hood, we use `CurveZMQ <http://curvezmq.org/>`_ to encrypt all communication channels
+between the executor and related nodes.
+
+Encryption performance
+++++++++++++++++++++++
+
+CurveZMQ depends on `libzmq <https://github.com/zeromq/libzmq>`_ and  `libsodium <https://github.com/jedisct1/libsodium>`_,
+which `pyzmq <https://github.com/zeromq/pyzmq>`_ (a Parsl dependency) includes as part of its
+installation via ``pip``. This installation path should work on most systems, but users have
+reported significant performance degradation as a result.
+
+If you experience a significant performance hit after enabling encryption, we recommend installing
+``pyzmq`` with conda:
+
+.. code-block:: bash
+
+    conda install conda-forge::pyzmq
+
+Alternatively, you can `install libsodium <https://doc.libsodium.org/installation>`_, then
+`install libzmq <https://zeromq.org/download/>`_, then build ``pyzmq`` from source:
+
+.. code-block:: bash
+
+    pip3 install parsl --no-binary pyzmq
