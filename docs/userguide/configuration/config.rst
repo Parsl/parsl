@@ -62,7 +62,7 @@ The ``load`` statement can happen after Apps are defined but must occur before t
 Loading the Config object within context manager like ``with`` is recommended
 for implicit cleaning of DFK on exiting the context manager.
 
-The :class:`~parsl.config.Config` object may not be used again after loaded.
+The :class:`~parsl.config.Config` object may not be used again once loaded.
 Consider a configuration function if the application will shut down and re-launch the DFK.
 
 .. code-block:: python
@@ -75,9 +75,21 @@ Consider a configuration function if the application will shut down and re-launc
 
     with parsl.load(make_config()):
         # Your workflow here
-    parsl.clear()  # Stops Parsl
-    with parsl.load(make_config()):  # Re-launches with a fresh configuration
-        # Your workflow here
+
+
+Config Options
+--------------
+
+Options for the :class:`~parsl.config.Config` object apply to Parsl's general behavior
+and affect all executors.
+Common options include:
+
+- ``run_dir`` for setting where Parsl writes log files
+- ``retries`` to restart failed tasks
+- ``usage_tracking`` to help Parsl `by reporting how you use it <../advanced/usage_tracking.html>`_
+
+Consult the :py:class:`API documentation for Config <parsl.config.Config>`
+or the `advanced documentation <../advanced/index.html>`_ to learn about options.
 
 Multiple Executors
 ------------------
