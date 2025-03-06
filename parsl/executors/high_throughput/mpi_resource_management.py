@@ -4,6 +4,7 @@ import os
 import pickle
 import queue
 import subprocess
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional
 
@@ -69,6 +70,14 @@ class MPINodesUnavailable(Exception):
         return f"MPINodesUnavailable(requested={self.requested} available={self.available})"
 
 
+@dataclass(order=True)
+class PrioritizedTask:
+    # Comparing dict will fail since they are unhashable
+    # This dataclass limits comparison to the priority field
+    priority: int
+    task: Dict = field(compare=False)
+
+
 class TaskScheduler:
     """Default TaskScheduler that does no taskscheduling
 
@@ -111,7 +120,7 @@ class MPITaskScheduler(TaskScheduler):
         super().__init__(pending_task_q, pending_result_q)
         self.scheduler = identify_scheduler()
         # PriorityQueue is threadsafe
-        self._backlog_queue: queue.PriorityQueue = queue.PriorityQueue()
+        self._backlog_queue: queue.PriorityQueue[PrioritizedTask] = queue.PriorityQueue()
         self._map_tasks_to_nodes: Dict[str, List[str]] = {}
         self.available_nodes = get_nodes_in_batchjob(self.scheduler)
         self._free_node_counter = SpawnContext.Value("i", len(self.available_nodes))
@@ -169,7 +178,8 @@ class MPITaskScheduler(TaskScheduler):
                 allocated_nodes = self._get_nodes(nodes_needed)
             except MPINodesUnavailable:
                 logger.info(f"Not enough resources, placing task {tid} into backlog")
-                self._backlog_queue.put((nodes_needed, task_package))
+                # Negate the priority element so that larger tasks are prioritized
+                self._backlog_queue.put(PrioritizedTask(-1 * nodes_needed, task_package))
                 return
             else:
                 resource_spec["MPI_NODELIST"] = ",".join(allocated_nodes)
@@ -182,14 +192,16 @@ class MPITaskScheduler(TaskScheduler):
 
     def _schedule_backlog_tasks(self):
         """Attempt to schedule backlogged tasks"""
-        try:
-            _nodes_requested, task_package = self._backlog_queue.get(block=False)
-            self.put_task(task_package)
-        except queue.Empty:
-            return
-        else:
-            # Keep attempting to schedule tasks till we are out of resources
-            self._schedule_backlog_tasks()
+
+        # Separate fetching tasks from the _backlog_queue and scheduling them
+        # since tasks that failed to schedule will be pushed to the _backlog_queue
+        backlogged_tasks = []
+        while not self._backlog_queue.empty():
+            prioritized_task = self._backlog_queue.get(block=False)
+            backlogged_tasks.append(prioritized_task.task)
+
+        for backlogged_task in backlogged_tasks:
+            self.put_task(backlogged_task)
 
     def get_result(self, block: bool = True, timeout: Optional[float] = None):
         """Return result and relinquish provisioned nodes"""
