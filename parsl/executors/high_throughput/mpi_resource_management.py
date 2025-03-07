@@ -191,14 +191,19 @@ class MPITaskScheduler(TaskScheduler):
 
     def _schedule_backlog_tasks(self):
         """Attempt to schedule backlogged tasks"""
-        try:
-            prioritized_task = self._backlog_queue.get(block=False)
-            self.put_task(prioritized_task.task)
-        except queue.Empty:
-            return
-        else:
-            # Keep attempting to schedule tasks till we are out of resources
-            self._schedule_backlog_tasks()
+
+        # Separate fetching tasks from the _backlog_queue and scheduling them
+        # since tasks that failed to schedule will be pushed to the _backlog_queue
+        backlogged_tasks = []
+        while True:
+            try:
+                prioritized_task = self._backlog_queue.get(block=False)
+                backlogged_tasks.append(prioritized_task.task)
+            except queue.Empty:
+                break
+
+        for backlogged_task in backlogged_tasks:
+            self.put_task(backlogged_task)
 
     def get_result(self, block: bool = True, timeout: Optional[float] = None):
         """Return result and relinquish provisioned nodes"""
