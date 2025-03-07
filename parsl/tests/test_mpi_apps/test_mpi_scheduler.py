@@ -186,3 +186,35 @@ def test_hashable_backlog_queue():
         task_package = {"task_id": i, "buffer": mock_task_buffer}
         scheduler.put_task(task_package)
     assert scheduler._backlog_queue.qsize() == 2, "Expected 2 backlogged tasks"
+
+
+@pytest.mark.local
+def test_tiny_large_loop():
+    """Run a set of tiny and large tasks in a loop"""
+
+    task_q, result_q = SpawnContext.Queue(), SpawnContext.Queue()
+    scheduler = MPITaskScheduler(task_q, result_q)
+
+    assert scheduler.available_nodes
+    assert len(scheduler.available_nodes) == 8
+
+    assert scheduler._free_node_counter.value == 8
+
+    for i in range(10):
+        num_nodes = 2 if i % 2 == 0 else 8
+        mock_task_buffer = pack_res_spec_apply_message("func", "args", "kwargs",
+                                                       resource_specification={
+                                                           "num_nodes": num_nodes,
+                                                           "ranks_per_node": 2
+                                                       })
+        task_package = {"task_id": i, "buffer": mock_task_buffer}
+        scheduler.put_task(task_package)
+
+    for i in range(10):
+        task = task_q.get(timeout=30)
+        result_pkl = pickle.dumps(
+            {"task_id": task["task_id"], "type": "result", "buffer": "RESULT BUF"})
+        result_q.put(result_pkl)
+        got_result = scheduler.get_result(True, 1)
+
+    assert got_result == result_pkl
