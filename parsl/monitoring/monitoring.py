@@ -3,24 +3,21 @@ from __future__ import annotations
 import logging
 import multiprocessing.synchronize as ms
 import os
-import pickle
 import queue
-import time
 from multiprocessing import Event
 from multiprocessing.queues import Queue
-from typing import TYPE_CHECKING, Literal, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Literal, Optional, Tuple, Union
 
 import typeguard
 
-from parsl.log_utils import set_file_logger
 from parsl.monitoring.errors import MonitoringHubStartError
+from parsl.monitoring.radios.filesystem_router import filesystem_router_starter
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.monitoring.radios.udp_router import udp_router_starter
 from parsl.monitoring.radios.zmq_router import zmq_router_starter
 from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import ForkProcess, SizedQueue
-from parsl.process_loggers import wrap_with_logs
-from parsl.utils import RepresentationMixin, setproctitle
+from parsl.utils import RepresentationMixin
 
 _db_manager_excepts: Optional[Exception]
 
@@ -183,7 +180,7 @@ class MonitoringHub(RepresentationMixin):
         logger.info("Started ZMQ router process %s, UDP router process %s and DBM process %s",
                     self.zmq_router_proc.pid, self.udp_router_proc.pid, self.dbm_proc.pid)
 
-        self.filesystem_proc = ForkProcess(target=filesystem_receiver,
+        self.filesystem_proc = ForkProcess(target=filesystem_router_starter,
                                            args=(self.resource_msgs, dfk_run_dir),
                                            name="Monitoring-Filesystem-Process",
                                            daemon=True
@@ -285,41 +282,3 @@ class MonitoringHub(RepresentationMixin):
             self.resource_msgs.close()
             self.resource_msgs.join_thread()
             logger.info("Closed monitoring multiprocessing queues")
-
-
-@wrap_with_logs
-def filesystem_receiver(q: Queue[TaggedMonitoringMessage], run_dir: str) -> None:
-    logger = set_file_logger(f"{run_dir}/monitoring_filesystem_radio.log",
-                             name="monitoring_filesystem_radio",
-                             level=logging.INFO)
-
-    logger.info("Starting filesystem radio receiver")
-    setproctitle("parsl: monitoring filesystem receiver")
-    base_path = f"{run_dir}/monitor-fs-radio/"
-    tmp_dir = f"{base_path}/tmp/"
-    new_dir = f"{base_path}/new/"
-    logger.debug("Creating new and tmp paths under %s", base_path)
-
-    target_radio = MultiprocessingQueueRadioSender(q)
-
-    os.makedirs(tmp_dir, exist_ok=True)
-    os.makedirs(new_dir, exist_ok=True)
-
-    while True:  # this loop will end on process termination
-        logger.debug("Start filesystem radio receiver loop")
-
-        # iterate over files in new_dir
-        for filename in os.listdir(new_dir):
-            try:
-                logger.info("Processing filesystem radio file %s", filename)
-                full_path_filename = f"{new_dir}/{filename}"
-                with open(full_path_filename, "rb") as f:
-                    message = pickle.load(f)
-                logger.debug("Message received is: %s", message)
-                assert isinstance(message, tuple)
-                target_radio.send(cast(TaggedMonitoringMessage, message))
-                os.remove(full_path_filename)
-            except Exception:
-                logger.exception("Exception processing %s - probably will be retried next iteration", filename)
-
-        time.sleep(1)  # whats a good time for this poll?
