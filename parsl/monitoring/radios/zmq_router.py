@@ -28,7 +28,6 @@ class MonitoringRouter:
 
                  run_dir: str = ".",
                  logging_level: int = logging.INFO,
-                 atexit_timeout: int = 3,   # in seconds
                  resource_msgs: mpq.Queue,
                  exit_event: Event,
                  ):
@@ -45,8 +44,6 @@ class MonitoringRouter:
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         logging_level : int
              Logging level as defined in the logging module. Default: logging.INFO
-        atexit_timeout : float, optional
-            The amount of time in seconds to terminate the hub without receiving any messages, after the last dfk workflow message is received.
         resource_msgs : multiprocessing.Queue
             A multiprocessing queue to receive messages to be routed onwards to the database process
         exit_event : Event
@@ -59,7 +56,6 @@ class MonitoringRouter:
         self.logger.debug("Monitoring router starting")
 
         self.hub_address = hub_address
-        self.atexit_timeout = atexit_timeout
 
         self.loop_freq = 10.0  # milliseconds
 
