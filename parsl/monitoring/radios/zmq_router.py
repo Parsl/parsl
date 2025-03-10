@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import multiprocessing.queues as mpq
 import os
-import threading
 import time
 from multiprocessing.synchronize import Event
 from typing import Tuple
@@ -79,16 +78,7 @@ class MonitoringRouter:
 
     @wrap_with_logs(target="monitoring_router")
     def start(self) -> None:
-        self.logger.info("Starting ZMQ listener thread")
-        zmq_radio_receiver_thread = threading.Thread(target=self.start_zmq_listener, daemon=True)
-        zmq_radio_receiver_thread.start()
-
-        self.logger.info("Joining on ZMQ listener thread")
-        zmq_radio_receiver_thread.join()
-        self.logger.info("Joined on ZMQ listener threads")
-
-    @wrap_with_logs(target="monitoring_router")
-    def start_zmq_listener(self) -> None:
+        self.logger.info("Starting ZMQ listener")
         try:
             while not self.exit_event.is_set():
                 try:
