@@ -5,7 +5,6 @@ import multiprocessing.queues as mpq
 import os
 import pickle
 import socket
-import threading
 import time
 from multiprocessing.synchronize import Event
 from typing import Optional
@@ -87,16 +86,7 @@ class MonitoringRouter:
 
     @wrap_with_logs(target="monitoring_router")
     def start(self) -> None:
-        self.logger.info("Starting UDP listener thread")
-        udp_radio_receiver_thread = threading.Thread(target=self.start_udp_listener, daemon=True)
-        udp_radio_receiver_thread.start()
-
-        self.logger.info("Joining on UDP listener thread")
-        udp_radio_receiver_thread.join()
-        self.logger.info("Joined on both ZMQ and UDP listener threads")
-
-    @wrap_with_logs(target="monitoring_router")
-    def start_udp_listener(self) -> None:
+        self.logger.info("Starting UDP listener")
         try:
             while not self.exit_event.is_set():
                 try:
