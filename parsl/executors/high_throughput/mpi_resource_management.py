@@ -6,7 +6,7 @@ import queue
 import subprocess
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from parsl.multiprocessing import SpawnContext
 from parsl.serialize import pack_res_spec_apply_message, unpack_res_spec_apply_message
@@ -76,6 +76,8 @@ class PrioritizedTask:
     # This dataclass limits comparison to the priority field
     priority: int
     task: Dict = field(compare=False)
+    unpacked_task: Tuple = field(compare=False)
+    nodes_needed: int = field(compare=False)
 
 
 class TaskScheduler:
@@ -165,6 +167,28 @@ class MPITaskScheduler(TaskScheduler):
         with self._free_node_counter.get_lock():
             self._free_node_counter.value += len(nodes)  # type: ignore[attr-defined]
 
+    def schedule_task(self, p_task: PrioritizedTask):
+        """Schedule a prioritized task if resources are available, and push to backlog
+        otherwise."""
+        nodes_needed = p_task.nodes_needed
+        tid = p_task.task["task_id"]
+        if nodes_needed:
+            try:
+                allocated_nodes = self._get_nodes(nodes_needed)
+            except MPINodesUnavailable:
+                logger.info(f"Not enough resources, placing task {tid} into backlog")
+                self._backlog_queue.put(p_task)
+                return
+            else:
+                f, args, kwargs, resource_spec = p_task.unpacked_task
+                resource_spec["MPI_NODELIST"] = ",".join(allocated_nodes)
+                self._map_tasks_to_nodes[tid] = allocated_nodes
+                buffer = pack_res_spec_apply_message(f, args, kwargs, resource_spec)
+                p_task.task["buffer"] = buffer
+                p_task.task["resource_spec"] = resource_spec
+
+        self.pending_task_q.put(p_task.task)
+
     def put_task(self, task_package: dict):
         """Schedule task if resources are available otherwise backlog the task"""
         user_ns = locals()
@@ -172,22 +196,12 @@ class MPITaskScheduler(TaskScheduler):
         _f, _args, _kwargs, resource_spec = unpack_res_spec_apply_message(task_package["buffer"])
 
         nodes_needed = resource_spec.get("num_nodes")
-        tid = task_package["task_id"]
-        if nodes_needed:
-            try:
-                allocated_nodes = self._get_nodes(nodes_needed)
-            except MPINodesUnavailable:
-                logger.info(f"Not enough resources, placing task {tid} into backlog")
-                self._backlog_queue.put(PrioritizedTask(nodes_needed, task_package))
-                return
-            else:
-                resource_spec["MPI_NODELIST"] = ",".join(allocated_nodes)
-                self._map_tasks_to_nodes[tid] = allocated_nodes
-                buffer = pack_res_spec_apply_message(_f, _args, _kwargs, resource_spec)
-                task_package["buffer"] = buffer
-                task_package["resource_spec"] = resource_spec
+        prioritized_task = PrioritizedTask(priority=nodes_needed,
+                                           task=task_package,
+                                           unpacked_task=(_f, _args, _kwargs, resource_spec),
+                                           nodes_needed=nodes_needed)
 
-        self.pending_task_q.put(task_package)
+        self.schedule_task(prioritized_task)
 
     def _schedule_backlog_tasks(self):
         """Attempt to schedule backlogged tasks"""
@@ -198,12 +212,12 @@ class MPITaskScheduler(TaskScheduler):
         while True:
             try:
                 prioritized_task = self._backlog_queue.get(block=False)
-                backlogged_tasks.append(prioritized_task.task)
+                backlogged_tasks.append(prioritized_task)
             except queue.Empty:
                 break
 
         for backlogged_task in backlogged_tasks:
-            self.put_task(backlogged_task)
+            self.schedule_task(backlogged_task)
 
     def get_result(self, block: bool = True, timeout: Optional[float] = None):
         """Return result and relinquish provisioned nodes"""
