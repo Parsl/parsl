@@ -5,6 +5,7 @@ import os
 import pickle
 import time
 from multiprocessing.queues import Queue
+from multiprocessing.synchronize import Event
 from typing import cast
 
 from parsl.log_utils import set_file_logger
@@ -15,7 +16,7 @@ from parsl.utils import setproctitle
 
 
 @wrap_with_logs
-def filesystem_router_starter(q: Queue[TaggedMonitoringMessage], run_dir: str) -> None:
+def filesystem_router_starter(q: Queue[TaggedMonitoringMessage], run_dir: str, exit_event: Event) -> None:
     logger = set_file_logger(f"{run_dir}/monitoring_filesystem_radio.log",
                              name="monitoring_filesystem_radio",
                              level=logging.INFO)
@@ -32,7 +33,7 @@ def filesystem_router_starter(q: Queue[TaggedMonitoringMessage], run_dir: str) -
     os.makedirs(tmp_dir, exist_ok=True)
     os.makedirs(new_dir, exist_ok=True)
 
-    while True:  # this loop will end on process termination
+    while not exit_event.is_set():
         logger.debug("Start filesystem radio receiver loop")
 
         # iterate over files in new_dir
@@ -50,3 +51,4 @@ def filesystem_router_starter(q: Queue[TaggedMonitoringMessage], run_dir: str) -
                 logger.exception("Exception processing %s - probably will be retried next iteration", filename)
 
         time.sleep(1)  # whats a good time for this poll?
+    logger.info("Ending filesystem radio receiver")
