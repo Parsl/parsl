@@ -45,7 +45,7 @@ def test_row_counts():
 
     # dig out the interchange port...
     hub_address = parsl.dfk().monitoring.hub_address
-    hub_zmq_port = parsl.dfk().monitoring.hub_zmq_port
+    hub_zmq_port = parsl.dfk().executors["htex_Local"].hub_zmq_port
 
     # this will send a string to a new socket connection
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

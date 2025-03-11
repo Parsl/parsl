@@ -3,16 +3,23 @@ from __future__ import annotations
 import logging
 import multiprocessing.queues as mpq
 import os
+import queue
 import time
-from multiprocessing.synchronize import Event
+from multiprocessing import Event
+from multiprocessing.context import ForkProcess as ForkProcessType
+from multiprocessing.queues import Queue as QueueType
+from multiprocessing.synchronize import Event as EventType
 from typing import Tuple
 
 import typeguard
 import zmq
 
+from parsl.addresses import tcp_url
 from parsl.log_utils import set_file_logger
+from parsl.monitoring.errors import MonitoringRouterStartError
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.monitoring.types import TaggedMonitoringMessage
+from parsl.multiprocessing import ForkProcess, SizedQueue
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
@@ -23,21 +30,21 @@ class MonitoringRouter:
 
     def __init__(self,
                  *,
-                 hub_address: str,
-                 zmq_port_range: Tuple[int, int] = (55050, 56000),
+                 address: str,
+                 port_range: Tuple[int, int] = (55050, 56000),
 
                  run_dir: str = ".",
                  logging_level: int = logging.INFO,
                  resource_msgs: mpq.Queue,
-                 exit_event: Event,
+                 exit_event: EventType,
                  ):
         """ Initializes a monitoring configuration class.
 
         Parameters
         ----------
-        hub_address : str
+        address : str
              The ip address at which the workers will be able to reach the Hub.
-        zmq_port_range : tuple(int, int)
+        port_range : tuple(int, int)
              The MonitoringHub picks ports at random from the range which will be used by Hub.
              Default: (55050, 56000)
         run_dir : str
@@ -55,7 +62,7 @@ class MonitoringRouter:
                                       level=logging_level)
         self.logger.debug("Monitoring router starting")
 
-        self.hub_address = hub_address
+        self.address = address
 
         self.loop_freq = 10.0  # milliseconds
 
@@ -64,10 +71,10 @@ class MonitoringRouter:
         self.zmq_receiver_channel.setsockopt(zmq.LINGER, 0)
         self.zmq_receiver_channel.set_hwm(0)
         self.zmq_receiver_channel.RCVTIMEO = int(self.loop_freq)  # in milliseconds
-        self.logger.debug("hub_address: {}. zmq_port_range {}".format(hub_address, zmq_port_range))
-        self.zmq_receiver_port = self.zmq_receiver_channel.bind_to_random_port("tcp://*",
-                                                                               min_port=zmq_port_range[0],
-                                                                               max_port=zmq_port_range[1])
+        self.logger.debug("address: {}. port_range {}".format(address, port_range))
+        self.zmq_receiver_port = self.zmq_receiver_channel.bind_to_random_port(tcp_url(address),
+                                                                               min_port=port_range[0],
+                                                                               max_port=port_range[1])
 
         self.target_radio = MultiprocessingQueueRadioSender(resource_msgs)
         self.exit_event = exit_event
@@ -108,17 +115,17 @@ class MonitoringRouter:
 def zmq_router_starter(*,
                        comm_q: mpq.Queue,
                        resource_msgs: mpq.Queue,
-                       exit_event: Event,
+                       exit_event: EventType,
 
-                       hub_address: str,
-                       zmq_port_range: Tuple[int, int],
+                       address: str,
+                       port_range: Tuple[int, int],
 
                        run_dir: str,
                        logging_level: int) -> None:
     setproctitle("parsl: monitoring zmq router")
     try:
-        router = MonitoringRouter(hub_address=hub_address,
-                                  zmq_port_range=zmq_port_range,
+        router = MonitoringRouter(address=address,
+                                  port_range=port_range,
                                   run_dir=run_dir,
                                   logging_level=logging_level,
                                   resource_msgs=resource_msgs,
@@ -129,3 +136,50 @@ def zmq_router_starter(*,
     else:
         comm_q.put(router.zmq_receiver_port)
         router.start()
+
+
+class ZMQRadioReceiver():
+    def __init__(self, *, process: ForkProcessType, exit_event: EventType, port: int) -> None:
+        self.process = process
+        self.exit_event = exit_event
+        self.port = port
+
+
+def start_zmq_receiver(*,
+                       monitoring_messages: QueueType,
+                       loopback_address: str,
+                       port_range: Tuple[int, int],
+                       logdir: str,
+                       worker_debug: bool) -> ZMQRadioReceiver:
+    comm_q = SizedQueue(maxsize=10)
+
+    # TODO: do this shutdown
+    router_exit_event = Event()
+
+    router_proc = ForkProcess(target=zmq_router_starter,
+                              kwargs={"comm_q": comm_q,
+                                      "resource_msgs": monitoring_messages,
+                                      "exit_event": router_exit_event,
+                                      "address": loopback_address,
+                                      "port_range": port_range,
+                                      "run_dir": logdir,
+                                      "logging_level": logging.DEBUG if worker_debug else logging.INFO,
+                                      },
+                              name="Monitoring-ZMQ-Router-Process",
+                              daemon=True,
+                              )
+    router_proc.start()
+
+    try:
+        comm_q_result = comm_q.get(block=True, timeout=120)
+        comm_q.close()
+        comm_q.join_thread()
+    except queue.Empty:
+        logger.error("Monitoring ZMQ Router has not reported port in 120s")
+        raise MonitoringRouterStartError()
+
+    if isinstance(comm_q_result, str):
+        logger.error("MonitoringRouter sent an error message: %s", comm_q_result)
+        raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
+
+    return ZMQRadioReceiver(process=router_proc, exit_event=router_exit_event, port=comm_q_result)
