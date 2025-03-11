@@ -5,6 +5,7 @@ import multiprocessing.synchronize as ms
 import os
 import queue
 from multiprocessing import Event
+from multiprocessing.context import ForkProcess as ForkProcessType
 from multiprocessing.queues import Queue
 from typing import TYPE_CHECKING, Optional, Tuple, Union
 
@@ -247,31 +248,23 @@ class MonitoringHub(RepresentationMixin):
                         exception_msg[0],
                         exception_msg[1]
                     )
-                self.zmq_router_proc.terminate()
-                self.udp_router_proc.terminate()
-                self.dbm_proc.terminate()
-                self.filesystem_proc.terminate()
             logger.info("Setting router termination event")
             self.router_exit_event.set()
 
             logger.info("Waiting for ZMQ router to terminate")
-            self.zmq_router_proc.join()
-            self.zmq_router_proc.close()
+            join_terminate_close_proc(self.zmq_router_proc)
 
             logger.info("Waiting for UDP router to terminate")
-            self.udp_router_proc.join()
-            self.udp_router_proc.close()
+            join_terminate_close_proc(self.udp_router_proc)
 
             logger.debug("Finished waiting for router termination")
             logger.debug("Waiting for DB termination")
             self.dbm_exit_event.set()
-            self.dbm_proc.join()
-            self.dbm_proc.close()
+            join_terminate_close_proc(self.dbm_proc)
             logger.debug("Finished waiting for DBM termination")
 
             logger.info("Terminating filesystem radio receiver process")
-            self.filesystem_proc.join()
-            self.filesystem_proc.close()
+            join_terminate_close_proc(self.filesystem_proc)
 
             logger.info("Closing monitoring multiprocessing queues")
             self.exception_q.close()
@@ -279,3 +272,37 @@ class MonitoringHub(RepresentationMixin):
             self.resource_msgs.close()
             self.resource_msgs.join_thread()
             logger.info("Closed monitoring multiprocessing queues")
+
+
+def join_terminate_close_proc(process: ForkProcessType, *, timeout: int = 30) -> None:
+    """Increasingly aggressively terminate a process.
+
+    This function assumes that the process is likely to exit before
+    the join timeout, driven by some other means, such as the
+    MonitoringHub router_exit_event. If the process does not exit, then
+    first terminate() and then kill() will be used to end the process.
+
+    In the case of a very mis-behaving process, this function might take
+    up to 3*timeout to exhaust all termination methods and return.
+    """
+    process.join(timeout)
+
+    # run a sequence of increasingly aggressive steps to shut down the process.
+    if process.is_alive():
+        logger.error("Process did not join. Terminating.")
+        process.terminate()
+        process.join(timeout)
+        if process.is_alive():
+            logger.error("Process did not join after terminate. Killing.")
+            process.kill()
+            process.join(timeout)
+            # This kill should not be caught by any signal handlers so it is
+            # unlikely that this join will timeout. If it does, there isn't
+            # anything further to do except log an error in the next if-block.
+
+    if process.is_alive():
+        logger.error("Process failed to end")
+        # don't call close if the process hasn't ended:
+        # process.close() doesn't work on a running process.
+    else:
+        process.close()
