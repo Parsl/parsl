@@ -1,11 +1,13 @@
 import os
 from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
+from multiprocessing.queues import Queue
 from typing import Any, Callable, Dict, Optional
 
 from typing_extensions import Literal, Self
 
 from parsl.monitoring.radios.base import MonitoringRadioSender
+from parsl.monitoring.types import TaggedMonitoringMessage
 
 
 class ParslExecutor(metaclass=ABCMeta):
@@ -29,6 +31,8 @@ class ParslExecutor(metaclass=ABCMeta):
        radio_mode: str - a string describing which radio mode should be used to
               send task resource data back to the submit side.
 
+    # TODO: document monitoring_msgs here
+
     An executor may optionally expose:
 
        storage_access: List[parsl.data_provider.staging.Staging] - a list of staging
@@ -51,13 +55,13 @@ class ParslExecutor(metaclass=ABCMeta):
         self,
         *,
         hub_address: Optional[str] = None,
-        hub_zmq_port: Optional[int] = None,
+        monitoring_messages: Optional[Queue[TaggedMonitoringMessage]] = None,
         submit_monitoring_radio: Optional[MonitoringRadioSender] = None,
         run_dir: str = ".",
         run_id: Optional[str] = None,
     ):
         self.hub_address = hub_address
-        self.hub_zmq_port = hub_zmq_port
+        self.monitoring_messages = monitoring_messages
         self.submit_monitoring_radio = submit_monitoring_radio
         self.run_dir = os.path.abspath(run_dir)
         self.run_id = run_id
@@ -135,16 +139,6 @@ class ParslExecutor(metaclass=ABCMeta):
     @hub_address.setter
     def hub_address(self, value: Optional[str]) -> None:
         self._hub_address = value
-
-    @property
-    def hub_zmq_port(self) -> Optional[int]:
-        """Port to the Hub for monitoring.
-        """
-        return self._hub_zmq_port
-
-    @hub_zmq_port.setter
-    def hub_zmq_port(self, value: Optional[int]) -> None:
-        self._hub_zmq_port = value
 
     @property
     def submit_monitoring_radio(self) -> Optional[MonitoringRadioSender]:

@@ -29,6 +29,7 @@ from parsl.executors.high_throughput.manager_selector import (
 )
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
+from parsl.monitoring.radios.zmq_router import start_zmq_router
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
@@ -426,6 +427,17 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.command_client = zmq_pipes.CommandClient(
             self.loopback_address, self.interchange_port_range, self.cert_dir
         )
+
+        self.hub_zmq_port = None
+        self.zmq_router_proc = None
+
+        if self.monitoring_messages is not None:
+            (self.zmq_router_proc, self.zmq_exit_event, self.hub_zmq_port) = start_zmq_router(monitoring_messages=self.monitoring_messages,
+                                                                                              loopback_address=self.loopback_address,
+                                                                                              port_range=self.interchange_port_range,
+                                                                                              logdir=self.logdir,
+                                                                                              worker_debug=self.worker_debug,
+                                                                                              )
 
         self._result_queue_thread = None
         self._start_result_queue_thread()
