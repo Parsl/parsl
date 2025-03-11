@@ -178,6 +178,7 @@ def start_zmq_receiver(*,
     router_proc.start()
 
     try:
+        logger.debug("Waiting for router process to report port")
         comm_q_result = comm_q.get(block=True, timeout=120)
         comm_q.close()
         comm_q.join_thread()
