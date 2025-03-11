@@ -416,7 +416,7 @@ class Manager:
                 logger.exception("Failed to send result to interchange")
 
         result_outgoing.close()
-        logger.info("Exiting")
+        logger.debug("Exiting")
 
     @wrap_with_logs
     def heartbeater(self):
@@ -453,7 +453,7 @@ class Manager:
                     self.procs[worker_id] = p
                     logger.info("Worker {} has been restarted".format(worker_id))
 
-        logger.critical("Exiting")
+        logger.debug("Exiting")
 
     @wrap_with_logs
     def handle_monitoring_messages(self):
@@ -483,7 +483,7 @@ class Manager:
                 self.pending_result_queue.put(msg)
                 logger.debug("Put monitoring message on pending_result_queue")
 
-        logger.critical("Exiting")
+        logger.debug("Exiting")
 
     def start(self):
         """ Start the worker processes.
