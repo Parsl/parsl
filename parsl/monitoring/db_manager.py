@@ -684,8 +684,7 @@ class DatabaseManager:
 
 @wrap_with_logs(target="database_manager")
 @typeguard.typechecked
-def dbm_starter(exception_q: mpq.Queue,
-                resource_msgs: mpq.Queue,
+def dbm_starter(resource_msgs: mpq.Queue,
                 db_url: str,
                 run_dir: str,
                 logging_level: int,
@@ -708,9 +707,8 @@ def dbm_starter(exception_q: mpq.Queue,
         logger.exception("KeyboardInterrupt signal caught")
         dbm.close()
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("dbm.start exception")
-        exception_q.put(("DBM", str(e)))
         dbm.close()
 
     logger.info("End of dbm_starter")

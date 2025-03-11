@@ -129,9 +129,6 @@ class MonitoringHub(RepresentationMixin):
         zmq_comm_q = SizedQueue(maxsize=10)
         udp_comm_q = SizedQueue(maxsize=10)
 
-        self.exception_q: Queue[Tuple[str, str]]
-        self.exception_q = SizedQueue(maxsize=10)
-
         self.resource_msgs: Queue[TaggedMonitoringMessage]
         self.resource_msgs = SizedQueue()
 
@@ -140,7 +137,6 @@ class MonitoringHub(RepresentationMixin):
 
         self.zmq_router_proc = ForkProcess(target=zmq_router_starter,
                                            kwargs={"comm_q": zmq_comm_q,
-                                                   "exception_q": self.exception_q,
                                                    "resource_msgs": self.resource_msgs,
                                                    "exit_event": self.router_exit_event,
                                                    "hub_address": self.hub_address,
@@ -155,7 +151,6 @@ class MonitoringHub(RepresentationMixin):
 
         self.udp_router_proc = ForkProcess(target=udp_router_starter,
                                            kwargs={"comm_q": udp_comm_q,
-                                                   "exception_q": self.exception_q,
                                                    "resource_msgs": self.resource_msgs,
                                                    "exit_event": self.router_exit_event,
                                                    "hub_address": self.hub_address,
@@ -172,7 +167,7 @@ class MonitoringHub(RepresentationMixin):
         self.dbm_exit_event = Event()
 
         self.dbm_proc = ForkProcess(target=dbm_starter,
-                                    args=(self.exception_q, self.resource_msgs,),
+                                    args=(self.resource_msgs,),
                                     kwargs={"run_dir": dfk_run_dir,
                                             "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                             "db_url": self.logging_endpoint,
@@ -232,22 +227,8 @@ class MonitoringHub(RepresentationMixin):
 
     def close(self) -> None:
         logger.info("Terminating Monitoring Hub")
-        exception_msgs = []
-        while True:
-            try:
-                exception_msgs.append(self.exception_q.get(block=False))
-                logger.error("There was a queued exception (Either router or DBM process got exception much earlier?)")
-            except queue.Empty:
-                break
         if self.monitoring_hub_active:
             self.monitoring_hub_active = False
-            if exception_msgs:
-                for exception_msg in exception_msgs:
-                    logger.error(
-                        "%s process delivered an exception: %s. Terminating all monitoring processes immediately.",
-                        exception_msg[0],
-                        exception_msg[1]
-                    )
             logger.info("Setting router termination event")
             self.router_exit_event.set()
 
@@ -267,8 +248,6 @@ class MonitoringHub(RepresentationMixin):
             join_terminate_close_proc(self.filesystem_proc)
 
             logger.info("Closing monitoring multiprocessing queues")
-            self.exception_q.close()
-            self.exception_q.join_thread()
             self.resource_msgs.close()
             self.resource_msgs.join_thread()
             logger.info("Closed monitoring multiprocessing queues")
