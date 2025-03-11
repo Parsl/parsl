@@ -181,7 +181,7 @@ class MonitoringHub(RepresentationMixin):
                     self.zmq_router_proc.pid, self.udp_router_proc.pid, self.dbm_proc.pid)
 
         self.filesystem_proc = ForkProcess(target=filesystem_router_starter,
-                                           args=(self.resource_msgs, dfk_run_dir),
+                                           args=(self.resource_msgs, dfk_run_dir, self.router_exit_event),
                                            name="Monitoring-Filesystem-Process",
                                            daemon=True
                                            )
@@ -269,10 +269,7 @@ class MonitoringHub(RepresentationMixin):
             self.dbm_proc.close()
             logger.debug("Finished waiting for DBM termination")
 
-            # should this be message based? it probably doesn't need to be if
-            # we believe we've received all messages
             logger.info("Terminating filesystem radio receiver process")
-            self.filesystem_proc.terminate()
             self.filesystem_proc.join()
             self.filesystem_proc.close()
 
