@@ -468,20 +468,17 @@ class Manager:
         """
         logger.debug("Starting monitoring handler thread")
 
-        poll_period_s = max(10, self.poll_period) / 1000    # Must be at least 10 ms
-
         while not self._stop_event.is_set():
             try:
                 logger.debug("Starting monitor_queue.get()")
-                msg = self.monitoring_queue.get(block=True, timeout=poll_period_s)
-            except queue.Empty:
-                logger.debug("monitoring_queue.get() has timed out")
-            except Exception as e:
-                logger.exception(f"Got an exception: {e}")
-            else:
+                msg = self.monitoring_queue.get(block=True)
+                if msg is None:
+                    continue
                 logger.debug("Got a monitoring message")
                 self.pending_result_queue.put(msg)
                 logger.debug("Put monitoring message on pending_result_queue")
+            except Exception:
+                logger.exception("Failed to forward monitoring message")
 
         logger.debug("Exiting")
 
@@ -522,6 +519,7 @@ class Manager:
         logger.critical("Received kill event, terminating worker processes")
 
         # Invite blocking threads to quit
+        self.monitoring_queue.put(None)
         self.pending_result_queue.put(None)
 
         thr_heartbeater.join()
