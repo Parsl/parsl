@@ -3,22 +3,24 @@ import itertools
 import logging
 import os
 import pathlib
+import random
 import re
 import shutil
-import time
-import types
 import signal
+import string
 import sys
 import tempfile
 import threading
+import time
 import traceback
+import types
 import typing as t
 from datetime import datetime
 from glob import glob
 from itertools import chain
 
-import pytest
 import _pytest.runner as runner
+import pytest
 
 import parsl
 from parsl.dataflow.dflow import DataFlowKernelLoader
@@ -56,7 +58,7 @@ def tmpd_cwd_session(pytestconfig):
 
     config = re.sub(r"[^A-z0-9_-]+", "_", pytestconfig.getoption('config')[0])
     cwd = pathlib.Path(os.getcwd())
-    pytest_dir = cwd / ".pytest"
+    pytest_dir = cwd / "pytest-parsl"
     pytest_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
 
     test_dir_prefix = "parsltest-"
@@ -135,28 +137,35 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
-        'noci: mark test to be unsuitable for running during automated tests'
-    )
-
-    config.addinivalue_line(
-        'markers',
         'cleannet: Enable tests that require a clean network connection (such as for testing FTP)'
     )
     config.addinivalue_line(
         'markers',
-        'issue363: Marks tests that require a shared filesystem for stdout/stderr - see issue #363'
-    )
-    config.addinivalue_line(
-        'markers',
-        'staging_required: Marks tests that require a staging provider, when there is no sharedFS)'
-    )
-    config.addinivalue_line(
-        'markers',
-        'sshd_required: Marks tests that require a SSHD'
+        'staging_required: Marks tests that require a staging provider, when there is no sharedFS'
     )
     config.addinivalue_line(
         'markers',
         'multiple_cores_required: Marks tests that require multiple cores, such as htex affinity'
+    )
+    config.addinivalue_line(
+        'markers',
+        'unix_filesystem_permissions_required: Marks tests that require unix-level filesystem permission enforcement'
+    )
+    config.addinivalue_line(
+        'markers',
+        'issue3328: Marks tests broken by issue #3328'
+    )
+    config.addinivalue_line(
+        'markers',
+        'executor_supports_std_stream_tuples: Marks tests that require tuple support for stdout/stderr'
+    )
+    config.addinivalue_line(
+        'markers',
+        'shared_fs: Marks tests that require a shared_fs between the workers are the test client'
+    )
+    config.addinivalue_line(
+        'markers',
+        'issue_3620: Marks tests that do not work correctly on GlobusComputeExecutor (ref: issue 3620)'
     )
 
 
@@ -200,7 +209,7 @@ def load_dfk_session(request, pytestconfig, tmpd_cwd_session):
         if parsl.dfk() != dfk:
             raise RuntimeError("DFK changed unexpectedly during test")
         dfk.cleanup()
-        parsl.clear()
+        assert DataFlowKernelLoader._dfk is None
     else:
         yield
 
@@ -246,12 +255,13 @@ def load_dfk_local_module(request, pytestconfig, tmpd_cwd_session):
 
         if callable(local_teardown):
             local_teardown()
+            assert DataFlowKernelLoader._dfk is None, "Expected teardown to clear DFK"
 
         if local_config:
             if parsl.dfk() != dfk:
                 raise RuntimeError("DFK changed unexpectedly during test")
             dfk.cleanup()
-            parsl.clear()
+            assert DataFlowKernelLoader._dfk is None
 
     else:
         yield
@@ -422,3 +432,11 @@ def try_assert():
             raise AssertionError("Bad assert call: no attempts or timeout period")
 
     yield _impl
+
+
+@pytest.fixture
+def randomstring():
+    def func(length=5, alphabet=string.ascii_letters):
+        return "".join(random.choice(alphabet) for _ in range(length))
+
+    return func

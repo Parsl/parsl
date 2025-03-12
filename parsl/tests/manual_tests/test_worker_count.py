@@ -1,7 +1,7 @@
 import argparse
-import time
 import math
 import multiprocessing
+import time
 
 import parsl
 
@@ -10,10 +10,11 @@ CORES_PER_WORKER = 1
 EXPECTED_WORKERS = math.floor(CORES / CORES_PER_WORKER)
 
 
+from parsl.executors import HighThroughputExecutor
+
 # from parsl.tests.configs.htex_local import config
 from parsl.tests.manual_tests.htex_local import config
 
-from parsl.executors import HighThroughputExecutor
 assert isinstance(config.executors[0], HighThroughputExecutor)
 config.executors[0].cores_per_worker = CORES_PER_WORKER
 config.executors[0].provider.init_blocks = 1

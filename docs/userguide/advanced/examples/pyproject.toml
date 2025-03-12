@@ -1,0 +1,7 @@
+[project]
+name = "library"
+version = '0.0.0'
+description = 'Example library for Parsl documentation'
+
+[tool.setuptools.packages.find]
+include = ['library*']

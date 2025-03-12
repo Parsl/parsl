@@ -1,4 +1,3 @@
-import socket
 from dataclasses import dataclass
 from typing import Optional
 
@@ -23,9 +22,9 @@ class TaskVineManagerConfig:
         A value of 0 means TaskVine chooses any available port.
         Default is VINE_DEFAULT_PORT.
 
-    address: str
+    address: Optional[str]
         Address of the local machine.
-        Default is socket.gethostname().
+        If None, :py:func:`parsl.addresses.get_any_address` will be used to determine the address.
 
     project_name: Optional[str]
         If given, TaskVine will periodically report its status and performance
@@ -57,7 +56,7 @@ class TaskVineManagerConfig:
         environment name is given, TaskVine will package the conda
         environment in a tarball and send it along with tasks to be
         executed in a replicated conda environment.
-        If a tarball of packages (*.tar.gz) is given, TaskVine
+        If a tarball of packages (``*.tar.gz``) is given, TaskVine
         skips the packaging step and sends the tarball along with
         tasks to be executed in a replicated conda environment.
 
@@ -157,11 +156,15 @@ class TaskVineManagerConfig:
         Directory to store TaskVine logging facilities.
         Default is None, in which all TaskVine logs will be contained
         in the Parsl logging directory.
+
+    tune_parameters: Optional[dict]
+        Extended vine_tune parameters, expressed in a dictionary
+        by { 'tune-parameter' : value }.
     """
 
     # Connection and communication settings
     port: int = VINE_DEFAULT_PORT
-    address: str = socket.gethostname()
+    address: Optional[str] = None
     project_name: Optional[str] = None
     project_password_file: Optional[str] = None
 
@@ -182,6 +185,7 @@ class TaskVineManagerConfig:
     autocategory: bool = True
     enable_peer_transfers: bool = True
     wait_for_workers: Optional[int] = None
+    tune_parameters: Optional[dict] = None
 
     # Logging settings
     vine_log_dir: Optional[str] = None

@@ -60,7 +60,8 @@ user_opts = {
     #     'username': OSG_USERNAME,
     #     'script_dir': '/home/{}/parsl_scripts'.format(OSG_USERNAME),
     #     'scheduler_options': "",
-    #     'worker_init' : 'module load python/3.5.2; python3 -m venv parsl_env; source parsl_env/bin/activate; python3 -m pip install parsl==0.5.2'
+    #     'worker_init' : 'module load python/3.5.2; python3 -m venv parsl_env;
+    #                      source parsl_env/bin/activate; python3 -m pip install parsl==0.5.2'
     # },
     # 'swan': {
     #     'username': SWAN_USERNAME,
@@ -134,13 +135,6 @@ user_opts = {
     #     # For example:
     #     'remote_writeable': 'globus://af7bda53-6d04-11e5-ba46-22000b92c6ec/home/bzc/'
     # },
-    # 'adhoc': {
-    #    # This specifies configuration parameters when testing an ad-hoc SSH based cluster
-    #    'username': 'fixme', # username on remote systems
-    #    'remote_hostnames': ['hostname1', 'hostname2'], # addresses of remote systems
-    #    'worker_init': 'init commands',  # worker_init for remote systems
-    #    'script_dir': "/path"  # script directory on remote systems
-    # }
     #
 }  # type: Dict[str, Any]
 

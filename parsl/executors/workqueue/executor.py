@@ -3,50 +3,49 @@ Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant,
 high-throughput system for delegating Parsl tasks to thousands of remote machines
 """
 
-import threading
-import multiprocessing
-import logging
-from concurrent.futures import Future
-from ctypes import c_bool
-
-import tempfile
 import hashlib
-import subprocess
+import inspect
+import itertools
+import logging
+import multiprocessing
 import os
-import socket
-import time
 import pickle
 import queue
-import inspect
 import shutil
-import itertools
-
-from parsl.serialize import pack_apply_message, deserialize
-import parsl.utils as putils
-from parsl.executors.errors import ExecutorError
-from parsl.data_provider.files import File
-from parsl.errors import OptionalModuleMissing
-from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.providers.base import ExecutionProvider
-from parsl.providers import LocalProvider, CondorProvider
-from parsl.executors.workqueue import exec_parsl_function
-from parsl.process_loggers import wrap_with_logs
-from parsl.utils import setproctitle
+import socket
+import subprocess
+import tempfile
+import threading
+import time
+from collections import namedtuple
+from concurrent.futures import Future
+from ctypes import c_bool
+from typing import Dict, List, Optional, Set, Union
 
 import typeguard
-from typing import Dict, List, Optional, Set, Union
+
+import parsl.utils as putils
+from parsl.data_provider.files import File
 from parsl.data_provider.staging import Staging
+from parsl.errors import OptionalModuleMissing
+from parsl.executors.errors import ExecutorError, InvalidResourceSpecification
+from parsl.executors.status_handling import BlockProviderExecutor
+from parsl.executors.workqueue import exec_parsl_function
+from parsl.process_loggers import wrap_with_logs
+from parsl.providers import CondorProvider, LocalProvider
+from parsl.providers.base import ExecutionProvider
+from parsl.serialize import deserialize, pack_apply_message
+from parsl.utils import setproctitle
 
-from .errors import WorkQueueTaskFailure
-from .errors import WorkQueueFailure
-
-from collections import namedtuple
+from .errors import WorkQueueFailure, WorkQueueTaskFailure
 
 try:
     import work_queue as wq
-    from work_queue import WorkQueue
-    from work_queue import WORK_QUEUE_DEFAULT_PORT
-    from work_queue import WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT
+    from work_queue import (
+        WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT,
+        WORK_QUEUE_DEFAULT_PORT,
+        WorkQueue,
+    )
 except ImportError:
     _work_queue_enabled = False
     WORK_QUEUE_DEFAULT_PORT = 0
@@ -216,6 +215,13 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             This requires a version of Work Queue / cctools after commit
             874df524516441da531b694afc9d591e8b134b73 (release 7.5.0 is too early).
             Default is False.
+
+        scaling_cores_per_worker: int
+            When using Parsl scaling, this specifies the number of cores that a
+            worker is expected to have available for computation. Default 1. This
+            parameter can be ignored when using a fixed number of blocks, or when
+            using one task per worker (by omitting a ``cores`` resource
+            specifiation for each task).
     """
 
     radio_mode = "filesystem"
@@ -245,16 +251,17 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  full_debug: bool = True,
                  worker_executable: str = 'work_queue_worker',
                  function_dir: Optional[str] = None,
-                 coprocess: bool = False):
+                 coprocess: bool = False,
+                 scaling_cores_per_worker: int = 1):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
         if not _work_queue_enabled:
             raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
 
+        self.scaling_cores_per_worker = scaling_cores_per_worker
         self.label = label
         self.task_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
         self.collector_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
-        self.blocks = {}  # type: Dict[str, str]
         self.address = address
         self.port = port
         self.executor_task_counter = -1
@@ -326,7 +333,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         logger.debug("Starting WorkQueueExecutor")
 
-        self._port_mailbox = multiprocessing.Queue()
+        port_mailbox = multiprocessing.Queue()
 
         # Create a Process to perform WorkQueue submissions
         submit_process_kwargs = {"task_queue": self.task_queue,
@@ -344,7 +351,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                  "wq_log_dir": self.wq_log_dir,
                                  "project_password_file": self.project_password_file,
                                  "project_name": self.project_name,
-                                 "port_mailbox": self._port_mailbox,
+                                 "port_mailbox": port_mailbox,
                                  "coprocess": self.coprocess
                                  }
         self.submit_process = multiprocessing.Process(target=_work_queue_submit_wait,
@@ -359,7 +366,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.submit_process.start()
         self.collector_thread.start()
 
-        self._chosen_port = self._port_mailbox.get(timeout=60)
+        self._chosen_port = port_mailbox.get(timeout=60)
 
         logger.debug(f"Chosen listening port is {self._chosen_port}")
 
@@ -412,7 +419,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 message = "Task resource specification only accepts these types of resources: {}".format(
                         ', '.join(acceptable_fields))
                 logger.error(message)
-                raise ExecutorError(self, message)
+                raise InvalidResourceSpecification(keys, message)
 
             # this checks that either all of the required resource types are specified, or
             # that none of them are: the `required_resource_types` are not actually required,
@@ -423,9 +430,10 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 logger.error("Running with `autolabel=False`. In this mode, "
                              "task resource specification requires "
                              "three resources to be specified simultaneously: cores, memory, and disk")
-                raise ExecutorError(self, "Task resource specification requires "
-                                          "three resources to be specified simultaneously: cores, memory, and disk. "
-                                          "Try setting autolabel=True if you are unsure of the resource usage")
+                raise InvalidResourceSpecification(keys,
+                                                   "Task resource specification requires "
+                                                   "three resources to be specified simultaneously: cores, memory, and disk. "
+                                                   "Try setting autolabel=True if you are unsure of the resource usage")
 
             for k in keys:
                 if k == 'cores':
@@ -471,6 +479,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Create a Future object and have it be mapped from the task ID in the tasks dictionary
         fu = Future()
         fu.parsl_executor_task_id = executor_task_id
+        assert isinstance(resource_specification, dict)
+        fu.resource_specification = resource_specification
         logger.debug("Getting tasks_lock to set WQ-level task entry")
         with self.tasks_lock:
             logger.debug("Got tasks_lock to set WQ-level task entry")
@@ -654,42 +664,31 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.worker_command = self._construct_worker_command()
         self._patch_providers()
 
-        if hasattr(self.provider, 'init_blocks'):
-            try:
-                self.scale_out(blocks=self.provider.init_blocks)
-            except Exception as e:
-                logger.error("Initial block scaling out failed: {}".format(e))
-                raise e
-
     @property
     def outstanding(self) -> int:
-        """Count the number of outstanding tasks. This is inefficiently
+        """Count the number of outstanding slots required. This is inefficiently
         implemented and probably could be replaced with a counter.
         """
+        logger.debug("Calculating outstanding task slot load")
         outstanding = 0
+        tasks = 0  # only for log message...
         with self.tasks_lock:
             for fut in self.tasks.values():
                 if not fut.done():
-                    outstanding += 1
-        logger.debug(f"Counted {outstanding} outstanding tasks")
+                    # if a task does not specify a core count, Work Queue will allocate an entire
+                    # worker node to that task. That's approximated here by saying that it uses
+                    # scaling_cores_per_worker.
+                    resource_spec = getattr(fut, 'resource_specification', {})
+                    cores = resource_spec.get('cores', self.scaling_cores_per_worker)
+
+                    outstanding += cores
+                    tasks += 1
+        logger.debug(f"Counted {tasks} outstanding tasks with {outstanding} outstanding slots")
         return outstanding
 
     @property
     def workers_per_node(self) -> Union[int, float]:
-        return 1
-
-    def scale_in(self, count):
-        """Scale in method.
-        """
-        # Obtain list of blocks to kill
-        to_kill = list(self.blocks.keys())[:count]
-        kill_ids = [self.blocks[block] for block in to_kill]
-
-        # Cancel the blocks provisioned
-        if self.provider:
-            self.provider.cancel(kill_ids)
-        else:
-            logger.error("No execution provider available to scale")
+        return self.scaling_cores_per_worker
 
     def shutdown(self, *args, **kwargs):
         """Shutdown the executor. Sets flag to cancel the submit process and
@@ -698,16 +697,18 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("Work Queue shutdown started")
         self.should_stop.value = True
 
-        # Remove the workers that are still going
-        kill_ids = [self.blocks[block] for block in self.blocks.keys()]
-        if self.provider:
-            logger.debug("Cancelling blocks")
-            self.provider.cancel(kill_ids)
-
         logger.debug("Joining on submit process")
         self.submit_process.join()
+        self.submit_process.close()
+
         logger.debug("Joining on collector thread")
         self.collector_thread.join()
+
+        logger.debug("Closing multiprocessing queues")
+        self.task_queue.close()
+        self.task_queue.join_thread()
+        self.collector_queue.close()
+        self.collector_queue.join_thread()
 
         logger.debug("Work Queue shutdown completed")
 

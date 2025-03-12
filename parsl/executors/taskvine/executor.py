@@ -3,46 +3,47 @@ Cooperative Computing Lab (CCL) at Notre Dame to provide a fault-tolerant,
 high-throughput system for delegating Parsl tasks to thousands of remote machines
 """
 
-# Import Python built-in libraries
-import threading
-import multiprocessing
-import logging
-import tempfile
+import getpass
 import hashlib
-import subprocess
+import inspect
+import itertools
+import logging
+import multiprocessing
 import os
 import queue
-import inspect
 import shutil
-import itertools
+import subprocess
+import tempfile
+
+# Import Python built-in libraries
+import threading
 import uuid
 from concurrent.futures import Future
-from typing import List, Optional, Union, Literal
-
-# Import Parsl constructs
-import parsl.utils as putils
-from parsl.data_provider.staging import Staging
-from parsl.serialize import serialize, deserialize
-from parsl.data_provider.files import File
-from parsl.errors import OptionalModuleMissing
-from parsl.providers.base import ExecutionProvider
-from parsl.providers import LocalProvider, CondorProvider
-from parsl.process_loggers import wrap_with_logs
-from parsl.addresses import get_any_address
-from parsl.executors.errors import ExecutorError
-from parsl.executors.status_handling import BlockProviderExecutor
-from parsl.executors.taskvine import exec_parsl_function
-from parsl.executors.taskvine.manager_config import TaskVineManagerConfig
-from parsl.executors.taskvine.factory_config import TaskVineFactoryConfig
-from parsl.executors.taskvine.errors import TaskVineTaskFailure
-from parsl.executors.taskvine.errors import TaskVineManagerFailure
-from parsl.executors.taskvine.utils import ParslTaskToVine
-from parsl.executors.taskvine.utils import ParslFileToVine
-from parsl.executors.taskvine.manager import _taskvine_submit_wait
-from parsl.executors.taskvine.factory import _taskvine_factory
+from datetime import datetime
+from typing import List, Literal, Optional, Union
 
 # Import other libraries
 import typeguard
+
+# Import Parsl constructs
+import parsl.utils as putils
+from parsl.addresses import get_any_address
+from parsl.data_provider.files import File
+from parsl.data_provider.staging import Staging
+from parsl.errors import OptionalModuleMissing
+from parsl.executors.errors import ExecutorError
+from parsl.executors.status_handling import BlockProviderExecutor
+from parsl.executors.taskvine import exec_parsl_function
+from parsl.executors.taskvine.errors import TaskVineManagerFailure, TaskVineTaskFailure
+from parsl.executors.taskvine.factory import _taskvine_factory
+from parsl.executors.taskvine.factory_config import TaskVineFactoryConfig
+from parsl.executors.taskvine.manager import _taskvine_submit_wait
+from parsl.executors.taskvine.manager_config import TaskVineManagerConfig
+from parsl.executors.taskvine.utils import ParslFileToVine, ParslTaskToVine
+from parsl.process_loggers import wrap_with_logs
+from parsl.providers import CondorProvider, LocalProvider
+from parsl.providers.base import ExecutionProvider
+from parsl.serialize import deserialize, serialize
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +172,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         # Path to directory that holds all tasks' data and results.
         self._function_data_dir = ""
 
-        # helper scripts to prepare package tarballs for Parsl apps
+        # Helper scripts to prepare package tarballs for Parsl apps
         self._package_analyze_script = shutil.which("poncho_package_analyze")
         self._package_create_script = shutil.which("poncho_package_create")
         if self._package_analyze_script is None or self._package_create_script is None:
@@ -196,8 +197,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if self.manager_config.port == 0 and self.manager_config.project_name is None:
             self.manager_config.project_name = "parsl-vine-" + str(uuid.uuid4())
 
-        # guess the host name if the project name is not given
-        if not self.manager_config.project_name:
+        # guess the host name if the project name is not given and none has been supplied
+        # explicitly in the manager config.
+        if not self.manager_config.project_name and self.manager_config.address is None:
             self.manager_config.address = get_any_address()
 
         # Factory communication settings are overridden by manager communication settings.
@@ -215,9 +217,9 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # Create directories for data and results
         log_dir = os.path.join(run_dir, self.label)
-        self._function_data_dir = os.path.join(run_dir, self.label, "function_data")
         os.makedirs(log_dir)
-        os.makedirs(self._function_data_dir)
+        tmp_prefix = f'{self.label}-{getpass.getuser()}-{datetime.now().strftime("%Y%m%d%H%M%S%f")}-'
+        self._function_data_dir = tempfile.TemporaryDirectory(prefix=tmp_prefix)
 
         # put TaskVine logs outside of a Parsl run as TaskVine caches between runs while
         # Parsl does not.
@@ -227,7 +229,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         # factory logs go with manager logs regardless
         self.factory_config.scratch_dir = self.manager_config.vine_log_dir
-        logger.debug(f"Function data directory: {self._function_data_dir}, log directory: {log_dir}")
+        logger.debug(f"Function data directory: {self._function_data_dir.name}, log directory: {log_dir}")
         logger.debug(
             f"TaskVine manager log directory: {self.manager_config.vine_log_dir}, "
             f"factory log directory: {self.factory_config.scratch_dir}")
@@ -293,7 +295,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             'map': Pickled file with a dict between local parsl names, and remote taskvine names.
         """
         task_dir = "{:04d}".format(executor_task_id)
-        return os.path.join(self._function_data_dir, task_dir, *path_components)
+        return os.path.join(self._function_data_dir.name, task_dir, *path_components)
 
     def submit(self, func, resource_specification, *args, **kwargs):
         """Processes the Parsl app by its arguments and submits the function
@@ -563,13 +565,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self._worker_command = self._construct_worker_command()
         self._patch_providers()
 
-        if hasattr(self.provider, 'init_blocks'):
-            try:
-                self.scale_out(blocks=self.provider.init_blocks)
-            except Exception as e:
-                logger.error("Initial block scaling out failed: {}".format(e))
-                raise e
-
     @property
     def outstanding(self) -> int:
         """Count the number of outstanding tasks."""
@@ -580,19 +575,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
     def workers_per_node(self) -> Union[int, float]:
         return 1
 
-    def scale_in(self, count):
-        """Scale in method. Cancel a given number of blocks
-        """
-        # Obtain list of blocks to kill
-        to_kill = list(self.blocks.keys())[:count]
-        kill_ids = [self.blocks[block] for block in to_kill]
-
-        # Cancel the blocks provisioned
-        if self.provider:
-            self.provider.cancel(kill_ids)
-        else:
-            logger.error("No execution provider available to scale")
-
     def shutdown(self, *args, **kwargs):
         """Shutdown the executor. Sets flag to cancel the submit process and
         collector thread, which shuts down the TaskVine system submission.
@@ -600,20 +582,22 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("TaskVine shutdown started")
         self._should_stop.set()
 
-        # Remove the workers that are still going
-        kill_ids = [self.blocks[block] for block in self.blocks.keys()]
-        if self.provider:
-            logger.debug("Cancelling blocks")
-            self.provider.cancel(kill_ids)
-
         # Join all processes before exiting
         logger.debug("Joining on submit process")
         self._submit_process.join()
+        self._submit_process.close()
         logger.debug("Joining on collector thread")
         self._collector_thread.join()
         if self.worker_launch_method == 'factory':
             logger.debug("Joining on factory process")
             self._factory_process.join()
+            self._factory_process.close()
+
+        # Shutdown multiprocessing queues
+        self._ready_task_queue.close()
+        self._ready_task_queue.join_thread()
+        self._finished_task_queue.close()
+        self._finished_task_queue.join_thread()
 
         logger.debug("TaskVine shutdown completed")
 

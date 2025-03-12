@@ -1,10 +1,11 @@
+import pickle
+import sys
+import traceback
+
 from parsl.app.errors import RemoteExceptionWrapper
 from parsl.data_provider.files import File
-from parsl.utils import get_std_fname_mode
-import traceback
-import sys
-import pickle
 from parsl.serialize import serialize
+from parsl.utils import get_std_fname_mode
 
 # This scripts executes a parsl function which is pickled in a file:
 #
@@ -93,7 +94,7 @@ def unpack_source_code_function(function_info, user_namespace):
 
 def unpack_byte_code_function(function_info, user_namespace):
     from parsl.serialize import unpack_apply_message
-    func, args, kwargs = unpack_apply_message(function_info["byte code"], user_namespace, copy=False)
+    func, args, kwargs = unpack_apply_message(function_info["byte code"])
     return (func, 'parsl_function_name', args, kwargs)
 
 

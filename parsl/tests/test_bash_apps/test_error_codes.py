@@ -4,12 +4,9 @@ import os
 import pytest
 
 import parsl
-from parsl.app.app import bash_app
 import parsl.app.errors as pe
-
-
+from parsl.app.app import bash_app
 from parsl.app.errors import BashExitFailure
-
 from parsl.tests.configs.local_threads import fresh_config as local_config
 
 
@@ -61,6 +58,7 @@ test_matrix = {
 whitelist = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', '*threads*')
 
 
+@pytest.mark.shared_fs
 def test_div_0(test_fn=div_0):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
@@ -76,7 +74,7 @@ def test_div_0(test_fn=div_0):
     os.remove('std.out')
 
 
-@pytest.mark.issue363
+@pytest.mark.shared_fs
 def test_bash_misuse(test_fn=bash_misuse):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
@@ -91,7 +89,7 @@ def test_bash_misuse(test_fn=bash_misuse):
     os.remove('std.out')
 
 
-@pytest.mark.issue363
+@pytest.mark.shared_fs
 def test_command_not_found(test_fn=command_not_found):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()
@@ -108,7 +106,7 @@ def test_command_not_found(test_fn=command_not_found):
     return True
 
 
-@pytest.mark.issue363
+@pytest.mark.shared_fs
 def test_not_executable(test_fn=not_executable):
     err_code = test_matrix[test_fn]['exit_code']
     f = test_fn()

@@ -1,11 +1,11 @@
 import logging
 import os
+
 import requests
 
 import parsl
-
-from parsl.utils import RepresentationMixin
 from parsl.data_provider.staging import Staging
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 from parsl.config import Config
-from parsl.channels import LocalChannel
-from parsl.providers import GridEngineProvider
 from parsl.executors import HighThroughputExecutor
+from parsl.providers import GridEngineProvider
+from parsl.usage_tracking.levels import LEVEL_1
 
 config = Config(
     executors=[
@@ -9,7 +9,6 @@ config = Config(
             label='cc_in2p3_htex',
             max_workers_per_node=2,
             provider=GridEngineProvider(
-                channel=LocalChannel(),
                 nodes_per_block=1,
                 init_blocks=2,
                 max_blocks=2,
@@ -19,4 +18,5 @@ config = Config(
             ),
         )
     ],
+    usage_tracking=LEVEL_1,
 )

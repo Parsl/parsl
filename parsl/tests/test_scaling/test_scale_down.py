@@ -4,13 +4,11 @@ import time
 import pytest
 
 import parsl
-
 from parsl import File, python_app
-from parsl.providers import LocalProvider
-from parsl.channels import LocalChannel
-from parsl.launchers import SingleNodeLauncher
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
+from parsl.launchers import SingleNodeLauncher
+from parsl.providers import LocalProvider
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +28,6 @@ def local_config():
                 max_workers_per_node=1,
                 encrypted=True,
                 provider=LocalProvider(
-                    channel=LocalChannel(),
                     init_blocks=0,
                     max_blocks=_max_blocks,
                     min_blocks=_min_blocks,

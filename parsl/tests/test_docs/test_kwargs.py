@@ -1,7 +1,9 @@
 """Functions used to explain kwargs"""
 from pathlib import Path
 
-from parsl import python_app, File
+import pytest
+
+from parsl import File, python_app
 
 
 def test_inputs():
@@ -19,6 +21,7 @@ def test_inputs():
     assert reduce_future.result() == 6
 
 
+@pytest.mark.shared_fs
 def test_outputs(tmpd_cwd):
     @python_app()
     def write_app(message, outputs=()):

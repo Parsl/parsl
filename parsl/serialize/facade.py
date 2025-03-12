@@ -87,16 +87,16 @@ def pack_res_spec_apply_message(func: Any, args: Any, kwargs: Any, resource_spec
     return pack_apply_message(func, args, (kwargs, resource_specification), buffer_threshold=buffer_threshold)
 
 
-def unpack_apply_message(packed_buffer: bytes, user_ns: Any = None, copy: Any = False) -> List[Any]:
+def unpack_apply_message(packed_buffer: bytes) -> List[Any]:
     """ Unpack and deserialize function and parameters
     """
     return [deserialize(buf) for buf in unpack_buffers(packed_buffer)]
 
 
-def unpack_res_spec_apply_message(packed_buffer: bytes, user_ns: Any = None, copy: Any = False) -> List[Any]:
+def unpack_res_spec_apply_message(packed_buffer: bytes) -> List[Any]:
     """ Unpack and deserialize function, parameters, and resource_specification
     """
-    func, args, (kwargs, resource_spec) = unpack_apply_message(packed_buffer, user_ns=user_ns, copy=copy)
+    func, args, (kwargs, resource_spec) = unpack_apply_message(packed_buffer)
     return [func, args, kwargs, resource_spec]
 
 

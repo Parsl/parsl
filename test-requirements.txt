@@ -1,5 +1,4 @@
 flake8==6.1.0
-ipyparallel
 pandas
 pytest>=7.4.0,<8
 pytest-cov
@@ -7,17 +6,19 @@ pytest-random-order
 nbsphinx
 sphinx_rtd_theme
 mypy==1.5.1
+types-mock
 types-python-dateutil
 types-requests
-types-paramiko
 mpi4py
+globus-compute-sdk>=2.34.0
 
 # sqlalchemy is needed for typechecking, so it's here
 # as well as at runtime for optional monitoring execution
 # (where it's specified in setup.py)
-sqlalchemy>=1.4,<2
-sqlalchemy2-stubs
+sqlalchemy>=2,<2.1
 
 Sphinx==4.5.0
 twine
 wheel
+isort
+

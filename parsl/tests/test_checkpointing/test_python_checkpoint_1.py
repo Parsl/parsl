@@ -1,4 +1,5 @@
 import os
+
 import pytest
 
 import parsl
@@ -25,9 +26,6 @@ def test_initial_checkpoint_write():
     uuid_app().result()
 
     cpt_dir = parsl.dfk().checkpoint()
-
-    cptpath = cpt_dir + '/dfk.pkl'
-    assert os.path.exists(cptpath), f"DFK checkpoint missing: {cptpath}"
 
     cptpath = cpt_dir + '/tasks.pkl'
     assert os.path.exists(cptpath), f"Tasks checkpoint missing: {cptpath}"

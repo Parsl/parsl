@@ -1,14 +1,13 @@
-import logging
-import typeguard
 import concurrent.futures as cf
-
+import logging
 from typing import List, Optional
+
+import typeguard
 
 from parsl.data_provider.staging import Staging
 from parsl.executors.base import ParslExecutor
+from parsl.executors.errors import InvalidResourceSpecification
 from parsl.utils import RepresentationMixin
-from parsl.executors.errors import UnsupportedFeatureError
-
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +54,8 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
         if resource_specification:
             logger.error("Ignoring the resource specification. "
                          "Parsl resource specification is not supported in ThreadPool Executor.")
-            raise UnsupportedFeatureError('resource specification', 'ThreadPool Executor', None)
+            raise InvalidResourceSpecification(set(resource_specification.keys()),
+                                               "Parsl resource specification is not supported in ThreadPool Executor.")
 
         return self.executor.submit(func, *args, **kwargs)
 

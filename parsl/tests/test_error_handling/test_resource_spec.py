@@ -1,9 +1,11 @@
+import pytest
+
 import parsl
 from parsl.app.app import python_app
-from parsl.executors.errors import UnsupportedFeatureError, ExecutorError
 from parsl.executors import WorkQueueExecutor
-from parsl.executors.high_throughput.mpi_prefix_composer import InvalidResourceSpecification
+from parsl.executors.errors import InvalidResourceSpecification
 from parsl.executors.high_throughput.executor import HighThroughputExecutor
+from parsl.executors.threads import ThreadPoolExecutor
 
 
 @python_app
@@ -11,6 +13,7 @@ def double(x, parsl_resource_specification={}):
     return x * 2
 
 
+@pytest.mark.issue_3620
 def test_resource(n=2):
     executors = parsl.dfk().executors
     executor = None
@@ -25,11 +28,10 @@ def test_resource(n=2):
     try:
         fut.result()
     except InvalidResourceSpecification:
-        assert isinstance(executor, HighThroughputExecutor)
-    except UnsupportedFeatureError:
-        assert not isinstance(executor, WorkQueueExecutor)
-    except Exception as e:
-        assert isinstance(e, ExecutorError)
+        assert (
+            isinstance(executor, HighThroughputExecutor) or
+            isinstance(executor, WorkQueueExecutor) or
+            isinstance(executor, ThreadPoolExecutor))
 
     # Specify resources with wrong types
     # 'cpus' is incorrect, should be 'cores'
@@ -38,8 +40,7 @@ def test_resource(n=2):
     try:
         fut.result()
     except InvalidResourceSpecification:
-        assert isinstance(executor, HighThroughputExecutor)
-    except UnsupportedFeatureError:
-        assert not isinstance(executor, WorkQueueExecutor)
-    except Exception as e:
-        assert isinstance(e, ExecutorError)
+        assert (
+            isinstance(executor, HighThroughputExecutor) or
+            isinstance(executor, WorkQueueExecutor) or
+            isinstance(executor, ThreadPoolExecutor))

@@ -1,5 +1,6 @@
-import parsl
 import pytest
+
+import parsl
 from parsl.tests.configs.local_threads import fresh_config
 
 
@@ -22,7 +23,6 @@ def test_summary(caplog):
     fail().exception()
 
     parsl.dfk().cleanup()
-    parsl.clear()
 
     assert "Summary of tasks in DFK:" in caplog.text
     assert "Tasks in state States.exec_done: 1" in caplog.text

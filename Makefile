@@ -35,6 +35,10 @@ deps: $(DEPS) ## install the dependencies
 lint: ## run linter script
 	parsl/tests/lint-inits.sh
 
+.PHONY: isort
+isort: ## run isort on all files
+	isort --check parsl/
+
 .PHONY: flake8
 flake8:  ## run flake
 	flake8 parsl/
@@ -46,6 +50,10 @@ clean_coverage:
 .PHONY: mypy
 mypy: ## run mypy checks
 	MYPYPATH=$(CWD)/mypy-stubs mypy parsl/
+
+.PHONY: gce_test
+gce_test: ## Run tests with GlobusComputeExecutor
+	pytest -v -k "not shared_fs and not issue_3620 and not staging_required" --config parsl/tests/configs/globus_compute.py parsl/tests/ --random-order --durations 10
 
 .PHONY: local_thread_test
 local_thread_test: ## run all tests with local_thread config
@@ -66,22 +74,22 @@ $(CCTOOLS_INSTALL):	#CCtools contains both taskvine and workqueue so install onl
 
 .PHONY: vineex_local_test
 vineex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with taskvine_ex config
-	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/taskvine_ex.py --random-order --durations 10
+	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/taskvine_ex.py --random-order --durations 10
 
 .PHONY: wqex_local_test
 wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with workqueue_ex config
-	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_ex.py --random-order --durations 10
+	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/workqueue_ex.py --random-order --durations 10
 
 .PHONY: radical_local_test
 radical_local_test:
 	pip3 install ".[radical-pilot]"
 	mkdir -p ~/.radical/pilot/configs && echo '{"localhost": {"virtenv_mode": "local"}}' > ~/.radical/pilot/configs/resource_local.json
-	pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/local_radical.py --random-order --durations 10
+	pytest parsl/tests/ -k "not cleannet and not issue3328 and not executor_supports_std_stream_tuples" --config parsl/tests/configs/local_radical.py --random-order --durations 10
 
 .PHONY: config_local_test
-config_local_test:
-	pip3 install ".[monitoring,visualization,proxystore]"
-	pytest parsl/tests/ -k "not cleannet" --config local --random-order --durations 10
+config_local_test: $(CCTOOLS_INSTALL)
+	pip3 install ".[monitoring,visualization,proxystore,kubernetes]"
+	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages pytest parsl/tests/ -k "not cleannet" --config local --random-order --durations 10
 
 .PHONY: site_test
 site_test:
@@ -93,7 +101,7 @@ perf_test:
 	parsl-perf --time 5 --config parsl/tests/configs/local_threads.py
 
 .PHONY: test ## run all tests with all config types
-test: clean_coverage lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test wqex_local_test vineex_local_test radical_local_test config_local_test perf_test ## run all tests
+test: clean_coverage isort lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test wqex_local_test vineex_local_test radical_local_test config_local_test perf_test ## run all tests
 
 .PHONY: tag
 tag: ## create a tag in git. to run, do a 'make VERSION="version string" tag
@@ -122,4 +130,9 @@ coverage: ## show the coverage report
 
 .PHONY: clean
 clean: ## clean up the environment by deleting the .venv, dist, eggs, mypy caches, coverage info, etc
-	rm -rf .venv $(DEPS) dist *.egg-info .mypy_cache build .pytest_cache .coverage runinfo_* $(WORKQUEUE_INSTALL)
+	rm -rf .venv $(DEPS) dist *.egg-info .mypy_cache build .pytest_cache .coverage runinfo $(WORKQUEUE_INSTALL)
+
+.PHONY: flux_local_test
+flux_local_test: ## Test Parsl with Flux Executor
+	pip3 install .
+	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/flux_local.py --random-order --durations 10

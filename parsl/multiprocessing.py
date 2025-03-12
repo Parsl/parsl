@@ -6,7 +6,6 @@ import multiprocessing
 import multiprocessing.queues
 import platform
 from multiprocessing.context import ForkProcess as ForkProcessType
-
 from typing import Callable
 
 logger = logging.getLogger(__name__)
