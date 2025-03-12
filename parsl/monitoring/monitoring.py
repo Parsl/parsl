@@ -6,7 +6,7 @@ import os
 import queue
 from multiprocessing import Event
 from multiprocessing.queues import Queue
-from typing import TYPE_CHECKING, Literal, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Optional, Tuple, Union
 
 import typeguard
 
@@ -131,7 +131,7 @@ class MonitoringHub(RepresentationMixin):
         self.exception_q: Queue[Tuple[str, str]]
         self.exception_q = SizedQueue(maxsize=10)
 
-        self.resource_msgs: Queue[Union[TaggedMonitoringMessage, Literal["STOP"]]]
+        self.resource_msgs: Queue[TaggedMonitoringMessage]
         self.resource_msgs = SizedQueue()
 
         self.router_exit_event: ms.Event
@@ -167,11 +167,15 @@ class MonitoringHub(RepresentationMixin):
                                            )
         self.udp_router_proc.start()
 
+        self.dbm_exit_event: ms.Event
+        self.dbm_exit_event = Event()
+
         self.dbm_proc = ForkProcess(target=dbm_starter,
                                     args=(self.exception_q, self.resource_msgs,),
                                     kwargs={"run_dir": dfk_run_dir,
                                             "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                             "db_url": self.logging_endpoint,
+                                            "exit_event": self.dbm_exit_event,
                                             },
                                     name="Monitoring-DBM-Process",
                                     daemon=True,
@@ -259,12 +263,8 @@ class MonitoringHub(RepresentationMixin):
             self.udp_router_proc.close()
 
             logger.debug("Finished waiting for router termination")
-            if len(exception_msgs) == 0:
-                logger.debug("Sending STOP to DBM")
-                self.resource_msgs.put("STOP")
-            else:
-                logger.debug("Not sending STOP to DBM, because there were DBM exceptions")
             logger.debug("Waiting for DB termination")
+            self.dbm_exit_event.set()
             self.dbm_proc.join()
             self.dbm_proc.close()
             logger.debug("Finished waiting for DBM termination")
