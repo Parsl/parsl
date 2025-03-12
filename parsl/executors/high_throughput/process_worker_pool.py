@@ -410,7 +410,7 @@ class Manager:
                 if r is None:
                     continue
                 logger.debug("Result received from worker: %s", id(r))
-                result_outgoing.send_multipart([r])
+                result_outgoing.send(r)
                 logger.debug("Result sent to interchange: %s", id(r))
             except Exception:
                 logger.exception("Failed to send result to interchange")
