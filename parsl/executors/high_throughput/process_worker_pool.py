@@ -15,6 +15,7 @@ import threading
 import time
 import uuid
 from importlib.metadata import distributions
+from multiprocessing.context import SpawnProcess
 from multiprocessing.managers import DictProxy
 from multiprocessing.sharedctypes import Synchronized
 from typing import Dict, List, Optional, Sequence
@@ -425,13 +426,12 @@ class Manager:
             logger.info(f"Sending heartbeat via results connection: {heartbeat_message}")
             self.pending_result_queue.put(pickle.dumps({'type': 'heartbeat'}))
 
-    @wrap_with_logs
-    def worker_watchdog(self):
+    def worker_watchdog(self, procs: dict[int, SpawnProcess]):
         """Keeps workers alive."""
         logger.debug("Starting worker watchdog")
 
         while not self._stop_event.wait(self.heartbeat_period):
-            for worker_id, p in self.procs.items():
+            for worker_id, p in procs.items():
                 if not p.is_alive():
                     logger.error("Worker {} has died".format(worker_id))
                     try:
@@ -449,8 +449,7 @@ class Manager:
                     except KeyError:
                         logger.info("Worker {} was not busy when it died".format(worker_id))
 
-                    p = self._start_worker(worker_id)
-                    self.procs[worker_id] = p
+                    procs[worker_id] = self._start_worker(worker_id)
                     logger.info("Worker {} has been restarted".format(worker_id))
 
         logger.debug("Exiting")
@@ -487,10 +486,9 @@ class Manager:
 
         TODO: Move task receiving to a thread
         """
-        self.procs = {}
+        procs: dict[int, SpawnProcess] = {}
         for worker_id in range(self.worker_count):
-            p = self._start_worker(worker_id)
-            self.procs[worker_id] = p
+            procs[worker_id] = self._start_worker(worker_id)
 
         logger.debug("Workers started")
 
@@ -499,7 +497,7 @@ class Manager:
             target=self.push_results, name="Result-Pusher"
         )
         thr_worker_watchdog = threading.Thread(
-            target=self.worker_watchdog, name="worker-watchdog"
+            target=self.worker_watchdog, args=(procs,), name="worker-watchdog"
         )
         thr_monitoring_handler = threading.Thread(
             target=self.handle_monitoring_messages, name="Monitoring-Handler"
@@ -516,7 +514,7 @@ class Manager:
 
         # This might need a multiprocessing event to signal back.
         self._stop_event.wait()
-        logger.critical("Received kill event, terminating worker processes")
+        logger.info("Stop event set; terminating worker processes")
 
         # Invite blocking threads to quit
         self.monitoring_queue.put(None)
@@ -527,19 +525,41 @@ class Manager:
         thr_result_pusher.join()
         thr_worker_watchdog.join()
         thr_monitoring_handler.join()
-        for proc_id in self.procs:
-            self.procs[proc_id].terminate()
-            logger.critical("Terminating worker {}: is_alive()={}".format(self.procs[proc_id],
-                                                                          self.procs[proc_id].is_alive()))
-            self.procs[proc_id].join()
-            logger.debug("Worker {} joined successfully".format(self.procs[proc_id]))
+
+        for worker_id in procs:
+            p = procs[worker_id]
+            proc_info = f"(PID: {p.pid}, Worker ID: {worker_id})"
+            logger.debug(f"Signaling worker {p.name} (TERM). {proc_info}")
+            p.terminate()
 
         self.zmq_context.term()
+
+        # give processes 1 second to gracefully shut themselves down, based on the
+        # SIGTERM (.terminate()) just sent; after then, we pull the plug.
+        force_child_shutdown_at = time.monotonic() + 1
+        while procs:
+            worker_id, p = procs.popitem()
+            timeout = max(force_child_shutdown_at - time.monotonic(), 0.000001)
+            p.join(timeout=timeout)
+            proc_info = f"(PID: {p.pid}, Worker ID: {worker_id})"
+            if p.exitcode is not None:
+                logger.debug(
+                    "Worker joined successfully.  %s (exitcode: %s)", proc_info, p.exitcode
+                )
+
+            else:
+                logger.warning(
+                    f"Worker {p.name} ({worker_id}) failed to terminate in a timely"
+                    f" manner; sending KILL signal to process. {proc_info}"
+                )
+                p.kill()
+                p.join()
+            p.close()
+
         delta = time.time() - self._start_time
         logger.info("process_worker_pool ran for {} seconds".format(delta))
-        return
 
-    def _start_worker(self, worker_id: int):
+    def _start_worker(self, worker_id: int) -> SpawnProcess:
         p = SpawnContext.Process(
             target=worker,
             args=(
