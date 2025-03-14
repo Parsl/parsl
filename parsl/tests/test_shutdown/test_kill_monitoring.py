@@ -28,9 +28,11 @@ def test_no_kills():
     parsl.dfk().cleanup()
 
 
+# TODO: these various processes doesn't live in monitoring any more... what can we test instead
+# for roughly equivalent coverage?
 @pytest.mark.local
 @pytest.mark.parametrize("sig", [signal.SIGINT, signal.SIGTERM, signal.SIGKILL, signal.SIGQUIT])
-@pytest.mark.parametrize("process_attr", ["zmq_router_proc", "udp_router_proc", "dbm_proc", "filesystem_proc"])
+@pytest.mark.parametrize("process_attr", ["dbm_proc"])
 def test_kill_monitoring_helper_process(sig, process_attr, try_assert):
     """This tests that we can kill a monitoring process and still have successful shutdown.
     SIGINT emulates some racy behaviour when ctrl-C is pressed: that

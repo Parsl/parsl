@@ -97,8 +97,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             Default is None.
     """
 
-    radio_mode = "filesystem"
-
     @typeguard.typechecked
     def __init__(self,
                  label: str = "TaskVineExecutor",
@@ -598,6 +596,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self._ready_task_queue.join_thread()
         self._finished_task_queue.close()
         self._finished_task_queue.join_thread()
+
+        super().shutdown()
 
         logger.debug("TaskVine shutdown completed")
 

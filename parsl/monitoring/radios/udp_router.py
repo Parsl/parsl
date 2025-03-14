@@ -118,7 +118,6 @@ class MonitoringRouter:
 @typeguard.typechecked
 def udp_router_starter(*,
                        comm_q: mpq.Queue,
-                       exception_q: mpq.Queue,
                        resource_msgs: mpq.Queue,
                        exit_event: Event,
 
@@ -144,6 +143,5 @@ def udp_router_starter(*,
         router.logger.info("Starting MonitoringRouter in router_starter")
         try:
             router.start()
-        except Exception as e:
+        except Exception:
             router.logger.exception("UDP router start exception")
-            exception_q.put(('Hub', str(e)))
