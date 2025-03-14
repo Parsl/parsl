@@ -285,6 +285,7 @@ def join_terminate_close_proc(process: ForkProcessType, *, timeout: int = 30) ->
     In the case of a very mis-behaving process, this function might take
     up to 3*timeout to exhaust all termination methods and return.
     """
+    logger.debug("Joining process")
     process.join(timeout)
 
     # run a sequence of increasingly aggressive steps to shut down the process.
