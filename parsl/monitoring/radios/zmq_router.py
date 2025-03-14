@@ -107,7 +107,6 @@ class MonitoringRouter:
 @typeguard.typechecked
 def zmq_router_starter(*,
                        comm_q: mpq.Queue,
-                       exception_q: mpq.Queue,
                        resource_msgs: mpq.Queue,
                        exit_event: Event,
 
@@ -129,10 +128,4 @@ def zmq_router_starter(*,
         comm_q.put(f"Monitoring router construction failed: {e}")
     else:
         comm_q.put(router.zmq_receiver_port)
-
-        router.logger.info("Starting MonitoringRouter in router_starter")
-        try:
-            router.start()
-        except Exception as e:
-            router.logger.exception("ZMQ router start exception")
-            exception_q.put(('Hub', str(e)))
+        router.start()
