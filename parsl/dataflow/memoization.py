@@ -5,6 +5,7 @@ import logging
 import os
 import pickle
 from functools import lru_cache, singledispatch
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 
 import typeguard
@@ -162,6 +163,8 @@ class Memoizer:
         """
         self.dfk = dfk
         self.memoize = memoize
+        self.memo_table_dir = os.path.join(self.dfk.run_dir, "memo_table_fs")
+        os.makedirs(self.memo_table_dir, exist_ok=True)
 
         checkpoint = self.load_checkpoints(checkpoint_files)
 
@@ -232,7 +235,7 @@ class Memoizer:
         logger.debug("Task {} has memoization hash {}".format(task_id, hashsum))
         result = None
         if hashsum in self.memo_lookup_table:
-            result = self.memo_lookup_table[hashsum]
+            result = self.memo_lookup(hashsum)
             logger.info("Task %s using result from cache", task_id)
         else:
             logger.info("Task %s had no result in cache", task_id)
@@ -242,7 +245,7 @@ class Memoizer:
         assert isinstance(result, Future) or result is None
         return result
 
-    def hash_lookup(self, hashsum: str) -> Future[Any]:
+    def memo_lookup(self, hashsum: str) -> Future[Any]:
         """Lookup a hash in the memoization table.
 
         Args:
@@ -254,7 +257,21 @@ class Memoizer:
         Raises:
             - KeyError: if hash not in table
         """
-        return self.memo_lookup_table[hashsum]
+        with open(self.memo_lookup_table[hashsum], 'rb') as f:
+            data = pickle.load(f)
+        memo_fu: Future = Future()
+        assert data['exception'] is None
+        memo_fu.set_result(data['result'])
+        return memo_fu
+
+    def store_memo(self, table: Dict[str, Path], hashsum: str, future: Future[Any]) -> None:
+        checkpoint_filename = Path(os.path.join(self.memo_table_dir, f"{hashsum}.pkl"))
+
+        if not future.exception():
+            to_store = {'hash': hashsum, 'exception': None, 'result': future.result()}
+            with open(checkpoint_filename, 'wb') as f:
+                pickle.dump(to_store, file=f)
+            table[hashsum] = checkpoint_filename
 
     def update_memo(self, task: TaskRecord, r: Future[Any]) -> None:
         """Updates the memoization lookup table with the result from a task.
@@ -279,9 +296,10 @@ class Memoizer:
             logger.info(f"Replacing app cache entry {task['hashsum']} with result from task {task_id}")
         else:
             logger.debug(f"Storing app cache entry {task['hashsum']} with result from task {task_id}")
-        self.memo_lookup_table[task['hashsum']] = r
 
-    def _load_checkpoints(self, checkpointDirs: Sequence[str]) -> Dict[str, Future[Any]]:
+        self.store_memo(self.memo_lookup_table, task['hashsum'], r)
+
+    def _load_checkpoints(self, checkpointDirs: Sequence[str]) -> Dict[str, Path]:
         """Load a checkpoint file into a lookup table.
 
         The data being loaded from the pickle file mostly contains input
@@ -297,7 +315,7 @@ class Memoizer:
         Returns:
             - memoized_lookup_table (dict)
         """
-        memo_lookup_table = {}
+        memo_lookup_table: Dict[str, Path] = {}
 
         for checkpoint_dir in checkpointDirs:
             logger.info("Loading checkpoints from {}".format(checkpoint_dir))
@@ -311,7 +329,8 @@ class Memoizer:
                             memo_fu: Future = Future()
                             assert data['exception'] is None
                             memo_fu.set_result(data['result'])
-                            memo_lookup_table[data['hash']] = memo_fu
+                            # memo_lookup_table[data['hash']] = memo_fu
+                            self.store_memo(memo_lookup_table, data['hash'], memo_fu)
 
                         except EOFError:
                             # Done with the checkpoint file
@@ -332,7 +351,7 @@ class Memoizer:
         return memo_lookup_table
 
     @typeguard.typechecked
-    def load_checkpoints(self, checkpointDirs: Optional[Sequence[str]]) -> Dict[str, Future]:
+    def load_checkpoints(self, checkpointDirs: Optional[Sequence[str]]) -> Dict[str, Path]:
         """Load checkpoints from the checkpoint files into a dictionary.
 
         The results are used to pre-populate the memoizer's lookup_table
