@@ -13,8 +13,7 @@ def noop():
 
 
 @pytest.mark.local
-def test_pre_exit():
-    """Test calling against a process that has already exited."""
+def test_end_process_already_exited():
     p = ForkProcess(target=noop)
     p.start()
     p.join()
@@ -27,7 +26,7 @@ def hang():
 
 
 @pytest.mark.local
-def test_hang():
+def test_end_hung_process():
     """Test calling against a process that will not exit itself."""
     p = ForkProcess(target=hang)
     p.start()
@@ -45,7 +44,7 @@ def hang_no_sigint(e):
 
 
 @pytest.mark.local
-def test_hang_no_sigint():
+def test_end_hung_process_no_sigint():
     """Test calling against a process that will not exit itself."""
     e = multiprocessing.Event()
     p = ForkProcess(target=hang_no_sigint, args=(e,))
