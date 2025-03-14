@@ -24,7 +24,7 @@ class TaskVineManagerConfig:
 
     address: Optional[str]
         Address of the local machine.
-        If None, socket.gethostname() will be used to determine the address.
+        If None, :py:func:`parsl.addresses.get_any_address` will be used to determine the address.
 
     project_name: Optional[str]
         If given, TaskVine will periodically report its status and performance
@@ -56,7 +56,7 @@ class TaskVineManagerConfig:
         environment name is given, TaskVine will package the conda
         environment in a tarball and send it along with tasks to be
         executed in a replicated conda environment.
-        If a tarball of packages (*.tar.gz) is given, TaskVine
+        If a tarball of packages (``*.tar.gz``) is given, TaskVine
         skips the packaging step and sends the tarball along with
         tasks to be executed in a replicated conda environment.
 

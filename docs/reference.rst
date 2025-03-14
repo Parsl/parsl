@@ -32,6 +32,8 @@ Configuration
     parsl.addresses.address_by_interface
     parsl.addresses.address_by_query
     parsl.addresses.address_by_route
+    parsl.addresses.get_all_addresses
+    parsl.addresses.get_any_address
     parsl.utils.get_all_checkpoints
     parsl.utils.get_last_checkpoint
 
@@ -77,6 +79,7 @@ Executors
     parsl.executors.taskvine.TaskVineExecutor
     parsl.executors.FluxExecutor
     parsl.executors.radical.RadicalPilotExecutor
+    parsl.executors.GlobusComputeExecutor
 
 Manager Selectors
 =================
@@ -193,3 +196,13 @@ Internal
     parsl.jobs.job_status_poller.JobStatusPoller
     parsl.jobs.strategy.Strategy
     parsl.utils.Timer
+
+Task Vine configuration
+=======================
+
+.. autosummary::
+    :toctree: stubs
+    :nosignatures:
+
+    parsl.executors.taskvine.TaskVineManagerConfig
+    parsl.executors.taskvine.TaskVineFactoryConfig

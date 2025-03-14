@@ -29,7 +29,7 @@ from parsl.config import Config
 from parsl.data_provider.data_manager import DataManager
 from parsl.data_provider.files import File
 from parsl.dataflow.dependency_resolvers import SHALLOW_DEPENDENCY_RESOLVER
-from parsl.dataflow.errors import BadCheckpoint, DependencyError, JoinError
+from parsl.dataflow.errors import DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.rundirs import make_rundir
@@ -164,13 +164,13 @@ class DataFlowKernel:
                                  workflow_info))
 
         if config.checkpoint_files is not None:
-            checkpoints = self.load_checkpoints(config.checkpoint_files)
+            checkpoint_files = config.checkpoint_files
         elif config.checkpoint_files is None and config.checkpoint_mode is not None:
-            checkpoints = self.load_checkpoints(get_all_checkpoints(self.run_dir))
+            checkpoint_files = get_all_checkpoints(self.run_dir)
         else:
-            checkpoints = {}
+            checkpoint_files = []
 
-        self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint=checkpoints)
+        self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint_files=checkpoint_files)
         self.checkpointed_tasks = 0
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
@@ -605,24 +605,18 @@ class DataFlowKernel:
 
             # now we know each joinable Future is done
             # so now look for any exceptions
-            exceptions_tids: List[Tuple[BaseException, Optional[str]]]
+            exceptions_tids: List[Tuple[BaseException, str]]
             exceptions_tids = []
             if isinstance(joinable, Future):
                 je = joinable.exception()
                 if je is not None:
-                    if hasattr(joinable, 'task_record'):
-                        tid = joinable.task_record['id']
-                    else:
-                        tid = None
+                    tid = self.render_future_description(joinable)
                     exceptions_tids = [(je, tid)]
             elif isinstance(joinable, list):
                 for future in joinable:
                     je = future.exception()
                     if je is not None:
-                        if hasattr(joinable, 'task_record'):
-                            tid = joinable.task_record['id']
-                        else:
-                            tid = None
+                        tid = self.render_future_description(future)
                         exceptions_tids.append((je, tid))
             else:
                 raise TypeError(f"Unknown joinable type {type(joinable)}")
@@ -1046,13 +1040,7 @@ class DataFlowKernel:
         dep_failures = []
 
         def append_failure(e: Exception, dep: Future) -> None:
-            # If this Future is associated with a task inside this DFK,
-            # then refer to the task ID.
-            # Otherwise make a repr of the Future object.
-            if hasattr(dep, 'task_record') and dep.task_record['dfk'] == self:
-                tid = "task " + repr(dep.task_record['id'])
-            else:
-                tid = repr(dep)
+            tid = self.render_future_description(dep)
             dep_failures.extend([(e, tid)])
 
         # Replace item in args
@@ -1205,10 +1193,7 @@ class DataFlowKernel:
 
         depend_descs = []
         for d in depends:
-            if isinstance(d, AppFuture) or isinstance(d, DataFuture):
-                depend_descs.append("task {}".format(d.tid))
-            else:
-                depend_descs.append(repr(d))
+            depend_descs.append(self.render_future_description(d))
 
         if depend_descs != []:
             waiting_message = "waiting on {}".format(", ".join(depend_descs))
@@ -1344,10 +1329,8 @@ class DataFlowKernel:
                 self._checkpoint_timer.close()
 
         # Send final stats
-        logger.info("Sending end message for usage tracking")
         self.usage_tracker.send_end_message()
         self.usage_tracker.close()
-        logger.info("Closed usage tracking")
 
         logger.info("Closing job status poller")
         self.job_status_poller.close()
@@ -1409,7 +1392,7 @@ class DataFlowKernel:
         Returns:
             Checkpoint dir if checkpoints were written successfully.
             By default the checkpoints are written to the RUNDIR of the current
-            run under RUNDIR/checkpoints/{tasks.pkl, dfk.pkl}
+            run under RUNDIR/checkpoints/tasks.pkl
         """
         with self.checkpoint_lock:
             if tasks:
@@ -1419,17 +1402,10 @@ class DataFlowKernel:
                 self.checkpointable_tasks = []
 
             checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
-            checkpoint_dfk = checkpoint_dir + '/dfk.pkl'
             checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
 
             if not os.path.exists(checkpoint_dir):
                 os.makedirs(checkpoint_dir, exist_ok=True)
-
-            with open(checkpoint_dfk, 'wb') as f:
-                state = {'rundir': self.run_dir,
-                         'task_count': self.task_count
-                         }
-                pickle.dump(state, f)
 
             count = 0
 
@@ -1462,74 +1438,6 @@ class DataFlowKernel:
                 logger.info("Done checkpointing {} tasks".format(count))
 
             return checkpoint_dir
-
-    def _load_checkpoints(self, checkpointDirs: Sequence[str]) -> Dict[str, Future[Any]]:
-        """Load a checkpoint file into a lookup table.
-
-        The data being loaded from the pickle file mostly contains input
-        attributes of the task: func, args, kwargs, env...
-        To simplify the check of whether the exact task has been completed
-        in the checkpoint, we hash these input params and use it as the key
-        for the memoized lookup table.
-
-        Args:
-            - checkpointDirs (list) : List of filepaths to checkpoints
-              Eg. ['runinfo/001', 'runinfo/002']
-
-        Returns:
-            - memoized_lookup_table (dict)
-        """
-        memo_lookup_table = {}
-
-        for checkpoint_dir in checkpointDirs:
-            logger.info("Loading checkpoints from {}".format(checkpoint_dir))
-            checkpoint_file = os.path.join(checkpoint_dir, 'tasks.pkl')
-            try:
-                with open(checkpoint_file, 'rb') as f:
-                    while True:
-                        try:
-                            data = pickle.load(f)
-                            # Copy and hash only the input attributes
-                            memo_fu: Future = Future()
-                            assert data['exception'] is None
-                            memo_fu.set_result(data['result'])
-                            memo_lookup_table[data['hash']] = memo_fu
-
-                        except EOFError:
-                            # Done with the checkpoint file
-                            break
-            except FileNotFoundError:
-                reason = "Checkpoint file was not found: {}".format(
-                    checkpoint_file)
-                logger.error(reason)
-                raise BadCheckpoint(reason)
-            except Exception:
-                reason = "Failed to load checkpoint: {}".format(
-                    checkpoint_file)
-                logger.error(reason)
-                raise BadCheckpoint(reason)
-
-            logger.info("Completed loading checkpoint: {0} with {1} tasks".format(checkpoint_file,
-                                                                                  len(memo_lookup_table.keys())))
-        return memo_lookup_table
-
-    @typeguard.typechecked
-    def load_checkpoints(self, checkpointDirs: Optional[Sequence[str]]) -> Dict[str, Future]:
-        """Load checkpoints from the checkpoint files into a dictionary.
-
-        The results are used to pre-populate the memoizer's lookup_table
-
-        Kwargs:
-             - checkpointDirs (list) : List of run folder to use as checkpoints
-               Eg. ['runinfo/001', 'runinfo/002']
-
-        Returns:
-             - dict containing, hashed -> future mappings
-        """
-        if checkpointDirs:
-            return self._load_checkpoints(checkpointDirs)
-        else:
-            return {}
 
     @staticmethod
     def _log_std_streams(task_record: TaskRecord) -> None:
@@ -1566,6 +1474,18 @@ class DataFlowKernel:
                 taskrecord['func_name'],
                 '' if label is None else '_{}'.format(label),
                 kw))
+
+    def render_future_description(self, dep: Future) -> str:
+        """Renders a description of the future in the context of the
+        current DFK.
+        """
+        if isinstance(dep, AppFuture) and dep.task_record['dfk'] == self:
+            tid = "task " + repr(dep.task_record['id'])
+        elif isinstance(dep, DataFuture):
+            tid = "DataFuture from task " + repr(dep.tid)
+        else:
+            tid = repr(dep)
+        return tid
 
 
 class DataFlowKernelLoader:

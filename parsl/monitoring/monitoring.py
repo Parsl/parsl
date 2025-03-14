@@ -3,23 +3,22 @@ from __future__ import annotations
 import logging
 import multiprocessing.synchronize as ms
 import os
-import pickle
 import queue
-import time
 from multiprocessing import Event
+from multiprocessing.context import ForkProcess as ForkProcessType
 from multiprocessing.queues import Queue
-from typing import TYPE_CHECKING, Literal, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Optional, Tuple, Union
 
 import typeguard
 
-from parsl.log_utils import set_file_logger
 from parsl.monitoring.errors import MonitoringHubStartError
+from parsl.monitoring.radios.filesystem_router import filesystem_router_starter
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
-from parsl.monitoring.router import router_starter
+from parsl.monitoring.radios.udp_router import udp_router_starter
+from parsl.monitoring.radios.zmq_router import zmq_router_starter
 from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import ForkProcess, SizedQueue
-from parsl.process_loggers import wrap_with_logs
-from parsl.utils import RepresentationMixin, setproctitle
+from parsl.utils import RepresentationMixin
 
 _db_manager_excepts: Optional[Exception]
 
@@ -127,51 +126,68 @@ class MonitoringHub(RepresentationMixin):
         # in the future, Queue will allow runtime subscripts.
 
         if TYPE_CHECKING:
-            comm_q: Queue[Union[Tuple[int, int], str]]
+            zmq_comm_q: Queue[Union[int, str]]
+            udp_comm_q: Queue[Union[int, str]]
         else:
-            comm_q: Queue
+            zmq_comm_q: Queue
+            udp_comm_q: Queue
 
-        comm_q = SizedQueue(maxsize=10)
+        zmq_comm_q = SizedQueue(maxsize=10)
+        udp_comm_q = SizedQueue(maxsize=10)
 
-        self.exception_q: Queue[Tuple[str, str]]
-        self.exception_q = SizedQueue(maxsize=10)
-
-        self.resource_msgs: Queue[Union[TaggedMonitoringMessage, Literal["STOP"]]]
+        self.resource_msgs: Queue[TaggedMonitoringMessage]
         self.resource_msgs = SizedQueue()
 
         self.router_exit_event: ms.Event
         self.router_exit_event = Event()
 
-        self.router_proc = ForkProcess(target=router_starter,
-                                       kwargs={"comm_q": comm_q,
-                                               "exception_q": self.exception_q,
-                                               "resource_msgs": self.resource_msgs,
-                                               "exit_event": self.router_exit_event,
-                                               "hub_address": self.hub_address,
-                                               "udp_port": self.hub_port,
-                                               "zmq_port_range": self.hub_port_range,
-                                               "run_dir": dfk_run_dir,
-                                               "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                               },
-                                       name="Monitoring-Router-Process",
-                                       daemon=True,
-                                       )
-        self.router_proc.start()
+        self.zmq_router_proc = ForkProcess(target=zmq_router_starter,
+                                           kwargs={"comm_q": zmq_comm_q,
+                                                   "resource_msgs": self.resource_msgs,
+                                                   "exit_event": self.router_exit_event,
+                                                   "hub_address": self.hub_address,
+                                                   "zmq_port_range": self.hub_port_range,
+                                                   "run_dir": dfk_run_dir,
+                                                   "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                                   },
+                                           name="Monitoring-ZMQ-Router-Process",
+                                           daemon=True,
+                                           )
+        self.zmq_router_proc.start()
+
+        self.udp_router_proc = ForkProcess(target=udp_router_starter,
+                                           kwargs={"comm_q": udp_comm_q,
+                                                   "resource_msgs": self.resource_msgs,
+                                                   "exit_event": self.router_exit_event,
+                                                   "hub_address": self.hub_address,
+                                                   "udp_port": self.hub_port,
+                                                   "run_dir": dfk_run_dir,
+                                                   "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                                   },
+                                           name="Monitoring-UDP-Router-Process",
+                                           daemon=True,
+                                           )
+        self.udp_router_proc.start()
+
+        self.dbm_exit_event: ms.Event
+        self.dbm_exit_event = Event()
 
         self.dbm_proc = ForkProcess(target=dbm_starter,
-                                    args=(self.exception_q, self.resource_msgs,),
+                                    args=(self.resource_msgs,),
                                     kwargs={"run_dir": dfk_run_dir,
                                             "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
                                             "db_url": self.logging_endpoint,
+                                            "exit_event": self.dbm_exit_event,
                                             },
                                     name="Monitoring-DBM-Process",
                                     daemon=True,
                                     )
         self.dbm_proc.start()
-        logger.info("Started the router process %s and DBM process %s", self.router_proc.pid, self.dbm_proc.pid)
+        logger.info("Started ZMQ router process %s, UDP router process %s and DBM process %s",
+                    self.zmq_router_proc.pid, self.udp_router_proc.pid, self.dbm_proc.pid)
 
-        self.filesystem_proc = ForkProcess(target=filesystem_receiver,
-                                           args=(self.resource_msgs, dfk_run_dir),
+        self.filesystem_proc = ForkProcess(target=filesystem_router_starter,
+                                           args=(self.resource_msgs, dfk_run_dir, self.router_exit_event),
                                            name="Monitoring-Filesystem-Process",
                                            daemon=True
                                            )
@@ -181,24 +197,35 @@ class MonitoringHub(RepresentationMixin):
         self.radio = MultiprocessingQueueRadioSender(self.resource_msgs)
 
         try:
-            comm_q_result = comm_q.get(block=True, timeout=120)
-            comm_q.close()
-            comm_q.join_thread()
+            zmq_comm_q_result = zmq_comm_q.get(block=True, timeout=120)
+            zmq_comm_q.close()
+            zmq_comm_q.join_thread()
         except queue.Empty:
-            logger.error("Hub has not completed initialization in 120s. Aborting")
+            logger.error("Monitoring ZMQ Router has not reported port in 120s. Aborting")
             raise MonitoringHubStartError()
 
-        if isinstance(comm_q_result, str):
-            logger.error("MonitoringRouter sent an error message: %s", comm_q_result)
-            raise RuntimeError(f"MonitoringRouter failed to start: {comm_q_result}")
+        if isinstance(zmq_comm_q_result, str):
+            logger.error("MonitoringRouter sent an error message: %s", zmq_comm_q_result)
+            raise RuntimeError(f"MonitoringRouter failed to start: {zmq_comm_q_result}")
 
-        udp_port, zmq_port = comm_q_result
+        self.hub_zmq_port = zmq_comm_q_result
 
+        try:
+            udp_comm_q_result = udp_comm_q.get(block=True, timeout=120)
+            udp_comm_q.close()
+            udp_comm_q.join_thread()
+        except queue.Empty:
+            logger.error("Monitoring UDP router has not reported port in 120s. Aborting")
+            raise MonitoringHubStartError()
+
+        if isinstance(udp_comm_q_result, str):
+            logger.error("MonitoringRouter sent an error message: %s", udp_comm_q_result)
+            raise RuntimeError(f"MonitoringRouter failed to start: {udp_comm_q_result}")
+
+        udp_port = udp_comm_q_result
         self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
 
         logger.info("Monitoring Hub initialized")
-
-        self.hub_zmq_port = zmq_port
 
     def send(self, message: TaggedMonitoringMessage) -> None:
         logger.debug("Sending message type %s", message[0])
@@ -206,89 +233,62 @@ class MonitoringHub(RepresentationMixin):
 
     def close(self) -> None:
         logger.info("Terminating Monitoring Hub")
-        exception_msgs = []
-        while True:
-            try:
-                exception_msgs.append(self.exception_q.get(block=False))
-                logger.error("There was a queued exception (Either router or DBM process got exception much earlier?)")
-            except queue.Empty:
-                break
         if self.monitoring_hub_active:
             self.monitoring_hub_active = False
-            if exception_msgs:
-                for exception_msg in exception_msgs:
-                    logger.error(
-                        "%s process delivered an exception: %s. Terminating all monitoring processes immediately.",
-                        exception_msg[0],
-                        exception_msg[1]
-                    )
-                self.router_proc.terminate()
-                self.dbm_proc.terminate()
-                self.filesystem_proc.terminate()
             logger.info("Setting router termination event")
             self.router_exit_event.set()
-            logger.info("Waiting for router to terminate")
-            self.router_proc.join()
-            self.router_proc.close()
+
+            logger.info("Waiting for ZMQ router to terminate")
+            join_terminate_close_proc(self.zmq_router_proc)
+
+            logger.info("Waiting for UDP router to terminate")
+            join_terminate_close_proc(self.udp_router_proc)
+
             logger.debug("Finished waiting for router termination")
-            if len(exception_msgs) == 0:
-                logger.debug("Sending STOP to DBM")
-                self.resource_msgs.put("STOP")
-            else:
-                logger.debug("Not sending STOP to DBM, because there were DBM exceptions")
             logger.debug("Waiting for DB termination")
-            self.dbm_proc.join()
-            self.dbm_proc.close()
+            self.dbm_exit_event.set()
+            join_terminate_close_proc(self.dbm_proc)
             logger.debug("Finished waiting for DBM termination")
 
-            # should this be message based? it probably doesn't need to be if
-            # we believe we've received all messages
             logger.info("Terminating filesystem radio receiver process")
-            self.filesystem_proc.terminate()
-            self.filesystem_proc.join()
-            self.filesystem_proc.close()
+            join_terminate_close_proc(self.filesystem_proc)
 
             logger.info("Closing monitoring multiprocessing queues")
-            self.exception_q.close()
-            self.exception_q.join_thread()
             self.resource_msgs.close()
             self.resource_msgs.join_thread()
             logger.info("Closed monitoring multiprocessing queues")
 
 
-@wrap_with_logs
-def filesystem_receiver(q: Queue[TaggedMonitoringMessage], run_dir: str) -> None:
-    logger = set_file_logger(f"{run_dir}/monitoring_filesystem_radio.log",
-                             name="monitoring_filesystem_radio",
-                             level=logging.INFO)
+def join_terminate_close_proc(process: ForkProcessType, *, timeout: int = 30) -> None:
+    """Increasingly aggressively terminate a process.
 
-    logger.info("Starting filesystem radio receiver")
-    setproctitle("parsl: monitoring filesystem receiver")
-    base_path = f"{run_dir}/monitor-fs-radio/"
-    tmp_dir = f"{base_path}/tmp/"
-    new_dir = f"{base_path}/new/"
-    logger.debug("Creating new and tmp paths under %s", base_path)
+    This function assumes that the process is likely to exit before
+    the join timeout, driven by some other means, such as the
+    MonitoringHub router_exit_event. If the process does not exit, then
+    first terminate() and then kill() will be used to end the process.
 
-    target_radio = MultiprocessingQueueRadioSender(q)
+    In the case of a very mis-behaving process, this function might take
+    up to 3*timeout to exhaust all termination methods and return.
+    """
+    logger.debug("Joining process")
+    process.join(timeout)
 
-    os.makedirs(tmp_dir, exist_ok=True)
-    os.makedirs(new_dir, exist_ok=True)
+    # run a sequence of increasingly aggressive steps to shut down the process.
+    if process.is_alive():
+        logger.error("Process did not join. Terminating.")
+        process.terminate()
+        process.join(timeout)
+        if process.is_alive():
+            logger.error("Process did not join after terminate. Killing.")
+            process.kill()
+            process.join(timeout)
+            # This kill should not be caught by any signal handlers so it is
+            # unlikely that this join will timeout. If it does, there isn't
+            # anything further to do except log an error in the next if-block.
 
-    while True:  # this loop will end on process termination
-        logger.debug("Start filesystem radio receiver loop")
-
-        # iterate over files in new_dir
-        for filename in os.listdir(new_dir):
-            try:
-                logger.info("Processing filesystem radio file %s", filename)
-                full_path_filename = f"{new_dir}/{filename}"
-                with open(full_path_filename, "rb") as f:
-                    message = pickle.load(f)
-                logger.debug("Message received is: %s", message)
-                assert isinstance(message, tuple)
-                target_radio.send(cast(TaggedMonitoringMessage, message))
-                os.remove(full_path_filename)
-            except Exception:
-                logger.exception("Exception processing %s - probably will be retried next iteration", filename)
-
-        time.sleep(1)  # whats a good time for this poll?
+    if process.is_alive():
+        logger.error("Process failed to end")
+        # don't call close if the process hasn't ended:
+        # process.close() doesn't work on a running process.
+    else:
+        process.close()

@@ -582,12 +582,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         logger.debug("TaskVine shutdown started")
         self._should_stop.set()
 
-        # Remove the workers that are still going
-        kill_ids = [self.blocks_to_job_id[block] for block in self.blocks_to_job_id.keys()]
-        if self.provider:
-            logger.debug("Cancelling blocks")
-            self.provider.cancel(kill_ids)
-
         # Join all processes before exiting
         logger.debug("Joining on submit process")
         self._submit_process.join()

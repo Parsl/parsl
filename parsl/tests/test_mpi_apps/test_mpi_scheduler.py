@@ -161,3 +161,28 @@ def test_MPISched_contention():
     assert task_on_worker_side['task_id'] == 2
     _, _, _, resource_spec = unpack_res_spec_apply_message(task_on_worker_side['buffer'])
     assert len(resource_spec['MPI_NODELIST'].split(',')) == 8
+
+
+@pytest.mark.local
+def test_hashable_backlog_queue():
+    """Run multiple large tasks that to force entry into backlog_queue
+    where queue.PriorityQueue expects hashability/comparability
+    """
+
+    task_q, result_q = SpawnContext.Queue(), SpawnContext.Queue()
+    scheduler = MPITaskScheduler(task_q, result_q)
+
+    assert scheduler.available_nodes
+    assert len(scheduler.available_nodes) == 8
+
+    assert scheduler._free_node_counter.value == 8
+
+    for i in range(3):
+        mock_task_buffer = pack_res_spec_apply_message("func", "args", "kwargs",
+                                                       resource_specification={
+                                                           "num_nodes": 8,
+                                                           "ranks_per_node": 2
+                                                       })
+        task_package = {"task_id": i, "buffer": mock_task_buffer}
+        scheduler.put_task(task_package)
+    assert scheduler._backlog_queue.qsize() == 2, "Expected 2 backlogged tasks"
