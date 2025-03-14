@@ -1,6 +1,6 @@
-import logging
 import sys
 
+import packaging.version
 import pytest
 
 import parsl
@@ -34,3 +34,20 @@ def test_connected_managers():
     assert 'parsl_version' in manager_info
     assert manager_info['parsl_version'] == parsl.__version__
     assert manager_info['python_version'] == f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+
+
+@pytest.mark.local
+def test_connected_managers_packages():
+    # Run dummy function to ensure a manager is online
+    f = dummy()
+    assert f.result() is None
+
+    htex: parsl.HighThroughputExecutor = parsl.dfk().executors['htex_local']
+    managers_info_list = htex.connected_managers()
+    managers_packages = htex.connected_managers_packages()
+
+    assert len(managers_packages) == len(managers_info_list) == 1
+    manager_id, packages = list(managers_packages.items())[0]
+    assert manager_id == managers_info_list[0]['manager']
+    normalized_version = str(packaging.version.parse(parsl.__version__))
+    assert packages['parsl'] == normalized_version
