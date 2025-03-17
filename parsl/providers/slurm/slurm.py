@@ -4,6 +4,7 @@ import os
 import re
 import time
 from typing import Any, Dict, Optional
+import itertools
 
 import typeguard
 
@@ -148,6 +149,8 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         self.qos = qos
         self.constraint = constraint
         self.clusters = clusters
+        # Used to batch requests to sacct/squeue for long jobs lists
+        self._job_batch_size = 50
         self.scheduler_options = scheduler_options + '\n'
         if exclusive:
             self.scheduler_options += "#SBATCH --exclusive\n"
@@ -199,22 +202,26 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         Returns:
               [status...] : Status list of all jobs
         '''
-        job_id_list = ','.join(
-            [jid for jid, job in self.resources.items() if not job['status'].terminal]
-        )
-        if not job_id_list:
+        
+        if len(self.resources.items()) == 0:
             logger.debug('No active jobs, skipping status update')
             return
-
-        cmd = self._cmd.format(job_id_list)
-        logger.debug("Executing %s", cmd)
-        retcode, stdout, stderr = self.execute_wait(cmd)
-        logger.debug("sacct/squeue returned %s %s", stdout, stderr)
-
-        # Execute_wait failed. Do no update
-        if retcode != 0:
-            logger.warning("sacct/squeue failed with non-zero exit code {}".format(retcode))
-            return
+        
+        job_list_batches = itertools.batched(self.resources.items(), self._job_batch_size)
+        stdout = ""
+        for job_batch in job_list_batches:
+            job_id_list = ','.join(
+                [jid for jid, job in job_batch if not job['status'].terminal]
+            )
+            cmd = self._cmd.format(job_id_list)
+            logger.debug("Executing %s", cmd)
+            retcode, _stdout, stderr = self.execute_wait(cmd)
+            logger.debug("sacct/squeue returned %s %s", stdout, stderr)
+            stdout += _stdout
+            # Execute_wait failed. Do no update
+            if retcode != 0:
+                logger.warning("sacct/squeue failed with non-zero exit code {}".format(retcode))
+                return
 
         jobs_missing = set(self.resources.keys())
         for line in stdout.split('\n'):
