@@ -17,6 +17,9 @@ SpawnContext = multiprocessing.get_context("spawn")
 ForkProcess: Callable[..., ForkProcessType] = ForkContext.Process
 SpawnProcess: Callable[..., SpawnProcessType] = SpawnContext.Process
 
+SpawnEvent = SpawnContext.Event
+SpawnQueue = SpawnContext.Queue
+
 
 class MacSafeQueue(multiprocessing.queues.Queue):
     """ Multiprocessing queues do not have qsize attributes on MacOS.
@@ -28,7 +31,7 @@ class MacSafeQueue(multiprocessing.queues.Queue):
 
     def __init__(self, *args, **kwargs):
         if 'ctx' not in kwargs:
-            kwargs['ctx'] = multiprocessing.get_context()
+            kwargs['ctx'] = multiprocessing.get_context('spawn')
         super().__init__(*args, **kwargs)
         self._counter = multiprocessing.Value('i', 0)
 
@@ -61,6 +64,6 @@ SizedQueue: Callable[..., multiprocessing.Queue]
 
 if platform.system() != 'Darwin':
     import multiprocessing
-    SizedQueue = multiprocessing.Queue
+    SizedQueue = SpawnQueue
 else:
     SizedQueue = MacSafeQueue
