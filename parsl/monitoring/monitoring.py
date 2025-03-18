@@ -4,8 +4,7 @@ import logging
 import multiprocessing.synchronize as ms
 import os
 import queue
-from multiprocessing import Event
-from multiprocessing.context import ForkProcess as ForkProcessType
+from multiprocessing.context import SpawnProcess as SpawnProcessType
 from multiprocessing.queues import Queue
 from typing import TYPE_CHECKING, Optional, Tuple, Union
 
@@ -17,7 +16,7 @@ from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSen
 from parsl.monitoring.radios.udp_router import udp_router_starter
 from parsl.monitoring.radios.zmq_router import zmq_router_starter
 from parsl.monitoring.types import TaggedMonitoringMessage
-from parsl.multiprocessing import ForkProcess, SizedQueue
+from parsl.multiprocessing import SizedQueue, SpawnEvent, SpawnProcess
 from parsl.utils import RepresentationMixin
 
 _db_manager_excepts: Optional[Exception]
@@ -133,58 +132,58 @@ class MonitoringHub(RepresentationMixin):
         self.resource_msgs = SizedQueue()
 
         self.router_exit_event: ms.Event
-        self.router_exit_event = Event()
+        self.router_exit_event = SpawnEvent()
 
-        self.zmq_router_proc = ForkProcess(target=zmq_router_starter,
-                                           kwargs={"comm_q": zmq_comm_q,
-                                                   "resource_msgs": self.resource_msgs,
-                                                   "exit_event": self.router_exit_event,
-                                                   "hub_address": self.hub_address,
-                                                   "zmq_port_range": self.hub_port_range,
-                                                   "run_dir": dfk_run_dir,
-                                                   "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                                   },
-                                           name="Monitoring-ZMQ-Router-Process",
-                                           daemon=True,
-                                           )
+        self.zmq_router_proc = SpawnProcess(target=zmq_router_starter,
+                                            kwargs={"comm_q": zmq_comm_q,
+                                                    "resource_msgs": self.resource_msgs,
+                                                    "exit_event": self.router_exit_event,
+                                                    "hub_address": self.hub_address,
+                                                    "zmq_port_range": self.hub_port_range,
+                                                    "run_dir": dfk_run_dir,
+                                                    "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                                    },
+                                            name="Monitoring-ZMQ-Router-Process",
+                                            daemon=True,
+                                            )
         self.zmq_router_proc.start()
 
-        self.udp_router_proc = ForkProcess(target=udp_router_starter,
-                                           kwargs={"comm_q": udp_comm_q,
-                                                   "resource_msgs": self.resource_msgs,
-                                                   "exit_event": self.router_exit_event,
-                                                   "hub_address": self.hub_address,
-                                                   "udp_port": self.hub_port,
-                                                   "run_dir": dfk_run_dir,
-                                                   "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                                   },
-                                           name="Monitoring-UDP-Router-Process",
-                                           daemon=True,
-                                           )
+        self.udp_router_proc = SpawnProcess(target=udp_router_starter,
+                                            kwargs={"comm_q": udp_comm_q,
+                                                    "resource_msgs": self.resource_msgs,
+                                                    "exit_event": self.router_exit_event,
+                                                    "hub_address": self.hub_address,
+                                                    "udp_port": self.hub_port,
+                                                    "run_dir": dfk_run_dir,
+                                                    "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                                    },
+                                            name="Monitoring-UDP-Router-Process",
+                                            daemon=True,
+                                            )
         self.udp_router_proc.start()
 
         self.dbm_exit_event: ms.Event
-        self.dbm_exit_event = Event()
+        self.dbm_exit_event = SpawnEvent()
 
-        self.dbm_proc = ForkProcess(target=dbm_starter,
-                                    args=(self.resource_msgs,),
-                                    kwargs={"run_dir": dfk_run_dir,
-                                            "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                            "db_url": self.logging_endpoint,
-                                            "exit_event": self.dbm_exit_event,
-                                            },
-                                    name="Monitoring-DBM-Process",
-                                    daemon=True,
-                                    )
+        self.dbm_proc = SpawnProcess(target=dbm_starter,
+                                     args=(self.resource_msgs,),
+                                     kwargs={"run_dir": dfk_run_dir,
+                                             "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
+                                             "db_url": self.logging_endpoint,
+                                             "exit_event": self.dbm_exit_event,
+                                             },
+                                     name="Monitoring-DBM-Process",
+                                     daemon=True,
+                                     )
         self.dbm_proc.start()
         logger.info("Started ZMQ router process %s, UDP router process %s and DBM process %s",
                     self.zmq_router_proc.pid, self.udp_router_proc.pid, self.dbm_proc.pid)
 
-        self.filesystem_proc = ForkProcess(target=filesystem_router_starter,
-                                           args=(self.resource_msgs, dfk_run_dir, self.router_exit_event),
-                                           name="Monitoring-Filesystem-Process",
-                                           daemon=True
-                                           )
+        self.filesystem_proc = SpawnProcess(target=filesystem_router_starter,
+                                            args=(self.resource_msgs, dfk_run_dir, self.router_exit_event),
+                                            name="Monitoring-Filesystem-Process",
+                                            daemon=True
+                                            )
         self.filesystem_proc.start()
         logger.info("Started filesystem radio receiver process %s", self.filesystem_proc.pid)
 
@@ -253,7 +252,7 @@ class MonitoringHub(RepresentationMixin):
             logger.info("Closed monitoring multiprocessing queues")
 
 
-def join_terminate_close_proc(process: ForkProcessType, *, timeout: int = 30) -> None:
+def join_terminate_close_proc(process: SpawnProcessType, *, timeout: int = 30) -> None:
     """Increasingly aggressively terminate a process.
 
     This function assumes that the process is likely to exit before
