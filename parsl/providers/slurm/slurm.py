@@ -117,7 +117,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
     cmd_timeout : int (Default = 10)
         Number of seconds to wait for slurm commands to finish. For schedulers with many this
         may need to be increased to wait longer for scheduler information.
-    status_batch_size: ine (Default = 50)
+    status_batch_size: int (Default = 50)
         Number of jobs to batch together in calls to the scheduler status. For schedulers
         with many jobs this may need to be decreased to get jobs in smaller batches.
     exclusive : bool (Default = True)
