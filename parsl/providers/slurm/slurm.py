@@ -4,7 +4,21 @@ import os
 import re
 import time
 from typing import Any, Dict, Optional
-import itertools
+try:
+    from itertools import batched
+except AttributeError:
+    # https://docs.python.org/3.13/library/itertools.html#itertools.batched
+    from itertools import islice
+    def batched(iterable, n, *, strict=False):
+        # batched('ABCDEFG', 3) → ABC DEF G
+        if n < 1:
+            raise ValueError('n must be at least one')
+        iterator = iter(iterable)
+        while batch := tuple(islice(iterator, n)):
+            if strict and len(batch) != n:
+                raise ValueError('batched(): incomplete batch')
+            yield batch
+        
 
 import typeguard
 
@@ -207,7 +221,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             logger.debug('No active jobs, skipping status update')
             return
         
-        job_list_batches = itertools.batched(self.resources.items(), self._job_batch_size)
+        job_list_batches = batched(self.resources.items(), self._job_batch_size)
         stdout = ""
         for job_batch in job_list_batches:
             job_id_list = ','.join(
