@@ -4,9 +4,10 @@ import os
 import re
 import time
 from typing import Any, Dict, Optional
+
 try:
     from itertools import batched
-except AttributeError:
+except ImportError:
     # https://docs.python.org/3.13/library/itertools.html#itertools.batched
     from itertools import islice
     def batched(iterable, n, *, strict=False):
