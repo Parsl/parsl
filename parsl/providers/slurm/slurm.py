@@ -10,6 +10,7 @@ try:
 except ImportError:
     # https://docs.python.org/3.13/library/itertools.html#itertools.batched
     from itertools import islice
+
     def batched(iterable, n, *, strict=False):
         # batched('ABCDEFG', 3) → ABC DEF G
         if n < 1:
@@ -19,7 +20,7 @@ except ImportError:
             if strict and len(batch) != n:
                 raise ValueError('batched(): incomplete batch')
             yield batch
-        
+
 
 import typeguard
 
@@ -217,11 +218,11 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         Returns:
               [status...] : Status list of all jobs
         '''
-        
+
         if len(self.resources.items()) == 0:
             logger.debug('No active jobs, skipping status update')
             return
-        
+
         job_list_batches = batched(self.resources.items(), self._job_batch_size)
         stdout = ""
         for job_batch in job_list_batches:
