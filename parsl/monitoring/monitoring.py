@@ -4,7 +4,6 @@ import logging
 import multiprocessing.synchronize as ms
 import os
 import queue
-from multiprocessing.context import SpawnProcess as SpawnProcessType
 from multiprocessing.queues import Queue
 from typing import TYPE_CHECKING, Optional, Tuple, Union
 
@@ -16,7 +15,12 @@ from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSen
 from parsl.monitoring.radios.udp_router import udp_router_starter
 from parsl.monitoring.radios.zmq_router import zmq_router_starter
 from parsl.monitoring.types import TaggedMonitoringMessage
-from parsl.multiprocessing import SizedQueue, SpawnEvent, SpawnProcess
+from parsl.multiprocessing import (
+    SizedQueue,
+    SpawnEvent,
+    SpawnProcess,
+    join_terminate_close_proc,
+)
 from parsl.utils import RepresentationMixin
 
 _db_manager_excepts: Optional[Exception]
@@ -250,38 +254,3 @@ class MonitoringHub(RepresentationMixin):
             self.resource_msgs.close()
             self.resource_msgs.join_thread()
             logger.info("Closed monitoring multiprocessing queues")
-
-
-def join_terminate_close_proc(process: SpawnProcessType, *, timeout: int = 30) -> None:
-    """Increasingly aggressively terminate a process.
-
-    This function assumes that the process is likely to exit before
-    the join timeout, driven by some other means, such as the
-    MonitoringHub router_exit_event. If the process does not exit, then
-    first terminate() and then kill() will be used to end the process.
-
-    In the case of a very mis-behaving process, this function might take
-    up to 3*timeout to exhaust all termination methods and return.
-    """
-    logger.debug("Joining process")
-    process.join(timeout)
-
-    # run a sequence of increasingly aggressive steps to shut down the process.
-    if process.is_alive():
-        logger.error("Process did not join. Terminating.")
-        process.terminate()
-        process.join(timeout)
-        if process.is_alive():
-            logger.error("Process did not join after terminate. Killing.")
-            process.kill()
-            process.join(timeout)
-            # This kill should not be caught by any signal handlers so it is
-            # unlikely that this join will timeout. If it does, there isn't
-            # anything further to do except log an error in the next if-block.
-
-    if process.is_alive():
-        logger.error("Process failed to end")
-        # don't call close if the process hasn't ended:
-        # process.close() doesn't work on a running process.
-    else:
-        process.close()
