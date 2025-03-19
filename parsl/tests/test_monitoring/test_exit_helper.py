@@ -4,8 +4,7 @@ import signal
 import psutil
 import pytest
 
-from parsl.monitoring.monitoring import join_terminate_close_proc
-from parsl.multiprocessing import SpawnEvent, SpawnProcess
+from parsl.multiprocessing import SpawnEvent, SpawnProcess, join_terminate_close_proc
 
 
 def noop():
