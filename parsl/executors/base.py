@@ -1,11 +1,14 @@
+from __future__ import annotations
+
 import os
 from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
+from multiprocessing.queues import Queue
 from typing import Any, Callable, Dict, Optional
 
 from typing_extensions import Literal, Self
 
-from parsl.monitoring.radios.base import MonitoringRadioSender
+from parsl.monitoring.types import TaggedMonitoringMessage
 
 
 class ParslExecutor(metaclass=ABCMeta):
@@ -42,6 +45,13 @@ class ParslExecutor(metaclass=ABCMeta):
               invariant, not co-variant, and it looks like @typeguard cannot be
               persuaded otherwise. So if you're implementing an executor and want to
               @typeguard the constructor, you'll have to use List[Any] here.
+
+    The DataFlowKernel will set this attribute before calling .start(),
+    if monitoring is enabled:
+
+        monitoring_messages: Optional[Queue[TaggedMonitoringMessage]] - an executor
+            can send messages to the monitoring hub by putting them into
+            this queue.
     """
 
     label: str = "undefined"
@@ -50,15 +60,11 @@ class ParslExecutor(metaclass=ABCMeta):
     def __init__(
         self,
         *,
-        hub_address: Optional[str] = None,
-        hub_zmq_port: Optional[int] = None,
-        submit_monitoring_radio: Optional[MonitoringRadioSender] = None,
+        monitoring_messages: Optional[Queue[TaggedMonitoringMessage]] = None,
         run_dir: str = ".",
         run_id: Optional[str] = None,
     ):
-        self.hub_address = hub_address
-        self.hub_zmq_port = hub_zmq_port
-        self.submit_monitoring_radio = submit_monitoring_radio
+        self.monitoring_messages = monitoring_messages
         self.run_dir = os.path.abspath(run_dir)
         self.run_id = run_id
 
@@ -125,33 +131,3 @@ class ParslExecutor(metaclass=ABCMeta):
     @run_id.setter
     def run_id(self, value: Optional[str]) -> None:
         self._run_id = value
-
-    @property
-    def hub_address(self) -> Optional[str]:
-        """Address to the Hub for monitoring.
-        """
-        return self._hub_address
-
-    @hub_address.setter
-    def hub_address(self, value: Optional[str]) -> None:
-        self._hub_address = value
-
-    @property
-    def hub_zmq_port(self) -> Optional[int]:
-        """Port to the Hub for monitoring.
-        """
-        return self._hub_zmq_port
-
-    @hub_zmq_port.setter
-    def hub_zmq_port(self, value: Optional[int]) -> None:
-        self._hub_zmq_port = value
-
-    @property
-    def submit_monitoring_radio(self) -> Optional[MonitoringRadioSender]:
-        """Local radio for sending monitoring messages
-        """
-        return self._submit_monitoring_radio
-
-    @submit_monitoring_radio.setter
-    def submit_monitoring_radio(self, value: Optional[MonitoringRadioSender]) -> None:
-        self._submit_monitoring_radio = value

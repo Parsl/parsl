@@ -8,7 +8,7 @@ import uuid
 
 from parsl.dataflow.states import States
 from parsl.errors import ConfigurationError
-from parsl.multiprocessing import ForkProcess
+from parsl.multiprocessing import SpawnProcess
 from parsl.usage_tracking.api import get_parsl_usage
 from parsl.usage_tracking.levels import DISABLED as USAGE_TRACKING_DISABLED
 from parsl.usage_tracking.levels import LEVEL_3 as USAGE_TRACKING_LEVEL_3
@@ -35,7 +35,7 @@ def async_process(fn: Callable[P, None]) -> Callable[P, None]:
     """ Decorator function to launch a function as a separate process """
 
     def run(*args, **kwargs):
-        proc = ForkProcess(target=fn, args=args, kwargs=kwargs, name="Usage-Tracking")
+        proc = SpawnProcess(target=fn, args=args, kwargs=kwargs, name="Usage-Tracking")
         proc.start()
         return proc
 

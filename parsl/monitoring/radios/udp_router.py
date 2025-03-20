@@ -5,17 +5,14 @@ import multiprocessing.queues as mpq
 import os
 import pickle
 import socket
-import threading
 import time
 from multiprocessing.synchronize import Event
-from typing import Optional, Tuple
+from typing import Optional
 
 import typeguard
-import zmq
 
 from parsl.log_utils import set_file_logger
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
-from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
@@ -28,8 +25,8 @@ class MonitoringRouter:
                  *,
                  hub_address: str,
                  udp_port: Optional[int] = None,
-                 zmq_port_range: Tuple[int, int] = (55050, 56000),
 
+                 monitoring_hub_address: str = "127.0.0.1",
                  run_dir: str = ".",
                  logging_level: int = logging.INFO,
                  atexit_timeout: int = 3,   # in seconds
@@ -44,9 +41,6 @@ class MonitoringRouter:
              The ip address at which the workers will be able to reach the Hub.
         udp_port : int
              The specific port at which workers will be able to reach the Hub via UDP. Default: None
-        zmq_port_range : tuple(int, int)
-             The MonitoringHub picks ports at random from the range which will be used by Hub.
-             Default: (55050, 56000)
         run_dir : str
              Parsl log directory paths. Logs and temp files go here. Default: '.'
         logging_level : int
@@ -59,7 +53,7 @@ class MonitoringRouter:
             An event that the main Parsl process will set to signal that the monitoring router should shut down.
         """
         os.makedirs(run_dir, exist_ok=True)
-        self.logger = set_file_logger(f"{run_dir}/monitoring_router.log",
+        self.logger = set_file_logger(f"{run_dir}/monitoring_udp_router.log",
                                       name="monitoring_router",
                                       level=logging_level)
         self.logger.debug("Monitoring router starting")
@@ -87,37 +81,12 @@ class MonitoringRouter:
         self.udp_sock.settimeout(self.loop_freq / 1000)
         self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.udp_port))
 
-        self._context = zmq.Context()
-        self.zmq_receiver_channel = self._context.socket(zmq.DEALER)
-        self.zmq_receiver_channel.setsockopt(zmq.LINGER, 0)
-        self.zmq_receiver_channel.set_hwm(0)
-        self.zmq_receiver_channel.RCVTIMEO = int(self.loop_freq)  # in milliseconds
-        self.logger.debug("hub_address: {}. zmq_port_range {}".format(hub_address, zmq_port_range))
-        self.zmq_receiver_port = self.zmq_receiver_channel.bind_to_random_port("tcp://*",
-                                                                               min_port=zmq_port_range[0],
-                                                                               max_port=zmq_port_range[1])
-
         self.target_radio = MultiprocessingQueueRadioSender(resource_msgs)
         self.exit_event = exit_event
 
     @wrap_with_logs(target="monitoring_router")
     def start(self) -> None:
-        self.logger.info("Starting UDP listener thread")
-        udp_radio_receiver_thread = threading.Thread(target=self.start_udp_listener, daemon=True)
-        udp_radio_receiver_thread.start()
-
-        self.logger.info("Starting ZMQ listener thread")
-        zmq_radio_receiver_thread = threading.Thread(target=self.start_zmq_listener, daemon=True)
-        zmq_radio_receiver_thread.start()
-
-        self.logger.info("Joining on ZMQ listener thread")
-        zmq_radio_receiver_thread.join()
-        self.logger.info("Joining on UDP listener thread")
-        udp_radio_receiver_thread.join()
-        self.logger.info("Joined on both ZMQ and UDP listener threads")
-
-    @wrap_with_logs(target="monitoring_router")
-    def start_udp_listener(self) -> None:
+        self.logger.info("Starting UDP listener")
         try:
             while not self.exit_event.is_set():
                 try:
@@ -144,55 +113,23 @@ class MonitoringRouter:
         finally:
             self.logger.info("UDP listener finished")
 
-    @wrap_with_logs(target="monitoring_router")
-    def start_zmq_listener(self) -> None:
-        try:
-            while not self.exit_event.is_set():
-                try:
-                    dfk_loop_start = time.time()
-                    while time.time() - dfk_loop_start < 1.0:  # TODO make configurable
-                        # note that nothing checks that msg really is of the annotated type
-                        msg: TaggedMonitoringMessage
-                        msg = self.zmq_receiver_channel.recv_pyobj()
-
-                        assert isinstance(msg, tuple), "ZMQ Receiver expects only tuples, got {}".format(msg)
-                        assert len(msg) >= 1, "ZMQ Receiver expects tuples of length at least 1, got {}".format(msg)
-                        assert len(msg) == 2, "ZMQ Receiver expects message tuples of exactly length 2, got {}".format(msg)
-
-                        self.target_radio.send(msg)
-                except zmq.Again:
-                    pass
-                except Exception:
-                    # This will catch malformed messages. What happens if the
-                    # channel is broken in such a way that it always raises
-                    # an exception? Looping on this would maybe be the wrong
-                    # thing to do.
-                    self.logger.warning("Failure processing a ZMQ message", exc_info=True)
-
-            self.logger.info("ZMQ listener finishing normally")
-        finally:
-            self.logger.info("ZMQ listener finished")
-
 
 @wrap_with_logs
 @typeguard.typechecked
-def router_starter(*,
-                   comm_q: mpq.Queue,
-                   exception_q: mpq.Queue,
-                   resource_msgs: mpq.Queue,
-                   exit_event: Event,
+def udp_router_starter(*,
+                       comm_q: mpq.Queue,
+                       resource_msgs: mpq.Queue,
+                       exit_event: Event,
 
-                   hub_address: str,
-                   udp_port: Optional[int],
-                   zmq_port_range: Tuple[int, int],
+                       hub_address: str,
+                       udp_port: Optional[int],
 
-                   run_dir: str,
-                   logging_level: int) -> None:
-    setproctitle("parsl: monitoring router")
+                       run_dir: str,
+                       logging_level: int) -> None:
+    setproctitle("parsl: monitoring UDP router")
     try:
         router = MonitoringRouter(hub_address=hub_address,
                                   udp_port=udp_port,
-                                  zmq_port_range=zmq_port_range,
                                   run_dir=run_dir,
                                   logging_level=logging_level,
                                   resource_msgs=resource_msgs,
@@ -201,11 +138,10 @@ def router_starter(*,
         logger.error("MonitoringRouter construction failed.", exc_info=True)
         comm_q.put(f"Monitoring router construction failed: {e}")
     else:
-        comm_q.put((router.udp_port, router.zmq_receiver_port))
+        comm_q.put(router.udp_port)
 
         router.logger.info("Starting MonitoringRouter in router_starter")
         try:
             router.start()
-        except Exception as e:
-            router.logger.exception("router.start exception")
-            exception_q.put(('Hub', str(e)))
+        except Exception:
+            router.logger.exception("UDP router start exception")
