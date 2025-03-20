@@ -64,13 +64,11 @@ class ParslExecutor(metaclass=ABCMeta):
     def __init__(
         self,
         *,
-        hub_address: Optional[str] = None,
         monitoring_messages: Optional[Queue[TaggedMonitoringMessage]] = None,
         submit_monitoring_radio: Optional[MonitoringRadioSender] = None,
         run_dir: str = ".",
         run_id: Optional[str] = None,
     ):
-        self.hub_address = hub_address
         self.monitoring_messages = monitoring_messages
         self.submit_monitoring_radio = submit_monitoring_radio
         self.run_dir = os.path.abspath(run_dir)
@@ -139,16 +137,6 @@ class ParslExecutor(metaclass=ABCMeta):
     @run_id.setter
     def run_id(self, value: Optional[str]) -> None:
         self._run_id = value
-
-    @property
-    def hub_address(self) -> Optional[str]:
-        """Address to the Hub for monitoring.
-        """
-        return self._hub_address
-
-    @hub_address.setter
-    def hub_address(self, value: Optional[str]) -> None:
-        self._hub_address = value
 
     @property
     def submit_monitoring_radio(self) -> Optional[MonitoringRadioSender]:
