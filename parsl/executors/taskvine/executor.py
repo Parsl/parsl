@@ -239,6 +239,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         retrieve Parsl tasks within the TaskVine system.
         """
 
+        super().start()
         # Synchronize connection and communication settings between the manager and factory
         self.__synchronize_manager_factory_comm_settings()
 

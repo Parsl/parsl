@@ -8,7 +8,6 @@ from typing import Any, Callable, Dict, Optional
 
 from typing_extensions import Literal, Self
 
-from parsl.monitoring.radios.base import MonitoringRadioSender
 from parsl.monitoring.types import TaggedMonitoringMessage
 
 
@@ -47,15 +46,12 @@ class ParslExecutor(metaclass=ABCMeta):
               persuaded otherwise. So if you're implementing an executor and want to
               @typeguard the constructor, you'll have to use List[Any] here.
 
-    The DataFlowKernel will set these two attributes before calling .start(),
+    The DataFlowKernel will set this attribute before calling .start(),
     if monitoring is enabled:
 
         monitoring_messages: Optional[Queue[TaggedMonitoringMessage]] - an executor
             can send messages to the monitoring hub by putting them into
             this queue.
-
-        submit_monitoring_radio: Optional[MonitoringRadioSender] - an executor can
-            send messages to the monitoring hub by sending them using this sender.
     """
 
     label: str = "undefined"
@@ -65,12 +61,10 @@ class ParslExecutor(metaclass=ABCMeta):
         self,
         *,
         monitoring_messages: Optional[Queue[TaggedMonitoringMessage]] = None,
-        submit_monitoring_radio: Optional[MonitoringRadioSender] = None,
         run_dir: str = ".",
         run_id: Optional[str] = None,
     ):
         self.monitoring_messages = monitoring_messages
-        self.submit_monitoring_radio = submit_monitoring_radio
         self.run_dir = os.path.abspath(run_dir)
         self.run_id = run_id
 
@@ -137,13 +131,3 @@ class ParslExecutor(metaclass=ABCMeta):
     @run_id.setter
     def run_id(self, value: Optional[str]) -> None:
         self._run_id = value
-
-    @property
-    def submit_monitoring_radio(self) -> Optional[MonitoringRadioSender]:
-        """Local radio for sending monitoring messages
-        """
-        return self._submit_monitoring_radio
-
-    @submit_monitoring_radio.setter
-    def submit_monitoring_radio(self, value: Optional[MonitoringRadioSender]) -> None:
-        self._submit_monitoring_radio = value
