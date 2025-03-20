@@ -1,7 +1,17 @@
 The WorkQueue Executor
 ======================
 
-The :class:`parsl.executors.WorkQueueExecutor` IS DESIGNED TO XYZ.
+The :class:`parsl.executors.WorkQueueExecutor` (WQEx) executes Parsl tasks
+using the `Work Queue, a framework from the Cooperative Computing Lab <https://ccl.cse.nd.edu/software/workqueue/>`_.
+WQEx dispatches Parsl tasks to Work Queue's "managers" and places
+the managers on to compute nodes via Parsl's `Providers <./providers/index.html>`_.
+
+This part of the documentation details the unique capabilities available through Work Queue.
+
+.. contents::
+   :local:
+   :depth: 1
+
 
 Heterogeneous Resources
 -----------------------
