@@ -34,9 +34,10 @@ These executors include:
 #. :class:`~parsl.executors.MPIExecutor` (MPEx): A specialized wrapper over HTEx designed to manage tasks which span multiple compute nodes.
    See `MPI and Multi-node Apps <../apps/mpi_apps.rst>`_.
 
-#. :class:`~parsl.executors.ThreadPoolExecutor`: A lightweight executor that runs on the same computer as the Parsl script.
+#. :class:`~parsl.executors.ThreadPoolExecutor`: A lightweight executor that runs on the same computer as the Parsl script. 
+   Tasks running on the ``ThreadPoolExecutor`` can start other Parsl tasks.
 
-Start by following the documentation for the chosen documentation.
+Start by following the documentation for the chosen executor.
 Continue by specifying how to request compute nodes in the `Provider <../providers/index.html>`_ documentation.
 
 .. toctree::
