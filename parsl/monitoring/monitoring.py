@@ -4,8 +4,9 @@ import logging
 import multiprocessing.synchronize as ms
 import os
 import queue
+import warnings
 from multiprocessing.queues import Queue
-from typing import TYPE_CHECKING, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import typeguard
 
@@ -13,7 +14,6 @@ from parsl.monitoring.errors import MonitoringHubStartError
 from parsl.monitoring.radios.filesystem_router import filesystem_router_starter
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.monitoring.radios.udp_router import udp_router_starter
-from parsl.monitoring.radios.zmq_router import zmq_router_starter
 from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import (
     SizedQueue,
@@ -41,7 +41,7 @@ class MonitoringHub(RepresentationMixin):
     def __init__(self,
                  hub_address: str,
                  hub_port: Optional[int] = None,
-                 hub_port_range: Tuple[int, int] = (55050, 56000),
+                 hub_port_range: Any = None,
 
                  workflow_name: Optional[str] = None,
                  workflow_version: Optional[str] = None,
@@ -60,12 +60,11 @@ class MonitoringHub(RepresentationMixin):
              Note that despite the similar name, this is not related to
              hub_port_range.
              Default: None
-        hub_port_range : tuple(int, int)
-             The port range for a ZMQ channel from an executor process
-             (for example, the interchange in the High Throughput Executor)
-             to deliver monitoring messages to the monitoring router.
-             Note that despite the similar name, this is not related to hub_port.
-             Default: (55050, 56000)
+        hub_port_range : unused
+             Unused, but retained until 2025-09-14 to avoid configuration errors.
+             This value previously configured one ZMQ channel inside the
+             HighThroughputExecutor. That ZMQ channel is now configured by the
+             interchange_port_range parameter of HighThroughputExecutor.
         workflow_name : str
              The name for the workflow. Default to the name of the parsl script
         workflow_version : str
@@ -92,6 +91,13 @@ class MonitoringHub(RepresentationMixin):
 
         self.hub_address = hub_address
         self.hub_port = hub_port
+
+        if hub_port_range is not None:
+            message = "Instead of MonitoringHub.hub_port_range, Use HighThroughputExecutor.interchange_port_range"
+            warnings.warn(message, DeprecationWarning)
+            logger.warning(message)
+        # This is used by RepresentationMixin so needs to exist as an attribute
+        # even though now it is otherwise unused.
         self.hub_port_range = hub_port_range
 
         self.logging_endpoint = logging_endpoint
@@ -123,13 +129,10 @@ class MonitoringHub(RepresentationMixin):
         # in the future, Queue will allow runtime subscripts.
 
         if TYPE_CHECKING:
-            zmq_comm_q: Queue[Union[int, str]]
             udp_comm_q: Queue[Union[int, str]]
         else:
-            zmq_comm_q: Queue
             udp_comm_q: Queue
 
-        zmq_comm_q = SizedQueue(maxsize=10)
         udp_comm_q = SizedQueue(maxsize=10)
 
         self.resource_msgs: Queue[TaggedMonitoringMessage]
@@ -137,20 +140,6 @@ class MonitoringHub(RepresentationMixin):
 
         self.router_exit_event: ms.Event
         self.router_exit_event = SpawnEvent()
-
-        self.zmq_router_proc = SpawnProcess(target=zmq_router_starter,
-                                            kwargs={"comm_q": zmq_comm_q,
-                                                    "resource_msgs": self.resource_msgs,
-                                                    "exit_event": self.router_exit_event,
-                                                    "hub_address": self.hub_address,
-                                                    "zmq_port_range": self.hub_port_range,
-                                                    "run_dir": dfk_run_dir,
-                                                    "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                                    },
-                                            name="Monitoring-ZMQ-Router-Process",
-                                            daemon=True,
-                                            )
-        self.zmq_router_proc.start()
 
         self.udp_router_proc = SpawnProcess(target=udp_router_starter,
                                             kwargs={"comm_q": udp_comm_q,
@@ -180,8 +169,8 @@ class MonitoringHub(RepresentationMixin):
                                      daemon=True,
                                      )
         self.dbm_proc.start()
-        logger.info("Started ZMQ router process %s, UDP router process %s and DBM process %s",
-                    self.zmq_router_proc.pid, self.udp_router_proc.pid, self.dbm_proc.pid)
+        logger.info("Started UDP router process %s and DBM process %s",
+                    self.udp_router_proc.pid, self.dbm_proc.pid)
 
         self.filesystem_proc = SpawnProcess(target=filesystem_router_starter,
                                             args=(self.resource_msgs, dfk_run_dir, self.router_exit_event),
@@ -192,20 +181,6 @@ class MonitoringHub(RepresentationMixin):
         logger.info("Started filesystem radio receiver process %s", self.filesystem_proc.pid)
 
         self.radio = MultiprocessingQueueRadioSender(self.resource_msgs)
-
-        try:
-            zmq_comm_q_result = zmq_comm_q.get(block=True, timeout=120)
-            zmq_comm_q.close()
-            zmq_comm_q.join_thread()
-        except queue.Empty:
-            logger.error("Monitoring ZMQ Router has not reported port in 120s. Aborting")
-            raise MonitoringHubStartError()
-
-        if isinstance(zmq_comm_q_result, str):
-            logger.error("MonitoringRouter sent an error message: %s", zmq_comm_q_result)
-            raise RuntimeError(f"MonitoringRouter failed to start: {zmq_comm_q_result}")
-
-        self.hub_zmq_port = zmq_comm_q_result
 
         try:
             udp_comm_q_result = udp_comm_q.get(block=True, timeout=120)
@@ -234,9 +209,6 @@ class MonitoringHub(RepresentationMixin):
             self.monitoring_hub_active = False
             logger.info("Setting router termination event")
             self.router_exit_event.set()
-
-            logger.info("Waiting for ZMQ router to terminate")
-            join_terminate_close_proc(self.zmq_router_proc)
 
             logger.info("Waiting for UDP router to terminate")
             join_terminate_close_proc(self.udp_router_proc)
