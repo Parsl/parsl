@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import copy
 from concurrent.futures import Future
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, List, Optional
 
 import typeguard
 
+from parsl.data_provider.staging import Staging
 from parsl.errors import OptionalModuleMissing
 from parsl.executors.base import ParslExecutor
 from parsl.utils import RepresentationMixin
@@ -40,6 +41,8 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
         self,
         executor: Executor,
         label: str = 'GlobusComputeExecutor',
+        storage_access: Optional[List[Staging]] = None,
+        working_dir: Optional[str] = None,
     ):
         """
         Parameters
@@ -52,6 +55,12 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
 
         label:
             a label to name the executor
+
+        storage_access:
+            a list of staging providers that will be used for file staging
+
+        working_dir:
+            The working dir to be used for file staging
         """
         if not _globus_compute_enabled:
             raise OptionalModuleMissing(
@@ -64,6 +73,8 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
         self.resource_specification = self.executor.resource_specification
         self.user_endpoint_config = self.executor.user_endpoint_config
         self.label = label
+        self.storage_access = storage_access
+        self.working_dir = working_dir
 
     def start(self) -> None:
         """ Start the Globus Compute Executor """
