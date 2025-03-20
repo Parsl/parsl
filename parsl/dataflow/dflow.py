@@ -1129,7 +1129,6 @@ class DataFlowKernel:
             executor.run_dir = self.run_dir
             if self.monitoring:
                 executor.monitoring_messages = self.monitoring.resource_msgs
-                executor.submit_monitoring_radio = self.monitoring.radio
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')

@@ -412,6 +412,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     def start(self):
         """Create the Interchange process and connect to it.
         """
+        super().start()
         if self.encrypted and self.cert_dir is None:
             logger.debug("Creating CurveZMQ certificates")
             self.cert_dir = curvezmq.create_certificates(self.logdir)
