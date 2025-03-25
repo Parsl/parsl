@@ -2,7 +2,7 @@
   "projectName": "parsl",
   "projectOwner": "Parsl",
   "files": [
-    "README.md"
+    "CONTRIBUTORS.md"
   ],
   "commitType": "docs",
   "commitConvention": "angular",
