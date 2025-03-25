@@ -29,6 +29,7 @@ from parsl.executors.high_throughput.manager_selector import (
 )
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
+from parsl.monitoring.radios.zmq_router import ZMQRadioReceiver, start_zmq_receiver
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
@@ -334,6 +335,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self._result_queue_thread_exit = threading.Event()
         self._result_queue_thread: Optional[threading.Thread] = None
 
+        self.zmq_monitoring: Optional[ZMQRadioReceiver]
+        self.zmq_monitoring = None
+        self.hub_zmq_port = None
+
     radio_mode = "htex"
     enable_mpi_mode: bool = False
     mpi_launcher: str = "mpiexec"
@@ -407,6 +412,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     def start(self):
         """Create the Interchange process and connect to it.
         """
+        super().start()
         if self.encrypted and self.cert_dir is None:
             logger.debug("Creating CurveZMQ certificates")
             self.cert_dir = curvezmq.create_certificates(self.logdir)
@@ -426,6 +432,15 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.command_client = zmq_pipes.CommandClient(
             self.loopback_address, self.interchange_port_range, self.cert_dir
         )
+
+        if self.monitoring_messages is not None:
+            self.zmq_monitoring = start_zmq_receiver(monitoring_messages=self.monitoring_messages,
+                                                     loopback_address=self.loopback_address,
+                                                     port_range=self.interchange_port_range,
+                                                     logdir=self.logdir,
+                                                     worker_debug=self.worker_debug,
+                                                     )
+            self.hub_zmq_port = self.zmq_monitoring.port
 
         self._result_queue_thread = None
         self._start_result_queue_thread()
@@ -536,7 +551,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                               "interchange_address": self.address,
                               "worker_ports": self.worker_ports,
                               "worker_port_range": self.worker_port_range,
-                              "hub_address": self.hub_address,
+                              "hub_address": self.loopback_address,
                               "hub_zmq_port": self.hub_zmq_port,
                               "logdir": self.logdir,
                               "heartbeat_threshold": self.heartbeat_threshold,
@@ -865,6 +880,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         logger.info("Waiting for result queue thread exit")
         if self._result_queue_thread:
             self._result_queue_thread.join()
+
+        if self.zmq_monitoring:
+            self.zmq_monitoring.close()
 
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 

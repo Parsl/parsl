@@ -316,6 +316,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Create submit process and collector thread to create, send, and
         retrieve Parsl tasks within the Work Queue system.
         """
+        super().start()
         self.tasks_lock = threading.Lock()
 
         # Create directories for data and results
