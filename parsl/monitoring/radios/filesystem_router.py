@@ -33,8 +33,16 @@ def filesystem_router_starter(q: Queue[TaggedMonitoringMessage], run_dir: str, e
     os.makedirs(tmp_dir, exist_ok=True)
     os.makedirs(new_dir, exist_ok=True)
 
-    while not exit_event.is_set():
+    # test was failing if we don't make this router hang round for a little while
+    polls_left = 3
+
+    while polls_left > 0:
         logger.debug("Start filesystem radio receiver loop")
+
+        # this will make polls_left count down once we've gone into
+        # exiting state
+        if exit_event.is_set():
+            polls_left -= 1
 
         # iterate over files in new_dir
         for filename in os.listdir(new_dir):
