@@ -481,7 +481,7 @@ class Interchange:
                         m['idle_since'] = None
                         logger.debug("Sent tasks: %s to manager %r", tids, manager_id)
                         # recompute real_capacity after sending tasks
-                        real_capacity = m['max_capacity'] - tasks_inflight
+                        real_capacity -= task_count
                         if real_capacity > 0:
                             logger.debug("Manager %r has free capacity %s", manager_id, real_capacity)
                             # ... so keep it in the interesting_managers list
