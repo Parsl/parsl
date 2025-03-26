@@ -4,6 +4,7 @@ import logging
 import multiprocessing.synchronize as ms
 import os
 import queue
+import time
 import warnings
 from multiprocessing.queues import Queue
 from typing import TYPE_CHECKING, Any, Optional, Union
@@ -201,7 +202,10 @@ class MonitoringHub(RepresentationMixin):
 
     def send(self, message: TaggedMonitoringMessage) -> None:
         logger.debug("Sending message type %s", message[0])
+        t_before = time.time()
         self.radio.send(message)
+        t_after = time.time()
+        logger.debug(f"Sent message in {t_after - t_before} seconds")
 
     def close(self) -> None:
         logger.info("Terminating Monitoring Hub")

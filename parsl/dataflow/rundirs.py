@@ -1,11 +1,15 @@
 import logging
 import os
+import random
+import time
 from glob import glob
+
+from parsl.dataflow.errors import RundirCreateError
 
 logger = logging.getLogger(__name__)
 
 
-def make_rundir(path: str) -> str:
+def make_rundir(path: str, *, max_tries: int = 3) -> str:
     """Create a numbered run directory under the specified path.
 
         ./runinfo <- specified path
@@ -17,23 +21,39 @@ def make_rundir(path: str) -> str:
     Args:
         - path (str): String path to root of all rundirs
     """
-    try:
-        if not os.path.exists(path):
-            os.makedirs(path)
+    backoff_time_s = 1 + random.random()
 
-        prev_rundirs = glob(os.path.join(path, "[0-9]*[0-9]"))
+    os.makedirs(path, exist_ok=True)
 
-        current_rundir = os.path.join(path, '000')
+    # try_count is 1-based for human readability
+    try_count = 1
+    while True:
 
-        if prev_rundirs:
-            # Since we globbed on files named as 0-9
-            x = sorted([int(os.path.basename(x)) for x in prev_rundirs])[-1]
-            current_rundir = os.path.join(path, '{0:03}'.format(x + 1))
+        # Python 3.10 introduces root_dir argument to glob which in future
+        # can be used to simplify this code, something like:
+        #   prev_rundirs = glob("[0-9]*[0-9]", root_dir=path)
+        full_prev_rundirs = glob(os.path.join(path, "[0-9]*[0-9]"))
+        prev_rundirs = [os.path.basename(d) for d in full_prev_rundirs]
 
-        os.makedirs(current_rundir)
-        logger.debug("Parsl run initializing in rundir: {0}".format(current_rundir))
-        return os.path.abspath(current_rundir)
+        next = max([int(d) for d in prev_rundirs] + [-1]) + 1
 
-    except Exception:
-        logger.exception("Failed to create run directory")
-        raise
+        current_rundir = os.path.join(path, '{0:03}'.format(next))
+
+        try:
+            os.makedirs(current_rundir)
+            logger.debug("rundir created: %s", current_rundir)
+            return os.path.abspath(current_rundir)
+        except FileExistsError:
+            logger.warning(f"Could not create rundir {current_rundir} on try {try_count}")
+
+            if try_count >= max_tries:
+                raise
+            else:
+                logger.debug("Backing off {}s", backoff_time_s)
+                time.sleep(backoff_time_s)
+                backoff_time_s *= 2 + random.random()
+                try_count += 1
+
+    # this should never be reached - the above loop should have either returned
+    # or raised an exception on the last try
+    raise RundirCreateError()
