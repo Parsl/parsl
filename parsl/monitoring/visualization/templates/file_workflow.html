@@ -1,0 +1,47 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<br />
+
+<h2> Files for Workflow {{ workflow['workflow_name'] }}</h2>
+
+<table class="table table-hover">
+    <thead>
+      <tr>
+          <th>Task</th>
+          <th>Task Id</th>
+          <th>Input Files</th>
+          <th>Output Files</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for tid, task in tasks | dictsort %}
+        <tr>
+            <td><a href="/workflow/{{ workflow['run_id'] }}/app/{{ task['task_func_name'] }}">{{ task['task_func_name'] }}</a></td>
+            <td><a href="/workflow/{{ workflow['run_id'] }}/task/{{ task['task_id'] }}">{{ task['task_id'] }}</a></td>
+            <td>
+                {% if task['task_inputs'] %}
+                    {% for input in task_files[tid]['inputs'] %}
+                        <a href="/file/{{ input['file_id'] }}/">{{ file_map[input['file_id']] }}</a><br />
+                    {% endfor %}
+                {% else %}
+                    None
+                {% endif %}
+            </td>
+            <td>
+                {% if task['task_outputs'] %}
+                    {% for output in task_files[tid]['outputs'] %}
+                        <a href="/file/{{ output['file_id'] }}/">{{ file_map[output['file_id']] }}</a><br />
+                    {% endfor %}
+                {% else %}
+                    None
+                {% endif %}
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+
+</table>
+
+{% endblock %}
