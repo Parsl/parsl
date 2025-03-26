@@ -78,7 +78,7 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
 
     def start(self) -> None:
         """ Start the Globus Compute Executor """
-        pass
+        super().start()
 
     def submit(self, func: Callable, resource_specification: Dict[str, Any], *args: Any, **kwargs: Any) -> Future:
         """ Submit func to globus-compute

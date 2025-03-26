@@ -314,6 +314,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         """Create submit process and collector thread to create, send, and
         retrieve Parsl tasks within the Work Queue system.
         """
+        super().start()
         self.tasks_lock = threading.Lock()
 
         # Create directories for data and results
@@ -333,7 +334,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         logger.debug("Starting WorkQueueExecutor")
 
-        self._port_mailbox = multiprocessing.Queue()
+        port_mailbox = multiprocessing.Queue()
 
         # Create a Process to perform WorkQueue submissions
         submit_process_kwargs = {"task_queue": self.task_queue,
@@ -351,7 +352,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                  "wq_log_dir": self.wq_log_dir,
                                  "project_password_file": self.project_password_file,
                                  "project_name": self.project_name,
-                                 "port_mailbox": self._port_mailbox,
+                                 "port_mailbox": port_mailbox,
                                  "coprocess": self.coprocess
                                  }
         self.submit_process = multiprocessing.Process(target=_work_queue_submit_wait,
@@ -366,7 +367,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.submit_process.start()
         self.collector_thread.start()
 
-        self._chosen_port = self._port_mailbox.get(timeout=60)
+        self._chosen_port = port_mailbox.get(timeout=60)
 
         logger.debug(f"Chosen listening port is {self._chosen_port}")
 

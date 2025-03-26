@@ -257,6 +257,13 @@ class Interchange:
                             'draining': m['draining']}
                     reply.append(resp)
 
+            elif command_req == "MANAGERS_PACKAGES":
+                reply = {}
+                for manager_id in self._ready_managers:
+                    m = self._ready_managers[manager_id]
+                    manager_id_str = manager_id.decode('utf-8')
+                    reply[manager_id_str] = m["packages"]
+
             elif command_req.startswith("HOLD_WORKER"):
                 cmd, s_manager = command_req.split(';')
                 manager_id = s_manager.encode('utf-8')
@@ -474,7 +481,7 @@ class Interchange:
                         m['idle_since'] = None
                         logger.debug("Sent tasks: %s to manager %r", tids, manager_id)
                         # recompute real_capacity after sending tasks
-                        real_capacity = m['max_capacity'] - tasks_inflight
+                        real_capacity -= task_count
                         if real_capacity > 0:
                             logger.debug("Manager %r has free capacity %s", manager_id, real_capacity)
                             # ... so keep it in the interesting_managers list
