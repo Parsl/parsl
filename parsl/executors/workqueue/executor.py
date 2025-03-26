@@ -31,6 +31,7 @@ from parsl.errors import OptionalModuleMissing
 from parsl.executors.errors import ExecutorError, InvalidResourceSpecification
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.workqueue import exec_parsl_function
+from parsl.multiprocessing import SpawnContext, SpawnProcess
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import CondorProvider, LocalProvider
 from parsl.providers.base import ExecutionProvider
@@ -260,8 +261,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         self.scaling_cores_per_worker = scaling_cores_per_worker
         self.label = label
-        self.task_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
-        self.collector_queue = multiprocessing.Queue()  # type: multiprocessing.Queue
+        self.task_queue: multiprocessing.Queue = SpawnContext.Queue()
+        self.collector_queue: multiprocessing.Queue = SpawnContext.Queue()
         self.address = address
         self.port = port
         self.executor_task_counter = -1
@@ -282,7 +283,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.autolabel_window = autolabel_window
         self.autocategory = autocategory
         self.max_retries = max_retries
-        self.should_stop = multiprocessing.Value(c_bool, False)
+        self.should_stop = SpawnContext.Value(c_bool, False)
         self.cached_envs = {}  # type: Dict[int, str]
         self.worker_options = worker_options
         self.worker_executable = worker_executable
@@ -334,7 +335,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
 
         logger.debug("Starting WorkQueueExecutor")
 
-        port_mailbox = multiprocessing.Queue()
+        port_mailbox = SpawnContext.Queue()
 
         # Create a Process to perform WorkQueue submissions
         submit_process_kwargs = {"task_queue": self.task_queue,
@@ -355,9 +356,9 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                  "port_mailbox": port_mailbox,
                                  "coprocess": self.coprocess
                                  }
-        self.submit_process = multiprocessing.Process(target=_work_queue_submit_wait,
-                                                      name="WorkQueue-Submit-Process",
-                                                      kwargs=submit_process_kwargs)
+        self.submit_process = SpawnProcess(target=_work_queue_submit_wait,
+                                           name="WorkQueue-Submit-Process",
+                                           kwargs=submit_process_kwargs)
 
         self.collector_thread = threading.Thread(target=self._collect_work_queue_results,
                                                  name="WorkQueue-collector-thread")
