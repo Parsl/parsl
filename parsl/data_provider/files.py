@@ -51,7 +51,7 @@ class File:
         # let the DFK set these values, if needed
         self.size: Optional[int] = None
         self.md5sum: Optional[str] = None
-        self.timestamp = timestamp
+        self.time_stamp = timestamp
 
         self.local_path: Optional[str] = None
         if uu_id is not None:
@@ -65,7 +65,7 @@ class File:
            object will be as the original object was when it was constructed.
         """
         logger.debug("Making clean copy of File object {}".format(repr(self)))
-        return File(self.url, self.uuid, self.timestamp)
+        return File(self.url, self.uuid, self.time_stamp)
 
     def __str__(self) -> str:
         return self.filepath
@@ -112,5 +112,10 @@ class File:
 
     @property
     def timestamp(self) -> Optional[str]:
-        """Stub to make this compatible with DynamicFile objects."""
-        return None
+        """Get the timestamp"""
+        return self.time_stamp
+
+    @timestamp.setter
+    def timestamp(self, timestamp: Optional[datetime.datetime]) -> None:
+        """Set the timestamp"""
+        self.time_stamp = timestamp
