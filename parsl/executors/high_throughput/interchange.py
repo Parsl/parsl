@@ -328,7 +328,7 @@ class Interchange:
             self.process_results_incoming(interesting_managers, monitoring_radio)
             self.expire_bad_managers(interesting_managers, monitoring_radio)
             self.expire_drained_managers(interesting_managers, monitoring_radio)
-            self.process_tasks_to_send(interesting_managers)
+            self.process_tasks_to_send(interesting_managers, monitoring_radio)
 
         self.zmq_context.destroy()
         delta = time.time() - start
@@ -452,7 +452,7 @@ class Interchange:
                 m['active'] = False
                 self._send_monitoring_info(monitoring_radio, m)
 
-    def process_tasks_to_send(self, interesting_managers: Set[bytes]) -> None:
+    def process_tasks_to_send(self, interesting_managers: Set[bytes], monitoring_radio: Optional[MonitoringRadioSender]) -> None:
         # Check if there are tasks that could be sent to managers
 
         logger.debug(
@@ -488,6 +488,7 @@ class Interchange:
                         else:
                             logger.debug("Manager %r is now saturated", manager_id)
                             interesting_managers.remove(manager_id)
+                    self._send_monitoring_info(monitoring_radio, m)
                 else:
                     interesting_managers.remove(manager_id)
                     # logger.debug("Nothing to send to manager {}".format(manager_id))
