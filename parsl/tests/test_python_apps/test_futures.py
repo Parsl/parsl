@@ -20,7 +20,7 @@ from parsl.data_provider.files import File
 
 
 @python_app
-def delay_incr(x, delay=0.0, outputs=()):
+def delay_incr(x, delay=0.0, outputs=None):
     import time
     if outputs:
         with open(outputs[0].filepath, 'w') as outs:

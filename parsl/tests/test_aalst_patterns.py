@@ -76,7 +76,7 @@ def slow_increment(x, dur=1):
 
 
 @python_app
-def join(inputs=[]):
+def join(inputs):
     return sum(inputs)
 
 

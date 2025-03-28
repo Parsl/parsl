@@ -197,7 +197,7 @@ class Memoizer:
             logger.debug("Ignoring kwarg %s", k)
             del filtered_kw[k]
 
-        if 'outputs' in task['kwargs']:
+        if task['kwargs'].get('outputs'):
             outputs = task['kwargs']['outputs']
             del filtered_kw['outputs']
             t.append(id_for_memo(outputs, output_ref=True))
