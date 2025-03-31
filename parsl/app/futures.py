@@ -42,6 +42,7 @@ class DataFuture(Future):
         if e:
             self.set_exception(e)
         else:
+            self.set_result(self.file_obj)
             # only update the file object if it is a file
             if self.data_flow_kernel.file_provenance and self.file_obj.scheme == 'file' and os.path.isfile(self.file_obj.filepath):
                 if not self.file_obj.timestamp:
@@ -51,7 +52,6 @@ class DataFuture(Future):
                 if not self.file_obj.md5sum:
                     self.file_obj.md5sum = md5(open(self.file_obj, 'rb').read()).hexdigest()
             self.data_flow_kernel.register_as_output(self.file_obj, self.app_fut.task_record)
-            self.set_result(self.file_obj)
 
     @typeguard.typechecked
     def __init__(self, fut: Future, file_obj: File, dfk: "DataFlowKernel", tid: int, app_fut: Optional[Future] = None) -> None:
