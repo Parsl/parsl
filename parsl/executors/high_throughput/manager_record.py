@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from typing_extensions import TypedDict
 
@@ -18,3 +18,4 @@ class ManagerRecord(TypedDict, total=False):
     timestamp: datetime
     parsl_version: str
     python_version: str
+    packages: Dict[str, str]
