@@ -12,7 +12,6 @@ from parsl.data_provider.dynamic_files import DynamicFileList
 def bash_watch(func: Callable,
                outputs: DynamicFileList,
                paths: Union[List[str], str] = ".",
-               *args,
                **kwargs) -> int:
     """This function wraps a bash_app and captures any files created by the bash_app. This is done
     by using the watchdog library to watch the specified paths for file creation events. It is most
@@ -87,7 +86,7 @@ def bash_watch(func: Callable,
         observer.schedule(watcher, pth, recursive=True)
     observer.start()
     # run the bash app and wait for it to complete
-    _f = func(outputs=i_outs, *args, **kwargs)
+    _f = func(outputs=i_outs, **kwargs)
     res = _f.result()
     observer.stop()
     observer.join()

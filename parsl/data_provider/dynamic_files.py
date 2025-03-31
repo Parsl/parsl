@@ -107,6 +107,11 @@ class DynamicFileList(Future):
                 return None
             return self.file_obj.timestamp
 
+        @timestamp.setter
+        def timestamp(self, timestamp: Optional[datetime]) -> None:
+            """Set the timestamp"""
+            self.file_obj.timestamp = timestamp
+
         @typeguard.typechecked
         def set_file(self, file_obj: Union[File, DataFuture, 'DynamicFileList.DynamicFile']):
             """Set the file_obj for this instance.
