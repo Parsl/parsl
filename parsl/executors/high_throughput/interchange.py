@@ -548,6 +548,8 @@ class Interchange:
                     if len(m['tasks']) == 0 and m['idle_since'] is None:
                         m['idle_since'] = time.time()
 
+                    self._send_monitoring_info(monitoring_radio, m)
+
                 logger.debug("Current tasks on manager %r: %s", manager_id, m["tasks"])
 
             logger.debug("leaving results_incoming section")

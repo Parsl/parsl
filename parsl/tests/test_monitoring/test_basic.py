@@ -120,7 +120,7 @@ def test_row_counts(tmpd_cwd, fresh_config):
             # Two entries: one showing manager active, one inactive
             result = connection.execute(text("SELECT COUNT(*) FROM node"))
             (c, ) = result.first()
-            assert c == 3
+            assert c == 4
 
         # There should be one block polling status
         # local provider has a status_polling_interval of 5s
