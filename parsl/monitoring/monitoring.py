@@ -9,7 +9,7 @@ from typing import Any, Optional, Union
 
 import typeguard
 
-from parsl.monitoring.radios.filesystem_router import filesystem_router_starter
+from parsl.monitoring.radios.filesystem_router import start_filesystem_receiver
 from parsl.monitoring.radios.udp_router import start_udp_receiver
 from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import (
@@ -120,9 +120,6 @@ class MonitoringHub(RepresentationMixin):
         self.resource_msgs: Queue[TaggedMonitoringMessage]
         self.resource_msgs = SizedQueue()
 
-        self.router_exit_event: ms.Event
-        self.router_exit_event = SpawnEvent()
-
         self.udp_receiver = start_udp_receiver(debug=self.monitoring_debug,
                                                logdir=dfk_run_dir,
                                                monitoring_messages=self.resource_msgs,
@@ -146,15 +143,11 @@ class MonitoringHub(RepresentationMixin):
         logger.info("Started UDP router process %s and DBM process %s",
                     self.udp_receiver.process.pid, self.dbm_proc.pid)
 
-        self.filesystem_proc = SpawnProcess(target=filesystem_router_starter,
-                                            kwargs={"q": self.resource_msgs,
-                                                    "run_dir": dfk_run_dir,
-                                                    "exit_event": self.router_exit_event},
-                                            name="Monitoring-Filesystem-Process",
-                                            daemon=True
-                                            )
-        self.filesystem_proc.start()
-        logger.info("Started filesystem radio receiver process %s", self.filesystem_proc.pid)
+        self.filesystem_receiver = start_filesystem_receiver(debug=self.monitoring_debug,
+                                                             logdir=dfk_run_dir,
+                                                             monitoring_messages=self.resource_msgs
+                                                             )
+        logger.info("Started filesystem radio receiver process %s", self.filesystem_receiver.process.pid)
 
         self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, self.udp_receiver.port)
 
@@ -165,7 +158,6 @@ class MonitoringHub(RepresentationMixin):
         if self.monitoring_hub_active:
             self.monitoring_hub_active = False
             logger.info("Setting router termination event")
-            self.router_exit_event.set()
 
             logger.info("Waiting for UDP router to terminate")
             self.udp_receiver.close()
@@ -177,7 +169,7 @@ class MonitoringHub(RepresentationMixin):
             logger.debug("Finished waiting for DBM termination")
 
             logger.info("Terminating filesystem radio receiver process")
-            join_terminate_close_proc(self.filesystem_proc)
+            self.filesystem_receiver.close()
 
             logger.info("Closing monitoring multiprocessing queues")
             self.resource_msgs.close()
