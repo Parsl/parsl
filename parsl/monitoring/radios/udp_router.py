@@ -4,15 +4,26 @@ import logging
 import multiprocessing.queues as mpq
 import os
 import pickle
+import queue
 import socket
 import time
+from multiprocessing.context import SpawnProcess as SpawnProcessType
+from multiprocessing.queues import Queue
 from multiprocessing.synchronize import Event
-from typing import Optional
+from multiprocessing.synchronize import Event as EventType
+from typing import Optional, Union
 
 import typeguard
 
 from parsl.log_utils import set_file_logger
+from parsl.monitoring.errors import MonitoringRouterStartError
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
+from parsl.multiprocessing import (
+    SizedQueue,
+    SpawnEvent,
+    SpawnProcess,
+    join_terminate_close_proc,
+)
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
@@ -137,3 +148,53 @@ def udp_router_starter(*,
             router.start()
         except Exception:
             router.logger.exception("UDP router start exception")
+
+
+class UDPRadioReceiver():
+    def __init__(self, *, process: SpawnProcessType, exit_event: EventType, port: int) -> None:
+        self.process = process
+        self.exit_event = exit_event
+        self.port = port
+
+    def close(self) -> None:
+        self.exit_event.set()
+        join_terminate_close_proc(self.process)
+
+
+def start_udp_receiver(*,
+                       monitoring_messages: Queue,
+                       port: Optional[int],
+                       logdir: str,
+                       debug: bool) -> UDPRadioReceiver:
+
+    udp_comm_q: Queue[Union[int, str]]
+    udp_comm_q = SizedQueue(maxsize=10)
+
+    router_exit_event = SpawnEvent()
+
+    router_proc = SpawnProcess(target=udp_router_starter,
+                               kwargs={"comm_q": udp_comm_q,
+                                       "resource_msgs": monitoring_messages,
+                                       "exit_event": router_exit_event,
+                                       "udp_port": port,
+                                       "run_dir": logdir,
+                                       "logging_level": logging.DEBUG if debug else logging.INFO,
+                                       },
+                               name="Monitoring-UDP-Router-Process",
+                               daemon=True,
+                               )
+    router_proc.start()
+
+    try:
+        udp_comm_q_result = udp_comm_q.get(block=True, timeout=120)
+        udp_comm_q.close()
+        udp_comm_q.join_thread()
+    except queue.Empty:
+        logger.error("Monitoring UDP router has not reported port in 120s. Aborting")
+        raise MonitoringRouterStartError()
+
+    if isinstance(udp_comm_q_result, str):
+        logger.error("MonitoringRouter sent an error message: %s", udp_comm_q_result)
+        raise RuntimeError(f"MonitoringRouter failed to start: {udp_comm_q_result}")
+
+    return UDPRadioReceiver(process=router_proc, exit_event=router_exit_event, port=udp_comm_q_result)
