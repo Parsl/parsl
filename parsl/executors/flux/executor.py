@@ -248,6 +248,8 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
         if wait:
             self._submission_thread.join()
 
+        super().shutdown()
+
     def submit(
         self,
         func: Callable,
