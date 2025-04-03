@@ -134,3 +134,5 @@ class GlobusComputeExecutor(ParslExecutor, RepresentationMixin):
         self.executor.shutdown(wait=False, cancel_futures=True)
         result_watcher = self.executor._get_result_watcher()
         result_watcher.shutdown(wait=False, cancel_futures=True)
+
+        super().shutdown()
