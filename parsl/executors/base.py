@@ -99,6 +99,9 @@ class ParslExecutor(metaclass=ABCMeta):
         """Shutdown the executor.
 
         This includes all attached resources such as workers and controllers.
+
+        Executors should call super().shutdown() as part of their overridden
+        implementation.
         """
         pass
 
