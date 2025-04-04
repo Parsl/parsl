@@ -4,8 +4,9 @@ import time
 import pytest
 
 import parsl
-from parsl import HighThroughputExecutor
+from parsl import HighThroughputExecutor, ThreadPoolExecutor
 from parsl.config import Config
+from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.monitoring import MonitoringHub
 
 
@@ -22,6 +23,13 @@ def this_app():
 
 # The below fresh configs are for use in parametrization, and should return
 # a configuration that is suitably configured for monitoring.
+
+def thread_config():
+    c = Config(executors=[ThreadPoolExecutor()],
+               monitoring=MonitoringHub(hub_address="localhost",
+                                        resource_monitoring_interval=0))
+    return c
+
 
 def htex_config():
     """This config will use htex's default htex-specific monitoring radio mode"""
@@ -121,19 +129,28 @@ def row_counts_parametrized(tmpd_cwd, fresh_config):
             (c, ) = result.first()
             assert c == 4
 
-        # There should be one block polling status
-        # local provider has a status_polling_interval of 5s
-        result = connection.execute(text("SELECT COUNT(*) FROM block"))
-        (c, ) = result.first()
-        assert c >= 2
+        if isinstance(config.executors[0], BlockProviderExecutor):
+            # This case assumes that a BlockProviderExecutor is actually being
+            # used with blocks. It might not be (for example, Work Queue and
+            # Task Vine can be configured to launch their own workers; and it
+            # is a valid (although occasional) use of htex to launch executors
+            # manually.
+            # If you just added test cases like that and are wondering why this
+            # assert is failing, that might be why.
+            result = connection.execute(text("SELECT COUNT(*) FROM block"))
+            (c, ) = result.first()
+            assert c >= 2, "There should be at least two block statuses from a BlockProviderExecutor"
 
         result = connection.execute(text("SELECT COUNT(*) FROM resource"))
         (c, ) = result.first()
-        assert c >= 1
+        if isinstance(config.executors[0], ThreadPoolExecutor):
+            assert c == 0, "Thread pool executors should not be recording resources"
+        else:
+            assert c >= 1, "Task execution should have created some resource records"
 
 
 @pytest.mark.local
-@pytest.mark.parametrize("fresh_config", [htex_config, htex_filesystem_config, htex_udp_config])
+@pytest.mark.parametrize("fresh_config", [thread_config, htex_config, htex_filesystem_config, htex_udp_config])
 def test_row_counts_base(tmpd_cwd, fresh_config):
     row_counts_parametrized(tmpd_cwd, fresh_config)
 
