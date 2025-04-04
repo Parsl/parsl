@@ -4,8 +4,9 @@ import time
 import pytest
 
 import parsl
-from parsl import HighThroughputExecutor
+from parsl import HighThroughputExecutor, ThreadPoolExecutor
 from parsl.config import Config
+from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.taskvine import TaskVineExecutor, TaskVineManagerConfig
 from parsl.monitoring import MonitoringHub
 
@@ -72,8 +73,16 @@ def taskvine_config():
     return c
 
 
+def thread_config():
+    c = Config(executors=[ThreadPoolExecutor()],
+               monitoring=MonitoringHub(hub_address="localhost",
+                                        resource_monitoring_interval=0))
+    return c
+
+
 @pytest.mark.local
-@pytest.mark.parametrize("fresh_config", [htex_config, htex_filesystem_config, htex_udp_config, workqueue_config, taskvine_config])
+@pytest.mark.parametrize("fresh_config", [thread_config, htex_config, htex_filesystem_config,
+                                          htex_udp_config, workqueue_config, taskvine_config])
 def test_row_counts(tmpd_cwd, fresh_config):
     # this is imported here rather than at module level because
     # it isn't available in a plain parsl install, so this module
@@ -122,12 +131,16 @@ def test_row_counts(tmpd_cwd, fresh_config):
             (c, ) = result.first()
             assert c == 4
 
-        # There should be one block polling status
-        # local provider has a status_polling_interval of 5s
-        result = connection.execute(text("SELECT COUNT(*) FROM block"))
-        (c, ) = result.first()
-        assert c >= 2
+        if isinstance(config.executors[0], BlockProviderExecutor):
+            # There should be one block polling status
+            # local provider has a status_polling_interval of 5s
+            result = connection.execute(text("SELECT COUNT(*) FROM block"))
+            (c, ) = result.first()
+            assert c >= 2
 
         result = connection.execute(text("SELECT COUNT(*) FROM resource"))
         (c, ) = result.first()
-        assert c >= 1
+        if isinstance(config.executors[0], ThreadPoolExecutor):
+            assert c == 0, "Thread pool executors should not be recording resources"
+        else:
+            assert c >= 1
