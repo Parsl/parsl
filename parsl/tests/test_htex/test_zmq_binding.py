@@ -12,12 +12,15 @@ from parsl.executors.high_throughput.interchange import Interchange
 from parsl.executors.high_throughput.manager_selector import RandomManagerSelector
 
 
-def make_interchange(*, interchange_address: Optional[str], cert_dir: Optional[str]) -> Interchange:
+def make_interchange(*,
+                     interchange_address: Optional[str],
+                     cert_dir: Optional[str],
+                     worker_ports: Optional[tuple[int, int]] = None) -> Interchange:
     return Interchange(interchange_address=interchange_address,
                        cert_dir=cert_dir,
                        client_address="127.0.0.1",
                        client_ports=(50055, 50056, 50057),
-                       worker_ports=None,
+                       worker_ports=worker_ports,
                        worker_port_range=(54000, 55000),
                        hub_address=None,
                        hub_zmq_port=None,
@@ -105,3 +108,10 @@ def test_limited_interface_binding(cert_dir: Optional[str]):
     assert len(matched_conns) == 1
     # laddr.ip can return ::ffff:127.0.0.1 when using IPv6
     assert address in matched_conns[0].laddr.ip
+
+
+@pytest.mark.local
+@pytest.mark.parametrize("encrypted", (True, False), indirect=True)
+def test_fixed_ports(cert_dir: Optional[str]):
+    ix = make_interchange(interchange_address=None, cert_dir=cert_dir, worker_ports=(51117, 51118))
+    assert ix.interchange_address == "*"
