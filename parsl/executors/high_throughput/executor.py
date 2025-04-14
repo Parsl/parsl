@@ -599,20 +599,20 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self._result_queue_thread.start()
         logger.debug("Started result queue thread: %r", self._result_queue_thread)
 
-    def hold_worker(self, worker_id: str) -> None:
-        """Puts a worker on hold, preventing scheduling of additional tasks to it.
+    def _hold_manager(self, manager_id: str) -> None:
+        """Puts a manager on hold, preventing scheduling of additional tasks to it.
 
         This is called "hold" mostly because this only stops scheduling of tasks,
-        and does not actually kill the worker.
+        and does not actually kill the manager or workers.
 
         Parameters
         ----------
 
-        worker_id : str
-            Worker id to be put on hold
+        manager_id : str
+            Manager id to be put on hold
         """
-        self.command_client.run("HOLD_WORKER;{}".format(worker_id))
-        logger.debug("Sent hold request to manager: {}".format(worker_id))
+        self.command_client.run("HOLD_WORKER;{}".format(manager_id))
+        logger.debug("Sent hold request to manager: {}".format(manager_id))
 
     @property
     def outstanding(self) -> int:
@@ -656,7 +656,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         for manager in managers:
             if manager['block_id'] == block_id:
                 logger.debug("Sending hold to manager: {}".format(manager['manager']))
-                self.hold_worker(manager['manager'])
+                self._hold_manager(manager['manager'])
 
     def submit(self, func, resource_specification, *args, **kwargs):
         """Submits work to the outgoing_q.
