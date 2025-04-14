@@ -786,7 +786,7 @@ class DataFlowKernel:
             logger.debug("Not performing input staging")
             return args, kwargs, func
 
-        inputs = kwargs.get('inputs', [])
+        inputs = kwargs.get('inputs') or []
         for idx, f in enumerate(inputs):
             (inputs[idx], func) = self.data_manager.optionally_stage_in(f, func, executor)
 
@@ -805,7 +805,7 @@ class DataFlowKernel:
 
     def _add_output_deps(self, executor: str, args: Sequence[Any], kwargs: Dict[str, Any], app_fut: AppFuture, func: Callable) -> Callable:
         logger.debug("Adding output dependencies")
-        outputs = kwargs.get('outputs', [])
+        outputs = kwargs.get('outputs') or []
         app_fut._outputs = []
 
         # Pass over all possible outputs: the outputs kwarg, stdout and stderr
@@ -888,7 +888,7 @@ class DataFlowKernel:
             check_dep(dep)
 
         # Check for futures in inputs=[<fut>...]
-        for dep in kwargs.get('inputs', []):
+        for dep in kwargs.get('inputs') or []:
             check_dep(dep)
 
         return depends
@@ -936,7 +936,7 @@ class DataFlowKernel:
                 append_failure(e, dep)
 
         # Check for futures in inputs=[<fut>...]
-        if 'inputs' in kwargs:
+        if kwargs.get('inputs'):
             new_inputs = []
             for dep in kwargs['inputs']:
                 try:

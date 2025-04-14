@@ -5,7 +5,7 @@ from parsl.app.app import bash_app
 
 
 @bash_app
-def multiline(inputs=(), outputs=(), stderr=None, stdout=None):
+def multiline(inputs, outputs, stderr=None, stdout=None):
     return """echo {inputs[0]} &> {outputs[0]}
     echo {inputs[1]} &> {outputs[1]}
     echo {inputs[2]} &> {outputs[2]}

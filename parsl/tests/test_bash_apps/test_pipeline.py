@@ -6,7 +6,7 @@ from parsl.data_provider.files import File
 
 
 @bash_app
-def increment(inputs=(), outputs=(), stdout=None, stderr=None):
+def increment(inputs, outputs, stdout=None, stderr=None):
     cmd_line = """
     if ! [ -f {inputs[0]} ] ; then exit 43 ; fi
     x=$(cat {inputs[0]})
@@ -16,7 +16,7 @@ def increment(inputs=(), outputs=(), stdout=None, stderr=None):
 
 
 @bash_app
-def slow_increment(dur, inputs=(), outputs=(), stdout=None, stderr=None):
+def slow_increment(dur, inputs, outputs, stdout=None, stderr=None):
     cmd_line = """
     x=$(cat {inputs[0]})
     echo $(($x+1)) > {outputs[0]}

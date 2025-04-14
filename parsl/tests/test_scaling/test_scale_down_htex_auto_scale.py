@@ -39,7 +39,7 @@ def local_config():
 
 
 @python_app
-def waiting_app(ident: int, outputs=(), inputs=()):
+def waiting_app(ident: int, outputs, inputs):
     import pathlib
     import time
 

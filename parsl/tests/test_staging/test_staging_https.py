@@ -24,25 +24,25 @@ _exp_sorted = sorted(f"{i}\n" for i in range(1, 101))[:20]
 
 
 @python_app
-def sort_strings(inputs=(), outputs=()):
+def sort_strings(inputs, outputs):
     from parsl.tests.test_staging import read_sort_write
     read_sort_write(inputs[0].filepath, outputs[0].filepath)
 
 
 @python_app
-def sort_strings_kw(*, x=None, outputs=()):
+def sort_strings_kw(*, x=None, outputs):
     from parsl.tests.test_staging import read_sort_write
     read_sort_write(x.filepath, outputs[0].filepath)
 
 
 @python_app
-def sort_strings_arg(x, /, outputs=()):
+def sort_strings_arg(x, /, outputs):
     from parsl.tests.test_staging import read_sort_write
     read_sort_write(x.filepath, outputs[0].filepath)
 
 
 @python_app(executors=['other'])
-def sort_strings_additional_executor(inputs=(), outputs=()):
+def sort_strings_additional_executor(inputs, outputs):
     from parsl.tests.test_staging import read_sort_write
     read_sort_write(inputs[0].filepath, outputs[0].filepath)
 

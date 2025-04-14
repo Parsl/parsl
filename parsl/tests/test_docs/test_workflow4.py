@@ -5,17 +5,17 @@ from parsl.data_provider.files import File
 
 
 @bash_app
-def generate(outputs=()):
+def generate(outputs):
     return "echo 1 &> {o}".format(o=outputs[0])
 
 
 @bash_app
-def concat(inputs=(), outputs=(), stdout=None, stderr=None):
+def concat(inputs, outputs, stdout=None, stderr=None):
     return "cat {0} >> {1}".format(" ".join(map(lambda x: x.filepath, inputs)), outputs[0])
 
 
 @python_app
-def total(inputs=()):
+def total(inputs):
     with open(inputs[0].filepath, "r") as f:
         return sum(int(line) for line in f)
 
