@@ -491,7 +491,6 @@ class Interchange:
                     self._send_monitoring_info(monitoring_radio, m)
                 else:
                     interesting_managers.remove(manager_id)
-                    # logger.debug("Nothing to send to manager {}".format(manager_id))
             logger.debug("leaving _ready_managers section, with %s managers still interesting", len(interesting_managers))
         else:
             logger.debug("either no interesting managers or no tasks, so skipping manager pass")
