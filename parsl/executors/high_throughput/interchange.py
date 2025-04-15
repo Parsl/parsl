@@ -605,8 +605,6 @@ def start_file_logger(filename: str, level: int = logging.DEBUG, format_string: 
 
         )
 
-    global logger
-    logger = logging.getLogger(LOGGER_NAME)
     logger.setLevel(level)
     handler = logging.FileHandler(filename)
     handler.setLevel(level)
