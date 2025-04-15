@@ -41,8 +41,8 @@ from parsl.utils import setproctitle
 from .errors import WorkQueueFailure, WorkQueueTaskFailure
 
 try:
-    import work_queue as wq
-    from work_queue import (
+    import ndcctools.work_queue as wq
+    from ndcctools.work_queue import (
         WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT,
         WORK_QUEUE_DEFAULT_PORT,
         WorkQueue,

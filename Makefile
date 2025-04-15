@@ -4,10 +4,11 @@ GIT := $(shell which git || echo ".git_is_missing")
 CWD := $(shell pwd)
 DEPS := .deps
 CCTOOLS_INSTALL := /tmp/cctools
+CCTOOLS_PYTHONPATH := $(CCTOOLS_INSTALL)/lib/python3.12/site-packages
 MPICH=mpich
 OPENMPI=openmpi
 export PATH := $(CCTOOLS_INSTALL)/bin/:$(PATH)
-export CCTOOLS_VERSION=7.8.0
+export CCTOOLS_VERSION=7.15.1
 export HYDRA_LAUNCHER=fork
 export OMPI_MCA_rmaps_base_oversubscribe=yes
 MPI=$(MPICH)
@@ -74,11 +75,11 @@ $(CCTOOLS_INSTALL):	#CCtools contains both taskvine and workqueue so install onl
 
 .PHONY: vineex_local_test
 vineex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with taskvine_ex config
-	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/taskvine_ex.py --random-order --durations 10
+	PYTHONPATH=$(CCTOOLS_PYTHONPATH)  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/taskvine_ex.py --random-order --durations 10
 
 .PHONY: wqex_local_test
 wqex_local_test: $(CCTOOLS_INSTALL)  ## run all tests with workqueue_ex config
-	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/workqueue_ex.py --random-order --durations 10
+	PYTHONPATH=$(CCTOOLS_PYTHONPATH)  pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/workqueue_ex.py --random-order --durations 10
 
 .PHONY: radical_local_test
 radical_local_test:
@@ -89,7 +90,7 @@ radical_local_test:
 .PHONY: config_local_test
 config_local_test: $(CCTOOLS_INSTALL)
 	pip3 install ".[monitoring,visualization,proxystore,kubernetes]"
-	PYTHONPATH=/tmp/cctools/lib/python3.8/site-packages pytest parsl/tests/ -k "not cleannet" --config local --random-order --durations 10
+	PYTHONPATH=$(CCTOOLS_PYTHONPATH) pytest parsl/tests/ -k "not cleannet" --config local --random-order --durations 10
 
 .PHONY: site_test
 site_test:
