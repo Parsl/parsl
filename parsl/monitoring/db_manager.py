@@ -1,6 +1,7 @@
 import datetime
 import logging
 import multiprocessing.queues as mpq
+import multiprocessing.synchronize as mpe
 import os
 import queue
 import threading
@@ -278,11 +279,13 @@ class Database:
 
 class DatabaseManager:
     def __init__(self,
+                 *,
                  db_url: str = 'sqlite:///runinfo/monitoring.db',
                  run_dir: str = '.',
                  logging_level: int = logging.INFO,
                  batching_interval: float = 1,
                  batching_threshold: float = 99999,
+                 exit_event: mpe.Event
                  ):
 
         self.workflow_end = False
@@ -306,6 +309,8 @@ class DatabaseManager:
         self.pending_node_queue: queue.Queue[MonitoringMessage] = queue.Queue()
         self.pending_block_queue: queue.Queue[MonitoringMessage] = queue.Queue()
         self.pending_resource_queue: queue.Queue[MonitoringMessage] = queue.Queue()
+
+        self.external_exit_event = exit_event
 
     def start(self,
               resource_queue: mpq.Queue) -> None:
@@ -555,15 +560,16 @@ class DatabaseManager:
         while not kill_event.is_set() or logs_queue.qsize() != 0:
             logger.debug("Checking STOP conditions: kill event: %s, queue has entries: %s",
                          kill_event.is_set(), logs_queue.qsize() != 0)
+
+            if self.external_exit_event.is_set():
+                self.close()
+
             try:
                 x = logs_queue.get(timeout=0.1)
             except queue.Empty:
                 continue
             else:
-                if x == 'STOP':
-                    self.close()
-                else:
-                    self._dispatch_to_internal(x)
+                self._dispatch_to_internal(x)
 
     def _dispatch_to_internal(self, x: Tuple) -> None:
         assert isinstance(x, tuple)
@@ -678,11 +684,11 @@ class DatabaseManager:
 
 @wrap_with_logs(target="database_manager")
 @typeguard.typechecked
-def dbm_starter(exception_q: mpq.Queue,
-                resource_msgs: mpq.Queue,
+def dbm_starter(resource_msgs: mpq.Queue,
                 db_url: str,
                 run_dir: str,
-                logging_level: int) -> None:
+                logging_level: int,
+                exit_event: mpe.Event) -> None:
     """Start the database manager process
 
     The DFK should start this function. The args, kwargs match that of the monitoring config
@@ -693,16 +699,16 @@ def dbm_starter(exception_q: mpq.Queue,
     try:
         dbm = DatabaseManager(db_url=db_url,
                               run_dir=run_dir,
-                              logging_level=logging_level)
+                              logging_level=logging_level,
+                              exit_event=exit_event)
         logger.info("Starting dbm in dbm starter")
         dbm.start(resource_msgs)
     except KeyboardInterrupt:
         logger.exception("KeyboardInterrupt signal caught")
         dbm.close()
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("dbm.start exception")
-        exception_q.put(("DBM", str(e)))
         dbm.close()
 
     logger.info("End of dbm_starter")

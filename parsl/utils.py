@@ -341,6 +341,8 @@ class Timer:
 
     def _wake_up_timer(self) -> None:
         logger.debug("Wake up timer: before first event wait")
+        self.make_callback()
+
         while not self._kill_event.wait(self.interval):
             logger.debug("Wake up timer: before make_callback")
             self.make_callback()

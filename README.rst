@@ -1,6 +1,6 @@
 Parsl - Parallel Scripting Library
 ==================================
-|licence| |docs| |NSF-1550588| |NSF-1550476| |NSF-1550562| |NSF-1550528| |NumFOCUS| |CZI-EOSS| 
+|licence| |docs| |All Contributors| |NSF-1550588| |NSF-1550476| |NSF-1550562| |NSF-1550528| |NumFOCUS| |CZI-EOSS| 
 
 Parsl extends parallelism in Python beyond a single computer.
 
@@ -67,6 +67,9 @@ then explore the `parallel computing patterns <https://parsl.readthedocs.io/en/s
 .. |NumFOCUS| image:: https://img.shields.io/badge/powered%20by-NumFOCUS-orange.svg?style=flat&colorA=E1523D&colorB=007D8A
     :target: https://numfocus.org
     :alt: Powered by NumFOCUS
+.. |All Contributors| image:: https://img.shields.io/github/all-contributors/Parsl/parsl?color=ee8449&style=flat-square ](#contributors)
+    :target: https://allcontributors.org/
+    :alt: All Contributors
 
    
 Quickstart
