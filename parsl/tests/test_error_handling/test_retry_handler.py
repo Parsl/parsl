@@ -4,6 +4,7 @@ import pytest
 
 import parsl
 from parsl import bash_app
+from parsl.dataflow.retries import CompleteWithAlternateValue
 from parsl.tests.configs.local_threads import fresh_config
 
 
