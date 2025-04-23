@@ -1,4 +1,5 @@
 import logging
+import os
 import pathlib
 from typing import Optional
 from unittest import mock
@@ -26,7 +27,7 @@ def make_interchange(*, interchange_address: Optional[str], cert_dir: Optional[s
                        logging_level=logging.INFO,
                        manager_selector=RandomManagerSelector(),
                        poll_period=10,
-                       run_id="test_run_id")
+                       run_id="test_run_id", submit_pid=os.getpid())
 
 
 @pytest.fixture

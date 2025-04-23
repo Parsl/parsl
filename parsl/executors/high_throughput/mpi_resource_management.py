@@ -100,8 +100,8 @@ class TaskScheduler:
     def put_task(self, task) -> None:
         return self.pending_task_q.put(task)
 
-    def get_result(self, block: bool = True, timeout: Optional[float] = None):
-        return self.pending_result_q.get(block, timeout)
+    def get_result(self):
+        return self.pending_result_q.get(True, None)  # these removed params are never used
 
 
 # TODO: maybe this should be more pluggable?
@@ -134,8 +134,8 @@ class FakeTaskScheduler(TaskScheduler):
 
         # return self.pending_task_q.put(task)
 
-    def get_result(self, block: bool, timeout: float):
-        return self.pending_result_q.get(block, timeout=timeout)
+    def get_result(self):
+        return self.pending_result_q.get(True, timeout=None)
 
 
 class MPITaskScheduler(TaskScheduler):

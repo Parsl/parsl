@@ -358,8 +358,8 @@ class Manager:
             poll_duration_s = max(0, next_interesting_event_time - time.time())
             socks = dict(poller.poll(timeout=poll_duration_s * 1000))
 
-            if self.task_incoming in socks and socks[self.task_incoming] == zmq.POLLIN:
-                _, pkl_msg = self.task_incoming.recv_multipart()
+            if task_incoming in socks and socks[task_incoming] == zmq.POLLIN:
+                _, pkl_msg = task_incoming.recv_multipart()
                 try:
                     tasks = pickle.loads(pkl_msg)
                 except Exception:

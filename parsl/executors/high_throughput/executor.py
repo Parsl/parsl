@@ -575,7 +575,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         config_pickle = pickle.dumps(interchange_config)
 
         if self.benc_interchange_cli == "rust":
-            self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange " + str(self.cert_dir)], shell=True)
+            self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange", str(self.cert_dir)], shell=False)
             # when i was playing with performance, I did a dev/null redirect here
             # to reduce console load. but then you lose panic-style debug output
             # self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange " +
@@ -605,17 +605,18 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         elif self.benc_interchange_cli == "python":
             self.interchange_proc = subprocess.Popen(b"interchange.py", stdin=subprocess.PIPE)
+
+            stdin = self.interchange_proc.stdin
+            assert stdin is not None, "Popen should have created an IO object (vs default None) because of PIPE mode"
+
+            logger.debug("Popened interchange process. Writing config object")
+            stdin.write(config_pickle)
+            stdin.flush()
+            stdin.close()
+            logger.debug("Sent config object")
+
         else:
             raise RuntimeError("unknown benc-interchange type")
-
-        stdin = self.interchange_proc.stdin
-        assert stdin is not None, "Popen should have created an IO object (vs default None) because of PIPE mode"
-
-        logger.debug("Popened interchange process. Writing config object")
-        stdin.write(config_pickle)
-        stdin.flush()
-        stdin.close()
-        logger.debug("Sent config object")
 
         logger.debug("Requesting worker ports")
         try:
@@ -882,8 +883,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                 job_status[job_id].state = JobState.MISSING
                 if job_status[job_id].message is None:
                     job_status[job_id].message = (
-                        "Job is marked as MISSING since the workers failed to register "
-                        "to the executor. Check the stdout/stderr logs in the submit_scripts "
+                        f"Job {job_id} is marked as MISSING since the workers failed to register "
+                        "to the interchange. Check the stdout/stderr logs in the submit_scripts "
                         "directory for more debug information"
                     )
         return job_status
