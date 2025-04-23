@@ -582,7 +582,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             #                           str(self.cert_dir) + " >/dev/null 2>/dev/null"], shell=True)
         elif self.benc_interchange_cli == "elixir":
             # this is going to leave residual elixirchange around because killing shell won't kill children...
-            self.interchange_proc = subprocess.Popen(args=["cd elixirchange; MIX_ENV=prod mix run --no-halt"], shell=True)
+            self.interchange_proc = subprocess.Popen(args=["cd elixirchange; MIX_ENV=prod mix run --no-halt"], shell=True, stdin=subprocess.PIPE)
         elif self.benc_interchange_cli == "idris2":
             self.interchange_proc = subprocess.Popen(args=["cd idris2interchange ; "
                                                            "gcc -shared gluezmq.c -lzmq -o glue_zmq.so && "
