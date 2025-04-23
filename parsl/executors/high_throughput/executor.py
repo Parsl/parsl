@@ -575,7 +575,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         config_pickle = pickle.dumps(interchange_config)
 
         if self.benc_interchange_cli == "rust":
-            self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange", str(self.cert_dir)], shell=False)
+            self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange", str(self.cert_dir)], shell=False, stdin=subprocess.PIPE)
             # when i was playing with performance, I did a dev/null redirect here
             # to reduce console load. but then you lose panic-style debug output
             # self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange " +
@@ -587,7 +587,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             self.interchange_proc = subprocess.Popen(args=["cd idris2interchange ; "
                                                            "gcc -shared gluezmq.c -lzmq -o glue_zmq.so && "
                                                            "gcc -shared pollhelper.c -o pollhelper.so && gcc -shared bytes.c -o bytes.so && "
-                                                           # "rm -rf build/ && idris2 Main.idr -p sop -p elab-util -p contrib -x main"],
+                                                           "rm -rf build/ && idris2 Main.idr -p sop -p elab-util -p contrib -x main"],
                                                            # shell=True, stdin=subprocess.PIPE)
                                                            # "rm -rf build/ && "
                                                            # "idris2 Main.idr -p sop -p elab-util -p contrib -x main 2>&1 | tee i2ic.log"],
@@ -596,7 +596,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                                            # "valgrind --trace-children=yes --leak-check=full "
                                                            # "idris2 Main.idr -p sop -p elab-util -p contrib -x main"],
                                                            # shell=True, stdin=subprocess.PIPE)
-                                                           "perf record idris2 Main.idr -p sop -p elab-util -p contrib -x main"],
+                                                           # "perf record idris2 Main.idr -p sop -p elab-util -p contrib -x main"],
                                                      shell=True, stdin=subprocess.PIPE)
 
     # "rm -rf build/ && valgrind --trace-children=yes --tool=massif idris2 Main.idr -p sop -p elab-util -p contrib -x main"],
@@ -605,18 +605,17 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
 
         elif self.benc_interchange_cli == "python":
             self.interchange_proc = subprocess.Popen(b"interchange.py", stdin=subprocess.PIPE)
-
-            stdin = self.interchange_proc.stdin
-            assert stdin is not None, "Popen should have created an IO object (vs default None) because of PIPE mode"
-
-            logger.debug("Popened interchange process. Writing config object")
-            stdin.write(config_pickle)
-            stdin.flush()
-            stdin.close()
-            logger.debug("Sent config object")
-
         else:
             raise RuntimeError("unknown benc-interchange type")
+
+        stdin = self.interchange_proc.stdin
+        assert stdin is not None, "Popen should have created an IO object (vs default None) because of PIPE mode"
+
+        logger.debug("Popened interchange process. Writing config object")
+        stdin.write(config_pickle)
+        stdin.flush()
+        stdin.close()
+        logger.debug("Sent config object")
 
         logger.debug("Requesting worker ports")
         try:
