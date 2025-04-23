@@ -575,7 +575,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         config_pickle = pickle.dumps(interchange_config)
 
         if self.benc_interchange_cli == "rust":
-            self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange", str(self.cert_dir)], shell=False, stdin=subprocess.PIPE)
+            self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange", str(self.cert_dir)],
+                                                     shell=False,
+                                                     stdin=subprocess.PIPE)
             # when i was playing with performance, I did a dev/null redirect here
             # to reduce console load. but then you lose panic-style debug output
             # self.interchange_proc = subprocess.Popen(args=["rusterchange/target/release/rusterchange " +
@@ -588,15 +590,15 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                                            "gcc -shared gluezmq.c -lzmq -o glue_zmq.so && "
                                                            "gcc -shared pollhelper.c -o pollhelper.so && gcc -shared bytes.c -o bytes.so && "
                                                            "rm -rf build/ && idris2 Main.idr -p sop -p elab-util -p contrib -x main"],
-                                                           # shell=True, stdin=subprocess.PIPE)
-                                                           # "rm -rf build/ && "
-                                                           # "idris2 Main.idr -p sop -p elab-util -p contrib -x main 2>&1 | tee i2ic.log"],
-                                                           # shell=True, stdin=subprocess.PIPE)
-                                                           # "rm -rf build/ && "
-                                                           # "valgrind --trace-children=yes --leak-check=full "
-                                                           # "idris2 Main.idr -p sop -p elab-util -p contrib -x main"],
-                                                           # shell=True, stdin=subprocess.PIPE)
-                                                           # "perf record idris2 Main.idr -p sop -p elab-util -p contrib -x main"],
+                                                     # shell=True, stdin=subprocess.PIPE)
+                                                     # "rm -rf build/ && "
+                                                     # "idris2 Main.idr -p sop -p elab-util -p contrib -x main 2>&1 | tee i2ic.log"],
+                                                     # shell=True, stdin=subprocess.PIPE)
+                                                     # "rm -rf build/ && "
+                                                     # "valgrind --trace-children=yes --leak-check=full "
+                                                     # "idris2 Main.idr -p sop -p elab-util -p contrib -x main"],
+                                                     # shell=True, stdin=subprocess.PIPE)
+                                                     # "perf record idris2 Main.idr -p sop -p elab-util -p contrib -x main"],
                                                      shell=True, stdin=subprocess.PIPE)
 
     # "rm -rf build/ && valgrind --trace-children=yes --tool=massif idris2 Main.idr -p sop -p elab-util -p contrib -x main"],
