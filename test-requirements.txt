@@ -16,6 +16,7 @@ globus-compute-sdk>=2.34.0
 # as well as at runtime for optional monitoring execution
 # (where it's specified in setup.py)
 sqlalchemy>=2,<2.1
+sortedcontainers-stubs
 
 Sphinx==4.5.0
 twine
