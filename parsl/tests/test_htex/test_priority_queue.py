@@ -1,27 +1,23 @@
 import pytest
 
 import parsl
-from parsl.app.app import bash_app, python_app
+from parsl.app.app import python_app
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
-from parsl.executors.high_throughput.manager_selector import (
-    ManagerSelector,
-    RandomManagerSelector,
-)
-from parsl.launchers import WrappedLauncher
+from parsl.executors.high_throughput.manager_selector import RandomManagerSelector
 from parsl.providers import LocalProvider
 from parsl.usage_tracking.levels import LEVEL_1
 
 
-@parsl.python_app
-def fake_task(parsl_resource_specification={'priority': 1}):
+@python_app
+def fake_task(parsl_resource_specification=None):
     import time
     return time.time()
 
 
 @pytest.mark.local
 def test_priority_queue():
-    p = LocalProvider(
+    provider = LocalProvider(
         init_blocks=0,
         max_blocks=0,
         min_blocks=0,
@@ -31,7 +27,7 @@ def test_priority_queue():
         label="htex_local",
         max_workers_per_node=1,
         manager_selector=RandomManagerSelector(),
-        provider=p,
+        provider=provider,
     )
 
     config = Config(
@@ -42,12 +38,37 @@ def test_priority_queue():
 
     with parsl.load(config):
         futures = {}
-        for priority in range(10, 0, -1):
-            spec = {'priority': priority}
-            futures[priority] = fake_task(parsl_resource_specification=spec)
 
-        p.max_blocks = 1
-        results = {priority: future.result() for priority, future in futures.items()}
-        sorted_results = dict(sorted(results.items(), key=lambda item: item[1]))
-        sorted_priorities = list(sorted_results.keys())
-        assert sorted_priorities == sorted(sorted_priorities)
+        # Submit tasks with mixed priorities
+        # Priorities: [1, 1, 5, 5, 10, 10] to test fallback behavior
+        for i, priority in enumerate([1, 1, 5, 5, 10, 10]):
+            spec = {'priority': priority}
+            futures[(priority, i)] = fake_task(parsl_resource_specification=spec)
+
+        provider.max_blocks = 1
+
+        # Wait for completion
+        results = {
+            key: future.result() for key, future in futures.items()
+        }
+
+        # Sort by finish time
+        sorted_by_completion = sorted(results.items(), key=lambda item: item[1])
+        execution_order = [key for key, _ in sorted_by_completion]
+
+        # print("\nExecution Order (priority, submission index):")
+        # for key in execution_order:
+        #     print(f"  {key}")
+
+        # check priority queue functionality
+        priorities_only = [p for (p, i) in execution_order]
+        assert priorities_only == sorted(priorities_only, reverse=True), "Priority execution order failed"
+
+        # check FIFO fallback
+        from collections import defaultdict
+        seen = defaultdict(list)
+        for (priority, idx) in execution_order:
+            seen[priority].append(idx)
+
+        for priority, indices in seen.items():
+            assert indices == sorted(indices), f"FIFO fallback violated for priority {priority}"

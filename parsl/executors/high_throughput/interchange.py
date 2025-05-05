@@ -131,7 +131,9 @@ class Interchange:
         self.hub_address = hub_address
         self.hub_zmq_port = hub_zmq_port
 
-        self.pending_task_queue: SortedList[Any] = SortedList(key=lambda msg: -msg['resource_spec']['priority'])
+        self.pending_task_queue: SortedList[Any] = SortedList(key=lambda tup: (-tup[0], tup[1]))
+        self._task_insert_counter = 0
+
         self.count = 0
 
         self.worker_ports = worker_ports
@@ -193,8 +195,8 @@ class Interchange:
         tasks = []
         for _ in range(0, count):
             if len(self.pending_task_queue) > 0:
-                x = self.pending_task_queue.pop(-1)
-                tasks.append(x)
+                _, _, task = self.pending_task_queue.pop(0)
+                tasks.append(task)
             else:
                 break
 
@@ -216,12 +218,17 @@ class Interchange:
                 # We just timed out while attempting to receive
                 logger.debug("zmq.Again with {} tasks in internal queue".format(len(self.pending_task_queue)))
                 continue
-            
+
             resource_spec = msg.get('resource_spec', {})
             resource_spec.setdefault("priority", float('inf'))
             msg['resource_spec'] = resource_spec
+
+            priority = resource_spec['priority']
+            queue_entry = (priority, self._task_insert_counter, msg)
+            self._task_insert_counter += 1
+
             logger.debug("putting message onto pending_task_queue")
-            self.pending_task_queue.add(msg)
+            self.pending_task_queue.add(queue_entry)
             task_counter += 1
             logger.debug(f"Fetched {task_counter} tasks so far")
 
