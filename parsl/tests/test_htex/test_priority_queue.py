@@ -40,8 +40,8 @@ def test_priority_queue():
         futures = {}
 
         # Submit tasks with mixed priorities
-        # Priorities: [1, 1, 5, 5, 10, 10] to test fallback behavior
-        for i, priority in enumerate([1, 1, 5, 5, 10, 10]):
+        # Priorities: [10, 10, 5, 5, 1, 1] to test fallback behavior
+        for i, priority in enumerate([10, 10, 5, 5, 1, 1]):
             spec = {'priority': priority}
             futures[(priority, i)] = fake_task(parsl_resource_specification=spec)
 
@@ -62,7 +62,7 @@ def test_priority_queue():
 
         # check priority queue functionality
         priorities_only = [p for (p, i) in execution_order]
-        assert priorities_only == sorted(priorities_only, reverse=True), "Priority execution order failed"
+        assert priorities_only == sorted(priorities_only), "Priority execution order failed"
 
         # check FIFO fallback
         from collections import defaultdict

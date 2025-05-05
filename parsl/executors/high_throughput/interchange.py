@@ -131,7 +131,7 @@ class Interchange:
         self.hub_address = hub_address
         self.hub_zmq_port = hub_zmq_port
 
-        self.pending_task_queue: SortedList[Any] = SortedList(key=lambda tup: (-tup[0], tup[1]))
+        self.pending_task_queue: SortedList[Any] = SortedList(key=lambda tup: (tup[0], tup[1]))
         self._task_insert_counter = 0
 
         self.count = 0
