@@ -261,7 +261,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         if not _work_queue_enabled:
             raise OptionalModuleMissing(['work_queue'], f"WorkQueueExecutor requires the work_queue module. More info: {IMPORT_EXCEPTION}")
 
-
         self.scaling_cores_per_worker = scaling_cores_per_worker
         self.label = label
         self.task_queue: multiprocessing.Queue = SpawnContext.Queue()
