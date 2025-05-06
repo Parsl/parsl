@@ -35,16 +35,16 @@ def test_arg_parser_known_required():
         assert a.option_strings[-1] in _known_required, "Update _known_required?"
 
 
-# @pytest.mark.local
-# @pytest.mark.parametrize("req", _known_required)
-# def test_arg_parser_required(req):
-#     p = process_worker_pool.get_arg_parser()
-#     p.exit_on_error = False
-#     with pytest.raises(SystemExit) as pyt_exc:
-#         p.parse_args([])
+@pytest.mark.local
+@pytest.mark.parametrize("req", _known_required)
+def test_arg_parser_required(req):
+    p = process_worker_pool.get_arg_parser()
+    p.exit_on_error = False
+    with pytest.raises(SystemExit) as pyt_exc:
+        p.parse_args([])
 
-#     e_msg = pyt_exc.value.args[1]
-#     assert req in e_msg
+    e_msg = pyt_exc.value.args[1]
+    assert req in e_msg
 
 
 @pytest.mark.local
