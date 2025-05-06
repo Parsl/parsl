@@ -5,7 +5,7 @@ import pytest
 
 from parsl.executors.high_throughput import process_worker_pool
 
-if sys.version_info < (3, 13):
+if sys.version_info < (3, 12):
     # exit_on_error bug; see https://github.com/python/cpython/issues/121018
     # "argparse.ArgumentParser.parses_args does not honor exit_on_error=False when
     #  given unrecognized arguments"
@@ -40,7 +40,7 @@ def test_arg_parser_known_required():
 def test_arg_parser_required(req):
     p = process_worker_pool.get_arg_parser()
     p.exit_on_error = False
-    with pytest.raises(SystemExit) as pyt_exc:
+    with pytest.raises(ArgumentError) as pyt_exc:
         p.parse_args([])
 
     e_msg = pyt_exc.value.args[1]
