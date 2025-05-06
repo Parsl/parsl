@@ -37,14 +37,14 @@ def test_arg_parser_known_required():
 
 @pytest.mark.local
 @pytest.mark.parametrize("req", _known_required)
-def test_arg_parser_required(req):
+def test_arg_parser_required(req, capsys):
     p = process_worker_pool.get_arg_parser()
     p.exit_on_error = False
     with pytest.raises(SystemExit) as pyt_exc:
         p.parse_args([])
 
-    e_msg = pyt_exc.value.args[1]
-    assert req in e_msg
+    captured = capsys.readouterr()
+    assert req in captured.err
 
 
 @pytest.mark.local
