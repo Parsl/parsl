@@ -40,7 +40,7 @@ def test_arg_parser_known_required():
 def test_arg_parser_required(req, capsys):
     p = process_worker_pool.get_arg_parser()
     p.exit_on_error = False
-    with pytest.raises(SystemExit) as pyt_exc:
+    with pytest.raises(SystemExit):
         p.parse_args([])
 
     captured = capsys.readouterr()
