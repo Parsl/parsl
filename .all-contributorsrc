@@ -31,6 +31,21 @@
         "code",
         "content"
       ]
+    },
+    {
+      "login": "benclifford",
+      "name": "Ben Clifford",
+      "avatar_url": "https://avatars.githubusercontent.com/u/280107?v=4",
+      "profile": "http://www.hawaga.org.uk/ben/tech/",
+      "contributions": [
+        "code",
+        "maintenance",
+        "doc",
+        "ideas",
+        "test",
+        "content",
+        "blog"
+      ]
     }
   ]
 }
