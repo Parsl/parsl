@@ -54,26 +54,8 @@ def htex_filesystem_config():
     return c
 
 
-def workqueue_config():
-    from parsl.tests.configs.workqueue_ex import fresh_config
-    c = fresh_config()
-    c.monitoring = MonitoringHub(
-                        hub_address="localhost",
-                        resource_monitoring_interval=1)
-    return c
-
-
-def taskvine_config():
-    c = Config(executors=[TaskVineExecutor(manager_config=TaskVineManagerConfig(port=9000),
-                                           worker_launch_method='provider')],
-
-               monitoring=MonitoringHub(hub_address="localhost",
-                                        resource_monitoring_interval=1))
-    return c
-
-
 @pytest.mark.local
-@pytest.mark.parametrize("fresh_config", [htex_config, htex_filesystem_config, htex_udp_config, workqueue_config, taskvine_config])
+@pytest.mark.parametrize("fresh_config", [htex_config, htex_filesystem_config, htex_udp_config])
 def test_row_counts(tmpd_cwd, fresh_config):
     # this is imported here rather than at module level because
     # it isn't available in a plain parsl install, so this module

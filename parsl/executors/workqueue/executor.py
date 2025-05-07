@@ -40,16 +40,18 @@ from parsl.utils import setproctitle
 
 from .errors import WorkQueueFailure, WorkQueueTaskFailure
 
+IMPORT_EXCEPTION = None
 try:
-    import work_queue as wq
-    from work_queue import (
+    from ndcctools import work_queue as wq
+    from ndcctools.work_queue import (
         WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT,
         WORK_QUEUE_DEFAULT_PORT,
         WorkQueue,
     )
-except ImportError:
+except ImportError as e:
     _work_queue_enabled = False
     WORK_QUEUE_DEFAULT_PORT = 0
+    IMPORT_EXCEPTION = e
 else:
     _work_queue_enabled = True
 
@@ -257,7 +259,7 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
         if not _work_queue_enabled:
-            raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
+            raise OptionalModuleMissing(['work_queue'], f"WorkQueueExecutor requires the work_queue module. More info: {IMPORT_EXCEPTION}")
 
         self.scaling_cores_per_worker = scaling_cores_per_worker
         self.label = label
