@@ -5,6 +5,7 @@ import time
 
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
+from parsl.providers.errors import SubmitException
 from parsl.providers.pbspro.template import template_string
 from parsl.providers.torque.torque import TorqueProvider, translate_table
 
@@ -198,10 +199,15 @@ class PBSProProvider(TorqueProvider):
                                               'job_stderr_path': job_stderr_path,
                                               }
         else:
-            message = "Command '{}' failed with return code {}".format(launch_cmd, retcode)
-            if (stdout is not None) and (stderr is not None):
-                message += "\nstderr:{}\nstdout{}".format(stderr.strip(), stdout.strip())
+            message = "Submit command '{}' failed".format(launch_cmd)
             logger.error(message)
+            logger.error("Retcode:%s STDOUT:%s STDERR:%s", retcode, stdout.strip(), stderr.strip())
+            raise SubmitException(
+                job_name=job_name,
+                message=message,
+                stdout=stdout,
+                stderr=stderr,
+            )
 
         return job_id
 
