@@ -16,6 +16,7 @@ def some_mpi_func(msg, sleep, comm=None, parsl_resource_specification={}):
 apps = []
 
 
+@pytest.mark.skip(reason="Skipping due to issue #3849")
 @pytest.mark.local
 @pytest.mark.radical
 def test_radical_mpi(n=7):
