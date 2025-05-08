@@ -223,12 +223,12 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
         Returns:
               [status...] : Status list of all jobs
         '''
-
-        if len(self.resources.items()) == 0:
+        active_jobs = {jid: job for jid, job in self.resources.items() if not job["status"].terminal}
+        if len(active_jobs) == 0:
             logger.debug("No active jobs, skipping status update")
             return
 
-        job_list_batches = batched(self.resources.items(), self.status_batch_size)
+        job_list_batches = batched(active_jobs.items(), self.status_batch_size)
         stdout = ""
         for job_batch in job_list_batches:
             job_id_list = ",".join([jid for jid, job in job_batch if not job["status"].terminal])
