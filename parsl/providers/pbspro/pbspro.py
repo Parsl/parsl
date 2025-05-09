@@ -98,6 +98,14 @@ class PBSProProvider(TorqueProvider):
 
         retcode, stdout, stderr = self.execute_wait("qstat -f -F json {0}".format(job_id_list))
 
+        # If qstat failed do not update job state
+        if retcode != 0:
+            logger.warning("qstat failed with retcode:%s STDOUT:%s STDERR:%s",
+                           retcode,
+                           stdout.strip(),
+                           stderr.strip())
+            return
+
         job_statuses = json.loads(stdout)
 
         if 'Jobs' in job_statuses:
