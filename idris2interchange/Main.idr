@@ -83,11 +83,19 @@ ascii_dump v = do
     else pure1 v
 
 
+get_block_id : JSON -> PickleAST
+get_block_id m = 
+  let c = lookup "block_id" m
+   in case c of
+        Just (JString c) => PickleUnicodeString c
+        _ => ?notimpl_error_path_block_id_not_str_
+
+
 -- the Python type contained in the returned AST depends on the supplied
 -- command... TODO: maybe I can describe that typing in the idris2 code
 -- rather than returning an equivalent to Python Any... so that the
 -- individual dispatch_cmd pieces can be typechecked a bit?
-dispatch_cmd : (State LogConfig LogConfig es, HasErr AppHasIO es) => String -> App es PickleAST
+dispatch_cmd : (State MatchState MatchState es, State LogConfig LogConfig es, HasErr AppHasIO es) => String -> App es PickleAST
 
 dispatch_cmd "WORKER_PORTS" = do
   log "WORKER_PORTS requested"
@@ -101,7 +109,33 @@ dispatch_cmd "CONNECTED_BLOCKS" = do
   -- TODO: in the rusterchange, it seemed like connected blocks didn't
   -- need implementing for the test suite, and could return an empty
   -- list. So that's what I'll do here.
-  pure (PickleList [])
+  -- XXXXX needed for surviving scaling timeout - without listing
+  -- registered blocks here, a block is eventually marked as MISSING
+  -- and fails.
+  -- so registration now needs to store some state, and then return it here.
+  (MkMatchState managers tasks) <- get MatchState
+
+  let managers_json = map snd managers
+
+  logv "Managers JSON" managers_json
+
+  -- Now pull out the block_id of each of the managers_json list entries,
+  -- and turn it into a unicode string.
+  -- It's fine if this fails, because the implicit protocol says it will
+  -- always be there.
+
+  -- There is no need to de-dupe, although probably should, and it would
+  -- probably be an improvement (I think) on the real interchange - assuming
+  -- de-dupe cost is less than the cost of sending them all and looking
+  -- through them all on the client side. There are implementation methods
+  -- that could be more efficient here too: rather than de-duping on each
+  -- CONNECTED_BLOCKS, keep a set at registration time.
+  -- See issue #3366 about that happening in the real interchange.
+
+
+  let manager_block_ids = map get_block_id managers_json
+
+  pure (PickleList manager_block_ids)
 
 dispatch_cmd "MANAGERS" = do
   log "MANAGERS requested"
@@ -200,7 +234,7 @@ matchmake sockets = do
 ||| Some reading:
 ||| https://funcptr.net/2012/09/10/zeromq---edge-triggered-notification/
 ||| https://github.com/zeromq/libzmq/issues/3641
-covering zmq_poll_command_channel_loop : (State LogConfig LogConfig es, HasErr AppHasIO es) => ZMQSocket -> App es ()
+covering zmq_poll_command_channel_loop : (State MatchState MatchState es, State LogConfig LogConfig es, HasErr AppHasIO es) => ZMQSocket -> App es ()
 zmq_poll_command_channel_loop command_socket = do
   -- need to run this in a loop until it returns no events left
   events <- zmq_get_socket_events command_socket
