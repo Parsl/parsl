@@ -21,7 +21,7 @@ import ZMQ
 
 %ambiguity_depth 10
 %language ElabReflection
--- %default total
+%default total
 
 -- TODO: this should eventually be chosen according to
 -- config supplied on stdin, or by random bind.
@@ -57,7 +57,7 @@ record SocketState where
 
 -- this should be total, proved by decreasing n
 -- but apparently not? cheat by using assert_smaller...
-inner_ascii_dump : HasErr AppHasIO es => (1 _ : ByteBlock) -> App1 es ByteBlock
+covering inner_ascii_dump : HasErr AppHasIO es => (1 _ : ByteBlock) -> App1 es ByteBlock
 inner_ascii_dump bytes = do
  let (l # bytes) = length1 bytes
  case l of
@@ -69,7 +69,7 @@ inner_ascii_dump bytes = do
       else app $ primIO $ putStr "."
      inner_ascii_dump rest
 
-ascii_dump : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> App1 es ByteBlock
+covering ascii_dump : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> App1 es ByteBlock
 ascii_dump v = do
   en <- app $ loggingEnabled
   app $ primIO $ pure () -- any use of IO here makes the bb_duplicate below work. otherwise, cannot resolve es... is this a BUG? what is the magic unification thingy doing?
@@ -95,7 +95,7 @@ get_block_id m =
 -- command... TODO: maybe I can describe that typing in the idris2 code
 -- rather than returning an equivalent to Python Any... so that the
 -- individual dispatch_cmd pieces can be typechecked a bit?
-dispatch_cmd : (State MatchState MatchState es, State LogConfig LogConfig es, HasErr AppHasIO es) => String -> App es PickleAST
+covering dispatch_cmd : (State MatchState MatchState es, State LogConfig LogConfig es, HasErr AppHasIO es) => String -> App es PickleAST
 
 dispatch_cmd "WORKER_PORTS" = do
   log "WORKER_PORTS requested"
@@ -145,7 +145,7 @@ dispatch_cmd "MANAGERS" = do
 dispatch_cmd _ = ?error_cmd_not_implemented
 
 
-matchmake :  (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
+covering matchmake :  (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
 matchmake sockets = do
   log "Matchmaker starting"
   -- we can make a match if we have a manager with capacity and a task in the
@@ -460,7 +460,7 @@ covering poll_loop : (State LogConfig LogConfig es, State Bool Bool es, State Ma
 
 
 -- TODO: this only reads up to 128kb. which should be enough for test interchange configs. but is lame.
-readStdinToEnd : HasErr AppHasIO es => App1 es ByteBlock
+covering readStdinToEnd : HasErr AppHasIO es => App1 es ByteBlock
 readStdinToEnd = read stdin 128000
 
 
