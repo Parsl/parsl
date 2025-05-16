@@ -226,6 +226,10 @@ matchmake sockets = do
                     -- Here is an example of using linear types to ensure b and resp_bytes get freed.
                     -- This code won't compile without the free1 calls.
                     -- Compare that to how rust lifetimes would insert a free here.
+                    -- also compare the resp_bytes <- action resp_bytes    syntax above to rust's
+                    -- borrow syntax: we end up with the "same" variable bound. but it's not necessarily
+                    -- the same because the action can return something else... (but not the same as a
+                    -- mutable borrow)
                     free1 resp_bytes
 
                   -- TODO: update MatchState to remove one task and keep rest_tasks, as well as updating
