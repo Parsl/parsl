@@ -216,17 +216,33 @@ matchmake sockets = do
                     -- these three sends demonstrate three different kind of memory policy
                     b <- from_gc_bytes b  -- changes type of b
                     b <- zmq_send_bytes1 sockets.tasks_interchange_to_worker b True
-                    app $ zmq_send_bytes sockets.tasks_interchange_to_worker emptyByteBlock True
-                    resp_bytes <- zmq_send_bytes1 sockets.tasks_interchange_to_worker resp_bytes False
-                    free1 resp_bytes
                     free1 b
+
+                    -- this is the unused empty byte block mentioned in https://github.com/Parsl/parsl/issues/3372
+                    app $ zmq_send_bytes sockets.tasks_interchange_to_worker emptyByteBlock True
+
+                    resp_bytes <- zmq_send_bytes1 sockets.tasks_interchange_to_worker resp_bytes False
+
+                    -- Here is an example of using linear types to ensure b and resp_bytes get freed.
+                    -- This code won't compile without the free1 calls.
+                    -- Compare that to how rust lifetimes would insert a free here.
+                    free1 resp_bytes
 
                   -- TODO: update MatchState to remove one task and keep rest_tasks, as well as updating
                   -- manager capacity. Iterate until no more matches are possible.
                   put MatchState (MkMatchState managers rest_tasks)
                   matchmake sockets  -- this must be a tail call (can I assert that? I think not... but it would be nice)
                 else ?notimpl_manager_oversubscribed
+                  -- TODO: this never happens... because there is an unimplemented TODO to reduce the capacity...
+                  -- when that happens, then this path should be reached.
+
+                  -- Without manager decrement and this case, the tests still pass. there isn't a test failure when
+                  -- all the tasks get sent to one manager. instead the behaviour is basically the same as if there
+                  -- is a large prefetch value: they queue up and performance is changed (probably reduced, except
+                  -- to the extent that prefetch increases it). Maybe that's interesting to note as untested?
             _ => ?error_registration_bad_max_capacity
+                  -- TODO: a more strongly typed manager record (rather than arbitrary JSON) would not have this case:
+                  -- eg parse (don't validate) at registration time?
 
 
 ||| this drains ZMQ when there's a poll. this is a bit complicated and
