@@ -44,6 +44,8 @@ record ManagerRegistration where
   manager_id : GCByteBlock
   manager_json : JSON
 -- %runElab derive "ManagerRegistration" [Generic, Meta, Show]
+-- this runElab doesn't work, i think because GCByteBlock is not
+-- Show-able.
 
 record MatchState where
   constructor MkMatchState
