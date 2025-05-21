@@ -142,7 +142,9 @@ dispatch_cmd "MANAGERS" = do
   -- TODO: notimpl, but maybe this is enough for tests?
   pure (PickleDict [])
 
-dispatch_cmd _ = ?error_cmd_not_implemented
+dispatch_cmd c = do
+  logv "Request with unknown command" c
+  pure PickleNone
 
 
 covering matchmake :  (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
