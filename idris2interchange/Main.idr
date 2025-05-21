@@ -42,15 +42,19 @@ WORKER_RESULT_PORT = 9004
 record ManagerRegistration where
   constructor MkManagerRegistration
   manager_id : GCByteBlock
-  manager_json : JSON
+  manager_json : JSON  -- TODO: this manager_json can go away and be replaced by the two fields that are actually used.
 -- %runElab derive "ManagerRegistration" [Generic, Meta, Show]
 -- this runElab doesn't work, i think because GCByteBlock is not
--- Show-able.
+-- Show-able. TODO: make that byte block showable, or make a
+-- manager id type -- that would be a more type-interesting
+-- approach.
 
 record MatchState where
   constructor MkMatchState
   managers: List ManagerRegistration
-  tasks: List PickleAST
+  tasks: List PickleAST  -- TODO: make this task representation a task record, rather than a PickleAST.
+                         -- There isn't any introspection here at the moment, but there should be for
+                         -- expired-manager task failure triggered by the interchange.
 -- %runElab derive "MatchState" [Generic, Meta, Show]
 
 record SocketState where
@@ -84,7 +88,7 @@ ascii_dump v = do
     then do  -- is this using the wrong bind? bb_duplicate works outside the if, and if i put it there, it makes the below bb_duplicate work too - as if a different elaboration of `do` / >>= is happening?
           (v # v') <- bb_duplicate v
           v' <- inner_ascii_dump v'
-          free1 v'
+          free1 v'  -- is this v' actually freeable? it's not the original v' I think, even though it looks like I am hoping it is. because inner_ascii_dump advances the point through the byte block using bb_uncons. TODO greater thinking about how I want to manage byte blocks, in the context of how I actually use them. (for example, mutate vs share; reference count; ensure being freed)
           app $ primIO $ putStrLn ""
           pure1 v
     else pure1 v
