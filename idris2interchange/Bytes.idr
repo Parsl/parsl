@@ -25,7 +25,10 @@ import Control.App
 -- this file moved elsewhere? Bytes.Kernel?
 -- The pointer in a byte block *must* be allocated by something
 -- malloc-like (which includes the NULL constant), because it
--- will eventually be released by free().
+-- will eventually be released by free()...
+-- ** but that isn't true! **  bb_uncons moves pointers along
+-- inside a byte block... and free doesn't crash when they're
+-- passed in (although the behaviour is undefined...)
 public export
 data ByteBlock = MkByteBlock AnyPtr Nat
 
