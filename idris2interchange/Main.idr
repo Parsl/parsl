@@ -39,10 +39,15 @@ WORKER_RESULT_PORT = 9004
 -- pytest -s parsl/tests/ --config parsl/tests/configs/htex_idris2.py 
 
 
+record ManagerRegistration where
+  constructor MkManagerRegistration
+  manager_id : GCByteBlock
+  manager_json : JSON
+-- %runElab derive "ManagerRegistration" [Generic, Meta, Show]
 
 record MatchState where
   constructor MkMatchState
-  managers: List (GCByteBlock, JSON)
+  managers: List ManagerRegistration
   tasks: List PickleAST
 -- %runElab derive "MatchState" [Generic, Meta, Show]
 
@@ -83,6 +88,13 @@ ascii_dump v = do
     else pure1 v
 
 
+-- TODO: remove the notimpl path. One way is to make this Maybe,
+-- but then there is still a failing path to deal with where
+-- get_block_id is called. More type-interesting would be to
+-- replace the JSON with a manager data structure containing
+-- the fields that are interesting, and this function becomes
+-- the probably much simpler projection of that field out of
+-- the manager record.
 get_block_id : JSON -> PickleAST
 get_block_id m = 
   let c = lookup "block_id" m
@@ -115,7 +127,7 @@ dispatch_cmd "CONNECTED_BLOCKS" = do
   -- so registration now needs to store some state, and then return it here.
   (MkMatchState managers tasks) <- get MatchState
 
-  let managers_json = map snd managers
+  let managers_json = map manager_json managers
 
   logv "Managers JSON" managers_json
 
@@ -190,9 +202,15 @@ matchmake sockets = do
       -- as many as listed in the original count.
       case managers of
         [] => log "No match possible: no managers registered"
-        (b, m) :: rest_managers => do
-          logv "Considering manager for match" m
-          let c = lookup "max_capacity" m
+        mr :: rest_managers => do
+          logv "Considering manager for match" (manager_json mr) -- manager JSON here because we can't
+                                                                 -- Show the whole manager registration
+                                                                 -- because elab of Show doesn't work
+                                                                 -- maybe because byte string does not
+                                                                 -- have Show? TODO which points towards
+                                                                 -- having a separate manager ID type
+                                                                 -- rather than a plain byte string?
+          let c = lookup "max_capacity" (manager_json mr)
           case c of
             Just (JNumber c) => do
               logv "This manager has capacity" c
@@ -216,7 +234,7 @@ matchmake sockets = do
                     -- it is interesting to have the garbage collector manage that, rather
                     -- than linear types?
                     -- these three sends demonstrate three different kind of memory policy
-                    b <- from_gc_bytes b  -- changes type of b
+                    b <- from_gc_bytes (manager_id mr)
                     b <- zmq_send_bytes1 sockets.tasks_interchange_to_worker b True
                     free1 b
 
@@ -463,7 +481,8 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
             case t of
               Just (JString "registration") => do
                 (MkMatchState managers tasks) <- get MatchState
-                put MatchState (MkMatchState ((gc_addr_bytes, j) :: managers) tasks)
+                let new_manager_registration = MkManagerRegistration gc_addr_bytes j
+                put MatchState (MkMatchState (new_manager_registration :: managers) tasks)
                 log "Put new manager into match state" 
                 matchmake sockets
               Just (JString "heartbeat") => 
