@@ -95,9 +95,9 @@ ascii_dump v = do
 -- the fields that are interesting, and this function becomes
 -- the probably much simpler projection of that field out of
 -- the manager record.
-get_block_id : JSON -> PickleAST
-get_block_id m = 
-  let c = lookup "block_id" m
+get_block_id : ManagerRegistration -> PickleAST
+get_block_id mr = 
+  let c = lookup "block_id" (manager_json mr)
    in case c of
         Just (JString c) => PickleUnicodeString c
         _ => ?notimpl_error_path_block_id_not_str_
@@ -127,10 +127,6 @@ dispatch_cmd "CONNECTED_BLOCKS" = do
   -- so registration now needs to store some state, and then return it here.
   (MkMatchState managers tasks) <- get MatchState
 
-  let managers_json = map manager_json managers
-
-  logv "Managers JSON" managers_json
-
   -- Now pull out the block_id of each of the managers_json list entries,
   -- and turn it into a unicode string.
   -- It's fine if this fails, because the implicit protocol says it will
@@ -144,8 +140,7 @@ dispatch_cmd "CONNECTED_BLOCKS" = do
   -- CONNECTED_BLOCKS, keep a set at registration time.
   -- See issue #3366 about that happening in the real interchange.
 
-
-  let manager_block_ids = map get_block_id managers_json
+  let manager_block_ids = map get_block_id managers
 
   pure (PickleList manager_block_ids)
 
