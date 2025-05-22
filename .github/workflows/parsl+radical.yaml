@@ -1,4 +1,4 @@
-name: WorkQueue and TaskVine tests
+name: Radical tests
 on:
   pull_request:
     types:
@@ -32,6 +32,14 @@ jobs:
         make deps
         pip3 install ".[radical-pilot]"
         export PATH=/usr/share/miniconda/bin/:$PATH
+    
+    - name: Sanity check
+      run: |
+        echo "PATH: $PATH"
+        echo "Python: "; which python3
+        mpiexec --version
+        mpiexec -n 4 python3 -c "from mpi4py import MPI; print(f'Rank {MPI.COMM_WORLD.Get_rank()} of {MPI.COMM_WORLD.Get_size()}')"
+        which python3
         
     - name: Run pytest suite for Radical
       run: |
