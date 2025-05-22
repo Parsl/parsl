@@ -43,4 +43,5 @@ jobs:
         
     - name: Run pytest suite for Radical
       run: |
+        export RADICAL_CI=1
         make radical_local_test
