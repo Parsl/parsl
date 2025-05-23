@@ -38,8 +38,7 @@ jobs:
         echo "PATH: $PATH"
         echo "Python: "; which python3
         mpiexec --version
-        mpiexec -n 4 python3 -c "from mpi4py import MPI; print(f'Rank {MPI.COMM_WORLD.Get_rank()} of {MPI.COMM_WORLD.Get_size()}')"
-        which python3
+        mpiexec -n 4 python3 -c "from mpi4py import MPI; assert MPI.COMM_WORLD.Get_size() == 4, 'Expected 4 ranks'; print(f'Rank {MPI.COMM_WORLD.Get_rank()} of {MPI.COMM_WORLD.Get_size()}')"
         
     - name: Run pytest suite for Radical
       run: |
