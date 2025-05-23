@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import uuid
 from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
 from multiprocessing.queues import Queue
@@ -67,6 +68,7 @@ class ParslExecutor(metaclass=ABCMeta):
         self.monitoring_messages = monitoring_messages
         self.run_dir = os.path.abspath(run_dir)
         self.run_id = run_id
+        self.uu_id = uuid.uuid4()
 
     def __enter__(self) -> Self:
         return self
