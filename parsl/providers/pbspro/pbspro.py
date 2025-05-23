@@ -5,6 +5,7 @@ import time
 
 from parsl.jobs.states import JobState, JobStatus
 from parsl.launchers import SingleNodeLauncher
+from parsl.providers.errors import SubmitException
 from parsl.providers.pbspro.template import template_string
 from parsl.providers.torque.torque import TorqueProvider, translate_table
 
@@ -96,6 +97,14 @@ class PBSProProvider(TorqueProvider):
         jobs_missing = list(self.resources.keys())
 
         retcode, stdout, stderr = self.execute_wait("qstat -f -F json {0}".format(job_id_list))
+
+        # If qstat failed do not update job state
+        if retcode != 0:
+            logger.warning("qstat failed with retcode:%s STDOUT:%s STDERR:%s",
+                           retcode,
+                           stdout.strip(),
+                           stderr.strip())
+            return
 
         job_statuses = json.loads(stdout)
 
@@ -198,10 +207,19 @@ class PBSProProvider(TorqueProvider):
                                               'job_stderr_path': job_stderr_path,
                                               }
         else:
-            message = "Command '{}' failed with return code {}".format(launch_cmd, retcode)
-            if (stdout is not None) and (stderr is not None):
-                message += "\nstderr:{}\nstdout{}".format(stderr.strip(), stdout.strip())
-            logger.error(message)
+            message = f"Submit command '{launch_cmd}' failed"
+            logger.error(
+                f"{message}\n"
+                f" Return code: {retcode}\n"
+                f" STDOUT: {stdout.strip()}\n"
+                f" STDERR: {stderr.strip()}"
+            )
+            raise SubmitException(
+                job_name=job_name,
+                message=message,
+                stdout=stdout,
+                stderr=stderr,
+            )
 
         return job_id
 
