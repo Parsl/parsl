@@ -12,6 +12,7 @@ Apps can be one of three types of functions, each with their own type of decorat
 
 - ``@python_app``: Most Python functions
 - ``@bash_app``: A Python function which returns a command line program to execute
+- ``@bash_watch``: A Python function which returns a command line program to execute, but also enabling file provenance tracking
 - ``@join_app``: A function which launches one or more new Apps
 
 Start by learning how to write Python Apps, which define most of the rules needed to write
@@ -22,5 +23,6 @@ other types of Apps.
 
    python
    bash
+   bash_watch
    mpi_apps
    joins

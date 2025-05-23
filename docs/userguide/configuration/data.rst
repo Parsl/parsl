@@ -205,36 +205,29 @@ consumed files. But using a :py:class:`parsl.data_provider.dynamic_files.Dynamic
 
 .. _label-bash-watcher:
 
-None of the above examples will necessarily work as expected if ``produce`` was a ``bash_app``. This is because the
-command line call returned by the ``bash_app`` may produce files that neither Python nor Parsl are aware of, there is no
-direct way to to know what files to track, without additional work. Parsl provides a function that can help with this.
-The :py:func:`parsl.app.watcher.bash_watch` can be used to wrap and watch for files produced by a ``bash_app``. The
-``bash_app`` being wrapped does not need to change, just the way it is called. In the following example assume that
-there is a ``bash_app`` named my_func that takes two arguments and produces some files. Normally you would call it like
-this:
+None of the above examples will necessarily work as expected if ``produce`` was a :py:func:`parsl.app.app.bash_app`. This
+is because the command line call returned by the :py:func:`parsl.app.app.bash_app` may produce files that neither Python
+nor Parsl are aware of, there is no direct way to to know what files to track, without additional work. Parsl provides
+functionality that can help with this. The :py:func:`parsl.app.app.bash_watch` can be used like a
+:py:func:`parsl.app.app.bash_app` but also watches for files produced by the executed command line. The
+:py:func:`parsl.app.app.bash_watch` utilizes some additional arguments than the :py:func:`parsl.app.app.bash_app`.
 
 .. code-block:: python
 
-    outp = [File('file1.txt'), File('file2.txt')]
-    a = my_func(my_arg1, my_arg2, outputs=outp)
-
-But if you don't know what files may be produced, you can use the :py:func:`parsl.app.watcher.bash_watch` like this:
-
-.. code-block:: python
-
-    from parsl.app.watcher import bash_watch
+    from parsl.app.app import bash_watch
     from parsl.data_provider.dynamic_files import DynamicFileList
 
+    @bash_watch
+    def my_func(outputs=[])
     outp = DynamicFileList()
-    a = bash_watch(my_func, outp, os.getcwd(), my_arg1, my_arg2)
+    a = bash_watch(outp, paths=<list of paths to monitor>)
     res = a.result()
 
-The first argument is the ``bash_app`` to be watched. The second is a :py:class:`parsl.data_provider.dynamic_files.DynamicFileList`
-instance which will contain the files produced by the ``bash_app``. The third argument is the path or paths (as a list)
-of directories to watch, recursively, for new files in, the default is ".". It is recommended that the directory
-structure being watch is not overly complex as this can slow down the watcher. The remaining arguments are the same as
-those that would be passed to the ``bash_app``, both positional and keyword. The ``result()`` function must be called on
-the ``bash_watch`` or Parsl may get into a deadlock situation.
+The first argument must be a :py:class:`parsl.data_provider.dynamic_files.DynamicFileList` instance and ``paths`` is a
+required keyword argument, which specifies the path (as a str) or paths (as a list of str)
+of directories to watch, recursively, for new files in, the default is ".". Additional key-word
+and non-keyword arguments can be added to the call as usual. It is recommended that the directory
+structure being watch is not overly complex as this can slow down the watcher.
 
 .. note::
     If multiple `bash_watch` instances are monitoring the same path(s), there is no way for them to know which files
@@ -371,7 +364,7 @@ HTTP and FTP separate task staging providers can be configured as follows.
     from parsl.data_provider.http import HTTPSeparateTaskStaging
     from parsl.data_provider.ftp import FTPSeparateTaskStaging
 
-		config = Config(
+    config = Config(
         executors=[
             HighThroughputExecutor(
                 storage_access=[HTTPSeparateTaskStaging(), FTPSeparateTaskStaging()]

@@ -6,7 +6,7 @@ from concurrent.futures import Future
 from datetime import datetime, timezone
 from hashlib import md5
 from os import stat
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 import typeguard
 
@@ -54,7 +54,7 @@ class DataFuture(Future):
             self.data_flow_kernel.register_as_output(self.file_obj, self.app_fut.task_record)
 
     @typeguard.typechecked
-    def __init__(self, fut: Future, file_obj: File, dfk: "DataFlowKernel", tid: int, app_fut: Optional[Future] = None) -> None:
+    def __init__(self, fut: Future, file_obj: File, dfk: Union["DataFlowKernel", None], tid: int, app_fut: Optional[Future] = None) -> None:
         """Construct the DataFuture object.
 
         If the file_obj is a string convert to a File.
@@ -141,3 +141,17 @@ class DataFuture(Future):
         else:
             done = "not done"
         return f"<{module}.{qualname} object at {hex(id(self))} representing {repr(self.file_obj)} {done}>"
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['data_flow_kernel']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
+    def __reduce__(self):
+        return self.__reduce_ex__(None)
+
+    def __reduce_ex__(self, proto):
+        return (self.__class__, (self.parent, self.file_obj, None, self.tid, self.app_fut))

@@ -191,7 +191,51 @@ def bash_app(function: Optional[Callable] = None,
                            cache=cache,
                            executors=executors,
                            ignore_for_cache=ignore_for_cache)
+
         return wrapper(func)
+
+    if function is not None:
+        return decorator(function)
+    return decorator
+
+
+@typeguard.typechecked
+def bash_watch(function: Optional[Callable] = None,
+               data_flow_kernel: Optional[DataFlowKernel] = None,
+               cache: bool = False,
+               executors: Union[List[str], Literal['all']] = 'all',
+               ignore_for_cache: Optional[Sequence[str]] = None) -> Callable:
+    """Decorator function for making a watched bash app.
+
+    Parameters
+    ----------
+    function : function
+        Do not pass this keyword argument directly. This is needed in order to allow for omitted parenthesis,
+        for example, ``@bash_watch`` if using all defaults or ``@bash_watch(walltime=120)``. If the
+        decorator is used alone, function will be the actual function being decorated, whereas if it
+        is called with arguments, function will be None. Default is None.
+    data_flow_kernel : DataFlowKernel
+        The :class:`~parsl.dataflow.dflow.DataFlowKernel` responsible for managing this app. This can
+        be omitted only after calling :meth:`parsl.dataflow.dflow.DataFlowKernelLoader.load`. Default is None.
+    executors : string or list
+        Labels of the executors that this app can execute over. Default is 'all'.
+    cache : bool
+        Enable caching of the app call. Default is False.
+    ignore_for_cache : (list|None)
+        Names of arguments which will be ignored by the caching mechanism.
+    """
+    from parsl.app.bash import BashWatch
+
+    def decorator(func: Callable) -> Callable:
+        def wrapper(f: Callable) -> BashWatch:
+            return BashWatch(f,
+                             data_flow_kernel=data_flow_kernel,
+                             cache=cache,
+                             executors=executors,
+                             ignore_for_cache=ignore_for_cache)
+
+        return wrapper(func)
+
     if function is not None:
         return decorator(function)
     return decorator

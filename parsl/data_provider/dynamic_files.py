@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import sys
 from concurrent.futures import Future
+from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Callable, Dict, List, Optional, Union
 
@@ -19,6 +20,7 @@ import typeguard
 from parsl.app.futures import DataFuture
 from parsl.data_provider.files import File
 from parsl.dataflow.futures import AppFuture
+from parsl.dataflow.taskrecord import deepcopy as trcopy
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +56,10 @@ class DynamicFileList(Future):
             else:
                 self.file_obj.timestamp = datetime.now(timezone.utc)
                 self.parent.dfk.register_as_output(self.file_obj, self.parent.task_record)
-                self.set_result(self.file_obj)
+                if self._is_df:
+                    self.set_result(self.file_obj.file_obj)
+                else:
+                    self.set_result(self.file_obj)
 
         def __init__(self, fut: DynamicFileList,
                      file_obj: Optional[Union[File, DataFuture]] = None):
@@ -80,7 +85,7 @@ class DynamicFileList(Future):
             return self._staged_out
 
         @property
-        def scheme(self) -> str:
+        def scheme(self) -> Union[str, None]:
             """Return the scheme for the wrapped file object."""
             if self.empty:
                 return None
@@ -193,6 +198,15 @@ class DynamicFileList(Future):
                 return self.file_obj.file_obj.size
             return self.file_obj.size
 
+        @size.setter
+        def size(self, f_size: int):
+            """ Set the size of the file """
+            if self.file_obj:
+                if self._is_df:
+                    self.file_obj.file_obj.size = f_size
+                else:
+                    self.file_obj.size = f_size
+
         @property
         def md5sum(self) -> Union[str, None]:
             """MD5 sum of the file."""
@@ -201,6 +215,15 @@ class DynamicFileList(Future):
             if self._is_df:
                 return self.file_obj.file_obj.md5sum
             return self.file_obj.md5sum
+
+        @md5sum.setter
+        def md5sum(self, sum: str):
+            """ Set MD5 sum for file """
+            if self.file_obj:
+                if self._is_df:
+                    self.file_obj.file_obj.md5sum = sum
+                else:
+                    self.file_obj.md5sum = sum
 
         def cancel(self):
             """Not implemented"""
@@ -266,7 +289,10 @@ class DynamicFileList(Future):
         if e:
             self.set_exception(e)
         else:
-            self._isdone = True
+            if self._watcher is not None:
+                self._watcher()
+                self._watcher = None
+            self._is_done = True
             self.parent._outputs = self
             self.set_result(self)
 
@@ -290,9 +316,18 @@ class DynamicFileList(Future):
         self._output_task_id = None
         self.task_record = None
         self._files: List[DynamicFileList.DynamicFile] = []
-        self._isdone = False
+        self._is_done = False
         if files is not None:
             self.extend(files)
+        self._watcher = None
+
+    def add_watcher_callback(self, func: Callable):
+        """ Add a function to call when a bash_watch app completes, to collect the files.
+
+        Args:
+            - func (Callable) : function to use
+        """
+        self._watcher = func
 
     def add_done_func(self, name: str, func: Callable):
         """ Add a function to the files_done dict, specifically for when an empty DynamicFile
@@ -400,9 +435,9 @@ class DynamicFileList(Future):
         else:
             return False
 
-    def result(self, timeout=None) -> 'DynamicFileList':
-        """ Return self, which is the results of the file list """
-        return self
+    #def result(self, timeout=None) -> 'DynamicFileList':
+    #    """ Return self, which is the results of the file list """
+    #    return self
 
     def exception(self, timeout=None) -> None:
         """ No-op"""
@@ -410,7 +445,7 @@ class DynamicFileList(Future):
 
     def done(self, ) -> bool:
         """ Return True if all files are done """
-        if not self._isdone:
+        if not self._is_done:
             return False
         for element in self.files_done.values():
             if not element():
@@ -686,6 +721,61 @@ class DynamicFileList(Future):
             done = "not done"
         return f"<{module}.{qualname} object at {hex(id(self))} containing {len(self)} objects {done}>"
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['dfk']
+        del state['_condition']
+        if self.parent is not None:
+            #state['parent'] = self.parent.__getstate__()
+            if state['parent'].task_record is not None:
+                state['parent'].task_record = trcopy(self.parent.task_record)
+        if self.task_record is not None:
+            state['task_record'] = trcopy(self.task_record)
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+
+    def __reduce__(self):
+        return self.__reduce_ex__(None)
+
+    def __reduce_ex__(self, proto):
+        if self.task_record is not None:
+            tr = trcopy(self.task_record)
+            if 'dfk' in tr:
+                del tr['dfk']
+        else:
+            tr = None
+        if self.parent is not None:
+            par = deepcopy(self.parent)
+            if 'dfk' in par.task_record:
+                del par.task_record['dfk']
+        else:
+            par = None
+        data = {}
+        data["files_done"] = self.files_done
+        data["_last_idx"] = self._last_idx
+        data["executor"] = self.executor
+        data["parent"] = par
+        data["_sub_callbacks"] = self._sub_callbacks
+        data["_in_callback"] = self._in_callback
+        data["_staging_inhibited"] = self._staging_inhibited
+        data["_output_task_id"] = self._output_task_id
+        data["task_record"] = tr
+        data["_is_done"] = self._is_done
+        return (self.__class__, (self._files,), data)
+
+        '''
+        return (self.__class__, (self._files, ), {"files_done": self.files_done,
+                                                  "_last_idx": self._last_idx,
+                                                  "executor": self.executor,
+                                                  "parent": par,
+                                                  "_sub_callbacks": self._sub_callbacks,
+                                                  "_in_callback": self._in_callback,
+                                                  "_staging_inhibited": self._staging_inhibited,
+                                                  "_output_task_id": self._output_task_id,
+                                                  "task_record": tr,
+                                                  "_is_done": self._is_done})'''
 
 class DynamicFileSubList(DynamicFileList):
     @typeguard.typechecked
