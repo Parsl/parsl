@@ -240,5 +240,6 @@ class UsageTracker:
                 if proc.is_alive():
                     logger.warning("Usage tracking process did not end itself; sending SIGKILL")
                     proc.kill()
+                    proc.join(timeout=timeout)
 
                 proc.close()
