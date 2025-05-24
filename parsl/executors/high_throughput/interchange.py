@@ -221,11 +221,11 @@ class Interchange:
     def process_command(self, monitoring_radio: Optional[MonitoringRadioSender]) -> None:
         """ Command server to run async command to the interchange
         """
-        logger.debug("entering command_server section")
 
         reply: Any  # the type of reply depends on the command_req received (aka this needs dependent types...)
 
         if self.command_channel in self.socks and self.socks[self.command_channel] == zmq.POLLIN:
+            logger.debug("entering command_server section")
 
             command_req = self.command_channel.recv_pyobj()
             logger.debug("Received command request: {}".format(command_req))
@@ -494,10 +494,7 @@ class Interchange:
                     self._send_monitoring_info(monitoring_radio, m)
                 else:
                     interesting_managers.remove(manager_id)
-                    # logger.debug("Nothing to send to manager {}".format(manager_id))
             logger.debug("leaving _ready_managers section, with %s managers still interesting", len(interesting_managers))
-        else:
-            logger.debug("either no interesting managers or no tasks, so skipping manager pass")
 
     def process_results_incoming(self, interesting_managers: Set[bytes], monitoring_radio: Optional[MonitoringRadioSender]) -> None:
         # Receive any results and forward to client
@@ -608,8 +605,6 @@ def start_file_logger(filename: str, level: int = logging.DEBUG, format_string: 
 
         )
 
-    global logger
-    logger = logging.getLogger(LOGGER_NAME)
     logger.setLevel(level)
     handler = logging.FileHandler(filename)
     handler.setLevel(level)
