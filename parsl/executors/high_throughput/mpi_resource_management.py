@@ -196,7 +196,8 @@ class MPITaskScheduler(TaskScheduler):
         _f, _args, _kwargs, resource_spec = unpack_res_spec_apply_message(task_package["buffer"])
 
         nodes_needed = resource_spec.get("num_nodes")
-        prioritized_task = PrioritizedTask(priority=nodes_needed,
+        # Prioritize large jobs
+        prioritized_task = PrioritizedTask(priority=-1 * nodes_needed,
                                            task=task_package,
                                            unpacked_task=(_f, _args, _kwargs, resource_spec),
                                            nodes_needed=nodes_needed)
