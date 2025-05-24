@@ -7,7 +7,7 @@ from typing import Any, Optional, Sequence, Union
 
 import parsl.app.app as app
 from parsl.app.futures import DataFuture
-from parsl.dataflow.taskrecord import TaskRecord
+from parsl.dataflow.taskrecord import TaskRecord, deepcopy as trcopy
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +153,13 @@ class AppFuture(Future):
         deferred_getattr_app = app.python_app(deferred_getattr, executors=['_parsl_internal'], data_flow_kernel=self.task_record['dfk'])
 
         return deferred_getattr_app(self, name)
+
+    def __deepcopy__(self, memo):
+        trcp = trcopy(self.task_record)
+        instance = AppFuture(trcp)
+        instance._update_lock = None
+        instance._condition = None
+        return instance
 
 
 def deferred_getitem(o: Any, k: Any) -> Any:
