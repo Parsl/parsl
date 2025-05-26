@@ -17,6 +17,7 @@ def this_app():
 
 
 @pytest.mark.local
+@pytest.mark.workqueue
 def test_row_counts():
     import sqlalchemy
 

@@ -69,10 +69,12 @@ htex_local_alternate_test: ## run all tests with htex_local config
 .PHONY: vineex_local_test
 vineex_local_test:
 	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/taskvine_ex.py --random-order --durations 10
+	pytest parsl/tests/ -k "not cleannet and taskvine" --config local --random-order --durations 10
 
 .PHONY: wqex_local_test
 wqex_local_test:
 	pytest parsl/tests/ -k "not cleannet" --config parsl/tests/configs/workqueue_ex.py --random-order --durations 10
+	pytest parsl/tests/ -k "not cleannet and workqueue" --config local --random-order --durations 10
 
 .PHONY: radical_local_test
 radical_local_test:
@@ -90,7 +92,7 @@ workqueue_mon_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex con
 .PHONY: config_local_test
 config_local_test:
 	pip3 install ".[monitoring,visualization,proxystore,kubernetes]"
-	pytest parsl/tests/ -k "not cleannet and not site" --config local --random-order --durations 10
+	pytest parsl/tests/ -k "not cleannet and not site and not workqueue and not taskvine" --config local --random-order --durations 10
 
 .PHONY: site_test
 site_test:

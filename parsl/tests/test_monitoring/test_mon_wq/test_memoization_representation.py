@@ -16,6 +16,7 @@ def this_app(x):
 
 
 @pytest.mark.local
+@pytest.mark.workqueue
 def test_hashsum():
     import sqlalchemy
 

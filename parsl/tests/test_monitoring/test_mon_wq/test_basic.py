@@ -22,6 +22,7 @@ def this_app():
 
 
 @pytest.mark.local
+@pytest.mark.workqueue
 def test_row_counts():
     # this is imported here rather than at module level because
     # it isn't available in a plain parsl install, so this module
