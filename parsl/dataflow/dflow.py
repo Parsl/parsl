@@ -45,6 +45,7 @@ from parsl.executors.threads import ThreadPoolExecutor
 from parsl.jobs.job_status_poller import JobStatusPoller
 from parsl.monitoring import MonitoringHub
 from parsl.monitoring.message_type import MessageType
+from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.monitoring.remote import monitor_wrapper
 from parsl.process_loggers import wrap_with_logs
 from parsl.trace import Span, event, output_event_stats, span_bind_sub
@@ -111,8 +112,11 @@ class DataFlowKernel:
         self.monitoring: Optional[MonitoringHub]
         self.monitoring = config.monitoring
 
+        self.monitoring_radio = None
+
         if self.monitoring:
             self.monitoring.start(self.run_dir, self.config.run_dir)
+            self.monitoring_radio = MultiprocessingQueueRadioSender(self.monitoring.resource_msgs)
 
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
@@ -157,9 +161,9 @@ class DataFlowKernel:
                 'host': gethostname(),
         }
 
-        if self.monitoring:
-            self.monitoring.send((MessageType.WORKFLOW_INFO,
-                                 workflow_info))
+        if self.monitoring_radio:
+            self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
+                                       workflow_info))
 
         if config.checkpoint_files is not None:
             checkpoint_files = config.checkpoint_files
@@ -232,9 +236,9 @@ class DataFlowKernel:
             raise InternalConsistencyError(f"Exit case for {mode} should be unreachable, validated by typeguard on Config()")
 
     def _send_task_log_info(self, task_record: TaskRecord) -> None:
-        if self.monitoring:
+        if self.monitoring_radio:
             task_log_info = self._create_task_log_info(task_record)
-            self.monitoring.send((MessageType.TASK_INFO, task_log_info))
+            self.monitoring_radio.send((MessageType.TASK_INFO, task_log_info))
 
     def _create_task_log_info(self, task_record: TaskRecord) -> Dict[str, Any]:
         """
@@ -1265,15 +1269,16 @@ class DataFlowKernel:
         logger.info("Terminated executors")
         self.time_completed = datetime.datetime.now()
 
-        if self.monitoring:
+        if self.monitoring_radio:
             logger.info("Sending final monitoring message")
-            self.monitoring.send((MessageType.WORKFLOW_INFO,
-                                 {'tasks_failed_count': self.task_state_counts[States.failed],
-                                  'tasks_completed_count': self.task_state_counts[States.exec_done],
-                                  "time_began": self.time_began,
-                                  'time_completed': self.time_completed,
-                                  'run_id': self.run_id, 'rundir': self.run_dir}))
+            self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
+                                       {'tasks_failed_count': self.task_state_counts[States.failed],
+                                        'tasks_completed_count': self.task_state_counts[States.exec_done],
+                                        "time_began": self.time_began,
+                                        'time_completed': self.time_completed,
+                                        'run_id': self.run_id, 'rundir': self.run_dir}))
 
+        if self.monitoring:
             logger.info("Terminating monitoring")
             self.monitoring.close()
             logger.info("Terminated monitoring")

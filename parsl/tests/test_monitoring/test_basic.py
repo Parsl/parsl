@@ -72,7 +72,7 @@ def taskvine_config():
 
 
 @pytest.mark.local
-@pytest.mark.parametrize("fresh_config", [htex_config, htex_filesystem_config, htex_udp_config, workqueue_config, taskvine_config])
+@pytest.mark.parametrize("fresh_config", [htex_config, htex_filesystem_config, htex_udp_config, taskvine_config, workqueue_config])
 def test_row_counts(tmpd_cwd, fresh_config):
     # this is imported here rather than at module level because
     # it isn't available in a plain parsl install, so this module
@@ -123,7 +123,7 @@ def test_row_counts(tmpd_cwd, fresh_config):
             # Two entries: one showing manager active, one inactive
             result = connection.execute(text("SELECT COUNT(*) FROM node"))
             (c, ) = result.first()
-            assert c == 2
+            assert c == 4
 
         # There should be one block polling status
         # local provider has a status_polling_interval of 5s

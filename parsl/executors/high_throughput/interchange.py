@@ -220,11 +220,11 @@ class Interchange:
     def process_command(self, monitoring_radio: Optional[MonitoringRadioSender]) -> None:
         """ Command server to run async command to the interchange
         """
-        logger.debug("entering command_server section")
 
         reply: Any  # the type of reply depends on the command_req received (aka this needs dependent types...)
 
         if self.command_channel in self.socks and self.socks[self.command_channel] == zmq.POLLIN:
+            logger.debug("entering command_server section")
 
             logger.debug("Waiting for command request")
             command_req = self.command_channel.recv_pyobj()
@@ -329,7 +329,7 @@ class Interchange:
             self.process_results_incoming(interesting_managers, monitoring_radio)
             self.expire_bad_managers(interesting_managers, monitoring_radio)
             self.expire_drained_managers(interesting_managers, monitoring_radio)
-            self.process_tasks_to_send(interesting_managers)
+            self.process_tasks_to_send(interesting_managers, monitoring_radio)
 
         self.zmq_context.destroy()
         delta = time.time() - start
@@ -462,7 +462,7 @@ class Interchange:
                 m['active'] = False
                 self._send_monitoring_info(monitoring_radio, m)
 
-    def process_tasks_to_send(self, interesting_managers: Set[bytes]) -> None:
+    def process_tasks_to_send(self, interesting_managers: Set[bytes], monitoring_radio: Optional[MonitoringRadioSender]) -> None:
         # Check if there are tasks that could be sent to managers
 
         logger.debug(
@@ -498,12 +498,10 @@ class Interchange:
                         else:
                             logger.debug("Manager %r is now saturated", manager_id)
                             interesting_managers.remove(manager_id)
+                    self._send_monitoring_info(monitoring_radio, m)
                 else:
                     interesting_managers.remove(manager_id)
-                    # logger.debug("Nothing to send to manager {}".format(manager_id))
             logger.debug("leaving _ready_managers section, with %s managers still interesting", len(interesting_managers))
-        else:
-            logger.debug("either no interesting managers or no tasks, so skipping manager pass")
 
     def process_results_incoming(self, interesting_managers: Set[bytes], monitoring_radio: Optional[MonitoringRadioSender]) -> None:
         # Receive any results and forward to client
@@ -516,13 +514,24 @@ class Interchange:
             else:
                 logger.debug("Got %s result items in batch from manager %r", len(all_messages), manager_id)
 
-                b_messages = []
+                m = self._ready_managers[manager_id]
+                b_messages_to_send = []
 
                 for p_message in all_messages:
                     r = pickle.loads(p_message)
                     if r['type'] == 'result':
                         # process this for task ID and forward to executor
-                        b_messages.append((p_message, r))
+                        logger.debug("Removing task %s from manager record %r", r["task_id"], manager_id)
+                        try:
+                            m['tasks'].remove(r['task_id'])
+                            b_messages_to_send.append(p_message)
+                        except Exception:
+                            logger.exception(
+                                "Ignoring exception removing task_id %s for manager %r with task list %s",
+                                r['task_id'],
+                                manager_id,
+                                m["tasks"]
+                            )
                     elif r['type'] == 'monitoring':
                         # the monitoring code makes the assumption that no
                         # monitoring messages will be received if monitoring
@@ -536,43 +545,21 @@ class Interchange:
                     else:
                         logger.error("Interchange discarding result_queue message of unknown type: %s", r["type"])
 
-                got_result = False
-                m = self._ready_managers[manager_id]
-                for (_, r) in b_messages:
-                    assert 'type' in r, f"Message is missing type entry: {r}"
-                    if r['type'] == 'result':
-                        got_result = True
-                        try:
-                            logger.debug("Removing task %s from manager record %r", r["task_id"], manager_id)
-                            m['tasks'].remove(r['task_id'])
-                        except Exception:
-                            # If we reach here, there's something very wrong.
-                            logger.exception(
-                                "Ignoring exception removing task_id %s for manager %r with task list %s",
-                                r['task_id'],
-                                manager_id,
-                                m["tasks"]
-                            )
-
-                b_messages_to_send = []
-                for (b_message, _) in b_messages:
-                    b_messages_to_send.append(b_message)
-
                 if b_messages_to_send:
                     logger.debug("Sending messages on results_outgoing")
                     self.results_outgoing.send_multipart(b_messages_to_send)
                     logger.debug("Sent messages on results_outgoing")
 
-                logger.debug("Current tasks on manager %r: %s", manager_id, m["tasks"])
-                if len(m['tasks']) == 0 and m['idle_since'] is None:
-                    m['idle_since'] = time.time()
-
-                # A manager is only made interesting here if a result was
-                # received, which means there should be capacity for a new
-                # task now. Heartbeats and monitoring messages do not make a
-                # manager become interesting.
-                if got_result:
+                    # At least one result received, so manager now has idle capacity
                     interesting_managers.add(manager_id)
+
+                    if len(m['tasks']) == 0 and m['idle_since'] is None:
+                        m['idle_since'] = time.time()
+
+                    self._send_monitoring_info(monitoring_radio, m)
+
+                logger.debug("Current tasks on manager %r: %s", manager_id, m["tasks"])
+
             logger.debug("leaving results_incoming section")
 
     def expire_bad_managers(self, interesting_managers: Set[bytes], monitoring_radio: Optional[MonitoringRadioSender]) -> None:
@@ -626,8 +613,6 @@ def start_file_logger(filename: str, level: int = logging.DEBUG, format_string: 
 
         )
 
-    global logger
-    logger = logging.getLogger(LOGGER_NAME)
     logger.setLevel(level)
     handler = logging.FileHandler(filename)
     handler.setLevel(level)

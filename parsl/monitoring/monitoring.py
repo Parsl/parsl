@@ -4,7 +4,6 @@ import logging
 import multiprocessing.synchronize as ms
 import os
 import queue
-import time
 import warnings
 from multiprocessing.queues import Queue
 from typing import TYPE_CHECKING, Any, Optional, Union
@@ -13,7 +12,6 @@ import typeguard
 
 from parsl.monitoring.errors import MonitoringHubStartError
 from parsl.monitoring.radios.filesystem_router import filesystem_router_starter
-from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.monitoring.radios.udp_router import udp_router_starter
 from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import (
@@ -181,8 +179,6 @@ class MonitoringHub(RepresentationMixin):
         self.filesystem_proc.start()
         logger.info("Started filesystem radio receiver process %s", self.filesystem_proc.pid)
 
-        self.radio = MultiprocessingQueueRadioSender(self.resource_msgs)
-
         try:
             udp_comm_q_result = udp_comm_q.get(block=True, timeout=120)
             udp_comm_q.close()
@@ -199,13 +195,6 @@ class MonitoringHub(RepresentationMixin):
         self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
 
         logger.info("Monitoring Hub initialized")
-
-    def send(self, message: TaggedMonitoringMessage) -> None:
-        logger.debug("Sending message type %s", message[0])
-        t_before = time.time()
-        self.radio.send(message)
-        t_after = time.time()
-        logger.debug(f"Sent message in {t_after - t_before} seconds")
 
     def close(self) -> None:
         logger.info("Terminating Monitoring Hub")

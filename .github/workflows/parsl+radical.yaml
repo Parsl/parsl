@@ -1,0 +1,46 @@
+name: Radical tests
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      max-parallel: 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.11'
+
+    - name: Add conda to system path
+      run: |
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        echo $CONDA/bin >> $GITHUB_PATH
+        echo "CONDA BIN: $CONDA/bin"
+
+    - name: Install parsl and dependencies
+      run: |
+        conda install --channel=conda-forge mpich mpi4py openssl
+        make deps
+        pip3 install ".[radical-pilot]"
+        export PATH=/usr/share/miniconda/bin/:$PATH
+
+    - name: Sanity check
+      run: |
+        echo "PATH: $PATH"
+        echo "Python: "; which python3
+        mpiexec --version
+        mpiexec -n 4 python3 -c "from mpi4py import MPI; assert MPI.COMM_WORLD.Get_size() == 4, 'Expected 4 ranks'; print(f'Rank {MPI.COMM_WORLD.Get_rank()} of {MPI.COMM_WORLD.Get_size()}')"
+
+    - name: Run pytest suite for Radical
+      run: |
+        export RADICAL_CI=1
+        make radical_local_test

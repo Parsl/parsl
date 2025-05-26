@@ -289,20 +289,20 @@ class BlockProviderExecutor(ParslExecutor):
             logger.debug("Sending block monitoring message: %r", msg)
             self.submit_monitoring_radio.send((MessageType.BLOCK_INFO, msg))
 
-    def create_monitoring_info(self, status: Dict[str, JobStatus]) -> Sequence[object]:
+    def create_monitoring_info(self, status: Dict[str, JobStatus]) -> Sequence[Dict[str, Any]]:
         """Create a monitoring message for each block based on the poll status.
         """
-        msg = []
-        for bid, s in status.items():
-            d: Dict[str, Any] = {}
-            d['run_id'] = self.run_id
-            d['status'] = s.status_name
-            d['timestamp'] = datetime.datetime.now()
-            d['executor_label'] = self.label
-            d['job_id'] = self.blocks_to_job_id.get(bid, None)
-            d['block_id'] = bid
-            msg.append(d)
-        return msg
+        return [
+            {
+                "run_id": self.run_id,
+                "status": s.status_name,
+                "timestamp": datetime.datetime.now(),
+                "executor_label": self.label,
+                "job_id": self.blocks_to_job_id.get(bid, None),
+                "block_id": bid
+            }
+            for bid, s in status.items()
+        ]
 
     def poll_facade(self) -> None:
         now = time.time()
