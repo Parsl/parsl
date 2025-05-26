@@ -71,25 +71,6 @@ def taskvine_config():
     return c
 
 
-def workqueue_config():
-    from parsl.tests.configs.workqueue_ex import fresh_config
-    c = fresh_config()
-    c.monitoring = MonitoringHub(
-                        hub_address="localhost",
-                        resource_monitoring_interval=1)
-    return c
-
-
-def taskvine_config():
-    c = Config(executors=[TaskVineExecutor(manager_config=TaskVineManagerConfig(port=9000),
-                                           worker_launch_method='provider')],
-               strategy_period=0.5,
-
-               monitoring=MonitoringHub(hub_address="localhost",
-                                        resource_monitoring_interval=1))
-    return c
-
-
 @pytest.mark.local
 @pytest.mark.parametrize("fresh_config", [htex_config, htex_filesystem_config, htex_udp_config, taskvine_config, workqueue_config])
 def test_row_counts(tmpd_cwd, fresh_config):
@@ -159,10 +140,11 @@ def test_row_counts(tmpd_cwd, fresh_config):
 @pytest.mark.local
 @pytest.mark.parametrize("fresh_config", [workqueue_config])
 def test_row_counts_wq(tmpd_cwd, fresh_config):
-  test_row_counts(tmpd_cwd, fresh_config)
+    test_row_counts(tmpd_cwd, fresh_config)
+
 
 @pytest.mark.taskvine
 @pytest.mark.local
 @pytest.mark.parametrize("fresh_config", [taskvine_config])
 def test_row_counts_tv(tmpd_cwd, fresh_config):
-  test_row_counts(tmpd_cwd, fresh_config)
+    test_row_counts(tmpd_cwd, fresh_config)
