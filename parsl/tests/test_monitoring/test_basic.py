@@ -6,7 +6,6 @@ import pytest
 import parsl
 from parsl import HighThroughputExecutor
 from parsl.config import Config
-from parsl.executors.taskvine import TaskVineExecutor, TaskVineManagerConfig
 from parsl.monitoring import MonitoringHub
 
 
@@ -54,9 +53,27 @@ def htex_filesystem_config():
     return c
 
 
-@pytest.mark.local
-@pytest.mark.parametrize("fresh_config", [htex_config, htex_filesystem_config, htex_udp_config])
-def test_row_counts(tmpd_cwd, fresh_config):
+def workqueue_config():
+    from parsl.tests.configs.workqueue_ex import fresh_config
+    c = fresh_config()
+    c.monitoring = MonitoringHub(
+                        hub_address="localhost",
+                        resource_monitoring_interval=1)
+    return c
+
+
+def taskvine_config():
+    from parsl.executors.taskvine import TaskVineExecutor, TaskVineManagerConfig
+    c = Config(executors=[TaskVineExecutor(manager_config=TaskVineManagerConfig(port=9000),
+                                           worker_launch_method='provider')],
+               strategy_period=0.5,
+
+               monitoring=MonitoringHub(hub_address="localhost",
+                                        resource_monitoring_interval=1))
+    return c
+
+
+def row_counts_parametrized(tmpd_cwd, fresh_config):
     # this is imported here rather than at module level because
     # it isn't available in a plain parsl install, so this module
     # would otherwise fail to import and break even a basic test
@@ -113,3 +130,23 @@ def test_row_counts(tmpd_cwd, fresh_config):
         result = connection.execute(text("SELECT COUNT(*) FROM resource"))
         (c, ) = result.first()
         assert c >= 1
+
+
+@pytest.mark.local
+@pytest.mark.parametrize("fresh_config", [htex_config, htex_filesystem_config, htex_udp_config])
+def test_row_counts_base(tmpd_cwd, fresh_config):
+    row_counts_parametrized(tmpd_cwd, fresh_config)
+
+
+@pytest.mark.workqueue
+@pytest.mark.local
+@pytest.mark.parametrize("fresh_config", [workqueue_config])
+def test_row_counts_wq(tmpd_cwd, fresh_config):
+    row_counts_parametrized(tmpd_cwd, fresh_config)
+
+
+@pytest.mark.taskvine
+@pytest.mark.local
+@pytest.mark.parametrize("fresh_config", [taskvine_config])
+def test_row_counts_tv(tmpd_cwd, fresh_config):
+    row_counts_parametrized(tmpd_cwd, fresh_config)
