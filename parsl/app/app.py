@@ -8,7 +8,6 @@ from inspect import signature
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
 import typeguard
-from typing_extensions import Literal
 
 from parsl.dataflow.dflow import DataFlowKernel
 from parsl.dataflow.futures import AppFuture
@@ -27,7 +26,7 @@ class AppBase(metaclass=ABCMeta):
     @typeguard.typechecked
     def __init__(self, func: Callable,
                  data_flow_kernel: Optional[DataFlowKernel] = None,
-                 executors: Union[List[str], Literal['all']] = 'all',
+                 executors: Union[List[str], str] = 'all',
                  cache: bool = False,
                  ignore_for_cache: Optional[Sequence[str]] = None) -> None:
         """Construct the App object.
@@ -80,7 +79,7 @@ class AppBase(metaclass=ABCMeta):
 def python_app(function: Optional[Callable] = None,
                data_flow_kernel: Optional[DataFlowKernel] = None,
                cache: bool = False,
-               executors: Union[List[str], Literal['all']] = 'all',
+               executors: Union[List[str], str] = 'all',
                ignore_for_cache: Optional[Sequence[str]] = None) -> Callable:
     """Decorator function for making python apps.
 
@@ -146,7 +145,7 @@ def join_app(function: Optional[Callable] = None,
             return PythonApp(f,
                              data_flow_kernel=data_flow_kernel,
                              cache=cache,
-                             executors=["_parsl_internal"],
+                             executors="_parsl_internal",
                              ignore_for_cache=ignore_for_cache,
                              join=True)
         return wrapper(func)
@@ -159,7 +158,7 @@ def join_app(function: Optional[Callable] = None,
 def bash_app(function: Optional[Callable] = None,
              data_flow_kernel: Optional[DataFlowKernel] = None,
              cache: bool = False,
-             executors: Union[List[str], Literal['all']] = 'all',
+             executors: Union[List[str], str] = 'all',
              ignore_for_cache: Optional[Sequence[str]] = None) -> Callable:
     """Decorator function for making bash apps.
 
