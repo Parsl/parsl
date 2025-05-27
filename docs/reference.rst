@@ -173,7 +173,7 @@ Exceptions
     parsl.providers.errors.SchedulerMissingArgs
     parsl.providers.errors.ScriptPathError
     parsl.executors.high_throughput.errors.WorkerLost
-    parsl.executors.high_throughput.interchange.ManagerLost
+    parsl.executors.high_throughput.errors.ManagerLost
     parsl.serialize.errors.DeserializationError
     parsl.serialize.errors.SerializationError
 
