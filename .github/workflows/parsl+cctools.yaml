@@ -30,7 +30,7 @@ jobs:
       run: |
         conda install --channel=conda-forge ndcctools mpich mpi4py openssl
         make deps
-        pip install .[workqueue]
+        pip install .[workqueue,monitoring]
         export PATH=/usr/share/miniconda/bin/:$PATH
 
     - name: Sanity check
