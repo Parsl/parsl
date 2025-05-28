@@ -378,6 +378,11 @@ class Interchange:
                 return
 
             if msg['type'] == 'registration':
+                ix_minor_py = self.current_platform['python_v'].rsplit(".", 1)[0]
+                ix_parsl_v = self.current_platform['parsl_v']
+                mgr_minor_py = msg['python_v'].rsplit(".", 1)[0]
+                mgr_parsl_v = msg['parsl_v']
+
                 # We set up an entry only if registration works correctly
                 self._ready_managers[manager_id] = {'last_heartbeat': time.time(),
                                                     'idle_since': time.time(),
@@ -387,7 +392,7 @@ class Interchange:
                                                     'worker_count': 0,
                                                     'active': True,
                                                     'draining': False,
-                                                    'parsl_version': msg['parsl_v'],
+                                                    'parsl_version': mgr_parsl_v,
                                                     'python_version': msg['python_v'],
                                                     'tasks': []}
                 self.connected_block_history.append(msg['block_id'])
@@ -405,23 +410,32 @@ class Interchange:
                 logger.info(f"Registration info for manager {manager_id!r}: {msg}")
                 self._send_monitoring_info(monitoring_radio, m)
 
-                if (msg['python_v'].rsplit(".", 1)[0] != self.current_platform['python_v'].rsplit(".", 1)[0] or
-                    msg['parsl_v'] != self.current_platform['parsl_v']):
-                    logger.error(f"Manager {manager_id!r} has incompatible version info with the interchange")
-                    logger.debug("Setting kill event")
+                if (mgr_minor_py, mgr_parsl_v) != (ix_minor_py, ix_parsl_v):
                     kill_event.set()
-                    e = VersionMismatch("py.v={} parsl.v={}".format(self.current_platform['python_v'].rsplit(".", 1)[0],
-                                                                    self.current_platform['parsl_v']),
-                                        "py.v={} parsl.v={}".format(msg['python_v'].rsplit(".", 1)[0],
-                                                                    msg['parsl_v'])
-                                        )
-                    result_package = {'type': 'result', 'task_id': -1, 'exception': serialize_object(e)}
+                    e = VersionMismatch(
+                        f"py.v={ix_minor_py} parsl.v={ix_parsl_v}",
+                        f"py.v={mgr_minor_py} parsl.v={mgr_parsl_v}",
+                    )
+                    result_package = {
+                        'type': 'result',
+                        'task_id': -1,
+                        'exception': serialize_object(e),
+                    }
                     pkl_package = pickle.dumps(result_package)
                     self.results_outgoing.send(pkl_package)
-                    logger.error("Sent failure reports, shutting down interchange")
+                    logger.error(
+                        "Manager has incompatible version info with the interchange;"
+                        " sending failure reports and shutting down:"
+                        f"\n  Interchange: {e.interchange_version}"
+                        f"\n  Manager:     {e.manager_version}"
+                    )
+
                 else:
-                    logger.info(f"Manager {manager_id!r} has compatible Parsl version {msg['parsl_v']}")
-                    logger.info(f"Manager {manager_id!r} has compatible Python version {msg['python_v'].rsplit('.', 1)[0]}")
+                    logger.info(
+                        f"Registered manager {manager_id!r} (py{mgr_minor_py},"
+                        f" {mgr_parsl_v}) and added to ready queue"
+                    )
+                    logger.debug("Manager %r -> %s", manager_id, m)
             elif msg['type'] == 'heartbeat':
                 manager = self._ready_managers.get(manager_id)
                 if manager:
