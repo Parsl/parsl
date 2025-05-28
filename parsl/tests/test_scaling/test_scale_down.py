@@ -37,6 +37,7 @@ def local_config():
         ],
         max_idletime=0.5,
         strategy='simple',
+        strategy_period=0.5,
     )
 
 

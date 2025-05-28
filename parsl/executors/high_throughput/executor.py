@@ -29,6 +29,7 @@ from parsl.executors.high_throughput.manager_selector import (
 )
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
+from parsl.monitoring.radios.zmq_router import ZMQRadioReceiver, start_zmq_receiver
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
@@ -334,6 +335,10 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self._result_queue_thread_exit = threading.Event()
         self._result_queue_thread: Optional[threading.Thread] = None
 
+        self.zmq_monitoring: Optional[ZMQRadioReceiver]
+        self.zmq_monitoring = None
+        self.hub_zmq_port = None
+
     radio_mode = "htex"
     enable_mpi_mode: bool = False
     mpi_launcher: str = "mpiexec"
@@ -407,6 +412,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
     def start(self):
         """Create the Interchange process and connect to it.
         """
+        super().start()
         if self.encrypted and self.cert_dir is None:
             logger.debug("Creating CurveZMQ certificates")
             self.cert_dir = curvezmq.create_certificates(self.logdir)
@@ -426,6 +432,15 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.command_client = zmq_pipes.CommandClient(
             self.loopback_address, self.interchange_port_range, self.cert_dir
         )
+
+        if self.monitoring_messages is not None:
+            self.zmq_monitoring = start_zmq_receiver(monitoring_messages=self.monitoring_messages,
+                                                     loopback_address=self.loopback_address,
+                                                     port_range=self.interchange_port_range,
+                                                     logdir=self.logdir,
+                                                     worker_debug=self.worker_debug,
+                                                     )
+            self.hub_zmq_port = self.zmq_monitoring.port
 
         self._result_queue_thread = None
         self._start_result_queue_thread()
@@ -584,20 +599,20 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self._result_queue_thread.start()
         logger.debug("Started result queue thread: %r", self._result_queue_thread)
 
-    def hold_worker(self, worker_id: str) -> None:
-        """Puts a worker on hold, preventing scheduling of additional tasks to it.
+    def _hold_manager(self, manager_id: str) -> None:
+        """Puts a manager on hold, preventing scheduling of additional tasks to it.
 
         This is called "hold" mostly because this only stops scheduling of tasks,
-        and does not actually kill the worker.
+        and does not actually kill the manager or workers.
 
         Parameters
         ----------
 
-        worker_id : str
-            Worker id to be put on hold
+        manager_id : str
+            Manager id to be put on hold
         """
-        self.command_client.run("HOLD_WORKER;{}".format(worker_id))
-        logger.debug("Sent hold request to manager: {}".format(worker_id))
+        self.command_client.run("HOLD_WORKER;{}".format(manager_id))
+        logger.debug("Sent hold request to manager: {}".format(manager_id))
 
     @property
     def outstanding(self) -> int:
@@ -641,7 +656,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         for manager in managers:
             if manager['block_id'] == block_id:
                 logger.debug("Sending hold to manager: {}".format(manager['manager']))
-                self.hold_worker(manager['manager'])
+                self._hold_manager(manager['manager'])
 
     def submit(self, func, resource_specification, *args, **kwargs):
         """Submits work to the outgoing_q.
@@ -860,6 +875,9 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         logger.info("Waiting for result queue thread exit")
         if self._result_queue_thread:
             self._result_queue_thread.join()
+
+        if self.zmq_monitoring:
+            self.zmq_monitoring.close()
 
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 
