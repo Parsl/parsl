@@ -3,7 +3,7 @@ import math
 import os
 import re
 import time
-from itertools import islice
+import sys
 from typing import Any, Dict, Optional
 
 import typeguard
@@ -51,18 +51,25 @@ squeue_translate_table = {
 }
 
 
-def batched(iterable, n):
-    """Batched
-    Turns a list into a batch of size n. This code is from
-    https://docs.python.org/3.12/library/itertools.html#itertools.batched
-    and in versions 3.12+ this can be replaced with
-    itertools.batched
-    """
-    if n < 1:
-        raise ValueError("n must be at least one")
-    iterator = iter(iterable)
-    while batch := tuple(islice(iterator, n)):
-        yield batch
+if sys.version_info < (3, 12):
+    from itertools import islice
+    from typing import Iterable
+    def batched(
+        iterable: Iterable[tuple[object, Any]], n: int, *, strict: bool = False
+    ):
+        """Batched
+        Turns a list into a batch of size n. This code is from
+        https://docs.python.org/3.12/library/itertools.html#itertools.batched
+        and in versions 3.12+ this can be replaced with
+        itertools.batched
+        """
+        if n < 1:
+            raise ValueError("n must be at least one")
+        iterator = iter(iterable)
+        while batch := tuple(islice(iterator, n)):
+            yield batch
+else:
+    from itertools import batched
 
 
 class SlurmProvider(ClusterProvider, RepresentationMixin):
