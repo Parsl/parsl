@@ -408,13 +408,13 @@ def try_assert():
         check_period_ms: int = 20,
     ):
         tb = create_traceback(start=1)
-        timeout_s = abs(timeout_ms) / 1000.0
         check_period_s = abs(check_period_ms) / 1000.0
         if attempts > 0:
             for _attempt_no in range(attempts):
+                time.sleep(random.random() * check_period_s)  # jitter
+                check_period_s *= 2
                 if test_func():
                     return
-                time.sleep(check_period_s)
             else:
                 att_fail = (
                     f"\n  (Still failing after attempt limit [{attempts}], testing"
@@ -423,12 +423,15 @@ def try_assert():
                 exc = AssertionError(f"{str(fail_msg)}{att_fail}".strip())
                 raise exc.with_traceback(tb)
 
-        elif timeout_s > 0:
+        elif timeout_ms > 0:
+            timeout_s = abs(timeout_ms) / 1000.0
             end = time.monotonic() + timeout_s
             while time.monotonic() < end:
+                wait_for = random.random() * check_period_s  # jitter
+                time.sleep(min(wait_for, end - time.monotonic()))
+                check_period_s *= 2
                 if test_func():
                     return
-                time.sleep(check_period_s)
             att_fail = (
                 f"\n  (Still failing after timeout [{timeout_ms}ms], with attempts "
                 f"every {check_period_ms}ms)"
