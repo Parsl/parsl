@@ -237,7 +237,7 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
 
         stdout = ""
         for job_batch in batched(active_jobs.items(), self.status_batch_size):
-            job_id_list = ",".join([jid for jid, job in job_batch if not job["status"].terminal])
+            job_id_list = ",".join(jid for jid, job in job_batch if not job["status"].terminal)
             cmd = self._cmd.format(job_id_list)
             logger.debug("Executing %s", cmd)
             retcode, batch_stdout, batch_stderr = self.execute_wait(cmd)
