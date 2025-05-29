@@ -235,15 +235,14 @@ class SlurmProvider(ClusterProvider, RepresentationMixin):
             logger.debug("No active jobs, skipping status update")
             return
 
-        job_list_batches = batched(active_jobs.items(), self.status_batch_size)
         stdout = ""
-        for job_batch in job_list_batches:
+        for job_batch in batched(active_jobs.items(), self.status_batch_size):
             job_id_list = ",".join([jid for jid, job in job_batch if not job["status"].terminal])
             cmd = self._cmd.format(job_id_list)
             logger.debug("Executing %s", cmd)
-            retcode, _stdout, stderr = self.execute_wait(cmd)
-            logger.debug("sacct/squeue returned %s %s", stdout, stderr)
-            stdout += _stdout
+            retcode, batch_stdout, batch_stderr = self.execute_wait(cmd)
+            logger.debug(f"sacct/squeue returned {retcode} {batch_stdout} {batch_stderr}")
+            stdout += batch_stdout
             # Execute_wait failed. Do no update
             if retcode != 0:
                 logger.warning("sacct/squeue failed with non-zero exit code {}".format(retcode))
