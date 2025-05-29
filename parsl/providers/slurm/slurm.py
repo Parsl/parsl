@@ -54,6 +54,7 @@ squeue_translate_table = {
 if sys.version_info < (3, 12):
     from itertools import islice
     from typing import Iterable
+
     def batched(
         iterable: Iterable[tuple[object, Any]], n: int, *, strict: bool = False
     ):
