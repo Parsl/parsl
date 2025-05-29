@@ -308,12 +308,12 @@ class DataFlowKernel:
     def _send_file_log_info(self, file: Union[File, DataFuture],
                             task_record: TaskRecord, is_output: bool) -> None:
         """ Generate a message for the monitoring db about a file. """
-        if self.monitoring and self.file_provenance:
+        if self.monitoring_radio and self.file_provenance:
             file_log_info = self._create_file_log_info(file, task_record)
             # make sure the task_id is None for inputs
             if not is_output:
                 file_log_info['task_id'] = None
-            self.monitoring.send((MessageType.FILE_INFO, file_log_info))
+            self.monitoring_radio.send((MessageType.FILE_INFO, file_log_info))
 
     def _create_file_log_info(self, file: Union[File, DataFuture],
                               task_record: TaskRecord) -> Dict[str, Any]:
@@ -347,18 +347,18 @@ class DataFlowKernel:
     def register_as_input(self, f: Union[File, DataFuture],
                           task_record: TaskRecord):
         """ Register a file as an input to a task. """
-        if self.monitoring and self.file_provenance:
+        if self.monitoring_radio and self.file_provenance:
             self._send_file_log_info(f, task_record, False)
             file_input_info = self._create_file_io_info(f, task_record)
-            self.monitoring.send((MessageType.INPUT_FILE, file_input_info))
+            self.monitoring_radio.send((MessageType.INPUT_FILE, file_input_info))
 
     def register_as_output(self, f: Union[File, DataFuture],
                            task_record: TaskRecord):
         """ Register a file as an output of a task. """
-        if self.monitoring and self.file_provenance:
+        if self.monitoring_radio and self.file_provenance:
             self._send_file_log_info(f, task_record, True)
             file_output_info = self._create_file_io_info(f, task_record)
-            self.monitoring.send((MessageType.OUTPUT_FILE, file_output_info))
+            self.monitoring_radio.send((MessageType.OUTPUT_FILE, file_output_info))
 
     def _create_file_io_info(self, file: Union[File, DataFuture],
                              task_record: TaskRecord) -> Dict[str, Any]:
@@ -374,9 +374,9 @@ class DataFlowKernel:
 
     def _register_env(self, environ: ParslExecutor) -> None:
         """ Capture the environment information for the monitoring db. """
-        if self.monitoring and self.file_provenance:
+        if self.monitoring_radio and self.file_provenance:
             environ_info = self._create_env_log_info(environ)
-            self.monitoring.send((MessageType.ENVIRONMENT_INFO, environ_info))
+            self.monitoring_radio.send((MessageType.ENVIRONMENT_INFO, environ_info))
 
     def _create_env_log_info(self, environ: ParslExecutor) -> Dict[str, Any]:
         """
@@ -397,13 +397,13 @@ class DataFlowKernel:
 
     def log_info(self, msg: str) -> None:
         """Log an info message to the monitoring db."""
-        if self.monitoring:
+        if self.monitoring_radio:
             if self.file_provenance:
                 misc_msg = self._create_misc_log_info(msg)
                 if misc_msg is None:
                     logger.info("Could not turn message into a str, so not sending message to monitoring db")
                 else:
-                    self.monitoring.send((MessageType.MISC_INFO, misc_msg))
+                    self.monitoring_radio.send((MessageType.MISC_INFO, misc_msg))
             else:
                 logger.info("File provenance is not enabled, so not sending message to monitoring db")
         else:
