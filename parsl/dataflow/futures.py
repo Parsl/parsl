@@ -7,7 +7,8 @@ from typing import Any, Optional, Sequence, Union
 
 import parsl.app.app as app
 from parsl.app.futures import DataFuture
-from parsl.dataflow.taskrecord import TaskRecord, deepcopy as trcopy
+from parsl.dataflow.taskrecord import TaskRecord
+from parsl.dataflow.taskrecord import deepcopy as trcopy
 
 logger = logging.getLogger(__name__)
 

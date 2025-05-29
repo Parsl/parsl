@@ -1,19 +1,19 @@
+import glob
 import logging
+import os
+import subprocess
 from functools import partial
 from inspect import Parameter, signature
 from pathlib import Path
-import glob
-import os
-import subprocess
-
-from parsl.app.app import AppBase
-from parsl.app.errors import wrap_error
-from parsl.data_provider.files import File
-from parsl.dataflow.dflow import DataFlowKernelLoader
-from parsl.data_provider.dynamic_files import DynamicFileList
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
+
+from parsl.app.app import AppBase
+from parsl.app.errors import wrap_error
+from parsl.data_provider.dynamic_files import DynamicFileList
+from parsl.data_provider.files import File
+from parsl.dataflow.dflow import DataFlowKernelLoader
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,7 @@ import os
 import queue
 import threading
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, Union, cast
 
 import typeguard
 

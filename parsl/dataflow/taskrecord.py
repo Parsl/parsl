@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from copy import deepcopy as dcpy
 import datetime
 import threading
 from concurrent.futures import Future
+from copy import deepcopy as dcpy
 
 # only for type checking:
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Union

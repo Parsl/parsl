@@ -13,7 +13,7 @@ import sys
 from concurrent.futures import Future
 from copy import deepcopy
 from datetime import datetime, timezone
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Type, Union
 
 import typeguard
 
@@ -297,7 +297,7 @@ class DynamicFileList(Future):
             self.set_result(self)
 
     @typeguard.typechecked
-    def __init__(self, files: Optional[List[Union[File, DataFuture, 'self.DynamicFile']]] = None):
+    def __init__(self, files: Optional[List[Union[File, DataFuture, Type[DynamicFileList.DynamicFile]]]] = None):
         """Construct a DynamicFileList instance
 
         Args:
@@ -434,10 +434,6 @@ class DynamicFileList(Future):
             return self.parent.running()
         else:
             return False
-
-    #def result(self, timeout=None) -> 'DynamicFileList':
-    #    """ Return self, which is the results of the file list """
-    #    return self
 
     def exception(self, timeout=None) -> None:
         """ No-op"""
@@ -726,7 +722,6 @@ class DynamicFileList(Future):
         del state['dfk']
         del state['_condition']
         if self.parent is not None:
-            #state['parent'] = self.parent.__getstate__()
             if state['parent'].task_record is not None:
                 state['parent'].task_record = trcopy(self.parent.task_record)
         if self.task_record is not None:
@@ -776,6 +771,7 @@ class DynamicFileList(Future):
                                                   "_output_task_id": self._output_task_id,
                                                   "task_record": tr,
                                                   "_is_done": self._is_done})'''
+
 
 class DynamicFileSubList(DynamicFileList):
     @typeguard.typechecked

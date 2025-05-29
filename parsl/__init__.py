@@ -19,7 +19,7 @@ import multiprocessing as _multiprocessing
 import os
 import platform
 
-from parsl.app.app import bash_app, join_app, python_app, bash_watch
+from parsl.app.app import bash_app, bash_watch, join_app, python_app
 from parsl.config import Config
 from parsl.data_provider.files import File
 from parsl.dataflow.dflow import DataFlowKernel, DataFlowKernelLoader
