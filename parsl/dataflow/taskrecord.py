@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import threading
 from concurrent.futures import Future
+from copy import deepcopy as dcpy
 
 # only for type checking:
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Union
@@ -101,3 +102,34 @@ class TaskRecord(TypedDict, total=False):
     """Restricts access to end-of-join behavior to ensure that joins
     only complete once, even if several joining Futures complete close
     together in time."""
+
+    environment: str
+    """The environment in which the task is being executed."""
+
+
+def deepcopy(tr: TaskRecord) -> TaskRecord:
+    tr_out: TaskRecord
+    tr_out = {
+        'executor': dcpy(tr['executor']),
+        'func': dcpy(tr['func']),
+        'func_name': dcpy(tr['func'].__name__),
+        'memoize': dcpy(tr['memoize']),
+        'hashsum': dcpy(tr['hashsum']),
+        'exec_fu': None,
+        'fail_count': dcpy(tr['fail_count']),
+        'fail_cost': dcpy(tr['fail_cost']),
+        'fail_history': dcpy(tr['fail_history']),
+        'from_memo': dcpy(tr['from_memo']),
+        'ignore_for_cache': dcpy(tr['ignore_for_cache']),
+        'join': dcpy(tr['join']),
+        'joins': dcpy(tr['joins']),
+        'try_id': dcpy(tr['try_id']),
+        'id': dcpy(tr['id']),
+        'time_invoked': dcpy(tr['time_invoked']),
+        'time_returned': dcpy(tr['time_returned']),
+        'try_time_launched': dcpy(tr['try_time_launched']),
+        'try_time_returned': dcpy(tr['try_time_returned']),
+        'resource_specification': dcpy(tr['resource_specification']),
+        'environment': dcpy(tr['environment'])}
+
+    return tr_out
