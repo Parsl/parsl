@@ -2,8 +2,8 @@ import logging
 import math
 import os
 import re
-import time
 import sys
+import time
 from typing import Any, Dict, Optional
 
 import typeguard
