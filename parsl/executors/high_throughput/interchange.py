@@ -389,23 +389,19 @@ class Interchange:
                 mgr_minor_py = msg['python_v'].rsplit(".", 1)[0]
                 mgr_parsl_v = msg['parsl_v']
 
-                # We set up an entry only if registration works correctly
-                self._ready_managers[manager_id] = {'last_heartbeat': time.time(),
-                                                    'idle_since': time.time(),
-                                                    'block_id': None,
-                                                    'start_time': msg['start_time'],
-                                                    'max_capacity': 0,
-                                                    'worker_count': 0,
-                                                    'active': True,
-                                                    'draining': False,
-                                                    'parsl_version': mgr_parsl_v,
-                                                    'python_version': msg['python_v'],
-                                                    'tasks': []}
-                self.connected_block_history.append(msg['block_id'])
-
-                interesting_managers.add(manager_id)
-                logger.info(f"Adding manager: {manager_id!r} to ready queue")
-                m = self._ready_managers[manager_id]
+                m = ManagerRecord(
+                    block_id=None,
+                    start_time=msg['start_time'],
+                    tasks=[],
+                    worker_count=0,
+                    max_capacity=0,
+                    active=True,
+                    draining=False,
+                    last_heartbeat=time.time(),
+                    idle_since=time.time(),
+                    parsl_version=mgr_parsl_v,
+                    python_version=msg['python_v'],
+                )
 
                 # m is a ManagerRecord, but msg is a dict[Any,Any] and so can
                 # contain arbitrary fields beyond those in ManagerRecord (and
@@ -437,11 +433,22 @@ class Interchange:
                     )
 
                 else:
+                    # We really should update the associated data structure; but not
+                    # at this time.  *kicks can down the road*
+                    assert m['block_id'] is not None, "Verified externally currently"
+
+                    # set up entry only if we accept the registration
+                    self._ready_managers[manager_id] = m
+                    self.connected_block_history.append(m['block_id'])
+
+                    interesting_managers.add(manager_id)
+
                     logger.info(
                         f"Registered manager {manager_id!r} (py{mgr_minor_py},"
                         f" {mgr_parsl_v}) and added to ready queue"
                     )
                     logger.debug("Manager %r -> %s", manager_id, m)
+
             elif msg['type'] == 'heartbeat':
                 manager = self._ready_managers.get(manager_id)
                 if manager:
