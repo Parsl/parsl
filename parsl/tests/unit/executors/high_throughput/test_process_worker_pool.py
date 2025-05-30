@@ -15,8 +15,7 @@ if sys.version_info < (3, 12):
 _known_required = (  # type: ignore[unreachable, unused-ignore]
     "--cert_dir",
     "--cpu-affinity",
-    "--result_port",
-    "--task_port",
+    "--port",
     "--addresses",
 )
 
@@ -61,8 +60,7 @@ def test_arg_parser_required(req):
 def test_arg_parser_validates_cpu_affinity(valid, val):
     reqd_args = []
     reqd_args.extend(("--cert_dir", "/some/path"))
-    reqd_args.extend(("--result_port", "123"))
-    reqd_args.extend(("--task_port", "123"))
+    reqd_args.extend(("--port", "123"))
     reqd_args.extend(("--addresses", "asdf"))
     reqd_args.extend(("--cpu-affinity", val))
 
