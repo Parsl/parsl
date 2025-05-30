@@ -46,8 +46,7 @@ DEFAULT_LAUNCH_CMD = ("process_worker_pool.py {debug} {max_workers_per_node} "
                       "-c {cores_per_worker} "
                       "-m {mem_per_worker} "
                       "--poll {poll_period} "
-                      "--task_port={task_port} "
-                      "--result_port={result_port} "
+                      "--port={worker_port} "
                       "--cert_dir {cert_dir} "
                       "--logdir={logdir} "
                       "--block_id={{block_id}} "
@@ -100,8 +99,8 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
         Supports IPv4 and IPv6 addresses
         default=127.0.0.1
 
-    worker_ports : (int, int)
-        Specify the ports to be used by workers to connect to Parsl. If this option is specified,
+    worker_port : int
+        Specify the port to be used by workers to connect to Parsl. If this option is specified,
         worker_port_range will not be honored.
 
     worker_port_range : (int, int)
@@ -241,7 +240,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  interchange_launch_cmd: Optional[Sequence[str]] = None,
                  address: Optional[str] = None,
                  loopback_address: str = "127.0.0.1",
-                 worker_ports: Optional[Tuple[int, int]] = None,
+                 worker_port: Optional[int] = None,
                  worker_port_range: Optional[Tuple[int, int]] = (54000, 55000),
                  interchange_port_range: Optional[Tuple[int, int]] = (55000, 56000),
                  storage_access: Optional[List[Staging]] = None,
@@ -310,7 +309,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             self._workers_per_node = 1  # our best guess-- we do not have any provider hints
 
         self._task_counter = 0
-        self.worker_ports = worker_ports
+        self.worker_port = worker_port
         self.worker_port_range = worker_port_range
         self.interchange_proc: Optional[subprocess.Popen] = None
         self.interchange_port_range = interchange_port_range
@@ -390,8 +389,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                        prefetch_capacity=self.prefetch_capacity,
                                        address_probe_timeout_string=address_probe_timeout_string,
                                        addresses=self.all_addresses,
-                                       task_port=self.worker_task_port,
-                                       result_port=self.worker_result_port,
+                                       worker_port=self.worker_port,
                                        cores_per_worker=self.cores_per_worker,
                                        mem_per_worker=self.mem_per_worker,
                                        max_workers_per_node=max_workers_per_node,
@@ -551,7 +549,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                                                self.incoming_q.port,
                                                self.command_client.port),
                               "interchange_address": self.address,
-                              "worker_ports": self.worker_ports,
+                              "worker_port": self.worker_port,
                               "worker_port_range": self.worker_port_range,
                               "hub_address": self.loopback_address,
                               "hub_zmq_port": self.hub_zmq_port,
@@ -576,15 +574,14 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         stdin.close()
         logger.debug("Sent config object. Requesting worker ports")
         try:
-            (self.worker_task_port, self.worker_result_port) = self.command_client.run("WORKER_PORTS", timeout_s=120)
+            self.worker_port = self.command_client.run("WORKER_BINDS", timeout_s=120)
         except CommandClientTimeoutError:
             logger.error("Interchange has not completed initialization. Aborting")
             raise Exception("Interchange failed to start")
         logger.debug(
-            "Interchange process started (%r).  Worker ports: %d, %d",
+            "Interchange process started (%r).  Worker port: %d",
             self.interchange_proc,
-            self.worker_task_port,
-            self.worker_result_port
+            self.worker_port,
         )
 
     def _start_result_queue_thread(self):
