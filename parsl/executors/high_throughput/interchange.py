@@ -196,12 +196,12 @@ class Interchange:
             eg. [{'task_id':<x>, 'buffer':<buf>} ... ]
         """
         tasks = []
-        for _ in range(0, count):
-            if len(self.pending_task_queue) > 0:
-                _, _, task = self.pending_task_queue.pop(0)
+        try:
+            for _ in range(count):
+                *_, task = self.pending_task_queue.pop()
                 tasks.append(task)
-            else:
-                break
+        except IndexError:
+            pass
 
         return tasks
 
@@ -344,10 +344,8 @@ class Interchange:
 
             # Process priority, higher number = lower priority
             resource_spec = msg.get('resource_spec', {})
-            resource_spec.setdefault("priority", float('inf'))
-            msg['resource_spec'] = resource_spec
-            priority = resource_spec['priority']
-            queue_entry = (priority, self.task_counter, msg)
+            priority = resource_spec.get('priority', float('inf'))
+            queue_entry = (-priority, -self.task_counter, msg)
 
             logger.debug("putting message onto pending_task_queue")
 
@@ -483,10 +481,10 @@ class Interchange:
             len(self._ready_managers)
         )
 
-        if interesting_managers and (len(self.pending_task_queue) != 0):
+        if interesting_managers and self.pending_task_queue:
             shuffled_managers = self.manager_selector.sort_managers(self._ready_managers, interesting_managers)
 
-            while shuffled_managers and (len(self.pending_task_queue) != 0):  # cf. the if statement above...
+            while shuffled_managers and self.pending_task_queue:  # cf. the if statement above...
                 manager_id = shuffled_managers.pop()
                 m = self._ready_managers[manager_id]
                 tasks_inflight = len(m['tasks'])

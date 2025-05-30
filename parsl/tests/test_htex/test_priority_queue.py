@@ -56,10 +56,6 @@ def test_priority_queue():
         sorted_by_completion = sorted(results.items(), key=lambda item: item[1])
         execution_order = [key for key, _ in sorted_by_completion]
 
-        # print("\nExecution Order (priority, submission index):")
-        # for key in execution_order:
-        #     print(f"  {key}")
-
         # check priority queue functionality
         priorities_only = [p for (p, i) in execution_order]
         assert priorities_only == sorted(priorities_only), "Priority execution order failed"
