@@ -66,8 +66,7 @@ class Manager:
     def __init__(self, *,
                  addresses,
                  address_probe_timeout,
-                 task_port,
-                 result_port,
+                 port,
                  cores_per_worker,
                  mem_per_worker,
                  max_workers_per_node,
@@ -157,15 +156,13 @@ class Manager:
         self._start_time = time.time()
 
         try:
-            ix_address = probe_addresses(addresses.split(','), task_port, timeout=address_probe_timeout)
+            ix_address = probe_addresses(addresses.split(','), port, timeout=address_probe_timeout)
             if not ix_address:
                 raise Exception("No viable address found")
             else:
-                logger.info("Connection to Interchange successful on {}".format(ix_address))
-                task_q_url = tcp_url(ix_address, task_port)
-                result_q_url = tcp_url(ix_address, result_port)
-                logger.info("Task url : {}".format(task_q_url))
-                logger.info("Result url : {}".format(result_q_url))
+                logger.info(f"Connection to Interchange successful on {ix_address}")
+                task_q_url = tcp_url(ix_address, port)
+                logger.info(f"Interchange url: {task_q_url}")
         except Exception:
             logger.exception("Caught exception while trying to determine viable address to interchange")
             print("Failed to find a viable address to connect to interchange. Exiting")
@@ -175,7 +172,6 @@ class Manager:
         self.zmq_context = curvezmq.ClientContext(self.cert_dir)
 
         self._task_q_url = task_q_url
-        self._result_q_url = result_q_url
 
         self.uid = uid
         self.block_id = block_id
@@ -294,11 +290,16 @@ class Manager:
         logger.debug("Sent drain")
 
     @wrap_with_logs
-    def pull_tasks(self):
+    def interchange_communicator(self, pair_setup: threading.Event):
         """ Pull tasks from the incoming tasks zmq pipe onto the internal
         pending task queue
         """
         logger.info("starting")
+
+        results_sock = self.zmq_context.socket(zmq.PAIR)
+        results_sock.setsockopt(zmq.LINGER, 0)
+        results_sock.bind("inproc://results")
+        pair_setup.set()
 
         # Linger is set to 0, so that the manager can exit even when there might be
         # messages in the pipe
@@ -309,6 +310,7 @@ class Manager:
         logger.info("Manager task pipe connected to interchange")
 
         poller = zmq.Poller()
+        poller.register(results_sock, zmq.POLLIN)
         poller.register(task_incoming, zmq.POLLIN)
 
         # Send a registration message
@@ -335,10 +337,13 @@ class Manager:
                 pending_task_count = self.pending_task_queue.qsize()
             except NotImplementedError:
                 # Ref: https://github.com/python/cpython/blob/6d5e0dc0e330f4009e8dc3d1642e46b129788877/Lib/multiprocessing/queues.py#L125
-                pending_task_count = f"pending task count is not available on {platform.system()}"
+                pending_task_count = f"pending task count is not available on {platform.system()}"  # type: ignore[assignment]
 
-            logger.debug("ready workers: {}, pending tasks: {}".format(self.ready_worker_count.value,
-                                                                       pending_task_count))
+            logger.debug(
+                'ready workers: %d, pending tasks: %d',
+                self.ready_worker_count.value,  # type: ignore[attr-defined]
+                pending_task_count,
+            )
 
             if time.time() >= last_beat + self.heartbeat_period:
                 self.heartbeat_to_incoming(task_incoming)
@@ -377,6 +382,10 @@ class Manager:
                     for task in tasks:
                         self.task_scheduler.put_task(task)
 
+            elif socks.get(results_sock) == zmq.POLLIN:
+                meta_b = json.dumps({'type': 'result'}).encode()
+                task_incoming.send_multipart([meta_b, results_sock.recv()])
+                logger.debug("Result sent to interchange")
             else:
                 logger.debug("No incoming tasks")
 
@@ -391,40 +400,31 @@ class Manager:
         logger.info("Exiting")
 
     @wrap_with_logs
-    def push_results(self):
-        """ Listens on the pending_result_queue and sends out results via zmq
+    def ferry_result(self, may_connect: threading.Event):
+        """ Listens on the pending_result_queue and ferries results to the interchange
+         connected thread
         """
-        logger.debug("Starting result push thread")
+        logger.debug("Begin")
 
         # Linger is set to 0, so that the manager can exit even when there might be
         # messages in the pipe
-        result_outgoing = self.zmq_context.socket(zmq.DEALER)
-        result_outgoing.setsockopt(zmq.IDENTITY, self.uid.encode('utf-8'))
-        result_outgoing.setsockopt(zmq.LINGER, 0)
-        result_outgoing.connect(self._result_q_url)
-        logger.info("Manager result pipe connected to interchange")
+        notify_sock = self.zmq_context.socket(zmq.PAIR)
+        notify_sock.setsockopt(zmq.LINGER, 0)
+        may_connect.wait()
+        notify_sock.connect("inproc://results")
 
         while not self._stop_event.is_set():
-            logger.debug("Starting pending_result_queue get")
             try:
                 r = self.task_scheduler.get_result()
                 if r is None:
                     continue
-                logger.debug("Result received from worker: %s", id(r))
-                result_outgoing.send(r)
-                logger.debug("Result sent to interchange: %s", id(r))
+                logger.debug("Result received from worker")
+                notify_sock.send(r)
             except Exception:
                 logger.exception("Failed to send result to interchange")
 
-        result_outgoing.close()
+        notify_sock.close()
         logger.debug("Exiting")
-
-    @wrap_with_logs
-    def heartbeater(self):
-        while not self._stop_event.wait(self.heartbeat_period):
-            heartbeat_message = f"heartbeat_period={self.heartbeat_period} seconds"
-            logger.info(f"Sending heartbeat via results connection: {heartbeat_message}")
-            self.pending_result_queue.put(pickle.dumps({'type': 'heartbeat'}))
 
     def worker_watchdog(self, procs: dict[int, SpawnProcess]):
         """Keeps workers alive."""
@@ -492,23 +492,26 @@ class Manager:
 
         logger.debug("Workers started")
 
-        thr_task_puller = threading.Thread(target=self.pull_tasks, name="Task-Puller")
-        thr_result_pusher = threading.Thread(
-            target=self.push_results, name="Result-Pusher"
+        pair_setup = threading.Event()
+
+        thr_task_puller = threading.Thread(
+            target=self.interchange_communicator,
+            args=(pair_setup,),
+            name="Interchange-Communicator",
         )
+        thr_result_ferry = threading.Thread(
+            target=self.ferry_result, args=(pair_setup,), name="Result-Shovel")
         thr_worker_watchdog = threading.Thread(
             target=self.worker_watchdog, args=(procs,), name="worker-watchdog"
         )
         thr_monitoring_handler = threading.Thread(
             target=self.handle_monitoring_messages, name="Monitoring-Handler"
         )
-        thr_heartbeater = threading.Thread(target=self.heartbeater, name="Heartbeater")
 
         thr_task_puller.start()
-        thr_result_pusher.start()
+        thr_result_ferry.start()
         thr_worker_watchdog.start()
         thr_monitoring_handler.start()
-        thr_heartbeater.start()
 
         logger.info("Manager threads started")
 
@@ -520,11 +523,10 @@ class Manager:
         self.monitoring_queue.put(None)
         self.pending_result_queue.put(None)
 
-        thr_heartbeater.join()
-        thr_task_puller.join()
-        thr_result_pusher.join()
-        thr_worker_watchdog.join()
         thr_monitoring_handler.join()
+        thr_worker_watchdog.join()
+        thr_result_ferry.join()
+        thr_task_puller.join()
 
         for worker_id in procs:
             p = procs[worker_id]
@@ -862,10 +864,10 @@ def get_arg_parser() -> argparse.ArgumentParser:
         help="GB of memory assigned to each worker process. Default=0, no assignment",
     )
     parser.add_argument(
-        "-t",
-        "--task_port",
+        "-P",
+        "--port",
         required=True,
-        help="Task port for receiving tasks from the interchange",
+        help="Port for communication with the interchange",
     )
     parser.add_argument(
         "--max_workers_per_node",
@@ -900,12 +902,6 @@ def get_arg_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--poll", default=10, help="Poll period used in milliseconds"
-    )
-    parser.add_argument(
-        "-r",
-        "--result_port",
-        required=True,
-        help="Result port for posting results to the interchange",
     )
     parser.add_argument(
         "--cpu-affinity",
@@ -953,8 +949,7 @@ if __name__ == "__main__":
         f"\n  Block ID: {args.block_id}"
         f"\n  cores_per_worker: {args.cores_per_worker}"
         f"\n  mem_per_worker: {args.mem_per_worker}"
-        f"\n  task_port: {args.task_port}"
-        f"\n  result_port: {args.result_port}"
+        f"\n  Interchange port: {args.port}"
         f"\n  addresses: {args.addresses}"
         f"\n  max_workers_per_node: {args.max_workers_per_node}"
         f"\n  poll_period: {args.poll}"
@@ -969,8 +964,7 @@ if __name__ == "__main__":
         f"\n  mpi_launcher: {args.mpi_launcher}"
     )
     try:
-        manager = Manager(task_port=args.task_port,
-                          result_port=args.result_port,
+        manager = Manager(port=args.port,
                           addresses=args.addresses,
                           address_probe_timeout=int(args.address_probe_timeout),
                           uid=args.uid,
