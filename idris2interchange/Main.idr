@@ -714,6 +714,14 @@ poll_loop sockets = do
 
   log "poll completed"
 
+
+  log "DEBUG: reading tasks interchange to worker status"
+  logv "DEBUG: socket poll result: " (index 2 poll_outputs).revents
+  dbg_events <- zmq_get_socket_events sockets.tasks_interchange_to_worker
+  logv "DEBUG: zmq socket events: " dbg_events
+
+  -- TODO: some assert here?
+
   -- one thing i dislike about the rust polling interface I used is it
   -- was ugly looking to track the fd (poll output entry) back to the
   -- originating socket - because I'm controlling the idris2 level poll
