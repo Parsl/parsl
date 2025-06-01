@@ -121,7 +121,7 @@ dispatch_cmd "WORKER_PORTS" = do
   -- hard-code return value because ports are also hard-coded ...
   -- TODO: this should be some environment to be passed around
   -- perhaps as a monad-style reader environment?
-  pure (PickleTuple [PickleInteger WORKER_TASK_PORT, PickleInteger WORKER_RESULT_PORT])
+  pure (PickleTuple [PickleInteger $ cast WORKER_TASK_PORT, PickleInteger $ cast WORKER_RESULT_PORT])
 
 dispatch_cmd "CONNECTED_BLOCKS" = do
   log "CONNECTED_BLOCKS requested"
@@ -636,7 +636,10 @@ app_main = do
   -- There's a race condition in this approach (as with any "name the process
   -- with a pid" approach) that the process might be gone and replaced by a
   -- new unrelated process by this time.
-  submit_pidfd <- pidfd_open submit_pid
+
+  -- TODO: cast here hopes that the integer is small enough to fit into the
+  -- pid space...
+  submit_pidfd <- pidfd_open (cast submit_pid)
  
   logv "Created submitter pidfd" submit_pidfd
 
@@ -657,6 +660,32 @@ app_main = do
 
 
 poll_loop sockets = do
+
+
+  -- fairly ugly hack: before asking the OS to wait for poll, the
+  -- individual ZMQ sockets get their events checked: an fd event
+  -- does not always happen because other zmq socket operations
+  -- somehow cancel that (as documented in the ZMQ_FD socket option)
+  -- so we need to do a zmq-level event check for them if that happens.
+  -- It is harmless (if maybe inefficient) to do this for all the
+  -- zmq sockets here - although some other flag system might be
+  -- usable too, that is set whenever we interact with a socket?
+  -- This is drifting towards having multiple kinds of event in one
+  -- loop which i was hoping to avoid with using polling fds. But as
+  -- long as this loop doesn't have to keep going round when nothing
+  -- is happening, i guess its OK to do one-off checks for lots of
+  -- stuff before the poll.
+  -- This code could maybe be structured as a callback that happens
+  -- both when the poll indicates it is time too look, and also
+  -- immediately before the poll happens? so then there is only a
+  -- single callback declaration?
+
+  zmq_poll_command_channel_loop sockets.command
+  zmq_poll_tasks_submit_to_interchange_loop sockets
+  zmq_poll_tasks_interchange_to_worker_loop sockets
+  zmq_poll_results_worker_to_interchange_loop sockets
+
+
 
   -- TODO: polling of some kind here to decide which socket we're going to
   -- ask for a message (or other kind of event that might happen - eg.

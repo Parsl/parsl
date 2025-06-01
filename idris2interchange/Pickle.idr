@@ -4,6 +4,7 @@
 module Pickle
 
 import Control.App
+import Data.Monoid.Exponentiation
 import Generics.Derive
 
 import Bytes
@@ -26,7 +27,7 @@ import Logging
 ||| while Python equality is key-order independent.
 public export
 data PickleAST = PickleUnicodeString String
-               | PickleInteger Int
+               | PickleInteger Integer
                | PickleTuple (List PickleAST)
                | PickleList (List PickleAST)
                | PickleDict (List (PickleAST, PickleAST))
@@ -592,7 +593,6 @@ store_INT bytes v = do
   bytes <- bb_append bytes (cast b4)
   pure1 bytes
 
-
 pickle_BININT : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> Int -> App1 es ByteBlock
 pickle_BININT bytes v = do
   logv "Pickling BININT" v
@@ -602,6 +602,58 @@ pickle_BININT bytes v = do
   bytes <- bb_append bytes 74   -- opcode is ASCII 'J'
   bytes <- store_INT bytes v
   pure1 bytes
+
+store_LONG1_8 : HasErr AppHasIO es => (1 _ : ByteBlock) -> Integer -> App1 es ByteBlock
+store_LONG1_8 bytes v = do
+  let b1 = v `mod` 256
+  let b2 = (v `div` 256) `mod` 256
+  let b3 = (v `div` 256 `div` 256) `mod` 256
+  let b4 = (v `div` 256 `div` 256 `div` 256) `mod` 256
+  let b5 = (v `div` 256 `div` 256 `div` 256 `div` 256) `mod` 256
+  let b6 = (v `div` 256 `div` 256 `div` 256 `div` 256 `div` 256) `mod` 256
+  let b7 = (v `div` 256 `div` 256 `div` 256 `div` 256 `div` 256 `div` 256) `mod` 256
+  let b8 = (v `div` 256 `div` 256 `div` 256 `div` 256 `div` 256 `div` 256 `div` 256) `mod` 256
+  let b9 = (v `div` 256 `div` 256 `div` 256 `div` 256 `div` 256 `div` 256 `div` 256 `div` 256) `mod` 256
+
+  -- this is `when` but I get a cannot find Applicative instance error
+  if (b9 /= 0) 
+   then ?error_store_LONG1_8_b9_not_zero
+   else pure ()
+
+  bytes <- bb_append bytes (cast b1)
+  bytes <- bb_append bytes (cast b2)
+  bytes <- bb_append bytes (cast b3)
+  bytes <- bb_append bytes (cast b4)
+  bytes <- bb_append bytes (cast b5)
+  bytes <- bb_append bytes (cast b6)
+  bytes <- bb_append bytes (cast b7)
+  bytes <- bb_append bytes (cast b8)
+
+  pure1 bytes
+
+
+
+||| This is not a full implementation of LONG1: that can be up to 256 bytes of number
+||| but here I am using it to represent only (and always) 8 bytes of number - even
+||| if this could fit in fewer bytes.
+pickle_LONG1 : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> Integer -> App1 es ByteBlock
+pickle_LONG1 bytes v = do
+  logv "Pickling LONG1" v
+  bytes <- bb_append bytes 138   -- opcode is \x8a
+  bytes <- bb_append bytes 8 -- constant 8 bytes number size now - TODO full LONG1 impl would allow bigger
+  bytes <- store_LONG1_8 bytes v
+  pure1 bytes
+
+pickle_integer : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> Integer -> App1 es ByteBlock
+pickle_integer bytes v = do
+  logv "Pickling integer" v
+
+  -- this cast (from integer to int) works because v is small. there's no type checking
+  -- that the if clause matches the capabilities of the case, though...
+  if v < 2^31
+   then pickle_BININT bytes (cast v) 
+   else if v < 2^63 then pickle_LONG1 bytes v
+                    else ?notimpl_pickle_integer_toobig
 
 pickle_DICT_entries : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> List (PickleAST, PickleAST) -> App1 es ByteBlock
 pickle_DICT_entries bb [] = pure1 bb
@@ -652,7 +704,7 @@ pickle_BYTES bytes b = do
 
 pickle_ast bytes (PickleTuple elements) = pickle_TUPLE bytes elements
 pickle_ast bytes (PickleList elements) = pickle_LIST bytes elements
-pickle_ast bytes (PickleInteger v) = pickle_BININT bytes v
+pickle_ast bytes (PickleInteger v) = pickle_integer bytes v
 pickle_ast bytes (PickleDict l) = pickle_DICT bytes l
 pickle_ast bytes (PickleUnicodeString s) = pickle_UNICODE bytes s
 pickle_ast bytes (PickleBytes b) = pickle_BYTES bytes b
