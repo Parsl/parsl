@@ -21,5 +21,7 @@ def fresh_config():
                 ),
             )
         ],
+
+        # TODO: cannot use 'simple' strategy because WORKERS command is NOTIMPL
         strategy='none',
     )

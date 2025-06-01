@@ -8,6 +8,7 @@ module Main
 -- the source code was 290 lines long before adding the first
 -- import...
 import Control.App
+import Data.Monoid.Exponentiation
 import Data.Vect
 import Generics.Derive
 import Language.JSON
@@ -455,7 +456,15 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
           addr_bytes <- zmq_msg_as_bytes addr_part
           log "Address bytes:"
           addr_bytes <- ascii_dump addr_bytes
-          to_gc_bytes addr_bytes -- hands over deallocation responsibility to runtime GC, rather than linear typing
+          gc_bytes <- to_gc_bytes addr_bytes -- hands over deallocation responsibility to runtime GC, rather than linear typing
+
+          -- some debug info for visual inspection that things get moved around without corruption
+          addr_bytes2 <- from_gc_bytes gc_bytes
+          log "Address bytes (round tripped):"
+          addr_bytes2 <- ascii_dump addr_bytes2
+          free1 addr_bytes2
+
+          pure gc_bytes
 
         msg_as_str <- app1 $ do
           bytes <- zmq_msg_as_bytes json_part
@@ -476,8 +485,6 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
           Just j => do
             logv "Parsed JSON" j
 
-            -- TODO: is this always registration? I think no, because I think
-            -- there might be heartbeats too? so pull out type and match on that.
             let t = lookup "type" j
             case t of
               Just (JString "registration") => do
@@ -486,8 +493,21 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
                 put MatchState (MkMatchState (new_manager_registration :: managers) tasks)
                 log "Put new manager into match state" 
                 matchmake sockets
-              Just (JString "heartbeat") => 
-                log "TODO: Ignoring heartbeat"  -- TODO: reply else we'll get a timeout...
+              Just (JString "heartbeat") => do
+                log "Got a heartbeat on task channel from a manager"
+                app1 $ do heartbeat_code <- pickle (PickleInteger ((2 ^ 32) - 1))
+                          addr_bytes <- from_gc_bytes gc_addr_bytes
+
+                          log "Sending heartbeat to manager:"
+                          addr_bytes <- ascii_dump addr_bytes
+
+                          b <- zmq_send_bytes1 sockets.tasks_interchange_to_worker addr_bytes True
+                          free1 b
+                          b <- zmq_send_bytes1 sockets.tasks_interchange_to_worker emptyByteBlock True
+                          free1 b
+                          b <- zmq_send_bytes1 sockets.tasks_interchange_to_worker heartbeat_code False
+                          free1 b
+                log "Sent heartbeat on task channel"
               _ => ?error_unknown_registration_like_type
         zmq_msg_close addr_part
         zmq_msg_close json_part
