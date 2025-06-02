@@ -70,7 +70,6 @@ setup(
                'parsl/executors/high_throughput/interchange.py',
                'parsl/executors/workqueue/exec_parsl_function.py',
                'parsl/executors/workqueue/parsl_coprocess.py',
-               'parsl/monitoring/allprocs.py',
     ],
 
     extras_require=extras_require,
