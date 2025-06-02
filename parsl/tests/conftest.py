@@ -168,6 +168,14 @@ def pytest_configure(config):
         'markers',
         'issue_3620: Marks tests that do not work correctly on GlobusComputeExecutor (ref: issue 3620)'
     )
+    config.addinivalue_line(
+        'markers',
+        'workqueue: Marks local tests that require a working Work Queue installation'
+    )
+    config.addinivalue_line(
+        'markers',
+        'taskvine: Marks local tests that require a working Task Vine installation'
+    )
 
 
 @pytest.fixture(autouse=True, scope='session')

@@ -5,13 +5,13 @@ import logging
 import os
 import pickle
 import platform
-import queue
 import sys
 import threading
 import time
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, cast
 
 import zmq
+from sortedcontainers import SortedList
 
 from parsl import curvezmq
 from parsl.addresses import tcp_url
@@ -131,7 +131,7 @@ class Interchange:
         self.hub_address = hub_address
         self.hub_zmq_port = hub_zmq_port
 
-        self.pending_task_queue: queue.Queue[Any] = queue.Queue(maxsize=10 ** 6)
+        self.pending_task_queue: SortedList[Any] = SortedList(key=lambda tup: (tup[0], tup[1]))
 
         # count of tasks that have been received from the submit side
         self.task_counter = 0
@@ -196,13 +196,12 @@ class Interchange:
             eg. [{'task_id':<x>, 'buffer':<buf>} ... ]
         """
         tasks = []
-        for _ in range(0, count):
-            try:
-                x = self.pending_task_queue.get(block=False)
-            except queue.Empty:
-                break
-            else:
-                tasks.append(x)
+        try:
+            for _ in range(count):
+                *_, task = self.pending_task_queue.pop()
+                tasks.append(task)
+        except IndexError:
+            pass
 
         return tasks
 
@@ -343,8 +342,15 @@ class Interchange:
         if self.task_incoming in self.socks and self.socks[self.task_incoming] == zmq.POLLIN:
             logger.debug("start task_incoming section")
             msg = self.task_incoming.recv_pyobj()
+
+            # Process priority, higher number = lower priority
+            resource_spec = msg.get('resource_spec', {})
+            priority = resource_spec.get('priority', float('inf'))
+            queue_entry = (-priority, -self.task_counter, msg)
+
             logger.debug("putting message onto pending_task_queue")
-            self.pending_task_queue.put(msg)
+
+            self.pending_task_queue.add(queue_entry)
             self.task_counter += 1
             logger.debug(f"Fetched {self.task_counter} tasks so far")
 
@@ -379,32 +385,24 @@ class Interchange:
                 return
 
             if msg['type'] == 'registration':
-                # We set up an entry only if registration works correctly
-                # XXXX this makes a partially initialised manager record visible
-                # (for example via MANAGERS). Initialize it properly before
-                # assigning it into _ready_managers?
-                self._ready_managers[manager_id] = {'last_heartbeat': time.time(),
-                                                    'idle_since': time.time(),
-                                                    'block_id': None,
-                                                    'start_time': msg['start_time'],
-                                                    'max_capacity': 0,
-                                                    'worker_count': 0,
-                                                    'active': True,
-                                                    'draining': False,
-                                                    'parsl_version': msg['parsl_v'],
-                                                    'python_version': msg['python_v'],
-                                                    'tasks': []}
-                self.connected_block_history.append(msg['block_id'])
+                ix_minor_py = self.current_platform['python_v'].rsplit(".", 1)[0]
+                ix_parsl_v = self.current_platform['parsl_v']
+                mgr_minor_py = msg['python_v'].rsplit(".", 1)[0]
+                mgr_parsl_v = msg['parsl_v']
 
-                interesting_managers.add(manager_id)
-                logger.info(f"Adding manager: {manager_id!r} to ready queue")
-                m = self._ready_managers[manager_id]
-
-                # XXXX maybe should be a bit more strict about which fields are
-                # being copied here... why are we using python_version and also
-                # copying in python_v here?
-                # what are the fields we actually care about, rather than this being
-                # a dumping ground?
+                m = ManagerRecord(
+                    block_id=None,
+                    start_time=msg['start_time'],
+                    tasks=[],
+                    worker_count=0,
+                    max_capacity=0,
+                    active=True,
+                    draining=False,
+                    last_heartbeat=time.time(),
+                    idle_since=time.time(),
+                    parsl_version=mgr_parsl_v,
+                    python_version=msg['python_v'],
+                )
 
                 # m is a ManagerRecord, but msg is a dict[Any,Any] and so can
                 # contain arbitrary fields beyond those in ManagerRecord (and
@@ -415,23 +413,43 @@ class Interchange:
                 logger.info(f"Registration info for manager {manager_id!r}: {msg}")
                 self._send_monitoring_info(monitoring_radio, m)
 
-                if (msg['python_v'].rsplit(".", 1)[0] != self.current_platform['python_v'].rsplit(".", 1)[0] or
-                    msg['parsl_v'] != self.current_platform['parsl_v']):
-                    logger.error(f"Manager {manager_id!r} has incompatible version info with the interchange")
-                    logger.debug("Setting kill event")
+                if (mgr_minor_py, mgr_parsl_v) != (ix_minor_py, ix_parsl_v):
                     kill_event.set()
-                    e = VersionMismatch("py.v={} parsl.v={}".format(self.current_platform['python_v'].rsplit(".", 1)[0],
-                                                                    self.current_platform['parsl_v']),
-                                        "py.v={} parsl.v={}".format(msg['python_v'].rsplit(".", 1)[0],
-                                                                    msg['parsl_v'])
-                                        )
-                    result_package = {'type': 'result', 'task_id': -1, 'exception': serialize_object(e)}
+                    e = VersionMismatch(
+                        f"py.v={ix_minor_py} parsl.v={ix_parsl_v}",
+                        f"py.v={mgr_minor_py} parsl.v={mgr_parsl_v}",
+                    )
+                    result_package = {
+                        'type': 'result',
+                        'task_id': -1,
+                        'exception': serialize_object(e),
+                    }
                     pkl_package = pickle.dumps(result_package)
                     self.results_outgoing.send(pkl_package)
-                    logger.error("Sent failure reports, shutting down interchange")
+                    logger.error(
+                        "Manager has incompatible version info with the interchange;"
+                        " sending failure reports and shutting down:"
+                        f"\n  Interchange: {e.interchange_version}"
+                        f"\n  Manager:     {e.manager_version}"
+                    )
+
                 else:
-                    logger.info(f"Manager {manager_id!r} has compatible Parsl version {msg['parsl_v']}")
-                    logger.info(f"Manager {manager_id!r} has compatible Python version {msg['python_v'].rsplit('.', 1)[0]}")
+                    # We really should update the associated data structure; but not
+                    # at this time.  *kicks can down the road*
+                    assert m['block_id'] is not None, "Verified externally currently"
+
+                    # set up entry only if we accept the registration
+                    self._ready_managers[manager_id] = m
+                    self.connected_block_history.append(m['block_id'])
+
+                    interesting_managers.add(manager_id)
+
+                    logger.info(
+                        f"Registered manager {manager_id!r} (py{mgr_minor_py},"
+                        f" {mgr_parsl_v}) and added to ready queue"
+                    )
+                    logger.debug("Manager %r -> %s", manager_id, m)
+
             elif msg['type'] == 'heartbeat':
                 manager = self._ready_managers.get(manager_id)
                 if manager:
@@ -471,10 +489,10 @@ class Interchange:
             len(self._ready_managers)
         )
 
-        if interesting_managers and not self.pending_task_queue.empty():
+        if interesting_managers and self.pending_task_queue:
             shuffled_managers = self.manager_selector.sort_managers(self._ready_managers, interesting_managers)
 
-            while shuffled_managers and not self.pending_task_queue.empty():  # cf. the if statement above...
+            while shuffled_managers and self.pending_task_queue:  # cf. the if statement above...
                 manager_id = shuffled_managers.pop()
                 m = self._ready_managers[manager_id]
                 tasks_inflight = len(m['tasks'])
@@ -510,7 +528,6 @@ class Interchange:
             manager_id, *all_messages = self.results_incoming.recv_multipart()
             if manager_id not in self._ready_managers:
                 logger.warning(f"Received a result from a un-registered manager: {manager_id!r}")
-                # this could happen for a heartbeat message (either before registration has happened in another thread, or after cleanup)
             else:
                 logger.debug("Got %s result items in batch from manager %r", len(all_messages), manager_id)
 

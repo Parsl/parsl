@@ -71,9 +71,7 @@ def taskvine_config():
     return c
 
 
-@pytest.mark.local
-@pytest.mark.parametrize("fresh_config", [htex_config, htex_filesystem_config, htex_udp_config, taskvine_config, workqueue_config])
-def test_row_counts(tmpd_cwd, fresh_config):
+def row_counts_parametrized(tmpd_cwd, fresh_config):
     # this is imported here rather than at module level because
     # it isn't available in a plain parsl install, so this module
     # would otherwise fail to import and break even a basic test
@@ -136,15 +134,21 @@ def test_row_counts(tmpd_cwd, fresh_config):
         assert c >= 1
 
 
+@pytest.mark.local
+@pytest.mark.parametrize("fresh_config", [htex_config, htex_filesystem_config, htex_udp_config])
+def test_row_counts_base(tmpd_cwd, fresh_config):
+    row_counts_parametrized(tmpd_cwd, fresh_config)
+
+
 @pytest.mark.workqueue
 @pytest.mark.local
 @pytest.mark.parametrize("fresh_config", [workqueue_config])
 def test_row_counts_wq(tmpd_cwd, fresh_config):
-    test_row_counts(tmpd_cwd, fresh_config)
+    row_counts_parametrized(tmpd_cwd, fresh_config)
 
 
 @pytest.mark.taskvine
 @pytest.mark.local
 @pytest.mark.parametrize("fresh_config", [taskvine_config])
 def test_row_counts_tv(tmpd_cwd, fresh_config):
-    test_row_counts(tmpd_cwd, fresh_config)
+    row_counts_parametrized(tmpd_cwd, fresh_config)
