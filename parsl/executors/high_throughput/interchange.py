@@ -225,6 +225,7 @@ class Interchange:
         if self.command_channel in self.socks and self.socks[self.command_channel] == zmq.POLLIN:
             logger.debug("entering command_server section")
 
+            logger.debug("Waiting for command request")
             command_req = self.command_channel.recv_pyobj()
             logger.debug("Received command request: {}".format(command_req))
             if command_req == "CONNECTED_BLOCKS":
@@ -453,7 +454,7 @@ class Interchange:
                 manager = self._ready_managers.get(manager_id)
                 if manager:
                     manager['last_heartbeat'] = time.time()
-                    logger.debug("Manager %r sent heartbeat via tasks connection", manager_id)
+                    logger.debug("Received heartbeat from manager %r via tasks connection", manager_id)
                     self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
                 else:
                     logger.warning("Received heartbeat via tasks connection for not-registered manager %r", manager_id)
@@ -557,7 +558,7 @@ class Interchange:
 
                         monitoring_radio.send(r['payload'])
                     elif r['type'] == 'heartbeat':
-                        logger.debug("Manager %r sent heartbeat via results connection", manager_id)
+                        logger.debug("Received heartbeat from manager %r via results connection", manager_id)
                     else:
                         logger.error("Interchange discarding result_queue message of unknown type: %s", r["type"])
 

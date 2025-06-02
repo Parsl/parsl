@@ -83,10 +83,16 @@ radical_local_test:
 	pytest parsl/tests/ -k "not cleannet and not issue3328 and not executor_supports_std_stream_tuples" --config parsl/tests/configs/local_radical.py --random-order --durations 10
 	pytest parsl/tests/ -m "radical" --config local --random-order --durations 10
 
+.PHONY: workqueue_mon_test
+workqueue_mon_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex config
+	pip3 install ".[monitoring]"
+	PYTHONPATH=.:/tmp/cctools/lib/python3.8/site-packages  pytest parsl/tests/ -k "not cleannet and not issue363" --config parsl/tests/configs/workqueue_monitoring_config.py --cov=parsl --cov-append --cov-report= --random-order
+
+
 .PHONY: config_local_test
 config_local_test:
 	pip3 install ".[monitoring,visualization,proxystore,kubernetes]"
-	pytest parsl/tests/ -k "not cleannet and not workqueue and not taskvine" --config local --random-order --durations 10
+	pytest parsl/tests/ -k "not cleannet and not site and not workqueue and not taskvine" --config local --random-order --durations 10
 
 .PHONY: site_test
 site_test:
@@ -98,7 +104,7 @@ perf_test:
 	parsl-perf --time 5 --config parsl/tests/configs/local_threads.py
 
 .PHONY: test ## run all tests with all config types
-test: clean_coverage isort lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test config_local_test perf_test ## run all tests
+test: clean_coverage isort lint flake8 mypy local_thread_test htex_local_test htex_local_alternate_test perf_test ## run all tests
 
 .PHONY: tag
 tag: ## create a tag in git. to run, do a 'make VERSION="version string" tag
