@@ -42,7 +42,7 @@ from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize
 from parsl.version import VERSION as PARSL_VERSION
 
-HEARTBEAT_RESPONSE_CODE = (2 ** 32) - 1
+HEARTBEAT_CODE = (2 ** 32) - 1
 DRAINED_CODE = (2 ** 32) - 2
 
 
@@ -363,7 +363,7 @@ class Manager:
                 tasks = pickle.loads(pkl_msg)
                 last_interchange_contact = time.time()
 
-                if tasks == HEARTBEAT_RESPONSE_CODE:
+                if tasks == HEARTBEAT_CODE:
                     logger.debug("Got heartbeat response from interchange")
                 elif tasks == DRAINED_CODE:
                     logger.info("Got fully drained message from interchange - setting kill flag")

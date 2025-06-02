@@ -27,7 +27,7 @@ from parsl.serialize import serialize as serialize_object
 from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
 
-PKL_HEARTBEAT_RESPONSE_CODE = pickle.dumps((2 ** 32) - 1)
+PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
 PKL_DRAINED_CODE = pickle.dumps((2 ** 32) - 2)
 
 LOGGER_NAME = "interchange"
@@ -455,7 +455,7 @@ class Interchange:
                 if manager:
                     manager['last_heartbeat'] = time.time()
                     logger.debug("Received heartbeat from manager %r via tasks connection", manager_id)
-                    self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_RESPONSE_CODE])
+                    self.task_outgoing.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
                 else:
                     logger.warning("Received heartbeat via tasks connection for not-registered manager %r", manager_id)
             elif msg['type'] == 'drain':
