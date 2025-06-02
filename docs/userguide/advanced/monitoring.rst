@@ -15,7 +15,7 @@ SQLite tools.
 Monitoring configuration
 ------------------------
 
-Parsl monitoring is only supported with the `parsl.executors.HighThroughputExecutor`. 
+Parsl monitoring is only supported with the `parsl.executors.HighThroughputExecutor`.
 
 The following example shows how to enable monitoring in the Parsl
 configuration. Here the `parsl.monitoring.MonitoringHub` is specified to use port
@@ -49,6 +49,117 @@ configuration. Here the `parsl.monitoring.MonitoringHub` is specified to use por
    )
 
 
+File Provenance
+---------------
+
+The monitoring system can also be used to track file provenance. File provenance is defined as the
+history of a file including:
+
+* When the files was created
+* File size in bytes
+* File md5sum
+* What task created the file
+* What task(s) used the file
+* What inputs were given to the task that created the file
+* What environment was used (e.g. the 'worker_init' entry from a :py:class:`~parsl.providers.ExecutionProvider`),
+  not available with every provider.
+
+The purpose of the file provenance tracking is to provide a mechanism where the user can see exactly
+how a file was created and used in a workflow. This can be useful for debugging, understanding the
+workflow, for ensuring that the workflow is reproducible, and reviewing past work. The file
+provenance information is stored in the monitoring database and can be accessed using the
+``parsl-visualize`` tool. To enable file provenance tracking, set the ``file_provenance`` flag to
+``True`` in the `parsl.monitoring.MonitoringHub` configuration.
+
+This functionality also enables you to log informational messages from you scripts, to capture
+anything not automatically gathered. The main change to your code to use this functionality is to
+assign the return value of the ``parsl.load`` to a variable. Then use the ``log_info`` function to
+log the messages in the database. Note that this feature is only available in the main script, not
+inside Apps. Passing this variable, ``my_cfg`` in the example below to an App will have undefined
+behavior. The following example shows how to use this feature.
+
+.. code-block:: python
+
+   import parsl
+   from parsl.monitoring.monitoring import MonitoringHub
+   from parsl.config import Config
+   from parsl.executors import HighThroughputExecutor
+   from parsl.addresses import address_by_hostname
+
+   import logging
+
+   config = Config(
+      executors=[
+          HighThroughputExecutor(
+              label="local_htex",
+              cores_per_worker=1,
+              max_workers_per_node=4,
+              address=address_by_hostname(),
+          )
+      ],
+      monitoring=MonitoringHub(
+          hub_address=address_by_hostname(),
+          hub_port=55055,
+          monitoring_debug=False,
+          resource_monitoring_interval=10,
+          file_provenance=True,
+      ),
+      strategy='none'
+   )
+
+   my_cfg = parsl.load(config)
+
+   my_cfg.log_info("This is an informational message")
+
+The file provenance framework also works with the :ref:`label-dynamic-file-list` feature .When a
+:py:class:`parsl.data_provider.dynamic_files.DynamicFileList` is used the framework will wait until the app completes
+and any files contained in the :py:class:`parsl.data_provider.dynamic_files.DynamicFileList` are marked as done before
+completing its processing. The :ref:`bash watcher<label-bash-watcher>` can also be used to capture file provenance
+information from ``bash_apps``.
+
+.. note::
+    Known limitations: The file provenance feature will capture the creation of files and the use of files in an app,
+    but does not capture the modification of files it already knows about.
+
+This functionality also enables you to log informational messages from you scripts, to capture anything not
+automatically gathered. The main change to your code to use this functionality is to assign the return value of the
+``parsl.load`` to a variable. Then use the ``log_info`` function to log the messages in the database. Note that this
+feature is only available in the main script, not inside apps, unless you pass the variable (``my_cfg`` in the example
+below), as an argument to the app. The following example shows how to use this feature.
+
+.. code-block:: python
+
+   import parsl
+   from parsl.monitoring.monitoring import MonitoringHub
+   from parsl.config import Config
+   from parsl.executors import HighThroughputExecutor
+   from parsl.addresses import address_by_hostname
+
+   import logging
+
+   config = Config(
+      executors=[
+          HighThroughputExecutor(
+              label="local_htex",
+              cores_per_worker=1,
+              max_workers_per_node=4,
+              address=address_by_hostname(),
+          )
+      ],
+      monitoring=MonitoringHub(
+          hub_address=address_by_hostname(),
+          hub_port=55055,
+          monitoring_debug=False,
+          resource_monitoring_interval=10,
+          capture_file_provenance=True,
+      ),
+      strategy='none'
+   )
+
+   my_cfg = parsl.load(config)
+
+   my_cfg.log_info("This is an informational message")
+
 Visualization
 -------------
 
@@ -74,7 +185,7 @@ By default, the visualization web server listens on ``127.0.0.1:8080``. If the w
    $ ssh -L 50000:127.0.0.1:8080 username@cluster_address
 
 This command will bind your local machine's port 50000 to the remote cluster's port 8080.
-The dashboard can then be accessed via the local machine's browser at ``127.0.0.1:50000``. 
+The dashboard can then be accessed via the local machine's browser at ``127.0.0.1:50000``.
 
 .. warning:: Alternatively you can deploy the visualization server on a public interface. However, first check that this is allowed by the cluster's security policy. The following example shows how to deploy the web server on a public port (i.e., open to Internet via ``public_IP:55555``)::
 
@@ -98,12 +209,12 @@ Workflow Summary
 
 The workflow summary page captures the run level details of a workflow, including start and end times
 as well as task summary statistics. The workflow summary section is followed by the *App Summary* that lists
-the various apps and invocation count for each. 
+the various apps and invocation count for each.
 
 .. image:: ../../images/mon_workflow_summary.png
 
 
-The workflow summary also presents three different views of the workflow:
+The workflow summary also presents several different views of the workflow:
 
 * Workflow DAG - with apps differentiated by colors: This visualization is useful to visually inspect the dependency
   structure of the workflow. Hovering over the nodes in the DAG shows a tooltip for the app represented by the node and it's task ID.
@@ -119,3 +230,35 @@ The workflow summary also presents three different views of the workflow:
 
 .. image:: ../../images/mon_resource_summary.png
 
+* Workflow file provenance (only if enabled and files were used in the workflow): This visualization gives a tabular listing of each task that created (output) or used (input) a file. Each listed file has a link to a page detailing the file's information.
+
+.. image:: ../../images/mon_workflow_files.png
+
+File Provenance
+^^^^^^^^^^^^^^^
+
+The file provenance page provides an interface for searching for files and viewing their provenance. The % wildcard can be used in the search bar to match any number of characters. Any results are listed in a table below the search bar. Clicking on a file in the table will take you to the file's detail page.
+
+.. image:: ../../images/mon_file_provenance.png
+
+File Details
+^^^^^^^^^^^^
+
+The file details page provides information about a specific file, including the file's name, size, md5sum, and the tasks that created and used the file. Clicking on any of the tasks will take you to their respective details page. If the file was created by a task there will be an entry for the Environment used by that task. Clicking that link will take you to the Environment Details page.
+
+.. image:: ../../images/mon_file_detail.png
+
+
+Task Details
+^^^^^^^^^^^^
+
+The task details page provides information about a specific instantiation of a task. This information includes task dependencies, executor (environment), input and output files, and task arguments.
+
+.. image:: ../../images/mon_task_detail.png
+
+Environment Details
+^^^^^^^^^^^^^^^^^^^
+
+The environment details page provides information on the compute environment a task was run including the provider and launcher used and the worker_init that was used.
+
+.. image:: ../../images/mon_env_detail.png
