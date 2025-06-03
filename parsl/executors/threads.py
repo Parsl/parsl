@@ -8,6 +8,7 @@ from parsl.data_provider.staging import Staging
 from parsl.executors.base import ParslExecutor
 from parsl.executors.errors import InvalidResourceSpecification
 from parsl.monitoring.radios.base import RadioConfig
+from parsl.monitoring.radios.threadpool import ThreadPoolRadio
 from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,10 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
         self.storage_access = storage_access
         self.working_dir = working_dir
 
-        self.remote_monitoring_radio = remote_monitoring_radio
+        if remote_monitoring_radio is not None:
+            self.remote_monitoring_radio = remote_monitoring_radio
+        else:
+            self.remote_monitoring_radio = ThreadPoolRadio()
 
     def start(self):
         self.executor = cf.ThreadPoolExecutor(max_workers=self.max_threads,
