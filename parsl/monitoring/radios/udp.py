@@ -1,5 +1,7 @@
+import hmac
 import logging
 import pickle
+import secrets
 import socket
 from multiprocessing.queues import Queue
 from typing import Any, Optional, Union
@@ -19,13 +21,29 @@ class UDPRadio(RadioConfig):
 
     def create_sender(self) -> MonitoringRadioSender:
         assert self.port is not None, "self.port should have been initialized by create_receiver"
-        return UDPRadioSender(self.address, self.port)
+        return UDPRadioSender(self.address, self.port, self.hmac_key)
 
     def create_receiver(self, run_dir: str, resource_msgs: Queue) -> Any:
+        # 128 byte key length is chosen based on Microsoft's recommendation
+        # here:
+        # https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.hmacsha512.-ctor
+        # and on comments in RFC 2104 section 2 that the key length be at
+        # least as long as the hash output (64 bytes in the case of SHA512).
+        # RFC 2014 section 3 talks about periodic key refreshing. This key is
+        # not refreshed inside a workflow run, but each separate workflow run
+        # uses a new key.
+        self.hmac_key = secrets.token_bytes(128)
+
+        # this is now in the submitting process, not the router process.
+        # I don't think this matters for UDP so much because it's on the
+        # way out - but how should this work for other things? compare with
+        # filesystem radio impl?
+
         udp_receiver = start_udp_receiver(logdir=run_dir,
                                           monitoring_messages=resource_msgs,
                                           port=self.port,
-                                          debug=self.debug
+                                          debug=self.debug,
+                                          hmac_key=self.hmac_key
                                           )
         self.port = udp_receiver.port
         return udp_receiver
@@ -33,10 +51,11 @@ class UDPRadio(RadioConfig):
 
 class UDPRadioSender(MonitoringRadioSender):
 
-    def __init__(self, address: str, port: int, timeout: int = 10) -> None:
+    def __init__(self, address: str, port: int, hmac_key: bytes, *, timeout: int = 10) -> None:
         self.sock_timeout = timeout
         self.address = address
         self.port = port
+        self.hmac_key = hmac_key
 
         self.sock = socket.socket(socket.AF_INET,
                                   socket.SOCK_DGRAM,
@@ -57,7 +76,9 @@ class UDPRadioSender(MonitoringRadioSender):
         """
         logger.info("Starting UDP radio message send")
         try:
-            buffer = pickle.dumps(message)
+            data = pickle.dumps(message)
+            origin_hmac = hmac.digest(self.hmac_key, data, 'sha512')
+            buffer = origin_hmac + data
         except Exception:
             logging.exception("Exception during pickling", exc_info=True)
             return
