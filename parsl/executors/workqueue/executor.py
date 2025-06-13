@@ -227,8 +227,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             specifiation for each task).
     """
 
-    radio_mode = "filesystem"
-
     @typeguard.typechecked
     def __init__(self,
                  label: str = "WorkQueueExecutor",
@@ -713,6 +711,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.task_queue.join_thread()
         self.collector_queue.close()
         self.collector_queue.join_thread()
+
+        super().shutdown()
 
         logger.debug("Work Queue shutdown completed")
 

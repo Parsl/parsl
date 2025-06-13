@@ -601,6 +601,9 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
             self._bulk_thread.join()
 
         self.session.close(download=True)
+
+        super().shutdown()
+
         logger.info("RadicalPilotExecutor is terminated.")
 
         return True
