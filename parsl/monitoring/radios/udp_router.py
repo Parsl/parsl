@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import logging
 import multiprocessing.queues as mpq
 import os
@@ -41,6 +42,7 @@ class MonitoringRouter:
                  atexit_timeout: int,   # in seconds
                  resource_msgs: mpq.Queue,
                  exit_event: Event,
+                 hmac_key: bytes,
                  ):
         """ Initializes a monitoring configuration class.
 
@@ -65,6 +67,8 @@ class MonitoringRouter:
         logger.debug("Monitoring router starting")
 
         self.atexit_timeout = atexit_timeout
+
+        self.hmac_key = hmac_key
 
         self.loop_freq = 10.0  # milliseconds
 
@@ -95,10 +99,7 @@ class MonitoringRouter:
         try:
             while not self.exit_event.is_set():
                 try:
-                    data, addr = self.udp_sock.recvfrom(2048)
-                    resource_msg = pickle.loads(data)
-                    logger.debug("Got UDP Message from {}: {}".format(addr, resource_msg))
-                    self.target_radio.send(resource_msg)
+                    self.process_message()
                 except socket.timeout:
                     pass
 
@@ -106,10 +107,7 @@ class MonitoringRouter:
             last_msg_received_time = time.time()
             while time.time() - last_msg_received_time < self.atexit_timeout:
                 try:
-                    data, addr = self.udp_sock.recvfrom(2048)
-                    msg = pickle.loads(data)
-                    logger.debug("Got UDP Message from {}: {}".format(addr, msg))
-                    self.target_radio.send(msg)
+                    self.process_message()
                     last_msg_received_time = time.time()
                 except socket.timeout:
                     pass
@@ -117,6 +115,25 @@ class MonitoringRouter:
             logger.info("UDP listener finishing normally")
         finally:
             logger.info("UDP listener finished")
+
+    def process_message(self) -> None:
+        hmdata, addr = self.udp_sock.recvfrom(2048)
+        origin_hmac = hmdata[0:64]
+        data = hmdata[64:]
+        # Check hmac before pickle load.
+        # If data is wrong, do not log it because it is suspect,
+        # but it should be safe to log the addr, at error level.
+
+        recomputed_hmac = hmac.digest(self.hmac_key, data, 'sha512')
+
+        if not hmac.compare_digest(origin_hmac, recomputed_hmac):
+            logger.error("HMAC does not match on received message")
+            # No exception, because this can be arbitrary network noise
+            # that shouldn't break the receiver.
+        else:
+            resource_msg = pickle.loads(data)
+            logger.debug("Got UDP Message from {}: {}".format(addr, resource_msg))
+            self.target_radio.send(resource_msg)
 
 
 @wrap_with_logs
@@ -127,7 +144,7 @@ def udp_router_starter(*,
                        exit_event: Event,
 
                        udp_port: Optional[int],
-
+                       hmac_key: bytes,
                        run_dir: str,
                        logging_level: int,
                        atexit_timeout: int) -> None:
@@ -138,7 +155,8 @@ def udp_router_starter(*,
                                   logging_level=logging_level,
                                   resource_msgs=resource_msgs,
                                   exit_event=exit_event,
-                                  atexit_timeout=atexit_timeout)
+                                  atexit_timeout=atexit_timeout,
+                                  hmac_key=hmac_key)
     except Exception as e:
         logger.error("MonitoringRouter construction failed.", exc_info=True)
         comm_q.put(f"Monitoring router construction failed: {e}")
@@ -168,7 +186,8 @@ def start_udp_receiver(*,
                        port: Optional[int],
                        logdir: str,
                        debug: bool,
-                       atexit_timeout: int) -> UDPRadioReceiver:
+                       atexit_timeout: int,
+                       hmac_key: bytes) -> UDPRadioReceiver:
 
     udp_comm_q: Queue[Union[int, str]]
     udp_comm_q = SizedQueue(maxsize=10)
@@ -183,6 +202,7 @@ def start_udp_receiver(*,
                                        "run_dir": logdir,
                                        "logging_level": logging.DEBUG if debug else logging.INFO,
                                        "atexit_timeout": atexit_timeout,
+                                       "hmac_key": hmac_key,
                                        },
                                name="Monitoring-UDP-Router-Process",
                                daemon=True,
