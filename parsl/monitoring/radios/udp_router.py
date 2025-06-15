@@ -23,7 +23,6 @@ class MonitoringRouter:
 
     def __init__(self,
                  *,
-                 hub_address: str,
                  udp_port: Optional[int] = None,
 
                  monitoring_hub_address: str = "127.0.0.1",
@@ -37,8 +36,6 @@ class MonitoringRouter:
 
         Parameters
         ----------
-        hub_address : str
-             The ip address at which the workers will be able to reach the Hub.
         udp_port : int
              The specific port at which workers will be able to reach the Hub via UDP. Default: None
         run_dir : str
@@ -58,7 +55,6 @@ class MonitoringRouter:
                                       level=logging_level)
         self.logger.debug("Monitoring router starting")
 
-        self.hub_address = hub_address
         self.atexit_timeout = atexit_timeout
 
         self.loop_freq = 10.0  # milliseconds
@@ -121,15 +117,13 @@ def udp_router_starter(*,
                        resource_msgs: mpq.Queue,
                        exit_event: Event,
 
-                       hub_address: str,
                        udp_port: Optional[int],
 
                        run_dir: str,
                        logging_level: int) -> None:
     setproctitle("parsl: monitoring UDP router")
     try:
-        router = MonitoringRouter(hub_address=hub_address,
-                                  udp_port=udp_port,
+        router = MonitoringRouter(udp_port=udp_port,
                                   run_dir=run_dir,
                                   logging_level=logging_level,
                                   resource_msgs=resource_msgs,
