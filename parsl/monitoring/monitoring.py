@@ -172,7 +172,9 @@ class MonitoringHub(RepresentationMixin):
                     self.udp_router_proc.pid, self.dbm_proc.pid)
 
         self.filesystem_proc = SpawnProcess(target=filesystem_router_starter,
-                                            args=(self.resource_msgs, dfk_run_dir, self.router_exit_event),
+                                            kwargs={"q": self.resource_msgs,
+                                                    "run_dir": dfk_run_dir,
+                                                    "exit_event": self.router_exit_event},
                                             name="Monitoring-Filesystem-Process",
                                             daemon=True
                                             )

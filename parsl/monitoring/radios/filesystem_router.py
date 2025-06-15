@@ -16,7 +16,7 @@ from parsl.utils import setproctitle
 
 
 @wrap_with_logs
-def filesystem_router_starter(q: Queue[TaggedMonitoringMessage], run_dir: str, exit_event: Event) -> None:
+def filesystem_router_starter(*, q: Queue[TaggedMonitoringMessage], run_dir: str, exit_event: Event) -> None:
     logger = set_file_logger(f"{run_dir}/monitoring_filesystem_radio.log",
                              name="monitoring_filesystem_radio",
                              level=logging.INFO)
