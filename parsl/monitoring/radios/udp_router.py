@@ -24,8 +24,6 @@ class MonitoringRouter:
     def __init__(self,
                  *,
                  udp_port: Optional[int] = None,
-
-                 monitoring_hub_address: str = "127.0.0.1",
                  run_dir: str = ".",
                  logging_level: int = logging.INFO,
                  atexit_timeout: int = 3,   # in seconds
