@@ -144,7 +144,6 @@ class MonitoringHub(RepresentationMixin):
                                             kwargs={"comm_q": udp_comm_q,
                                                     "resource_msgs": self.resource_msgs,
                                                     "exit_event": self.router_exit_event,
-                                                    "hub_address": self.hub_address,
                                                     "udp_port": self.hub_port,
                                                     "run_dir": dfk_run_dir,
                                                     "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
