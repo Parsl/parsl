@@ -406,13 +406,15 @@ def try_assert():
         timeout_ms: float = 5000,
         attempts: int = 0,
         check_period_ms: int = 20,
+        factor: float = 2,
     ):
         tb = create_traceback(start=1)
         check_period_s = abs(check_period_ms) / 1000.0
         if attempts > 0:
             for _attempt_no in range(attempts):
-                time.sleep(random.random() * check_period_s)  # jitter
-                check_period_s *= 2
+                fraction = random.random()
+                time.sleep(fraction * check_period_s)  # jitter
+                check_period_s *= factor ** fraction
                 if test_func():
                     return
             else:
@@ -427,9 +429,10 @@ def try_assert():
             timeout_s = abs(timeout_ms) / 1000.0
             end = time.monotonic() + timeout_s
             while time.monotonic() < end:
-                wait_for = random.random() * check_period_s  # jitter
+                fraction = random.random()
+                wait_for = fraction * check_period_s  # jitter
                 time.sleep(min(wait_for, end - time.monotonic()))
-                check_period_s *= 2
+                check_period_s *= factor ** fraction
                 if test_func():
                     return
             att_fail = (
