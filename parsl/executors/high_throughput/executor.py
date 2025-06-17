@@ -881,6 +881,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         if self.zmq_monitoring:
             self.zmq_monitoring.close()
 
+        super().shutdown()
+
         logger.info("Finished HighThroughputExecutor shutdown attempt")
 
     def get_usage_information(self):
