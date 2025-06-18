@@ -18,7 +18,7 @@ class HTEXRadioSender(MonitoringRadioSender):
         timeout : int
             timeout, default=10s
         """
-        logger.info("htex-based monitoring channel initialising")
+        logger.info("htex-based monitoring radio initialising")
 
     def send(self, message: object) -> None:
         """ Sends a message to the UDP receiver
