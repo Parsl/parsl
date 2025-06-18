@@ -27,7 +27,7 @@ class FilesystemRadioSender(MonitoringRadioSender):
     """
 
     def __init__(self, *, monitoring_url: str, timeout: int = 10, run_dir: str):
-        logger.info("filesystem based monitoring channel initializing")
+        logger.info("filesystem based monitoring radio initializing")
         self.base_path = f"{run_dir}/monitor-fs-radio/"
         self.tmp_path = f"{self.base_path}/tmp"
         self.new_path = f"{self.base_path}/new"
