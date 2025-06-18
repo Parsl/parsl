@@ -6,6 +6,7 @@ class ParslTaskToVine:
 
     def __init__(self,
                  executor_id: int,                 # executor id of Parsl function
+                 func_name: str,                   # name of the Parsl function
                  exec_mode: str,                   # execution mode of function, out of {regular, python, serverless}
                  category: str,                    # category of Parsl function
                  input_files: list,                # list of input files to this function
@@ -14,6 +15,7 @@ class ParslTaskToVine:
                  function_file: Optional[str],     # pickled file containing the function information
                  argument_file: Optional[str],     # pickled file containing the arguments to the function call
                  result_file: Optional[str],       # path to the pickled result object of the function execution
+                 function_context_file: Optional[list],  # path to the pickled list of function context details for serverless functions
                  cores: Optional[float],           # number of cores to allocate
                  memory: Optional[int],            # amount of memory in MBs to allocate
                  disk: Optional[int],              # amount of disk in MBs to allocate
@@ -23,6 +25,7 @@ class ParslTaskToVine:
                  env_pkg: Optional[str],           # path to a poncho environment tarball
                  ):
         self.executor_id = executor_id
+        self.func_name = func_name
         self.exec_mode = exec_mode
         self.category = category
         self.map_file = map_file
@@ -31,6 +34,7 @@ class ParslTaskToVine:
         self.result_file = result_file
         self.input_files = input_files
         self.output_files = output_files
+        self.function_context_file = function_context_file
         self.cores = cores
         self.memory = memory
         self.disk = disk
@@ -83,3 +87,8 @@ def run_parsl_function(map_file, function_file, argument_file, result_file):
     """
     from parsl.executors.taskvine.exec_parsl_function import run
     run(map_file, function_file, argument_file, result_file)
+
+
+def load_variable_in_serverless(var_name):
+    from ndcctools.taskvine.utils import load_variable_from_library
+    return load_variable_from_library(var_name)
