@@ -114,3 +114,10 @@ class MPIExecutor(HighThroughputExecutor):
 
     def validate_resource_spec(self, resource_specification: dict):
         return validate_resource_spec(resource_specification)
+
+    def monitor_resources(self):
+        """Resource monitoring does not make sense when using the
+        MPIExecutor, as the process tree launched for each task is spread
+        across multiple OS images/worker nodes.
+        """
+        return False
