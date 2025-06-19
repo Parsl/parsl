@@ -16,12 +16,13 @@ from parsl.multiprocessing import SpawnEvent, join_terminate_close_proc
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
+logger = logging.getLogger(__name__)
+
 
 @wrap_with_logs
 def filesystem_router_starter(*, q: Queue[TaggedMonitoringMessage], run_dir: str, exit_event: Event) -> None:
-    logger = set_file_logger(f"{run_dir}/monitoring_filesystem_radio.log",
-                             name="monitoring_filesystem_radio",
-                             level=logging.INFO)
+    set_file_logger(f"{run_dir}/monitoring_filesystem_radio.log",
+                    level=logging.INFO)
 
     logger.info("Starting filesystem radio receiver")
     setproctitle("parsl: monitoring filesystem receiver")
