@@ -1,22 +1,28 @@
 import logging
 import pickle
+from multiprocessing.queues import Queue
 
-from parsl.monitoring.radios.base import MonitoringRadioSender
+from parsl.monitoring.radios.base import (
+    MonitoringRadioReceiver,
+    MonitoringRadioSender,
+    RadioConfig,
+)
 
 logger = logging.getLogger(__name__)
 
 
+class HTEXRadio(RadioConfig):
+    def create_sender(self) -> MonitoringRadioSender:
+        return HTEXRadioSender()
+
+    def create_receiver(self, *, run_dir: str, resource_msgs: Queue) -> MonitoringRadioReceiver:
+        return HTEXRadioReceiver()
+
+
 class HTEXRadioSender(MonitoringRadioSender):
 
-    def __init__(self, monitoring_url: str, timeout: int = 10):
-        """
-        Parameters
-        ----------
-
-        monitoring_url : str
-            URL of the form <scheme>://<IP>:<PORT>
-        timeout : int
-            timeout, default=10s
+    def __init__(self) -> None:
+        """Nothing to initialise, because that happens in HTEX itself.
         """
         logger.info("htex-based monitoring radio initialising")
 
@@ -54,4 +60,8 @@ class HTEXRadioSender(MonitoringRadioSender):
         else:
             logger.error("result_queue is uninitialized - cannot put monitoring message")
 
-        return
+
+class HTEXRadioReceiver(MonitoringRadioReceiver):
+    def shutdown(self) -> None:
+        # there is nothing to shut down
+        pass

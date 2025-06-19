@@ -9,8 +9,6 @@ from typing import Any, Optional, Union
 
 import typeguard
 
-from parsl.monitoring.radios.filesystem_router import start_filesystem_receiver
-from parsl.monitoring.radios.udp_router import start_udp_receiver
 from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import (
     SizedQueue,
@@ -36,9 +34,9 @@ logger = logging.getLogger(__name__)
 @typeguard.typechecked
 class MonitoringHub(RepresentationMixin):
     def __init__(self,
-                 hub_address: str,
-                 hub_port: Optional[int] = None,
-                 hub_port_range: Any = None,
+                 hub_address: Any = None,  # unused, so no type enforcement
+                 hub_port_range: Any = None,  # unused, so no type enforcement
+                 hub_port: Any = None,  # unused, so no type enforcement
 
                  workflow_name: Optional[str] = None,
                  workflow_version: Optional[str] = None,
@@ -49,16 +47,14 @@ class MonitoringHub(RepresentationMixin):
         """
         Parameters
         ----------
-        hub_address : str
-             The ip address at which the workers will be able to reach the Hub.
-        hub_port : int
-             The UDP port to which workers will be able to deliver messages to
-             the monitoring router.
-             Note that despite the similar name, this is not related to
-             hub_port_range.
-             Default: None
+        hub_address : unused
+        hub_port : unused
+             Unused, but probably retained until 2026-06-01 to give deprecation warning.
+             These two values previously configured UDP parameters when UDP was used
+             for monitoring messages from workers. These are now configured on the
+             relevant UDPRadio.
         hub_port_range : unused
-             Unused, but retained until 2025-09-14 to avoid configuration errors.
+             Unused, but probably retained until 2026-06-01 to give deprecation warning.
              This value previously configured one ZMQ channel inside the
              HighThroughputExecutor. That ZMQ channel is now configured by the
              interchange_port_range parameter of HighThroughputExecutor.
@@ -86,15 +82,27 @@ class MonitoringHub(RepresentationMixin):
         if _db_manager_excepts:
             raise _db_manager_excepts
 
+        # The following three parameters need to exist as attributes to be
+        # output by RepresentationMixin.
+        if hub_address is not None:
+            message = "Instead of MonitoringHub.hub_address, specify UDPRadio(address=...)"
+            warnings.warn(message, DeprecationWarning)
+            logger.warning(message)
+
         self.hub_address = hub_address
+
+        if hub_port is not None:
+            message = "Instead of MonitoringHub.hub_port, specify UDPRadio(port=...)"
+            warnings.warn(message, DeprecationWarning)
+            logger.warning(message)
+
         self.hub_port = hub_port
 
         if hub_port_range is not None:
             message = "Instead of MonitoringHub.hub_port_range, Use HighThroughputExecutor.interchange_port_range"
             warnings.warn(message, DeprecationWarning)
             logger.warning(message)
-        # This is used by RepresentationMixin so needs to exist as an attribute
-        # even though now it is otherwise unused.
+
         self.hub_port_range = hub_port_range
 
         self.logging_endpoint = logging_endpoint
@@ -120,12 +128,6 @@ class MonitoringHub(RepresentationMixin):
         self.resource_msgs: Queue[TaggedMonitoringMessage]
         self.resource_msgs = SizedQueue()
 
-        self.udp_receiver = start_udp_receiver(debug=self.monitoring_debug,
-                                               logdir=dfk_run_dir,
-                                               monitoring_messages=self.resource_msgs,
-                                               port=self.hub_port
-                                               )
-
         self.dbm_exit_event: ms.Event
         self.dbm_exit_event = SpawnEvent()
 
@@ -140,36 +142,17 @@ class MonitoringHub(RepresentationMixin):
                                      daemon=True,
                                      )
         self.dbm_proc.start()
-        logger.info("Started UDP router process %s and DBM process %s",
-                    self.udp_receiver.process.pid, self.dbm_proc.pid)
-
-        self.filesystem_receiver = start_filesystem_receiver(debug=self.monitoring_debug,
-                                                             logdir=dfk_run_dir,
-                                                             monitoring_messages=self.resource_msgs
-                                                             )
-        logger.info("Started filesystem radio receiver process %s", self.filesystem_receiver.process.pid)
-
-        self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, self.udp_receiver.port)
-
+        logger.info("Started DBM process %s", self.dbm_proc.pid)
         logger.info("Monitoring Hub initialized")
 
     def close(self) -> None:
         logger.info("Terminating Monitoring Hub")
         if self.monitoring_hub_active:
             self.monitoring_hub_active = False
-            logger.info("Setting router termination event")
-
-            logger.info("Waiting for UDP router to terminate")
-            self.udp_receiver.close()
-
-            logger.debug("Finished waiting for router termination")
             logger.debug("Waiting for DB termination")
             self.dbm_exit_event.set()
             join_terminate_close_proc(self.dbm_proc)
             logger.debug("Finished waiting for DBM termination")
-
-            logger.info("Terminating filesystem radio receiver process")
-            self.filesystem_receiver.close()
 
             logger.info("Closing monitoring multiprocessing queues")
             self.resource_msgs.close()

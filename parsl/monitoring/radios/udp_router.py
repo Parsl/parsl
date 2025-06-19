@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import logging
 import multiprocessing.queues as mpq
 import os
@@ -40,6 +41,7 @@ class MonitoringRouter:
                  atexit_timeout: int = 3,   # in seconds
                  resource_msgs: mpq.Queue,
                  exit_event: Event,
+                 hmac_key: bytes,
                  ):
         """ Initializes a monitoring configuration class.
 
@@ -59,12 +61,13 @@ class MonitoringRouter:
             An event that the main Parsl process will set to signal that the monitoring router should shut down.
         """
         os.makedirs(run_dir, exist_ok=True)
-        self.logger = set_file_logger(f"{run_dir}/monitoring_udp_router.log",
-                                      name="monitoring_router",
-                                      level=logging_level)
-        self.logger.debug("Monitoring router starting")
+        set_file_logger(f"{run_dir}/monitoring_udp_router.log",
+                        level=logging_level)
+        logger.debug("Monitoring router starting")
 
         self.atexit_timeout = atexit_timeout
+
+        self.hmac_key = hmac_key
 
         self.loop_freq = 10.0  # milliseconds
 
@@ -84,39 +87,65 @@ class MonitoringRouter:
             except Exception as e:
                 raise RuntimeError(f"Could not bind to udp_port {udp_port} because: {e}")
         self.udp_sock.settimeout(self.loop_freq / 1000)
-        self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.udp_port))
+        logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.udp_port))
 
         self.target_radio = MultiprocessingQueueRadioSender(resource_msgs)
         self.exit_event = exit_event
 
-    @wrap_with_logs(target="monitoring_router")
+    @wrap_with_logs
     def start(self) -> None:
-        self.logger.info("Starting UDP listener")
+        logger.info("Starting UDP listener")
         try:
             while not self.exit_event.is_set():
                 try:
-                    data, addr = self.udp_sock.recvfrom(2048)
+                    # DUPLICATE INTO drain loop too, via refactor
+                    hmdata, addr = self.udp_sock.recvfrom(2048)
+                    origin_hmac = hmdata[0:64]
+                    data = hmdata[64:]
+                    # Check hmac before pickle load.
+                    # If data is wrong, do not log it because it is suspect,
+                    # but it should be safe to log the addr, at error level.
+
+                    recomputed_hmac = hmac.digest(self.hmac_key, data, 'sha512')
+
+                    if not hmac.compare_digest(origin_hmac, recomputed_hmac):
+                        raise RuntimeError("hmac does not match")  # TODO: custom exception, make a log entry
+
                     resource_msg = pickle.loads(data)
-                    self.logger.debug("Got UDP Message from {}: {}".format(addr, resource_msg))
+                    logger.debug("Got UDP Message from {}: {}".format(addr, resource_msg))
                     self.target_radio.send(resource_msg)
+
+                    # XXX  ^^^ duplicate
+
                 except socket.timeout:
                     pass
 
-            self.logger.info("UDP listener draining")
+            logger.info("UDP listener draining")
             last_msg_received_time = time.time()
             while time.time() - last_msg_received_time < self.atexit_timeout:
                 try:
-                    data, addr = self.udp_sock.recvfrom(2048)
-                    msg = pickle.loads(data)
-                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
-                    self.target_radio.send(msg)
+                    hmdata, addr = self.udp_sock.recvfrom(2048)
+                    origin_hmac = hmdata[0:64]
+                    data = hmdata[64:]
+                    # Check hmac before pickle load.
+                    # If data is wrong, do not log it because it is suspect,
+                    # but it should be safe to log the addr, at error level.
+
+                    recomputed_hmac = hmac.digest(self.hmac_key, data, 'sha512')
+
+                    if not hmac.compare_digest(origin_hmac, recomputed_hmac):
+                        raise RuntimeError("hmac does not match")  # TODO: custom exception, make a log entry
+
+                    resource_msg = pickle.loads(data)
+                    logger.debug("Got UDP Message from {}: {}".format(addr, resource_msg))
+                    self.target_radio.send(resource_msg)
                     last_msg_received_time = time.time()
                 except socket.timeout:
                     pass
 
-            self.logger.info("UDP listener finishing normally")
+            logger.info("UDP listener finishing normally")
         finally:
-            self.logger.info("UDP listener finished")
+            logger.info("UDP listener finished")
 
 
 @wrap_with_logs
@@ -127,7 +156,7 @@ def udp_router_starter(*,
                        exit_event: Event,
 
                        udp_port: Optional[int],
-
+                       hmac_key: bytes,
                        run_dir: str,
                        logging_level: int) -> None:
     setproctitle("parsl: monitoring UDP router")
@@ -136,18 +165,19 @@ def udp_router_starter(*,
                                   run_dir=run_dir,
                                   logging_level=logging_level,
                                   resource_msgs=resource_msgs,
-                                  exit_event=exit_event)
+                                  exit_event=exit_event,
+                                  hmac_key=hmac_key)
     except Exception as e:
         logger.error("MonitoringRouter construction failed.", exc_info=True)
         comm_q.put(f"Monitoring router construction failed: {e}")
     else:
         comm_q.put(router.udp_port)
 
-        router.logger.info("Starting MonitoringRouter in router_starter")
+        logger.info("Starting MonitoringRouter in router_starter")
         try:
             router.start()
         except Exception:
-            router.logger.exception("UDP router start exception")
+            logger.exception("UDP router start exception")
 
 
 class UDPRadioReceiver():
@@ -156,7 +186,7 @@ class UDPRadioReceiver():
         self.exit_event = exit_event
         self.port = port
 
-    def close(self) -> None:
+    def shutdown(self) -> None:
         self.exit_event.set()
         join_terminate_close_proc(self.process)
 
@@ -165,7 +195,8 @@ def start_udp_receiver(*,
                        monitoring_messages: Queue,
                        port: Optional[int],
                        logdir: str,
-                       debug: bool) -> UDPRadioReceiver:
+                       debug: bool,
+                       hmac_key: bytes) -> UDPRadioReceiver:
 
     udp_comm_q: Queue[Union[int, str]]
     udp_comm_q = SizedQueue(maxsize=10)
@@ -179,6 +210,7 @@ def start_udp_receiver(*,
                                        "udp_port": port,
                                        "run_dir": logdir,
                                        "logging_level": logging.DEBUG if debug else logging.INFO,
+                                       "hmac_key": hmac_key,
                                        },
                                name="Monitoring-UDP-Router-Process",
                                daemon=True,

@@ -1,8 +1,7 @@
 import pytest
 
 from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.radios.udp import UDPRadioSender
-from parsl.monitoring.radios.udp_router import start_udp_receiver
+from parsl.monitoring.radios.udp import UDPRadio
 from parsl.multiprocessing import SpawnQueue
 
 
@@ -16,19 +15,15 @@ def test_udp(tmpd_cwd):
 
     resource_msgs = SpawnQueue()
 
+    radio_config = UDPRadio(address="localhost")
+
     # start receiver
-    udp_receiver = start_udp_receiver(debug=True,
-                                      logdir=str(tmpd_cwd),
-                                      monitoring_messages=resource_msgs,
-                                      port=None
-                                      )
+    udp_receiver = radio_config.create_receiver(run_dir=str(tmpd_cwd),
+                                                resource_msgs=resource_msgs)
 
     # make radio
 
-    # this comes from monitoring.py:
-    url = "udp://{}:{}".format("localhost", udp_receiver.port)
-
-    radio_sender = UDPRadioSender(url)
+    radio_sender = radio_config.create_sender()
 
     # send message into radio
 
@@ -44,7 +39,7 @@ def test_udp(tmpd_cwd):
 
     # shut down router
 
-    udp_receiver.close()
+    udp_receiver.shutdown()
 
     # we can't inspect the process if it has been closed properly, but
     # we can verify that it raises the expected ValueError the closed
