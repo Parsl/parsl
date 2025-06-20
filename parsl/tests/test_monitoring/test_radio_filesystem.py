@@ -1,8 +1,7 @@
 import pytest
 
 from parsl.monitoring.message_type import MessageType
-from parsl.monitoring.radios.filesystem import FilesystemRadioSender
-from parsl.monitoring.radios.filesystem_router import start_filesystem_receiver
+from parsl.monitoring.radios.filesystem import FilesystemRadio
 from parsl.multiprocessing import SpawnQueue
 
 
@@ -16,16 +15,15 @@ def test_filesystem(tmpd_cwd):
 
     resource_msgs = SpawnQueue()
 
+    radio_config = FilesystemRadio()
+
     # start receiver
-    receiver = start_filesystem_receiver(debug=True,
-                                         logdir=str(tmpd_cwd),
-                                         monitoring_messages=resource_msgs,
-                                         )
+    receiver = radio_config.create_receiver(run_dir=str(tmpd_cwd),
+                                            resource_msgs=resource_msgs)
 
     # make radio
 
-    radio_sender = FilesystemRadioSender(run_dir=str(tmpd_cwd),
-                                         monitoring_url="irrelevant:")
+    radio_sender = radio_config.create_sender()
 
     # send message into radio
 
@@ -41,7 +39,7 @@ def test_filesystem(tmpd_cwd):
 
     # shut down router
 
-    receiver.close()
+    receiver.shutdown()
 
     # we can't inspect the process if it has been closed properly, but
     # we can verify that it raises the expected ValueError the closed

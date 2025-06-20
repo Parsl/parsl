@@ -155,7 +155,7 @@ class UDPRadioReceiver():
         self.exit_event = exit_event
         self.port = port
 
-    def close(self) -> None:
+    def shutdown(self) -> None:
         self.exit_event.set()
         join_terminate_close_proc(self.process)
 
