@@ -185,9 +185,9 @@ Monitoring
     :nosignatures:
 
     parsl.monitoring.MonitoringHub
+    parsl.monitoring.radios.base.MonitoringRadioReceiver
+    parsl.monitoring.radios.base.MonitoringRadioSender
     parsl.monitoring.radios.base.RadioConfig
-    parsl.monitoring.radios.base.RadioSender
-    parsl.monitoring.radios.base.RadioReceiver
     parsl.monitoring.radios.filesystem.FilesystemRadio
     parsl.monitoring.radios.htex.HTEXRadio
     parsl.monitoring.radios.udp.UDPRadio
