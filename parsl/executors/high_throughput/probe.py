@@ -11,15 +11,15 @@ from parsl.addresses import get_all_addresses, tcp_url
 logger = logging.getLogger(__name__)
 
 
-def probe_addresses(addresses, task_port, timeout=120):
+def probe_addresses(addresses, port, timeout=120):
     """
     Parameters
     ----------
 
     addresses: [string]
         List of addresses as strings
-    task_port: int
-        Task port on the interchange
+    port: int
+        Port on the interchange
     timeout: int
         Timeout in seconds
 
@@ -33,7 +33,7 @@ def probe_addresses(addresses, task_port, timeout=120):
         socket = context.socket(zmq.DEALER)
         socket.setsockopt(zmq.LINGER, 0)
         socket.setsockopt(zmq.IPV6, True)
-        url = tcp_url(addr, task_port)
+        url = tcp_url(addr, port)
         logger.debug("Trying to connect back on {}".format(url))
         socket.connect(url)
         addr_map[addr] = {'sock': socket,
