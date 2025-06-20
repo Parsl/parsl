@@ -59,10 +59,9 @@ class MonitoringRouter:
             An event that the main Parsl process will set to signal that the monitoring router should shut down.
         """
         os.makedirs(run_dir, exist_ok=True)
-        self.logger = set_file_logger(f"{run_dir}/monitoring_udp_router.log",
-                                      name="monitoring_router",
-                                      level=logging_level)
-        self.logger.debug("Monitoring router starting")
+        set_file_logger(f"{run_dir}/monitoring_udp_router.log",
+                        level=logging_level)
+        logger.debug("Monitoring router starting")
 
         self.atexit_timeout = atexit_timeout
 
@@ -84,39 +83,39 @@ class MonitoringRouter:
             except Exception as e:
                 raise RuntimeError(f"Could not bind to udp_port {udp_port} because: {e}")
         self.udp_sock.settimeout(self.loop_freq / 1000)
-        self.logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.udp_port))
+        logger.info("Initialized the UDP socket on 0.0.0.0:{}".format(self.udp_port))
 
         self.target_radio = MultiprocessingQueueRadioSender(resource_msgs)
         self.exit_event = exit_event
 
-    @wrap_with_logs(target="monitoring_router")
+    @wrap_with_logs
     def start(self) -> None:
-        self.logger.info("Starting UDP listener")
+        logger.info("Starting UDP listener")
         try:
             while not self.exit_event.is_set():
                 try:
                     data, addr = self.udp_sock.recvfrom(2048)
                     resource_msg = pickle.loads(data)
-                    self.logger.debug("Got UDP Message from {}: {}".format(addr, resource_msg))
+                    logger.debug("Got UDP Message from {}: {}".format(addr, resource_msg))
                     self.target_radio.send(resource_msg)
                 except socket.timeout:
                     pass
 
-            self.logger.info("UDP listener draining")
+            logger.info("UDP listener draining")
             last_msg_received_time = time.time()
             while time.time() - last_msg_received_time < self.atexit_timeout:
                 try:
                     data, addr = self.udp_sock.recvfrom(2048)
                     msg = pickle.loads(data)
-                    self.logger.debug("Got UDP Message from {}: {}".format(addr, msg))
+                    logger.debug("Got UDP Message from {}: {}".format(addr, msg))
                     self.target_radio.send(msg)
                     last_msg_received_time = time.time()
                 except socket.timeout:
                     pass
 
-            self.logger.info("UDP listener finishing normally")
+            logger.info("UDP listener finishing normally")
         finally:
-            self.logger.info("UDP listener finished")
+            logger.info("UDP listener finished")
 
 
 @wrap_with_logs
@@ -143,11 +142,11 @@ def udp_router_starter(*,
     else:
         comm_q.put(router.udp_port)
 
-        router.logger.info("Starting MonitoringRouter in router_starter")
+        logger.info("Starting MonitoringRouter in router_starter")
         try:
             router.start()
         except Exception:
-            router.logger.exception("UDP router start exception")
+            logger.exception("UDP router start exception")
 
 
 class UDPRadioReceiver():
