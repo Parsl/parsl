@@ -47,6 +47,7 @@ from parsl.monitoring import MonitoringHub
 from parsl.monitoring.errors import RadioRequiredError
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
+from parsl.monitoring.radios.udp import UDPRadio
 from parsl.monitoring.remote import monitor_wrapper
 from parsl.process_loggers import wrap_with_logs
 from parsl.usage_tracking.usage import UsageTracker
@@ -187,7 +188,9 @@ class DataFlowKernel:
         self.executors: Dict[str, ParslExecutor] = {}
 
         self.data_manager = DataManager(self)
-        parsl_internal_executor = ThreadPoolExecutor(max_threads=config.internal_tasks_max_threads, label='_parsl_internal')
+        parsl_internal_executor = ThreadPoolExecutor(max_threads=config.internal_tasks_max_threads,
+                                                     label='_parsl_internal',
+                                                     remote_monitoring_radio=UDPRadio(address='127.0.0.1'))
         self.add_executors(config.executors)
         self.add_executors([parsl_internal_executor])
 
