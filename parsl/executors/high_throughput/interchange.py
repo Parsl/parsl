@@ -369,7 +369,11 @@ class Interchange:
             'Processing message type %r from manager %r', mtype, manager_id
         )
 
-        if mtype == 'registration':
+        if mtype == 'connection_probe':
+            self.manager_sock.send_multipart([manager_id, b''])
+            return
+
+        elif mtype == 'registration':
             ix_minor_py = self.current_platform['python_v'].rsplit('.', 1)[0]
             ix_parsl_v = self.current_platform['parsl_v']
             mgr_minor_py = meta['python_v'].rsplit('.', 1)[0]
