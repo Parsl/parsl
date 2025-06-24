@@ -138,15 +138,15 @@ class Interchange:
         # count of tasks that have been sent out to worker pools
         self.count = 0
 
-        self.worker_sock = self.zmq_context.socket(zmq.ROUTER)
-        self.worker_sock.set_hwm(0)
+        self.manager_sock = self.zmq_context.socket(zmq.ROUTER)
+        self.manager_sock.set_hwm(0)
 
         if worker_port:
             task_addy = tcp_url(self.interchange_address, worker_port)
-            self.worker_sock.bind(task_addy)
+            self.manager_sock.bind(task_addy)
 
         else:
-            worker_port = self.worker_sock.bind_to_random_port(
+            worker_port = self.manager_sock.bind_to_random_port(
                 tcp_url(self.interchange_address),
                 min_port=worker_port_range[0],
                 max_port=worker_port_range[1],
@@ -298,7 +298,7 @@ class Interchange:
         kill_event = threading.Event()
 
         poller = zmq.Poller()
-        poller.register(self.worker_sock, zmq.POLLIN)
+        poller.register(self.manager_sock, zmq.POLLIN)
         poller.register(self.task_incoming, zmq.POLLIN)
         poller.register(self.command_channel, zmq.POLLIN)
 
@@ -348,12 +348,12 @@ class Interchange:
         monitoring_radio: Optional[MonitoringRadioSender],
         kill_event: threading.Event,
     ) -> None:
-        """Process one message from manager on the worker_sock channel."""
-        if not self.socks.get(self.worker_sock) == zmq.POLLIN:
+        """Process one message from manager on the manager_sock channel."""
+        if not self.socks.get(self.manager_sock) == zmq.POLLIN:
             return
 
         logger.debug('starting worker message section')
-        msg_parts = self.worker_sock.recv_multipart()
+        msg_parts = self.manager_sock.recv_multipart()
         try:
             manager_id, meta_b, *msgs = msg_parts
             meta = pickle.loads(meta_b)
@@ -494,7 +494,7 @@ class Interchange:
 
         elif mtype == 'heartbeat':
             m['last_heartbeat'] = time.time()
-            self.worker_sock.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
+            self.manager_sock.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
 
         elif mtype == 'drain':
             m['draining'] = True
@@ -512,7 +512,7 @@ class Interchange:
             m = self._ready_managers[manager_id]
             if m['draining'] and len(m['tasks']) == 0:
                 logger.info(f"Manager {manager_id!r} is drained - sending drained message to manager")
-                self.worker_sock.send_multipart([manager_id, b'', PKL_DRAINED_CODE])
+                self.manager_sock.send_multipart([manager_id, b'', PKL_DRAINED_CODE])
                 interesting_managers.remove(manager_id)
                 self._ready_managers.pop(manager_id)
 
@@ -540,7 +540,7 @@ class Interchange:
                 if real_capacity and m["active"] and not m["draining"]:
                     tasks = self.get_tasks(real_capacity)
                     if tasks:
-                        self.worker_sock.send_multipart([manager_id, b'', pickle.dumps(tasks)])
+                        self.manager_sock.send_multipart([manager_id, b'', pickle.dumps(tasks)])
                         task_count = len(tasks)
                         self.count += task_count
                         tids = [t['task_id'] for t in tasks]
