@@ -494,7 +494,7 @@ class Interchange:
 
         elif mtype == 'heartbeat':
             m['last_heartbeat'] = time.time()
-            self.manager_sock.send_multipart([manager_id, b'', PKL_HEARTBEAT_CODE])
+            self.manager_sock.send_multipart([manager_id, PKL_HEARTBEAT_CODE])
 
         elif mtype == 'drain':
             m['draining'] = True
@@ -512,7 +512,7 @@ class Interchange:
             m = self._ready_managers[manager_id]
             if m['draining'] and len(m['tasks']) == 0:
                 logger.info(f"Manager {manager_id!r} is drained - sending drained message to manager")
-                self.manager_sock.send_multipart([manager_id, b'', PKL_DRAINED_CODE])
+                self.manager_sock.send_multipart([manager_id, PKL_DRAINED_CODE])
                 interesting_managers.remove(manager_id)
                 self._ready_managers.pop(manager_id)
 
@@ -540,7 +540,7 @@ class Interchange:
                 if real_capacity and m["active"] and not m["draining"]:
                     tasks = self.get_tasks(real_capacity)
                     if tasks:
-                        self.manager_sock.send_multipart([manager_id, b'', pickle.dumps(tasks)])
+                        self.manager_sock.send_multipart([manager_id, pickle.dumps(tasks)])
                         task_count = len(tasks)
                         self.count += task_count
                         tids = [t['task_id'] for t in tasks]
