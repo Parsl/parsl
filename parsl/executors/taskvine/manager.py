@@ -1,12 +1,12 @@
 import hashlib
 import logging
 import os
-import parsl
 import queue
 import shutil
 import subprocess
 import uuid
 
+import parsl
 from parsl.executors.taskvine import exec_parsl_function
 from parsl.executors.taskvine.utils import VineTaskToParsl, run_parsl_function
 from parsl.process_loggers import wrap_with_logs
