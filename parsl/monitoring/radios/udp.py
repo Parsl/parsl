@@ -2,7 +2,7 @@ import logging
 import pickle
 import socket
 from multiprocessing.queues import Queue
-from typing import Optional, Union
+from typing import Optional
 
 from parsl.monitoring.radios.base import (
     MonitoringRadioReceiver,
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 class UDPRadio(RadioConfig):
-    def __init__(self, *, port: Optional[int] = None, atexit_timeout: Union[int, float] = 3, address: str, debug: bool = False):
+    def __init__(self, *, port: Optional[int] = None, atexit_timeout: int = 3, address: str, debug: bool = False):
         self.port = port
         self.atexit_timeout = atexit_timeout
         self.address = address
@@ -29,7 +29,8 @@ class UDPRadio(RadioConfig):
         udp_receiver = start_udp_receiver(logdir=run_dir,
                                           monitoring_messages=resource_msgs,
                                           port=self.port,
-                                          debug=self.debug
+                                          debug=self.debug,
+                                          atexit_timeout=self.atexit_timeout
                                           )
         self.port = udp_receiver.port
         return udp_receiver
