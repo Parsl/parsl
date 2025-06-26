@@ -44,8 +44,10 @@ from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.jobs.job_status_poller import JobStatusPoller
 from parsl.monitoring import MonitoringHub
+from parsl.monitoring.errors import RadioRequiredError
 from parsl.monitoring.message_type import MessageType
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
+from parsl.monitoring.radios.udp import UDPRadio
 from parsl.monitoring.remote import monitor_wrapper
 from parsl.process_loggers import wrap_with_logs
 from parsl.usage_tracking.usage import UsageTracker
@@ -186,7 +188,9 @@ class DataFlowKernel:
         self.executors: Dict[str, ParslExecutor] = {}
 
         self.data_manager = DataManager(self)
-        parsl_internal_executor = ThreadPoolExecutor(max_threads=config.internal_tasks_max_threads, label='_parsl_internal')
+        parsl_internal_executor = ThreadPoolExecutor(max_threads=config.internal_tasks_max_threads,
+                                                     label='_parsl_internal',
+                                                     remote_monitoring_radio=UDPRadio(address='127.0.0.1'))
         self.add_executors(config.executors)
         self.add_executors([parsl_internal_executor])
 
@@ -736,17 +740,19 @@ class DataFlowKernel:
         try_id = task_record['fail_count']
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
+            if executor.remote_monitoring_radio is None:
+                raise RadioRequiredError()
+
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
             (function, args, kwargs) = monitor_wrapper(f=function,
                                                        args=args,
                                                        kwargs=kwargs,
                                                        x_try_id=try_id,
                                                        x_task_id=task_id,
-                                                       monitoring_hub_url=self.monitoring.monitoring_hub_url,
+                                                       radio_config=executor.remote_monitoring_radio,
                                                        run_id=self.run_id,
                                                        logging_level=wrapper_logging_level,
                                                        sleep_dur=self.monitoring.resource_monitoring_interval,
-                                                       radio_mode=executor.radio_mode,
                                                        monitor_resources=executor.monitor_resources(),
                                                        run_dir=self.run_dir)
 
@@ -1131,8 +1137,14 @@ class DataFlowKernel:
         for executor in executors:
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
-            if self.monitoring:
+            if self.monitoring and executor.remote_monitoring_radio is not None:
                 executor.monitoring_messages = self.monitoring.resource_msgs
+                logger.debug("Starting monitoring receiver for executor %s "
+                             "with remote monitoring radio config %s",
+                             executor, executor.remote_monitoring_radio)
+
+                executor.monitoring_receiver = executor.remote_monitoring_radio.create_receiver(resource_msgs=executor.monitoring_messages,
+                                                                                                run_dir=executor.run_dir)
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')

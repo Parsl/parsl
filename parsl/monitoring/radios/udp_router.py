@@ -17,6 +17,7 @@ import typeguard
 
 from parsl.log_utils import set_file_logger
 from parsl.monitoring.errors import MonitoringRouterStartError
+from parsl.monitoring.radios.base import MonitoringRadioReceiver
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.multiprocessing import (
     SizedQueue,
@@ -149,13 +150,13 @@ def udp_router_starter(*,
             logger.exception("UDP router start exception")
 
 
-class UDPRadioReceiver():
+class UDPRadioReceiver(MonitoringRadioReceiver):
     def __init__(self, *, process: SpawnProcessType, exit_event: EventType, port: int) -> None:
         self.process = process
         self.exit_event = exit_event
         self.port = port
 
-    def close(self) -> None:
+    def shutdown(self) -> None:
         self.exit_event.set()
         join_terminate_close_proc(self.process)
 
