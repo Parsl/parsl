@@ -29,7 +29,7 @@ class RadioConfig(metaclass=ABCMeta):
     MonitoringRadioReceiver objects do not need to be pickleable (and often
     will not be - for example, when they hold references to other processes).
 
-    The RadioConfig object will be use by Parsl in this sequence:
+    The RadioConfig object will be used by Parsl in this sequence:
 
     * A user creates a RadioConfig object from the appropriate subclass for
       radio mechanism they want to use, and specifies it as part of their
