@@ -2,9 +2,13 @@ import logging
 import pickle
 import socket
 from multiprocessing.queues import Queue
-from typing import Any, Optional, Union
+from typing import Optional, Union
 
-from parsl.monitoring.radios.base import MonitoringRadioSender, RadioConfig
+from parsl.monitoring.radios.base import (
+    MonitoringRadioReceiver,
+    MonitoringRadioSender,
+    RadioConfig,
+)
 from parsl.monitoring.radios.udp_router import start_udp_receiver
 
 logger = logging.getLogger(__name__)
@@ -21,7 +25,7 @@ class UDPRadio(RadioConfig):
         assert self.port is not None, "self.port should have been initialized by create_receiver"
         return UDPRadioSender(self.address, self.port)
 
-    def create_receiver(self, run_dir: str, resource_msgs: Queue) -> Any:
+    def create_receiver(self, run_dir: str, resource_msgs: Queue) -> MonitoringRadioReceiver:
         udp_receiver = start_udp_receiver(logdir=run_dir,
                                           monitoring_messages=resource_msgs,
                                           port=self.port,
