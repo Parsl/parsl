@@ -28,7 +28,7 @@ def this_app():
 # a configuration that is suitably configured for monitoring.
 
 def thread_config():
-    c = Config(executors=[ThreadPoolExecutor(remote_monitoring_radio=UDPRadio(address="localhost"))],
+    c = Config(executors=[ThreadPoolExecutor(remote_monitoring_radio=UDPRadio(address="localhost", atexit_timeout=0))],
                monitoring=MonitoringHub(resource_monitoring_interval=0))
     return c
 
@@ -47,7 +47,7 @@ def htex_udp_config():
     ex = c.executors[0]
 
     assert isinstance(ex.remote_monitoring_radio, HTEXRadio), "precondition: htex is configured for the HTEXRadio"
-    ex.remote_monitoring_radio = UDPRadio(address="localhost")
+    ex.remote_monitoring_radio = UDPRadio(address="localhost", atexit_timeout=0)
 
     return c
 
