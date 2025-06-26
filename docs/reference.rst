@@ -191,7 +191,7 @@ Monitoring
     parsl.monitoring.radios.filesystem.FilesystemRadio
     parsl.monitoring.radios.htex.HTEXRadio
     parsl.monitoring.radios.udp.UDPRadio
-    parsl.monitoring.radios.multiprocessing.MultiprocessingRadio
+    parsl.monitoring.radios.multiprocessing.MultiprocessingQueueRadio
 
 
 Internal
