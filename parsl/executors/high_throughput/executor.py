@@ -33,6 +33,7 @@ from parsl.monitoring.radios.zmq_router import ZMQRadioReceiver, start_zmq_recei
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
+from parsl.serialize.serializer import SerializerT, Serializer
 from parsl.serialize import deserialize, pack_res_spec_apply_message
 from parsl.serialize.errors import DeserializationError, SerializationError
 from parsl.usage_tracking.api import UsageInformation
@@ -156,6 +157,10 @@ GENERAL_HTEX_PARAM_DOCS = """provider : :class:`~parsl.providers.base.ExecutionP
         Determines what strategy the interchange uses to select managers during task distribution.
         See API reference under "Manager Selectors" regarding the various manager selectors.
         Default: 'RandomManagerSelector'
+        
+    serializer_module_path: str
+        Serializer used for serializing tasks and results between the executor and the
+        workers. Defaults to parsl.serialize.serializer.Serializer
 """  # Documentation for params used by both HTEx and MPIEx
 
 
@@ -261,7 +266,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  worker_logdir_root: Optional[str] = None,
                  manager_selector: ManagerSelector = RandomManagerSelector(),
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
-                 encrypted: bool = False):
+                 encrypted: bool = False,
+                 serializer_mod_path: str = "parsl.serialize.serializer.Serializer"):
 
         logger.debug("Initializing HighThroughputExecutor")
 
@@ -277,6 +283,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.address_probe_timeout = address_probe_timeout
         self.manager_selector = manager_selector
         self.loopback_address = loopback_address
+        self.serializer_mod_path = serializer_mod_path
+        self.serializer = serializer_mod_path
 
         if self.address:
             self.all_addresses = address
