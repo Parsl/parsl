@@ -24,6 +24,10 @@ def test_udp(tmpd_cwd):
     udp_receiver = radio_config.create_receiver(run_dir=str(tmpd_cwd),
                                                 resource_msgs=resource_msgs)
 
+    # check hash properties
+
+    assert len(radio_config.hmac_key) == 64, "With default hash, should expect 64 byte key"
+
     # make radio
 
     radio_sender = radio_config.create_sender()

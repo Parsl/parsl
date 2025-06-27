@@ -120,13 +120,16 @@ class MonitoringRouter:
 
     def process_message(self) -> None:
         hmdata, addr = self.udp_sock.recvfrom(2048)
-        origin_hmac = hmdata[0:64]
-        data = hmdata[64:]
+        h = hmac.HMAC(key=self.hmac_key, digestmod=self.hmac_digest)
+        origin_hmac = hmdata[0:h.digest_size]
+        h.update(hmdata[h.digest_size:])
+        data = hmdata[h.digest_size:]
+
         # Check hmac before pickle load.
         # If data is wrong, do not log it because it is suspect,
         # but it should be safe to log the addr, at error level.
 
-        recomputed_hmac = hmac.digest(self.hmac_key, data, self.hmac_digest)
+        recomputed_hmac = h.digest()
 
         if not hmac.compare_digest(origin_hmac, recomputed_hmac):
             logger.error("HMAC does not match on received message")

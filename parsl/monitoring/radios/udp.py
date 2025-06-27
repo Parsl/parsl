@@ -1,3 +1,4 @@
+import hashlib
 import hmac
 import logging
 import pickle
@@ -29,15 +30,13 @@ class UDPRadio(RadioConfig):
         return UDPRadioSender(self.address, self.port, self.hmac_key, self.hmac_digest)
 
     def create_receiver(self, run_dir: str, resource_msgs: Queue) -> MonitoringRadioReceiver:
-        # 128 byte key length is chosen based on Microsoft's recommendation
-        # here:
-        # https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.hmacsha512.-ctor
-        # and on comments in RFC 2104 section 2 that the key length be at
+        # RFC 2104 section 2 recommends that the key length be at
         # least as long as the hash output (64 bytes in the case of SHA512).
         # RFC 2014 section 3 talks about periodic key refreshing. This key is
         # not refreshed inside a workflow run, but each separate workflow run
         # uses a new key.
-        self.hmac_key = secrets.token_bytes(128)
+        keysize = hashlib.new(self.hmac_digest).digest_size
+        self.hmac_key = secrets.token_bytes(keysize)
 
         udp_receiver = start_udp_receiver(logdir=run_dir,
                                           monitoring_messages=resource_msgs,
