@@ -43,6 +43,7 @@ class MonitoringRouter:
                  resource_msgs: mpq.Queue,
                  exit_event: Event,
                  hmac_key: bytes,
+                 hmac_digest: str,
                  ):
         """ Initializes a monitoring configuration class.
 
@@ -69,6 +70,7 @@ class MonitoringRouter:
         self.atexit_timeout = atexit_timeout
 
         self.hmac_key = hmac_key
+        self.hmac_digest = hmac_digest
 
         self.loop_freq = 10.0  # milliseconds
 
@@ -124,7 +126,7 @@ class MonitoringRouter:
         # If data is wrong, do not log it because it is suspect,
         # but it should be safe to log the addr, at error level.
 
-        recomputed_hmac = hmac.digest(self.hmac_key, data, 'sha512')
+        recomputed_hmac = hmac.digest(self.hmac_key, data, self.hmac_digest)
 
         if not hmac.compare_digest(origin_hmac, recomputed_hmac):
             logger.error("HMAC does not match on received message")
@@ -147,7 +149,8 @@ def udp_router_starter(*,
                        hmac_key: bytes,
                        run_dir: str,
                        logging_level: int,
-                       atexit_timeout: int) -> None:
+                       atexit_timeout: int,
+                       hmac_digest: str) -> None:
     setproctitle("parsl: monitoring UDP router")
     try:
         router = MonitoringRouter(udp_port=udp_port,
@@ -156,7 +159,8 @@ def udp_router_starter(*,
                                   resource_msgs=resource_msgs,
                                   exit_event=exit_event,
                                   atexit_timeout=atexit_timeout,
-                                  hmac_key=hmac_key)
+                                  hmac_key=hmac_key,
+                                  hmac_digest=hmac_digest)
     except Exception as e:
         logger.error("MonitoringRouter construction failed.", exc_info=True)
         comm_q.put(f"Monitoring router construction failed: {e}")
@@ -187,7 +191,8 @@ def start_udp_receiver(*,
                        logdir: str,
                        debug: bool,
                        atexit_timeout: int,
-                       hmac_key: bytes) -> UDPRadioReceiver:
+                       hmac_key: bytes,
+                       hmac_digest: str) -> UDPRadioReceiver:
 
     udp_comm_q: Queue[Union[int, str]]
     udp_comm_q = SizedQueue(maxsize=10)
@@ -203,6 +208,7 @@ def start_udp_receiver(*,
                                        "logging_level": logging.DEBUG if debug else logging.INFO,
                                        "atexit_timeout": atexit_timeout,
                                        "hmac_key": hmac_key,
+                                       "hmac_digest": hmac_digest,
                                        },
                                name="Monitoring-UDP-Router-Process",
                                daemon=True,
