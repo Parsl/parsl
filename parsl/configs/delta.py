@@ -8,7 +8,7 @@ config = Config(
     executors=[
         HighThroughputExecutor(
             label='Delta_GPU_Executor',
-            working_dir='/scratch/path/to/your/directory'
+            working_dir='/scratch/path/to/your/directory',
             max_workers_per_node=1,
             provider=SlurmProvider(
                 partition='gpuA100x4',

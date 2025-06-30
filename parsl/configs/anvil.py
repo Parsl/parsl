@@ -8,7 +8,7 @@ config = Config(
     executors=[
         HighThroughputExecutor(
             label='Anvil_GPU_Executor',
-            working_dir='/anvil/scratch/path/to/your/directory'
+            working_dir='/anvil/scratch/path/to/your/directory',
             max_workers_per_node=1,
             provider=SlurmProvider(
                 partition='gpu',
