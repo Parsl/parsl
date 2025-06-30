@@ -152,8 +152,11 @@ def _taskvine_submit_wait(ready_task_queue=None,
     means that any communication should be done using the multiprocessing
     module capabilities, rather than shared memory.
     """
-    logger.debug("Starting TaskVine Submit/Wait Process")
+    print("BENC: about to set proc title")
     setproctitle("parsl: TaskVine submit/wait")
+    print("BENC: about to log that submit process starts")
+    logger.debug("Starting TaskVine Submit/Wait Process")
+    print("BENC: after log that submit process starts")
 
     # Enable debugging flags and create logging file
     if manager_config.vine_log_dir is not None:
