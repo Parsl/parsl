@@ -12,7 +12,7 @@ from parsl.log_utils import set_file_logger
 from parsl.monitoring.radios.base import MonitoringRadioReceiver
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.monitoring.types import TaggedMonitoringMessage
-from parsl.multiprocessing import SpawnEvent, SpawnProcess
+from parsl.multiprocessing import SpawnEvent, SpawnProcess, join_terminate_close_proc
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
@@ -69,6 +69,5 @@ class FilesystemRadioReceiver(MonitoringRadioReceiver):
         logger.info("Started filesystem radio receiver process %s", self.process.pid)
 
     def shutdown(self) -> None:
-        self.process.terminate()
-        self.process.join()
-        self.process.close()
+        self.exit_event.set()
+        join_terminate_close_proc(self.process)
