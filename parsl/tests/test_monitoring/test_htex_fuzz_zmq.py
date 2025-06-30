@@ -17,7 +17,12 @@ def this_app():
 
 
 @pytest.mark.local
-def test_row_counts():
+def test_fuzz():
+    """This test sends fuzz into the ZMQ radio receiver that HTEX starts
+    for receiving monitoring messages from the interchange, and checks
+    that monitoring still records things ok.
+    """
+
     import sqlalchemy
     from sqlalchemy import text
 
@@ -44,7 +49,7 @@ def test_row_counts():
     #   the latter is what i'm most suspicious of in my present investigation
 
     # dig out the interchange port...
-    hub_address = parsl.dfk().monitoring.hub_address
+    hub_address = parsl.dfk().executors["htex_Local"].loopback_address
     hub_zmq_port = parsl.dfk().executors["htex_Local"].hub_zmq_port
 
     # this will send a string to a new socket connection

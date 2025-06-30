@@ -4,22 +4,28 @@ import time
 import pytest
 
 import parsl
-from parsl import HighThroughputExecutor
+from parsl import HighThroughputExecutor, ThreadPoolExecutor
 from parsl.config import Config
+from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.monitoring import MonitoringHub
+from parsl.monitoring.radios.filesystem import FilesystemRadio
+from parsl.monitoring.radios.htex import HTEXRadio
+from parsl.monitoring.radios.udp import UDPRadio
 
 
 @parsl.python_app
 def this_app():
-    # TODO: deleted this sleep because we will always send a final resource message
-    # rather than requiring polling to happen - since TODO PR #####
-    # time.sleep(3)
-
     return 5
 
 
 # The below fresh configs are for use in parametrization, and should return
 # a configuration that is suitably configured for monitoring.
+
+def thread_config():
+    c = Config(executors=[ThreadPoolExecutor(remote_monitoring_radio=UDPRadio(address="localhost", atexit_timeout=0))],
+               monitoring=MonitoringHub(resource_monitoring_interval=0))
+    return c
+
 
 def htex_config():
     """This config will use htex's default htex-specific monitoring radio mode"""
@@ -32,9 +38,10 @@ def htex_udp_config():
     from parsl.tests.configs.htex_local_alternate import fresh_config
     c = fresh_config()
     assert len(c.executors) == 1
+    ex = c.executors[0]
 
-    assert c.executors[0].radio_mode == "htex", "precondition: htex has a radio mode attribute, configured for htex radio"
-    c.executors[0].radio_mode = "udp"
+    assert isinstance(ex.remote_monitoring_radio, HTEXRadio), "precondition: htex is configured for the HTEXRadio"
+    ex.remote_monitoring_radio = UDPRadio(address="localhost", atexit_timeout=0)
 
     return c
 
@@ -44,9 +51,10 @@ def htex_filesystem_config():
     from parsl.tests.configs.htex_local_alternate import fresh_config
     c = fresh_config()
     assert len(c.executors) == 1
+    ex = c.executors[0]
 
-    assert c.executors[0].radio_mode == "htex", "precondition: htex has a radio mode attribute, configured for htex radio"
-    c.executors[0].radio_mode = "filesystem"
+    assert isinstance(ex.remote_monitoring_radio, HTEXRadio), "precondition: htex is configured for the HTEXRadio"
+    ex.remote_monitoring_radio = FilesystemRadio()
 
     return c
 
@@ -55,7 +63,6 @@ def workqueue_config():
     from parsl.tests.configs.workqueue_ex import fresh_config
     c = fresh_config()
     c.monitoring = MonitoringHub(
-                        hub_address="localhost",
                         resource_monitoring_interval=1)
     return c
 
@@ -66,8 +73,7 @@ def taskvine_config():
                                            worker_launch_method='provider')],
                strategy_period=0.5,
 
-               monitoring=MonitoringHub(hub_address="localhost",
-                                        resource_monitoring_interval=1))
+               monitoring=MonitoringHub(resource_monitoring_interval=1))
     return c
 
 
@@ -123,19 +129,28 @@ def row_counts_parametrized(tmpd_cwd, fresh_config):
             (c, ) = result.first()
             assert c == 4
 
-        # There should be one block polling status
-        # local provider has a status_polling_interval of 5s
-        result = connection.execute(text("SELECT COUNT(*) FROM block"))
-        (c, ) = result.first()
-        assert c >= 2
+        if isinstance(config.executors[0], BlockProviderExecutor):
+            # This case assumes that a BlockProviderExecutor is actually being
+            # used with blocks. It might not be (for example, Work Queue and
+            # Task Vine can be configured to launch their own workers; and it
+            # is a valid (although occasional) use of htex to launch executors
+            # manually.
+            # If you just added test cases like that and are wondering why this
+            # assert is failing, that might be why.
+            result = connection.execute(text("SELECT COUNT(*) FROM block"))
+            (c, ) = result.first()
+            assert c >= 2, "There should be at least two block statuses from a BlockProviderExecutor"
 
         result = connection.execute(text("SELECT COUNT(*) FROM resource"))
         (c, ) = result.first()
-        assert c >= 1
+        if isinstance(config.executors[0], ThreadPoolExecutor):
+            assert c == 0, "Thread pool executors should not be recording resources"
+        else:
+            assert c >= 1, "Task execution should have created some resource records"
 
 
 @pytest.mark.local
-@pytest.mark.parametrize("fresh_config", [htex_config, htex_filesystem_config, htex_udp_config])
+@pytest.mark.parametrize("fresh_config", [thread_config, htex_config, htex_filesystem_config, htex_udp_config])
 def test_row_counts_base(tmpd_cwd, fresh_config):
     row_counts_parametrized(tmpd_cwd, fresh_config)
 

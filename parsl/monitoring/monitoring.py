@@ -3,16 +3,12 @@ from __future__ import annotations
 import logging
 import multiprocessing.synchronize as ms
 import os
-import queue
 import warnings
 from multiprocessing.queues import Queue
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import Any, Optional, Union
 
 import typeguard
 
-from parsl.monitoring.errors import MonitoringHubStartError
-from parsl.monitoring.radios.filesystem_router import filesystem_router_starter
-from parsl.monitoring.radios.udp_router import udp_router_starter
 from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import (
     SizedQueue,
@@ -38,9 +34,9 @@ logger = logging.getLogger(__name__)
 @typeguard.typechecked
 class MonitoringHub(RepresentationMixin):
     def __init__(self,
-                 hub_address: str,
-                 hub_port: Optional[int] = None,
-                 hub_port_range: Any = None,
+                 hub_address: Any = None,  # unused, so no type enforcement
+                 hub_port_range: Any = None,  # unused, so no type enforcement
+                 hub_port: Any = None,  # unused, so no type enforcement
 
                  workflow_name: Optional[str] = None,
                  workflow_version: Optional[str] = None,
@@ -51,16 +47,14 @@ class MonitoringHub(RepresentationMixin):
         """
         Parameters
         ----------
-        hub_address : str
-             The ip address at which the workers will be able to reach the Hub.
-        hub_port : int
-             The UDP port to which workers will be able to deliver messages to
-             the monitoring router.
-             Note that despite the similar name, this is not related to
-             hub_port_range.
-             Default: None
+        hub_address : unused
+        hub_port : unused
+             Unused, but probably retained until 2026-06-01 to give deprecation warning.
+             These two values previously configured UDP parameters when UDP was used
+             for monitoring messages from workers. These are now configured on the
+             relevant UDPRadio.
         hub_port_range : unused
-             Unused, but retained until 2025-09-14 to avoid configuration errors.
+             Unused, but probably retained until 2026-06-01 to give deprecation warning.
              This value previously configured one ZMQ channel inside the
              HighThroughputExecutor. That ZMQ channel is now configured by the
              interchange_port_range parameter of HighThroughputExecutor.
@@ -88,15 +82,27 @@ class MonitoringHub(RepresentationMixin):
         if _db_manager_excepts:
             raise _db_manager_excepts
 
+        # The following three parameters need to exist as attributes to be
+        # output by RepresentationMixin.
+        if hub_address is not None:
+            message = "Instead of MonitoringHub.hub_address, specify UDPRadio(address=...)"
+            warnings.warn(message, DeprecationWarning)
+            logger.warning(message)
+
         self.hub_address = hub_address
+
+        if hub_port is not None:
+            message = "Instead of MonitoringHub.hub_port, specify UDPRadio(port=...)"
+            warnings.warn(message, DeprecationWarning)
+            logger.warning(message)
+
         self.hub_port = hub_port
 
         if hub_port_range is not None:
             message = "Instead of MonitoringHub.hub_port_range, Use HighThroughputExecutor.interchange_port_range"
             warnings.warn(message, DeprecationWarning)
             logger.warning(message)
-        # This is used by RepresentationMixin so needs to exist as an attribute
-        # even though now it is otherwise unused.
+
         self.hub_port_range = hub_port_range
 
         self.logging_endpoint = logging_endpoint
@@ -119,40 +125,8 @@ class MonitoringHub(RepresentationMixin):
 
         self.monitoring_hub_active = True
 
-        # This annotation is incompatible with typeguard 4.x instrumentation
-        # of local variables: Queue is not subscriptable at runtime, as far
-        # as typeguard is concerned. The more general Queue annotation works,
-        # but does not restrict the contents of the Queue. Using TYPE_CHECKING
-        # here allows the stricter definition to be seen by mypy, and the
-        # simpler definition to be seen by typeguard. Hopefully at some point
-        # in the future, Queue will allow runtime subscripts.
-
-        if TYPE_CHECKING:
-            udp_comm_q: Queue[Union[int, str]]
-        else:
-            udp_comm_q: Queue
-
-        udp_comm_q = SizedQueue(maxsize=10)
-
         self.resource_msgs: Queue[TaggedMonitoringMessage]
         self.resource_msgs = SizedQueue()
-
-        self.router_exit_event: ms.Event
-        self.router_exit_event = SpawnEvent()
-
-        self.udp_router_proc = SpawnProcess(target=udp_router_starter,
-                                            kwargs={"comm_q": udp_comm_q,
-                                                    "resource_msgs": self.resource_msgs,
-                                                    "exit_event": self.router_exit_event,
-                                                    "hub_address": self.hub_address,
-                                                    "udp_port": self.hub_port,
-                                                    "run_dir": dfk_run_dir,
-                                                    "logging_level": logging.DEBUG if self.monitoring_debug else logging.INFO,
-                                                    },
-                                            name="Monitoring-UDP-Router-Process",
-                                            daemon=True,
-                                            )
-        self.udp_router_proc.start()
 
         self.dbm_exit_event: ms.Event
         self.dbm_exit_event = SpawnEvent()
@@ -168,52 +142,17 @@ class MonitoringHub(RepresentationMixin):
                                      daemon=True,
                                      )
         self.dbm_proc.start()
-        logger.info("Started UDP router process %s and DBM process %s",
-                    self.udp_router_proc.pid, self.dbm_proc.pid)
-
-        self.filesystem_proc = SpawnProcess(target=filesystem_router_starter,
-                                            args=(self.resource_msgs, dfk_run_dir, self.router_exit_event),
-                                            name="Monitoring-Filesystem-Process",
-                                            daemon=True
-                                            )
-        self.filesystem_proc.start()
-        logger.info("Started filesystem radio receiver process %s", self.filesystem_proc.pid)
-
-        try:
-            udp_comm_q_result = udp_comm_q.get(block=True, timeout=120)
-            udp_comm_q.close()
-            udp_comm_q.join_thread()
-        except queue.Empty:
-            logger.error("Monitoring UDP router has not reported port in 120s. Aborting")
-            raise MonitoringHubStartError()
-
-        if isinstance(udp_comm_q_result, str):
-            logger.error("MonitoringRouter sent an error message: %s", udp_comm_q_result)
-            raise RuntimeError(f"MonitoringRouter failed to start: {udp_comm_q_result}")
-
-        udp_port = udp_comm_q_result
-        self.monitoring_hub_url = "udp://{}:{}".format(self.hub_address, udp_port)
-
+        logger.info("Started DBM process %s", self.dbm_proc.pid)
         logger.info("Monitoring Hub initialized")
 
     def close(self) -> None:
         logger.info("Terminating Monitoring Hub")
         if self.monitoring_hub_active:
             self.monitoring_hub_active = False
-            logger.info("Setting router termination event")
-            self.router_exit_event.set()
-
-            logger.info("Waiting for UDP router to terminate")
-            join_terminate_close_proc(self.udp_router_proc)
-
-            logger.debug("Finished waiting for router termination")
             logger.debug("Waiting for DB termination")
             self.dbm_exit_event.set()
             join_terminate_close_proc(self.dbm_proc)
             logger.debug("Finished waiting for DBM termination")
-
-            logger.info("Terminating filesystem radio receiver process")
-            join_terminate_close_proc(self.filesystem_proc)
 
             logger.info("Closing monitoring multiprocessing queues")
             self.resource_msgs.close()

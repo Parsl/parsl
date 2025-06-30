@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import uuid
 
+import parsl
 from parsl.executors.taskvine import exec_parsl_function
 from parsl.executors.taskvine.utils import VineTaskToParsl, run_parsl_function
 from parsl.process_loggers import wrap_with_logs
@@ -258,7 +259,8 @@ def _taskvine_submit_wait(ready_task_queue=None,
                                                                      run_parsl_function,
                                                                      poncho_env=poncho_env_path,
                                                                      init_command=manager_config.init_command,
-                                                                     add_env=add_env)
+                                                                     add_env=add_env,
+                                                                     hoisting_modules=[parsl.serialize, run_parsl_function])
 
                     # Configure the library if provided
                     if manager_config.library_config:

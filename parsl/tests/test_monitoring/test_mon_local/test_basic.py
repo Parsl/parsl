@@ -21,6 +21,16 @@ def this_app():
     return 5
 
 
+def fresh_config():
+    from parsl import ThreadPoolExecutor
+    from parsl.config import Config
+    from parsl.monitoring import MonitoringHub
+
+    return Config(executors=[ThreadPoolExecutor(label='threads', max_threads=4)],
+                  monitoring=MonitoringHub(resource_monitoring_interval=3)
+                  )
+
+
 @pytest.mark.local
 def test_row_counts():
     # this is imported here rather than at module level because
@@ -28,8 +38,6 @@ def test_row_counts():
     # would otherwise fail to import and break even a basic test
     # run.
     import sqlalchemy
-
-    from parsl.tests.configs.local_threads_monitoring import fresh_config
 
     if os.path.exists("runinfo/monitoring.db"):
         logger.info("Monitoring database already exists - deleting")

@@ -15,11 +15,19 @@ def this_app(x):
     return x + 1
 
 
+def fresh_config():
+    from parsl import ThreadPoolExecutor
+    from parsl.config import Config
+    from parsl.monitoring import MonitoringHub
+
+    return Config(executors=[ThreadPoolExecutor(label='threads', max_threads=4)],
+                  monitoring=MonitoringHub(resource_monitoring_interval=3)
+                  )
+
+
 @pytest.mark.local
 def test_hashsum():
     import sqlalchemy
-
-    from parsl.tests.configs.local_threads_monitoring import fresh_config
 
     if os.path.exists("runinfo/monitoring.db"):
         logger.info("Monitoring database already exists - deleting")
