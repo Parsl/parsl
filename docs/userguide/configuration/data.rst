@@ -203,35 +203,11 @@ consumed files. But using a :py:class:`parsl.data_provider.dynamic_files.Dynamic
     r1 = consume(inputs=outp[1:])
     r1.result()
 
-.. _label-bash-watcher:
+..
 
 None of the above examples will necessarily work as expected if ``produce`` was a :py:func:`parsl.app.app.bash_app`. This
 is because the command line call returned by the :py:func:`parsl.app.app.bash_app` may produce files that neither Python
-nor Parsl are aware of, there is no direct way to to know what files to track, without additional work. Parsl provides
-functionality that can help with this. The :py:func:`parsl.app.app.bash_watch` can be used like a
-:py:func:`parsl.app.app.bash_app` but also watches for files produced by the executed command line. The
-:py:func:`parsl.app.app.bash_watch` utilizes some additional arguments than the :py:func:`parsl.app.app.bash_app`.
-
-.. code-block:: python
-
-    from parsl.app.app import bash_watch
-    from parsl.data_provider.dynamic_files import DynamicFileList
-
-    @bash_watch
-    def my_func(outputs=[])
-    outp = DynamicFileList()
-    a = bash_watch(outp, paths=<list of paths to monitor>)
-    res = a.result()
-
-The first argument must be a :py:class:`parsl.data_provider.dynamic_files.DynamicFileList` instance and ``paths`` is a
-required keyword argument, which specifies the path (as a str) or paths (as a list of str)
-of directories to watch, recursively, for new files in, the default is ".". Additional key-word
-and non-keyword arguments can be added to the call as usual. It is recommended that the directory
-structure being watch is not overly complex as this can slow down the watcher.
-
-.. note::
-    If multiple `bash_watch` instances are monitoring the same path(s), there is no way for them to know which files
-    were created by which `bash_app` instance. This may lead to incorrect file provenance records.
+nor Parsl are aware of, there is no direct way to to know what files to track, without additional work.
 
 Staging providers
 -----------------

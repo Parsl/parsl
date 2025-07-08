@@ -111,11 +111,10 @@ behavior. The following example shows how to use this feature.
 
    my_cfg.log_info("This is an informational message")
 
-The file provenance framework also works with the :ref:`label-dynamic-file-list` feature .When a
+The file provenance framework also works with the :ref:`label-dynamic-file-list` feature. When a
 :py:class:`parsl.data_provider.dynamic_files.DynamicFileList` is used the framework will wait until the app completes
 and any files contained in the :py:class:`parsl.data_provider.dynamic_files.DynamicFileList` are marked as done before
-completing its processing. The :ref:`bash watcher<label-bash-watcher>` can also be used to capture file provenance
-information from ``bash_apps``.
+completing its processing.
 
 .. note::
     Known limitations: The file provenance feature will capture the creation of files and the use of files in an app,
