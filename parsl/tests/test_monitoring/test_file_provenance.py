@@ -68,6 +68,7 @@ def test_provenance(tmpd_cwd):
     # would otherwise fail to import and break even a basic test
     # run.
     import sqlalchemy
+    from sqlalchemy import text
 
     cfg = fresh_config(tmpd_cwd)
     with parsl.load(cfg) as my_dfk:
@@ -98,9 +99,9 @@ def test_provenance(tmpd_cwd):
         engine = sqlalchemy.create_engine(cfg.monitoring.logging_endpoint)
         with engine.begin() as connection:
             def count_rows(table: str):
-                result = connection.execute(f"SELECT COUNT(*) FROM {table}")
-                (c,) = result.first()
-                return c
+                result = connection.execute(text(f"SELECT COUNT(*) FROM {table}"))
+                (count,) = result.first()
+                return count
 
             assert count_rows("workflow") == 1
 
