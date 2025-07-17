@@ -31,6 +31,8 @@ from parsl.errors import OptionalModuleMissing
 from parsl.executors.errors import ExecutorError, InvalidResourceSpecification
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.workqueue import exec_parsl_function
+from parsl.monitoring.radios.base import RadioConfig
+from parsl.monitoring.radios.filesystem import FilesystemRadio
 from parsl.multiprocessing import SpawnContext, SpawnProcess
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import CondorProvider, LocalProvider
@@ -40,16 +42,18 @@ from parsl.utils import setproctitle
 
 from .errors import WorkQueueFailure, WorkQueueTaskFailure
 
+IMPORT_EXCEPTION = None
 try:
-    import work_queue as wq
-    from work_queue import (
+    from ndcctools import work_queue as wq
+    from ndcctools.work_queue import (
         WORK_QUEUE_ALLOCATION_MODE_MAX_THROUGHPUT,
         WORK_QUEUE_DEFAULT_PORT,
         WorkQueue,
     )
-except ImportError:
+except ImportError as e:
     _work_queue_enabled = False
     WORK_QUEUE_DEFAULT_PORT = 0
+    IMPORT_EXCEPTION = e
 else:
     _work_queue_enabled = True
 
@@ -225,8 +229,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             specifiation for each task).
     """
 
-    radio_mode = "filesystem"
-
     @typeguard.typechecked
     def __init__(self,
                  label: str = "WorkQueueExecutor",
@@ -253,11 +255,12 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  worker_executable: str = 'work_queue_worker',
                  function_dir: Optional[str] = None,
                  coprocess: bool = False,
-                 scaling_cores_per_worker: int = 1):
+                 scaling_cores_per_worker: int = 1,
+                 remote_monitoring_radio: Optional[RadioConfig] = None):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
         if not _work_queue_enabled:
-            raise OptionalModuleMissing(['work_queue'], "WorkQueueExecutor requires the work_queue module.")
+            raise OptionalModuleMissing(['work_queue'], f"WorkQueueExecutor requires the work_queue module. More info: {IMPORT_EXCEPTION}")
 
         self.scaling_cores_per_worker = scaling_cores_per_worker
         self.label = label
@@ -305,6 +308,11 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.launch_cmd = ("{package_prefix}python3 exec_parsl_function.py {mapping} {function} {result}")
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
+
+        if remote_monitoring_radio is not None:
+            self.remote_monitoring_radio = remote_monitoring_radio
+        else:
+            self.remote_monitoring_radio = FilesystemRadio()
 
     def _get_launch_command(self, block_id):
         # this executor uses different terminology for worker/launch
@@ -711,6 +719,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.task_queue.join_thread()
         self.collector_queue.close()
         self.collector_queue.join_thread()
+
+        super().shutdown()
 
         logger.debug("Work Queue shutdown completed")
 

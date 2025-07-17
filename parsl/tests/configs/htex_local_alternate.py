@@ -59,7 +59,6 @@ def fresh_config():
         app_cache=True, checkpoint_mode='task_exit',
         retries=2,
         monitoring=MonitoringHub(
-                        hub_address="localhost",
                         monitoring_debug=False,
                         resource_monitoring_interval=1,
         ),
