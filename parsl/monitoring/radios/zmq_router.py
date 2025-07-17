@@ -61,10 +61,9 @@ class MonitoringRouter:
             An event that the main Parsl process will set to signal that the monitoring router should shut down.
         """
         os.makedirs(run_dir, exist_ok=True)
-        self.logger = set_file_logger(f"{run_dir}/monitoring_zmq_router.log",
-                                      name="zmq_monitoring_router",
-                                      level=logging_level)
-        self.logger.debug("Monitoring router starting")
+        set_file_logger(f"{run_dir}/monitoring_zmq_router.log",
+                        level=logging_level)
+        logger.debug("Monitoring router starting")
 
         self.address = address
 
@@ -75,7 +74,7 @@ class MonitoringRouter:
         self.zmq_receiver_channel.setsockopt(zmq.LINGER, 0)
         self.zmq_receiver_channel.set_hwm(0)
         self.zmq_receiver_channel.RCVTIMEO = int(self.loop_freq)  # in milliseconds
-        self.logger.debug("address: {}. port_range {}".format(address, port_range))
+        logger.debug("address: {}. port_range {}".format(address, port_range))
         self.zmq_receiver_port = self.zmq_receiver_channel.bind_to_random_port(tcp_url(address),
                                                                                min_port=port_range[0],
                                                                                max_port=port_range[1])
@@ -83,9 +82,9 @@ class MonitoringRouter:
         self.target_radio = MultiprocessingQueueRadioSender(resource_msgs)
         self.exit_event = exit_event
 
-    @wrap_with_logs(target="zmq_monitoring_router")
+    @wrap_with_logs
     def start(self) -> None:
-        self.logger.info("Starting ZMQ listener")
+        logger.info("Starting ZMQ listener")
         try:
             while not self.exit_event.is_set():
                 try:
@@ -107,11 +106,11 @@ class MonitoringRouter:
                     # channel is broken in such a way that it always raises
                     # an exception? Looping on this would maybe be the wrong
                     # thing to do.
-                    self.logger.warning("Failure processing a ZMQ message", exc_info=True)
+                    logger.warning("Failure processing a ZMQ message", exc_info=True)
 
-            self.logger.info("ZMQ listener finishing normally")
+            logger.info("ZMQ listener finishing normally")
         finally:
-            self.logger.info("ZMQ listener finished")
+            logger.info("ZMQ listener finished")
 
 
 @wrap_with_logs

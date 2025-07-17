@@ -2,13 +2,19 @@ import logging
 import os
 import pickle
 import uuid
+from multiprocessing.queues import Queue
 
-from parsl.monitoring.radios.base import MonitoringRadioSender
+from parsl.monitoring.radios.base import (
+    MonitoringRadioReceiver,
+    MonitoringRadioSender,
+    RadioConfig,
+)
+from parsl.monitoring.radios.filesystem_router import FilesystemRadioReceiver
 
 logger = logging.getLogger(__name__)
 
 
-class FilesystemRadioSender(MonitoringRadioSender):
+class FilesystemRadio(RadioConfig):
     """A MonitoringRadioSender that sends messages over a shared filesystem.
 
     The messsage directory structure is based on maildir,
@@ -26,8 +32,17 @@ class FilesystemRadioSender(MonitoringRadioSender):
     the UDP radio, but should be much more reliable.
     """
 
-    def __init__(self, *, monitoring_url: str, timeout: int = 10, run_dir: str):
-        logger.info("filesystem based monitoring channel initializing")
+    def create_sender(self) -> MonitoringRadioSender:
+        return FilesystemRadioSender(run_dir=self.run_dir)
+
+    def create_receiver(self, *, run_dir: str, resource_msgs: Queue) -> MonitoringRadioReceiver:
+        self.run_dir = run_dir
+        return FilesystemRadioReceiver(resource_msgs, run_dir)
+
+
+class FilesystemRadioSender(MonitoringRadioSender):
+    def __init__(self, *, run_dir: str):
+        logger.info("filesystem based monitoring radio initializing")
         self.base_path = f"{run_dir}/monitor-fs-radio/"
         self.tmp_path = f"{self.base_path}/tmp"
         self.new_path = f"{self.base_path}/new"
