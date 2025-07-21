@@ -9,6 +9,7 @@ from parsl.config import Config
 from parsl.data_provider.files import File
 from parsl.executors import ThreadPoolExecutor
 from parsl.monitoring import MonitoringHub
+from parsl.monitoring.radios.udp import UDPRadio
 
 
 @parsl.bash_app
@@ -45,19 +46,14 @@ def combine(inputs=None, outputs=None):
                 ofh.write("\n")
 
 
-def fresh_config(run_dir):
+def fresh_config():
     return Config(
-        run_dir=str(run_dir),
         executors=[
-            ThreadPoolExecutor()
+            ThreadPoolExecutor(remote_monitoring_radio=UDPRadio(address="localhost", atexit_timeout=0))
         ],
         strategy='simple',
         strategy_period=0.1,
-        monitoring=MonitoringHub(
-                        hub_address="localhost",
-                        logging_endpoint=f"sqlite:///{run_dir}/monitoring.db",
-                        file_provenance=True,
-        )
+        monitoring=MonitoringHub(file_provenance=True)
     )
 
 
@@ -68,10 +64,13 @@ def test_provenance(tmpd_cwd):
     # would otherwise fail to import and break even a basic test
     # run.
     import sqlalchemy
+    from sqlalchemy import text
 
-    cfg = fresh_config(tmpd_cwd)
+    cfg = fresh_config()
+    cfg.run_dir = tmpd_cwd
+    cfg.monitoring.logging_endpoint = f"sqlite:///{tmpd_cwd}/monitoring.db"
+
     with parsl.load(cfg) as my_dfk:
-
         cwd = os.getcwd()
         if os.path.exists(os.path.join(cwd, 'provenance')):
             shutil.rmtree(os.path.join(cwd, 'provenance'))
@@ -98,9 +97,9 @@ def test_provenance(tmpd_cwd):
         engine = sqlalchemy.create_engine(cfg.monitoring.logging_endpoint)
         with engine.begin() as connection:
             def count_rows(table: str):
-                result = connection.execute(f"SELECT COUNT(*) FROM {table}")
-                (c,) = result.first()
-                return c
+                result = connection.execute(text(f"SELECT COUNT(*) FROM {table}"))
+                (count,) = result.first()
+                return count
 
             assert count_rows("workflow") == 1
 
