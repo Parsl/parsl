@@ -22,7 +22,7 @@ DEFAULT_FORMAT = (
 def set_stream_logger(name: str = 'parsl',
                       level: int = logging.DEBUG,
                       format_string: Optional[str] = None,
-                      stream: Optional[io.TextIOWrapper] = None) -> None:
+                      stream: Optional[io.TextIOBase] = None) -> Callable[[], None]:
     """Add a stream log handler.
 
     Args:
@@ -50,6 +50,12 @@ def set_stream_logger(name: str = 'parsl',
     futures_logger = logging.getLogger("concurrent.futures")
     futures_logger.addHandler(handler)
 
+    def unregister_callback():
+        logger.removeHandler(handler)
+        futures_logger.removeHandler(handler)
+
+    return unregister_callback
+
 
 @typeguard.typechecked
 def set_file_logger(filename: str,
@@ -63,6 +69,12 @@ def set_file_logger(filename: str,
         - name (string): Logger name
         - level (logging.LEVEL): Set the logging level.
         - format_string (string): Set the format string
+
+    Returns:
+        - a callable which, when invoked, will reverse the log handler
+          attachments made by this call. (compare to how object based pieces
+          of parsl model this as a close/shutdown/cleanup method on the
+          object))
     """
     if format_string is None:
         format_string = DEFAULT_FORMAT
