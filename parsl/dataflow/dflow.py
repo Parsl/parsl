@@ -1185,12 +1185,9 @@ class DataFlowKernel:
 
     @wrap_with_logs
     def cleanup(self) -> None:
-        """DataFlowKernel cleanup.
-
-        This involves releasing all resources explicitly.
-
-        We call scale_in on each of the executors and call executor.shutdown.
+        """Clean-up by closing all of the components used by the DFK
         """
+
         logger.info("DFK cleanup initiated")
 
         # this check won't detect two DFK cleanups happening from
