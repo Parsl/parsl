@@ -216,6 +216,7 @@ class Interchange:
         if self.command_channel in self.socks and self.socks[self.command_channel] == zmq.POLLIN:
             logger.debug("entering command_server section")
 
+            logger.debug("Waiting for command request")
             command_req = self.command_channel.recv_pyobj()
             logger.debug("Received command request: {}".format(command_req))
             if command_req == "CONNECTED_BLOCKS":
