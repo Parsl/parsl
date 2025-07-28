@@ -1,18 +1,13 @@
-"""Following the general logging philosophy of python libraries, by default
-Parsl doesn't log anything.  However the following helper functions are
-provided for logging:
+"""This module contains helpers for configuring logging. By default,
+`set_file_logger` is invoked by the DataFlowKernel initializer to log
+parsl messages to parsl.log.
 
-1. set_stream_logger
-    This sets the logger to the StreamHandler. This is quite useful when working from
-    a Jupyter notebook.
-
-2. set_file_logger
-    This sets the logging to a file. This is ideal for reporting issues to the dev team.
-
+`set_stream_logger` which by default logs to stderr, can be useful
+when working in a Jupyter notebook.
 """
 import io
 import logging
-from typing import Optional
+from typing import Callable, Optional
 
 import typeguard
 
@@ -27,7 +22,7 @@ DEFAULT_FORMAT = (
 def set_stream_logger(name: str = 'parsl',
                       level: int = logging.DEBUG,
                       format_string: Optional[str] = None,
-                      stream: Optional[io.TextIOWrapper] = None) -> logging.Logger:
+                      stream: Optional[io.TextIOWrapper] = None) -> None:
     """Add a stream log handler.
 
     Args:
@@ -36,9 +31,6 @@ def set_stream_logger(name: str = 'parsl',
          - format_string (string) : Set to None by default.
          - stream (io.TextIOWrapper) : Specify sys.stdout or sys.stderr for stream.
             If not specified, the default stream for logging.StreamHandler is used.
-
-    Returns:
-         - logger for specified name
     """
     if format_string is None:
         # format_string = "%(asctime)s %(name)s [%(levelname)s] Thread:%(thread)d %(message)s"
@@ -58,14 +50,12 @@ def set_stream_logger(name: str = 'parsl',
     futures_logger = logging.getLogger("concurrent.futures")
     futures_logger.addHandler(handler)
 
-    return logger
-
 
 @typeguard.typechecked
 def set_file_logger(filename: str,
                     name: str = 'parsl',
                     level: int = logging.DEBUG,
-                    format_string: Optional[str] = None) -> logging.Logger:
+                    format_string: Optional[str] = None) -> Callable[[], None]:
     """Add a file log handler.
 
     Args:
@@ -73,9 +63,6 @@ def set_file_logger(filename: str,
         - name (string): Logger name
         - level (logging.LEVEL): Set the logging level.
         - format_string (string): Set the format string
-
-    Returns:
-       - logger for specified name
     """
     if format_string is None:
         format_string = DEFAULT_FORMAT
@@ -93,4 +80,8 @@ def set_file_logger(filename: str,
     futures_logger = logging.getLogger("concurrent.futures")
     futures_logger.addHandler(handler)
 
-    return logger
+    def unregister_callback():
+        logger.removeHandler(handler)
+        futures_logger.removeHandler(handler)
+
+    return unregister_callback
