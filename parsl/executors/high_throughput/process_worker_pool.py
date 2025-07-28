@@ -154,23 +154,23 @@ class Manager:
 
         self._start_time = time.time()
 
-        try:
-            ix_address = probe_addresses(addresses.split(','), port, timeout=address_probe_timeout)
-            if not ix_address:
-                raise Exception("No viable address found")
-            else:
-                logger.info(f"Connection to Interchange successful on {ix_address}")
-                ix_url = tcp_url(ix_address, port)
-                logger.info(f"Interchange url: {ix_url}")
-        except Exception:
-            logger.exception("Caught exception while trying to determine viable address to interchange")
-            print("Failed to find a viable address to connect to interchange. Exiting")
-            exit(5)
-
         self.cert_dir = cert_dir
         self.zmq_context = curvezmq.ClientContext(self.cert_dir)
 
-        self._ix_url = ix_url
+        addresses = ','.join(tcp_url(a, port) for a in addresses.split(','))
+        try:
+            self._ix_url = probe_addresses(
+                self.zmq_context,
+                addresses,
+                timeout_ms=1_000 * address_probe_timeout,
+                identity=uid.encode('utf-8'),
+            )
+        except ConnectionError:
+            addys = ", ".join(addresses.split(","))
+            logger.error(f"Unable to connect to interchange; attempted addresses: {addys}")
+            raise
+
+        logger.info(f"Probe discovered interchange url: {self._ix_url}")
 
         self.uid = uid
         self.block_id = block_id
@@ -311,6 +311,14 @@ class Manager:
         poller = zmq.Poller()
         poller.register(results_sock, zmq.POLLIN)
         poller.register(ix_sock, zmq.POLLIN)
+
+        ix_sock.send(pickle.dumps({"type": "connection_probe"}))
+        evts = dict(poller.poll(timeout=self.heartbeat_period))
+        if evts.get(ix_sock) is None:
+            logger.error(f"Failed to connect to interchange ({self._ix_url}")
+
+        ix_sock.recv()
+        logger.info(f"Successfully connected to interchange via URL: {self._ix_url}")
 
         # Send a registration message
         msg = self.create_reg_message()
