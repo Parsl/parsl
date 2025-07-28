@@ -1,14 +1,9 @@
-"""Following the general logging philosophy of python libraries, by default
-Parsl doesn't log anything.  However the following helper functions are
-provided for logging:
+"""This module contains helpers for configuring logging. By default,
+`set_file_logger` is invoked by the DataFlowKernel initializer to log
+parsl messages to parsl.log.
 
-1. set_stream_logger
-    This sets the logger to the StreamHandler. This is quite useful when working from
-    a Jupyter notebook.
-
-2. set_file_logger
-    This sets the logging to a file. This is ideal for reporting issues to the dev team.
-
+`set_stream_logger` which by default logs to stderr, can be useful
+when working in a Jupyter notebook.
 """
 import io
 import logging
