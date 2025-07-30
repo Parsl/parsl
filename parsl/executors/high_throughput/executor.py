@@ -621,7 +621,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.command_client.run("HOLD_WORKER;{}".format(manager_id))
         logger.debug("Sent hold request to manager: {}".format(manager_id))
 
-    @property
     def outstanding(self) -> int:
         """Returns the count of tasks outstanding across the interchange
         and managers"""
