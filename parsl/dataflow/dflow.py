@@ -3,6 +3,7 @@ from __future__ import annotations
 import atexit
 import concurrent.futures as cf
 import datetime
+import functools
 import inspect
 import logging
 import os
@@ -962,19 +963,22 @@ class DataFlowKernel:
                 stageout_fut = self.data_manager.stage_out(f_copy, executor, app_fut)
                 if stageout_fut:
                     logger.debug("Adding a dependency on stageout future for {}".format(repr(file)))
-                    df = DataFuture(stageout_fut, file, dfk=self, tid=app_fut.tid, app_fut=app_fut)
+                    df = DataFuture(stageout_fut, file, track_provenance=self.file_provenance, tid=app_fut.tid)
                 else:
                     logger.debug("No stageout dependency for {}".format(repr(file)))
-                    df = DataFuture(app_fut, file, dfk=self, tid=app_fut.tid, app_fut=app_fut)
+                    df = DataFuture(app_fut, file, track_provenance=self.file_provenance, tid=app_fut.tid)
 
                 # this is a hook for post-task stageout
                 # note that nothing depends on the output - which is maybe a bug
                 # in the not-very-tested stageout system?
                 rewritable_func = self.data_manager.replace_task_stage_out(f_copy, rewritable_func, executor)
+                df.add_done_callback(functools.partial(self.register_output_file, app_fut))
                 return rewritable_func, f_copy, df
             else:
                 logger.debug("Not performing output staging for: {}".format(repr(file)))
-                return rewritable_func, file, DataFuture(app_fut, file, dfk=self, tid=app_fut.tid, app_fut=app_fut)
+                df = DataFuture(app_fut, file, track_provenance=self.file_provenance, tid=app_fut.tid)
+                df.add_done_callback(functools.partial(self.register_output_file, app_fut))
+                return rewritable_func, file, df
 
         for idx, file in enumerate(outputs):
             func, outputs[idx], o = stageout_one_file(file, func)
@@ -1496,6 +1500,13 @@ class DataFlowKernel:
         else:
             tid = repr(dep)
         return tid
+
+    def register_output_file(self, a_fut: AppFuture, fut: Future):
+        """Callback for registering output file information"""
+        if isinstance(fut, DataFuture):
+            self.register_as_output(fut.file_obj, a_fut.task_record)
+        else:
+            raise ValueError("Invalid type given, must be DataFuture, but was {}".format(type(fut)))
 
 
 class DataFlowKernelLoader:
