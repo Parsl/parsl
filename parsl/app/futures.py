@@ -43,15 +43,7 @@ class DataFuture(Future):
             self.set_exception(e)
         else:
             self.set_result(self.file_obj)
-            # only update the file object if it is a file
-            if self.data_flow_kernel.file_provenance and self.file_obj.scheme == 'file' and os.path.isfile(self.file_obj.filepath):
-                if not self.file_obj.timestamp:
-                    self.file_obj.timestamp = datetime.fromtimestamp(stat(self.file_obj.filepath).st_ctime, tz=timezone.utc)
-                if not self.file_obj.size:
-                    self.file_obj.size = stat(self.file_obj.filepath).st_size
-                if not self.file_obj.md5sum:
-                    self.file_obj.md5sum = md5(open(self.file_obj, 'rb').read()).hexdigest()
-            self.data_flow_kernel.register_as_output(self.file_obj, self.app_fut.task_record)
+            self.update_file_provenance()
 
     @typeguard.typechecked
     def __init__(self, fut: Future, file_obj: File, dfk: "DataFlowKernel", tid: Optional[int] = None, app_fut: Optional[Future] = None) -> None:
@@ -147,3 +139,15 @@ class DataFuture(Future):
         else:
             done = "not done"
         return f"<{module}.{qualname} object at {hex(id(self))} representing {repr(self.file_obj)} {done}>"
+
+    def update_file_provenance(self):
+        """ Update any file provenance information, but only if the file object if it is a File
+        """
+        if self.data_flow_kernel.file_provenance and self.file_obj.scheme == 'file' and os.path.isfile(self.file_obj.filepath):
+            if not self.file_obj.timestamp:
+                self.file_obj.timestamp = datetime.fromtimestamp(stat(self.file_obj.filepath).st_ctime, tz=timezone.utc)
+            if not self.file_obj.size:
+                self.file_obj.size = stat(self.file_obj.filepath).st_size
+            if not self.file_obj.md5sum:
+                self.file_obj.md5sum = md5(open(self.file_obj, 'rb').read()).hexdigest()
+        self.data_flow_kernel.register_as_output(self.file_obj, self.app_fut.task_record)
