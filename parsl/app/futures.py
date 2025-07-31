@@ -44,6 +44,7 @@ class DataFuture(Future):
         else:
             self.set_result(self.file_obj)
             self.update_file_provenance()
+            self.data_flow_kernel.register_as_output(self.file_obj, self.app_fut.task_record)
 
     @typeguard.typechecked
     def __init__(self, fut: Future, file_obj: File, dfk: "DataFlowKernel", tid: Optional[int] = None, app_fut: Optional[Future] = None) -> None:
@@ -150,4 +151,3 @@ class DataFuture(Future):
                 self.file_obj.size = stat(self.file_obj.filepath).st_size
             if not self.file_obj.md5sum:
                 self.file_obj.md5sum = md5(open(self.file_obj, 'rb').read()).hexdigest()
-        self.data_flow_kernel.register_as_output(self.file_obj, self.app_fut.task_record)
