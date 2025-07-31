@@ -193,7 +193,7 @@ class Strategy:
                 self.executors[label]['first'] = False
 
             # Tasks that are either pending completion
-            active_tasks = executor.outstanding
+            active_tasks = executor.outstanding()
 
             status = executor.status_facade
 
