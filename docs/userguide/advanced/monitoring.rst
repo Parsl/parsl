@@ -170,7 +170,7 @@ The workflow summary also presents three different views of the workflow:
 
 .. image:: ../../images/mon_resource_summary.png
 
-* Workflow file provenance (only if enabled and files were used in the workflow): This visualization gives a tabular listing of each task that created (output) or used (input) a file. Each listed file has a link to a page detailing the file's information.
+* Workflow file provenance: This visualization gives a tabular listing of each task that created (output) or used (input) a file. Each listed file has a link to a page detailing the file's information.
 
 .. image:: ../../images/mon_workflow_files.png
 
