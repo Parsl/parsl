@@ -24,6 +24,7 @@ def test_resource(n=2):
             break
 
     # Specify incorrect number of resources
+    # "disk" is missing
     spec = {'cores': 1, 'memory': 1}
     fut = double(n, parsl_resource_specification=spec)
     try:
@@ -34,8 +35,10 @@ def test_resource(n=2):
             isinstance(executor, WorkQueueExecutor) or
             isinstance(executor, ThreadPoolExecutor))
     else:
-        pass  # TODO: what are we asserting when an exception didn't happen?
-        # especially wrt taskvine
+        assert not (
+            isinstance(executor, HighThroughputExecutor) or
+            isinstance(executor, WorkQueueExecutor) or
+            isinstance(executor, ThreadPoolExecutor))
 
     # Specify resources with wrong types
     # 'cpus' is incorrect, should be 'cores'
@@ -49,8 +52,10 @@ def test_resource(n=2):
             isinstance(executor, WorkQueueExecutor) or
             isinstance(executor, ThreadPoolExecutor))
     else:
-        pass  # TODO: what are we asserting when an exception didn't happen?
-        # especially wrt taskvine
+        assert not (
+            isinstance(executor, HighThroughputExecutor) or
+            isinstance(executor, WorkQueueExecutor) or
+            isinstance(executor, ThreadPoolExecutor))
 
 
 @python_app

@@ -194,7 +194,7 @@ class Strategy:
 
             # Tasks that are either pending completion
             logger.debug("getting outstanding (which looks like an attribute reference but is actually a network operation")
-            active_tasks = executor.outstanding
+            active_tasks = executor.outstanding()
             logger.debug(f"got outstanding {active_tasks}")
 
             status = executor.status_facade
@@ -215,12 +215,11 @@ class Strategy:
 
             logger.debug(f"Slot ratio calculation: active_slots = {active_slots}, active_tasks = {active_tasks}")
 
+            logger.debug('Executor {} has {} active tasks and {}/{} running/pending blocks'.format(
+                label, active_tasks, running, pending))
+
             if hasattr(executor, 'connected_workers'):
-                logger.debug('Executor {} has {} active tasks, {}/{} running/pending blocks, and {} connected workers'.format(
-                    label, active_tasks, running, pending, executor.connected_workers))
-            else:
-                logger.debug('Executor {} has {} active tasks and {}/{} running/pending blocks'.format(
-                    label, active_tasks, running, pending))
+                logger.debug('Executor {} has {} connected workers'.format(label, executor.connected_workers))
 
             # reset idle timer if executor has active tasks
 

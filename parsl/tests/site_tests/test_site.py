@@ -3,7 +3,7 @@ import argparse
 import pytest
 
 import parsl
-from parsl.app.app import python_app  # , bash_app
+from parsl.app.app import python_app
 from parsl.tests.site_tests.site_config_selector import fresh_config
 
 
@@ -35,8 +35,8 @@ def test_platform(n=2, sleep_dur=10):
     print([i.result() for i in x])
 
     print("Executor : ", dfk.executors[name])
-    print("Connected   : ", dfk.executors[name].connected_workers)
-    print("Outstanding : ", dfk.executors[name].outstanding)
+    print("Connected   : ", dfk.executors[name].connected_workers())
+    print("Outstanding : ", dfk.executors[name].outstanding())
 
     d = []
     for i in range(0, n):
