@@ -98,15 +98,17 @@ class ParslExecutor(metaclass=ABCMeta):
     def shutdown(self) -> None:
         """Shutdown the executor.
 
-        This includes all attached resources such as workers and controllers.
+        Executors should call super().shutdown() as part of their overridden
+        implementation.
         """
         pass
 
     def monitor_resources(self) -> bool:
         """Should resource monitoring happen for tasks on running on this executor?
 
-        Parsl resource monitoring conflicts with execution styles which use threads, and
-        can deadlock while running.
+        Parsl resource monitoring conflicts with execution styles which do
+        not directly use a process tree - for example, the ThreadPoolExecutor
+        and the MPIExecutor.
 
         This function allows resource monitoring to be disabled per executor implementation.
         """

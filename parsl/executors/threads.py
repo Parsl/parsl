@@ -73,9 +73,18 @@ class ThreadPoolExecutor(ParslExecutor, RepresentationMixin):
         """
         logger.debug("Shutting down executor, which involves waiting for running tasks to complete")
         self.executor.shutdown(wait=block)
+
+        super().shutdown()
+
         logger.debug("Done with executor shutdown")
 
     def monitor_resources(self):
-        """Resource monitoring sometimes deadlocks when using threads, so this function
-        returns false to disable it."""
+        """Resource monitoring does not make sense when using the
+        ThreadPoolExecutor, as there is no per-task process tree: all tasks
+        run inside the same single submitting process.
+
+        In addition, the use of fork-based multiprocessing in the remote
+        wrapper in parsl/monitoring/remote.py was especially prone to deadlock
+        with this executor.
+        """
         return False
