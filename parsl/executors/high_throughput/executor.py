@@ -626,7 +626,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         and managers"""
         return len(self.tasks)
 
-    @property
     def connected_workers(self) -> int:
         """Returns the count of workers across all connected managers"""
         return self.command_client.run("WORKERS")
