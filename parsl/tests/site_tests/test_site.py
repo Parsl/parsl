@@ -16,7 +16,7 @@ def platform(sleep=10, stdout=None):
 
 
 @pytest.mark.local
-@pytest.mark.skip("The behaviour this test is testing is unclear: there is no guarantee that tasks will go to different nodes")
+@pytest.mark.site
 def test_platform(n=2, sleep_dur=10):
     """ This should sleep to make sure that concurrent apps will go to different workers
     on different nodes.
@@ -35,7 +35,7 @@ def test_platform(n=2, sleep_dur=10):
     print([i.result() for i in x])
 
     print("Executor : ", dfk.executors[name])
-    print("Connected   : ", dfk.executors[name].connected_workers)
+    print("Connected   : ", dfk.executors[name].connected_workers())
     print("Outstanding : ", dfk.executors[name].outstanding())
 
     d = []
