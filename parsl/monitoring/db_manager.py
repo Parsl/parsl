@@ -548,6 +548,10 @@ class DatabaseManager:
                     "or some other error. monitoring data may have been lost"
                 )
                 exception_happened = True
+
+            if self.external_exit_event.is_set():
+                self.close()
+
         if exception_happened:
             raise RuntimeError("An exception happened sometime during database processing and should have been logged in database_manager.log")
 
@@ -558,9 +562,6 @@ class DatabaseManager:
         while not kill_event.is_set() or logs_queue.qsize() != 0:
             logger.debug("Checking STOP conditions: kill event: %s, queue has entries: %s",
                          kill_event.is_set(), logs_queue.qsize() != 0)
-
-            if self.external_exit_event.is_set():
-                self.close()
 
             try:
                 x = logs_queue.get(timeout=0.1)
