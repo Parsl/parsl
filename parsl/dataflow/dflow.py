@@ -1142,7 +1142,7 @@ class DataFlowKernel:
                 executor.monitoring_messages = self.monitoring.resource_msgs
                 logger.debug("Starting monitoring receiver for executor %s "
                              "with remote monitoring radio config %s",
-                             executor, executor.remote_monitoring_radio)
+                             executor.label, executor.remote_monitoring_radio)
 
                 executor.monitoring_receiver = executor.remote_monitoring_radio.create_receiver(resource_msgs=executor.monitoring_messages,
                                                                                                 run_dir=executor.run_dir)
