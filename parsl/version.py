@@ -1,3 +1,3 @@
 """Set module version.
 """
-VERSION = '2025.07.21+desc-2025.08.04a'
+VERSION = '2025.08.04+desc-2025.08.09a'

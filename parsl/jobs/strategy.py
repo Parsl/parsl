@@ -219,7 +219,7 @@ class Strategy:
                 label, active_tasks, running, pending))
 
             if hasattr(executor, 'connected_workers'):
-                logger.debug('Executor {} has {} connected workers'.format(label, executor.connected_workers))
+                logger.debug('Executor {} has {} connected workers'.format(label, executor.connected_workers()))
 
             # reset idle timer if executor has active tasks
 
