@@ -18,7 +18,7 @@ from parsl.monitoring.types import MonitoringMessage, TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
-logger = logging.getLogger("database_manager")
+logger = logging.getLogger(__name__)
 
 X = TypeVar('X')
 
@@ -293,11 +293,8 @@ class DatabaseManager:
         self.run_dir = run_dir
         os.makedirs(self.run_dir, exist_ok=True)
 
-        logger.propagate = False
-
         set_file_logger(f"{self.run_dir}/database_manager.log", level=logging_level,
-                        format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s",
-                        name="database_manager")
+                        format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s")
 
         logger.debug("Initializing Database Manager process")
 
@@ -550,19 +547,23 @@ class DatabaseManager:
                     "or some other error. monitoring data may have been lost"
                 )
                 exception_happened = True
+
+            if self.external_exit_event.is_set():
+                self.close()
+
         if exception_happened:
             raise RuntimeError("An exception happened sometime during database processing and should have been logged in database_manager.log")
 
-    @wrap_with_logs(target="database_manager")
-    def _migrate_logs_to_internal(self, logs_queue: queue.Queue, kill_event: threading.Event) -> None:
+    @wrap_with_logs
+    def _migrate_logs_to_internal(self, logs_queue: mpq.Queue, kill_event: threading.Event) -> None:
         logger.info("Starting _migrate_logs_to_internal")
 
         while not kill_event.is_set() or logs_queue.qsize() != 0:
             logger.debug("Checking STOP conditions: kill event: %s, queue has entries: %s",
                          kill_event.is_set(), logs_queue.qsize() != 0)
 
-            if self.external_exit_event.is_set():
-                self.close()
+            # if self.external_exit_event.is_set():
+            #    self.close()
 
             try:
                 x = logs_queue.get(timeout=0.1)
@@ -682,7 +683,7 @@ class DatabaseManager:
         self._kill_event.set()
 
 
-@wrap_with_logs(target="database_manager")
+@wrap_with_logs
 @typeguard.typechecked
 def dbm_starter(resource_msgs: mpq.Queue,
                 db_url: str,
