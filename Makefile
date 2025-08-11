@@ -86,7 +86,7 @@ radical_local_test:  ## Run the Radical local tests (-m radical --config local)
 .PHONY: config_local_test
 config_local_test:  ## run the config-local tests (--config local)
 	pip3 install ".[monitoring,visualization,proxystore,kubernetes]"
-	pytest parsl/tests/ -k "not cleannet and not workqueue and not taskvine" --config local --random-order --durations 10 --log-cli-level=DEBUG
+	pytest parsl/tests/ -k "not cleannet and not workqueue and not taskvine" --config local --random-order --durations 10 --log-cli-level=DEBUG -s
 
 .PHONY: site_test
 site_test:  ## Run the site tests
