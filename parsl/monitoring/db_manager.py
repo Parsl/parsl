@@ -552,7 +552,7 @@ class DatabaseManager:
             raise RuntimeError("An exception happened sometime during database processing and should have been logged in database_manager.log")
 
     @wrap_with_logs(target="database_manager")
-    def _migrate_logs_to_internal(self, logs_queue: queue.Queue, kill_event: threading.Event) -> None:
+    def _migrate_logs_to_internal(self, logs_queue: mpq.Queue, kill_event: threading.Event) -> None:
         logger.info("Starting _migrate_logs_to_internal")
 
         while not kill_event.is_set() or logs_queue.qsize() != 0:
