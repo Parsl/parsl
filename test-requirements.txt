@@ -10,10 +10,10 @@ types-mock
 types-python-dateutil
 types-requests
 mpi4py
-globus-compute-sdk>=2.34.0
+# globus-compute-sdk>=2.34.0
 
-pydantic-core @ git+https://github.com/pydantic/pydantic-core@e0bc980
-pydantic @ git+https://github.com/pydantic/pydantic@1c79f0e
+# pydantic-core @ git+https://github.com/pydantic/pydantic-core@e0bc980
+# pydantic @ git+https://github.com/pydantic/pydantic@1c79f0e
 
 # sqlalchemy is needed for typechecking, so it's here
 # as well as at runtime for optional monitoring execution
