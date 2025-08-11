@@ -674,7 +674,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.worker_command = self._construct_worker_command()
         self._patch_providers()
 
-    @property
     def outstanding(self) -> int:
         """Count the number of outstanding slots required. This is inefficiently
         implemented and probably could be replaced with a counter.
@@ -983,7 +982,7 @@ def _work_queue_submit_wait(*,
                 continue
             # When a task is found:
             executor_task_id = t.tag
-            logger.debug("Completed Work Queue task {}, executor task {}".format(t.id, t.tag))
+            logger.info("Completed Work Queue task {}, executor task {}".format(t.id, t.tag))
             result_file = result_file_of_task_id.pop(t.tag)
 
             # A tasks completes 'succesfully' if it has result file.

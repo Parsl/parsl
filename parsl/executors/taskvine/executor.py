@@ -573,7 +573,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self._worker_command = self._construct_worker_command()
         self._patch_providers()
 
-    @property
     def outstanding(self) -> int:
         """Count the number of outstanding tasks."""
         logger.debug(f"Counted {self._outstanding_tasks} outstanding tasks")
@@ -659,7 +658,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 with self._outstanding_tasks_lock:
                     self._outstanding_tasks -= 1
         finally:
-            logger.debug(f"Marking all {self.outstanding} outstanding tasks as failed")
+            logger.debug(f"Marking all {self.outstanding()} outstanding tasks as failed")
             logger.debug("Acquiring tasks_lock")
             with self._tasks_lock:
                 logger.debug("Acquired tasks_lock")

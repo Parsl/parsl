@@ -48,7 +48,7 @@ def test_htex_strategy_does_not_oscillate(ns):
     statuses = {}
 
     executor.provider = provider
-    executor.outstanding = n_tasks
+    executor.outstanding = lambda: n_tasks
     executor.status_facade = statuses
     executor.workers_per_node = n_workers
 
@@ -97,7 +97,7 @@ def test_htex_strategy_does_not_oscillate(ns):
     # this assert fails due to issue #3696
 
     # Now check scale in happens with 0 load
-    executor.outstanding = 0
+    executor.outstanding = lambda: 0
     s.strategize([executor])
     executor.scale_in_facade.assert_called()
     assert len([k for k in statuses if statuses[k].state == JobState.PENDING]) == 0

@@ -92,8 +92,11 @@ class DataFlowKernel:
         self._config = config
         self.run_dir = make_rundir(config.run_dir)
 
+        self._logging_unregister_callback: Optional[Callable[[], None]]
         if config.initialize_logging:
-            parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
+            self._logging_unregister_callback = parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
+        else:
+            self._logging_unregister_callback = None
 
         logger.info("Starting DataFlowKernel with config\n{}".format(config))
 
@@ -1272,7 +1275,7 @@ class DataFlowKernel:
                 executor.monitoring_messages = self.monitoring.resource_msgs
                 logger.debug("Starting monitoring receiver for executor %s "
                              "with remote monitoring radio config %s",
-                             executor, executor.remote_monitoring_radio)
+                             executor.label, executor.remote_monitoring_radio)
 
                 executor.monitoring_receiver = executor.remote_monitoring_radio.create_receiver(resource_msgs=executor.monitoring_messages,
                                                                                                 run_dir=executor.run_dir)
@@ -1388,6 +1391,13 @@ class DataFlowKernel:
         else:
             logger.debug("Cleaning up non-default DFK - not unregistering")
 
+        if self._logging_unregister_callback:
+            logger.info("Unregistering log handler")
+            self._logging_unregister_callback()
+            logger.info("Unregistered log handler")
+
+        # This message won't go to the default parsl.log, but other handlers
+        # should still see it.
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks: Optional[Sequence[TaskRecord]] = None) -> str:
