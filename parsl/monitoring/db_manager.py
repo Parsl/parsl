@@ -6,7 +6,7 @@ import os
 import queue
 import threading
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, TypeVar, Union, cast
 
 import typeguard
 
@@ -49,6 +49,11 @@ STATUS = 'status'        # Status table includes task status
 RESOURCE = 'resource'    # Resource table includes task resource utilization
 NODE = 'node'            # Node table include node info
 BLOCK = 'block'          # Block table include the status for block polling
+FILE = 'file'            # Files table include file info
+INPUT_FILE = 'input_file'  # Input files table include input file info
+OUTPUT_FILE = 'output_file'  # Output files table include output file info
+ENVIRONMENT = 'environment'  # Executor table include executor info
+MISC_INFO = 'misc_info'  # Misc info table include misc info
 
 
 class Database:
@@ -165,9 +170,12 @@ class Database:
         task_hashsum = Column('task_hashsum', Text, nullable=True, index=True)
         task_inputs = Column('task_inputs', Text, nullable=True)
         task_outputs = Column('task_outputs', Text, nullable=True)
+        task_args = Column('task_args', Text, nullable=True)
+        task_kwargs = Column('task_kwargs', Text, nullable=True)
         task_stdin = Column('task_stdin', Text, nullable=True)
         task_stdout = Column('task_stdout', Text, nullable=True)
         task_stderr = Column('task_stderr', Text, nullable=True)
+        task_environment = Column('task_environment', Text, nullable=True)
 
         task_time_invoked = Column(
             'task_time_invoked', DateTime, nullable=True)
@@ -236,6 +244,55 @@ class Database:
         __table_args__ = (
             PrimaryKeyConstraint('run_id', 'block_id', 'executor_label', 'timestamp'),
         )
+
+    class File(Base):
+        __tablename__ = FILE
+        file_name = Column('file_name', Text, index=True, nullable=False)
+        file_path = Column('file_path', Text, nullable=True)
+        full_path = Column('full_path', Text, index=True, nullable=False)
+        file_id = Column('file_id', Text, index=True, nullable=False)
+        run_id = Column('run_id', Text, index=True, nullable=False)
+        task_id = Column('task_id', Integer, index=True, nullable=True)
+        try_id = Column('try_id', Integer, index=True, nullable=True)
+        timestamp = Column('timestamp', DateTime, index=True, nullable=True)
+        size = Column('size', BigInteger, nullable=True)
+        md5sum = Column('md5sum', Text, nullable=True)
+        __table_args__ = (PrimaryKeyConstraint('file_id'),)
+
+    class Environment(Base):
+        __tablename__ = ENVIRONMENT
+        environment_id = Column('environment_id', Text, index=True, nullable=False)
+        run_id = Column('run_id', Text, index=True, nullable=False)
+        label = Column('label', Text, nullable=False)
+        address = Column('address', Text, nullable=True)
+        provider = Column('provider', Text, nullable=True)
+        launcher = Column('launcher', Text, nullable=True)
+        worker_init = Column('worker_init', Text, nullable=True)
+        __table_args__ = (PrimaryKeyConstraint('environment_id'),)
+
+    class InputFile(Base):
+        __tablename__ = INPUT_FILE
+        file_id = Column('file_id', Text, sa.ForeignKey(FILE + ".file_id"), nullable=False)
+        run_id = Column('run_id', Text, index=True, nullable=False)
+        task_id = Column('task_id', Integer, index=True, nullable=False)
+        try_id = Column('try_id', Integer, index=True, nullable=False)
+        __table_args__ = (PrimaryKeyConstraint('file_id'),)
+
+    class OutputFile(Base):
+        __tablename__ = OUTPUT_FILE
+        file_id = Column('file_id', Text, sa.ForeignKey(FILE + ".file_id"), nullable=False)
+        run_id = Column('run_id', Text, index=True, nullable=False)
+        task_id = Column('task_id', Integer, index=True, nullable=False)
+        try_id = Column('try_id', Integer, index=True, nullable=False)
+        __table_args__ = (PrimaryKeyConstraint('file_id'),)
+
+    class MiscInfo(Base):
+        __tablename__ = MISC_INFO
+        run_id = Column('run_id', Text, index=True, nullable=False)
+        timestamp = Column('timestamp', DateTime, index=True, nullable=False)
+        info = Column('info', Text, nullable=False)
+        __table_args__ = (
+            PrimaryKeyConstraint('run_id', 'timestamp'),)
 
     class Resource(Base):
         __tablename__ = RESOURCE
@@ -337,6 +394,14 @@ class DatabaseManager:
         """
         inserted_tries: Set[Any] = set()
 
+        """
+        like inserted_tasks but for Files
+        """
+        inserted_files: Dict[str, Dict[str, Union[None, datetime.datetime, str, int]]] = dict()
+        input_inserted_files: Dict[str, List[str]] = dict()
+        output_inserted_files: Dict[str, List[str]] = dict()
+        inserted_envs: Set[object] = set()
+
         # for any task ID, we can defer exactly one message, which is the
         # assumed-to-be-unique first message (with first message flag set).
         # The code prior to this patch will discard previous message in
@@ -380,6 +445,11 @@ class DatabaseManager:
                         "Got {} messages from priority queue".format(len(priority_messages)))
                     task_info_update_messages, task_info_insert_messages, task_info_all_messages = [], [], []
                     try_update_messages, try_insert_messages, try_all_messages = [], [], []
+                    file_update_messages, file_insert_messages, file_all_messages = [], [], []
+                    input_file_insert_messages, input_file_all_messages = [], []
+                    output_file_insert_messages, output_file_all_messages = [], []
+                    environment_insert_messages = []
+                    misc_info_insert_messages = []
                     for msg_type, msg in priority_messages:
                         if msg_type == MessageType.WORKFLOW_INFO:
                             if "python_version" in msg:   # workflow start message
@@ -416,6 +486,86 @@ class DatabaseManager:
                                 if task_try_id in deferred_resource_messages:
                                     reprocessable_first_resource_messages.append(
                                         deferred_resource_messages.pop(task_try_id))
+                        elif msg_type == MessageType.FILE_INFO:
+                            file_id = msg['file_id']
+                            file_all_messages.append(msg)
+                            msg['full_path'] = msg['file_name']
+                            loc = msg['file_name'].rfind("/")
+                            if loc >= 0:
+                                msg['file_path'] = msg['file_name'][:loc]
+                                msg['file_name'] = msg['file_name'][loc + 1:]
+
+                            if file_id in inserted_files:
+                                new_item = False
+                                # once certain items are set, they should not be changed
+                                if inserted_files[file_id]['timestamp'] is None:
+                                    if msg['timestamp'] is not None:
+                                        inserted_files[file_id]['timestamp'] = msg['timestamp']
+                                        new_item = True
+                                else:
+                                    msg['timestamp'] = inserted_files[file_id]['timestamp']
+                                if inserted_files[file_id]['size'] is None:
+                                    if msg['size'] is not None:
+                                        inserted_files[file_id]['size'] = msg['size']
+                                        new_item = True
+                                else:
+                                    msg['size'] = inserted_files[file_id]['size']
+                                if inserted_files[file_id]['md5sum'] is None:
+                                    if msg['md5sum'] is not None:
+                                        inserted_files[file_id]['md5sum'] = msg['md5sum']
+                                        new_item = True
+                                else:
+                                    msg['md5sum'] = inserted_files[file_id]['md5sum']
+                                if inserted_files[file_id]['task_id'] is None:
+                                    if msg['task_id'] is not None:
+                                        inserted_files[file_id]['task_id'] = msg['task_id']
+                                        inserted_files[file_id]['try_id'] = msg['try_id']
+                                        new_item = True
+                                else:
+                                    if msg['task_id'] == inserted_files[file_id]['task_id']:
+                                        if inserted_files[file_id]['try_id'] is None:
+                                            inserted_files[file_id]['try_id'] = msg['try_id']
+                                            new_item = True
+                                        elif msg['try_id'] > inserted_files[file_id]['try_id']:
+                                            inserted_files[file_id]['try_id'] = msg['try_id']
+                                            new_item = True
+                                    else:
+                                        msg['task_id'] = inserted_files[file_id]['task_id']
+                                        msg['try_id'] = inserted_files[file_id]['try_id']
+                                if new_item:
+                                    file_update_messages.append(msg)
+                            else:
+                                inserted_files[file_id] = {'size': msg['size'],
+                                                           'md5sum': msg['md5sum'],
+                                                           'timestamp': msg['timestamp'],
+                                                           'task_id': msg['task_id'],
+                                                           'try_id': msg['try_id']}
+                                file_insert_messages.append(msg)
+                        elif msg_type == MessageType.ENVIRONMENT_INFO:
+                            if msg['environment_id'] not in inserted_envs:
+                                environment_insert_messages.append(msg)
+                                inserted_envs.add(msg['environment_id'])
+                        elif msg_type == MessageType.MISC_INFO:
+                            # no filtering, just insert each message
+                            misc_info_insert_messages.append(msg)
+                        elif msg_type == MessageType.INPUT_FILE:
+                            file_id = msg['file_id']
+                            input_file_all_messages.append(msg)
+                            identifier = f"{msg['run_id']}.{msg['task_id']}.{msg['try_id']}"
+                            if file_id not in input_inserted_files:
+                                input_inserted_files[file_id] = []
+                            if identifier not in input_inserted_files[file_id]:
+                                input_inserted_files[file_id].append(identifier)
+                                input_file_insert_messages.append(msg)
+                        elif msg_type == MessageType.OUTPUT_FILE:
+                            file_id = msg['file_id']
+                            output_file_all_messages.append(msg)
+                            identifier = f"{msg['run_id']}.{msg['task_id']}.{msg['try_id']}"
+                            if file_id not in output_inserted_files:
+                                output_inserted_files[file_id] = []
+                            if identifier not in output_inserted_files[file_id]:
+                                output_inserted_files[file_id].append(identifier)
+                                output_file_insert_messages.append(msg)
                         else:
                             raise RuntimeError("Unexpected message type {} received on priority queue".format(msg_type))
 
@@ -445,6 +595,39 @@ class DatabaseManager:
                     logger.debug("Inserting {} task_info_all_messages into status table".format(len(task_info_all_messages)))
 
                     self._insert(table=STATUS, messages=task_info_all_messages)
+
+                    if file_insert_messages:
+                        logger.debug("Inserting {} FILE_INFO to file table".format(len(file_insert_messages)))
+                        self._insert(table=FILE, messages=file_insert_messages)
+                        logger.debug(
+                            "There are {} inserted file records".format(len(inserted_files)))
+
+                    if environment_insert_messages:
+                        logger.debug("Inserting {} ENVIRONMENT_INFO to environment table".format(len(environment_insert_messages)))
+                        self._insert(table=ENVIRONMENT, messages=environment_insert_messages)
+                        logger.debug(
+                            "There are {} inserted environment records".format(len(inserted_envs)))
+
+                    if file_update_messages:
+                        logger.debug("Updating {} FILE_INFO into file table".format(len(file_update_messages)))
+                        self._update(table=FILE,
+                                     columns=['timestamp', 'size', 'md5sum', 'file_id', 'task_id', 'try_id'],
+                                     messages=file_update_messages)
+
+                    if input_file_insert_messages:
+                        logger.debug("Inserting {} INPUT_FILE to input_files table".format(len(input_file_insert_messages)))
+                        self._insert(table=INPUT_FILE, messages=input_file_insert_messages)
+                        logger.debug("There are {} inserted input file records".format(len(input_inserted_files)))
+
+                    if output_file_insert_messages:
+                        logger.debug("Inserting {} OUTPUT_FILE to output_files table".format(len(output_file_insert_messages)))
+                        self._insert(table=OUTPUT_FILE, messages=output_file_insert_messages)
+                        logger.debug("There are {} inserted output file records".format(len(output_inserted_files)))
+
+                    if misc_info_insert_messages:
+                        logger.debug("Inserting {} MISC_INFO to misc_info table".format(len(misc_info_insert_messages)))
+                        self._insert(table=MISC_INFO, messages=misc_info_insert_messages)
+                        logger.debug("There are {} inserted misc info records".format(len(misc_info_insert_messages)))
 
                     if try_insert_messages:
                         logger.debug("Inserting {} TASK_INFO to try table".format(len(try_insert_messages)))
@@ -573,7 +756,8 @@ class DatabaseManager:
         assert isinstance(x, tuple)
         assert len(x) == 2, "expected message tuple to have exactly two elements"
 
-        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO]:
+        if x[0] in [MessageType.WORKFLOW_INFO, MessageType.TASK_INFO, MessageType.FILE_INFO, MessageType.INPUT_FILE,
+                    MessageType.OUTPUT_FILE, MessageType.ENVIRONMENT_INFO, MessageType.MISC_INFO]:
             self.pending_priority_queue.put(cast(Any, x))
         elif x[0] == MessageType.RESOURCE_INFO:
             body = x[1]
