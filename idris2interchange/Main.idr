@@ -65,7 +65,7 @@ record SocketState where
   tasks_interchange_to_worker : ZMQSocket
   results_worker_to_interchange : ZMQSocket
   results_interchange_to_submit : ZMQSocket
-  submit_pidfd : FD
+  submit_pidfd : FD PidFD
 
 -- this should be total, proved by decreasing n
 -- but apparently not? cheat by using assert_smaller...
@@ -640,7 +640,7 @@ app_main = do
   -- TODO: cast here hopes that the integer is small enough to fit into the
   -- pid space...
   submit_pidfd <- pidfd_open (cast submit_pid)
- 
+
   logv "Created submitter pidfd" submit_pidfd
 
   -- TODO: is there a named record syntax for construction?

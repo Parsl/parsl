@@ -162,11 +162,28 @@ zmq_msg_as_bytes msg = do
   -- malloc area.
   copy_into_bb byte_ptr size
 
+public export data ZMQFD : Type where
+
+public export Pollable ZMQFD where
+
+-- public export Pollable ZMQFD
+-- the above line gives me a *runtime* error!
+-- Encountered undefined name ZMQ.Pollable implementation at ZMQ:166:1--166:29
+-- which vibes like a compiler bug to me? I was getting a FD.Pollable is not visible error before making FD.Pollable into public export; so at compile time it's finding the right name at least; and renaming this to XPollable successfully says XPollable doesn't exist; and removing the line successfully gives me compile time type erorr that ZMQFD cannot be used with MkPollInput.
+-- This is with idris2 Version 0.7.0-f7c6b1990 + my own patch for non-monadic bind in Control/App.idr >>
+-- so let's try the latest idris2 to see if there's a bug thats been fixed, at least?
+-- In the latest still broken with same error.
+-- Looking at the scheme source: for PidFD and ZMQFD, the error message is a bit misleadingly emitted like this,
+-- by what i guess is meant to actually contain the implementation?
+-- (define (FD-u--__Impl_Pollable_PidFD . any-args) (blodwen-error-quit "Encountered undefined name FD.Pollable implementation at FD:45:1--45:29"))
+-- (define (ZMQ-u--__Impl_Pollable_ZMQFD . any-args) (blodwen-error-quit "Encountered undefined name ZMQ.Pollable implementation at ZMQ:166:1--166:29"))
+-- Turns out adding `where` onto the end seems to fix it: not sure (and maybe an idris2 question/issue) what it means to not have the `where` on there? seems to declare it exists without declaring a value for it? But maybe i'd prefer an error/warning?
+
 %foreign (gluezmq "glue_zmq_get_socket_fd")
 prim__zmq_get_socket_fd : AnyPtr -> PrimIO Int
 
 public export
-zmq_get_socket_fd : (State LogConfig LogConfig es, HasErr AppHasIO es) => ZMQSocket -> App es FD
+zmq_get_socket_fd : (State LogConfig LogConfig es, HasErr AppHasIO es) => ZMQSocket -> App es (FD ZMQFD)
 zmq_get_socket_fd (MkZMQSocket sock_ptr) = do
   log "calling get_socket_fd"
   fd <- (primIO $ primIO $ prim__zmq_get_socket_fd sock_ptr)

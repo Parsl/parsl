@@ -30,16 +30,31 @@ compilation times can be severely impacted.
 %language ElabReflection
 -- %default total
 
+
 -- bits for interfacing to linux poll
+
+-- implementing this interface is a "unsafe" statement that the relevant file
+-- descriptor type can be polled by kernel interfaces. It is a transcription
+-- of that piece of the kernel type model into idris2.
+public export interface Pollable p where
+
+public export data ReadableFD : Type where
+
+public export data PidFD : Type where
+
+
+public export Pollable PidFD where
+
+
 
 -- TODO: can we do something to protect the lifetime of this int,
 -- eg to treat it linearly (or linearly with dup-ing?) so that we
 -- don't end up with bad lifetimes?
 public export
-data FD = MkFD Int
+data FD x = MkFD Int
 
 public export
-stdin : FD
+stdin : FD ReadableFD
 stdin = MkFD 0  -- well-known fd number
 
 -- cast is deliberatly one-way: we can easily remove the FD-ness of
@@ -49,7 +64,7 @@ stdin = MkFD 0  -- well-known fd number
 -- serious looking than cast - going along with the concept that you
 -- can always cast an FD to an int meaningfully, but not the other way
 -- round.
-Cast FD Int where
+Cast (FD x) Int where
   cast (MkFD fd) = fd
 
 -- we need to derive Generic and Meta here, before Show will also
@@ -67,17 +82,36 @@ Cast FD Int where
 
 public export
 record PollInput where
+  -- I experimented with PollInput being parameterised by fd type, and putting a constraint on that type.
+  -- but we don't need the type exposed here, and it makes eg. a vector of PollInputs be non-homogenous, as
+  -- there can be different FD types in there.
+  -- https://stackoverflow.com/questions/47418867/idris-dependent-records-with-interface-constraint-on-type-constructor-parameter
+  -- so instead look at getting the FD constraint inside the PollInput.
+  -- that is, i guess, a fd of type fd_type, but also a Pollable instance for that fd, found automatically?
   constructor MkPollInput
-  fd: FD
+
+
+  -- proof that the fd is pollable
+  fd : FD fd_type
+  {auto pollable_fd : Pollable fd_type}
 
   -- hoping that Bits16 is the same size as a C short...
   -- that's not so defined in general
   events: Bits16
 
+
 public export
 record PollOutput where
+  -- not constraining fd_type to pollable here, because have not
+  -- encountered need. it is, however, implicitly pollable because
+  -- it came out of poll, at the implementation level, so maybe
+  -- its interesting to convey that at type level sometime.
+  -- but! should the fd_type be stored in poll output, or else
+  -- how do I safely convey the fd type? someone somewhere has
+  -- to assert the syscall maps the input and output FDs together
+  -- (perhaps with a runtime checkabout assert = or something)
   constructor MkPollOutput
-  fd: FD
+  fd: FD fd_type
 
   revents: Bits16   -- see events short note above
 
@@ -210,7 +244,7 @@ prim_read : Int -> AnyPtr -> Int -> PrimIO Int
 -- TODO: are ssize_t and size_t suitable to be Ints?
 
 public export
-read : HasErr AppHasIO es => FD -> Nat -> App1 es ByteBlock
+read : HasErr AppHasIO es => FD ReadableFD -> Nat -> App1 es ByteBlock
 read (MkFD fd_int) count = do
   -- allocate memory and read into it. that probably isn't the right
   -- way to do things linearly... or the right way to do things with
@@ -228,7 +262,7 @@ prim_pidfd_open : Int -> Int -> PrimIO Int
 -- this assumes pid_t and unsigned int both work as `Int`
 
 public export
-pidfd_open : HasErr AppHasIO es => Int -> App es FD
+pidfd_open : HasErr AppHasIO es => Int -> App es (FD PidFD)
 pidfd_open pid = do
   pidfd <- primIO $ primIO $ prim_pidfd_open pid 0
   case pidfd of
