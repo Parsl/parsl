@@ -36,7 +36,6 @@ class MacSafeQueue(multiprocessing.queues.Queue):
         self._counter = multiprocessing.Value('i', 0)
 
     def put(self, *args, **kwargs):
-        # logger.critical("Putting item {}".format(args))
         x = super().put(*args, **kwargs)
         with self._counter.get_lock():
             self._counter.value += 1
@@ -46,7 +45,6 @@ class MacSafeQueue(multiprocessing.queues.Queue):
         x = super().get(*args, **kwargs)
         with self._counter.get_lock():
             self._counter.value -= 1
-        # logger.critical("Getting item {}".format(x))
         return x
 
     def qsize(self):
