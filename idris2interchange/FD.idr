@@ -38,6 +38,8 @@ compilation times can be severely impacted.
 public export
 data FD = MkFD Int
 
+public export
+stdin : FD
 stdin = MkFD 0  -- well-known fd number
 
 -- cast is deliberatly one-way: we can easily remove the FD-ness of
