@@ -50,12 +50,20 @@ record ManagerRegistration where
 -- manager id type -- that would be a more type-interesting
 -- approach.
 
+data TaskDef = MkTaskDef PickleAST
+
+%default covering
+%runElab derive "TaskDef" [Generic, Meta, Show]
+%default total
+
+-- ^ default to covering because i can't see how to specify it as non-total, and otherwise:
+-- parsl/tests/test_callables.py Error: implShowTaskDef is not total, possibly not terminating due to call to Pickle.implShowPickleAST
+
+
 record MatchState where
   constructor MkMatchState
   managers: List ManagerRegistration
-  tasks: List PickleAST  -- TODO: make this task representation a task record, rather than a PickleAST.
-                         -- There isn't any introspection here at the moment, but there should be for
-                         -- expired-manager task failure triggered by the interchange.
+  tasks: List TaskDef    
 -- %runElab derive "MatchState" [Generic, Meta, Show]
 
 record SocketState where
@@ -227,7 +235,8 @@ matchmake sockets = do
                   -- TODO: if we matchmake a lot of tasks at once, this singleton
                   -- list could contain many matched tasks destined for the same
                   -- manager.
-                  let task_msg = PickleList [task]
+                  let (MkTaskDef task_pkl) = task
+                  let task_msg = PickleList [task_pkl]
                   logv "Dispatching task" task_msg
                   app1 $ do
                     resp_bytes <- pickle task_msg
@@ -347,10 +356,12 @@ zmq_poll_tasks_submit_to_interchange_loop sockets = do
         s <- zmq_msg_size msg
         logv "Received task-like message on task submit->interchange channel, size" s
 
-        task <- app1 $ do
+        task_pkl <- app1 $ do
           bytes <- zmq_msg_as_bytes msg
           bytes <- ascii_dump bytes
           unpickle bytes
+
+        let task = MkTaskDef task_pkl
 
         zmq_msg_close msg
 
