@@ -19,7 +19,8 @@ def consumer(in_q, out_q, delay=0):
 
 
 @pytest.mark.local
-def test_mac_safe_queue():
+@pytest.mark.parametrize("method", ["fork", "spawn", "forkserver"])
+def test_mac_safe_queue(method):
     """ Regression test for HTEX being broken on Mac OS: https://github.com/Parsl/parsl/issues/854
     This test doesn't test the fix on mac's however it tests a multiprocessing queue replacement
     that is safe to run on Mac OS.
@@ -27,7 +28,7 @@ def test_mac_safe_queue():
     task_q = MacSafeQueue()
     result_q = MacSafeQueue()
 
-    p = multiprocessing.Process(target=consumer, args=(task_q, result_q,))
+    p = multiprocessing.get_context(method).Process(target=consumer, args=(task_q, result_q,))
     p.start()
     for i in range(10):
         task_q.put(i)
