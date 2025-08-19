@@ -216,13 +216,7 @@ matchmake sockets = do
       case managers of
         [] => log "No match possible: no managers registered"
         mr :: rest_managers => do
-          logv "Considering manager for match" (manager_json mr) -- manager JSON here because we can't
-                                                                 -- Show the whole manager registration
-                                                                 -- because elab of Show doesn't work
-                                                                 -- maybe because byte string does not
-                                                                 -- have Show? TODO which points towards
-                                                                 -- having a separate manager ID type
-                                                                 -- rather than a plain byte string?
+          logv "Considering manager for match" mr
           let c = lookup "max_capacity" (manager_json mr)
           case c of
             Just (JNumber c) => do
