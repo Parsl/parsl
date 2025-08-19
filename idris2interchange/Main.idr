@@ -39,16 +39,19 @@ WORKER_RESULT_PORT = 9004
 -- export PATH=~/.idris2/bin:$PATH
 -- pytest -s parsl/tests/ --config parsl/tests/configs/htex_idris2.py 
 
+data ManagerID = MkManagerId GCByteBlock
+-- TODO: %runElab derive "ManagerID" [Generic, Meta, Show]
+Show ManagerID where
+  show m = "<manager-id show notimpl>"
+-- this runElab doesn't work, i think because GCByteBlock is not
+-- Show-able. But maybe ManagerID should have something more
+-- explicitly ASCII-like.
 
 record ManagerRegistration where
   constructor MkManagerRegistration
-  manager_id : GCByteBlock
+  manager_id : ManagerID
   manager_json : JSON  -- TODO: this manager_json can go away and be replaced by the two fields that are actually used.
--- %runElab derive "ManagerRegistration" [Generic, Meta, Show]
--- this runElab doesn't work, i think because GCByteBlock is not
--- Show-able. TODO: make that byte block showable, or make a
--- manager id type -- that would be a more type-interesting
--- approach.
+%runElab derive "ManagerRegistration" [Generic, Meta, Show]
 
 data TaskDef = MkTaskDef PickleAST
 
@@ -245,7 +248,8 @@ matchmake sockets = do
                     -- it is interesting to have the garbage collector manage that, rather
                     -- than linear types?
                     -- these three sends demonstrate three different kind of memory policy
-                    b <- from_gc_bytes (manager_id mr)
+                    let (MkManagerId mid) = manager_id mr
+                    b <- from_gc_bytes mid
                     b <- zmq_send_bytes1 sockets.tasks_interchange_to_worker b True
                     free1 b
 
@@ -500,7 +504,7 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
             case t of
               Just (JString "registration") => do
                 (MkMatchState managers tasks) <- get MatchState
-                let new_manager_registration = MkManagerRegistration gc_addr_bytes j
+                let new_manager_registration = MkManagerRegistration (MkManagerId gc_addr_bytes) j
                 put MatchState (MkMatchState (new_manager_registration :: managers) tasks)
                 log "Put new manager into match state" 
                 matchmake sockets
