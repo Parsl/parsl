@@ -180,6 +180,8 @@ str_from_bytes l (MkByteBlock p l') = do
   pure $ prim__free p
   pure1 $ s # rest
   -- TODO: who unallocates the malloc in prim__str_from_bytes? is it idris FFI?
+  -- The manual says: A char* returned by a C function will be copied to the Idris heap, and the Idris run time immediately calls free with the returned char*.
+  -- but valgrind says otherwise.
 
 
 -- don't deconstruct this except in the trusted memory kernel
