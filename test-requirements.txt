@@ -10,7 +10,7 @@ types-mock
 types-python-dateutil
 types-requests
 mpi4py
-globus-compute-sdk>=2.34.0
+# globus-compute-sdk>=2.34.0 -- doesn't work with python 3.14-rc git right now - see issue #3924
 
 # sqlalchemy is needed for typechecking, so it's here
 # as well as at runtime for optional monitoring execution
