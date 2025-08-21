@@ -17,14 +17,11 @@ gluezmq fn = "C:" ++ fn ++ ",glue_zmq"
 %foreign (gluezmq "glue_zmq_ctx_new")
 prim__zmq_ctx_new : PrimIO AnyPtr
 
--- this is not public - or specifically MkZMQContext is not public -
--- so that outside of this source file, no one can get at the context
+-- this is not public so -- so that outside of this source file, no one can get at the context
 -- point, and use the libzmq context.
--- QUESTION: it should be fine to expose the type symbol but not the
--- constructor symbol - is there syntax to do that?
-data ZMQContext = MkZMQContext AnyPtr
+-- 'export' means the type name is available elsewhere but the constructor is not.
+export data ZMQContext = MkZMQContext AnyPtr
 
-public export
 new_zmq_context : HasErr AppHasIO es => App es ZMQContext
 new_zmq_context = do
   ptr <- primIO $ primIO $ prim__zmq_ctx_new
@@ -33,6 +30,22 @@ new_zmq_context = do
   -- terminate, or some other exception style?
   pure (MkZMQContext ptr)
 
+-- it's possible that ZMQContext should turn into an app-level state-like
+-- thing, with the value hidden so that it can't be captured, returned and
+-- used after close? In which case, it woul be something like a reader
+-- with ZMQContext content? and all the context-using functions changed to
+-- only use the current context rather than an arbitrary one passed in.
+-- so it doesn't matter if the user has managed to read the context value,
+-- they can't use it because no function takes it as a paremeter?
+-- (not actually true - this doesn't stop the user from making their own
+-- reader context with some arbitrarily acquired context pointer? how
+-- can I stop that? still tie the context to a region?)
+public export
+with_zmq_context: HasErr AppHasIO es => (ZMQContext -> App es a) -> App es a
+with_zmq_context body = do
+  ctx <- new_zmq_context
+  body ctx
+  -- TODO: clear up ZMQ context
 
 -- a partial manual enumeration of socket types
 -- (only enough for making this interchange work)

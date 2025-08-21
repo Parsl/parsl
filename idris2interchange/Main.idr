@@ -553,18 +553,26 @@ readStdinConfig = do
 
   pure config
 
+covering main_with_zmq : (State LogConfig LogConfig es, State Bool Bool es, HasErr AppHasIO es, State MatchState MatchState es) => PickleAST -> ZMQContext -> App es ()
+
 covering app_main : (State LogConfig LogConfig es, State Bool Bool es, HasErr AppHasIO es, State MatchState MatchState es) => App es ()
 app_main = do
   log "Idris2 interchange starting"
 
+  -- TODO: turn this into a reader app type rather than threading it around?
   cfg <- readStdinConfig
 
   -- could use some with-style notation? zmq context doesn't need any cleanup
   -- if the process will just be terminated, and I think it doesn't have much
   -- in the way of linearity constraints? (although probably the sockets do?)
-  -- but to make clean shutdown clean (eg maybe to make valgrind happier)
-  zmq_ctx <- new_zmq_context
+  -- but to make clean shutdown clean (eg maybe to make valgrind happier).
+  -- I do care about the context not being usable outside of a with-style block
+  -- which is something I've seen done with region typing in Haskell.
+  with_zmq_context $ \zmq_ctx => do
+    main_with_zmq cfg zmq_ctx
+    log "Idris2 interchange ending gracefully"
 
+main_with_zmq cfg zmq_ctx = do
   -- now we need a socket, tasks_submit_to_interchange, and once that is
   -- connected, we should see task(s) start to arrive on it without doing
   -- anything more. Maybe theres some interesting type-based sequencing for
@@ -666,7 +674,6 @@ app_main = do
        }
 
   poll_loop sockets
-  log "Idris2 interchange ending gracefully"
 
 
 poll_loop sockets = do
