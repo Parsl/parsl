@@ -562,6 +562,7 @@ app_main = do
   -- could use some with-style notation? zmq context doesn't need any cleanup
   -- if the process will just be terminated, and I think it doesn't have much
   -- in the way of linearity constraints? (although probably the sockets do?)
+  -- but to make clean shutdown clean (eg maybe to make valgrind happier)
   zmq_ctx <- new_zmq_context
 
   -- now we need a socket, tasks_submit_to_interchange, and once that is

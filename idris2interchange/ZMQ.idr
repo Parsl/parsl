@@ -17,6 +17,11 @@ gluezmq fn = "C:" ++ fn ++ ",glue_zmq"
 %foreign (gluezmq "glue_zmq_ctx_new")
 prim__zmq_ctx_new : PrimIO AnyPtr
 
+-- this is not public - or specifically MkZMQContext is not public -
+-- so that outside of this source file, no one can get at the context
+-- point, and use the libzmq context.
+-- QUESTION: it should be fine to expose the type symbol but not the
+-- constructor symbol - is there syntax to do that?
 data ZMQContext = MkZMQContext AnyPtr
 
 public export
