@@ -45,7 +45,11 @@ with_zmq_context: HasErr AppHasIO es => (ZMQContext -> App es a) -> App es a
 with_zmq_context body = do
   ctx <- new_zmq_context
   body ctx
-  -- TODO: clear up ZMQ context
+  close_zmq_context ctx
+  -- ^ i think its especially important to be checking error codes with this
+  -- close because I'd like to see if the close is failing due to all this
+  -- other stuff still being open. (and then... type level ensuring all
+  -- sockets are closed before being able to exit the with-block?)
 
 -- a partial manual enumeration of socket types
 -- (only enough for making this interchange work)
