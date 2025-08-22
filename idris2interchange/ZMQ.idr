@@ -40,6 +40,8 @@ new_zmq_context = do
 -- (not actually true - this doesn't stop the user from making their own
 -- reader context with some arbitrarily acquired context pointer? how
 -- can I stop that? still tie the context to a region?)
+-- closing the context will hang if sockets are still open so maybe its
+-- useful to somehow insist that all sockets are closed, statically?
 public export
 with_zmq_context: HasErr AppHasIO es => (ZMQContext -> App es a) -> App es a
 with_zmq_context body = do
