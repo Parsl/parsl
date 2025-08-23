@@ -185,7 +185,7 @@ str_from_bytes l (MkByteBlock p l') = do
 
 
 -- don't deconstruct this except in the trusted memory kernel
-public export
+export
 data GCByteBlock = MkGCByteBlock AnyPtr Nat
 
 -- TODO: this impl won't actually do a finalizer-based GC,
