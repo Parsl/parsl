@@ -570,7 +570,8 @@ app_main = do
   -- which is something I've seen done with region typing in Haskell.
   with_zmq_context $ \zmq_ctx => do
     main_with_zmq cfg zmq_ctx
-    log "Idris2 interchange ending gracefully"
+
+  log "Idris2 interchange ending gracefully"
 
 main_with_zmq cfg zmq_ctx = do
   -- now we need a socket, tasks_submit_to_interchange, and once that is
@@ -674,6 +675,17 @@ main_with_zmq cfg zmq_ctx = do
        }
 
   poll_loop sockets
+
+  -- TODO: this is perhaps tight enough usage that a
+  -- `with_socket` style could be implemented? With linear
+  -- type? because that's a bit more sessiony? and would
+  -- let me put a protocol state on the command socket too.
+  -- (for in waiting for req, waiting for rep states)
+  close_zmq_socket command_socket
+  close_zmq_socket tasks_submit_to_interchange_socket
+  close_zmq_socket tasks_interchange_to_worker_socket
+  close_zmq_socket results_worker_to_interchange_socket
+  close_zmq_socket results_interchange_to_submit_socket
 
 
 poll_loop sockets = do

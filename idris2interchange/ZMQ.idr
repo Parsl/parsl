@@ -99,6 +99,16 @@ new_zmq_socket (MkZMQContext ctx_ptr) socket_type = do
   ptr <- primIO $ primIO (prim__zmq_socket ctx_ptr (zmq_socket_to_int socket_type))
   pure (MkZMQSocket ptr)
 
+
+%foreign (gluezmq "glue_close_zmq_socket")
+prim__close_zmq_socket : AnyPtr -> PrimIO ()
+
+public export
+close_zmq_socket : HasErr AppHasIO es => ZMQSocket -> App es ()
+close_zmq_socket (MkZMQSocket ptr) = do
+  primIO $ primIO $ prim__close_zmq_socket ptr
+
+
 %foreign (gluezmq "glue_zmq_connect")
 prim__zmq_connect : AnyPtr -> String -> PrimIO ()
 
