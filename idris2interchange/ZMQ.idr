@@ -30,6 +30,17 @@ new_zmq_context = do
   -- terminate, or some other exception style?
   pure (MkZMQContext ptr)
 
+
+%foreign (gluezmq "glue_zmq_ctx_close")
+prim__zmq_ctx_close : AnyPtr -> PrimIO ()
+
+-- TODO: this can hang if sockets are open.
+-- can they be statically verified as closed?
+close_zmq_context : HasErr AppHasIO es => ZMQContext -> App es ()
+close_zmq_context (MkZMQContext ptr) = do
+  primIO $ primIO $ prim__zmq_ctx_close ptr
+  pure ()
+
 -- it's possible that ZMQContext should turn into an app-level state-like
 -- thing, with the value hidden so that it can't be captured, returned and
 -- used after close? In which case, it woul be something like a reader
@@ -46,12 +57,13 @@ public export
 with_zmq_context: HasErr AppHasIO es => (ZMQContext -> App es a) -> App es a
 with_zmq_context body = do
   ctx <- new_zmq_context
-  body ctx
+  r <- body ctx
   close_zmq_context ctx
   -- ^ i think its especially important to be checking error codes with this
   -- close because I'd like to see if the close is failing due to all this
   -- other stuff still being open. (and then... type level ensuring all
   -- sockets are closed before being able to exit the with-block?)
+  pure r
 
 -- a partial manual enumeration of socket types
 -- (only enough for making this interchange work)

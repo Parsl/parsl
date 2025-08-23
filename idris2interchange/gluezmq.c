@@ -11,6 +11,14 @@ void *glue_zmq_ctx_new() {
     return ctx;
 }
 
+void glue_zmq_ctx_close(void *ctx) {
+    assert(ctx != NULL);
+    int r = zmq_ctx_destroy(ctx);
+    printf("zmq_ctx_destroy return code %d errno %d\n", r, errno);
+    assert(r == 0);
+}
+
+
 void *glue_zmq_socket(void* ctx, int type) {
     void *sock = zmq_socket(ctx, type);
     assert(sock != NULL);
