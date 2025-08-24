@@ -2,7 +2,7 @@ The High-Throughput Executor
 ============================
 
 The :class:`~parsl.executors.HighThroughputExecutor` (HTEx) is the standard Executor provided with Parsl.
-The following sections detail the most-used configuration options of Parsl.
+The following sections detail the most-used configuration options of HTEx.
 
 .. contents::
    :local:
@@ -26,15 +26,15 @@ Multi-Threaded Applications
 
 Workflows which launch multiple workers on a single node which perform multi-threaded tasks (e.g., NumPy, Tensorflow operations) may run into thread contention issues.
 Each worker may try to use the same hardware threads, which leads to performance penalties.
-Use the ``cpu_affinity`` feature of the :class:`~parsl.executors.HighThroughputExecutor` to assign workers to specific threads.  Users can pin threads to
-workers either with a strategy method or an explicit list.
+Use ``cpu_affinity`` to assign workers to specific threads either by 
+defining an allocation strategy method or an explicit list.
 
 The strategy methods will auto assign all detected hardware threads to workers.
-Allowed strategies that can be assigned to ``cpu_affinity`` are ``block``, ``block-reverse``, and ``alternating``.
+Allowed strategies are ``block``, ``block-reverse``, and ``alternating``.
 The ``block`` method pins threads to workers in sequential order (ex: 4 threads are grouped (0, 1) and (2, 3) on two workers);
 ``block-reverse`` pins threads in reverse sequential order (ex: (3, 2) and (1, 0)); and ``alternating`` alternates threads among workers (ex: (0, 2) and (1, 3)).
 
-Select the best blocking strategy for processor's cache hierarchy (choose ``alternating`` if in doubt) to ensure workers to not compete for cores.
+Select the best blocking strategy based on the node's CPU cache hierarchy (query the cache hierarchy using ``lscpu``).
 
 .. code-block:: python
 
@@ -110,8 +110,7 @@ as many workers as the accelerators specified via ``available_accelerators``.
     )
 
 It is possible to bind multiple/specific accelerators to each worker by specifying a list of comma separated strings
-each specifying accelerators. In the context of binding to NVIDIA GPUs, this works by setting ``CUDA_VISIBLE_DEVICES``
-on each worker to a specific string in the list supplied to ``available_accelerators``.
+each specifying accelerators.
 
 Here's an example:
 
@@ -130,15 +129,19 @@ Here's an example:
         ],
     )
 
+Binding is achieved by setting ``CUDA_VISIBLE_DEVICES`` (specific to NVIDIA GPUs), 
+``ROCR_VISIBLE_DEVICES`` (AMD GPUs),
+and ``ZE_AFFINITY_MASK`` (Intel GPUs) to the appropriate accelerator names.
+
 GPU Oversubscription
 ^^^^^^^^^^^^^^^^^^^^
 
-For hardware that uses Nvidia devices, Parsl allows for the oversubscription of workers to GPUS.  This is intended to
-make use of Nvidia's `Multi-Process Service (MPS) <https://docs.nvidia.com/deploy/mps/>`_ available on many of their
+For hardware that uses NVIDIA devices, Parsl allows for the oversubscription of workers to GPUS.  This is intended to
+make use of NVIDIA's `Multi-Process Service (MPS) <https://docs.nvidia.com/deploy/mps/>`_ available on many of their
 GPUs that allows users to run multiple concurrent processes on a single GPU.  The user needs to set the
 ``worker_init`` command of the Provider to start MPS on every node in the block (this is machine dependent).  The
 ``available_accelerators`` option should then be set to the total number of GPU partitions run on a single node in the
-block.  For example, for a node with 4 Nvidia GPUs, to create 8 workers per GPU, set ``available_accelerators=32``.
+block.  For example, for a node with 4 NVIDIA GPUs, to create 8 workers per GPU, set ``available_accelerators=32``.
 GPUs will be assigned to workers in ascending order in contiguous blocks.  In the example, workers 0-7 will be placed
 on GPU 0, workers 8-15 on GPU 1, workers 16-23 on GPU 2, and workers 24-31 on GPU 3.
 
