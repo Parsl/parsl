@@ -33,8 +33,8 @@ before deploying them to distributed resources.
 Cluster Schedulers
 ------------------
 
-Schedulers are used at facilities where a single compute clusters shared by many teams.
-Users request individual "batch jobs" that will be ran once resources are available.
+Schedulers are used at facilities where a single compute cluster is shared by many teams.
+Users request individual "batch jobs" that will run once resources are available.
 Parsl will create and manage its own batch jobs.
 
 Configuring a cluster scheduler requires:

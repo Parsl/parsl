@@ -71,8 +71,6 @@ This example assigns 16 threads each to 12 workers. Note that in this example th
 If a thread is not explicitly assigned to a worker, it will be left idle.
 The number of thread "ranks" (colon separated thread lists/ranges) must match the total number of workers on the node; otherwise an exception will be raised.
 
-
-
 Thread affinity is accomplished in two ways.
 Each worker first sets the affinity for the Python process using `the affinity mask <https://docs.python.org/3/library/os.html#os.sched_setaffinity>`_,
 which may not be available on all operating systems.
@@ -109,7 +107,7 @@ as many workers as the accelerators specified via ``available_accelerators``.
         strategy='none',
     )
 
-It is possible to bind multiple/specific accelerators to each worker by specifying a list of comma separated strings
+It is possible to bind multiple/specific accelerators to each worker by specifying a list of comma separated strings,
 each specifying accelerators.
 
 Here's an example:
@@ -136,7 +134,7 @@ and ``ZE_AFFINITY_MASK`` (Intel GPUs) to the appropriate accelerator names.
 GPU Oversubscription
 ^^^^^^^^^^^^^^^^^^^^
 
-For hardware that uses NVIDIA devices, Parsl allows for the oversubscription of workers to GPUS.  This is intended to
+For hardware that uses NVIDIA devices, Parsl allows for the oversubscription of workers to GPUs.  This is intended to
 make use of NVIDIA's `Multi-Process Service (MPS) <https://docs.nvidia.com/deploy/mps/>`_ available on many of their
 GPUs that allows users to run multiple concurrent processes on a single GPU.  The user needs to set the
 ``worker_init`` command of the Provider to start MPS on every node in the block (this is machine dependent).  The

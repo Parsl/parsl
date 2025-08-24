@@ -10,8 +10,8 @@ whereas those which require thousands of nodes should use the
 These executors include:
 
 #. :class:`~parsl.executors.HighThroughputExecutor` (HTEx): The best starting choice for Parsl applications.
-   HTEx deploys many identical Python workers as separate processes with across multiple compute nodes.
-   Implements a hierarchical scheduling strategy and routinely delivers high throughput task execution on thousands of nodes.
+   HTEx deploys many identical Python workers as separate processes across multiple compute nodes.
+   Implements a hierarchical scheduling strategy and can scale to thousands of workers in many applications..
 
 #. :class:`~parsl.executors.taskvine.TaskVineExecutor` (TVEx): An executor which supports performance features including:
    resizing the resources pinned to workers,

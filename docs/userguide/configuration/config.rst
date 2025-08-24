@@ -25,9 +25,9 @@ the Frontera supercomputer at TACC:
                 address=address_by_interface('ib0'),
                 max_workers_per_node=56,
                 provider=SlurmProvider(
+                    partition='normal',
                     nodes_per_block=128,
                     init_blocks=1,
-                    partition='normal',
                     launcher=SrunLauncher(),
                 ),
             )
@@ -41,8 +41,8 @@ The options include a name for the workers of this type (``label``),
 how the worker connects to the main Parsl process (``address``),
 and how many workers to place on each compute node (``max_workers_per_node``).
 
-The provider options are define the queue used for submission (``partition``)
-and sets Parsl to request one job (``init_blocks``) of 128 nodes (``nodes_per_block``).
+The provider options define the queue used for submission (``partition``),
+and tells Parsl request one job (``init_blocks``) of 128 nodes (``nodes_per_block``).
 
 The launcher uses the default mechanism for starting programs on Frontera compute nodes, ``srun``.
 
@@ -56,7 +56,14 @@ Use the ``Config`` object to start Parsl's data flow kernel with the ``parsl.loa
     from parsl.configs.htex_local import config
     import parsl
 
-    with parsl.load(config):
+    with parsl.load(config) as dfk:
+        future = app(x)
+        future.wait()
+
+The ``.load()`` function creates a DataFlowKernel ("DFK") object that maintains the workflows state.
+The DFK acquires the resources used by Parsl and should be closed to release the resources.
+While the DFK can be closed manually (``dfk.cleanup()``), the preferred and Pythonic route is use it as a context manager (the ``with`` statement)
+Using a context manager avoids unnecessary code and ensures cleanup occurs even if the workflow fails.
 
 The ``load`` statement can happen after Apps are defined but must occur before tasks are started.
 Loading the Config object within context manager like ``with`` is recommended

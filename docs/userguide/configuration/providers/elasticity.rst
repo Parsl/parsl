@@ -3,8 +3,8 @@
 Elasticity
 ==========
 
-Parsl can increase the amount of resources available depending as workloads vary over time.
-Allow the amount of workers used by Parsl to change elastically through two mecahnisms:
+Parsl can change the amount of resources available as workloads vary over time.
+Allow the amount of workers used by Parsl to change elastically through two mechanisms:
 
 1. Specifying the range of number of "blocks" allowed
 2. Controlling the target ratio of number of tasks to workers.

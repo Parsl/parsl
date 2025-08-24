@@ -9,9 +9,12 @@ Configuring Parsl
     Consider starting with `example configurations <examples.html>`_ to
     see if there is already an example which matches your needs.
 
-Parsl configuration objects (:class:`~parsl.config.Config`) define
-how to acquire resources to execute tasks
-and how Parsl will use those resources.
+Contemporary computing environments offer a wide range of computational platforms
+or **execution providers**, from laptops and PCs to various clusters, supercomputers, and cloud computing platforms.
+Different execution providers use of different **execution models**, such as threads (for efficient parallel execution on a multicore processor), processes, and pilot jobs for running many small tasks on a large parallel system.
+Parsl is designed to abstract these low-level details so that an identical Parsl program can run unchanged on different platforms or across multiple platforms.
+The Parsl configuration object (:class:`~parsl.config.Config`) specifies
+which execution provider(s) and execution model(s) to use.
 
 :class:`~parsl.config.Config` objects are expressed in Python
 so that software can
