@@ -40,6 +40,9 @@ from parsl.executors.taskvine.factory_config import TaskVineFactoryConfig
 from parsl.executors.taskvine.manager import _taskvine_submit_wait
 from parsl.executors.taskvine.manager_config import TaskVineManagerConfig
 from parsl.executors.taskvine.utils import ParslFileToVine, ParslTaskToVine
+from parsl.monitoring.radios.base import RadioConfig
+from parsl.monitoring.radios.filesystem import FilesystemRadio
+from parsl.multiprocessing import SpawnContext
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import CondorProvider, LocalProvider
 from parsl.providers.base import ExecutionProvider
@@ -97,8 +100,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             Default is None.
     """
 
-    radio_mode = "filesystem"
-
     @typeguard.typechecked
     def __init__(self,
                  label: str = "TaskVineExecutor",
@@ -107,7 +108,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  factory_config: TaskVineFactoryConfig = TaskVineFactoryConfig(),
                  provider: Optional[ExecutionProvider] = LocalProvider(init_blocks=1),
-                 storage_access: Optional[List[Staging]] = None):
+                 storage_access: Optional[List[Staging]] = None,
+                 remote_monitoring_radio: Optional[RadioConfig] = None):
 
         # Set worker launch option for this executor
         if worker_launch_method == 'factory' or worker_launch_method == 'manual':
@@ -133,14 +135,19 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.factory_config = factory_config
         self.storage_access = storage_access
 
+        if remote_monitoring_radio is not None:
+            self.remote_monitoring_radio = remote_monitoring_radio
+        else:
+            self.remote_monitoring_radio = FilesystemRadio()
+
         # Queue to send ready tasks from TaskVine executor process to TaskVine manager process
-        self._ready_task_queue: multiprocessing.Queue = multiprocessing.Queue()
+        self._ready_task_queue: multiprocessing.Queue = SpawnContext.Queue()
 
         # Queue to send finished tasks from TaskVine manager process to TaskVine executor process
-        self._finished_task_queue: multiprocessing.Queue = multiprocessing.Queue()
+        self._finished_task_queue: multiprocessing.Queue = SpawnContext.Queue()
 
         # Event to signal whether the manager and factory processes should stop running
-        self._should_stop = multiprocessing.Event()
+        self._should_stop = SpawnContext.Event()
 
         # TaskVine manager process
         self._submit_process = None
@@ -239,6 +246,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         retrieve Parsl tasks within the TaskVine system.
         """
 
+        super().start()
         # Synchronize connection and communication settings between the manager and factory
         self.__synchronize_manager_factory_comm_settings()
 
@@ -252,17 +260,17 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                                  "finished_task_queue": self._finished_task_queue,
                                  "should_stop": self._should_stop,
                                  "manager_config": self.manager_config}
-        self._submit_process = multiprocessing.Process(target=_taskvine_submit_wait,
-                                                       name="TaskVine-Submit-Process",
-                                                       kwargs=submit_process_kwargs)
+        self._submit_process = SpawnContext.Process(target=_taskvine_submit_wait,
+                                                    name="TaskVine-Submit-Process",
+                                                    kwargs=submit_process_kwargs)
 
         # Create a process to run the TaskVine factory if enabled.
         if self.worker_launch_method == 'factory':
             factory_process_kwargs = {"should_stop": self._should_stop,
                                       "factory_config": self.factory_config}
-            self._factory_process = multiprocessing.Process(target=_taskvine_factory,
-                                                            name="TaskVine-Factory-Process",
-                                                            kwargs=factory_process_kwargs)
+            self._factory_process = SpawnContext.Process(target=_taskvine_factory,
+                                                         name="TaskVine-Factory-Process",
+                                                         kwargs=factory_process_kwargs)
 
         # Run thread to collect results and set tasks' futures.
         self._collector_thread = threading.Thread(target=self._collect_taskvine_results,
@@ -565,7 +573,6 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self._worker_command = self._construct_worker_command()
         self._patch_providers()
 
-    @property
     def outstanding(self) -> int:
         """Count the number of outstanding tasks."""
         logger.debug(f"Counted {self._outstanding_tasks} outstanding tasks")
@@ -599,6 +606,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self._finished_task_queue.close()
         self._finished_task_queue.join_thread()
 
+        super().shutdown()
+
         logger.debug("TaskVine shutdown completed")
 
     @wrap_with_logs
@@ -621,8 +630,8 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 with self._tasks_lock:
                     future = self.tasks.pop(task_report.executor_id)
 
-                logger.debug(f'Updating Future for Parsl Task: {task_report.executor_id}. \
-                               Task {task_report.executor_id} has result_received set to {task_report.result_received}')
+                logger.debug(f'Updating Future for Parsl Task: {task_report.executor_id}. '
+                             f'Task {task_report.executor_id} has result_received set to {task_report.result_received}')
                 if task_report.result_received:
                     try:
                         with open(task_report.result_file, 'rb') as f_in:
@@ -649,7 +658,7 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                 with self._outstanding_tasks_lock:
                     self._outstanding_tasks -= 1
         finally:
-            logger.debug(f"Marking all {self.outstanding} outstanding tasks as failed")
+            logger.debug(f"Marking all {self.outstanding()} outstanding tasks as failed")
             logger.debug("Acquiring tasks_lock")
             with self._tasks_lock:
                 logger.debug("Acquired tasks_lock")

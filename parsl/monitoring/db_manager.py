@@ -1,6 +1,7 @@
 import datetime
 import logging
 import multiprocessing.queues as mpq
+import multiprocessing.synchronize as mpe
 import os
 import queue
 import threading
@@ -17,7 +18,7 @@ from parsl.monitoring.types import MonitoringMessage, TaggedMonitoringMessage
 from parsl.process_loggers import wrap_with_logs
 from parsl.utils import setproctitle
 
-logger = logging.getLogger("database_manager")
+logger = logging.getLogger(__name__)
 
 X = TypeVar('X')
 
@@ -278,11 +279,13 @@ class Database:
 
 class DatabaseManager:
     def __init__(self,
+                 *,
                  db_url: str = 'sqlite:///runinfo/monitoring.db',
                  run_dir: str = '.',
                  logging_level: int = logging.INFO,
                  batching_interval: float = 1,
                  batching_threshold: float = 99999,
+                 exit_event: mpe.Event
                  ):
 
         self.workflow_end = False
@@ -290,13 +293,10 @@ class DatabaseManager:
         self.run_dir = run_dir
         os.makedirs(self.run_dir, exist_ok=True)
 
-        logger.propagate = False
-
         set_file_logger(f"{self.run_dir}/database_manager.log", level=logging_level,
-                        format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s",
-                        name="database_manager")
+                        format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s")
 
-        logger.debug("Initializing Database Manager process")
+        logger.info("Initializing Database Manager process")
 
         self.db = Database(db_url)
         self.batching_interval = batching_interval
@@ -306,6 +306,8 @@ class DatabaseManager:
         self.pending_node_queue: queue.Queue[MonitoringMessage] = queue.Queue()
         self.pending_block_queue: queue.Queue[MonitoringMessage] = queue.Queue()
         self.pending_resource_queue: queue.Queue[MonitoringMessage] = queue.Queue()
+
+        self.external_exit_event = exit_event
 
     def start(self,
               resource_queue: mpq.Queue) -> None:
@@ -507,7 +509,7 @@ class DatabaseManager:
                             msg['task_status_name'] = States.running.name
                             msg['task_try_time_running'] = msg['timestamp']
 
-                            if task_try_id in inserted_tries:  # TODO: needs to become task_id and try_id, and check against inserted_tries
+                            if task_try_id in inserted_tries:
                                 reprocessable_first_resource_messages.append(msg)
                             else:
                                 if task_try_id in deferred_resource_messages:
@@ -545,25 +547,27 @@ class DatabaseManager:
                     "or some other error. monitoring data may have been lost"
                 )
                 exception_happened = True
+
+            if self.external_exit_event.is_set():
+                self.close()
+
         if exception_happened:
             raise RuntimeError("An exception happened sometime during database processing and should have been logged in database_manager.log")
 
-    @wrap_with_logs(target="database_manager")
-    def _migrate_logs_to_internal(self, logs_queue: queue.Queue, kill_event: threading.Event) -> None:
+    @wrap_with_logs
+    def _migrate_logs_to_internal(self, logs_queue: mpq.Queue, kill_event: threading.Event) -> None:
         logger.info("Starting _migrate_logs_to_internal")
 
         while not kill_event.is_set() or logs_queue.qsize() != 0:
             logger.debug("Checking STOP conditions: kill event: %s, queue has entries: %s",
                          kill_event.is_set(), logs_queue.qsize() != 0)
+
             try:
                 x = logs_queue.get(timeout=0.1)
             except queue.Empty:
                 continue
             else:
-                if x == 'STOP':
-                    self.close()
-                else:
-                    self._dispatch_to_internal(x)
+                self._dispatch_to_internal(x)
 
     def _dispatch_to_internal(self, x: Tuple) -> None:
         assert isinstance(x, tuple)
@@ -577,10 +581,10 @@ class DatabaseManager:
         elif x[0] == MessageType.NODE_INFO:
             assert len(x) == 2, "expected NODE_INFO tuple to have exactly two elements"
 
-            logger.info("Will put {} to pending node queue".format(x[1]))
+            logger.debug("Will put {} to pending node queue".format(x[1]))
             self.pending_node_queue.put(x[1])
         elif x[0] == MessageType.BLOCK_INFO:
-            logger.info("Will put {} to pending block queue".format(x[1]))
+            logger.debug("Will put {} to pending block queue".format(x[1]))
             self.pending_block_queue.put(x[-1])
         else:
             logger.error("Discarding message of unknown type {}".format(x[0]))
@@ -676,13 +680,13 @@ class DatabaseManager:
         self._kill_event.set()
 
 
-@wrap_with_logs(target="database_manager")
+@wrap_with_logs
 @typeguard.typechecked
-def dbm_starter(exception_q: mpq.Queue,
-                resource_msgs: mpq.Queue,
+def dbm_starter(resource_msgs: mpq.Queue,
                 db_url: str,
                 run_dir: str,
-                logging_level: int) -> None:
+                logging_level: int,
+                exit_event: mpe.Event) -> None:
     """Start the database manager process
 
     The DFK should start this function. The args, kwargs match that of the monitoring config
@@ -693,16 +697,16 @@ def dbm_starter(exception_q: mpq.Queue,
     try:
         dbm = DatabaseManager(db_url=db_url,
                               run_dir=run_dir,
-                              logging_level=logging_level)
+                              logging_level=logging_level,
+                              exit_event=exit_event)
         logger.info("Starting dbm in dbm starter")
         dbm.start(resource_msgs)
     except KeyboardInterrupt:
         logger.exception("KeyboardInterrupt signal caught")
         dbm.close()
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("dbm.start exception")
-        exception_q.put(("DBM", str(e)))
         dbm.close()
 
     logger.info("End of dbm_starter")

@@ -44,7 +44,9 @@ from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.threads import ThreadPoolExecutor
 from parsl.jobs.job_status_poller import JobStatusPoller
 from parsl.monitoring import MonitoringHub
+from parsl.monitoring.errors import RadioRequiredError
 from parsl.monitoring.message_type import MessageType
+from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.monitoring.remote import monitor_wrapper
 from parsl.process_loggers import wrap_with_logs
 from parsl.usage_tracking.usage import UsageTracker
@@ -89,8 +91,11 @@ class DataFlowKernel:
         self._config = config
         self.run_dir = make_rundir(config.run_dir)
 
+        self._logging_unregister_callback: Optional[Callable[[], None]]
         if config.initialize_logging:
-            parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
+            self._logging_unregister_callback = parsl.set_file_logger("{}/parsl.log".format(self.run_dir), level=logging.DEBUG)
+        else:
+            self._logging_unregister_callback = None
 
         logger.info("Starting DataFlowKernel with config\n{}".format(config))
 
@@ -110,8 +115,11 @@ class DataFlowKernel:
         self.monitoring: Optional[MonitoringHub]
         self.monitoring = config.monitoring
 
+        self.monitoring_radio = None
+
         if self.monitoring:
             self.monitoring.start(self.run_dir, self.config.run_dir)
+            self.monitoring_radio = MultiprocessingQueueRadioSender(self.monitoring.resource_msgs)
 
         self.time_began = datetime.datetime.now()
         self.time_completed: Optional[datetime.datetime] = None
@@ -156,9 +164,9 @@ class DataFlowKernel:
                 'host': gethostname(),
         }
 
-        if self.monitoring:
-            self.monitoring.send((MessageType.WORKFLOW_INFO,
-                                 workflow_info))
+        if self.monitoring_radio:
+            self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
+                                       workflow_info))
 
         if config.checkpoint_files is not None:
             checkpoint_files = config.checkpoint_files
@@ -182,7 +190,8 @@ class DataFlowKernel:
         self.executors: Dict[str, ParslExecutor] = {}
 
         self.data_manager = DataManager(self)
-        parsl_internal_executor = ThreadPoolExecutor(max_threads=config.internal_tasks_max_threads, label='_parsl_internal')
+        parsl_internal_executor = ThreadPoolExecutor(max_threads=config.internal_tasks_max_threads,
+                                                     label='_parsl_internal')
         self.add_executors(config.executors)
         self.add_executors([parsl_internal_executor])
 
@@ -231,9 +240,9 @@ class DataFlowKernel:
             raise InternalConsistencyError(f"Exit case for {mode} should be unreachable, validated by typeguard on Config()")
 
     def _send_task_log_info(self, task_record: TaskRecord) -> None:
-        if self.monitoring:
+        if self.monitoring_radio:
             task_log_info = self._create_task_log_info(task_record)
-            self.monitoring.send((MessageType.TASK_INFO, task_log_info))
+            self.monitoring_radio.send((MessageType.TASK_INFO, task_log_info))
 
     def _create_task_log_info(self, task_record: TaskRecord) -> Dict[str, Any]:
         """
@@ -732,17 +741,19 @@ class DataFlowKernel:
         try_id = task_record['fail_count']
 
         if self.monitoring is not None and self.monitoring.resource_monitoring_enabled:
+            if executor.remote_monitoring_radio is None:
+                raise RadioRequiredError()
+
             wrapper_logging_level = logging.DEBUG if self.monitoring.monitoring_debug else logging.INFO
             (function, args, kwargs) = monitor_wrapper(f=function,
                                                        args=args,
                                                        kwargs=kwargs,
                                                        x_try_id=try_id,
                                                        x_task_id=task_id,
-                                                       monitoring_hub_url=self.monitoring.monitoring_hub_url,
+                                                       radio_config=executor.remote_monitoring_radio,
                                                        run_id=self.run_id,
                                                        logging_level=wrapper_logging_level,
                                                        sleep_dur=self.monitoring.resource_monitoring_interval,
-                                                       radio_mode=executor.radio_mode,
                                                        monitor_resources=executor.monitor_resources(),
                                                        run_dir=self.run_dir)
 
@@ -1127,10 +1138,14 @@ class DataFlowKernel:
         for executor in executors:
             executor.run_id = self.run_id
             executor.run_dir = self.run_dir
-            if self.monitoring:
-                executor.hub_address = self.monitoring.hub_address
-                executor.hub_zmq_port = self.monitoring.hub_zmq_port
-                executor.submit_monitoring_radio = self.monitoring.radio
+            if self.monitoring and executor.remote_monitoring_radio is not None:
+                executor.monitoring_messages = self.monitoring.resource_msgs
+                logger.debug("Starting monitoring receiver for executor %s "
+                             "with remote monitoring radio config %s",
+                             executor.label, executor.remote_monitoring_radio)
+
+                executor.monitoring_receiver = executor.remote_monitoring_radio.create_receiver(resource_msgs=executor.monitoring_messages,
+                                                                                                run_dir=executor.run_dir)
             if hasattr(executor, 'provider'):
                 if hasattr(executor.provider, 'script_dir'):
                     executor.provider.script_dir = os.path.join(self.run_dir, 'submit_scripts')
@@ -1173,12 +1188,9 @@ class DataFlowKernel:
 
     @wrap_with_logs
     def cleanup(self) -> None:
-        """DataFlowKernel cleanup.
-
-        This involves releasing all resources explicitly.
-
-        We call scale_in on each of the executors and call executor.shutdown.
+        """Clean-up by closing all of the components used by the DFK
         """
+
         logger.info("DFK cleanup initiated")
 
         # this check won't detect two DFK cleanups happening from
@@ -1217,15 +1229,16 @@ class DataFlowKernel:
         logger.info("Terminated executors")
         self.time_completed = datetime.datetime.now()
 
-        if self.monitoring:
+        if self.monitoring_radio:
             logger.info("Sending final monitoring message")
-            self.monitoring.send((MessageType.WORKFLOW_INFO,
-                                 {'tasks_failed_count': self.task_state_counts[States.failed],
-                                  'tasks_completed_count': self.task_state_counts[States.exec_done],
-                                  "time_began": self.time_began,
-                                  'time_completed': self.time_completed,
-                                  'run_id': self.run_id, 'rundir': self.run_dir}))
+            self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
+                                       {'tasks_failed_count': self.task_state_counts[States.failed],
+                                        'tasks_completed_count': self.task_state_counts[States.exec_done],
+                                        "time_began": self.time_began,
+                                        'time_completed': self.time_completed,
+                                        'run_id': self.run_id, 'rundir': self.run_dir}))
 
+        if self.monitoring:
             logger.info("Terminating monitoring")
             self.monitoring.close()
             logger.info("Terminated monitoring")
@@ -1245,6 +1258,13 @@ class DataFlowKernel:
         else:
             logger.debug("Cleaning up non-default DFK - not unregistering")
 
+        if self._logging_unregister_callback:
+            logger.info("Unregistering log handler")
+            self._logging_unregister_callback()
+            logger.info("Unregistered log handler")
+
+        # This message won't go to the default parsl.log, but other handlers
+        # should still see it.
         logger.info("DFK cleanup complete")
 
     def checkpoint(self, tasks: Optional[Sequence[TaskRecord]] = None) -> str:

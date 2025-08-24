@@ -40,7 +40,7 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
                                            incoming_q.port,
                                            command_client.port),
                           "interchange_address": "127.0.0.1",
-                          "worker_ports": None,
+                          "worker_port": None,
                           "worker_port_range": (50000, 60000),
                           "hub_address": None,
                           "hub_zmq_port": None,
@@ -67,7 +67,7 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
     # responsive. if the interchange process didn't start enough to get the command
     # thread running, this will time out.
 
-    (task_port, result_port) = command_client.run("WORKER_PORTS", timeout_s=120)
+    worker_port = command_client.run("WORKER_BINDS", timeout_s=120)
 
     # now we'll assume that if the interchange command thread is responding,
     # then the worker polling code is also running and that the interchange has
@@ -80,7 +80,7 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
 
     msg = {'type': 'registration',
            'parsl_v': PARSL_VERSION,
-           'python_v': "{}.{}.{}".format(1, 1, 1),  # this is the bad bit
+           'python_v': "1.1.1",  # this is the bad bit
            'worker_count': 1,
            'uid': 'testuid',
            'block_id': 0,
@@ -104,11 +104,9 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
 
     task_channel.set_hwm(0)
     task_channel.setsockopt(zmq.SNDTIMEO, channel_timeout)
-    task_channel.connect(f"tcp://127.0.0.1:{task_port}")
+    task_channel.connect(f"tcp://127.0.0.1:{worker_port}")
 
-    b_msg = json.dumps(msg).encode('utf-8')
-
-    task_channel.send(b_msg)
+    task_channel.send(pickle.dumps(msg))
 
     # check that the interchange exits within some reasonable time
     try_assert(lambda: interchange_proc.poll() is not None, "Interchange did not exit after killing watched client process", timeout_ms=5000)

@@ -193,7 +193,7 @@ class Strategy:
                 self.executors[label]['first'] = False
 
             # Tasks that are either pending completion
-            active_tasks = executor.outstanding
+            active_tasks = executor.outstanding()
 
             status = executor.status_facade
 
@@ -215,7 +215,7 @@ class Strategy:
 
             if hasattr(executor, 'connected_workers'):
                 logger.debug('Executor {} has {} active tasks, {}/{} running/pending blocks, and {} connected workers'.format(
-                    label, active_tasks, running, pending, executor.connected_workers))
+                    label, active_tasks, running, pending, executor.connected_workers()))
             else:
                 logger.debug('Executor {} has {} active tasks and {}/{} running/pending blocks'.format(
                     label, active_tasks, running, pending))

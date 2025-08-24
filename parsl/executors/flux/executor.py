@@ -231,6 +231,7 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
 
     def start(self):
         """Called when DFK starts the executor when the config is loaded."""
+        super().start()
         os.makedirs(self.working_dir, exist_ok=True)
         self._submission_thread.start()
 
@@ -246,6 +247,8 @@ class FluxExecutor(ParslExecutor, RepresentationMixin):
             self._stop_event.set()
         if wait:
             self._submission_thread.join()
+
+        super().shutdown()
 
     def submit(
         self,

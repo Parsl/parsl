@@ -215,6 +215,7 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
         """Create the Pilot component and pass it.
         """
         logger.info("starting RadicalPilotExecutor")
+        super().start()
         logger.info('Parsl: {0}'.format(parsl.__version__))
         logger.info('RADICAL pilot: {0}'.format(rp.version))
         self.session = rp.Session(cfg={'base': self.run_dir},
@@ -600,6 +601,9 @@ class RadicalPilotExecutor(ParslExecutor, RepresentationMixin):
             self._bulk_thread.join()
 
         self.session.close(download=True)
+
+        super().shutdown()
+
         logger.info("RadicalPilotExecutor is terminated.")
 
         return True

@@ -35,9 +35,7 @@ def fresh_config(run_dir):
         ],
         strategy='simple',
         strategy_period=0.1,
-        monitoring=MonitoringHub(
-                        hub_address="localhost",
-        )
+        monitoring=MonitoringHub(),
     )
 
 
@@ -101,6 +99,9 @@ def test_stdstream_to_monitoring(stdx, expected_stdx, stream, tmpd_cwd, caplog):
     with parsl.load(c):
         kwargs = {stream: stdx}
         stdapp(**kwargs).result()
+
+    for record in caplog.records:
+        assert record.levelno < logging.ERROR
 
     engine = sqlalchemy.create_engine(c.monitoring.logging_endpoint)
     with engine.begin() as connection:

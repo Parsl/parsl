@@ -10,8 +10,25 @@ env:
   PYTHON_VERSION: 3.11
 
 jobs:
+  check-secret:
+    runs-on: ubuntu-latest
+    outputs:
+      has_secret: ${{ steps.check-secret.outputs.has_secret }}
+    steps:
+      - name: Collect secret
+        id: check-secret
+        run: |
+          if [ -n "${{ secrets.GLOBUS_COMPUTE_SECRET_KEY }}" ]; then
+            echo "has_secret=1" >> $GITHUB_OUTPUT
+          else
+            echo "has_secret=0" >> $GITHUB_OUTPUT
+          fi
+
   main-test-suite:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
+    needs: check-secret
+    if: needs.check-secret.outputs.has_secret == '1'
+
     timeout-minutes: 60
 
     steps:

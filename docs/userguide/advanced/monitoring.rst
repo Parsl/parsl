@@ -15,8 +15,6 @@ SQLite tools.
 Monitoring configuration
 ------------------------
 
-Parsl monitoring is only supported with the `parsl.executors.HighThroughputExecutor`. 
-
 The following example shows how to enable monitoring in the Parsl
 configuration. Here the `parsl.monitoring.MonitoringHub` is specified to use port
 55055 to receive monitoring messages from workers every 10 seconds.

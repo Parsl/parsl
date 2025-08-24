@@ -130,6 +130,15 @@ re-used in subsequent executions. The configuration uses the `parsl.providers.AW
 
 .. literalinclude:: ../../../parsl/configs/ec2.py
 
+Anvil (Purdue)
+--------------
+
+.. image:: https://www.rcac.purdue.edu/storage/resources/anvil/resource.jpg
+
+Anvil is hosted at Purdue University, and is a powerful new supercomputer that provides advanced computing capabilities to support a wide range of computational and data-intensive research spanning from traditional high-performance computing to modern artificial intelligence applications. 
+The configuration below provides access to a single GPU on a single node, and assumes that the user is running on a login node and uses the `parsl.providers.SlurmProvider` to interface with the scheduler, and uses the `parsl.launchers.SrunLauncher` to launch workers.
+
+.. literalinclude::  ../../../parsl/configs/anvil.py
 
 ASPIRE 1 (NSCC)
 ---------------
@@ -204,6 +213,16 @@ For more information on using TaskVine, including configurations for remote exec
 
 TaskVine's predecessor, WorkQueue, may continue to be used with Parsl.
 For more information on using WorkQueue visit the `CCTools documentation online <https://cctools.readthedocs.io/en/latest/help/>`_.
+
+Delta (NCSA)
+--------------
+
+.. image:: https://docs.ncsa.illinois.edu/systems/delta/en/latest/_images/delta_front_1.png
+
+Delta is a dedicated, ACCESS-allocated resource designed by HPE and NCSA, delivering a highly capable GPU-focused compute environment for GPU and CPU workloads.
+The configuration below provides access to a single GPU on a single node, and assumes that the user is running on a login node and uses the `parsl.providers.SlurmProvider` to interface with the scheduler, and uses the `parsl.launchers.SrunLauncher` to launch workers.
+
+.. literalinclude::  ../../../parsl/configs/delta.py
 
 Expanse (SDSC)
 --------------

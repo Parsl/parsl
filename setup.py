@@ -35,7 +35,7 @@ extras_require = {
     'docs' : [
         'ipython<=8.6.0',
         'nbsphinx',
-        'sphinx>=7.1,<7.2',  # 7.2 requires python 3.9+
+        'sphinx>=7.4,<8',
         'sphinx_rtd_theme'
     ],
     'google_cloud' : ['google-auth', 'google-api-python-client'],
