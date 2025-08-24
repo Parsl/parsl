@@ -9,5 +9,6 @@ More to learn about Parsl after starting a project.
    modularizing
    usage_tracking
    monitoring
+   data
    parsl_perf
    plugins
