@@ -27,7 +27,7 @@ def app(extra_payload, parsl_resource_specification={}):
     return 7
 
 
-def performance(*, resources: dict, target_t: float, args_extra_size: int):
+def performance(*, resources: dict, target_t: float, args_extra_size: int, count: Optional[int]):
     n = 10
 
     delta_t: float
@@ -39,10 +39,15 @@ def performance(*, resources: dict, target_t: float, args_extra_size: int):
 
     args_extra_payload = "x" * args_extra_size
 
-    while delta_t < threshold_t or iteration <= min_iterations:
+    while (delta_t < threshold_t and count is None) or iteration <= min_iterations:
         print(f"==== Iteration {iteration} ====")
         print(f"Will run {n} tasks to target {target_t} seconds runtime")
         start_t = time.time()
+
+        # skip forcing count on first iteration
+        if count is not None and iteration != 1:
+            assert isinstance(count, int)
+            n = count
 
         fs = []
         print("Submitting tasks / invoking apps")
@@ -94,6 +99,7 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
     parser.add_argument("--config", required=True, help="path to Python file that defines a configuration")
     parser.add_argument("--resources", metavar="EXPR", help="parsl_resource_specification dictionary")
     parser.add_argument("--time", metavar="SECONDS", help="target number of seconds for an iteration", default=120, type=float)
+    parser.add_argument("--count", metavar="TASKS", help="target number of tasks for an iteration (beyond warmups)", default=None, type=int)  # TODO: should be mutually exclusive with --time
     parser.add_argument("--argsize", metavar="BYTES", help="extra bytes to add into app invocation arguments", default=0, type=int)
 
     args = parser.parse_args()
@@ -104,7 +110,7 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
         resources = {}
 
     load_dfk_from_config(args.config)
-    performance(resources=resources, target_t=args.time, args_extra_size=args.argsize)
+    performance(resources=resources, target_t=args.time, args_extra_size=args.argsize, count=args.count)
     print("Cleaning up DFK")
     parsl.dfk().cleanup()
     print("The end")
