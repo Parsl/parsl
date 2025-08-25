@@ -692,7 +692,7 @@ class DatabaseManager:
                             msg['task_status_name'] = States.running.name
                             msg['task_try_time_running'] = msg['timestamp']
 
-                            if task_try_id in inserted_tries:  # TODO: needs to become task_id and try_id, and check against inserted_tries
+                            if task_try_id in inserted_tries:
                                 reprocessable_first_resource_messages.append(msg)
                             else:
                                 if task_try_id in deferred_resource_messages:
