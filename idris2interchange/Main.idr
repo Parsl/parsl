@@ -201,7 +201,6 @@ matchmake sockets = do
 
   case tasks of
     [] => log "No match possible: No tasks in matchmaker"
-    -- TODO: rest_tasks is discarded rather than being processed
     task :: rest_tasks => do
       logv "This task is available for matchmaking" task
       -- manager selection more complicated, especially with replacement/removal
@@ -261,8 +260,6 @@ matchmake sockets = do
                     -- mutable borrow)
                     free1 resp_bytes
 
-                  -- TODO: update MatchState to remove one task and keep rest_tasks, as well as updating
-                  -- manager capacity. Iterate until no more matches are possible.
                   put MatchState (MkMatchState managers rest_tasks)
                   matchmake sockets  -- this must be a tail call (can I assert that? I think not... but it would be nice)
                 else ?notimpl_manager_oversubscribed
