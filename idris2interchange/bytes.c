@@ -16,9 +16,18 @@ char *str_from_bytes(int n, char *p) {
   memcpy(b, p, n);
   b[n] = '\0';
   return b;
-  // idris2 runtime will de-alloc this malloc as part
-  // of the FFI definition.  (maybe?)
+  // idris2 runtime will allegedly de-alloc this malloc as part
+  // of the FFI definition. but see notes elsewhere and valgrind,
+  // it looks like it doesn't.
 }
+
+char *str_str_id(char *s) {
+  // this is a helper used as part of casting a Ptr String to a
+  // plain String in the FFI interface. To do with releasing the
+  // memory allocated in str_from_bytes above.
+  return s;
+}
+
 
 // copy_and_append: AnyPtr -> Int -> Bits8 -> PrimIO AnyPtr
 

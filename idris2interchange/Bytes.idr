@@ -88,6 +88,18 @@ length1 (MkByteBlock p l) = l # (MkByteBlock p l)
 %foreign "C:free,libc"
 prim__free : (1 _ : AnyPtr) -> ()
 
+-- %foreign "C:free,libc"
+-- prim__free_typed : (1 _ : Ptr x) -> ()
+-- errors with: Error: Can't pass argument of type Type  to foreign function
+-- which presumably is the implicit {x : Type} parameter.
+-- So... how can arbitrary Ptr x be passed in?
+-- For now, I only need it for one specific type, String,
+-- so I can specialise it:
+
+%foreign "C:free,libc"
+prim__free_str : (1 _ : Ptr String) -> ()
+
+
 public export
 free : (1 _ : ByteBlock) -> App {l = NoThrow} es ()
 free (MkByteBlock p n) = pure $ prim__free p
@@ -168,16 +180,26 @@ copy_into_bb p l = do
   p' <- app $ primIO $ primIO $ prim__duplicate_block p (cast l)
   pure1 $ MkByteBlock p' (cast l)
 
+%foreign "C:str_str_id,bytes"
+prim__str_str_id : Ptr String -> PrimIO String
+-- This roundtrips the pointer through the FFI, so it passes through the
+-- marshalling rules -- which are diferent for Ptr String and String.
 
 %foreign "C:str_from_bytes,bytes"
-prim__str_from_bytes : Int -> AnyPtr -> PrimIO String
+prim__str_from_bytes : Int -> AnyPtr -> PrimIO (Ptr String)
 
 export
 str_from_bytes : HasErr AppHasIO es => Nat -> (1 _ : ByteBlock) -> App1 es (Res String (const ByteBlock))
 str_from_bytes l (MkByteBlock p l') = do
-  s <- app $ primIO $ primIO $ prim__str_from_bytes (cast l) p
+  sp <- app $ primIO $ primIO $ prim__str_from_bytes (cast l) p
+  s <- app $ primIO $ primIO $ prim__str_str_id sp
   rest <- copy_into_bb (incPtrBy (cast l) p) ((cast l') - (cast l))
-  pure $ prim__free p
+  pure $ prim__free p  -- the input block because it's now discarded
+  pure $ prim__free_str sp  -- the temporary storage
+
+  -- maybe can tidy up the use of sp making use of the fact that p is held
+  -- linearly and so maybe we can mutate it?
+
   pure1 $ s # rest
   -- TODO: who unallocates the malloc in prim__str_from_bytes? is it idris FFI?
   -- The manual says: A char* returned by a C function will be copied to the Idris heap, and the Idris run time immediately calls free with the returned char*.
