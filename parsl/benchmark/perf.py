@@ -41,13 +41,14 @@ def performance(*, resources: dict, target_t: float, args_extra_size: int, count
 
     while (delta_t < threshold_t and count is None) or iteration <= min_iterations:
         print(f"==== Iteration {iteration} ====")
-        print(f"Will run {n} tasks to target {target_t} seconds runtime")
-        start_t = time.time()
 
         # skip forcing count on first iteration
         if count is not None and iteration != 1:
             assert isinstance(count, int)
             n = count
+
+        print(f"Will run {n} tasks to target {target_t} seconds runtime")
+        start_t = time.time()
 
         fs = []
         print("Submitting tasks / invoking apps")
