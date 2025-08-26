@@ -157,6 +157,11 @@ bytes_from_str s = do
   strbytes <- app $ primIO $ primIO $ prim__unicode_bytes s
   pure1 $ MkByteBlock strbytes (cast len)
 
+-- TODO: as of right now, the C-side duplicate_block code is leaking
+-- (around 14 blocks) according to valgrind. The linear typing looks
+-- ok in the two creation functions here so maybe the consumers are
+-- wrong?
+
 %foreign "C:duplicate_block,bytes"
 prim__duplicate_block : AnyPtr -> Int -> PrimIO AnyPtr
 
