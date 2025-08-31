@@ -616,6 +616,8 @@ main_with_zmq cfg zmq_ctx = do
   log "Creating interchange command channel socket"
   command_socket <- new_zmq_socket zmq_ctx ZMQSocketREP
   -- TODO: represent unconnected state here?
+  -- TODO: these URLs should be typed, not strings, and should be
+  --       configured from the supplied stdin config
   zmq_connect command_socket "tcp://127.0.0.1:9002"
   log "Connected interchange command channel"
 
