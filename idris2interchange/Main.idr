@@ -378,8 +378,10 @@ zmq_poll_tasks_submit_to_interchange_loop sockets = do
 
 covering process_result_part : (State LogConfig LogConfig es, HasErr AppHasIO es) => SocketState -> () -> ZMQMsg -> App es ()
 process_result_part sockets () msg_part = do
-  -- TODO: only forward on this result if it is a result-tag
+  -- Only forward on this result if it is a result-tag
   -- (rather than eg. monitoring or heartbeat)
+  -- TODO: do monitoring forwarding. test monitoring forwarding.
+  -- TODO: do heartbeat processing. test heartbeat processing.
  app1 $ do
   bytes <- zmq_msg_as_bytes msg_part
   (bytes # bytes') <- bb_duplicate bytes
