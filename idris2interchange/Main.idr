@@ -212,6 +212,8 @@ matchmake sockets = do
       -- task results come in.
       -- In the rust impl, I represented managers using multiple slot objects,
       -- as many as listed in the original count.
+      -- TODO: there is no testing that the correct number of tasks are
+      -- dispatched to each manager, in Parsl test suite.
       case managers of
         [] => log "No match possible: no managers registered"
         mr :: rest_managers => do
