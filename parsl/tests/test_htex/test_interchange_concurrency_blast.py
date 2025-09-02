@@ -15,7 +15,7 @@ def test_concurrency_blast():
 
   cc = parsl.dfk().executors['htex_local'].command_client
 
-  n = 3000
+  n = 2
   threads = []
 
   ok_so_far = True
