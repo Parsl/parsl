@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import contextlib
 import logging
 import threading
 import time
@@ -73,7 +74,8 @@ class CommandClient:
         start_time_s = time.monotonic()
 
         reply = '__PARSL_ZMQ_PIPES_MAGIC__'
-        with self._lock:
+        # with self._lock:
+        with contextlib.nullcontext():
             for _ in range(max_retries):
                 try:
                     logger.debug("Sending command client command")
