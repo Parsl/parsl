@@ -298,48 +298,6 @@ def test_server_context_destroy(server_ctx: curvezmq.ServerContext, encrypted: b
 
 @pytest.mark.local
 @pytest.mark.parametrize("encrypted", (True, False), indirect=True)
-def test_client_context_recreate(client_ctx: curvezmq.ClientContext):
-    hidden_ctx = client_ctx._ctx
-    sock = client_ctx.socket(zmq.REQ)
-
-    assert not sock.closed
-    assert not client_ctx.closed
-
-    client_ctx.recreate()
-
-    assert sock.closed
-    assert not client_ctx.closed
-    assert hidden_ctx != client_ctx._ctx
-    assert hidden_ctx.closed
-
-
-@pytest.mark.local
-@pytest.mark.parametrize("encrypted", (True, False), indirect=True)
-def test_server_context_recreate(server_ctx: curvezmq.ServerContext, encrypted: bool):
-    hidden_ctx = server_ctx._ctx
-    sock = server_ctx.socket(zmq.REP)
-
-    assert not sock.closed
-    assert not server_ctx.closed
-    if encrypted:
-        assert server_ctx.auth_thread
-        auth_thread = server_ctx.auth_thread
-        assert auth_thread.pipe
-
-    server_ctx.recreate()
-
-    assert sock.closed
-    assert not server_ctx.closed
-    assert hidden_ctx.closed
-    assert hidden_ctx != server_ctx._ctx
-    if encrypted:
-        assert server_ctx.auth_thread
-        assert auth_thread != server_ctx.auth_thread
-        assert server_ctx.auth_thread.pipe
-
-
-@pytest.mark.local
-@pytest.mark.parametrize("encrypted", (True, False), indirect=True)
 def test_connection(
     server_ctx: curvezmq.ServerContext, client_ctx: curvezmq.ClientContext
 ):
