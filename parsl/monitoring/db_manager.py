@@ -346,9 +346,9 @@ class DatabaseManager:
         exception_happened = False
 
         while (not self._kill_event.is_set() or
-               self.pending_priority_queue.qsize() != 0 or self.pending_resource_queue.qsize() != 0 or
-               self.pending_node_queue.qsize() != 0 or self.pending_block_queue.qsize() != 0 or
-               resource_queue.qsize() != 0):
+               not self.pending_priority_queue.empty() or not self.pending_resource_queue.empty() or
+               not self.pending_node_queue.empty() or not self.pending_block_queue.empty() or
+               not resource_queue.empty()):
 
             """
             WORKFLOW_INFO and TASK_INFO messages (i.e. priority messages)
@@ -357,9 +357,9 @@ class DatabaseManager:
             try:
                 logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}, {}""".format(
                                   self._kill_event.is_set(),
-                                  self.pending_priority_queue.qsize() != 0, self.pending_resource_queue.qsize() != 0,
-                                  self.pending_node_queue.qsize() != 0, self.pending_block_queue.qsize() != 0,
-                                  resource_queue.qsize() != 0))
+                                  not self.pending_priority_queue.empty(), not self.pending_resource_queue.empty(),
+                                  not self.pending_node_queue.empty(), not self.pending_block_queue.empty(),
+                                  not resource_queue.empty()))
 
                 # This is the list of resource messages which can be reprocessed as if they
                 # had just arrived because the corresponding first task message has been
@@ -558,9 +558,9 @@ class DatabaseManager:
     def _migrate_logs_to_internal(self, logs_queue: mpq.Queue, kill_event: threading.Event) -> None:
         logger.info("Starting _migrate_logs_to_internal")
 
-        while not kill_event.is_set() or logs_queue.qsize() != 0:
+        while not kill_event.is_set() or not logs_queue.empty():
             logger.debug("Checking STOP conditions: kill event: %s, queue has entries: %s",
-                         kill_event.is_set(), logs_queue.qsize() != 0)
+                         kill_event.is_set(), not logs_queue.empty())
 
             try:
                 x = logs_queue.get(timeout=0.1)

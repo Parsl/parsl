@@ -11,9 +11,9 @@ import typeguard
 
 from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import (
-    SizedQueue,
     SpawnEvent,
     SpawnProcess,
+    SpawnQueue,
     join_terminate_close_proc,
 )
 from parsl.utils import RepresentationMixin
@@ -126,7 +126,7 @@ class MonitoringHub(RepresentationMixin):
         self.monitoring_hub_active = True
 
         self.resource_msgs: Queue[TaggedMonitoringMessage]
-        self.resource_msgs = SizedQueue()
+        self.resource_msgs = SpawnQueue()
 
         self.dbm_exit_event: ms.Event
         self.dbm_exit_event = SpawnEvent()
