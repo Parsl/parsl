@@ -5,6 +5,7 @@ import typeguard
 from typing_extensions import Literal
 
 from parsl.dataflow.dependency_resolvers import DependencyResolver
+from parsl.dataflow.memoization import Memoizer
 from parsl.dataflow.taskrecord import TaskRecord
 from parsl.errors import ConfigurationError
 from parsl.executors.base import ParslExecutor
@@ -101,6 +102,7 @@ class Config(RepresentationMixin, UsageInformation):
     def __init__(self,
                  executors: Optional[Iterable[ParslExecutor]] = None,
                  app_cache: bool = True,
+                 memoizer: Optional[Memoizer] = None,
                  checkpoint_files: Optional[Sequence[str]] = None,
                  checkpoint_mode: Union[None,
                                         Literal['task_exit'],
@@ -131,6 +133,7 @@ class Config(RepresentationMixin, UsageInformation):
         self._executors: Sequence[ParslExecutor] = executors
         self._validate_executors()
 
+        self.memoizer = memoizer
         self.app_cache = app_cache
         self.checkpoint_files = checkpoint_files
         self.checkpoint_mode = checkpoint_mode

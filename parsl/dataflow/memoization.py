@@ -4,12 +4,14 @@ import hashlib
 import logging
 import os
 import pickle
+import threading
 from functools import lru_cache, singledispatch
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence
 
 import typeguard
 
 from parsl.dataflow.errors import BadCheckpoint
+from parsl.dataflow.futures import AppFuture
 from parsl.dataflow.taskrecord import TaskRecord
 
 if TYPE_CHECKING:
@@ -119,7 +121,60 @@ def id_for_memo_function(f: types.FunctionType, output_ref: bool = False) -> byt
     return pickle.dumps(["types.FunctionType", f.__name__, f.__module__])
 
 
+def make_hash(task: TaskRecord) -> str:
+    """Create a hash of the task inputs.
+
+    Args:
+        - task (dict) : Task dictionary from dfk.tasks
+
+    Returns:
+        - hash (str) : A unique hash string
+    """
+
+    t: List[bytes] = []
+
+    # if kwargs contains an outputs parameter, that parameter is removed
+    # and normalised differently - with output_ref set to True.
+    # kwargs listed in ignore_for_cache will also be removed
+
+    filtered_kw = task['kwargs'].copy()
+
+    ignore_list = task['ignore_for_cache']
+
+    logger.debug("Ignoring these kwargs for checkpointing: %s", ignore_list)
+    for k in ignore_list:
+        logger.debug("Ignoring kwarg %s", k)
+        del filtered_kw[k]
+
+    if 'outputs' in task['kwargs']:
+        outputs = task['kwargs']['outputs']
+        del filtered_kw['outputs']
+        t.append(id_for_memo(outputs, output_ref=True))
+
+    t.extend(map(id_for_memo, (filtered_kw, task['func'], task['args'])))
+
+    x = b''.join(t)
+    return hashlib.md5(x).hexdigest()
+
+
 class Memoizer:
+    def start(self, *, dfk: DataFlowKernel, memoize: bool = True, checkpoint_files: Sequence[str], run_dir: str) -> None:
+        raise NotImplementedError
+
+    def update_memo(self, task: TaskRecord, r: Future) -> None:
+        raise NotImplementedError
+
+    def checkpoint(self, tasks: Sequence[TaskRecord]) -> None:
+        raise NotImplementedError
+
+    def check_memo(self, task: TaskRecord) -> Optional[Future]:
+        raise NotImplementedError
+
+    def close(self) -> None:
+        raise NotImplementedError
+
+
+class BasicMemoizer(Memoizer):
     """Memoizer is responsible for ensuring that identical work is not repeated.
 
     When a task is repeated, i.e., the same function is called with the same exact arguments, the
@@ -150,7 +205,12 @@ class Memoizer:
 
     """
 
-    def __init__(self, dfk: DataFlowKernel, *, memoize: bool = True, checkpoint_files: Sequence[str]):
+    run_dir: str
+
+    def __init__(self) -> None:
+        pass
+
+    def start(self, *, dfk: DataFlowKernel, memoize: bool = True, checkpoint_files: Sequence[str], run_dir: str) -> None:
         """Initialize the memoizer.
 
         Args:
@@ -162,7 +222,14 @@ class Memoizer:
         """
         self.dfk = dfk
         self.memoize = memoize
+        self.run_dir = run_dir
 
+        self.checkpointed_tasks = 0
+
+        self.checkpoint_lock = threading.Lock()
+
+        # TODO: we always load checkpoints even if we then discard them...
+        # this is more obvious here, less obvious in previous Parsl...
         checkpoint = self.load_checkpoints(checkpoint_files)
 
         if self.memoize:
@@ -172,42 +239,10 @@ class Memoizer:
             logger.info("App caching disabled for all apps")
             self.memo_lookup_table = {}
 
-    def make_hash(self, task: TaskRecord) -> str:
-        """Create a hash of the task inputs.
+    def close(self) -> None:
+        pass   # nothing to close but more should move here
 
-        Args:
-            - task (dict) : Task dictionary from dfk.tasks
-
-        Returns:
-            - hash (str) : A unique hash string
-        """
-
-        t: List[bytes] = []
-
-        # if kwargs contains an outputs parameter, that parameter is removed
-        # and normalised differently - with output_ref set to True.
-        # kwargs listed in ignore_for_cache will also be removed
-
-        filtered_kw = task['kwargs'].copy()
-
-        ignore_list = task['ignore_for_cache']
-
-        logger.debug("Ignoring these kwargs for checkpointing: %s", ignore_list)
-        for k in ignore_list:
-            logger.debug("Ignoring kwarg %s", k)
-            del filtered_kw[k]
-
-        if 'outputs' in task['kwargs']:
-            outputs = task['kwargs']['outputs']
-            del filtered_kw['outputs']
-            t.append(id_for_memo(outputs, output_ref=True))
-
-        t.extend(map(id_for_memo, (filtered_kw, task['func'], task['args'])))
-
-        x = b''.join(t)
-        return hashlib.md5(x).hexdigest()
-
-    def check_memo(self, task: TaskRecord) -> Optional[Future[Any]]:
+    def check_memo(self, task: TaskRecord) -> Optional[Future]:
         """Create a hash of the task and its inputs and check the lookup table for this hash.
 
         If present, the results are returned.
@@ -228,7 +263,7 @@ class Memoizer:
             logger.debug("Task {} will not be memoized".format(task_id))
             return None
 
-        hashsum = self.make_hash(task)
+        hashsum = make_hash(task)
         logger.debug("Task {} has memoization hash {}".format(task_id, hashsum))
         result = None
         if hashsum in self.memo_lookup_table:
@@ -242,7 +277,7 @@ class Memoizer:
         assert isinstance(result, Future) or result is None
         return result
 
-    def hash_lookup(self, hashsum: str) -> Future[Any]:
+    def hash_lookup(self, hashsum: str) -> Future:
         """Lookup a hash in the memoization table.
 
         Args:
@@ -256,7 +291,7 @@ class Memoizer:
         """
         return self.memo_lookup_table[hashsum]
 
-    def update_memo(self, task: TaskRecord, r: Future[Any]) -> None:
+    def update_memo(self, task: TaskRecord, r: Future) -> None:
         """Updates the memoization lookup table with the result from a task.
 
         Args:
@@ -281,7 +316,7 @@ class Memoizer:
             logger.debug(f"Storing app cache entry {task['hashsum']} with result from task {task_id}")
         self.memo_lookup_table[task['hashsum']] = r
 
-    def _load_checkpoints(self, checkpointDirs: Sequence[str]) -> Dict[str, Future[Any]]:
+    def _load_checkpoints(self, checkpointDirs: Sequence[str]) -> Dict[str, Future]:
         """Load a checkpoint file into a lookup table.
 
         The data being loaded from the pickle file mostly contains input
@@ -309,8 +344,12 @@ class Memoizer:
                             data = pickle.load(f)
                             # Copy and hash only the input attributes
                             memo_fu: Future = Future()
-                            assert data['exception'] is None
-                            memo_fu.set_result(data['result'])
+
+                            if data['exception'] is None:
+                                memo_fu.set_result(data['result'])
+                            else:
+                                assert data['result'] is None
+                                memo_fu.set_exception(data['exception'])
                             memo_lookup_table[data['hash']] = memo_fu
 
                         except EOFError:
@@ -348,3 +387,69 @@ class Memoizer:
             return self._load_checkpoints(checkpointDirs)
         else:
             return {}
+
+    def checkpoint(self, tasks: Sequence[TaskRecord]) -> None:
+        """Checkpoint the dfk incrementally to a checkpoint file.
+
+        When called, every task that has been completed yet not
+        checkpointed is checkpointed to a file.
+
+        Kwargs:
+            - tasks (List of task records) : List of task ids to checkpoint. Default=None
+                                         if set to None, we iterate over all tasks held by the DFK.
+
+        .. note::
+            Checkpointing only works if memoization is enabled
+
+        Returns:
+            Checkpoint dir if checkpoints were written successfully.
+            By default the checkpoints are written to the RUNDIR of the current
+            run under RUNDIR/checkpoints/tasks.pkl
+        """
+        with self.checkpoint_lock:
+            checkpoint_queue = tasks
+
+            checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
+            checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
+
+            if not os.path.exists(checkpoint_dir):
+                os.makedirs(checkpoint_dir, exist_ok=True)
+
+            count = 0
+
+            with open(checkpoint_tasks, 'ab') as f:
+                for task_record in checkpoint_queue:
+                    task_id = task_record['id']
+
+                    app_fu = task_record['app_fu']
+
+                    if app_fu.done() and self.filter_for_checkpoint(app_fu):
+
+                        hashsum = task_record['hashsum']
+                        if not hashsum:
+                            continue
+
+                        if app_fu.exception() is None:
+                            t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
+                        else:
+                            t = {'hash': hashsum, 'exception': app_fu.exception(), 'result': None}
+
+                        # We are using pickle here since pickle dumps to a file in 'ab'
+                        # mode behave like a incremental log.
+                        pickle.dump(t, f)
+                        count += 1
+                        logger.debug("Task {} checkpointed as result".format(task_id))
+
+            self.checkpointed_tasks += count
+
+            if count == 0:
+                if self.checkpointed_tasks == 0:
+                    logger.warning("No tasks checkpointed so far in this run. Please ensure caching is enabled")
+                else:
+                    logger.debug("No tasks checkpointed in this pass.")
+            else:
+                logger.info("Done checkpointing {} tasks".format(count))
+
+    def filter_for_checkpoint(self, app_fu: AppFuture) -> bool:
+        """Overridable method to decide if an entry should be checkpointed"""
+        return app_fu.exception() is None

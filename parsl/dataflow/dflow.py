@@ -6,7 +6,6 @@ import datetime
 import inspect
 import logging
 import os
-import pickle
 import random
 import sys
 import threading
@@ -30,7 +29,7 @@ from parsl.data_provider.files import File
 from parsl.dataflow.dependency_resolvers import SHALLOW_DEPENDENCY_RESOLVER
 from parsl.dataflow.errors import DependencyError, JoinError
 from parsl.dataflow.futures import AppFuture
-from parsl.dataflow.memoization import Memoizer
+from parsl.dataflow.memoization import BasicMemoizer, Memoizer
 from parsl.dataflow.rundirs import make_rundir
 from parsl.dataflow.states import FINAL_FAILURE_STATES, FINAL_STATES, States
 from parsl.dataflow.taskrecord import TaskRecord
@@ -101,8 +100,6 @@ class DataFlowKernel:
 
         logger.info("Parsl version: {}".format(get_version()))
 
-        self.checkpoint_lock = threading.Lock()
-
         self.usage_tracker = UsageTracker(self)
         self.usage_tracker.send_start_message()
 
@@ -168,6 +165,8 @@ class DataFlowKernel:
             self.monitoring_radio.send((MessageType.WORKFLOW_INFO,
                                        workflow_info))
 
+        # TODO: this configuration should become part of the particular memoizer code
+        # - this is a checkpoint-implementation-specific parameter
         if config.checkpoint_files is not None:
             checkpoint_files = config.checkpoint_files
         elif config.checkpoint_files is None and config.checkpoint_mode is not None:
@@ -175,10 +174,20 @@ class DataFlowKernel:
         else:
             checkpoint_files = []
 
-        self.memoizer = Memoizer(self, memoize=config.app_cache, checkpoint_files=checkpoint_files)
-        self.checkpointed_tasks = 0
+        # self.memoizer: Memoizer = BasicMemoizer(self, memoize=config.app_cache, checkpoint_files=checkpoint_files)
+        # the memoize flag might turn into the user choosing different instances
+        # of the Memoizer interface
+        self.memoizer: Memoizer
+        if config.memoizer is not None:
+            self.memoizer = config.memoizer
+        else:
+            self.memoizer = BasicMemoizer()
+
+        self.memoizer.start(dfk=self, memoize=config.app_cache, checkpoint_files=checkpoint_files, run_dir=self.run_dir)
         self._checkpoint_timer = None
         self.checkpoint_mode = config.checkpoint_mode
+
+        self._modify_checkpointable_tasks_lock = threading.Lock()
         self.checkpointable_tasks: List[TaskRecord] = []
 
         # this must be set before executors are added since add_executors calls
@@ -195,6 +204,10 @@ class DataFlowKernel:
         self.add_executors(config.executors)
         self.add_executors([parsl_internal_executor])
 
+        # TODO: these checkpoint modes should move into the memoizer implementation
+        # they're (probably?) checkpointer specific: for example the sqlite3-pure-memoizer
+        # doesn't have a notion of building up an in-memory checkpoint table that needs to be
+        # flushed on a separate policy
         if self.checkpoint_mode == "periodic":
             if config.checkpoint_period is None:
                 raise ConfigurationError("Checkpoint period must be specified with periodic checkpoint mode")
@@ -204,7 +217,7 @@ class DataFlowKernel:
                 except Exception:
                     raise ConfigurationError("invalid checkpoint_period provided: {0} expected HH:MM:SS".format(config.checkpoint_period))
                 checkpoint_period = (h * 3600) + (m * 60) + s
-                self._checkpoint_timer = Timer(self.checkpoint, interval=checkpoint_period, name="Checkpoint")
+                self._checkpoint_timer = Timer(self.invoke_checkpoint, interval=checkpoint_period, name="Checkpoint")
 
         self.task_count = 0
         self.tasks: Dict[int, TaskRecord] = {}
@@ -567,9 +580,9 @@ class DataFlowKernel:
         # Do we need to checkpoint now, or queue for later,
         # or do nothing?
         if self.checkpoint_mode == 'task_exit':
-            self.checkpoint(tasks=[task_record])
+            self.memoizer.checkpoint(tasks=[task_record])
         elif self.checkpoint_mode in ('manual', 'periodic', 'dfk_exit'):
-            with self.checkpoint_lock:
+            with self._modify_checkpointable_tasks_lock:
                 self.checkpointable_tasks.append(task_record)
         elif self.checkpoint_mode is None:
             pass
@@ -1202,14 +1215,22 @@ class DataFlowKernel:
 
         self.log_task_states()
 
+        # TODO: do this in the basic memoizer
         # Checkpointing takes priority over the rest of the tasks
         # checkpoint if any valid checkpoint method is specified
         if self.checkpoint_mode is not None:
-            self.checkpoint()
+
+            # TODO: accesses to self.checkpointable_tasks should happen
+            # under a lock?
+            self.memoizer.checkpoint(self.checkpointable_tasks)
 
             if self._checkpoint_timer:
                 logger.info("Stopping checkpoint timer")
                 self._checkpoint_timer.close()
+
+        logger.info("Closing memoizer")
+        self.memoizer.close()
+        logger.info("Closed memoizer")
 
         # Send final stats
         self.usage_tracker.send_end_message()
@@ -1267,68 +1288,10 @@ class DataFlowKernel:
         # should still see it.
         logger.info("DFK cleanup complete")
 
-    def checkpoint(self, tasks: Optional[Sequence[TaskRecord]] = None) -> str:
-        """Checkpoint the dfk incrementally to a checkpoint file.
-
-        When called, every task that has been completed yet not
-        checkpointed is checkpointed to a file.
-
-        Kwargs:
-            - tasks (List of task records) : List of task ids to checkpoint. Default=None
-                                         if set to None, we iterate over all tasks held by the DFK.
-
-        .. note::
-            Checkpointing only works if memoization is enabled
-
-        Returns:
-            Checkpoint dir if checkpoints were written successfully.
-            By default the checkpoints are written to the RUNDIR of the current
-            run under RUNDIR/checkpoints/tasks.pkl
-        """
-        with self.checkpoint_lock:
-            if tasks:
-                checkpoint_queue = tasks
-            else:
-                checkpoint_queue = self.checkpointable_tasks
-                self.checkpointable_tasks = []
-
-            checkpoint_dir = '{0}/checkpoint'.format(self.run_dir)
-            checkpoint_tasks = checkpoint_dir + '/tasks.pkl'
-
-            if not os.path.exists(checkpoint_dir):
-                os.makedirs(checkpoint_dir, exist_ok=True)
-
-            count = 0
-
-            with open(checkpoint_tasks, 'ab') as f:
-                for task_record in checkpoint_queue:
-                    task_id = task_record['id']
-
-                    app_fu = task_record['app_fu']
-
-                    if app_fu.done() and app_fu.exception() is None:
-                        hashsum = task_record['hashsum']
-                        if not hashsum:
-                            continue
-                        t = {'hash': hashsum, 'exception': None, 'result': app_fu.result()}
-
-                        # We are using pickle here since pickle dumps to a file in 'ab'
-                        # mode behave like a incremental log.
-                        pickle.dump(t, f)
-                        count += 1
-                        logger.debug("Task {} checkpointed".format(task_id))
-
-            self.checkpointed_tasks += count
-
-            if count == 0:
-                if self.checkpointed_tasks == 0:
-                    logger.warning("No tasks checkpointed so far in this run. Please ensure caching is enabled")
-                else:
-                    logger.debug("No tasks checkpointed in this pass.")
-            else:
-                logger.info("Done checkpointing {} tasks".format(count))
-
-            return checkpoint_dir
+    def invoke_checkpoint(self) -> None:
+        with self._modify_checkpointable_tasks_lock:
+            self.memoizer.checkpoint(self.checkpointable_tasks)
+            self.checkpointable_tasks = []
 
     @staticmethod
     def _log_std_streams(task_record: TaskRecord) -> None:
