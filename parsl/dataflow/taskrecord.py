@@ -101,3 +101,6 @@ class TaskRecord(TypedDict, total=False):
     """Restricts access to end-of-join behavior to ensure that joins
     only complete once, even if several joining Futures complete close
     together in time."""
+
+    environment: str
+    """The environment in which the task is being executed."""
