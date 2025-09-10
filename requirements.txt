@@ -1,3 +1,7 @@
+# force a pydantic alpha version for trying out building in CI
+pydantic==2.12.0a1 
+
+
 pyzmq>=17.1.2
 
 # typeguard uses semantic versioning.
