@@ -20,17 +20,6 @@ SpawnEvent = SpawnContext.Event
 SpawnQueue = SpawnContext.Queue
 
 
-# SizedQueue should be constructable using the same calling
-# convention as multiprocessing.Queue but that entire signature
-# isn't expressible in mypy 0.790
-SizedQueue: Callable[..., multiprocessing.Queue]
-
-
-import multiprocessing
-
-SizedQueue = SpawnQueue
-
-
 def join_terminate_close_proc(process: SpawnProcessType, *, timeout: int = 30) -> None:
     """Increasingly aggressively terminate a process.
 
