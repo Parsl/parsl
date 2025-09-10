@@ -331,6 +331,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.cpu_affinity = cpu_affinity
         self.encrypted = encrypted
         self.cert_dir = None
+        self.check_version_mismatches: bool = True
 
         if not launch_cmd:
             launch_cmd = DEFAULT_LAUNCH_CMD
@@ -568,6 +569,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                               "cert_dir": self.cert_dir,
                               "manager_selector": self.manager_selector,
                               "run_id": self.run_id,
+                              "check_version_mismatches": self.check_version_mismatches,
                               }
 
         config_pickle = pickle.dumps(interchange_config)

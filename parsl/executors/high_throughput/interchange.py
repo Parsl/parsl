@@ -56,6 +56,7 @@ class Interchange:
                  cert_dir: Optional[str],
                  manager_selector: ManagerSelector,
                  run_id: str,
+                 check_version_mismatches: bool,
                  ) -> None:
         """
         Parameters
@@ -99,6 +100,11 @@ class Interchange:
 
         cert_dir : str | None
             Path to the certificate directory.
+
+        check_version_mismatches : bool
+            If True, the interchange and worker manager must run the same version
+            of Python and Parsl. Running different versions can cause inter-process
+            communication errors.
         """
         self.cert_dir = cert_dir
         self.logdir = logdir
@@ -126,6 +132,7 @@ class Interchange:
         logger.info("Connected to client")
 
         self.run_id = run_id
+        self.check_version_mismatches = check_version_mismatches
 
         self.hub_address = hub_address
         self.hub_zmq_port = hub_zmq_port
@@ -396,7 +403,7 @@ class Interchange:
             logger.info(f'Registration info for manager {manager_id!r}: {meta}')
             self._send_monitoring_info(monitoring_radio, new_rec)
 
-            if (mgr_minor_py, mgr_parsl_v) != (ix_minor_py, ix_parsl_v):
+            if self.check_version_mismatches and (mgr_minor_py, mgr_parsl_v) != (ix_minor_py, ix_parsl_v):
                 kill_event.set()
                 vm_exc = VersionMismatch(
                     f"py.v={ix_minor_py} parsl.v={ix_parsl_v}",
