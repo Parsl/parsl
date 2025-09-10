@@ -41,9 +41,9 @@ def test_concurrency_blast():
 
 
 def blast(cc, e):
-    target_end = time.time() + DURATION_S
+    target_end = time.monotonic() + DURATION_S
 
-    while time.time() < target_end:
+    while time.monotonic() < target_end:
         cc.run("WORKERS")
         cc.run("MANGERs_PACKAGES")
         cc.run("CONNECTED_BLOCKS")
