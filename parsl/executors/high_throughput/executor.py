@@ -35,7 +35,7 @@ from parsl.monitoring.radios.zmq_router import ZMQRadioReceiver, start_zmq_recei
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
-from parsl.serialize import deserialize, pack_res_spec_apply_message
+from parsl.serialize import deserialize, pack_apply_message
 from parsl.serialize.errors import DeserializationError, SerializationError
 from parsl.usage_tracking.api import UsageInformation
 from parsl.utils import RepresentationMixin
@@ -682,7 +682,26 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
               Future
         """
 
-        self.validate_resource_spec(resource_specification)
+        # handle people sending blobs gracefully
+        if logger.getEffectiveLevel() <= logging.DEBUG:
+            args_to_print = tuple([ar if len(ar := repr(arg)) < 100 else (ar[:100] + '...') for arg in args])
+            logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
+
+        try:
+            fn_buf = pack_apply_message(
+                func, args, kwargs, buffer_threshold=1024 * 1024
+            )
+        except TypeError:
+            raise SerializationError(func.__name__)
+
+        context = {
+            "resource_spec": resource_specification,
+        }
+
+        return self.submit_packed(fn_buf, context)
+
+    def submit_packed(self, buffer, context):
+        self.validate_resource_spec(context["resource_spec"])
 
         if self.bad_state_is_set:
             raise self.executor_exception
@@ -690,28 +709,19 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self._task_counter += 1
         task_id = self._task_counter
 
-        # handle people sending blobs gracefully
-        if logger.getEffectiveLevel() <= logging.DEBUG:
-            args_to_print = tuple([ar if len(ar := repr(arg)) < 100 else (ar[:100] + '...') for arg in args])
-            logger.debug("Pushing function {} to queue with args {}".format(func, args_to_print))
-
         fut = Future()
         fut.parsl_executor_task_id = task_id
         self.tasks[task_id] = fut
 
-        try:
-            fn_buf = pack_res_spec_apply_message(func, args, kwargs,
-                                                 resource_specification=resource_specification,
-                                                 buffer_threshold=1024 * 1024)
-        except TypeError:
-            raise SerializationError(func.__name__)
-
-        msg = {"task_id": task_id, "resource_spec": resource_specification, "buffer": fn_buf}
+        msg = {
+            "task_id": task_id,
+            "buffer": buffer,
+            "context": context,
+        }
 
         # Post task to the outgoing queue
         self.outgoing_q.put(msg)
 
-        # Return the future
         return fut
 
     @property

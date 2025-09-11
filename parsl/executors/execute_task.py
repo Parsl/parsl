@@ -1,20 +1,22 @@
 import os
 
-from parsl.serialize import unpack_res_spec_apply_message
+from parsl.serialize import unpack_apply_message
 
 
-def execute_task(bufs: bytes):
+def execute_task(bufs: bytes, context: dict | None = None):
     """Deserialize the buffer and execute the task.
     Returns the result or throws exception.
     """
-    f, args, kwargs, resource_spec = unpack_res_spec_apply_message(bufs)
+    f, args, kwargs = unpack_apply_message(bufs)
 
-    for varname in resource_spec:
-        envname = "PARSL_" + str(varname).upper()
-        os.environ[envname] = str(resource_spec[varname])
+    if context:
+        res_spec = context.get("resource_spec", {})
+        for varname in res_spec:
+            envname = "PARSL_" + str(varname).upper()
+            os.environ[envname] = str(res_spec[varname])
 
     # We might need to look into callability of the function from itself
-    # since we change it's name in the new namespace
+    # since we change its name in the new namespace
     prefix = "parsl_"
     fname = prefix + "f"
     argname = prefix + "args"

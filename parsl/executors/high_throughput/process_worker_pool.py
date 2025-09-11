@@ -766,10 +766,11 @@ def worker(
             ready_worker_count.value -= 1
         worker_enqueued = False
 
-        _init_mpi_env(mpi_launcher=mpi_launcher, resource_spec=req["resource_spec"])
+        ctxt = req["context"]
+        _init_mpi_env(mpi_launcher=mpi_launcher, resource_spec=ctxt["resource_spec"])
 
         try:
-            result = execute_task(req['buffer'])
+            result = execute_task(req['buffer'], ctxt)
             serialized_result = serialize(result, buffer_threshold=1000000)
         except Exception as e:
             logger.info('Caught an exception: {}'.format(e))
