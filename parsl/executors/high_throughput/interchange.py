@@ -216,42 +216,35 @@ class Interchange:
         if self.command_channel in self.socks and self.socks[self.command_channel] == zmq.POLLIN:
             logger.debug("entering command_server section")
 
-            logger.debug("Waiting for command request")
             command_req = self.command_channel.recv_pyobj()
             logger.debug("Received command request: {}".format(command_req))
             if command_req == "CONNECTED_BLOCKS":
                 reply = self.connected_block_history
 
             elif command_req == "WORKERS":
-                num_workers = 0
-                for manager in self._ready_managers.values():
-                    num_workers += manager['worker_count']
-                reply = num_workers
+                reply = sum(m['worker_count'] for m in self._ready_managers.values())
 
             elif command_req == "MANAGERS":
                 reply = []
-                for manager_id in self._ready_managers:
-                    m = self._ready_managers[manager_id]
-                    idle_since = m['idle_since']
-                    if idle_since is not None:
-                        idle_duration = time.time() - idle_since
-                    else:
-                        idle_duration = 0.0
-                    resp = {'manager': manager_id.decode('utf-8'),
-                            'block_id': m['block_id'],
-                            'worker_count': m['worker_count'],
-                            'tasks': len(m['tasks']),
-                            'idle_duration': idle_duration,
-                            'active': m['active'],
-                            'parsl_version': m['parsl_version'],
-                            'python_version': m['python_version'],
-                            'draining': m['draining']}
+                now = time.time()
+                for manager_id, m in self._ready_managers.items():
+                    idle_duration = now - (m['idle_since'] or now)
+                    resp = {
+                        'manager': manager_id.decode('utf-8'),
+                        'block_id': m['block_id'],
+                        'worker_count': m['worker_count'],
+                        'tasks': len(m['tasks']),
+                        'idle_duration': idle_duration,
+                        'active': m['active'],
+                        'parsl_version': m['parsl_version'],
+                        'python_version': m['python_version'],
+                        'draining': m['draining']
+                    }
                     reply.append(resp)
 
             elif command_req == "MANAGERS_PACKAGES":
                 reply = {}
-                for manager_id in self._ready_managers:
-                    m = self._ready_managers[manager_id]
+                for manager_id, m in self._ready_managers.items():
                     manager_id_str = manager_id.decode('utf-8')
                     reply[manager_id_str] = m["packages"]
 

@@ -193,9 +193,7 @@ class Strategy:
                 self.executors[label]['first'] = False
 
             # Tasks that are either pending completion
-            logger.debug("getting outstanding (which looks like an attribute reference but is actually a network operation")
             active_tasks = executor.outstanding()
-            logger.debug(f"got outstanding {active_tasks}")
 
             status = executor.status_facade
 

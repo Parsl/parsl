@@ -19,9 +19,9 @@ from parsl.monitoring.errors import MonitoringRouterStartError
 from parsl.monitoring.radios.multiprocessing import MultiprocessingQueueRadioSender
 from parsl.monitoring.types import TaggedMonitoringMessage
 from parsl.multiprocessing import (
-    SizedQueue,
     SpawnEvent,
     SpawnProcess,
+    SpawnQueue,
     join_terminate_close_proc,
 )
 from parsl.process_loggers import wrap_with_logs
@@ -158,7 +158,7 @@ def start_zmq_receiver(*,
                        port_range: Tuple[int, int],
                        logdir: str,
                        worker_debug: bool) -> ZMQRadioReceiver:
-    comm_q = SizedQueue(maxsize=10)
+    comm_q = SpawnQueue(maxsize=10)
 
     router_exit_event = SpawnEvent()
 

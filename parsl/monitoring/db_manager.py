@@ -296,7 +296,7 @@ class DatabaseManager:
         set_file_logger(f"{self.run_dir}/database_manager.log", level=logging_level,
                         format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s")
 
-        logger.debug("Initializing Database Manager process")
+        logger.info("Initializing Database Manager process")
 
         self.db = Database(db_url)
         self.batching_interval = batching_interval
@@ -346,9 +346,9 @@ class DatabaseManager:
         exception_happened = False
 
         while (not self._kill_event.is_set() or
-               self.pending_priority_queue.qsize() != 0 or self.pending_resource_queue.qsize() != 0 or
-               self.pending_node_queue.qsize() != 0 or self.pending_block_queue.qsize() != 0 or
-               resource_queue.qsize() != 0):
+               not self.pending_priority_queue.empty() or not self.pending_resource_queue.empty() or
+               not self.pending_node_queue.empty() or not self.pending_block_queue.empty() or
+               not resource_queue.empty()):
 
             """
             WORKFLOW_INFO and TASK_INFO messages (i.e. priority messages)
@@ -357,9 +357,9 @@ class DatabaseManager:
             try:
                 logger.debug("""Checking STOP conditions: {}, {}, {}, {}, {}, {}""".format(
                                   self._kill_event.is_set(),
-                                  self.pending_priority_queue.qsize() != 0, self.pending_resource_queue.qsize() != 0,
-                                  self.pending_node_queue.qsize() != 0, self.pending_block_queue.qsize() != 0,
-                                  resource_queue.qsize() != 0))
+                                  not self.pending_priority_queue.empty(), not self.pending_resource_queue.empty(),
+                                  not self.pending_node_queue.empty(), not self.pending_block_queue.empty(),
+                                  not resource_queue.empty()))
 
                 # This is the list of resource messages which can be reprocessed as if they
                 # had just arrived because the corresponding first task message has been
@@ -509,7 +509,7 @@ class DatabaseManager:
                             msg['task_status_name'] = States.running.name
                             msg['task_try_time_running'] = msg['timestamp']
 
-                            if task_try_id in inserted_tries:  # TODO: needs to become task_id and try_id, and check against inserted_tries
+                            if task_try_id in inserted_tries:
                                 reprocessable_first_resource_messages.append(msg)
                             else:
                                 if task_try_id in deferred_resource_messages:
@@ -558,12 +558,9 @@ class DatabaseManager:
     def _migrate_logs_to_internal(self, logs_queue: mpq.Queue, kill_event: threading.Event) -> None:
         logger.info("Starting _migrate_logs_to_internal")
 
-        while not kill_event.is_set() or logs_queue.qsize() != 0:
+        while not kill_event.is_set() or not logs_queue.empty():
             logger.debug("Checking STOP conditions: kill event: %s, queue has entries: %s",
-                         kill_event.is_set(), logs_queue.qsize() != 0)
-
-            # if self.external_exit_event.is_set():
-            #    self.close()
+                         kill_event.is_set(), not logs_queue.empty())
 
             try:
                 x = logs_queue.get(timeout=0.1)
@@ -584,10 +581,10 @@ class DatabaseManager:
         elif x[0] == MessageType.NODE_INFO:
             assert len(x) == 2, "expected NODE_INFO tuple to have exactly two elements"
 
-            logger.info("Will put {} to pending node queue".format(x[1]))
+            logger.debug("Will put {} to pending node queue".format(x[1]))
             self.pending_node_queue.put(x[1])
         elif x[0] == MessageType.BLOCK_INFO:
-            logger.info("Will put {} to pending block queue".format(x[1]))
+            logger.debug("Will put {} to pending block queue".format(x[1]))
             self.pending_block_queue.put(x[-1])
         else:
             logger.error("Discarding message of unknown type {}".format(x[0]))

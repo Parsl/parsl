@@ -242,20 +242,6 @@ class Memoizer:
         assert isinstance(result, Future) or result is None
         return result
 
-    def hash_lookup(self, hashsum: str) -> Future[Any]:
-        """Lookup a hash in the memoization table.
-
-        Args:
-            - hashsum (str): The same hashes used to uniquely identify apps+inputs
-
-        Returns:
-            - Lookup result
-
-        Raises:
-            - KeyError: if hash not in table
-        """
-        return self.memo_lookup_table[hashsum]
-
     def update_memo(self, task: TaskRecord, r: Future[Any]) -> None:
         """Updates the memoization lookup table with the result from a task.
 

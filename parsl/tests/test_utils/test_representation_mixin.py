@@ -9,14 +9,14 @@ class GoodRepr(RepresentationMixin):
         self.y = y
 
 
-class GoodReprKeywordOnly(RepresentationMixin):
-    def __init__(self, *, x, y):
+class GoodReprDefaults(RepresentationMixin):
+    def __init__(self, x, y="default 2"):
         self.x = x
         self.y = y
 
 
-class GoodReprDefaults(RepresentationMixin):
-    def __init__(self, x, y="default 2"):
+class GoodReprKeywordOnly(RepresentationMixin):
+    def __init__(self, *, x, y):
         self.x = x
         self.y = y
 
@@ -64,8 +64,8 @@ def test_repr_good_defaults_defaulted():
     # repr should not raise an exception
     r = repr(GoodReprDefaults(p1))
 
-    # representation should contain both values defaulted
-    # at object creation.
+    # representation should contain one value supplied
+    # at object creation, and the other defaulted.
     assert p1 in r
     assert "default 2" in r
 
