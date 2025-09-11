@@ -136,19 +136,23 @@ dispatch_cmd "WORKER_PORTS" = do
 
 dispatch_cmd "CONNECTED_BLOCKS" = do
   log "CONNECTED_BLOCKS requested"
-  -- TODO: in the rusterchange, it seemed like connected blocks didn't
+  -- In the rusterchange, it seemed like connected blocks didn't
   -- need implementing for the test suite, and could return an empty
-  -- list. So that's what I'll do here.
-  -- XXXXX needed for surviving scaling timeout - without listing
+  -- list.
+  -- But! this is needed for surviving scaling timeout - without listing
   -- registered blocks here, a block is eventually marked as MISSING
   -- and fails.
   -- so registration now needs to store some state, and then return it here.
-  (MkMatchState managers tasks) <- get MatchState
+  -- (also in the same situations in the rusterchange and elixir interchange)
 
-  -- Now pull out the block_id of each of the managers_json list entries,
+  -- TODO: This command is not properly tested - in the sense that a fast enough test run
+  -- will not fail if CONNECTED_BLOCKS is not implemented. But a slow enough
+  -- run will.
+
+  -- Pull out the block_id of each of the managers_json list entries,
   -- and turn it into a unicode string.
   -- It's fine if this fails, because the implicit protocol says it will
-  -- always be there.
+  -- always be there. But it's ugly type-wise.
 
   -- There is no need to de-dupe, although probably should, and it would
   -- probably be an improvement (I think) on the real interchange - assuming
@@ -158,8 +162,8 @@ dispatch_cmd "CONNECTED_BLOCKS" = do
   -- CONNECTED_BLOCKS, keep a set at registration time.
   -- See issue #3366 about that happening in the real interchange.
 
+  (MkMatchState managers tasks) <- get MatchState
   let manager_block_ids = map get_block_id managers
-
   pure (PickleList manager_block_ids)
 
 dispatch_cmd "MANAGERS" = do
