@@ -47,7 +47,9 @@ record ManagerRegistration where
   constructor MkManagerRegistration
   manager_id : ManagerID
   manager_pickle : PickleAST  -- TODO: this manager_pickle can go away and be replaced by the two fields that are actually used.
+%default covering
 %runElab derive "ManagerRegistration" [Generic, Meta, Show]
+%default total
 
 data TaskDef = MkTaskDef PickleAST
 
@@ -69,7 +71,7 @@ record SocketState where
   constructor MkSocketState
   command : ZMQSocket
   tasks_submit_to_interchange : ZMQSocket
-  tasks_interchange_to_worker : ZMQSocket
+  worker_to_interchange : ZMQSocket
   results_interchange_to_submit : ZMQSocket
   submit_pidfd : FD PidFD
 
@@ -101,19 +103,22 @@ ascii_dump v = do
     else pure1 v
 
 
--- TODO: remove the notimpl path. One way is to make this Maybe,
+-- TODO: remove the error paths. One way is to make this Maybe,
 -- but then there is still a failing path to deal with where
 -- get_block_id is called. More type-interesting would be to
 -- replace the PickleAST with a manager data structure containing
 -- the fields that are interesting, and this function becomes
 -- the probably much simpler projection of that field out of
 -- the manager record.
+covering
 get_block_id : ManagerRegistration -> PickleAST
 get_block_id mr = 
-  let c = lookup "block_id" (manager_pickle mr)
-   in case c of
-        Just (JString c) => PickleUnicodeString c
-        _ => ?notimpl_error_path_block_id_not_str_
+  case manager_pickle mr of
+    (PickleDict reg_dict) => 
+      case lookup "block_id" reg_dict of
+        Just s => s
+        Nothing => ?error_block_id_missing
+    _ => ?error_reg_dict_is_not_a_dict
 
 
 -- the Python type contained in the returned AST depends on the supplied
@@ -217,9 +222,11 @@ matchmake sockets = do
         [] => log "No match possible: no managers registered"
         mr :: rest_managers => do
           logv "Considering manager for match" mr
-          let c = lookup "max_capacity" (manager_pickle mr)
+          (PickleDict mpd) <- pure (manager_pickle mr)
+            | _ => ?error_manager_pickle_is_not_a_dict -- TODO: tidy up by better manager_pickle type
+          let c = lookup "max_capacity" mpd
           case c of
-            Just (JNumber c) => do
+            Just (PickleInteger c) => do
               logv "This manager has capacity" c
               if c > 0
                 then do
@@ -244,13 +251,13 @@ matchmake sockets = do
                     -- these three sends demonstrate three different kind of memory policy
                     let (MkManagerId mid) = manager_id mr
                     b <- from_gc_bytes mid
-                    b <- zmq_send_bytes1 sockets.tasks_interchange_to_worker b True
+                    b <- zmq_send_bytes1 sockets.worker_to_interchange b True
                     free1 b
 
                     -- this is the unused empty byte block mentioned in https://github.com/Parsl/parsl/issues/3372
-                    app $ zmq_send_bytes sockets.tasks_interchange_to_worker emptyByteBlock True
+                    app $ zmq_send_bytes sockets.worker_to_interchange emptyByteBlock True
 
-                    resp_bytes <- zmq_send_bytes1 sockets.tasks_interchange_to_worker resp_bytes False
+                    resp_bytes <- zmq_send_bytes1 sockets.worker_to_interchange resp_bytes False
 
                     -- Here is an example of using linear types to ensure b and resp_bytes get freed.
                     -- This code won't compile without the free1 calls.
@@ -375,10 +382,10 @@ zmq_poll_tasks_submit_to_interchange_loop sockets = do
         zmq_poll_tasks_submit_to_interchange_loop sockets
 
 
-covering process_result_part : (State LogConfig LogConfig es, HasErr AppHasIO es) => SocketState -> () -> ZMQMsg -> App es ()
-process_result_part sockets () msg_part = do
-  -- Only forward on this result if it is a result-tag
-  -- (rather than eg. monitoring or heartbeat)
+covering process_worker_part : (State LogConfig LogConfig es, HasErr AppHasIO es) => SocketState -> () -> ZMQMsg -> App es ()
+process_worker_part sockets () msg_part = do
+  -- Only forward on this if it is a result-tag
+  -- (rather than eg. monitoring or heartbeat or registration)
   -- TODO: do monitoring forwarding. test monitoring forwarding.
   -- TODO: do heartbeat processing. test heartbeat processing.
  app1 $ do
@@ -397,21 +404,19 @@ process_result_part sockets () msg_part = do
           bytes' <- zmq_send_bytes1 sockets.results_interchange_to_submit bytes' False
           free1 bytes'
         _ => do
-          log "Ignoring non-result"
+          logv "Ignoring non-result" tag
           free1 bytes'
       
-    _ => ?error_bad_pickle_object_on_result_channel
+    _ => ?error_bad_pickle_object_on_worker_channel
 
   -- TODO: release worker/task binding/count
 
  zmq_msg_close msg_part
  pure ()
 
--- TODO: this is not called anywhere now... the result handling has moved around
--- protocol-wise.
-covering zmq_poll_results_worker_to_interchange_loop : (State LogConfig LogConfig es, HasErr AppHasIO es) => SocketState -> App es ()
-zmq_poll_results_worker_to_interchange_loop sockets = do
-  events <- zmq_get_socket_events sockets.results_worker_to_interchange
+covering zmq_poll_worker_to_interchange_loop : (State LogConfig LogConfig es, HasErr AppHasIO es) => SocketState -> App es ()
+zmq_poll_worker_to_interchange_loop sockets = do
+  events <- zmq_get_socket_events sockets.worker_to_interchange
   logv "ZMQ poll results worker to interchange loop got these zmq events" events
   
   when (events `mod` 2 == 1) $ do -- read
@@ -419,7 +424,7 @@ zmq_poll_results_worker_to_interchange_loop sockets = do
     -- TODO: this will be a multipart message.
     -- First part will be the manager ID. Subsequent parts will be individual
     -- resuts as their own zmq message parts.
-    msgs <- zmq_recv_msgs_multipart_alloc sockets.results_worker_to_interchange
+    msgs <- zmq_recv_msgs_multipart_alloc sockets.worker_to_interchange
     case msgs of
       [] => log "No message received on results worker->interchange channel"
       (addr_part :: other_parts) => do
@@ -433,98 +438,9 @@ zmq_poll_results_worker_to_interchange_loop sockets = do
 
         logv "Number of result parts in this multipart message" (length other_parts)
 
-        foldlM (process_result_part sockets) () other_parts
+        foldlM (process_worker_part sockets) () other_parts
 
-        zmq_poll_results_worker_to_interchange_loop sockets
-
-covering xxx_old_zmq_poll_tasks_interchange_to_worker_loop : (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
-xxx_old_zmq_poll_tasks_interchange_to_worker_loop sockets = do
-  events <- zmq_get_socket_events sockets.tasks_interchange_to_worker
-  logv "ZMQ poll tasks interchange to worker loop got these zmq events" events
-  -- TODO: we'll be both reading and writing from this socket
-
-  when (events `mod` 2 == 1) $ do -- read
-    log "Reading message from task interchange<->worker channel"
-    -- This socket is a ROUTER socket, so there will be a multi-part
-    -- message where the first part is going to be the identifier of the
-    -- sender. I think if one part is available, all parts will be available,
-    -- because they're delivered all as one on-the-wire message. I haven't
-    -- seen that be explicitly noted, though.
-
-    -- TODO: Idris2 level API for receiving multipart messages, returning a
-    -- list of msg objects, instead of a Maybe.
-    msgs <- zmq_recv_msgs_multipart_alloc sockets.tasks_interchange_to_worker
-    case msgs of
-      -- TODO: this whole section needs rewriting as pickle, not JSON, and
-      -- merging with the tagged result stream code - probably keep the
-      -- tagged result stream code, and then move this case right here into
-      -- there.
-      [] => log "No message received on task interchange->worker channel"
-      [addr_part, json_part] => do
-        log "Received two-part message on task interchange->worker channel"
-
-        gc_addr_bytes <- app1 $ do
-          addr_bytes <- zmq_msg_as_bytes addr_part
-          log "Address bytes:"
-          addr_bytes <- ascii_dump addr_bytes
-          gc_bytes <- to_gc_bytes addr_bytes -- hands over deallocation responsibility to runtime GC, rather than linear typing
-
-          -- some debug info for visual inspection that things get moved around without corruption
-          addr_bytes2 <- from_gc_bytes gc_bytes
-          log "Address bytes (round tripped):"
-          addr_bytes2 <- ascii_dump addr_bytes2
-          free1 addr_bytes2
-
-          pure gc_bytes
-
-        msg_as_str <- app1 $ do
-          bytes <- zmq_msg_as_bytes json_part
-          let (s # bytes) = length1 bytes
-          logv "Registration message part size" s
-          bytes <- ascii_dump bytes
-          (s # bytes) <- str_from_bytes (cast s) bytes
-          free1 bytes
-          pure s
-
-        let mj = parse msg_as_str
-
-        -- weirdness: the get/put/log/matchmake statements can't get constraint-solved in their return type
-        -- and fail with an error about cannot solve () vs a. I guess a is the eventual return type of the
-        -- whole case tree because if I force the return type here with `the`, then it resolves ok?
-        the (App es ()) $ case mj of
-          Nothing => ?error_no_json_parse_of_registration_like
-          Just j => do
-            logv "Parsed JSON" j
-
-            let t = lookup "type" j
-            case t of
-              Just (JString "registration") => do
-                (MkMatchState managers tasks) <- get MatchState
-                let new_manager_registration = MkManagerRegistration (MkManagerId gc_addr_bytes) j
-                put MatchState (MkMatchState (new_manager_registration :: managers) tasks)
-                log "Put new manager into match state" 
-                matchmake sockets
-              Just (JString "heartbeat") => do
-                log "Got a heartbeat on task channel from a manager"
-                app1 $ do heartbeat_code <- pickle (PickleInteger ((2 ^ 32) - 1))
-                          addr_bytes <- from_gc_bytes gc_addr_bytes
-
-                          log "Sending heartbeat to manager:"
-                          addr_bytes <- ascii_dump addr_bytes
-
-                          b <- zmq_send_bytes1 sockets.tasks_interchange_to_worker addr_bytes True
-                          free1 b
-                          b <- zmq_send_bytes1 sockets.tasks_interchange_to_worker emptyByteBlock True
-                          free1 b
-                          b <- zmq_send_bytes1 sockets.tasks_interchange_to_worker heartbeat_code False
-                          free1 b
-                log "Sent heartbeat on task channel"
-              _ => ?error_unknown_registration_like_type
-        zmq_msg_close addr_part
-        zmq_msg_close json_part
-        xxx_old_zmq_poll_tasks_interchange_to_worker_loop sockets
-      _ => ?error_tasks_to_interchange_expected_two_parts
-
+        zmq_poll_worker_to_interchange_loop sockets
 
 
 -- TODO: is there anything to distinguish these three sockets at the type
@@ -631,10 +547,10 @@ main_with_zmq cfg zmq_ctx = do
   log "Connected interchange command channel"
 
   log "Creating worker task socket"
-  tasks_interchange_to_worker_socket <- new_zmq_socket zmq_ctx ZMQSocketROUTER
+  worker_to_interchange_socket <- new_zmq_socket zmq_ctx ZMQSocketROUTER
   -- TODO: use configuration interchange address from submit process, rather
   -- than hard-coded 0.0.0.0, likewise for port
-  zmq_bind tasks_interchange_to_worker_socket "tcp://0.0.0.0:9003"
+  zmq_bind worker_to_interchange_socket "tcp://0.0.0.0:9003"
 
   log "Created worker task socket"
 
@@ -667,7 +583,7 @@ main_with_zmq cfg zmq_ctx = do
   let sockets = MkSocketState {
        command = command_socket,
        tasks_submit_to_interchange = tasks_submit_to_interchange_socket,
-       tasks_interchange_to_worker = tasks_interchange_to_worker_socket,
+       worker_to_interchange = worker_to_interchange_socket,
        results_interchange_to_submit = results_interchange_to_submit_socket,
        submit_pidfd = submit_pidfd
        }
@@ -681,7 +597,7 @@ main_with_zmq cfg zmq_ctx = do
   -- (for in waiting for req, waiting for rep states)
   close_zmq_socket command_socket
   close_zmq_socket tasks_submit_to_interchange_socket
-  close_zmq_socket tasks_interchange_to_worker_socket
+  close_zmq_socket worker_to_interchange_socket
   close_zmq_socket results_interchange_to_submit_socket
 
 
@@ -708,8 +624,7 @@ poll_loop sockets = do
 
   zmq_poll_command_channel_loop sockets.command
   zmq_poll_tasks_submit_to_interchange_loop sockets
-  zmq_poll_tasks_interchange_to_worker_loop sockets
-  zmq_poll_results_worker_to_interchange_loop sockets
+  zmq_poll_worker_to_interchange_loop sockets
 
 
 
@@ -757,11 +672,11 @@ poll_loop sockets = do
   -- for the interface of this loop?
   tasks_submit_to_interchange_fd <- zmq_get_socket_fd sockets.tasks_submit_to_interchange
   command_fd <- zmq_get_socket_fd sockets.command
-  tasks_interchange_to_worker_fd <- zmq_get_socket_fd sockets.tasks_interchange_to_worker
+  worker_to_interchange_fd <- zmq_get_socket_fd sockets.worker_to_interchange
 
   poll_outputs <- poll [MkPollInput command_fd 0,
                         MkPollInput tasks_submit_to_interchange_fd 0,
-                        MkPollInput tasks_interchange_to_worker_fd 0,
+                        MkPollInput worker_to_interchange_fd 0,
                         MkPollInput (submit_pidfd sockets) 0]
                        (MkTimeMS (-1)) -- -1 means infinity. should either be infinity or managed as part of a timed events queue that is not fd driven?
 
@@ -770,7 +685,7 @@ poll_loop sockets = do
 
   log "DEBUG: reading tasks interchange to worker status"
   logv "DEBUG: socket poll result: " (index 2 poll_outputs).revents
-  dbg_events <- zmq_get_socket_events sockets.tasks_interchange_to_worker
+  dbg_events <- zmq_get_socket_events sockets.worker_to_interchange
   logv "DEBUG: zmq socket events: " dbg_events
 
   -- TODO: some assert here?
@@ -810,7 +725,7 @@ poll_loop sockets = do
 
   when ((index 2 poll_outputs).revents /= 0) $ do
     log "Got a poll result for tasks interchange to workers channel. Doing ZMQ-specific event handling."
-    zmq_poll_tasks_interchange_to_worker_loop sockets
+    zmq_poll_worker_to_interchange_loop sockets
 
   -- TODO: it's horrible API-wise that these numbers are manually tied to
   -- position in the poll list -- removing the worker to interchange result
