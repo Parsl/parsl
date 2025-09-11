@@ -7,11 +7,12 @@ from parsl.monitoring.radios.base import (
     MonitoringRadioSender,
     RadioConfig,
 )
+from parsl.utils import RepresentationMixin
 
 logger = logging.getLogger(__name__)
 
 
-class HTEXRadio(RadioConfig):
+class HTEXRadio(RadioConfig, RepresentationMixin):
     def create_sender(self) -> MonitoringRadioSender:
         return HTEXRadioSender()
 
