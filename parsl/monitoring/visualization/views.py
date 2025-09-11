@@ -1,9 +1,23 @@
+import datetime
+import os.path as ospath
+
 import pandas as pd
 from flask import current_app as app
-from flask import render_template
+from flask import render_template, request
 
 import parsl.monitoring.queries.pandas as queries
-from parsl.monitoring.visualization.models import Status, Task, Workflow, db
+from parsl.monitoring.visualization.form_fields import FileForm
+from parsl.monitoring.visualization.models import (
+    Environment,
+    File,
+    InputFile,
+    MiscInfo,
+    OutputFile,
+    Status,
+    Task,
+    Workflow,
+    db,
+)
 from parsl.monitoring.visualization.plots.default.task_plots import (
     time_series_memory_per_task_plot,
 )
@@ -19,8 +33,6 @@ from parsl.monitoring.visualization.plots.default.workflow_resource_plots import
 )
 
 dummy = True
-
-import datetime
 
 
 def format_time(value):
@@ -52,11 +64,76 @@ app.jinja_env.filters['durationformat'] = format_duration
 @app.route('/')
 def index():
     workflows = Workflow.query.all()
+    have_files = []
     for workflow in workflows:
         workflow.status = 'Running'
         if workflow.time_completed is not None:
             workflow.status = 'Completed'
-    return render_template('workflows_summary.html', workflows=workflows)
+        file_list = File.query.filter_by(run_id=workflow.run_id).first()
+        if file_list:
+            have_files.append(workflow.run_id)
+    return render_template('workflows_summary.html', workflows=workflows, have_files=have_files)
+
+
+@app.route('/file/<file_id>/')
+def file_id(file_id):
+    file_details = File.query.filter_by(file_id=file_id).first()
+    input_files = InputFile.query.filter_by(file_id=file_id).all()
+    output_files = OutputFile.query.filter_by(file_id=file_id).first()
+    task_ids = set()
+    environ = None
+
+    for f in input_files:
+        task_ids.add(f.task_id)
+    if output_files:
+        task_ids.add(output_files.task_id)
+    tasks = {}
+    for tid in task_ids:
+        tasks[tid] = Task.query.filter_by(run_id=file_details.run_id, task_id=tid).first()
+    workflow_details = Workflow.query.filter_by(run_id=file_details.run_id).first()
+    if output_files:
+        environ = Environment.query.filter_by(environment_id=tasks[output_files.task_id].task_environment).first()
+
+    return render_template('file_detail.html', file_details=file_details,
+                           input_files=input_files, output_files=output_files,
+                           tasks=tasks, workflow=workflow_details, environment=environ)
+
+
+@app.route('/file', methods=['GET', 'POST'])
+def file():
+    form = FileForm()
+    if request.method == 'POST':
+        file_list = []
+        if form.validate_on_submit():
+            if not form.file_name.data.startswith('%'):
+                filename = '%' + form.file_name.data
+            else:
+                filename = form.file_name.data
+            file_list = File.query.filter(File.full_path.like(filename)).all()
+        return render_template('file.html', form=form, file_list=file_list)
+    return render_template('file.html', form=form)
+
+
+@app.route('/file/workflow/<workflow_id>/')
+def file_workflow(workflow_id):
+    workflow_files = File.query.filter_by(run_id=workflow_id).all()
+    file_map = {}
+    workflow_details = Workflow.query.filter_by(run_id=workflow_id).first()
+    task_ids = set()
+    files_by_task = {}
+    file_details = {}
+    for wf in workflow_files:
+        file_details[wf.file_id] = wf
+        task_ids.add(wf.task_id)
+        file_map[wf.file_id] = ospath.basename(wf.full_path)
+    tasks = {}
+
+    for tid in task_ids:
+        tasks[tid] = Task.query.filter_by(run_id=workflow_id, task_id=tid).first()
+        files_by_task[tid] = {'inputs': InputFile.query.filter_by(run_id=workflow_id, task_id=tid).all(),
+                              'outputs': OutputFile.query.filter_by(run_id=workflow_id, task_id=tid).all()}
+    return render_template('file_workflow.html', workflow=workflow_details,
+                           task_files=files_by_task, tasks=tasks, file_map=file_map)
 
 
 @app.route('/workflow/<workflow_id>/')
@@ -70,12 +147,37 @@ def workflow(workflow_id):
     df_task = queries.completion_times_for_workflow(workflow_id, db.engine)
     df_task_tries = queries.tries_for_workflow(workflow_id, db.engine)
     task_summary = queries.app_counts_for_workflow(workflow_id, db.engine)
-
+    file_list = File.query.filter_by(run_id=workflow_id).first()
+    if file_list:
+        have_files = True
+    else:
+        have_files = False
+    misc_info = MiscInfo.query.filter_by(run_id=workflow_id).order_by(MiscInfo.timestamp.asc()).all()
+    if misc_info:
+        have_misc = True
+    else:
+        have_misc = False
     return render_template('workflow.html',
                            workflow_details=workflow_details,
                            task_summary=task_summary,
                            task_gantt=task_gantt_plot(df_task, df_status, time_completed=workflow_details.time_completed),
-                           task_per_app=task_per_app_plot(df_task_tries, df_status, time_completed=workflow_details.time_completed))
+                           task_per_app=task_per_app_plot(df_task_tries, df_status, time_completed=workflow_details.time_completed),
+                           have_files=have_files, misc_info=misc_info, have_misc=have_misc)
+
+
+@app.route('/workflow/<workflow_id>/environment/<environment_id>')
+def environment(workflow_id, environment_id):
+    environment_details = Environment.query.filter_by(environment_id=environment_id).first()
+    workflow = Workflow.query.filter_by(run_id=workflow_id).first()
+    task_list = Task.query.filter_by(task_environment=environment_id).all()
+    tasks = {}
+    for task in task_list:
+        if task.task_func_name not in tasks:
+            tasks[task.task_func_name] = []
+        tasks[task.task_func_name].append(task.task_id)
+
+    return render_template('env.html', environment_details=environment_details,
+                           workflow=workflow, tasks=tasks)
 
 
 @app.route('/workflow/<workflow_id>/app/<app_name>')
@@ -114,12 +216,15 @@ def task(workflow_id, task_id):
     if workflow_details is None:
         return render_template('error.html', message="Workflow %s could not be found" % workflow_id)
 
-    task_details = Task.query.filter_by(
-        run_id=workflow_id, task_id=task_id).first()
+    task_details = queries.full_task_info(workflow_id, task_id, db.engine)
     task_status = Status.query.filter_by(
         run_id=workflow_id, task_id=task_id).order_by(Status.timestamp)
 
     df_resources = queries.resources_for_task(workflow_id, task_id, db.engine)
+    environments = Environment.query.filter_by(run_id=workflow_id).all()
+    environs = {}
+    for env in environments:
+        environs[env.environment_id] = env.label
 
     return render_template('task.html',
                            workflow_details=workflow_details,
@@ -127,6 +232,7 @@ def task(workflow_id, task_id):
                            task_status=task_status,
                            time_series_memory_resident=time_series_memory_per_task_plot(
                                df_resources, 'psutil_process_memory_resident', 'Memory Usage'),
+                           environments=environs
                            )
 
 

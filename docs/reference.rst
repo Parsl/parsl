@@ -54,6 +54,7 @@ Data management
     parsl.data_provider.data_manager.DataManager
     parsl.data_provider.staging.Staging
     parsl.data_provider.files.File
+    parsl.data_provider.dynamic_files.DynamicFileList
     parsl.data_provider.ftp.FTPSeparateTaskStaging
     parsl.data_provider.ftp.FTPInTaskStaging
     parsl.data_provider.file_noop.NoOpFileStaging

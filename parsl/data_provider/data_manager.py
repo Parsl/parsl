@@ -3,6 +3,7 @@ from concurrent.futures import Future
 from typing import TYPE_CHECKING, Any, Callable, List, Optional
 
 from parsl.app.futures import DataFuture
+from parsl.data_provider.dynamic_files import DynamicFileList
 from parsl.data_provider.file_noop import NoOpFileStaging
 from parsl.data_provider.files import File
 from parsl.data_provider.ftp import FTPSeparateTaskStaging
@@ -58,12 +59,22 @@ class DataManager:
         raise ValueError("Executor {} cannot stage file {}".format(executor, repr(file)))
 
     def optionally_stage_in(self, input, func, executor):
-        if isinstance(input, DataFuture):
+        if isinstance(input, DynamicFileList.DynamicFile):
+            if input.empty:
+                file = DynamicFileList.DynamicFile
+            else:
+                file = input.cleancopy()
+                # replace the input DataFuture with a new DataFuture which will complete at
+                # the same time as the original one, but will contain the newly
+                # copied file
+                input = DataFuture(input, file, dfk=self.dfk, tid=input.tid)
+            return (input, func)
+        elif isinstance(input, DataFuture):
             file = input.file_obj.cleancopy()
             # replace the input DataFuture with a new DataFuture which will complete at
             # the same time as the original one, but will contain the newly
             # copied file
-            input = DataFuture(input, file, tid=input.tid)
+            input = DataFuture(input, file, dfk=self.dfk, tid=input.tid)
         elif isinstance(input, File):
             file = input.cleancopy()
             input = file
@@ -113,7 +124,7 @@ class DataManager:
             - executor (str) : an executor the file is going to be staged in to.
         """
 
-        if isinstance(input, DataFuture):
+        if isinstance(input, (DataFuture, DynamicFileList, DynamicFileList.DynamicFile)):
             parent_fut = input  # type: Optional[Future]
         elif isinstance(input, File):
             parent_fut = None

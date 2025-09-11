@@ -22,7 +22,7 @@ extras_require = {
         'networkx>=3.2,<3.3',
         'Flask>=1.0.2',
         'flask_sqlalchemy',
-
+        'Flask-WTF',
         # pandas uses "loose semantic versioning"
         # https://pandas.pydata.org/docs/development/policies.html#version-policy
         'pandas<3,>=2.2',

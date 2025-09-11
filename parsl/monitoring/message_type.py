@@ -17,3 +17,10 @@ class MessageType(Enum):
 
     # Reports of the block info
     BLOCK_INFO = 4
+
+    # Reports file info
+    FILE_INFO = 5
+    INPUT_FILE = 6
+    OUTPUT_FILE = 7
+    ENVIRONMENT_INFO = 8
+    MISC_INFO = 9
