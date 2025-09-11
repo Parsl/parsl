@@ -11,7 +11,6 @@ import Control.App
 import Data.Monoid.Exponentiation
 import Data.Vect
 import Generics.Derive
-import Language.JSON
 import System.FFI
 
 import Bytes
@@ -28,9 +27,6 @@ import ZMQ
 -- config supplied on stdin, or by random bind.
 WORKER_TASK_PORT : Int
 WORKER_TASK_PORT = 9003
-
-WORKER_RESULT_PORT : Int
-WORKER_RESULT_PORT = 9004
 
 -- for benc dev environment:
 -- apt install chezscheme      -- to run idris
@@ -50,7 +46,7 @@ Show ManagerID where
 record ManagerRegistration where
   constructor MkManagerRegistration
   manager_id : ManagerID
-  manager_json : JSON  -- TODO: this manager_json can go away and be replaced by the two fields that are actually used.
+  manager_pickle : PickleAST  -- TODO: this manager_pickle can go away and be replaced by the two fields that are actually used.
 %runElab derive "ManagerRegistration" [Generic, Meta, Show]
 
 data TaskDef = MkTaskDef PickleAST
@@ -74,7 +70,6 @@ record SocketState where
   command : ZMQSocket
   tasks_submit_to_interchange : ZMQSocket
   tasks_interchange_to_worker : ZMQSocket
-  results_worker_to_interchange : ZMQSocket
   results_interchange_to_submit : ZMQSocket
   submit_pidfd : FD PidFD
 
@@ -109,13 +104,13 @@ ascii_dump v = do
 -- TODO: remove the notimpl path. One way is to make this Maybe,
 -- but then there is still a failing path to deal with where
 -- get_block_id is called. More type-interesting would be to
--- replace the JSON with a manager data structure containing
+-- replace the PickleAST with a manager data structure containing
 -- the fields that are interesting, and this function becomes
 -- the probably much simpler projection of that field out of
 -- the manager record.
 get_block_id : ManagerRegistration -> PickleAST
 get_block_id mr = 
-  let c = lookup "block_id" (manager_json mr)
+  let c = lookup "block_id" (manager_pickle mr)
    in case c of
         Just (JString c) => PickleUnicodeString c
         _ => ?notimpl_error_path_block_id_not_str_
@@ -127,12 +122,12 @@ get_block_id mr =
 -- individual dispatch_cmd pieces can be typechecked a bit?
 covering dispatch_cmd : (State MatchState MatchState es, State LogConfig LogConfig es, HasErr AppHasIO es) => String -> App es PickleAST
 
-dispatch_cmd "WORKER_PORTS" = do
-  log "WORKER_PORTS requested"
-  -- hard-code return value because ports are also hard-coded ...
+dispatch_cmd "WORKER_BINDS" = do
+  log "WORKER_BINDS requested"
+  -- hard-code return value because port is also hard-coded ...
   -- TODO: this should be some environment to be passed around
   -- perhaps as a monad-style reader environment?
-  pure (PickleTuple [PickleInteger $ cast WORKER_TASK_PORT, PickleInteger $ cast WORKER_RESULT_PORT])
+  pure $ PickleInteger $ cast WORKER_TASK_PORT
 
 dispatch_cmd "CONNECTED_BLOCKS" = do
   log "CONNECTED_BLOCKS requested"
@@ -222,7 +217,7 @@ matchmake sockets = do
         [] => log "No match possible: no managers registered"
         mr :: rest_managers => do
           logv "Considering manager for match" mr
-          let c = lookup "max_capacity" (manager_json mr)
+          let c = lookup "max_capacity" (manager_pickle mr)
           case c of
             Just (JNumber c) => do
               logv "This manager has capacity" c
@@ -277,7 +272,7 @@ matchmake sockets = do
                   -- is a large prefetch value: they queue up and performance is changed (probably reduced, except
                   -- to the extent that prefetch increases it). Maybe that's interesting to note as untested?
             _ => ?error_registration_bad_max_capacity
-                  -- TODO: a more strongly typed manager record (rather than arbitrary JSON) would not have this case:
+                  -- TODO: a more strongly typed manager record (rather than arbitrary dict) would not have this case:
                   -- eg parse (don't validate) at registration time?
 
 
@@ -412,6 +407,8 @@ process_result_part sockets () msg_part = do
  zmq_msg_close msg_part
  pure ()
 
+-- TODO: this is not called anywhere now... the result handling has moved around
+-- protocol-wise.
 covering zmq_poll_results_worker_to_interchange_loop : (State LogConfig LogConfig es, HasErr AppHasIO es) => SocketState -> App es ()
 zmq_poll_results_worker_to_interchange_loop sockets = do
   events <- zmq_get_socket_events sockets.results_worker_to_interchange
@@ -440,14 +437,14 @@ zmq_poll_results_worker_to_interchange_loop sockets = do
 
         zmq_poll_results_worker_to_interchange_loop sockets
 
-covering zmq_poll_tasks_interchange_to_worker_loop : (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
-zmq_poll_tasks_interchange_to_worker_loop sockets = do
+covering xxx_old_zmq_poll_tasks_interchange_to_worker_loop : (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
+xxx_old_zmq_poll_tasks_interchange_to_worker_loop sockets = do
   events <- zmq_get_socket_events sockets.tasks_interchange_to_worker
   logv "ZMQ poll tasks interchange to worker loop got these zmq events" events
   -- TODO: we'll be both reading and writing from this socket
 
   when (events `mod` 2 == 1) $ do -- read
-    log "Reading message from task interchange->worker channel"
+    log "Reading message from task interchange<->worker channel"
     -- This socket is a ROUTER socket, so there will be a multi-part
     -- message where the first part is going to be the identifier of the
     -- sender. I think if one part is available, all parts will be available,
@@ -458,6 +455,10 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
     -- list of msg objects, instead of a Maybe.
     msgs <- zmq_recv_msgs_multipart_alloc sockets.tasks_interchange_to_worker
     case msgs of
+      -- TODO: this whole section needs rewriting as pickle, not JSON, and
+      -- merging with the tagged result stream code - probably keep the
+      -- tagged result stream code, and then move this case right here into
+      -- there.
       [] => log "No message received on task interchange->worker channel"
       [addr_part, json_part] => do
         log "Received two-part message on task interchange->worker channel"
@@ -479,7 +480,7 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
         msg_as_str <- app1 $ do
           bytes <- zmq_msg_as_bytes json_part
           let (s # bytes) = length1 bytes
-          logv "JSON part size" s
+          logv "Registration message part size" s
           bytes <- ascii_dump bytes
           (s # bytes) <- str_from_bytes (cast s) bytes
           free1 bytes
@@ -521,7 +522,7 @@ zmq_poll_tasks_interchange_to_worker_loop sockets = do
               _ => ?error_unknown_registration_like_type
         zmq_msg_close addr_part
         zmq_msg_close json_part
-        zmq_poll_tasks_interchange_to_worker_loop sockets
+        xxx_old_zmq_poll_tasks_interchange_to_worker_loop sockets
       _ => ?error_tasks_to_interchange_expected_two_parts
 
 
@@ -637,11 +638,6 @@ main_with_zmq cfg zmq_ctx = do
 
   log "Created worker task socket"
 
-  log "Creating worker result socket"
-  results_worker_to_interchange_socket <- new_zmq_socket zmq_ctx ZMQSocketROUTER
-  zmq_bind results_worker_to_interchange_socket "tcp://0.0.0.0:9004"
-  log "Created worker result socket"
-
   -- This `pure` is to get access to bind/| syntax which I think doesn't exist
   -- for `let` -- but I haven't checked for sure?
   PickleDict config_dict <- pure cfg
@@ -672,7 +668,6 @@ main_with_zmq cfg zmq_ctx = do
        command = command_socket,
        tasks_submit_to_interchange = tasks_submit_to_interchange_socket,
        tasks_interchange_to_worker = tasks_interchange_to_worker_socket,
-       results_worker_to_interchange = results_worker_to_interchange_socket,
        results_interchange_to_submit = results_interchange_to_submit_socket,
        submit_pidfd = submit_pidfd
        }
@@ -687,7 +682,6 @@ main_with_zmq cfg zmq_ctx = do
   close_zmq_socket command_socket
   close_zmq_socket tasks_submit_to_interchange_socket
   close_zmq_socket tasks_interchange_to_worker_socket
-  close_zmq_socket results_worker_to_interchange_socket
   close_zmq_socket results_interchange_to_submit_socket
 
 
@@ -764,12 +758,10 @@ poll_loop sockets = do
   tasks_submit_to_interchange_fd <- zmq_get_socket_fd sockets.tasks_submit_to_interchange
   command_fd <- zmq_get_socket_fd sockets.command
   tasks_interchange_to_worker_fd <- zmq_get_socket_fd sockets.tasks_interchange_to_worker
-  results_worker_to_interchange_fd <- zmq_get_socket_fd sockets.results_worker_to_interchange
 
   poll_outputs <- poll [MkPollInput command_fd 0,
                         MkPollInput tasks_submit_to_interchange_fd 0,
                         MkPollInput tasks_interchange_to_worker_fd 0,
-                        MkPollInput results_worker_to_interchange_fd 0,
                         MkPollInput (submit_pidfd sockets) 0]
                        (MkTimeMS (-1)) -- -1 means infinity. should either be infinity or managed as part of a timed events queue that is not fd driven?
 
@@ -820,11 +812,12 @@ poll_loop sockets = do
     log "Got a poll result for tasks interchange to workers channel. Doing ZMQ-specific event handling."
     zmq_poll_tasks_interchange_to_worker_loop sockets
 
-  when ((index 3 poll_outputs).revents /= 0) $ do
-    log "Got a poll result for results worker to interchange channel. Doing ZMQ-specific event handling."
-    zmq_poll_results_worker_to_interchange_loop sockets
+  -- TODO: it's horrible API-wise that these numbers are manually tied to
+  -- position in the poll list -- removing the worker to interchange result
+  -- socket needed manual renuber of the subsequent pidfd handler!
+  -- Implement an API that looks more like a match/case style poll call?
 
-  when ((index 4 poll_outputs).revents /= 0) $ do
+  when ((index 3 poll_outputs).revents /= 0) $ do
     log "Got a pidfd event from submit process. Setting exit state."
     put Bool False
 
