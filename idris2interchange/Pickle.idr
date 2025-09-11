@@ -38,6 +38,10 @@ data PickleAST = PickleUnicodeString String
                | PickleObj PickleAST PickleAST  -- NEWOBJ creates a class object (eg PickleGlobal) and args to __new__
 %runElab derive "PickleAST" [Generic, Meta, Show, Eq]
 
+export
+FromString PickleAST where
+  fromString s = PickleUnicodeString s
+
 record VMState where
   constructor MkVMState
   stack: List PickleAST
