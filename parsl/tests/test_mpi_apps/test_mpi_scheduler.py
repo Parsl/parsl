@@ -1,4 +1,3 @@
-import logging
 import os
 import pickle
 from unittest import mock
@@ -10,7 +9,7 @@ from parsl.executors.high_throughput.mpi_resource_management import (
     TaskScheduler,
 )
 from parsl.multiprocessing import SpawnContext
-from parsl.serialize import pack_res_spec_apply_message, unpack_res_spec_apply_message
+from parsl.serialize import pack_apply_message
 
 
 @pytest.fixture(autouse=True)
@@ -42,12 +41,9 @@ def test_MPISched_put_task():
     assert len(scheduler.available_nodes) == 8
     assert scheduler._free_node_counter.value == 8
 
-    mock_task_buffer = pack_res_spec_apply_message("func",
-                                                   "args",
-                                                   "kwargs",
-                                                   resource_specification={"num_nodes": 2,
-                                                                           "ranks_per_node": 2})
-    task_package = {"task_id": 1, "buffer": mock_task_buffer}
+    mock_task_buffer = pack_apply_message("func", "args", "kwargs")
+    res_spec = {"num_nodes": 2, "ranks_per_node": 2}
+    task_package = {"task_id": 1, "buffer": mock_task_buffer, "resource_spec": res_spec}
     scheduler.put_task(task_package)
 
     assert scheduler._free_node_counter.value == 6
@@ -85,12 +81,9 @@ def test_MPISched_roundtrip():
     for round in range(1, 9):
         assert scheduler._free_node_counter.value == 8
 
-        mock_task_buffer = pack_res_spec_apply_message("func",
-                                                       "args",
-                                                       "kwargs",
-                                                       resource_specification={"num_nodes": round,
-                                                                               "ranks_per_node": 2})
-        task_package = {"task_id": round, "buffer": mock_task_buffer}
+        mock_task_buffer = pack_apply_message("func", "args", "kwargs")
+        res_spec = {"num_nodes": round, "ranks_per_node": 2}
+        task_package = {"task_id": round, "buffer": mock_task_buffer, "resource_spec": res_spec}
         scheduler.put_task(task_package)
 
         assert scheduler._free_node_counter.value == 8 - round
@@ -114,27 +107,17 @@ def test_MPISched_contention():
 
     assert scheduler._free_node_counter.value == 8
 
-    mock_task_buffer = pack_res_spec_apply_message("func",
-                                                   "args",
-                                                   "kwargs",
-                                                   resource_specification={
-                                                       "num_nodes": 8,
-                                                       "ranks_per_node": 2
-                                                   })
-    task_package = {"task_id": 1, "buffer": mock_task_buffer}
+    mock_task_buffer = pack_apply_message("func", "args", "kwargs")
+    rspec_1 = {"num_nodes": 8, "ranks_per_node": 2}
+    task_package = {"task_id": 1, "buffer": mock_task_buffer, "resource_spec": rspec_1}
     scheduler.put_task(task_package)
 
     assert scheduler._free_node_counter.value == 0
     assert scheduler._backlog_queue.empty()
 
-    mock_task_buffer = pack_res_spec_apply_message("func",
-                                                   "args",
-                                                   "kwargs",
-                                                   resource_specification={
-                                                       "num_nodes": 8,
-                                                       "ranks_per_node": 2
-                                                   })
-    task_package = {"task_id": 2, "buffer": mock_task_buffer}
+    mock_task_buffer = pack_apply_message("func", "args", "kwargs")
+    rspec_2 = {"num_nodes": 8, "ranks_per_node": 2}
+    task_package = {"task_id": 2, "buffer": mock_task_buffer, "resource_spec": rspec_2}
     scheduler.put_task(task_package)
 
     # Second task should now be in the backlog_queue
@@ -143,8 +126,7 @@ def test_MPISched_contention():
     # Confirm that the first task is available and has all 8 nodes provisioned
     task_on_worker_side = task_q.get()
     assert task_on_worker_side['task_id'] == 1
-    _, _, _, resource_spec = unpack_res_spec_apply_message(task_on_worker_side['buffer'])
-    assert len(resource_spec['MPI_NODELIST'].split(',')) == 8
+    assert len(rspec_1["MPI_NODELIST"].split(",")) == 8
     assert task_q.empty()  # Confirm that task 2 is not yet scheduled
 
     # Simulate worker returning result and the scheduler picking up result
@@ -159,8 +141,7 @@ def test_MPISched_contention():
     # Pop in a mock result
     task_on_worker_side = task_q.get()
     assert task_on_worker_side['task_id'] == 2
-    _, _, _, resource_spec = unpack_res_spec_apply_message(task_on_worker_side['buffer'])
-    assert len(resource_spec['MPI_NODELIST'].split(',')) == 8
+    assert len(rspec_2["MPI_NODELIST"].split(",")) == 8
 
 
 @pytest.mark.local
@@ -178,11 +159,8 @@ def test_hashable_backlog_queue():
     assert scheduler._free_node_counter.value == 8
 
     for i in range(3):
-        mock_task_buffer = pack_res_spec_apply_message("func", "args", "kwargs",
-                                                       resource_specification={
-                                                           "num_nodes": 8,
-                                                           "ranks_per_node": 2
-                                                       })
-        task_package = {"task_id": i, "buffer": mock_task_buffer}
+        mock_task_buffer = pack_apply_message("func", "args", "kwargs")
+        res_spec = {"num_nodes": 8, "ranks_per_node": 2}
+        task_package = {"task_id": i, "buffer": mock_task_buffer, "resource_spec": res_spec}
         scheduler.put_task(task_package)
     assert scheduler._backlog_queue.qsize() == 2, "Expected 2 backlogged tasks"
