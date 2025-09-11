@@ -25,7 +25,7 @@ python3 -m venv parsl_env; source parsl_env/bin/activate; python3 -m pip install
                 walltime="00:20:00",
             ),
             worker_logdir_root='$OSG_WN_TMP',
-            worker_ports=(31000, 31001)
+            worker_port=31000,
         )
     ],
     usage_tracking=LEVEL_1,
