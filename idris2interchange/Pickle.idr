@@ -28,6 +28,7 @@ import Logging
 public export
 data PickleAST = PickleUnicodeString String
                | PickleInteger Integer
+               | PickleFloat Double
                | PickleTuple (List PickleAST)
                | PickleList (List PickleAST)
                | PickleDict (List (PickleAST, PickleAST))
@@ -119,6 +120,31 @@ read_uint2 bb = do
   pure1 $ v # bb2
 
 
+read_double8 : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> App1 es (Res Double (const ByteBlock))
+read_double8 bb = do
+  (byte1 # bb1) <- bb_uncons bb 
+  (byte2 # bb2) <- bb_uncons bb1 
+  (byte3 # bb3) <- bb_uncons bb2
+  (byte4 # bb4) <- bb_uncons bb3 
+  (byte5 # bb5) <- bb_uncons bb4 
+  (byte6 # bb6) <- bb_uncons bb5 
+  (byte7 # bb7) <- bb_uncons bb6 
+  (byte8 # bb8) <- bb_uncons bb7 
+
+  let v = 1234  -- TODO: false/dummy conversion of bytes to double! 
+
+  pure1 $ v # bb8
+
+
+-- TODO: this isn't tail recursive
+takeNbytes : HasErr AppHasIO es => Nat -> (1 _ : ByteBlock) -> App1 es (Res (List Bits8) (const ByteBlock))
+takeNbytes Z bb = pure1 $ [] # bb
+takeNbytes (S n) bb = do
+  (v # bb) <- bb_uncons bb
+  (rest # bb) <- takeNbytes n bb
+  pure1 $ ( [v] ++ rest ) # bb
+
+
 -- define this signature before the body because we are mutually
 -- recursive (or I could use a mutual block? what's the difference?)
 step : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
@@ -192,6 +218,29 @@ step_BININT bb (MkVMState stack memo) = do
   let new_state = MkVMState ((PickleInteger (cast v))::stack) memo
   step bb' new_state 
 
+step_LONG1 : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
+
+step_LONG1 bb (MkVMState stack memo) = do
+  log "Opcode: LONG1"
+  (n # bb') <- bb_uncons bb
+  logv "LONG1 number of bytes" n
+  -- TODO: this is a fake LONG1 parser
+  -- TODO: read n bytes even though faking, because otherwise
+  --       we lose track of the bytestream
+  bytes # bb' <- takeNbytes (the Nat (cast n)) bb'
+  let fake = 6789
+  
+  let new_state = MkVMState ((PickleInteger (cast fake))::stack) memo
+  step bb' new_state 
+
+step_BINFLOAT : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
+
+step_BINFLOAT bb (MkVMState stack memo) = do
+  log "Opcode: BINFLOAT"
+  (v # bb') <- read_double8 bb
+  logv "8-byte float" v
+  step bb' (MkVMState ((PickleFloat v)::stack) memo)
+
 step_NONE : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_NONE bb (MkVMState stack memo) = do
   log "Opcode: NONE"
@@ -258,16 +307,6 @@ step_STOP bb state = do
   log "Opcode: STOP"
   free1 bb
   pure state
-
-
--- TODO: this isn't tail recursive
-takeNbytes : HasErr AppHasIO es => Nat -> (1 _ : ByteBlock) -> App1 es (Res (List Bits8) (const ByteBlock))
-takeNbytes Z bb = pure1 $ [] # bb
-takeNbytes (S n) bb = do
-  (v # bb) <- bb_uncons bb
-  (rest # bb) <- takeNbytes n bb
-  pure1 $ ( [v] ++ rest ) # bb
-
 
 step_BINBYTES : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_BINBYTES bb (MkVMState stack memo) = do
@@ -456,6 +495,7 @@ step bb state = do
       46 => step_STOP bb' state
       66 => step_BINBYTES bb' state
       67 => step_SHORT_BINBYTES bb' state
+      71 => step_BINFLOAT bb' state
       74 => step_BININT bb' state
       75 => step_BININT1 bb' state
       77 => step_BININT2 bb' state
@@ -468,6 +508,7 @@ step bb state = do
       129 => step_NEWOBJ bb' state
       134 => step_TUPLE2 bb' state
       135 => step_TUPLE3 bb' state
+      138 => step_LONG1 bb' state
       140 => step_SHORT_BINUNICODE bb' state
       147 => step_STACK_GLOBAL bb' state
       148 => step_MEMOIZE bb' state
@@ -619,7 +660,7 @@ store_LONG1_8 bytes v = do
   let b8 = (v `div` 256 `div` 256 `div` 256 `div` 256 `div` 256 `div` 256 `div` 256) `mod` 256
   let b9 = (v `div` 256 `div` 256 `div` 256 `div` 256 `div` 256 `div` 256 `div` 256 `div` 256) `mod` 256
 
-  -- this is `when` but I get a cannot find Applicative instance error
+  -- ISSUE: this is `when` but I get a cannot find Applicative instance error
   if (b9 /= 0) 
    then ?error_store_LONG1_8_b9_not_zero
    else pure ()
