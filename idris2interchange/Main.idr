@@ -382,65 +382,102 @@ zmq_poll_tasks_submit_to_interchange_loop sockets = do
         zmq_poll_tasks_submit_to_interchange_loop sockets
 
 
-covering process_worker_part : (State LogConfig LogConfig es, HasErr AppHasIO es) => SocketState -> () -> ZMQMsg -> App es ()
-process_worker_part sockets () msg_part = do
-  -- Only forward on this if it is a result-tag
-  -- (rather than eg. monitoring or heartbeat or registration)
-  -- TODO: do monitoring forwarding. test monitoring forwarding.
-  -- TODO: do heartbeat processing. test heartbeat processing.
+covering process_result_part : (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> () -> ZMQMsg -> App es ()
+process_result_part sockets () msg_part = do
+ -- Only forward on this if it is a result-tag
+ -- (rather than eg. monitoring or heartbeat or registration)
  app1 $ do
+  -- ISSUE: I couldn't get 'get MatchState' to work/typecheck here
+  -- with the typechecker trying various other 'get' implementations
+  -- (eg from list/vect) rather than the state one.
+  -- It turns out its because I was omitting the `app` on the front of
+  -- `get MatchState` so it was in the wrong monad-like (App vs App1)
+  -- and the type error I got did not make that clear.
   bytes <- zmq_msg_as_bytes msg_part
   (bytes # bytes') <- bb_duplicate bytes
   result <- unpickle bytes
-
   logv "Unpickled result" result
   case result of
-    PickleDict pairs => do
-      let tag = lookup (PickleUnicodeString "type") pairs
-      logv "result tag" tag
-      case tag of
-        Just (PickleUnicodeString "result") => do
-          log "Result, so sending onwards"
-          bytes' <- zmq_send_bytes1 sockets.results_interchange_to_submit bytes' False
-          free1 bytes'
-        _ => do
-          logv "Ignoring non-result" tag
-          free1 bytes'
-      
-    _ => ?error_bad_pickle_object_on_worker_channel
+   PickleDict pairs => do
+     let tag = lookup (PickleUnicodeString "type") pairs
+     logv "result tag" tag
+     case tag of
+       Just (PickleUnicodeString "result") => do
+         log "Result, so sending onwards"
+         bytes' <- zmq_send_bytes1 sockets.results_interchange_to_submit bytes' False
+         free1 bytes'
+       _ => do
+         logv "Ignoring unknown rtype tag" tag
+         free1 bytes'
+     
+   _ => ?error_bad_pickle_object_on_worker_channel
 
   -- TODO: release worker/task binding/count
 
  zmq_msg_close msg_part
  pure ()
 
-covering zmq_poll_worker_to_interchange_loop : (State LogConfig LogConfig es, HasErr AppHasIO es) => SocketState -> App es ()
+covering zmq_poll_worker_to_interchange_loop : (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
 zmq_poll_worker_to_interchange_loop sockets = do
+  -- TODO: do monitoring forwarding. test monitoring forwarding.
+  -- TODO: do heartbeat processing. test heartbeat processing.
   events <- zmq_get_socket_events sockets.worker_to_interchange
   logv "ZMQ poll results worker to interchange loop got these zmq events" events
   
   when (events `mod` 2 == 1) $ do -- read
-    log "Trying to receive a message from results worker->interchange channel"
-    -- TODO: this will be a multipart message.
-    -- First part will be the manager ID. Subsequent parts will be individual
-    -- resuts as their own zmq message parts.
+    log "Trying to receive a message from worker<->interchange channel"
+    -- First part will be the manager ID. Then a pickle metadata dict.
+    -- Subsequent parts will be individual results, for result type messages.
     msgs <- zmq_recv_msgs_multipart_alloc sockets.worker_to_interchange
     case msgs of
-      [] => log "No message received on results worker->interchange channel"
-      (addr_part :: other_parts) => do
+      [] => log "No message received on worker<->interchange channel"
+      (addr_part :: meta_part :: other_parts) => do
         s <- zmq_msg_size addr_part
-        logv "Received result-like message on results worker->interchange channel, size" s
-        app1 $ do
+        logv "Received message on worker<->interchange channel, message size" s
+        logv "Number of other parts in this multipart message" (length other_parts)
+
+        addr_id <- app1 $ do
           remote_id <- zmq_msg_as_bytes addr_part
           remote_id <- ascii_dump remote_id
-          free1 remote_id
+          to_gc_bytes remote_id
         zmq_msg_close addr_part
 
-        logv "Number of result parts in this multipart message" (length other_parts)
+        meta_pkl <- app1 $ do
+          bytes <- zmq_msg_as_bytes meta_part -- TODO: is this safe wrt message maybe being already closed, typechecking wise? i.e. does it copy the bytes or point to the bytes?
+          unpickle bytes
+        zmq_msg_close meta_part  -- TODO: something linear with zmq messages to enforce closing
 
-        foldlM (process_worker_part sockets) () other_parts
+        logv "Unpickled meta_pkl" meta_pkl
+
+        -- ISSUE: without this `the`, can't figure out the type of the
+        -- body of the case: it seems to be unable to resolve ?e with
+        -- (). Could be something to do with having lots of holes for
+        -- error handling introducing that ?e hole.
+        the (App es ()) $ case meta_pkl of
+         PickleDict pairs => do
+           let tag = lookup (PickleUnicodeString "type") pairs
+           logv "message meta type" tag
+           case tag of
+
+             Just (PickleUnicodeString "result") => do
+               log "Result metatype"
+               foldlM (process_result_part sockets) () other_parts 
+
+             Just (PickleUnicodeString "registration") => do
+               log "Registration metatype"
+               (MkMatchState managers tasks) <- get MatchState
+               let new_manager_registration = MkManagerRegistration (MkManagerId addr_id) meta_pkl
+               put MatchState (MkMatchState (new_manager_registration :: managers) tasks)
+               matchmake sockets
+
+             Just (PickleUnicodeString "heartbeat") => do
+               log "Heartbeat metatype -- ignoring, DANGER"
+             _ => ?notimpl_meta_pkl_unknown_metatype_tag
+
+         _ => ?error_protocol_meta_pkl_not_a_dict
 
         zmq_poll_worker_to_interchange_loop sockets
+      _ => ?error_protocol_incorrect_msg_parts_case
 
 
 -- TODO: is there anything to distinguish these three sockets at the type
