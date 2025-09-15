@@ -474,6 +474,17 @@ zmq_poll_worker_to_interchange_loop sockets = do
 
              Just (PickleUnicodeString "heartbeat") => do
                log "Heartbeat metatype -- ignoring, DANGER"
+
+             Just (PickleUnicodeString "connection_probe") => do
+               -- TODO: i wonder if this can be merged with heartbeat? How is it different?
+               log "Connection probe metatype"
+
+               app1 $ do
+                 b <- from_gc_bytes addr_id
+                 b <- zmq_send_bytes1 sockets.worker_to_interchange b True
+                 free1 b
+               zmq_send_bytes sockets.worker_to_interchange emptyByteBlock False
+
              _ => ?notimpl_meta_pkl_unknown_metatype_tag
 
          _ => ?error_protocol_meta_pkl_not_a_dict
