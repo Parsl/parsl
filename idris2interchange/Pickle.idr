@@ -29,6 +29,7 @@ public export
 data PickleAST = PickleUnicodeString String
                | PickleInteger Integer
                | PickleFloat Double
+               | PickleBool Bool
                | PickleTuple (List PickleAST)
                | PickleList (List PickleAST)
                | PickleDict (List (PickleAST, PickleAST))
@@ -256,6 +257,12 @@ step_NONE : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlo
 step_NONE bb (MkVMState stack memo) = do
   log "Opcode: NONE"
   let new_state = MkVMState (PickleNone :: stack) memo
+  step bb new_state 
+
+step_NEWTRUE : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
+step_NEWTRUE bb (MkVMState stack memo) = do
+  log "Opcode: NEWTRUE"
+  let new_state = MkVMState (PickleBool True :: stack) memo
   step bb new_state 
 
 step_BINGET : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
@@ -522,6 +529,7 @@ step bb state = do
       129 => step_NEWOBJ bb' state
       134 => step_TUPLE2 bb' state
       135 => step_TUPLE3 bb' state
+      136 => step_NEWTRUE bb' state
       138 => step_LONG1 bb' state
       140 => step_SHORT_BINUNICODE bb' state
       147 => step_STACK_GLOBAL bb' state
