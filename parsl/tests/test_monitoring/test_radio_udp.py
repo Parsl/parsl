@@ -15,7 +15,7 @@ def test_udp(tmpd_cwd):
 
     resource_msgs = SpawnQueue()
 
-    radio_config = UDPRadio(address="localhost")
+    radio_config = UDPRadio(address="localhost", atexit_timeout=0)
 
     # start receiver
     udp_receiver = radio_config.create_receiver(run_dir=str(tmpd_cwd),

@@ -38,7 +38,7 @@ class MonitoringRouter:
                  udp_port: Optional[int] = None,
                  run_dir: str = ".",
                  logging_level: int = logging.INFO,
-                 atexit_timeout: int = 3,   # in seconds
+                 atexit_timeout: int,   # in seconds
                  resource_msgs: mpq.Queue,
                  exit_event: Event,
                  ):
@@ -129,14 +129,16 @@ def udp_router_starter(*,
                        udp_port: Optional[int],
 
                        run_dir: str,
-                       logging_level: int) -> None:
+                       logging_level: int,
+                       atexit_timeout: int) -> None:
     setproctitle("parsl: monitoring UDP router")
     try:
         router = MonitoringRouter(udp_port=udp_port,
                                   run_dir=run_dir,
                                   logging_level=logging_level,
                                   resource_msgs=resource_msgs,
-                                  exit_event=exit_event)
+                                  exit_event=exit_event,
+                                  atexit_timeout=atexit_timeout)
     except Exception as e:
         logger.error("MonitoringRouter construction failed.", exc_info=True)
         comm_q.put(f"Monitoring router construction failed: {e}")
@@ -165,7 +167,8 @@ def start_udp_receiver(*,
                        monitoring_messages: Queue,
                        port: Optional[int],
                        logdir: str,
-                       debug: bool) -> UDPRadioReceiver:
+                       debug: bool,
+                       atexit_timeout: int) -> UDPRadioReceiver:
 
     udp_comm_q: Queue[Union[int, str]]
     udp_comm_q = SizedQueue(maxsize=10)
@@ -179,6 +182,7 @@ def start_udp_receiver(*,
                                        "udp_port": port,
                                        "run_dir": logdir,
                                        "logging_level": logging.DEBUG if debug else logging.INFO,
+                                       "atexit_timeout": atexit_timeout,
                                        },
                                name="Monitoring-UDP-Router-Process",
                                daemon=True,
