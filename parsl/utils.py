@@ -250,6 +250,9 @@ class RepresentationMixin:
             args = [getattr(self, a, default) for a in argspec.args[1:]]
         kwargs = {key: getattr(self, key, default) for key in defaults}
 
+        kwonlyargs = {key: getattr(self, key, default) for key in argspec.kwonlyargs}
+        kwargs.update(kwonlyargs)
+
         def assemble_multiline(args: List[str], kwargs: Dict[str, object]) -> str:
             def indent(text: str) -> str:
                 lines = text.splitlines()
