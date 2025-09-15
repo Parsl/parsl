@@ -296,7 +296,7 @@ class DatabaseManager:
         set_file_logger(f"{self.run_dir}/database_manager.log", level=logging_level,
                         format_string="%(asctime)s.%(msecs)03d %(name)s:%(lineno)d [%(levelname)s] [%(threadName)s %(thread)d] %(message)s")
 
-        logger.debug("Initializing Database Manager process")
+        logger.info("Initializing Database Manager process")
 
         self.db = Database(db_url)
         self.batching_interval = batching_interval
@@ -581,10 +581,10 @@ class DatabaseManager:
         elif x[0] == MessageType.NODE_INFO:
             assert len(x) == 2, "expected NODE_INFO tuple to have exactly two elements"
 
-            logger.info("Will put {} to pending node queue".format(x[1]))
+            logger.debug("Will put {} to pending node queue".format(x[1]))
             self.pending_node_queue.put(x[1])
         elif x[0] == MessageType.BLOCK_INFO:
-            logger.info("Will put {} to pending block queue".format(x[1]))
+            logger.debug("Will put {} to pending block queue".format(x[1]))
             self.pending_block_queue.put(x[-1])
         else:
             logger.error("Discarding message of unknown type {}".format(x[0]))
