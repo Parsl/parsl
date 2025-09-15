@@ -677,10 +677,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.command_client.run("HOLD_WORKER;{}".format(manager_id))
         logger.debug("Sent hold request to manager: {}".format(manager_id))
 
-    # TODO: is this information available on the executor side?
-    # for example the size of the self.tasks dictionary? (in which case,
-    # we'd need to make sure we delete elements from it?)
-    @property
     def outstanding(self) -> int:
         """Returns the count of tasks outstanding across the interchange
         and managers"""
