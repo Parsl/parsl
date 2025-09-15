@@ -361,9 +361,8 @@ class Manager:
 
             poll_duration_s = max(0, next_interesting_event_time - time.time())
             socks = dict(poller.poll(timeout=poll_duration_s * 1000))
-
-            if ix_sock in socks and socks[ix_sock] == zmq.POLLIN:
-                _, pkl_msg = ix_sock.recv_multipart()
+            if socks.get(ix_sock) == zmq.POLLIN:
+                pkl_msg = ix_sock.recv()
                 try:
                     tasks = pickle.loads(pkl_msg)
                 except Exception:
@@ -392,6 +391,7 @@ class Manager:
                 meta_b = pickle.dumps({'type': 'result'})
                 ix_sock.send_multipart([meta_b, results_sock.recv()])
                 logger.debug("Result sent to interchange")
+
             else:
                 logger.debug("No incoming tasks")
 

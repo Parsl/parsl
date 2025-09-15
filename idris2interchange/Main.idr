@@ -254,9 +254,6 @@ matchmake sockets = do
                     b <- zmq_send_bytes1 sockets.worker_to_interchange b True
                     free1 b
 
-                    -- this is the unused empty byte block mentioned in https://github.com/Parsl/parsl/issues/3372
-                    app $ zmq_send_bytes sockets.worker_to_interchange emptyByteBlock True
-
                     resp_bytes <- zmq_send_bytes1 sockets.worker_to_interchange resp_bytes False
 
                     -- Here is an example of using linear types to ensure b and resp_bytes get freed.
