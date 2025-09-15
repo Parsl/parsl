@@ -160,8 +160,8 @@ class Manager:
                 raise Exception("No viable address found")
             else:
                 logger.info(f"Connection to Interchange successful on {ix_address}")
-                task_q_url = tcp_url(ix_address, port)
-                logger.info(f"Interchange url: {task_q_url}")
+                ix_url = tcp_url(ix_address, port)
+                logger.info(f"Interchange url: {ix_url}")
         except Exception:
             logger.exception("Caught exception while trying to determine viable address to interchange")
             print("Failed to find a viable address to connect to interchange. Exiting")
@@ -170,7 +170,7 @@ class Manager:
         self.cert_dir = cert_dir
         self.zmq_context = curvezmq.ClientContext(self.cert_dir)
 
-        self._task_q_url = task_q_url
+        self._ix_url = ix_url
 
         self.uid = uid
         self.block_id = block_id
@@ -302,20 +302,20 @@ class Manager:
 
         # Linger is set to 0, so that the manager can exit even when there might be
         # messages in the pipe
-        task_incoming = self.zmq_context.socket(zmq.DEALER)
-        task_incoming.setsockopt(zmq.IDENTITY, self.uid.encode('utf-8'))
-        task_incoming.setsockopt(zmq.LINGER, 0)
-        task_incoming.connect(self._task_q_url)
+        ix_sock = self.zmq_context.socket(zmq.DEALER)
+        ix_sock.setsockopt(zmq.IDENTITY, self.uid.encode('utf-8'))
+        ix_sock.setsockopt(zmq.LINGER, 0)
+        ix_sock.connect(self._ix_url)
         logger.info("Manager task pipe connected to interchange")
 
         poller = zmq.Poller()
         poller.register(results_sock, zmq.POLLIN)
-        poller.register(task_incoming, zmq.POLLIN)
+        poller.register(ix_sock, zmq.POLLIN)
 
         # Send a registration message
         msg = self.create_reg_message()
         logger.debug("Sending registration message: %s", msg)
-        task_incoming.send(pickle.dumps(msg))
+        ix_sock.send(pickle.dumps(msg))
         last_beat = time.time()
         last_interchange_contact = time.time()
         task_recv_counter = 0
@@ -345,12 +345,12 @@ class Manager:
             )
 
             if time.time() >= last_beat + self.heartbeat_period:
-                self.heartbeat_to_incoming(task_incoming)
+                self.heartbeat_to_incoming(ix_sock)
                 last_beat = time.time()
 
             if time.time() > self.drain_time:
                 logger.info("Requesting drain")
-                self.drain_to_incoming(task_incoming)
+                self.drain_to_incoming(ix_sock)
                 # This will start the pool draining...
                 # Drained exit behaviour does not happen here. It will be
                 # driven by the interchange sending a DRAINED_CODE message.
@@ -362,8 +362,8 @@ class Manager:
             poll_duration_s = max(0, next_interesting_event_time - time.time())
             socks = dict(poller.poll(timeout=poll_duration_s * 1000))
 
-            if task_incoming in socks and socks[task_incoming] == zmq.POLLIN:
-                _, pkl_msg = task_incoming.recv_multipart()
+            if ix_sock in socks and socks[ix_sock] == zmq.POLLIN:
+                _, pkl_msg = ix_sock.recv_multipart()
                 try:
                     tasks = pickle.loads(pkl_msg)
                 except Exception:
@@ -390,7 +390,7 @@ class Manager:
 
             elif socks.get(results_sock) == zmq.POLLIN:
                 meta_b = pickle.dumps({'type': 'result'})
-                task_incoming.send_multipart([meta_b, results_sock.recv()])
+                ix_sock.send_multipart([meta_b, results_sock.recv()])
                 logger.debug("Result sent to interchange")
             else:
                 logger.debug("No incoming tasks")
@@ -402,7 +402,7 @@ class Manager:
                     logger.critical("Exiting")
                     break
 
-        task_incoming.close()
+        ix_sock.close()
         logger.info("Exiting")
 
     @wrap_with_logs
