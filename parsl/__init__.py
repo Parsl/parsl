@@ -15,7 +15,6 @@ AUTO_LOGNAME
 
 """
 import logging
-import multiprocessing as _multiprocessing
 import os
 import platform
 
@@ -31,9 +30,6 @@ from parsl.executors import (
 from parsl.log_utils import set_file_logger, set_stream_logger
 from parsl.monitoring import MonitoringHub
 from parsl.version import VERSION
-
-if platform.system() == 'Darwin':
-    _multiprocessing.set_start_method('fork', force=True)
 
 __author__ = 'The Parsl Team'
 __version__ = VERSION
