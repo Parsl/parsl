@@ -1,29 +1,46 @@
 import logging
 import pickle
 import socket
+from multiprocessing.queues import Queue
+from typing import Optional, Union
 
-from parsl.monitoring.radios.base import MonitoringRadioSender
+from parsl.monitoring.radios.base import (
+    MonitoringRadioReceiver,
+    MonitoringRadioSender,
+    RadioConfig,
+)
+from parsl.monitoring.radios.udp_router import start_udp_receiver
+
+logger = logging.getLogger(__name__)
+
+
+class UDPRadio(RadioConfig):
+    def __init__(self, *, port: Optional[int] = None, atexit_timeout: Union[int, float] = 3, address: str, debug: bool = False):
+        self.port = port
+        self.atexit_timeout = atexit_timeout
+        self.address = address
+        self.debug = debug
+
+    def create_sender(self) -> MonitoringRadioSender:
+        assert self.port is not None, "self.port should have been initialized by create_receiver"
+        return UDPRadioSender(self.address, self.port)
+
+    def create_receiver(self, run_dir: str, resource_msgs: Queue) -> MonitoringRadioReceiver:
+        udp_receiver = start_udp_receiver(logdir=run_dir,
+                                          monitoring_messages=resource_msgs,
+                                          port=self.port,
+                                          debug=self.debug
+                                          )
+        self.port = udp_receiver.port
+        return udp_receiver
 
 
 class UDPRadioSender(MonitoringRadioSender):
 
-    def __init__(self, monitoring_url: str, timeout: int = 10):
-        """
-        Parameters
-        ----------
-
-        monitoring_url : str
-            URL of the form <scheme>://<IP>:<PORT>
-        timeout : int
-            timeout, default=10s
-        """
-        self.monitoring_url = monitoring_url
+    def __init__(self, address: str, port: int, timeout: int = 10) -> None:
         self.sock_timeout = timeout
-        try:
-            self.scheme, self.ip, port = (x.strip('/') for x in monitoring_url.split(':'))
-            self.port = int(port)
-        except Exception:
-            raise Exception("Failed to parse monitoring url: {}".format(monitoring_url))
+        self.address = address
+        self.port = port
 
         self.sock = socket.socket(socket.AF_INET,
                                   socket.SOCK_DGRAM,
@@ -42,6 +59,7 @@ class UDPRadioSender(MonitoringRadioSender):
         Returns:
             None
         """
+        logger.info("Starting UDP radio message send")
         try:
             buffer = pickle.dumps(message)
         except Exception:
@@ -49,8 +67,9 @@ class UDPRadioSender(MonitoringRadioSender):
             return
 
         try:
-            self.sock.sendto(buffer, (self.ip, self.port))
+            self.sock.sendto(buffer, (self.address, self.port))
         except socket.timeout:
             logging.error("Could not send message within timeout limit")
             return
+        logger.info("Normal ending for UDP radio message send")
         return

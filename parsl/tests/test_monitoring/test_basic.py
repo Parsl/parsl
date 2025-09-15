@@ -8,6 +8,9 @@ from parsl import HighThroughputExecutor, ThreadPoolExecutor
 from parsl.config import Config
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.monitoring import MonitoringHub
+from parsl.monitoring.radios.filesystem import FilesystemRadio
+from parsl.monitoring.radios.htex import HTEXRadio
+from parsl.monitoring.radios.udp import UDPRadio
 
 
 @parsl.python_app
@@ -25,9 +28,8 @@ def this_app():
 # a configuration that is suitably configured for monitoring.
 
 def thread_config():
-    c = Config(executors=[ThreadPoolExecutor()],
-               monitoring=MonitoringHub(hub_address="localhost",
-                                        resource_monitoring_interval=0))
+    c = Config(executors=[ThreadPoolExecutor(remote_monitoring_radio=UDPRadio(address="localhost"))],
+               monitoring=MonitoringHub(resource_monitoring_interval=0))
     return c
 
 
@@ -42,9 +44,10 @@ def htex_udp_config():
     from parsl.tests.configs.htex_local_alternate import fresh_config
     c = fresh_config()
     assert len(c.executors) == 1
+    ex = c.executors[0]
 
-    assert c.executors[0].radio_mode == "htex", "precondition: htex has a radio mode attribute, configured for htex radio"
-    c.executors[0].radio_mode = "udp"
+    assert isinstance(ex.remote_monitoring_radio, HTEXRadio), "precondition: htex is configured for the HTEXRadio"
+    ex.remote_monitoring_radio = UDPRadio(address="localhost")
 
     return c
 
@@ -54,9 +57,10 @@ def htex_filesystem_config():
     from parsl.tests.configs.htex_local_alternate import fresh_config
     c = fresh_config()
     assert len(c.executors) == 1
+    ex = c.executors[0]
 
-    assert c.executors[0].radio_mode == "htex", "precondition: htex has a radio mode attribute, configured for htex radio"
-    c.executors[0].radio_mode = "filesystem"
+    assert isinstance(ex.remote_monitoring_radio, HTEXRadio), "precondition: htex is configured for the HTEXRadio"
+    ex.remote_monitoring_radio = FilesystemRadio()
 
     return c
 
@@ -65,7 +69,6 @@ def workqueue_config():
     from parsl.tests.configs.workqueue_ex import fresh_config
     c = fresh_config()
     c.monitoring = MonitoringHub(
-                        hub_address="localhost",
                         resource_monitoring_interval=1)
     return c
 
@@ -76,8 +79,7 @@ def taskvine_config():
                                            worker_launch_method='provider')],
                strategy_period=0.5,
 
-               monitoring=MonitoringHub(hub_address="localhost",
-                                        resource_monitoring_interval=1))
+               monitoring=MonitoringHub(resource_monitoring_interval=1))
     return c
 
 

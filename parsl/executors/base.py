@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from abc import ABCMeta, abstractmethod
 from concurrent.futures import Future
@@ -8,7 +9,10 @@ from typing import Any, Callable, Dict, Optional
 
 from typing_extensions import Literal, Self
 
+from parsl.monitoring.radios.base import MonitoringRadioReceiver, RadioConfig
 from parsl.monitoring.types import TaggedMonitoringMessage
+
+logger = logging.getLogger(__name__)
 
 
 class ParslExecutor(metaclass=ABCMeta):
@@ -27,10 +31,8 @@ class ParslExecutor(metaclass=ABCMeta):
        label: str - a human readable label for the executor, unique
               with respect to other executors.
 
-    Per-executor monitoring behaviour can be influenced by exposing:
-
-       radio_mode: str - a string describing which radio mode should be used to
-              send task resource data back to the submit side.
+       remote_monitoring_radio: RadioConfig describing how tasks on this executor
+              should report task resource status
 
     An executor may optionally expose:
 
@@ -55,7 +57,6 @@ class ParslExecutor(metaclass=ABCMeta):
     """
 
     label: str = "undefined"
-    radio_mode: str = "udp"
 
     def __init__(
         self,
@@ -65,6 +66,10 @@ class ParslExecutor(metaclass=ABCMeta):
         run_id: Optional[str] = None,
     ):
         self.monitoring_messages = monitoring_messages
+
+        self.remote_monitoring_radio: Optional[RadioConfig] = None
+        self.monitoring_receiver: Optional[MonitoringRadioReceiver] = None
+
         self.run_dir = os.path.abspath(run_dir)
         self.run_id = run_id
 
@@ -101,7 +106,10 @@ class ParslExecutor(metaclass=ABCMeta):
         Executors should call super().shutdown() as part of their overridden
         implementation.
         """
-        pass
+        if self.monitoring_receiver is not None:
+            logger.info("Starting monitoring receiver shutdown")
+            self.monitoring_receiver.shutdown()
+            logger.info("Done with monitoring receiver shutdown")
 
     def monitor_resources(self) -> bool:
         """Should resource monitoring happen for tasks on running on this executor?

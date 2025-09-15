@@ -30,6 +30,8 @@ from parsl.executors.high_throughput.manager_selector import (
 )
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.jobs.states import TERMINAL_STATES, JobState, JobStatus
+from parsl.monitoring.radios.base import RadioConfig
+from parsl.monitoring.radios.htex import HTEXRadio
 from parsl.monitoring.radios.zmq_router import ZMQRadioReceiver, start_zmq_receiver
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import LocalProvider
@@ -262,7 +264,8 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                  manager_selector: ManagerSelector = RandomManagerSelector(),
                  block_error_handler: Union[bool, Callable[[BlockProviderExecutor, Dict[str, JobStatus]], None]] = True,
                  encrypted: bool = False,
-                 benc_interchange_cli: str = "python"):
+                 benc_interchange_cli: str = "python",
+                 remote_monitoring_radio: Optional[RadioConfig] = None):
 
         logger.debug("Initializing HighThroughputExecutor")
 
@@ -312,6 +315,12 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             self._workers_per_node = 1  # our best guess-- we do not have any provider hints
 
         self._task_counter = 0
+
+        if remote_monitoring_radio is not None:
+            self.remote_monitoring_radio = remote_monitoring_radio
+        else:
+            self.remote_monitoring_radio = HTEXRadio()
+
         self.worker_port = worker_port
         self.worker_port_range = worker_port_range
         self.interchange_proc: Optional[subprocess.Popen] = None
@@ -341,7 +350,6 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.zmq_monitoring = None
         self.hub_zmq_port = None
 
-    radio_mode = "htex"
     enable_mpi_mode: bool = False
     mpi_launcher: str = "mpiexec"
 

@@ -31,6 +31,8 @@ from parsl.errors import OptionalModuleMissing
 from parsl.executors.errors import ExecutorError, InvalidResourceSpecification
 from parsl.executors.status_handling import BlockProviderExecutor
 from parsl.executors.workqueue import exec_parsl_function
+from parsl.monitoring.radios.base import RadioConfig
+from parsl.monitoring.radios.filesystem import FilesystemRadio
 from parsl.multiprocessing import SpawnContext, SpawnProcess
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import CondorProvider, LocalProvider
@@ -227,8 +229,6 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
             specifiation for each task).
     """
 
-    radio_mode = "filesystem"
-
     @typeguard.typechecked
     def __init__(self,
                  label: str = "WorkQueueExecutor",
@@ -255,7 +255,8 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  worker_executable: str = 'work_queue_worker',
                  function_dir: Optional[str] = None,
                  coprocess: bool = False,
-                 scaling_cores_per_worker: int = 1):
+                 scaling_cores_per_worker: int = 1,
+                 remote_monitoring_radio: Optional[RadioConfig] = None):
         BlockProviderExecutor.__init__(self, provider=provider,
                                        block_error_handler=True)
         if not _work_queue_enabled:
@@ -307,6 +308,11 @@ class WorkQueueExecutor(BlockProviderExecutor, putils.RepresentationMixin):
         self.launch_cmd = ("{package_prefix}python3 exec_parsl_function.py {mapping} {function} {result}")
         if self.init_command != "":
             self.launch_cmd = self.init_command + "; " + self.launch_cmd
+
+        if remote_monitoring_radio is not None:
+            self.remote_monitoring_radio = remote_monitoring_radio
+        else:
+            self.remote_monitoring_radio = FilesystemRadio()
 
     def _get_launch_command(self, block_id):
         # this executor uses different terminology for worker/launch
