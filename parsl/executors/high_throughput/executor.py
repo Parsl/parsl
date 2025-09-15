@@ -335,6 +335,13 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.encrypted = encrypted
         self.cert_dir = None
 
+        # This flag will enable/disable internal Python mismatch checks
+        # between the interchange and worker managers. This serves as a
+        # temporary workaround for Globus Compute to support different
+        # Python versions at the endpoint and worker layers. We can drop
+        # the flag once we implement modular internal message protocols.
+        self._check_python_mismatch: bool = True
+
         if not launch_cmd:
             launch_cmd = DEFAULT_LAUNCH_CMD
         self.launch_cmd = launch_cmd
@@ -573,10 +580,11 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
                               "cert_dir": self.cert_dir,
                               "manager_selector": self.manager_selector,
                               "run_id": self.run_id,
-                              "submit_pid": os.getpid()
+                              "submit_pid": os.getpid(),
                               # race condition here: the workflow could end and the pid be re-used before
                               # the interchange process starts looking for that pid using pidfd: there's
                               # nothing to keep that pid allocated over the launch.
+                              "_check_python_mismatch": self._check_python_mismatch,
                               }
 
         logger.error(f"BENC: interchange_config = {interchange_config}")
