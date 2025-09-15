@@ -49,6 +49,14 @@ record VMState where
   memo: List PickleAST  -- sequential map of integers to objects - memo key n is at position n in the list so we don't need to store the key
 
 
+||| Two types of error: was I lazy not implementing something or was
+||| there something wrong with the pickle bytestream?
+data PickleError = PickleProtocolError String
+                 | PickleNotImplError String
+%runElab derive "PickleError" [Generic, Meta, Show]
+
+
+
 -- read an 8-byte integer - uint8 is the pickletools ArgumentDescriptor name.
 -- if there are not 8 bytes left in ByteBlock, explode...
 -- TODO: this could look nicer with a parser monad/parser applicative
@@ -144,6 +152,11 @@ takeNbytes (S n) bb = do
   (rest # bb) <- takeNbytes n bb
   pure1 $ ( [v] ++ rest ) # bb
 
+step_fail : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> PickleError -> App1 {u=Any} es VMState
+step_fail bb msg = do
+  logv "Pickle VM failure" msg
+  free1 bb
+  ?pickle_step_fail
 
 -- define this signature before the body because we are mutually
 -- recursive (or I could use a mutual block? what's the difference?)
@@ -164,7 +177,7 @@ step_NEWOBJ bb (MkVMState (a :: b :: rest) memo) = do
   log "Opcode: NEWOBJ"
   let o = PickleObj a b
   step bb (MkVMState (o :: rest) memo)
-step_NEWOBJ _ _ = ?error_NEWOBJ_bad_stack
+step_NEWOBJ bb _ = step_fail bb (PickleProtocolError "NEWOBJ bad stack")
 
 
 step_TUPLE2 : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
@@ -175,8 +188,7 @@ step_TUPLE2 bb (MkVMState (a::b::rest) memo) = do
   -- TODO: this might be the wrong order
   step bb (MkVMState new_stack memo)
 
-step_TUPLE2 _ _ = do
-  ?error_bad_stack_for_TUPLE2
+step_TUPLE2 bb _ = step_fail bb (PickleProtocolError "TUPLE2 bad stack")
 
 step_TUPLE3 : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 
@@ -186,8 +198,7 @@ step_TUPLE3 bb (MkVMState (a::b::c::rest) memo) = do
   -- TODO: this might be the wrong order
   step bb (MkVMState new_stack memo)
 
-step_TUPLE3 _ _ = do
-  ?error_bad_stack_for_TUPLE3
+step_TUPLE3 bb _ = step_fail bb (PickleProtocolError "TUPLE3 bad stack")
 
 step_BININT1 : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 
@@ -260,10 +271,7 @@ step_BINGET bb state@(MkVMState stack memo) = do
       let memo_val = index memo_slot memo
       let state' = MkVMState (memo_val :: stack) memo
       step bb' state'
-    No _ => do 
-      ?error_memo_index_out_of_bounds
-      pure state
-
+    No _ => step_fail bb' (PickleProtocolError "BIGGET memo index out of bounds")
 
 step_FRAME : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_FRAME bb state = do
@@ -289,13 +297,13 @@ step_FRAME bb state = do
       -- a parse.
       
       step bb' state
-    _ => ?error_not_enough_bytes_left_for_FRAME
+    _ => step_fail bb (PickleProtocolError "FRAME not enough bytes left")
 
 step_MEMOIZE : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_MEMOIZE bb (MkVMState (v::rest_stack) memo) = do
   log "Opcode: MEMOIZE"
   step bb (MkVMState (v::rest_stack) (memo ++ [v]))
-step_MEMOIZE bb (MkVMState [] memo) = ?error_MEMOIZE_with_empty_stack
+step_MEMOIZE bb (MkVMState [] memo) = step_fail bb (PickleProtocolError "MEMOIZE empty stack")
 
 -- Linear typing changes force bb to be deallocated here (or *something* has
 -- to be done with it, such as returning it for the next level up to free).
@@ -307,6 +315,7 @@ step_STOP bb state = do
   log "Opcode: STOP"
   free1 bb
   pure state
+
 
 step_BINBYTES : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_BINBYTES bb (MkVMState stack memo) = do
@@ -323,7 +332,7 @@ step_BINBYTES bb (MkVMState stack memo) = do
       let new_state = MkVMState ((PickleBytes bytes)::stack) memo
 
       step bb'' new_state
-    _ => ?error_BINBYTES_not_enough_to_count
+    _ => step_fail bb (PickleProtocolError "BINBYTES not enough bytes for length")
 
 step_SHORT_BINBYTES : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
 step_SHORT_BINBYTES bb (MkVMState stack memo) = do
@@ -338,7 +347,7 @@ step_SHORT_BINBYTES bb (MkVMState stack memo) = do
       let new_state = MkVMState ((PickleBytes bytes)::stack) memo
 
       step bb'' new_state
-    _ => ?error_SHORT_BINBYTES_not_enough_to_count
+    _ => step_fail bb (PickleProtocolError "SHORT_BINBYTES not enough bytes for length")
 
 
 step_SHORT_BINUNICODE : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
@@ -367,7 +376,7 @@ step_SHORT_BINUNICODE bb (MkVMState stack memo) = do
 
       step bb'' new_state
 
-    Z => ?error_SHORT_BINUNICODE_no_length
+    Z => step_fail bb (PickleProtocolError "SHORT_BINUNICODE not enought bytes for length")
 
 
 step_STACK_GLOBAL : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
@@ -380,7 +389,7 @@ step_STACK_GLOBAL bb (MkVMState (a :: b :: stack) memo) = do
 
   step bb new_state 
 
-step_STACK_GLOBAL _ _ = ?error_bad_stack_for_STACK_GLOBAL
+step_STACK_GLOBAL bb _ = step_fail bb (PickleProtocolError "STACK_GLOBAL bad stack")
 
 
 step_EMPTYDICT : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
@@ -458,7 +467,7 @@ step_SETITEMS bb (MkVMState stack memo) = do
       let new_stack = (PickleDict (item_pairs ++ old_items)) :: rest_stack
 
       step bb (MkVMState new_stack memo)
-    _ => ?error_stack_malformed_for_SETITEMS
+    _ => step_fail bb (PickleProtocolError "SETITEMS bad stack")
 
 
 step_SETITEM : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
@@ -470,7 +479,7 @@ step_SETITEM bb (MkVMState stack memo) = do
     (v :: k :: (PickleDict old_items) :: rest_stack) => do
       let new_stack = (PickleDict ([(k, v)] ++ old_items)) :: rest_stack
       step bb (MkVMState new_stack memo)
-    _ => ?error_stack_malformed_for_SETITEM
+    _ => step_fail bb (PickleProtocolError "SETITEM bad stack")
 
 
 step_MARK : (State LogConfig LogConfig es, HasErr AppHasIO es) => (1 _ : ByteBlock) -> VMState -> App1 {u=Any} es VMState
@@ -513,7 +522,7 @@ step bb state = do
       147 => step_STACK_GLOBAL bb' state
       148 => step_MEMOIZE bb' state
       149 => step_FRAME bb' state
-      _ => ?error_unknown_opcode
+      _ => step_fail bb' (PickleProtocolError "unknown opcode")
 
 ||| Takes some representation of a byte sequence containing a pickle and
 ||| executes that pickle program, leaving something more like an AST of
