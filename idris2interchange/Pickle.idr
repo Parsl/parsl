@@ -450,6 +450,11 @@ step_SETITEMS bb (MkVMState stack memo) = do
       -- now set item pairs from `items`, starting lowest down the stack
       -- (so at the end of the items list)
 
+      -- TODO: split_pairs only makes sense if items has an even number
+      -- of entries, which is a protocol constraint: the MARK should have
+      -- been placed on the stack by the sender with an even number of
+      -- items on the stack. So if that doesn't work, this should fail
+      -- here with a protocol error, rather than split_pairs erroring out.
       let item_pairs = map (\(a,b) => (b,a)) $ split_pairs items
       logv "item pairs" item_pairs
 
