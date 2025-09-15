@@ -12,7 +12,7 @@ import Logging
 
 %language ElabReflection
 
--- It should be possible for this to be total, on the length of the
+-- ISSUE: It should be possible for this to be total, on the length of the
 -- block of bytes, but this doesn't work at time of writing: I guess
 -- I haven't conveyed that the recursion terminates properly.
 -- %default total
