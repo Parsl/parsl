@@ -384,6 +384,11 @@ zmq_poll_tasks_submit_to_interchange_loop sockets = do
 
 covering process_result_part : (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> () -> ZMQMsg -> App es ()
 process_result_part sockets () msg_part = do
+ -- PARSL #3950: There are two tag dispatchers: one here and
+ -- one in the caller to process_result_part. I think there
+ -- only needs to be one tag in the protocol, and then one
+ -- dispatcher in the interchange.
+
  -- Only forward on this if it is a result-tag
  -- (rather than eg. monitoring or heartbeat or registration)
  app1 $ do
