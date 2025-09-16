@@ -149,7 +149,7 @@ dispatch_cmd "CONNECTED_BLOCKS" = do
   -- will not fail if CONNECTED_BLOCKS is not implemented. But a slow enough
   -- run will.
 
-  -- Pull out the block_id of each of the managers_json list entries,
+  -- Pull out the block_id of each of the manager entries,
   -- and turn it into a unicode string.
   -- It's fine if this fails, because the implicit protocol says it will
   -- always be there. But it's ugly type-wise.
