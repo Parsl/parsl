@@ -521,9 +521,9 @@ readStdinConfig = do
 
   pure config
 
-covering main_with_zmq : (State LogConfig LogConfig es, State Bool Bool es, HasErr AppHasIO es, State MatchState MatchState es) => PickleAST -> ZMQContext -> App es ()
+covering main_with_zmq : (State LogConfig LogConfig es, State Bool Bool es, HasErr AppHasIO es, State MatchState MatchState es, HasErr String es) => PickleAST -> ZMQContext -> App es ()
 
-covering app_main : (State LogConfig LogConfig es, State Bool Bool es, HasErr AppHasIO es, State MatchState MatchState es) => App es ()
+covering app_main : (State LogConfig LogConfig es, State Bool Bool es, HasErr AppHasIO es, State MatchState MatchState es, HasErr String es) => App es ()
 app_main = do
   log "Idris2 interchange starting"
 
@@ -795,4 +795,8 @@ poll_loop sockets = do
 covering main : IO ()
 main = run (new True
            (new (MkLogConfig True)
-           (new (MkMatchState [] []) app_main)))
+           (new (MkMatchState [] []) 
+           (handle {err=String} app_main
+                   (const $ pure ())
+                   (\e => logv "FINAL ERROR" e) -- TODO: unix exit codes rather than ()?
+           ))))

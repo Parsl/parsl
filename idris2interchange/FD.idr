@@ -262,9 +262,30 @@ prim_pidfd_open : Int -> Int -> PrimIO Int
 -- this assumes pid_t and unsigned int both work as `Int`
 
 public export
-pidfd_open : HasErr AppHasIO es => Int -> App es (FD PidFD)
+pidfd_open : (HasErr AppHasIO es, HasErr String es) => Int -> App es (FD PidFD)
 pidfd_open pid = do
   pidfd <- primIO $ primIO $ prim_pidfd_open pid 0
+  -- the (App es ()) $ throw "lol"
+  -- ^ ISSUE: another case of having to force the type of the action, but only
+  -- in testing/experimenting.
+  -- parsl/tests/test_callables.py Error: Unsolved holes:
+  -- FD.{a:6106} introduced at: 
+  -- FD:268:3--268:14
+  -- 264 | public export
+  -- 265 | pidfd_open : (HasErr AppHasIO es, HasErr String es) => Int -> App es (FD PidFD)
+  -- 266 | pidfd_open pid = do
+  -- 267 |   pidfd <- primIO $ primIO $ prim_pidfd_open pid 0
+  -- 268 |   throw "lol"
+  --         ^^^^^^^^^^^
+  -- I think whats happening: We dont' actually care what the return type of
+  -- the App is, but it has to be *something* concrete and there isn't any
+  -- information to pick that something -- the App es () could be
+  -- App es ANYTHING but the ANYTHING has to be solvable even though it is
+  -- never needed here because its discarded.
+  -- In practice, maybe that's not so much of a problem, because (as in the
+  -- case statement below) a throw would often be one branch of a case
+  -- statement that provides the type of throw via another branch - eg below
+  -- its easy to see the return value of the `throw` action is an (FD PidFD)
   case pidfd of
-    -1 => ?error_pidfd_open_returned_error
+    -1 => throw "error_pidfd_open_returned_error"
     p => pure (MkFD p)
