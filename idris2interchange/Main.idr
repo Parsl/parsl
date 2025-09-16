@@ -604,7 +604,7 @@ main_with_zmq cfg zmq_ctx = do
 
   log "Created worker task socket"
 
-  -- This `pure` is to get access to bind/| syntax which I think doesn't exist
+  -- ISSUE: This `pure` is to get access to bind/| syntax which I think doesn't exist
   -- for `let` -- but I haven't checked for sure?
   PickleDict config_dict <- pure cfg
     | _ => throw "error_config_is_not_a_dict"
