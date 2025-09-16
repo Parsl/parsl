@@ -176,7 +176,7 @@ dispatch_cmd c = do
   pure PickleNone
 
 
-covering matchmake :  (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
+covering matchmake :  (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es, HasErr String es) => SocketState -> App es ()
 matchmake sockets = do
   log "Matchmaker starting"
   -- we can make a match if we have a manager with capacity and a task in the
@@ -223,7 +223,7 @@ matchmake sockets = do
         mr :: rest_managers => do
           logv "Considering manager for match" mr
           (PickleDict mpd) <- pure (manager_pickle mr)
-            | _ => ?error_manager_pickle_is_not_a_dict -- TODO: tidy up by better manager_pickle type
+            | _ => throw "error_manager_pickle_is_not_a_dict" -- TODO: tidy up by better manager_pickle type
           let c = lookup "max_capacity" mpd
           case c of
             Just (PickleInteger c) => do
@@ -267,7 +267,7 @@ matchmake sockets = do
 
                   put MatchState (MkMatchState managers rest_tasks)
                   matchmake sockets  -- this must be a tail call (can I assert that? I think not... but it would be nice)
-                else ?notimpl_manager_oversubscribed
+                else throw "notimpl_manager_oversubscribed"
                   -- TODO: this never happens... because there is an unimplemented TODO to reduce the capacity...
                   -- when that happens, then this path should be reached.
 
@@ -275,7 +275,7 @@ matchmake sockets = do
                   -- all the tasks get sent to one manager. instead the behaviour is basically the same as if there
                   -- is a large prefetch value: they queue up and performance is changed (probably reduced, except
                   -- to the extent that prefetch increases it). Maybe that's interesting to note as untested?
-            _ => ?error_registration_bad_max_capacity
+            _ => throw "error_registration_bad_max_capacity"
                   -- TODO: a more strongly typed manager record (rather than arbitrary dict) would not have this case:
                   -- eg parse (don't validate) at registration time?
 
@@ -333,7 +333,7 @@ zmq_poll_command_channel_loop command_socket = do
         zmq_poll_command_channel_loop command_socket
 
 -- TODO: factor ZMQ_EVENTS handling with other channels
-covering zmq_poll_tasks_submit_to_interchange_loop : (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
+covering zmq_poll_tasks_submit_to_interchange_loop : (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es, HasErr String es) => SocketState -> App es ()
 zmq_poll_tasks_submit_to_interchange_loop sockets = do
   -- need to run this in a loop until it returns no events left
   events <- zmq_get_socket_events sockets.tasks_submit_to_interchange
@@ -419,7 +419,7 @@ process_result_part sockets () msg_part = do
  zmq_msg_close msg_part
  pure ()
 
-covering zmq_poll_worker_to_interchange_loop : (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
+covering zmq_poll_worker_to_interchange_loop : (State LogConfig LogConfig es, State MatchState MatchState es, HasErr AppHasIO es, HasErr String es) => SocketState -> App es ()
 zmq_poll_worker_to_interchange_loop sockets = do
   -- TODO: do monitoring forwarding. test monitoring forwarding.
   -- TODO: do heartbeat processing. test heartbeat processing.
@@ -485,17 +485,17 @@ zmq_poll_worker_to_interchange_loop sockets = do
                  free1 b
                zmq_send_bytes sockets.worker_to_interchange emptyByteBlock False
 
-             _ => ?notimpl_meta_pkl_unknown_metatype_tag
+             _ => throw "error meta_pkl_unknown_metatype_tag"
 
-         _ => ?error_protocol_meta_pkl_not_a_dict
+         _ => throw "error_protocol_meta_pkl_not_a_dict"
 
         zmq_poll_worker_to_interchange_loop sockets
-      _ => ?error_protocol_incorrect_msg_parts_case
+      _ => throw "error_protocol_incorrect_msg_parts_case"
 
 
 -- TODO: is there anything to distinguish these three sockets at the type
 -- level that ties into their expected use?
-covering poll_loop : (State LogConfig LogConfig es, State Bool Bool es, State MatchState MatchState es, HasErr AppHasIO es) => SocketState -> App es ()
+covering poll_loop : (State LogConfig LogConfig es, State Bool Bool es, State MatchState MatchState es, HasErr AppHasIO es, HasErr String es) => SocketState -> App es ()
 
 
 -- TODO: this only reads up to 128kb. which should be enough for test interchange configs. but is lame.
