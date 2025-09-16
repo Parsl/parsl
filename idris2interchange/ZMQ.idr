@@ -157,16 +157,16 @@ zmq_msg_close (MkZMQMsg msg_ptr) = do
 prim__zmq_msg_more : AnyPtr -> PrimIO Int
 
 public export
-zmq_msg_more : HasErr AppHasIO es => ZMQMsg -> App es Bool
+zmq_msg_more : (HasErr AppHasIO es, HasErr String es) => ZMQMsg -> App es Bool
 zmq_msg_more (MkZMQMsg msg_ptr) = do
   flag <- primIO $ primIO $ prim__zmq_msg_more msg_ptr
   case flag of
     0 => pure False
     1 => pure True
-    _ => ?error_out_of_range_zmq_msg_more
+    _ => throw "error_out_of_range_zmq_msg_more"
 
 public export
-zmq_recv_msgs_multipart_alloc : HasErr AppHasIO es => ZMQSocket -> App es (List ZMQMsg)
+zmq_recv_msgs_multipart_alloc : (HasErr AppHasIO es, HasErr String es) => ZMQSocket -> App es (List ZMQMsg)
 zmq_recv_msgs_multipart_alloc socket = do
   -- structure could be something like:
   -- recursively, keep invoking get msg while the 'more' flag is set
