@@ -285,7 +285,7 @@ matchmake sockets = do
 ||| Some reading:
 ||| https://funcptr.net/2012/09/10/zeromq---edge-triggered-notification/
 ||| https://github.com/zeromq/libzmq/issues/3641
-covering zmq_poll_command_channel_loop : (State MatchState MatchState es, State LogConfig LogConfig es, HasErr AppHasIO es) => ZMQSocket -> App es ()
+covering zmq_poll_command_channel_loop : (State MatchState MatchState es, State LogConfig LogConfig es, HasErr AppHasIO es, HasErr String es) => ZMQSocket -> App es ()
 zmq_poll_command_channel_loop command_socket = do
   -- need to run this in a loop until it returns no events left
   events <- zmq_get_socket_events command_socket
@@ -318,7 +318,7 @@ zmq_poll_command_channel_loop command_socket = do
           v <- unpickle bytes
           pure v
         (PickleUnicodeString cmd) <- pure unpickled_msg
-            | _ => ?error_cmd_is_not_a_string
+            | _ => throw "error_cmd_is_not_a_string"
         logv "Command received this command" cmd
         resp <- dispatch_cmd cmd
         logv "Response to command" resp
@@ -607,12 +607,12 @@ main_with_zmq cfg zmq_ctx = do
   -- This `pure` is to get access to bind/| syntax which I think doesn't exist
   -- for `let` -- but I haven't checked for sure?
   PickleDict config_dict <- pure cfg
-    | _ => ?error_config_is_not_a_dict
+    | _ => throw "error_config_is_not_a_dict"
 
   -- TODO: overload strings so that can say lookup "submit_pid" without
   -- the PickleUnicodeString constructor
   (Just (PickleInteger submit_pid)) <- pure $ lookup (PickleUnicodeString "submit_pid") config_dict
-    | _ => ?error_pidfd_is_not_an_int
+    | _ => throw "error_pidfd_is_not_an_int"
 
   logv "Submit pid" submit_pid
 
