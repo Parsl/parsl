@@ -1,22 +1,40 @@
+The High-Throughput Executor
+============================
+
+The :class:`~parsl.executors.HighThroughputExecutor` (HTEx) is the standard Executor provided with Parsl.
+The following sections detail the most-used configuration options of HTEx.
+
+.. contents::
+   :local:
+   :depth: 1
+
+Defining Workers Per Node
+-------------------------
+
+HTEx determines how many workers to run on each node individually.
+The number of nodes is the minimum of the ``max_workers_per_node``,
+the number of workers determined from ``cores_per_worker``,
+and the number of workers defined by ``mem_per_worker``.
+
 Resource pinning
-================
+----------------
 
 Resource pinning reduces contention between multiple workers using the same CPU cores or accelerators.
 
 Multi-Threaded Applications
----------------------------
++++++++++++++++++++++++++++
 
 Workflows which launch multiple workers on a single node which perform multi-threaded tasks (e.g., NumPy, Tensorflow operations) may run into thread contention issues.
 Each worker may try to use the same hardware threads, which leads to performance penalties.
-Use the ``cpu_affinity`` feature of the :class:`~parsl.executors.HighThroughputExecutor` to assign workers to specific threads.  Users can pin threads to
-workers either with a strategy method or an explicit list.
+Use ``cpu_affinity`` to assign workers to specific threads either by 
+defining an allocation strategy method or an explicit list.
 
 The strategy methods will auto assign all detected hardware threads to workers.
-Allowed strategies that can be assigned to ``cpu_affinity`` are ``block``, ``block-reverse``, and ``alternating``.
+Allowed strategies are ``block``, ``block-reverse``, and ``alternating``.
 The ``block`` method pins threads to workers in sequential order (ex: 4 threads are grouped (0, 1) and (2, 3) on two workers);
 ``block-reverse`` pins threads in reverse sequential order (ex: (3, 2) and (1, 0)); and ``alternating`` alternates threads among workers (ex: (0, 2) and (1, 3)).
 
-Select the best blocking strategy for processor's cache hierarchy (choose ``alternating`` if in doubt) to ensure workers to not compete for cores.
+Select the best blocking strategy based on the node's CPU cache hierarchy (query the cache hierarchy using ``lscpu``).
 
 .. code-block:: python
 
@@ -53,8 +71,6 @@ This example assigns 16 threads each to 12 workers. Note that in this example th
 If a thread is not explicitly assigned to a worker, it will be left idle.
 The number of thread "ranks" (colon separated thread lists/ranges) must match the total number of workers on the node; otherwise an exception will be raised.
 
-
-
 Thread affinity is accomplished in two ways.
 Each worker first sets the affinity for the Python process using `the affinity mask <https://docs.python.org/3/library/os.html#os.sched_setaffinity>`_,
 which may not be available on all operating systems.
@@ -64,7 +80,7 @@ so that any subprocesses launched by a worker which use OpenMP know which proces
 These include ``OMP_NUM_THREADS``, ``GOMP_COMP_AFFINITY``, and ``KMP_THREAD_AFFINITY``.
 
 Accelerators
-------------
+++++++++++++
 
 Many modern clusters provide multiple accelerators per compute node, yet many applications are best suited to using a
 single accelerator per task. Parsl supports pinning each worker to different accelerators using
@@ -91,9 +107,8 @@ as many workers as the accelerators specified via ``available_accelerators``.
         strategy='none',
     )
 
-It is possible to bind multiple/specific accelerators to each worker by specifying a list of comma separated strings
-each specifying accelerators. In the context of binding to NVIDIA GPUs, this works by setting ``CUDA_VISIBLE_DEVICES``
-on each worker to a specific string in the list supplied to ``available_accelerators``.
+It is possible to bind multiple/specific accelerators to each worker by specifying a list of comma separated strings,
+each specifying accelerators.
 
 Here's an example:
 
@@ -112,14 +127,64 @@ Here's an example:
         ],
     )
 
-GPU Oversubscription
-""""""""""""""""""""
+Binding is achieved by setting ``CUDA_VISIBLE_DEVICES`` (specific to NVIDIA GPUs), 
+``ROCR_VISIBLE_DEVICES`` (AMD GPUs),
+and ``ZE_AFFINITY_MASK`` (Intel GPUs) to the appropriate accelerator names.
 
-For hardware that uses Nvidia devices, Parsl allows for the oversubscription of workers to GPUS.  This is intended to
-make use of Nvidia's `Multi-Process Service (MPS) <https://docs.nvidia.com/deploy/mps/>`_ available on many of their
-GPUs that allows users to run multiple concurrent processes on a single GPU.  The user needs to set in the
-``worker_init`` commands to start MPS on every node in the block (this is machine dependent).  The
+GPU Oversubscription
+^^^^^^^^^^^^^^^^^^^^
+
+For hardware that uses NVIDIA devices, Parsl allows for the oversubscription of workers to GPUs.  This is intended to
+make use of NVIDIA's `Multi-Process Service (MPS) <https://docs.nvidia.com/deploy/mps/>`_ available on many of their
+GPUs that allows users to run multiple concurrent processes on a single GPU.  The user needs to set the
+``worker_init`` command of the Provider to start MPS on every node in the block (this is machine dependent).  The
 ``available_accelerators`` option should then be set to the total number of GPU partitions run on a single node in the
-block.  For example, for a node with 4 Nvidia GPUs, to create 8 workers per GPU, set ``available_accelerators=32``.
+block.  For example, for a node with 4 NVIDIA GPUs, to create 8 workers per GPU, set ``available_accelerators=32``.
 GPUs will be assigned to workers in ascending order in contiguous blocks.  In the example, workers 0-7 will be placed
 on GPU 0, workers 8-15 on GPU 1, workers 16-23 on GPU 2, and workers 24-31 on GPU 3.
+
+Encryption
+----------
+
+Users can encrypt traffic between the Parsl DFK and ``HighThroughputExecutor`` instances by setting its ``encrypted``
+initialization argument to ``True``.
+
+For example,
+
+.. code-block:: python
+
+    from parsl.config import Config
+    from parsl.executors import HighThroughputExecutor
+
+    config = Config(
+        executors=[
+            HighThroughputExecutor(
+                encrypted=True
+            )
+        ]
+    )
+
+Under the hood, we use `CurveZMQ <http://curvezmq.org/>`_ to encrypt all communication channels
+between the executor and related nodes.
+
+Encryption performance
+++++++++++++++++++++++
+
+CurveZMQ depends on `libzmq <https://github.com/zeromq/libzmq>`_ and  `libsodium <https://github.com/jedisct1/libsodium>`_,
+which `pyzmq <https://github.com/zeromq/pyzmq>`_ (a Parsl dependency) includes as part of its
+installation via ``pip``. This installation path should work on most systems, but users have
+reported significant performance degradation as a result.
+
+If you experience a significant performance hit after enabling encryption, we recommend installing
+``pyzmq`` with conda:
+
+.. code-block:: bash
+
+    conda install conda-forge::pyzmq
+
+Alternatively, you can `install libsodium <https://doc.libsodium.org/installation>`_, then
+`install libzmq <https://zeromq.org/download/>`_, then build ``pyzmq`` from source:
+
+.. code-block:: bash
+
+    pip3 install parsl --no-binary pyzmq

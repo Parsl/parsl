@@ -50,7 +50,8 @@ def test_exit_with_bad_registration(tmpd_cwd, try_assert):
                           "logging_level": logging.DEBUG,
                           "cert_dir": None,
                           "manager_selector": RandomManagerSelector(),
-                          "run_id": "test"
+                          "run_id": "test",
+                          "_check_python_mismatch": True,
                           }
 
     config_pickle = pickle.dumps(interchange_config)

@@ -56,6 +56,7 @@ class Interchange:
                  cert_dir: Optional[str],
                  manager_selector: ManagerSelector,
                  run_id: str,
+                 _check_python_mismatch: bool,
                  ) -> None:
         """
         Parameters
@@ -99,6 +100,11 @@ class Interchange:
 
         cert_dir : str | None
             Path to the certificate directory.
+
+        _check_python_mismatch : bool
+            If True, the interchange and worker managers must run the same version of
+            Python. Running different versions can cause inter-process communication
+            errors, so proceed with caution.
         """
         self.cert_dir = cert_dir
         self.logdir = logdir
@@ -126,6 +132,7 @@ class Interchange:
         logger.info("Connected to client")
 
         self.run_id = run_id
+        self._check_python_mismatch = _check_python_mismatch
 
         self.hub_address = hub_address
         self.hub_zmq_port = hub_zmq_port
@@ -396,7 +403,9 @@ class Interchange:
             logger.info(f'Registration info for manager {manager_id!r}: {meta}')
             self._send_monitoring_info(monitoring_radio, new_rec)
 
-            if (mgr_minor_py, mgr_parsl_v) != (ix_minor_py, ix_parsl_v):
+            python_mismatch: bool = ix_minor_py != mgr_minor_py
+            parsl_mismatch: bool = ix_parsl_v != mgr_parsl_v
+            if parsl_mismatch or (self._check_python_mismatch and python_mismatch):
                 kill_event.set()
                 vm_exc = VersionMismatch(
                     f"py.v={ix_minor_py} parsl.v={ix_parsl_v}",
