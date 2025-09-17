@@ -46,6 +46,7 @@ def test_priority_queue():
             futures[(priority, i)] = fake_task(parsl_resource_specification=spec)
 
         provider.max_blocks = 1
+        htex.scale_out_facade(1)  # don't wait for the JSP to catch up
 
         # Wait for completion
         results = {

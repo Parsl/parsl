@@ -92,7 +92,7 @@ workqueue_mon_test: $(WORKQUEUE_INSTALL)  ## run all tests with workqueue_ex con
 .PHONY: config_local_test
 config_local_test:  ## run the config-local tests (--config local)
 	pip3 install ".[monitoring,visualization,proxystore,kubernetes]"
-	pytest parsl/tests/ -k "not cleannet and not site and not workqueue and not taskvine" --config local --random-order --durations 10
+	pytest parsl/tests/ -k "not cleannet and not workqueue and not taskvine" --config local --random-order --durations 10
 
 .PHONY: site_test
 site_test:  ## Run the site tests

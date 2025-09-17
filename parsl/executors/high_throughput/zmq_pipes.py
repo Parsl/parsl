@@ -82,54 +82,37 @@ class CommandClient:
         reply = '__PARSL_ZMQ_PIPES_MAGIC__'
         logger.debug("acquiring command lock")
         with self._lock:
-            logger.debug("acquired command lock")
-            for i in range(max_retries):
-                logger.debug(f"try {i} for command {message}")
-                try:
-                    logger.debug("Sending command client command")
+            logger.debug("Sending command client command")
 
-                    if timeout_s is not None:
-                        remaining_time_s = start_time_s + timeout_s - time.monotonic()
-                        poll_result = self.zmq_socket.poll(timeout=remaining_time_s * 1000, flags=zmq.POLLOUT)
-                        if poll_result == zmq.POLLOUT:
-                            pass  # this is OK, so continue
-                        elif poll_result == 0:
-                            raise CommandClientTimeoutError("Waiting for command channel to be ready for a command")
-                        else:
-                            raise InternalConsistencyError(f"ZMQ poll returned unexpected value: {poll_result}")
-
-                    self.zmq_socket.send_pyobj(message, copy=True)
-
-                    if timeout_s is not None:
-                        logger.debug("Polling for command client response or timeout")
-                        remaining_time_s = start_time_s + timeout_s - time.monotonic()
-                        poll_result = self.zmq_socket.poll(timeout=remaining_time_s * 1000, flags=zmq.POLLIN)
-                        if poll_result == zmq.POLLIN:
-                            pass  # this is OK, so continue
-                        elif poll_result == 0:
-                            logger.error("Command timed-out - command client is now bad forever")
-                            self.ok = False
-                            raise CommandClientTimeoutError("Waiting for a reply from command channel")
-                        else:
-                            raise InternalConsistencyError(f"ZMQ poll returned unexpected value: {poll_result}")
-
-                    logger.debug(f"Receiving command client response to {message}")
-                    reply = self.zmq_socket.recv_pyobj()
-                    logger.debug(f"got response from command {message}")
-                except zmq.ZMQError:
-                    logger.exception("Potential ZMQ REQ-REP deadlock caught")
-                    logger.info("Trying to reestablish context after ZMQError")
-                    self.zmq_context.recreate()
-                    self.create_socket_and_bind()
-                    self._my_thread = None
+            if timeout_s is not None:
+                remaining_time_s = start_time_s + timeout_s - time.monotonic()
+                poll_result = self.zmq_socket.poll(timeout=remaining_time_s * 1000, flags=zmq.POLLOUT)
+                if poll_result == zmq.POLLOUT:
+                    pass  # this is OK, so continue
+                elif poll_result == 0:
+                    raise CommandClientTimeoutError("Waiting for command channel to be ready for a command")
                 else:
-                    break
+                    raise InternalConsistencyError(f"ZMQ poll returned unexpected value: {poll_result}")
 
-        if reply == '__PARSL_ZMQ_PIPES_MAGIC__':
-            logger.error("Command channel run retries exhausted. Unable to run command")
-            raise Exception("Command Channel retries exhausted")
+            self.zmq_socket.send_pyobj(message, copy=True)
 
-        return reply
+            if timeout_s is not None:
+                logger.debug("Polling for command client response or timeout")
+                remaining_time_s = start_time_s + timeout_s - time.monotonic()
+                poll_result = self.zmq_socket.poll(timeout=remaining_time_s * 1000, flags=zmq.POLLIN)
+                if poll_result == zmq.POLLIN:
+                    pass  # this is OK, so continue
+                elif poll_result == 0:
+                    logger.error("Command timed-out - command client is now bad forever")
+                    self.ok = False
+                    raise CommandClientTimeoutError("Waiting for a reply from command channel")
+                else:
+                    raise InternalConsistencyError(f"ZMQ poll returned unexpected value: {poll_result}")
+
+            logger.debug("Receiving command client response")
+            reply = self.zmq_socket.recv_pyobj()
+            logger.debug("Received command client response")
+            return reply
 
     def close(self):
         self.zmq_socket.close()
