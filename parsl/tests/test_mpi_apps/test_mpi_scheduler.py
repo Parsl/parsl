@@ -11,6 +11,8 @@ from parsl.executors.high_throughput.mpi_resource_management import (
 from parsl.multiprocessing import SpawnContext
 from parsl.serialize import pack_apply_message
 
+mock_task_buffer = pack_apply_message("func", "args", "kwargs")
+
 
 @pytest.fixture(autouse=True)
 def set_pbs_nodefile_envvars():
@@ -41,7 +43,6 @@ def test_MPISched_put_task():
     assert len(scheduler.available_nodes) == 8
     assert scheduler._free_node_counter.value == 8
 
-    mock_task_buffer = pack_apply_message("func", "args", "kwargs")
     res_spec = {"num_nodes": 2, "ranks_per_node": 2}
     task_package = {"task_id": 1, "buffer": mock_task_buffer, "resource_spec": res_spec}
     scheduler.put_task(task_package)
@@ -78,18 +79,17 @@ def test_MPISched_roundtrip():
     assert scheduler.available_nodes
     assert len(scheduler.available_nodes) == 8
 
-    for round in range(1, 9):
+    for trip in range(1, 9):
         assert scheduler._free_node_counter.value == 8
 
-        mock_task_buffer = pack_apply_message("func", "args", "kwargs")
-        res_spec = {"num_nodes": round, "ranks_per_node": 2}
-        task_package = {"task_id": round, "buffer": mock_task_buffer, "resource_spec": res_spec}
+        res_spec = {"num_nodes": trip, "ranks_per_node": 2}
+        task_package = {"task_id": trip, "buffer": mock_task_buffer, "resource_spec": res_spec}
         scheduler.put_task(task_package)
 
-        assert scheduler._free_node_counter.value == 8 - round
+        assert scheduler._free_node_counter.value == 8 - trip
 
         # Pop in a mock result
-        result_pkl = pickle.dumps({"task_id": round, "type": "result", "buffer": "RESULT BUF"})
+        result_pkl = pickle.dumps({"task_id": trip, "type": "result", "buffer": "RESULT BUF"})
         result_q.put(result_pkl)
 
         got_result = scheduler.get_result(True, 1)
@@ -107,7 +107,6 @@ def test_MPISched_contention():
 
     assert scheduler._free_node_counter.value == 8
 
-    mock_task_buffer = pack_apply_message("func", "args", "kwargs")
     rspec_1 = {"num_nodes": 8, "ranks_per_node": 2}
     task_package = {"task_id": 1, "buffer": mock_task_buffer, "resource_spec": rspec_1}
     scheduler.put_task(task_package)
@@ -115,7 +114,6 @@ def test_MPISched_contention():
     assert scheduler._free_node_counter.value == 0
     assert scheduler._backlog_queue.empty()
 
-    mock_task_buffer = pack_apply_message("func", "args", "kwargs")
     rspec_2 = {"num_nodes": 8, "ranks_per_node": 2}
     task_package = {"task_id": 2, "buffer": mock_task_buffer, "resource_spec": rspec_2}
     scheduler.put_task(task_package)
@@ -159,7 +157,6 @@ def test_hashable_backlog_queue():
     assert scheduler._free_node_counter.value == 8
 
     for i in range(3):
-        mock_task_buffer = pack_apply_message("func", "args", "kwargs")
         res_spec = {"num_nodes": 8, "ranks_per_node": 2}
         task_package = {"task_id": i, "buffer": mock_task_buffer, "resource_spec": res_spec}
         scheduler.put_task(task_package)
