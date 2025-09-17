@@ -166,8 +166,6 @@ class MPITaskScheduler(TaskScheduler):
 
     def put_task(self, task_package: dict):
         """Schedule task if resources are available otherwise backlog the task"""
-        user_ns = locals()
-        user_ns.update({"__builtins__": __builtins__})
         resource_spec = task_package.get("resource_spec", {})
 
         nodes_needed = resource_spec.get("num_nodes")
