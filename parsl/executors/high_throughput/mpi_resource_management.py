@@ -9,7 +9,6 @@ from enum import Enum
 from typing import Dict, List, Optional
 
 from parsl.multiprocessing import SpawnContext
-from parsl.serialize import pack_res_spec_apply_message, unpack_res_spec_apply_message
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +168,7 @@ class MPITaskScheduler(TaskScheduler):
         """Schedule task if resources are available otherwise backlog the task"""
         user_ns = locals()
         user_ns.update({"__builtins__": __builtins__})
-        _f, _args, _kwargs, resource_spec = unpack_res_spec_apply_message(task_package["buffer"])
+        resource_spec = task_package.get("resource_spec", {})
 
         nodes_needed = resource_spec.get("num_nodes")
         tid = task_package["task_id"]
@@ -183,9 +182,6 @@ class MPITaskScheduler(TaskScheduler):
             else:
                 resource_spec["MPI_NODELIST"] = ",".join(allocated_nodes)
                 self._map_tasks_to_nodes[tid] = allocated_nodes
-                buffer = pack_res_spec_apply_message(_f, _args, _kwargs, resource_spec)
-                task_package["buffer"] = buffer
-                task_package["resource_spec"] = resource_spec
 
         self.pending_task_q.put(task_package)
 

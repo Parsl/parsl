@@ -35,7 +35,7 @@ from parsl.monitoring.radios.zmq_router import ZMQRadioReceiver, start_zmq_recei
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
-from parsl.serialize import deserialize, pack_res_spec_apply_message
+from parsl.serialize import deserialize, pack_apply_message
 from parsl.serialize.errors import DeserializationError, SerializationError
 from parsl.usage_tracking.api import UsageInformation
 from parsl.utils import RepresentationMixin
@@ -708,9 +708,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.tasks[task_id] = fut
 
         try:
-            fn_buf = pack_res_spec_apply_message(func, args, kwargs,
-                                                 resource_specification=resource_specification,
-                                                 buffer_threshold=1024 * 1024)
+            fn_buf = pack_apply_message(func, args, kwargs, buffer_threshold=1 << 20)
         except TypeError:
             raise SerializationError(func.__name__)
 
