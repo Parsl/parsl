@@ -36,8 +36,20 @@ def filesystem_router_starter(*, q: Queue[TaggedMonitoringMessage], run_dir: str
     os.makedirs(tmp_dir, exist_ok=True)
     os.makedirs(new_dir, exist_ok=True)
 
-    while not exit_event.is_set():
+    # after the exit_event is set, there will be this number of additional
+    # poll loops to ensure files written to the file system during the last
+    # delay of the poll loop are picked up.
+    drain_polls_left = 1
+
+    while not exit_event.is_set() or drain_polls_left > 0:
         logger.debug("Start filesystem radio receiver loop")
+
+        # We could have entered this look with the event not set, but by
+        # this test the event is now set. This looks like a race condition,
+        # but it is OK: there will still be a poll (the poll that is about
+        # to happen in this iteration) after the event has been set.
+        if exit_event.is_set():
+            drain_polls_left -= 1
 
         # iterate over files in new_dir
         for filename in os.listdir(new_dir):

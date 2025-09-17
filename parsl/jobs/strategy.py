@@ -213,17 +213,21 @@ class Strategy:
 
             logger.debug(f"Slot ratio calculation: active_slots = {active_slots}, active_tasks = {active_tasks}")
 
+            logger.debug('Executor {} has {} active tasks and {}/{} running/pending blocks'.format(
+                label, active_tasks, running, pending))
+
             if hasattr(executor, 'connected_workers'):
-                logger.debug('Executor {} has {} active tasks, {}/{} running/pending blocks, and {} connected workers'.format(
-                    label, active_tasks, running, pending, executor.connected_workers()))
-            else:
-                logger.debug('Executor {} has {} active tasks and {}/{} running/pending blocks'.format(
-                    label, active_tasks, running, pending))
+                logger.debug('Executor {} has {} connected workers'.format(label, executor.connected_workers()))
 
             # reset idle timer if executor has active tasks
 
             if active_tasks > 0 and self.executors[executor.label]['idle_since']:
                 self.executors[executor.label]['idle_since'] = None
+
+            logger.debug(f"METRIC STRATEGY {executor.label} "
+                         f"active_tasks={active_tasks} "
+                         f"running_blocks={running} pending_blocks={pending} "
+                         f"active_blocks={active_blocks} active_slots={active_slots}")
 
             # Case 1
             # No tasks.
@@ -254,6 +258,7 @@ class Strategy:
                         # we have to scale_in now.
                         logger.debug(f"Idle time has reached {self.max_idletime}s for executor {label}; scaling in")
                         executor.scale_in_facade(active_blocks - min_blocks)
+                        logger.debug("executor.scale_in_facade returned")
 
                     else:
                         logger.debug(
@@ -303,6 +308,7 @@ class Strategy:
                             excess_blocks = min(excess_blocks, active_blocks - min_blocks)
                             logger.debug(f"Requesting scaling in by {excess_blocks} blocks with idle time {self.max_idletime}s")
                             executor.scale_in_facade(excess_blocks, max_idletime=self.max_idletime)
+                            logger.debug("executor.scale_in_facade returned")
                     else:
                         logger.error("This strategy does not support scaling in except for HighThroughputExecutor - taking no action")
                 else:
