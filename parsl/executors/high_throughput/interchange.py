@@ -360,9 +360,10 @@ class Interchange:
             mtype = meta['type']
         except Exception as e:
             logger.warning(
-                f'Failed to read manager message ([{type(e).__name__}] {e})'
+                'Failed to read manager message; ignoring message'
+                f' (Exception: [{type(e).__name__}] {e})'
             )
-            logger.debug('Message:\n   %r\n', msg_parts, exc_info=e)
+            logger.debug('Raw message bytes:\n   %r\n', msg_parts, exc_info=e)
             return
 
         logger.debug(
