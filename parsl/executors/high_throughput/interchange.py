@@ -23,7 +23,6 @@ from parsl.monitoring.radios.base import MonitoringRadioSender
 from parsl.monitoring.radios.zmq import ZMQRadioSender
 from parsl.process_loggers import wrap_with_logs
 from parsl.serialize import serialize as serialize_object
-from parsl.utils import setproctitle
 from parsl.version import VERSION as PARSL_VERSION
 
 PKL_HEARTBEAT_CODE = pickle.dumps((2 ** 32) - 1)
@@ -627,6 +626,8 @@ def start_file_logger(filename: str, level: int = logging.DEBUG, format_string: 
 
 
 if __name__ == "__main__":
+    from parsl.utils import setproctitle
+
     setproctitle("parsl: HTEX interchange")
 
     config = pickle.load(sys.stdin.buffer)
