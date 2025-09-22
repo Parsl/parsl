@@ -220,7 +220,7 @@ class Interchange:
 
         reply: Any  # the type of reply depends on the command_req received (aka this needs dependent types...)
 
-        if self.command_channel in self.socks and self.socks[self.command_channel] == zmq.POLLIN:
+        if self.socks.get(self.command_channel) == zmq.POLLIN:
             logger.debug("entering command_server section")
 
             command_req = self.command_channel.recv_pyobj()
@@ -328,7 +328,7 @@ class Interchange:
         """Process incoming task message(s).
         """
 
-        if self.task_incoming in self.socks and self.socks[self.task_incoming] == zmq.POLLIN:
+        if self.socks.get(self.task_incoming) == zmq.POLLIN:
             logger.debug("start task_incoming section")
             msg = self.task_incoming.recv_pyobj()
 
