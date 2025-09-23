@@ -82,6 +82,7 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
     parser.add_argument("--resources", metavar="EXPR", help="parsl_resource_specification dictionary")
     parser.add_argument("--time", metavar="SECONDS", help="target number of seconds for an iteration", default=120, type=float)
     parser.add_argument("--argsize", metavar="BYTES", help="extra bytes to add into app invocation arguments", default=0, type=int)
+    parser.add_argument("--version", action="version", version=f"parsl-perf from Parsl {parsl.__version__}")
 
     args = parser.parse_args()
 
