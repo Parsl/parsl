@@ -38,6 +38,13 @@ decide when to stop, use the ``--iterate`` parameter:
    which is sometimes sub-linear, and to get more consistent batch sizes across
    runs of ``parsl-perf``.
 
+ * ``--iterate=10,10000,10000`` (or any other sequence of batch sizes) will run a
+   fixed sequence of batches: in this example, first a batch of 10 tasks, then
+   two batches of 10000 tasks. This is useful for making tests that compare
+   fixed batch sizes along with warmup steps between different configurations,
+   without the additional batches of ``estimate`` and ``exponential`` to discover
+   time-sized (rather than count-sized) batch sizes.
+
 For example:
 
 .. code-block:: bash
