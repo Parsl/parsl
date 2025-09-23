@@ -40,10 +40,6 @@ defmodule EIC.Supervisor do
         start: {EIC.TasksInterchangeToWorkers, :start_link, [ctx]}
       },
       %{
-        id: EIC.ResultsWorkersToInterchange,
-        start: {EIC.ResultsWorkersToInterchange, :start_link, [ctx]}
-      },
-      %{
         id: EIC.ResultsInterchangeToSubmit,
         start: {EIC.ResultsInterchangeToSubmit, :start_link, [ctx]}
       },
@@ -98,7 +94,7 @@ defmodule EIC.TasksSubmitToInterchange do
   end
 end
 
-defmodule EIC.ResultsWorkersToInterchange do
+defmodule EIC.IrrelevantResultsWorkersToInterchange do
   @moduledoc """
   This module handles results coming from workers back into the interchange
   over ZMQ.
@@ -107,7 +103,7 @@ defmodule EIC.ResultsWorkersToInterchange do
   require Logger
 
   def start_link(ctx) do
-    Task.start_link(EIC.ResultsWorkersToInterchange, :body, [ctx])
+    Task.start_link(EIC.IrrelevantResultsWorkersToInterchange, :body, [ctx])
   end
 
   def body(ctx) do
