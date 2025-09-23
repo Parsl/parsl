@@ -240,9 +240,10 @@ defmodule EIC.CommandChannel do
     loop(socket)
   end
 
-  def handle_command("WORKER_PORTS") do
+  def handle_command("WORKER_BINDS") do
     # TODO: this can be dynamic... (since #3461)
-    {9003, 9004}
+    Logger.debug(["in WORKER_BINDS command"])
+    9003
   end
 
   def handle_command("CONNECTED_BLOCKS") do
