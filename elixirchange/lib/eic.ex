@@ -257,13 +257,13 @@ defmodule EIC.CommandChannel do
     []
   end
 
-  def handle_command(_bad) do
+  def handle_command(bad) do
     # TODO: what should happen when we receive a bad command, protocol-wise?
     # The rusterchange, at this point, dies. But perhaps we should be sending
     # back eg. None and then continuing? Its probably not right to be dying
     # without resetting the command channel to a known good state? because of
     # the two-state setup of ZMQ REQ/REP sockets.
-    raise "Unknown command on command channel"
+    raise "Unknown command on command channel: #{bad}"
   end
 end
 
