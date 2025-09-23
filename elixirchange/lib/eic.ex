@@ -328,20 +328,33 @@ defmodule EIC.TasksInterchangeToWorkers do
         Logger.debug(["inert poll message for fd ", inspect(fd)])
         :ok = :inert.fdset(fd)
         case :erlzmq.recv_multipart(socket) do
-          {:ok, [source, msg]} -> 
-            Logger.debug(inspect(msg))
-            decoded_msg = JSON.decode!(msg)
-            Logger.debug(inspect(decoded_msg))
-            handle_message_from_worker(source, decoded_msg)
+          {:ok, [source, meta | msgs]} -> 
+            Logger.debug(inspect(meta))
+            meta_dict = :pickle.pickle_to_term(meta)
+            Logger.debug(inspect(meta_dict))
+            {:pickle_unicode, meta_type} = :dict.fetch({:pickle_unicode, "type"}, meta_dict)
+            Logger.debug(inspect(meta_type))
+            Logger.debug(inspect(msgs))
+            handle_message_from_worker(socket, source, meta_type, meta_dict, msgs)
           {:error, :eagain} ->
             Logger.debug("EAGAIN on recv from socket - harmless ignoring of poll")
         end
-          
+
+      # TODO: this m should get :atom_tagged
       m -> Logger.debug("TasksInterchangeToWorkers: sending a multipart message to workers")
            :erlzmq.send_multipart(socket, m)
     end
 
     loop(socket)
+  end
+
+  def handle_message_from_worker(socket, source, "connection_probe", dict, msgs) do
+      Logger.debug("Responding to connection probe")
+      :erlzmq.send_multipart(socket, [source, <<>>])
+  end
+
+  def handle_message_from_worker(socket, source, type, dict, msgs) do
+    raise "Unsupported message metatag: #{type}"
   end
 
   def handle_message_from_worker(source, %{"type" => "registration"} = msg) do
