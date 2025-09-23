@@ -325,6 +325,13 @@ defmodule EIC.TasksInterchangeToWorkers do
 
     receive do
       {:inert_read, _, fd} -> 
+
+        # TODO: this seems to hang a bit -- but maye its becaues I need to
+        # repeatedly run that recv_multipart after receiving a poll message,
+        # to drain the queue, because this is edge-triggered, not level-triggered.
+        # That's what I had to do in the other impls and it is missing here and
+        # has similar symptoms.
+        
         Logger.debug(["inert poll message for fd ", inspect(fd)])
         :ok = :inert.fdset(fd)
         case :erlzmq.recv_multipart(socket) do
@@ -348,16 +355,23 @@ defmodule EIC.TasksInterchangeToWorkers do
     loop(socket)
   end
 
+  def get_reg_str(k, d) do
+    {:pickle_unicode, v} = :dict.fetch({:pickle_unicode, k}, d)
+    v
+  end
+
+  def get_reg_v(k, d) do
+    v = :dict.fetch({:pickle_unicode, k}, d)
+    v
+  end
+
+
   def handle_message_from_worker(socket, source, "connection_probe", dict, msgs) do
       Logger.debug("Responding to connection probe")
       :erlzmq.send_multipart(socket, [source, <<>>])
   end
 
-  def handle_message_from_worker(socket, source, type, dict, msgs) do
-    raise "Unsupported message metatag: #{type}"
-  end
-
-  def handle_message_from_worker(source, %{"type" => "registration"} = msg) do
+  def handle_message_from_worker(socket, source, "registration", dict, msgs) do
     # %{
     #  "block_id" => "0",
     # "cpu_count" => 4,
@@ -373,8 +387,20 @@ defmodule EIC.TasksInterchangeToWorkers do
     # "uid" => "2ad23417220a",
     # "worker_count" => 8
     # }
+    Logger.debug("Received a registration")
 
-   GenServer.cast(:matchmaker, {:new_manager, msg})
+    reg_map = %{
+        "block_id" => get_reg_str("block_id", dict),
+        "cpu_count" => get_reg_v("cpu_count", dict),
+        "max_capacity" => get_reg_v("max_capacity", dict),
+        "uid" => get_reg_str("uid", dict)
+    }
+
+   GenServer.cast(:matchmaker, {:new_manager, reg_map})
+  end
+
+  def handle_message_from_worker(socket, source, type, dict, msgs) do
+    raise "Unsupported message metatag: #{type}"
   end
 
   def handle_message_from_worker(source, %{"type" => "heartbeat"} = msg) do
@@ -507,6 +533,10 @@ defmodule EIC.Matchmaker do
 
     c = m["max_capacity"]
     if c < 1 do
+      # BUG: this sounds like a bug that should be tested - many managers with
+      # lots of tasks between them? This code looks like it only looks at the
+      # first manager on the list? but it should be able to choose any manager
+      # that has capacity?
       Logger.debug("Head manager has no capacity... no match to make")  
 
       # TODO: is there a syntax to avoid reconstructing these args?
@@ -515,7 +545,7 @@ defmodule EIC.Matchmaker do
 
       Logger.debug(["Selected manager has max_capacity: ", inspect(c)])
       pickled_list_of_tasks = :pickle.term_to_pickle([task_dict])
-      parts = [m["uid"], <<>>, pickled_list_of_tasks] 
+      parts = [m["uid"], pickled_list_of_tasks] 
 
       send(EIC.TasksInterchangeToWorkers, parts)
 
