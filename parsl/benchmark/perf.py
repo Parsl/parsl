@@ -6,6 +6,7 @@ from typing import Any, Dict
 
 import parsl
 from parsl.dataflow.dflow import DataFlowKernel
+from parsl.errors import InternalConsistencyError
 
 min_iterations = 2
 
@@ -40,19 +41,18 @@ def app(extra_payload: Any, parsl_resource_specification: Dict = {}) -> int:
     return 7
 
 
-def performance(*, resources: dict, target_t: float, args_extra_size: int) -> None:
+def performance(*, resources: dict, target_t: float, args_extra_size: int, iterate_mode: str) -> None:
     n = 10
 
     delta_t: float
-    delta_t = 0
-
-    threshold_t = int(0.75 * target_t)
 
     iteration = 1
 
     args_extra_payload = "x" * args_extra_size
 
-    while delta_t < threshold_t or iteration <= min_iterations:
+    iterate = True
+
+    while iterate:
         print(f"==== Iteration {iteration} ====")
         print(f"Will run {n} tasks to target {target_t} seconds runtime")
         start_t = time.time()
@@ -78,9 +78,19 @@ def performance(*, resources: dict, target_t: float, args_extra_size: int) -> No
         print(f"Runtime: actual {delta_t:.3f}s vs target {target_t}s")
         print(f"Tasks per second: {rate:.3f}")
 
-        n = max(1, int(target_t * rate))
-
         iteration += 1
+
+        # decide upon next iteration
+
+        match iterate_mode:
+            case "estimate":
+                n = max(1, int(target_t * rate))
+                iterate = delta_t < (0.75 * target_t) or iteration <= min_iterations
+            case "exponential":
+                n = int(n * 2)
+                iterate = delta_t < target_t or iteration <= min_iterations
+            case _:
+                raise InternalConsistencyError(f"Bad iterate mode {iterate_mode} - should have been validated at arg parse time")
 
 
 def cli_run() -> None:
@@ -96,6 +106,12 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
     parser.add_argument("--time", metavar="SECONDS", help="target number of seconds for an iteration", default=120, type=float)
     parser.add_argument("--argsize", metavar="BYTES", help="extra bytes to add into app invocation arguments", default=0, type=int)
     parser.add_argument("--version", action="version", version=f"parsl-perf from Parsl {parsl.__version__}")
+    parser.add_argument("--iterate",
+                        metavar="MODE",
+                        help="Iteration mode: estimate, exponential",
+                        type=str,
+                        default="estimate",
+                        choices=("estimate", "exponential"))
 
     args = parser.parse_args()
 
@@ -105,7 +121,7 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
         resources = {}
 
     with load_dfk_from_config(args.config):
-        performance(resources=resources, target_t=args.time, args_extra_size=args.argsize)
+        performance(resources=resources, target_t=args.time, args_extra_size=args.argsize, iterate_mode=args.iterate)
         print("Tests complete - leaving DFK block")
     print("The end")
 
