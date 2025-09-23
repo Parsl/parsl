@@ -2,11 +2,13 @@ import argparse
 import concurrent.futures
 import importlib
 import time
-from typing import Any, Dict
+from typing import Any, Dict, Literal
 
 import parsl
 from parsl.dataflow.dflow import DataFlowKernel
 from parsl.errors import InternalConsistencyError
+
+VALID_NAMED_ITERATION_MODES = ("estimate", "exponential")
 
 min_iterations = 2
 
@@ -41,8 +43,7 @@ def app(extra_payload: Any, parsl_resource_specification: Dict = {}) -> int:
     return 7
 
 
-def performance(*, resources: dict, target_t: float, args_extra_size: int, iterate_mode: str) -> None:
-    n = 10
+def performance(*, resources: dict, target_t: float, args_extra_size: int, iterate_mode: str | list[int]) -> None:
 
     delta_t: float
 
@@ -50,11 +51,16 @@ def performance(*, resources: dict, target_t: float, args_extra_size: int, itera
 
     args_extra_payload = "x" * args_extra_size
 
+    if isinstance(iterate_mode, list):
+        n = iterate_mode[0]
+    else:
+        n = 10
+
     iterate = True
 
     while iterate:
         print(f"==== Iteration {iteration} ====")
-        print(f"Will run {n} tasks to target {target_t} seconds runtime")
+        print(f"Will run {n} tasks")
         start_t = time.time()
 
         fs = []
@@ -89,8 +95,30 @@ def performance(*, resources: dict, target_t: float, args_extra_size: int, itera
             case "exponential":
                 n = int(n * 2)
                 iterate = delta_t < target_t or iteration <= min_iterations
+            case seq if isinstance(seq, list) and iteration <= len(seq):
+                n = seq[iteration - 1]
+                iterate = True
+            case seq if isinstance(seq, list):
+                iterate = False
             case _:
                 raise InternalConsistencyError(f"Bad iterate mode {iterate_mode} - should have been validated at arg parse time")
+
+
+def validate_int_list(v: str) -> list[int] | Literal[False]:
+    try:
+        return list(map(int, v.split(",")))
+    except ValueError:
+        return False
+
+
+def iteration_mode(v: str) -> str | list[int]:
+    match v:
+        case s if s in VALID_NAMED_ITERATION_MODES:
+            return s
+        case _ if seq := validate_int_list(v):
+            return seq
+        case _:
+            raise argparse.ArgumentTypeError(f"Invalid iteration mode: {v}")
 
 
 def cli_run() -> None:
@@ -108,10 +136,9 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
     parser.add_argument("--version", action="version", version=f"parsl-perf from Parsl {parsl.__version__}")
     parser.add_argument("--iterate",
                         metavar="MODE",
-                        help="Iteration mode: estimate, exponential",
-                        type=str,
-                        default="estimate",
-                        choices=("estimate", "exponential"))
+                        help="Iteration mode: " + ", ".join(VALID_NAMED_ITERATION_MODES) + ", or sequence of explicit sizes",
+                        type=iteration_mode,
+                        default="estimate")
 
     args = parser.parse_args()
 
