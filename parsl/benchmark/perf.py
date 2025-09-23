@@ -15,9 +15,9 @@ def load_dfk_from_config(filename):
     spec.loader.exec_module(module)
 
     if hasattr(module, 'config'):
-        parsl.load(module.config)
+        return parsl.load(module.config)
     elif hasattr(module, 'fresh_config'):
-        parsl.load(module.fresh_config())
+        return parsl.load(module.fresh_config())
     else:
         raise RuntimeError("Config module does not define config or fresh_config")
 
@@ -90,10 +90,9 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
     else:
         resources = {}
 
-    load_dfk_from_config(args.config)
-    performance(resources=resources, target_t=args.time, args_extra_size=args.argsize)
-    print("Cleaning up DFK")
-    parsl.dfk().cleanup()
+    with load_dfk_from_config(args.config):
+        performance(resources=resources, target_t=args.time, args_extra_size=args.argsize)
+        print("Tests complete - leaving DFK block")
     print("The end")
 
 
