@@ -230,7 +230,7 @@ defmodule EIC.TasksInterchangeToWorkers do
     :ok = :inert.start()
     :ok = :inert.fdset(fd)
 
-    loop(socket_to_workers)
+    loop(fd, socket_to_workers)
   end
 
 
@@ -252,21 +252,26 @@ defmodule EIC.TasksInterchangeToWorkers do
   end
 
 
-  def loop(socket) do
-    # IO.puts("TasksInterchangeToWorkers: recv poll")
+  def loop(fd, socket) do
 
+    # see idris2interchange note about this: poll fd gets reset on other
+    # actions - specifically, I think the send_multipart - which means that
+    # we then have to perform an explicit check of the socket here.
+    drain_worker_to_end(fd, socket)
+
+    Logger.debug("TasksInterchangeToWorkers: entering receive")
     receive do
       {:inert_read, _, fd} -> 
         Logger.debug(["inert poll message in TasksInterchangeToWorkers, fd ", inspect(fd)])
-        :ok = :inert.fdset(fd)
         drain_worker_to_end(fd, socket)
+        :ok = :inert.fdset(fd)
 
       # TODO: this m should get :atom_tagged
       m -> Logger.debug("TasksInterchangeToWorkers: sending a multipart message to workers")
            :erlzmq.send_multipart(socket, m)
     end
 
-    loop(socket)
+    loop(fd, socket)
   end
 
   def get_reg_str(k, d) do
