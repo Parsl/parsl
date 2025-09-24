@@ -235,10 +235,9 @@ defmodule EIC.TasksInterchangeToWorkers do
 
 
   def drain_worker_to_end(fd, socket) do
-        Logger.debug(["inert poll message for fd ", inspect(fd)])
-        :ok = :inert.fdset(fd)
         case :erlzmq.recv_multipart(socket) do
           {:ok, [source, meta | msgs]} -> 
+            Logger.debug("drain_worker_to_end: draining")
             Logger.debug(inspect(meta))
             meta_dict = :pickle.pickle_to_term(meta)
             Logger.debug(inspect(meta_dict))
@@ -248,7 +247,7 @@ defmodule EIC.TasksInterchangeToWorkers do
             handle_message_from_worker(socket, source, meta_type, meta_dict, msgs)
             drain_worker_to_end(fd, socket)
           {:error, :eagain} ->
-            Logger.debug("EAGAIN on recv from socket - end of socket drain")
+            Logger.debug("drain_worker_to_end: EAGAIN on recv from socket - end of socket drain")
         end
   end
 
@@ -258,6 +257,8 @@ defmodule EIC.TasksInterchangeToWorkers do
 
     receive do
       {:inert_read, _, fd} -> 
+        Logger.debug(["inert poll message in TasksInterchangeToWorkers, fd ", inspect(fd)])
+        :ok = :inert.fdset(fd)
         drain_worker_to_end(fd, socket)
 
       # TODO: this m should get :atom_tagged
