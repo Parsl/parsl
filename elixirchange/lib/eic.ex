@@ -316,18 +316,8 @@ defmodule EIC.TasksInterchangeToWorkers do
     loop(socket_to_workers)
   end
 
-  def loop(socket) do
-    # IO.puts("TasksInterchangeToWorkers: recv poll")
 
-    receive do
-      {:inert_read, _, fd} -> 
-
-        # TODO: this seems to hang a bit -- but maye its becaues I need to
-        # repeatedly run that recv_multipart after receiving a poll message,
-        # to drain the queue, because this is edge-triggered, not level-triggered.
-        # That's what I had to do in the other impls and it is missing here and
-        # has similar symptoms.
-        
+  def drain_worker_to_end(fd, socket) do
         Logger.debug(["inert poll message for fd ", inspect(fd)])
         :ok = :inert.fdset(fd)
         case :erlzmq.recv_multipart(socket) do
@@ -339,9 +329,19 @@ defmodule EIC.TasksInterchangeToWorkers do
             Logger.debug(inspect(meta_type))
             Logger.debug(inspect(msgs))
             handle_message_from_worker(socket, source, meta_type, meta_dict, msgs)
+            drain_worker_to_end(fd, socket)
           {:error, :eagain} ->
-            Logger.debug("EAGAIN on recv from socket - harmless ignoring of poll")
+            Logger.debug("EAGAIN on recv from socket - end of socket drain")
         end
+  end
+
+
+  def loop(socket) do
+    # IO.puts("TasksInterchangeToWorkers: recv poll")
+
+    receive do
+      {:inert_read, _, fd} -> 
+        drain_worker_to_end(fd, socket)
 
       # TODO: this m should get :atom_tagged
       m -> Logger.debug("TasksInterchangeToWorkers: sending a multipart message to workers")
