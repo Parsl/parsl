@@ -332,7 +332,7 @@ class Interchange:
             msg = self.task_incoming.recv_pyobj()
 
             # Process priority, higher number = lower priority
-            resource_spec = msg.get('resource_spec', {})
+            resource_spec = msg['context'].get('resource_spec', {})
             priority = resource_spec.get('priority', float('inf'))
             queue_entry = (-priority, -self.task_counter, msg)
 
