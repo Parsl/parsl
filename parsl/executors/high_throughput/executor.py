@@ -504,10 +504,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             else:
 
                 for serialized_msg in msgs:
-                    try:
-                        msg = pickle.loads(serialized_msg)
-                    except pickle.UnpicklingError:
-                        raise BadMessage("Message received could not be unpickled")
+                    msg = pickle.loads(serialized_msg)
 
                     if msg['type'] == 'result':
                         try:

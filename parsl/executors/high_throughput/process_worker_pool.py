@@ -371,11 +371,8 @@ class Manager:
             socks = dict(poller.poll(timeout=poll_duration_s * 1000))
             if socks.get(ix_sock) == zmq.POLLIN:
                 pkl_msg = ix_sock.recv()
-                try:
-                    tasks = pickle.loads(pkl_msg)
-                except Exception:
-                    logger.exception(f"exception unpickling pkl_msg: {pkl_msg!r}")
-                    raise
+                tasks = pickle.loads(pkl_msg)
+                del pkl_msg
 
                 last_interchange_contact = time.time()
 
@@ -460,6 +457,7 @@ class Manager:
                                               'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
                             pkl_package = pickle.dumps(result_package)
                             self.pending_result_queue.put(pkl_package)
+                            del pkl_package
                     except KeyError:
                         logger.info("Worker {} was not busy when it died".format(worker_id))
 
@@ -786,7 +784,8 @@ def worker(
             result_package = {'type': 'result', 'task_id': tid, 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
         else:
             result_package = {'type': 'result', 'task_id': tid, 'result': serialized_result}
-            # logger.debug("Result: {}".format(result))
+            del serialized_result
+        del req
 
         logger.info("Completed executor task {}".format(tid))
         try:
@@ -798,6 +797,7 @@ def worker(
                                         })
 
         result_queue.put(pkl_package)
+        del pkl_package, result_package
         tasks_in_progress.pop(worker_id)
         logger.info("All processing finished for executor task {}".format(tid))
 
