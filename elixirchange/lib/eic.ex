@@ -94,89 +94,6 @@ defmodule EIC.TasksSubmitToInterchange do
   end
 end
 
-defmodule EIC.IrrelevantResultsWorkersToInterchange do
-  @moduledoc """
-  This module handles results coming from workers back into the interchange
-  over ZMQ.
-  """
-
-  require Logger
-
-  def start_link(ctx) do
-    Task.start_link(EIC.IrrelevantResultsWorkersToInterchange, :body, [ctx])
-  end
-
-  def body(ctx) do
-    {:ok, socket} = :erlzmq.socket(ctx, :router)
-    :ok = :erlzmq.bind(socket, "tcp://127.0.0.1:9004")
-    loop(socket)
-  end
-
-  def loop(socket) do
-    Logger.debug("Invoking results receive")
-    {:ok, msgs} = :erlzmq.recv_multipart(socket)
-    # this parts vec will contain first a manager ID, and then an arbitrary number of pickled result-like parts from that manager.
-    Logger.debug(["Got this results multipart message:", inspect(msgs)])
-
-    # unpack the results message here - if its expensive, what would it be like to send each part into its own task
-    # that routed the result onwards?
-
-    [manager_id | results] = msgs
-
-    # I guess the protocol implicitly assumes that results come from the manager that we sent the task to...
-    # but what happens if not? does everything still behave right?
-    # If we don't care, then we can drop the manager ID from the message sequence and move to a less
-    # complicated message protocol here, that does not need to be a DEALER+multipart message...
-    # and if we do care... how does the Python implementation deal with a different manager ID?
-    # For example, in insecure mode (and other such badnesses), perhaps we'd get a task from a manager
-    # we don't even know about? In which case, a bunch of code possibly might break because it makes
-    # the assumption that there will be some appropriate state for that particular manager...
-    # TODO: protocol clarification: open an issue? write a test?
-
-    Logger.info(["Results messages are from manager id: ", inspect(manager_id)])
-    Logger.info(["There are ", inspect(length(results)), " results in this multipart message"])
-
-    # each element in results is a pickled dict, with a "type" key that can be
-    # result, heartbeat or monitoring.
-
-    Enum.each(results, fn msg ->
-      Logger.debug(["msg to unpickle: ", inspect(msg)])
-      result_dict = :pickle.pickle_to_term(msg)
-      result_type = :dict.fetch({:pickle_unicode, "type"}, result_dict)
-
-      Logger.info(["result message type is: ", inspect(result_type)])
-
-      # now we can dispatch on result_type...
-      case result_type do
-          {:pickle_unicode, "result"} -> deliver_result(result_dict, manager_id)
-          {:pickle_unicode, "heartbeat"} -> Logger.info("Result-channel heartbeat, no need for implementation - see #3464")
-          x -> raise "Unknown result message type"
-      end
-
-    end)
-
-    loop(socket)
-  end
-
-  def deliver_result(result_dict, manager_id) do
-    task_id = :dict.fetch({:pickle_unicode, "task_id"}, result_dict)
-
-    # TODO: task_id might be -1 here...
-    # which is used when sending back a pool-wide exception at startup
-    # (specifically VersionMismatch) rather than a task-specific result.
-    # There's no handling for that here. And no testing for it in the
-    # test suite, I think... but it should go in the protocol documentation...
-    # TODO: this -1 could turn into a different typed result, in the same
-    # way as heartbeats are - rather than overloading "result" with magic
-    # values. TODO: open an issue, #NNNN
-
-    Logger.info(["Delivering result to ParslTask id ", inspect(task_id)])
-    [{task_process, :whatever}] = Registry.lookup(EIC.TaskRegistry, task_id)
-    GenServer.cast(task_process, {:result, result_dict, manager_id})
-  end
-
-end
-
 defmodule EIC.ResultsInterchangeToSubmit do
   require Logger
 
@@ -396,12 +313,68 @@ defmodule EIC.TasksInterchangeToWorkers do
   end
 
   def handle_message_from_worker(socket, source, "result", dict, msgs) do
-    raise "NOTIMPL: result metatag"
+    process_results(source, msgs)
   end
 
   def handle_message_from_worker(socket, source, type, dict, msgs) do
     raise "Unsupported message metatag: #{type}"
   end
+
+  def process_results(manager_id, results) do
+    Logger.debug("Invoking results receive")
+
+    # I guess the protocol implicitly assumes that results come from the manager that we sent the task to...
+    # but what happens if not? does everything still behave right?
+    # If we don't care, then we can drop the manager ID from the message sequence and move to a less
+    # complicated message protocol here, that does not need to be a DEALER+multipart message...
+    # and if we do care... how does the Python implementation deal with a different manager ID?
+    # For example, in insecure mode (and other such badnesses), perhaps we'd get a task from a manager
+    # we don't even know about? In which case, a bunch of code possibly might break because it makes
+    # the assumption that there will be some appropriate state for that particular manager...
+    # TODO: protocol clarification: open an issue? write a test?
+
+    Logger.info(["Results messages are from manager id: ", inspect(manager_id)])
+    Logger.info(["There are ", inspect(length(results)), " results in this multipart message"])
+
+    # each element in results is a pickled dict, with a "type" key that can be
+    # result, heartbeat or monitoring.
+
+    Enum.each(results, fn msg ->
+      Logger.debug(["msg to unpickle: ", inspect(msg)])
+      result_dict = :pickle.pickle_to_term(msg)
+      result_type = :dict.fetch({:pickle_unicode, "type"}, result_dict)
+
+      Logger.info(["result message type is: ", inspect(result_type)])
+
+      # now we can dispatch on result_type...
+      case result_type do
+          {:pickle_unicode, "result"} -> deliver_result(result_dict, manager_id)
+          {:pickle_unicode, "heartbeat"} -> Logger.info("Result-channel heartbeat, no need for implementation - see #3464")
+          x -> raise "Unknown result message type"
+      end
+
+    end)
+
+  end
+
+  def deliver_result(result_dict, manager_id) do
+    task_id = :dict.fetch({:pickle_unicode, "task_id"}, result_dict)
+
+    # TODO: task_id might be -1 here...
+    # which is used when sending back a pool-wide exception at startup
+    # (specifically VersionMismatch) rather than a task-specific result.
+    # There's no handling for that here. And no testing for it in the
+    # test suite, I think... but it should go in the protocol documentation...
+    # TODO: this -1 could turn into a different typed result, in the same
+    # way as heartbeats are - rather than overloading "result" with magic
+    # values. TODO: open an issue, #NNNN
+
+    Logger.info(["Delivering result to ParslTask id ", inspect(task_id)])
+    [{task_process, :whatever}] = Registry.lookup(EIC.TaskRegistry, task_id)
+    GenServer.cast(task_process, {:result, result_dict, manager_id})
+  end
+
+
 
   def handle_message_from_worker(source, %{"type" => "heartbeat"} = msg) do
     Logger.error("NOTIMPL: task side heartbeat... will probably cause worker pools to time out... and also will cause hangs when a worker pool dies")
