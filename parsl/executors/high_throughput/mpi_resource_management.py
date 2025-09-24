@@ -168,9 +168,8 @@ class MPITaskScheduler(TaskScheduler):
         """Schedule task if resources are available otherwise backlog the task"""
         resource_spec = task_package.get("resource_spec", {})
 
-        nodes_needed = resource_spec.get("num_nodes")
-        tid = task_package["task_id"]
-        if nodes_needed:
+        if nodes_needed := resource_spec.get("num_nodes"):
+            tid = task_package["task_id"]
             try:
                 allocated_nodes = self._get_nodes(nodes_needed)
             except MPINodesUnavailable:
