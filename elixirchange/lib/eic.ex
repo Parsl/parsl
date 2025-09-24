@@ -395,6 +395,10 @@ defmodule EIC.TasksInterchangeToWorkers do
    GenServer.cast(:matchmaker, {:new_manager, reg_map})
   end
 
+  def handle_message_from_worker(socket, source, "result", dict, msgs) do
+    raise "NOTIMPL: result metatag"
+  end
+
   def handle_message_from_worker(socket, source, type, dict, msgs) do
     raise "Unsupported message metatag: #{type}"
   end
