@@ -773,7 +773,10 @@ def worker(
             ready_worker_count.value -= 1
         worker_enqueued = False
 
-        _init_mpi_env(mpi_launcher=mpi_launcher, resource_spec=req["resource_spec"])
+        ctxt = req["context"]
+        res_spec = ctxt.get("resource_spec", {})
+
+        _init_mpi_env(mpi_launcher=mpi_launcher, resource_spec=res_spec)
 
         try:
             result = execute_task(req['buffer'])
