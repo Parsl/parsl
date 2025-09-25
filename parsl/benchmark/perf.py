@@ -3,6 +3,8 @@ import concurrent.futures
 import importlib
 import time
 
+from typing import Optional
+
 import parsl
 
 min_iterations = 2
@@ -15,9 +17,9 @@ def load_dfk_from_config(filename):
     spec.loader.exec_module(module)
 
     if hasattr(module, 'config'):
-        parsl.load(module.config)
+        return parsl.load(module.config)
     elif hasattr(module, 'fresh_config'):
-        parsl.load(module.fresh_config())
+        return parsl.load(module.fresh_config())
     else:
         raise RuntimeError("Config module does not define config or fresh_config")
 
@@ -100,8 +102,13 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
     parser.add_argument("--config", required=True, help="path to Python file that defines a configuration")
     parser.add_argument("--resources", metavar="EXPR", help="parsl_resource_specification dictionary")
     parser.add_argument("--time", metavar="SECONDS", help="target number of seconds for an iteration", default=120, type=float)
-    parser.add_argument("--count", metavar="TASKS", help="target number of tasks for an iteration (beyond warmups)", default=None, type=int)  # TODO: should be mutually exclusive with --time
+    parser.add_argument("--count",
+                        metavar="TASKS",
+                        help="target number of tasks for an iteration (beyond warmups)", default=None, type=int)
+    # TODO: should be mutually exclusive with --time
+
     parser.add_argument("--argsize", metavar="BYTES", help="extra bytes to add into app invocation arguments", default=0, type=int)
+    parser.add_argument("--version", action="version", version=f"parsl-perf from Parsl {parsl.__version__}")
 
     args = parser.parse_args()
 
@@ -110,10 +117,9 @@ Example usage: python -m parsl.benchmark.perf --config parsl/tests/configs/workq
     else:
         resources = {}
 
-    load_dfk_from_config(args.config)
-    performance(resources=resources, target_t=args.time, args_extra_size=args.argsize, count=args.count)
-    print("Cleaning up DFK")
-    parsl.dfk().cleanup()
+    with load_dfk_from_config(args.config):
+        performance(resources=resources, target_t=args.time, args_extra_size=args.argsize, count=args.count)
+        print("Tests complete - leaving DFK block")
     print("The end")
 
 

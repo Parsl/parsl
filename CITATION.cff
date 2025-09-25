@@ -1,4 +1,4 @@
-cff-version: 1.1.0
+cff-version: 1.2.0
 message: "If you use this software in your work, please cite it using the following metadata."
 authors:
 - family-names: "Nand Babuji"
@@ -113,7 +113,8 @@ authors:
 - family-names: "Bilke"
   given-names: "Lars"
 title: "parsl"
-version: 1.1.0
-date-released: 2021-04-26
-
+identifiers:
+  - description: Conference proceedings paper
+    type: doi
+    value: "10.1145/3307681.3325400"
 
