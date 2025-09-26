@@ -136,30 +136,18 @@ class TasksOutgoing:
         self.port = self.zmq_socket.bind_to_random_port(tcp_url(ip_address),
                                                         min_port=port_range[0],
                                                         max_port=port_range[1])
-        self.poller = zmq.Poller()
-        self.poller.register(self.zmq_socket, zmq.POLLOUT)
 
     def put(self, message):
         """ This function needs to be fast at the same time aware of the possibility of
         ZMQ pipes overflowing.
 
-        The timeout increases slowly if contention is detected on ZMQ pipes.
         We could set copy=False and get slightly better latency but this results
         in ZMQ sockets reaching a broken state once there are ~10k tasks in flight.
         This issue can be magnified if each the serialized buffer itself is larger.
         """
-        timeout_ms = 1
-        while True:
-            socks = dict(self.poller.poll(timeout=timeout_ms))
-            if self.zmq_socket in socks and socks[self.zmq_socket] == zmq.POLLOUT:
-                # The copy option adds latency but reduces the risk of ZMQ overflow
-                logger.debug("Sending TasksOutgoing message")
-                self.zmq_socket.send_pyobj(message, copy=True)
-                logger.debug("Sent TasksOutgoing message")
-                return
-            else:
-                timeout_ms *= 2
-                logger.debug("Not sending due to non-ready zmq pipe, timeout: {} ms".format(timeout_ms))
+        logger.debug("Sending TasksOutgoing message")
+        self.zmq_socket.send_pyobj(message)
+        logger.debug("Sent TasksOutgoing message")
 
     def close(self):
         self.zmq_socket.close()
@@ -192,20 +180,15 @@ class ResultsIncoming:
         self.port = self.results_receiver.bind_to_random_port(tcp_url(ip_address),
                                                               min_port=port_range[0],
                                                               max_port=port_range[1])
-        self.poller = zmq.Poller()
-        self.poller.register(self.results_receiver, zmq.POLLIN)
 
     def get(self, timeout_ms=None):
         """Get a message from the queue, returning None if timeout expires
         without a message. timeout is measured in milliseconds.
         """
-        socks = dict(self.poller.poll(timeout=timeout_ms))
-        if self.results_receiver in socks and socks[self.results_receiver] == zmq.POLLIN:
-            m = self.results_receiver.recv_multipart()
-            logger.debug("Received ResultsIncoming message")
-            return m
-        else:
-            return None
+        if zmq.POLLIN == self.results_receiver.poll(timeout_ms, zmq.POLLIN):
+            logger.debug("Receiving ResultsIncoming multipart message")
+            return self.results_receiver.recv_multipart()
+        return None
 
     def close(self):
         self.results_receiver.close()

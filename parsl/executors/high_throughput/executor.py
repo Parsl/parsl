@@ -35,7 +35,7 @@ from parsl.monitoring.radios.zmq_router import ZMQRadioReceiver, start_zmq_recei
 from parsl.process_loggers import wrap_with_logs
 from parsl.providers import LocalProvider
 from parsl.providers.base import ExecutionProvider
-from parsl.serialize import deserialize, pack_res_spec_apply_message
+from parsl.serialize import deserialize, pack_apply_message
 from parsl.serialize.errors import DeserializationError, SerializationError
 from parsl.usage_tracking.api import UsageInformation
 from parsl.utils import RepresentationMixin
@@ -501,10 +501,7 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
             else:
 
                 for serialized_msg in msgs:
-                    try:
-                        msg = pickle.loads(serialized_msg)
-                    except pickle.UnpicklingError:
-                        raise BadMessage("Message received could not be unpickled")
+                    msg = pickle.loads(serialized_msg)
 
                     if msg['type'] == 'result':
                         try:
@@ -708,13 +705,15 @@ class HighThroughputExecutor(BlockProviderExecutor, RepresentationMixin, UsageIn
         self.tasks[task_id] = fut
 
         try:
-            fn_buf = pack_res_spec_apply_message(func, args, kwargs,
-                                                 resource_specification=resource_specification,
-                                                 buffer_threshold=1024 * 1024)
+            fn_buf = pack_apply_message(func, args, kwargs, buffer_threshold=1 << 20)
         except TypeError:
             raise SerializationError(func.__name__)
 
-        msg = {"task_id": task_id, "resource_spec": resource_specification, "buffer": fn_buf}
+        context = {}
+        if resource_specification:
+            context["resource_spec"] = resource_specification
+
+        msg = {"task_id": task_id, "context": context, "buffer": fn_buf}
 
         # Post task to the outgoing queue
         self.outgoing_q.put(msg)

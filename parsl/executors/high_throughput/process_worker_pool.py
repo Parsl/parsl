@@ -373,6 +373,8 @@ class Manager:
             if socks.get(ix_sock) == zmq.POLLIN:
                 pkl_msg = ix_sock.recv()
                 tasks = pickle.loads(pkl_msg)
+                del pkl_msg
+
                 last_interchange_contact = time.time()
 
                 if tasks == HEARTBEAT_CODE:
@@ -454,6 +456,7 @@ class Manager:
                                               'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
                             pkl_package = pickle.dumps(result_package)
                             self.pending_result_queue.put(pkl_package)
+                            del pkl_package
                     except KeyError:
                         logger.info("Worker {} was not busy when it died".format(worker_id))
 
@@ -603,6 +606,10 @@ def update_resource_spec_env_vars(mpi_launcher: str, resource_spec: Dict, node_i
 
 
 def _init_mpi_env(mpi_launcher: str, resource_spec: Dict):
+    for varname in resource_spec:
+        envname = "PARSL_" + str(varname).upper()
+        os.environ[envname] = str(resource_spec[varname])
+
     node_list = resource_spec.get("MPI_NODELIST")
     if node_list is None:
         return
@@ -753,8 +760,8 @@ def worker(
             worker_enqueued = True
 
         try:
-            # The worker will receive {'task_id':<tid>, 'buffer':<buf>}
             req = task_queue.get(timeout=task_queue_timeout)
+            # req is {'task_id':<tid>, 'buffer':<buf>, 'resource_spec':<dict>}
         except queue.Empty:
             continue
 
@@ -766,7 +773,10 @@ def worker(
             ready_worker_count.value -= 1
         worker_enqueued = False
 
-        _init_mpi_env(mpi_launcher=mpi_launcher, resource_spec=req["resource_spec"])
+        ctxt = req["context"]
+        res_spec = ctxt.get("resource_spec", {})
+
+        _init_mpi_env(mpi_launcher=mpi_launcher, resource_spec=res_spec)
 
         try:
             result = execute_task(req['buffer'])
@@ -776,7 +786,8 @@ def worker(
             result_package = {'type': 'result', 'task_id': tid, 'exception': serialize(RemoteExceptionWrapper(*sys.exc_info()))}
         else:
             result_package = {'type': 'result', 'task_id': tid, 'result': serialized_result}
-            # logger.debug("Result: {}".format(result))
+            del serialized_result
+        del req
 
         logger.info("Completed executor task {}".format(tid))
         try:
@@ -788,6 +799,7 @@ def worker(
                                         })
 
         result_queue.put(pkl_package)
+        del pkl_package, result_package
         tasks_in_progress.pop(worker_id)
         logger.info("All processing finished for executor task {}".format(tid))
 
