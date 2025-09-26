@@ -107,13 +107,17 @@ class TaskVineExecutor(BlockProviderExecutor, putils.RepresentationMixin):
                  function_exec_mode: Union[Literal['regular'], Literal['serverless']] = 'regular',
                  manager_config: TaskVineManagerConfig = TaskVineManagerConfig(),
                  factory_config: TaskVineFactoryConfig = TaskVineFactoryConfig(),
-                 provider: Optional[ExecutionProvider] = LocalProvider(init_blocks=1),
+                 provider: Optional[ExecutionProvider] = None,
                  storage_access: Optional[List[Staging]] = None,
                  remote_monitoring_radio: Optional[RadioConfig] = None):
 
         # Set worker launch option for this executor
         if worker_launch_method == 'factory' or worker_launch_method == 'manual':
             provider = None
+        elif worker_launch_method == 'provider' and provider is None:
+            # provider method chosen, but no explicit provider supplied to __init__
+            # so default to LocalProvider
+            provider = LocalProvider(init_blocks=1)
 
         # Initialize the parent class with the execution provider and block error handling enabled.
         # If provider is None, then no worker is launched via the provider method.
