@@ -472,7 +472,11 @@ fn main() {
                 // TODO: it's an error for a manager ID to be re-used... is that a protocol error? or some other error?
                 manager_info.insert(manager_id.clone(), ManagerInfo {alive: true, last_heard: Instant::now()});
             } else if meta_type == "connection_probe" {
-                println!("connection probe - TODO NOTIMPL")
+                println!("Connection probe");
+                let empty: [u8; 0] = [];
+                zmq_tasks_interchange_to_workers
+                    .send_multipart([manager_id, &empty.to_vec()], 0)
+                    .expect("sending result on results_interchange_to_submit");
             } else if meta_type == "heartbeat" {
                 // Heartbeat protocol:
                 //  Heartbeats are driven by the workers: a worker sends a heartbeat to the
@@ -494,8 +498,75 @@ fn main() {
 
                 println!("heartbeat from worker to interchange on task channel: {0:?} -> {1:?}", old_instant, mi.last_heard)
 
+            } else if meta_type == "result" {
+                let parts = &message[2..];
+                println!("Received a result-like message with {} parts", parts.len());
+                let mut parts_iter = parts.into_iter();
+                for part_pickle_bytes in parts_iter {
+                    println!("Processing part");
+                    // part is a pickled python dict with a 'type' tag
+                    // a part here is not necessarily a result: this channel also contains heartbeats and monitoring messages.
+
+                    // TODO: implement monitoring handling
+                    //   PROBLEM: monitoring messages here cannot be unpickled by serde_pickle:
+                    //   serde pickle doesn't know how to unpickle arbitrary globals with REDUCE
+                    //   and (according to log messages I added to serde-pickle)
+                    //     -  parsl.monitoring.message_type.MessageType
+                    //     -  datetime.datetime
+                    // We do need to unpickle this message enough to see what kind of message it is to route
+                    // it correctly, even though we don't at rust level need to understand those other
+                    // un-unpickleable types...
+
+                    // TODO: implement heartbeat handling - see issue #3464 that actually nothing much happens here other
+                    // than forwarding it on as a result
+
+                    // replace_unresolved_globals() will replace unknown globals with None,
+                    // which will let the code partially deserialize monitoring messages - enough
+                    // I hope to be able to ignore them (although possibly not forward them onwards
+                    // due to reserialization...)
+                    let p = serde_pickle::de::value_from_slice(
+                        &part_pickle_bytes,
+                        serde_pickle::de::DeOptions::new().replace_unresolved_globals(),
+                    ).expect("protocol error: ZMQ message part could not be unpickled");
+
+                    let serde_pickle::Value::Dict(part_dict) = p else {
+                        panic!("protocol violation")
+                    };
+                    let serde_pickle::Value::String(part_type) =
+                        &part_dict[&serde_pickle::HashableValue::String("type".to_string())]
+                    else {
+                        panic!("protocol violation")
+                    };
+
+                    println!("Result-like message part type: {}", part_type);
+                    if part_type == "result" {
+                        outstanding_c -= 1;
+                        assert!(outstanding_c >= 0);
+                        // pass the message on without reserializing it
+                        zmq_results_interchange_to_submit
+                            .send_multipart([&part_pickle_bytes], 0)
+                            .expect("sending result on results_interchange_to_submit");
+                        slot_queue
+                            .add(Slot {
+                                manager_id: manager_id.clone(),
+                            })
+                            .expect("enqueuing slot on result");
+                    } else if part_type == "monitoring" {
+                        // TODO: this should be implemented and tested
+                        println!("Ignoring monitoring message part because deserialization is quite difficult")
+                    } else if part_type == "heartbeat" {
+                        // TODO: there is code in the python interchange to do something
+                        // (but not much) with such a message: see issue #3464. Is there some functionality to be tested
+                        // or does #3464 mean that heartbeat path should be removed (on the way to a single
+                        // worker pool <-> interchange zmq channel? see #3022)? This code should perhaps forward it on
+                        // to the executor like the python version does?
+                        println!("Ignoring heartbeat on worker->interchange results channel as it doesn't have any timeout behaviour")
+                    } else {
+                        panic!("Unknown result-like message part type");
+                    }
+                }
             } else {
-                panic!("unknown message type")
+                panic!("unknown message type");
             };
         }
 
@@ -589,80 +660,6 @@ fn main() {
                 .expect("sending command response");
         }
 
-        if sockets[3].get_revents().contains(zmq::PollEvents::POLLIN) {
-            let parts = zmq_results_workers_to_interchange
-                .recv_multipart(0)
-                .expect("couldn't get messages from results_workers_to_interchange");
-            println!("Received a result-like message with {} parts", parts.len());
-            // this parts vec will contain first a manager ID, and then an arbitrary number of result-like parts from that manager.
-            let mut parts_iter = parts.into_iter();
-            let manager_id = parts_iter.next().expect("getting manager ID");
-            for part_pickle_bytes in parts_iter {
-                println!("Processing part");
-                // part is a pickled python dict with a 'type' tag
-                // a part here is not necessarily a result: this channel also contains heartbeats and monitoring messages.
-
-                // TODO: implement monitoring handling
-                //   PROBLEM: monitoring messages here cannot be unpickled by serde_pickle:
-                //   serde pickle doesn't know how to unpickle arbitrary globals with REDUCE
-                //   and (according to log messages I added to serde-pickle)
-                //     -  parsl.monitoring.message_type.MessageType
-                //     -  datetime.datetime
-                // We do need to unpickle this message enough to see what kind of message it is to route
-                // it correctly, even though we don't at rust level need to understand those other
-                // un-unpickleable types...
-
-                // TODO: implement heartbeat handling - see issue #3464 that actually nothing much happens here other
-                // than forwarding it on as a result
-
-                // replace_unresolved_globals() will replace unknown globals with None,
-                // which will let the code partially deserialize monitoring messages - enough
-                // I hope to be able to ignore them (although possibly not forward them onwards
-                // due to reserialization...)
-                let p = serde_pickle::de::value_from_slice(
-                    &part_pickle_bytes,
-                    serde_pickle::de::DeOptions::new().replace_unresolved_globals(),
-                )
-                .expect("protocol error: ZMQ message part could not be unpickled");
-
-                let serde_pickle::Value::Dict(part_dict) = p else {
-                    panic!("protocol violation")
-                };
-                let serde_pickle::Value::String(part_type) =
-                    &part_dict[&serde_pickle::HashableValue::String("type".to_string())]
-                else {
-                    panic!("protocol violation")
-                };
-
-                println!("Result-like message part type: {}", part_type);
-                if part_type == "result" {
-                    outstanding_c -= 1;
-                    assert!(outstanding_c >= 0);
-                    // pass the message on without reserializing it
-                    zmq_results_interchange_to_submit
-                        .send_multipart([&part_pickle_bytes], 0)
-                        .expect("sending result on results_interchange_to_submit");
-                    slot_queue
-                        .add(Slot {
-                            manager_id: manager_id.clone(),
-                        })
-                        .expect("enqueuing slot on result");
-                } else if part_type == "monitoring" {
-                    // TODO: this should be implemented and tested
-                    println!("Ignoring monitoring message part because deserialization is quite difficult")
-                } else if part_type == "heartbeat" {
-                    // TODO: there is code in the python interchange to do something
-                    // (but not much) with such a message: see issue #3464. Is there some functionality to be tested
-                    // or does #3464 mean that heartbeat path should be removed (on the way to a single
-                    // worker pool <-> interchange zmq channel? see #3022)? This code should perhaps forward it on
-                    // to the executor like the python version does?
-                    println!("Ignoring heartbeat on worker->interchange results channel as it doesn't have any timeout behaviour")
-                } else {
-                    panic!("Unknown result-like message part type");
-                }
-            }
-        }
-
         // socket monitoring
         if sockets[4].get_revents().contains(zmq::PollEvents::POLLIN) {
             let parts = zmq_tasks_submit_to_interchange_monitor
@@ -702,8 +699,6 @@ fn main() {
                 .remove()
                 .expect("reasoning violation: slot_queue is non-empty, by while condition");
 
-            let empty: [u8; 0] = []; // see protocol description for this weird unnecessary(TODO?) field
-
             let task_list = serde_pickle::value::Value::List(
                 [serde_pickle::value::Value::Dict(
                     std::collections::BTreeMap::from([
@@ -729,8 +724,7 @@ fn main() {
                     .expect("pickling tasks for workers");
 
             // now we send the task to the slot...
-            let multipart_msg = [slot.manager_id, empty.to_vec(), task_list_pkl];
-            // TODO empty.to_vec is a protocol wart - see issue #3372
+            let multipart_msg = [slot.manager_id, task_list_pkl];
             zmq_tasks_interchange_to_workers
                 .send_multipart(multipart_msg, 0)
                 .expect("sending task to pool");
