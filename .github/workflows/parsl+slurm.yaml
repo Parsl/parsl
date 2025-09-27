@@ -27,7 +27,8 @@ jobs:
         run: |
           apt install -y python3-virtualenv
           virtualenv ./venv
-          source venv/bin/activate
+          find ./venv
+          source ./venv/bin/activate
           CC=/usr/lib64/openmpi/bin/mpicc pip3 install . -r test-requirements.txt
 
       - name: Verify Parsl Installation
